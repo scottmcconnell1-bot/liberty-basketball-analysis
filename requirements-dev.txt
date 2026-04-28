@@ -1,0 +1,17 @@
+# Development-only dependencies for optional trackers and testing
+# Add these to your .venv if you plan to use the tracker wrapper with the
+# referenced backends. They are intentionally left out of the strict
+# requirements.txt to avoid forcing heavy native builds on every developer.
+
+# Pure-Python DeepSort fallback (recommended when ByteTrack is not available)
+deep_sort_realtime>=1.3.1
+
+# ByteTrack variants (preferred for production if you can install them).
+# These packages may have multiple names and native requirements. Install the
+# variant appropriate for your environment following that package's docs.
+# bytetrack-pytorch
+# bytetrack
+
+# Testing utilities
+pytest>=7.0
+
