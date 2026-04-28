@@ -37,3 +37,30 @@ CREATE TABLE detections (
   tracker_id INTEGER,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Seasons table: stores seasons/years/competitions for grouping games
+CREATE TABLE IF NOT EXISTS seasons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  start_date DATE,
+  end_date DATE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Scheduled games: planned games tied to a season
+CREATE TABLE IF NOT EXISTS scheduled_games (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  season_id INTEGER NOT NULL,
+  program_name TEXT,
+  gender TEXT,
+  level TEXT,
+  game_date DATE,
+  game_time TIME,
+  location_type TEXT,
+  opponent_name TEXT,
+  tournament_name TEXT,
+  status TEXT DEFAULT 'scheduled',
+  notes TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP
+);
