@@ -112,6 +112,20 @@ def get_ai_events(game_id):
     ).fetchall()
     return jsonify([dict(row) for row in events])
 
+
+@app.route("/api/tracker_summary/<game_id>")
+def tracker_summary(game_id):
+    """Small verification route: returns counts of detections with and without tracker_id for a game."""
+    db = get_db()
+    row = db.execute(
+        "SELECT COUNT(*) as total, SUM(CASE WHEN tracker_id IS NOT NULL THEN 1 ELSE 0 END) as with_tracker "
+        "FROM detections WHERE game_id = ?",
+        (game_id,),
+    ).fetchone()
+    if row is None:
+        return jsonify({"error": "no data"}), 404
+    return jsonify({"game_id": game_id, "total_detections": row[0], "with_tracker_id": row[1]})
+
 print(app.url_map)
 
 if __name__ == "__main__":
