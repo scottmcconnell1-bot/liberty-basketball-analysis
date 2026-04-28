@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import tempfile
+import numpy as np
 from ai_analyzer import run_ai_analysis, TRACKER_ENABLED
 
 # This smoke test runs ai_analyzer on synthetic frames by creating a tiny video
@@ -23,7 +24,6 @@ def create_dummy_video(path, num_frames=10, width=320, height=240):
 
 
 def test_smoke_tracker_integration():
-    import numpy as np
     tmpdir = tempfile.mkdtemp()
     video_path = os.path.join(tmpdir, 'dummy.mp4')
     db_path = os.path.join(tmpdir, 'test.db')
