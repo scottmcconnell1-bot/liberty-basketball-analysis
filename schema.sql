@@ -34,5 +34,6 @@ CREATE TABLE detections (
   y_center INTEGER NOT NULL,
   width INTEGER NOT NULL,
   height INTEGER NOT NULL,
+  tracker_id INTEGER,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -39,20 +39,26 @@ def run_ai_analysis(db_path, video_path, game_id):
             for result in results:
                 for box in result.boxes:
                     class_id = int(box.cls[0])
-                    class_name = model.names[class_id]
-                    if class_name in ['person', 'sports ball']:
+                    # Normalize class names to pipeline canonical values
+                    raw_class_name = model.names[class_id]
+                    class_name = raw_class_name
+                    if raw_class_name in ['sports ball', 'sports_ball']:
+                        class_name = 'ball'
+                    if class_name in ['person', 'ball']:
                         confidence = float(box.conf[0])
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        # tracker_id placeholder (None for now) — will be filled when tracking is added
+                        tracker_id = None
                         detections_to_add.append((
                             game_id, frame_number, timestamp_ms, class_name, confidence,
-                            (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1
+                            (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, tracker_id
                         ))
             
             if detections_to_add:
                 cursor = db.cursor()
                 cursor.executemany(
-                    '''INSERT INTO detections (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    '''INSERT INTO detections (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height, tracker_id)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     detections_to_add
                 )
                 db.commit()
@@ -70,4 +76,3 @@ def run_ai_analysis(db_path, video_path, game_id):
             db.close()
         print(f"[AI] Finished analysis for {game_id}. Processed {frame_number} frames.")
         generate_events(game_id, db_path)
-

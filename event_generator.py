@@ -3,17 +3,36 @@ import sqlite3
 import pandas as pd
 from scipy.spatial import distance
 
+
 def get_db_connection(db_path):
     """Establishes a connection to the SQLite database."""
     return sqlite3.connect(db_path)
 
+
 def get_detections(conn, game_id):
-    """Retrieves all detections for a given game_id from the database."""
+    """Retrieves all detections for a given game_id from the database and normalizes columns."""
     print(f"INFO: Reading detections for game_id: {game_id}")
     query = "SELECT * FROM detections WHERE game_id = ?"
     df = pd.read_sql_query(query, conn, params=(game_id,))
     print(f"INFO: Found {len(df)} detections in the database.")
+
+    # Normalize column names and values for downstream processing
+    if 'object_class' in df.columns:
+        # Map detector labels to canonical names used by the pipeline
+        df['class_name'] = df['object_class'].replace({
+            'sports ball': 'ball',
+            'sports_ball': 'ball'
+        }).fillna(df['object_class'])
+    else:
+        # Backwards-compatibility: if older column exists
+        df['class_name'] = df.get('class_name', '')
+
+    # Ensure tracker_id column exists in DataFrame even if DB doesn't have it yet
+    if 'tracker_id' not in df.columns:
+        df['tracker_id'] = pd.NA
+
     return df
+
 
 def find_ball_possession(detections_df, possession_threshold=50):
     """
@@ -65,22 +84,78 @@ def find_ball_possession(detections_df, possession_threshold=50):
     
     return detections_df
 
-def find_dribbles(detections_with_possession_df):
-    """Identifies dribble events from possession data."""
+
+def find_dribbles(detections_with_possession_df, min_sequence_frames=6, y_movement_thresh=3):
+    """Identifies dribble events from possession data.
+
+    This function tries to work even when explicit tracker_id values are not present.
+    If tracker_id exists, grouping is done by tracker_id. Otherwise a simple spatial-temporal
+    heuristic groups player detections into temporary buckets based on proximity.
+    """
     print("INFO: Identifying dribble events.")
     dribble_events = []
-    
+
     # Filter for player detections that have the ball
     player_possessions = detections_with_possession_df[
         (detections_with_possession_df['class_name'] == 'person') &
         (detections_with_possession_df['has_ball'] == True)
-    ].sort_values(by=['tracker_id', 'frame_number'])
+    ].sort_values(by=['frame_number'])
 
     print(f"DEBUG: Found {len(player_possessions)} total possession frames to analyze for dribbles.")
-    
-    # This is the section currently under development.
-    # The next step is to group by tracker_id and find continuous frame sequences.
 
+    if player_possessions.empty:
+        return dribble_events
+
+    # If tracker_id is available and not all-NA, group by it
+    if 'tracker_id' in player_possessions.columns and player_possessions['tracker_id'].notna().any():
+        groups = player_possessions.groupby('tracker_id')
+    else:
+        # Create a coarse spatial bin 'person_key' to approximate identity across nearby frames
+        # This is a fallback heuristic when no tracking is available.
+        bp = player_possessions.copy()
+        bp['person_key'] = ((bp['x_center'] // 50).astype(int).astype(str) + '_' + (bp['y_center'] // 50).astype(int).astype(str))
+        groups = bp.groupby('person_key')
+
+    for key, group in groups:
+        group = group.sort_values('frame_number')
+        # Find contiguous sequences of frames (allow small gaps of up to 2 frames)
+        seq = []
+        last_frame = None
+        sequences = []
+        for _, row in group.iterrows():
+            fn = int(row['frame_number'])
+            if last_frame is None or fn - last_frame <= 2:
+                seq.append(row)
+            else:
+                sequences.append(pd.DataFrame(seq))
+                seq = [row]
+            last_frame = fn
+        if seq:
+            sequences.append(pd.DataFrame(seq))
+
+        # Analyze each contiguous sequence for dribble-like vertical movement
+        for s in sequences:
+            if len(s) < min_sequence_frames:
+                continue
+            # Examine ball y_center changes (we need ball positions). We approximate by using ball_distance and player y
+            # If there is significant vertical movement of the ball relative to the player across the sequence, mark dribble
+            y_vals = s['y_center'].astype(float)
+            y_std = y_vals.diff().abs().median()
+            if pd.isna(y_std):
+                continue
+            if y_std >= y_movement_thresh:
+                # Create a dribble event at the start timestamp
+                event = {
+                    'game_id': s.iloc[0]['game_id'],
+                    'player': str(key),
+                    'event_type': 'dribble',
+                    'shot_result': None,
+                    'timestamp_ms': int(s.iloc[0]['timestamp_ms']),
+                    'details_json': str({'frames': list(s['frame_number'])})
+                }
+                dribble_events.append(event)
+
+    print(f"INFO: Identified {len(dribble_events)} dribble events.")
     return dribble_events
 
 
@@ -104,7 +179,18 @@ def main(game_id, db_path):
 
         # Step 3: Identify Dribble Events
         dribbles = find_dribbles(detections_with_possession_df)
-        print(f"INFO: Identified {len(dribbles)} dribble events (logic in development).")
+        print(f"INFO: Identified {len(dribbles)} dribble events (heuristic).")
+
+        # (Optional) Persist dribble events to the events table
+        if dribbles:
+            cur = conn.cursor()
+            for ev in dribbles:
+                cur.execute(
+                    "INSERT INTO events (game_id, player, event_type, shot_result, timestamp_ms, details_json) VALUES (?, ?, ?, ?, ?, ?)",
+                    (ev['game_id'], ev['player'], ev['event_type'], ev['shot_result'], ev['timestamp_ms'], ev['details_json'])
+                )
+            conn.commit()
+            print(f"INFO: Persisted {len(dribbles)} dribble events to the database.")
 
         print("INFO: Successfully completed event generation pipeline.")
         
