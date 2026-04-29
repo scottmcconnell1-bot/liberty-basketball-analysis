@@ -29,6 +29,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def index(filename=None):
     return render_template("film-tool-v2026-04-23-Tagger_Finished.html", filename=filename)
 
+
+@app.route("/schedule")
+def schedule():
+    """Render the simple schedule UI for coaches."""
+    return render_template("schedule.html")
+
 # --- Database Functions ---
 def get_db():
     """Connect to the application's database."""

@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Schedule</title>
+    <style>
+      body { font-family: sans-serif; margin: 20px; }
+      select, input, button, textarea { font-size: 14px; margin: 4px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; }
+      #message { margin: 8px 0; height: 1.2em; }
+      .opponent.cancelled { color: #777; text-decoration: line-through; }
+      tr.cancelled td { color: #777; }
+    </style>
+  </head>
+  <body>
+    <h1>Schedule</h1>
+
+    <div id="message" aria-live="polite"></div>
+
+    <label for="season-select">Season:</label>
+    <select id="season-select"></select>
+
+    <div id="controls">
+      <h3>Add Game</h3>
+      <form id="add-game-form">
+        <input name="program_name" placeholder="program (e.g. Liberty)" />
+        <input name="game_date" type="date" required />
+        <input name="game_time" type="time" required />
+        <label for="add-level" style="display:none">Level</label>
+        <select id="add-level" name="level">
+          <option value="varsity" selected>varsity</option>
+          <option value="jv">jv</option>
+          <option value="jr_high">jr_high</option>
+        </select>
+        <label for="add-gender" style="display:none">Gender</label>
+        <select id="add-gender" name="gender">
+          <option value="boys" selected>boys</option>
+          <option value="girls">girls</option>
+        </select>
+        <input name="location_type" placeholder="location (home/away/neutral)" />
+        <input name="tournament_name" placeholder="tournament (optional)" />
+        <label for="add-status" style="display:none">Status</label>
+        <select id="add-status" name="status">
+          <option value="scheduled" selected>scheduled</option>
+          <option value="completed">completed</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+        <input name="opponent_name" placeholder="opponent" />
+        <input name="notes" placeholder="notes (optional)" />
+        <button type="submit">Add</button>
+      </form>
+    </div>
+
+    <table id="schedule-table">
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Level</th><th>Gender</th><th>Opponent</th><th>Location</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      let selectedSeasonId = null;
+
+      function showMessage(text, isError){
+        const el = document.getElementById('message');
+        el.textContent = text || '';
+        el.style.color = isError ? 'red' : 'green';
+        if(text){
+          setTimeout(()=>{ if(el.textContent===text) el.textContent=''; }, 4000);
+        }
+      }
+
+      async function loadSeasons(){
+        const res = await fetch('/api/seasons');
+        const seasons = await res.json();
+        const sel = document.getElementById('season-select');
+        sel.innerHTML = '';
+        seasons.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name;
+          sel.appendChild(opt);
+        });
+        if(seasons.length>0){
+          sel.value = seasons[0].id;
+          selectedSeasonId = seasons[0].id;
+          loadSchedule();
+        }
+        sel.addEventListener('change', () => {
+          selectedSeasonId = sel.value;
+          loadSchedule();
+        });
+      }
+
+      function displayLabel(kind, value){
+        if(!value) return '';
+        const v = String(value).toLowerCase();
+        if(kind==='level'){
+          if(v==='jr_high') return 'Jr High';
+          if(v==='jv') return 'JV';
+          return v.charAt(0).toUpperCase() + v.slice(1);
+        }
+        if(kind==='gender'){
+          return v.charAt(0).toUpperCase() + v.slice(1);
+        }
+        if(kind==='status'){
+          return v.charAt(0).toUpperCase() + v.slice(1);
+        }
+        return value;
+      }
+
+      async function loadSchedule(){
+        if(!selectedSeasonId) return;
+        const res = await fetch('/api/scheduled_games?season_id='+encodeURIComponent(selectedSeasonId));
+        const games = await res.json();
+        const tbody = document.querySelector('#schedule-table tbody');
+        tbody.innerHTML = '';
+        games.forEach(g => {
+          const tr = document.createElement('tr');
+          // store raw values on the row for editing
+          tr.dataset.level = (g.level||'').toLowerCase();
+          tr.dataset.gender = (g.gender||'').toLowerCase();
+          tr.dataset.status = (g.status||'scheduled').toLowerCase();
+          tr.dataset.program_name = (g.program_name||'');
+          tr.dataset.location_type = (g.location_type||'');
+          tr.dataset.tournament_name = (g.tournament_name||'');
+          tr.dataset.opponent_name = (g.opponent_name||'');
+          tr.dataset.notes = (g.notes||'');
+          tr.dataset.game_date = (g.game_date||'');
+          tr.dataset.game_time = (g.game_time||'');
+          // simplify status display: omit scheduled
+          const statusLabel = (tr.dataset.status==='scheduled' || !tr.dataset.status) ? '' : displayLabel('status', tr.dataset.status);
+          const isCancelled = tr.dataset.status==='cancelled';
+          if(isCancelled) tr.classList.add('cancelled'); else tr.classList.remove('cancelled');
+          tr.innerHTML = `
+            <td>${g.game_date||''}</td>
+            <td>${g.game_time||''}</td>
+            <td>${displayLabel('level', tr.dataset.level)}</td>
+            <td>${displayLabel('gender', tr.dataset.gender)}</td>
+            <td class="opponent ${isCancelled? 'cancelled' : ''}">${g.opponent_name||''}</td>
+            <td>${g.location_type||''}</td>
+            <td class="status">${statusLabel}</td>
+            <td>${g.notes||''}</td>
+            <td>
+              <button data-id="${g.id}" class="edit">Edit</button>
+              <button data-id="${g.id}" class="delete">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.getElementById('add-game-form').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        if(!selectedSeasonId) { showMessage('Select a season first', true); return; }
+        const form = ev.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        const data = Object.fromEntries(new FormData(form));
+        data.season_id = selectedSeasonId;
+        try{
+          const res = await fetch('/api/scheduled_games', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+          if(res.status===201){
+            form.reset();
+            showMessage('Saved');
+            await loadSchedule();
+          } else {
+            const err = await res.json().catch(()=>({message:'Unknown'}));
+            showMessage('Error: '+(err.message||res.statusText), true);
+          }
+        }catch(e){
+          showMessage('Error: '+e.message, true);
+        }finally{
+          submitBtn.disabled = false;
+        }
+      });
+
+      document.addEventListener('click', async (ev)=>{
+        if(ev.target.matches('button.delete')){
+          const id = ev.target.dataset.id;
+          if(!confirm('Delete this scheduled game?')) return;
+          const btn = ev.target;
+          btn.disabled = true;
+          try{
+            const res = await fetch('/api/scheduled_games/'+id, { method: 'DELETE' });
+            if(res.ok){ showMessage('Deleted'); await loadSchedule(); } else { showMessage('Delete failed', true); }
+          }catch(e){ showMessage('Error: '+e.message, true); }
+          finally{ if(btn) btn.disabled = false; }
+        } else if(ev.target.matches('button.edit')){
+          const id = ev.target.dataset.id;
+          const row = ev.target.closest('tr');
+          // current values
+          const curDate = row.children[0].textContent||'';
+          const curTime = row.children[1].textContent||'';
+          const curLevel = row.children[2].textContent||'';
+          const curGender = row.children[3].textContent||'';
+          const curOpponent = row.children[4].textContent||'';
+          const curStatus = row.children[5].textContent||'scheduled';
+          const curNotes = row.children[6].textContent||'';
+          // turn row into editable inputs/selects
+          row.innerHTML = `
+            <td><input name="game_date" type="date" value="${curDate}" /></td>
+            <td><input name="game_time" type="time" value="${curTime}" /></td>
+            <td>
+              <select name="level">
+                <option value="varsity" ${curLevel==='varsity'?'selected':''}>varsity</option>
+                <option value="jv" ${curLevel==='jv'?'selected':''}>jv</option>
+                <option value="jr_high" ${curLevel==='jr_high'?'selected':''}>jr_high</option>
+              </select>
+            </td>
+            <td>
+              <select name="gender">
+                <option value="boys" ${curGender==='boys'?'selected':''}>boys</option>
+                <option value="girls" ${curGender==='girls'?'selected':''}>girls</option>
+              </select>
+            </td>
+            <td><input name="opponent_name" value="${curOpponent}" /></td>
+            <td>
+              <select name="status">
+                <option value="scheduled" ${curStatus==='scheduled'?'selected':''}>scheduled</option>
+                <option value="completed" ${curStatus==='completed'?'selected':''}>completed</option>
+                <option value="cancelled" ${curStatus==='cancelled'?'selected':''}>cancelled</option>
+              </select>
+            </td>
+            <td><input name="notes" value="${curNotes}" /></td>
+            <td>
+              <button data-id="${id}" class="save">Save</button>
+              <button data-id="${id}" class="cancel">Cancel</button>
+            </td>
+          `;
+        } else if(ev.target.matches('button.save')){
+          const id = ev.target.dataset.id;
+          const btn = ev.target;
+          btn.disabled = true;
+          const row = ev.target.closest('tr');
+          const inputs = row.querySelectorAll('input, select');
+          const payload = {};
+          inputs.forEach(i => { if(i.name) payload[i.name]=i.value; });
+          try{
+            const res = await fetch('/api/scheduled_games/'+id, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+            if(res.ok){ showMessage('Saved'); await loadSchedule(); } else { const err = await res.json().catch(()=>({message:'Unknown'})); showMessage('Error: '+(err.message||res.statusText), true); }
+          }catch(e){ showMessage('Error: '+e.message, true); }
+          finally{ btn.disabled = false; }
+        } else if(ev.target.matches('button.cancel')){
+          loadSchedule();
+        }
+      });
+
+      loadSeasons();
+    </script>
+  </body>
+</html>
