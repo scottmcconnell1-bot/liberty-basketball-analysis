@@ -180,6 +180,8 @@
     <a href="/" class="brand">🏀 Liberty Basketball</a>
     <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
     <a href="/schedule" {% if request.endpoint == 'schedule' %}class="active"{% endif %}>Schedule</a>
+    <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>
+    <a href="/status" {% if request.endpoint == 'status_page' %}class="active"{% endif %}>Status</a>
     <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
   </nav>
   <main>

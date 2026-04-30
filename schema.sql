@@ -166,3 +166,18 @@ CREATE TABLE IF NOT EXISTS practices (
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ── Video library ─────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS videos (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    original_filename TEXT NOT NULL,
+    stored_filename   TEXT NOT NULL UNIQUE,
+    file_path         TEXT NOT NULL,
+    file_size_bytes   INTEGER,
+    opponent          TEXT,
+    game_id           TEXT,
+    upload_timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_duplicate      INTEGER NOT NULL DEFAULT 0,
+    duplicate_of_id   INTEGER REFERENCES videos(id)
+);

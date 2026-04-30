@@ -44,8 +44,24 @@ def init_db():
 
 
 def _ensure_migration_columns(db):
-    """Add new columns to existing tables without wiping data."""
-    migrations = [
+    """Add new columns/tables to existing databases without wiping data."""
+    # ── New tables (idempotent) ──────────────────────────────
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS videos (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            original_filename TEXT NOT NULL,
+            stored_filename   TEXT NOT NULL UNIQUE,
+            file_path         TEXT NOT NULL,
+            file_size_bytes   INTEGER,
+            opponent          TEXT,
+            game_id           TEXT,
+            upload_timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            is_duplicate      INTEGER NOT NULL DEFAULT 0,
+            duplicate_of_id   INTEGER REFERENCES videos(id)
+        );
+    """)
+    # ── New columns on existing tables ──────────────────────
+    col_migrations = [
         ("events", "source_video",   "ALTER TABLE events ADD COLUMN source_video TEXT"),
         ("events", "source_frame",   "ALTER TABLE events ADD COLUMN source_frame INTEGER"),
         ("events", "human_verified", "ALTER TABLE events ADD COLUMN human_verified INTEGER NOT NULL DEFAULT 0"),
@@ -57,7 +73,7 @@ def _ensure_migration_columns(db):
             "SELECT type, tbl_name, name FROM sqlite_master WHERE type='table'"
         ).fetchall()
     }
-    for table, col, sql in migrations:
+    for table, col, sql in col_migrations:
         try:
             cols = [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
             if col not in cols:
@@ -78,6 +94,10 @@ def init_db_command():
 def ensure_db():
     if not os.path.exists(current_app.config["DATABASE"]):
         init_db()
+    else:
+        # Run migrations on every startup to pick up new tables/columns
+        db = get_db()
+        _ensure_migration_columns(db)
 
 
 # ── Page routes ───────────────────────────────────────────
@@ -90,6 +110,11 @@ def index():
 @app.route("/schedule")
 def schedule():
     return render_template("schedule.html")
+
+
+@app.route("/videos")
+def videos_page():
+    return render_template("videos.html")
 
 
 @app.route("/film")
@@ -459,23 +484,92 @@ def upload_video():
     return jsonify({"status": "uploaded", "filename": filename})
 
 
+@app.route("/api/videos")
+def api_videos():
+    """Return all videos from the DB with their analysis status."""
+    db = get_db()
+    rows = db.execute("""
+        SELECT v.*, ar.status as analysis_status, ar.error_message,
+               (SELECT COUNT(*) FROM detections d WHERE d.game_id = v.game_id) as detection_count,
+               (SELECT COUNT(*) FROM events e WHERE e.game_id = v.game_id) as event_count
+        FROM videos v
+        LEFT JOIN analysis_runs ar ON ar.game_id = v.game_id
+                                   AND ar.id = (SELECT MAX(id) FROM analysis_runs WHERE game_id = v.game_id)
+        ORDER BY v.id DESC
+    """).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/check_duplicate")
+def api_check_duplicate():
+    """Check if a filename has been uploaded before."""
+    original_filename = request.args.get("filename", "")
+    if not original_filename:
+        return jsonify({"is_duplicate": False})
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, stored_filename, opponent, upload_timestamp FROM videos WHERE original_filename=? ORDER BY id DESC",
+        (secure_filename(original_filename),),
+    ).fetchall()
+    if rows:
+        return jsonify({
+            "is_duplicate": True,
+            "previous_uploads": [dict(r) for r in rows],
+        })
+    return jsonify({"is_duplicate": False})
+
+
 @app.route("/upload", methods=["POST"])
 def upload_and_analyze():
     """Handle the film tool's 'Upload and Analyze' form (posts to /upload)."""
+    import sys
+    from datetime import datetime
+
     if "video" not in request.files:
         return "No video file provided", 400
     f = request.files["video"]
     if not f.filename:
         return "Empty filename", 400
+
     opponent = request.form.get("opponent", "unknown").strip() or "unknown"
-    filename = secure_filename(f.filename)
-    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+    original_filename = secure_filename(f.filename)
+    stem, ext = os.path.splitext(original_filename)
+
+    # ── Timestamped stored filename ───────────────────────────
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    stored_filename = f"{stem}_{ts}{ext}"
+    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
     f.save(dest)
+    file_size = os.path.getsize(dest)
 
-    stem = os.path.splitext(filename)[0]
-    game_id = f"{opponent.lower().replace(' ', '_')}_{stem}"
-
+    # ── Duplicate detection ───────────────────────────────────
     db = get_db()
+    prior = db.execute(
+        "SELECT id, stored_filename, upload_timestamp FROM videos WHERE original_filename=? ORDER BY id DESC LIMIT 1",
+        (original_filename,),
+    ).fetchone()
+    is_dup = prior is not None
+    dup_of_id = prior["id"] if prior else None
+    dup_msg = ""
+    if is_dup:
+        dup_msg = (
+            f"<p style='background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;"
+            f"padding:10px 14px;margin-top:12px;'>⚠️ <strong>Duplicate detected</strong> — "
+            f"<em>{original_filename}</em> was previously uploaded as "
+            f"<code>{prior['stored_filename']}</code> on {prior['upload_timestamp']}. "
+            f"This upload has been saved with a new timestamp.</p>"
+        )
+
+    # ── game_id & DB records ─────────────────────────────────
+    game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
+
+    db.execute(
+        """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
+                               opponent, game_id, is_duplicate, duplicate_of_id)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (original_filename, stored_filename, dest, file_size,
+         opponent, game_id, int(is_dup), dup_of_id),
+    )
     run_cur = db.execute(
         "INSERT INTO analysis_runs (game_id, video_path, status) VALUES (?,?,?)",
         (game_id, dest, "pending"),
@@ -483,18 +577,15 @@ def upload_and_analyze():
     run_id = run_cur.lastrowid
     db.commit()
 
-    # Check AI deps before launching subprocess
+    # ── Launch AI subprocess ──────────────────────────────────
     ai_available = True
-    missing = []
     for mod in ("cv2", "ultralytics"):
         try:
             __import__(mod)
         except ImportError:
             ai_available = False
-            missing.append("opencv-python" if mod == "cv2" else mod)
 
     if ai_available:
-        import subprocess, sys
         subprocess.Popen(
             [sys.executable, "ai_analyzer.py",
              current_app.config["DATABASE"], dest, game_id],
@@ -502,36 +593,38 @@ def upload_and_analyze():
         )
         ai_msg = "✅ AI analysis running in background — check <a href='/status'>Status page</a> for progress."
     else:
-        err = f"Missing packages: {', '.join(missing)}. Run: pip install {' '.join(missing)}"
         db.execute(
             "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
-            (err, run_id),
+            ("Missing AI packages (cv2/ultralytics)", run_id),
         )
         db.commit()
-        ai_msg = (
-            f"⚠️ <strong>AI analysis unavailable</strong> — {err}.<br>"
-            "Manual tagging in the film tool still works fine."
-        )
+        ai_msg = "⚠️ AI analysis unavailable — missing opencv-python or ultralytics."
 
     return f"""<!DOCTYPE html>
     <html><head>
-    <meta http-equiv="refresh" content="4;url=/film/{filename}">
+    <meta http-equiv="refresh" content="4;url=/film/{stored_filename}">
     <style>
-      body{{font-family:sans-serif;padding:40px;background:#f7f6f2;max-width:600px;margin:auto;}}
+      body{{font-family:sans-serif;padding:40px;background:#f7f6f2;max-width:640px;margin:auto;}}
       .card{{background:#fff;border:1px solid #e2e0da;border-radius:8px;padding:28px;margin-top:24px;}}
       code{{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}}
+      .nav a{{margin-right:16px;color:#01696f;text-decoration:none;font-weight:500;}}
     </style>
     </head><body>
+    <div class="nav"><a href="/">⬅ Dashboard</a><a href="/videos">📹 All Videos</a><a href="/status">📊 Status</a></div>
     <div class="card">
       <h2>📹 Upload complete</h2>
-      <p><strong>File:</strong> {filename}</p>
+      <p><strong>Original filename:</strong> {original_filename}</p>
+      <p><strong>Stored as:</strong> <code>{stored_filename}</code></p>
+      <p><strong>Opponent:</strong> {opponent}</p>
       <p><strong>Game ID:</strong> <code>{game_id}</code></p>
+      <p><strong>File size:</strong> {file_size/1_000_000:.1f} MB</p>
+      {dup_msg}
       <p style="margin-top:16px;">{ai_msg}</p>
       <p style="margin-top:20px;color:#6b7280;font-size:.9em;">
         Redirecting to film tool in 4 seconds…
-        <a href="/film/{filename}">click here</a> to go now.
+        <a href="/film/{stored_filename}">click here</a> to go now.
       </p>
-      <p><a href="/status">📊 View Analysis Status</a></p>
+      <p><a href="/videos">📹 View all uploaded videos</a> &nbsp;|&nbsp; <a href="/status">📊 Analysis status</a></p>
     </div>
     </body></html>
     """
