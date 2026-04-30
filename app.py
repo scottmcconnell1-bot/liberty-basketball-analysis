@@ -421,7 +421,7 @@ def get_analysis_status(game_id):
         (game_id,),
     ).fetchone()
     if row is None:
-        return jsonify({"status": "unknown"}), 404
+        return jsonify({"status": "not_started"})
     return jsonify(dict(row))
 
 
@@ -447,6 +447,56 @@ def upload_video():
     dest = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
     f.save(dest)
     return jsonify({"status": "uploaded", "filename": filename})
+
+
+@app.route("/upload", methods=["POST"])
+def upload_and_analyze():
+    """Handle the film tool's 'Upload and Analyze' form (posts to /upload)."""
+    if "video" not in request.files:
+        return "No video file provided", 400
+    f = request.files["video"]
+    if not f.filename:
+        return "Empty filename", 400
+    opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+    filename = secure_filename(f.filename)
+    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+    f.save(dest)
+
+    # Build a game_id from opponent + filename stem
+    stem = os.path.splitext(filename)[0]
+    game_id = f"{opponent.lower().replace(' ','_')}_{stem}"
+
+    db = get_db()
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, video_path, status)
+           VALUES (?,?,?)""",
+        (game_id, dest, "pending"),
+    )
+    db.commit()
+
+    # Try to kick off AI analysis in a subprocess (needs ultralytics + opencv)
+    try:
+        import subprocess, sys
+        subprocess.Popen(
+            [sys.executable, "ai_analyzer.py",
+             current_app.config["DATABASE"], dest, game_id],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+        status_msg = "Analysis started in background."
+    except Exception as e:
+        status_msg = f"Video uploaded (AI pipeline not available: {e}). Manual tagging is still available."
+
+    return f"""
+    <html><head>
+    <meta http-equiv="refresh" content="3;url=/film/{filename}">
+    <style>body{{font-family:sans-serif;padding:40px;background:#f7f6f2;}}</style>
+    </head><body>
+    <h2>✅ Upload complete</h2>
+    <p><strong>Game ID:</strong> {game_id}</p>
+    <p>{status_msg}</p>
+    <p>Redirecting to film tool in 3 seconds… <a href="/film/{filename}">click here</a> if not redirected.</p>
+    </body></html>
+    """
 
 
 if __name__ == "__main__":
