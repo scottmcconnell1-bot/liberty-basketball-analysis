@@ -4,6 +4,7 @@ import cv2
 from ultralytics import YOLO
 from event_generator import main as generate_events
 import sqlite3
+import sys
 
 def run_ai_analysis(db_path, video_path, game_id):
     frame_number = 0  # start at 0 so it always exists
@@ -84,3 +85,42 @@ def run_ai_analysis(db_path, video_path, game_id):
             print(f"[AI] Tracker assigner failed or not available: {e}")
         # Generate events from detections (will use tracker_id if present)
         generate_events(game_id, db_path)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 4:
+        print("Usage: ai_analyzer.py <db_path> <video_path> <game_id>")
+        sys.exit(1)
+
+    db_path, video_path, game_id = sys.argv[1], sys.argv[2], sys.argv[3]
+
+    # Mark as running
+    _conn = sqlite3.connect(db_path)
+    _conn.execute(
+        "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE game_id=? AND status='pending'",
+        (game_id,)
+    )
+    _conn.commit()
+    _conn.close()
+
+    try:
+        run_ai_analysis(db_path, video_path, game_id)
+        # Mark as completed
+        _conn = sqlite3.connect(db_path)
+        _conn.execute(
+            "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE game_id=?",
+            (game_id,)
+        )
+        _conn.commit()
+        _conn.close()
+        print(f"[AI] analysis_runs updated to 'completed' for {game_id}")
+    except Exception as e:
+        _conn = sqlite3.connect(db_path)
+        _conn.execute(
+            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE game_id=?",
+            (str(e), game_id)
+        )
+        _conn.commit()
+        _conn.close()
+        print(f"[AI] analysis_runs updated to 'failed' for {game_id}: {e}")
+        sys.exit(1)
