@@ -462,41 +462,133 @@ def upload_and_analyze():
     dest = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
     f.save(dest)
 
-    # Build a game_id from opponent + filename stem
     stem = os.path.splitext(filename)[0]
-    game_id = f"{opponent.lower().replace(' ','_')}_{stem}"
+    game_id = f"{opponent.lower().replace(' ', '_')}_{stem}"
 
     db = get_db()
-    db.execute(
-        """INSERT INTO analysis_runs (game_id, video_path, status)
-           VALUES (?,?,?)""",
+    run_cur = db.execute(
+        "INSERT INTO analysis_runs (game_id, video_path, status) VALUES (?,?,?)",
         (game_id, dest, "pending"),
     )
+    run_id = run_cur.lastrowid
     db.commit()
 
-    # Try to kick off AI analysis in a subprocess (needs ultralytics + opencv)
-    try:
+    # Check AI deps before launching subprocess
+    ai_available = True
+    missing = []
+    for mod in ("cv2", "ultralytics"):
+        try:
+            __import__(mod)
+        except ImportError:
+            ai_available = False
+            missing.append("opencv-python" if mod == "cv2" else mod)
+
+    if ai_available:
         import subprocess, sys
         subprocess.Popen(
             [sys.executable, "ai_analyzer.py",
              current_app.config["DATABASE"], dest, game_id],
             cwd=os.path.dirname(os.path.abspath(__file__)),
         )
-        status_msg = "Analysis started in background."
-    except Exception as e:
-        status_msg = f"Video uploaded (AI pipeline not available: {e}). Manual tagging is still available."
+        ai_msg = "✅ AI analysis running in background — check <a href='/status'>Status page</a> for progress."
+    else:
+        err = f"Missing packages: {', '.join(missing)}. Run: pip install {' '.join(missing)}"
+        db.execute(
+            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
+            (err, run_id),
+        )
+        db.commit()
+        ai_msg = (
+            f"⚠️ <strong>AI analysis unavailable</strong> — {err}.<br>"
+            "Manual tagging in the film tool still works fine."
+        )
 
-    return f"""
+    return f"""<!DOCTYPE html>
     <html><head>
-    <meta http-equiv="refresh" content="3;url=/film/{filename}">
-    <style>body{{font-family:sans-serif;padding:40px;background:#f7f6f2;}}</style>
+    <meta http-equiv="refresh" content="4;url=/film/{filename}">
+    <style>
+      body{{font-family:sans-serif;padding:40px;background:#f7f6f2;max-width:600px;margin:auto;}}
+      .card{{background:#fff;border:1px solid #e2e0da;border-radius:8px;padding:28px;margin-top:24px;}}
+      code{{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}}
+    </style>
     </head><body>
-    <h2>✅ Upload complete</h2>
-    <p><strong>Game ID:</strong> {game_id}</p>
-    <p>{status_msg}</p>
-    <p>Redirecting to film tool in 3 seconds… <a href="/film/{filename}">click here</a> if not redirected.</p>
+    <div class="card">
+      <h2>📹 Upload complete</h2>
+      <p><strong>File:</strong> {filename}</p>
+      <p><strong>Game ID:</strong> <code>{game_id}</code></p>
+      <p style="margin-top:16px;">{ai_msg}</p>
+      <p style="margin-top:20px;color:#6b7280;font-size:.9em;">
+        Redirecting to film tool in 4 seconds…
+        <a href="/film/{filename}">click here</a> to go now.
+      </p>
+      <p><a href="/status">📊 View Analysis Status</a></p>
+    </div>
     </body></html>
     """
+
+
+@app.route("/status")
+def status_page():
+    """Live status page showing all analysis runs."""
+    db = get_db()
+    runs = db.execute(
+        "SELECT * FROM analysis_runs ORDER BY id DESC"
+    ).fetchall()
+    rows_html = ""
+    for r in runs:
+        r = dict(r)
+        status = r["status"]
+        color = {"pending": "#f59e0b", "running": "#3b82f6",
+                 "completed": "#059669", "failed": "#dc2626"}.get(status, "#6b7280")
+        err = f"<br><small style='color:#dc2626'>{r['error_message']}</small>" if r.get("error_message") else ""
+        rows_html += f"""<tr>
+          <td>{r['id']}</td>
+          <td><code>{r['game_id']}</code></td>
+          <td>{r['video_path']}</td>
+          <td><span style="color:{color};font-weight:600">{status}</span>{err}</td>
+          <td>{r['started_at'] or '–'}</td>
+          <td>{r['completed_at'] or '–'}</td>
+        </tr>"""
+
+    if not rows_html:
+        rows_html = "<tr><td colspan='6' style='color:#6b7280;padding:20px'>No uploads yet.</td></tr>"
+
+    # Count detections and events per game
+    det_counts = {r[0]: r[1] for r in db.execute(
+        "SELECT game_id, COUNT(*) FROM detections GROUP BY game_id"
+    ).fetchall()}
+    evt_counts = {r[0]: r[1] for r in db.execute(
+        "SELECT game_id, COUNT(*) FROM events GROUP BY game_id"
+    ).fetchall()}
+
+    return f"""<!DOCTYPE html>
+    <html><head>
+    <title>Analysis Status – Liberty Basketball</title>
+    <meta http-equiv="refresh" content="5">
+    <style>
+      body{{font-family:sans-serif;padding:32px;background:#f7f6f2;}}
+      h2{{margin-bottom:6px;}} .sub{{color:#6b7280;font-size:.85rem;margin-bottom:20px;}}
+      table{{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);}}
+      th{{background:#01696f;color:#fff;padding:10px 14px;text-align:left;font-size:.8rem;text-transform:uppercase;}}
+      td{{padding:10px 14px;border-bottom:1px solid #e2e0da;font-size:.875rem;}}
+      tr:last-child td{{border:none;}} code{{background:#f3f4f6;padding:1px 5px;border-radius:4px;}}
+      .nav a{{margin-right:16px;color:#01696f;text-decoration:none;font-weight:500;}}
+    </style>
+    </head><body>
+    <div class="nav"><a href="/">Dashboard</a><a href="/schedule">Schedule</a><a href="/film">Film Tool</a></div>
+    <h2 style="margin-top:20px;">📊 Analysis Status</h2>
+    <p class="sub">Auto-refreshes every 5 seconds.</p>
+    <table>
+      <thead><tr><th>#</th><th>Game ID</th><th>Video</th><th>Status</th><th>Started</th><th>Completed</th></tr></thead>
+      <tbody>{rows_html}</tbody>
+    </table>
+    <h3 style="margin-top:28px;">Detections &amp; Events per Game</h3>
+    <table>
+      <thead><tr><th>Game ID</th><th>Detections</th><th>Events Tagged</th></tr></thead>
+      <tbody>{''.join(f"<tr><td><code>{g}</code></td><td>{det_counts.get(g,0)}</td><td>{evt_counts.get(g,0)}</td></tr>" for g in set(list(det_counts)+list(evt_counts))) or "<tr><td colspan='3' style='color:#6b7280;padding:20px'>No data yet.</td></tr>"}
+      </tbody>
+    </table>
+    </body></html>"""
 
 
 if __name__ == "__main__":
