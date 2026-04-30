@@ -95,7 +95,17 @@ def schedule():
 @app.route("/film")
 @app.route("/film/<filename>")
 def film(filename=None):
-    return render_template("film_tool.html", filename=filename)
+    game_id = None
+    if filename:
+        db = get_db()
+        # Find the most recent analysis run for this video file
+        row = db.execute(
+            "SELECT game_id FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
+            (f"%{filename}",),
+        ).fetchone()
+        if row:
+            game_id = row["game_id"]
+    return render_template("film_tool.html", filename=filename, game_id=game_id)
 
 
 @app.route("/uploads/<filename>")
