@@ -1,0 +1,39 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Uploaded videos (mounted as a volume at runtime)
+uploads/*.mp4
+uploads/*.avi
+uploads/*.mov
+uploads/*.mkv
+
+# SQLite DB (mounted as a volume at runtime)
+film_analysis.db
+
+# YOLO model weights (downloaded into image at build time)
+# yolov8n.pt  ← intentionally NOT excluded so the COPY bakes it in
+
+# Playwright / test artifacts
+tests/__pycache__/
+*.log

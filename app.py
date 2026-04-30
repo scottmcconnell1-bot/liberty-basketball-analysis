@@ -519,6 +519,61 @@ def api_check_duplicate():
     return jsonify({"is_duplicate": False})
 
 
+@app.route("/api/videos/<int:vid_id>", methods=["DELETE"])
+def delete_video(vid_id):
+    """Delete a video record, its file on disk, and all related analysis data."""
+    db = get_db()
+    row = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+
+    game_id = row["game_id"]
+    file_path = row["file_path"]
+
+    # Delete file from disk
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass  # Don't fail if file already gone
+
+    # Delete all related analysis data
+    db.execute("DELETE FROM events WHERE game_id=?", (game_id,))
+    db.execute("DELETE FROM detections WHERE game_id=?", (game_id,))
+    db.execute("DELETE FROM analysis_runs WHERE game_id=?", (game_id,))
+    db.execute("DELETE FROM videos WHERE id=?", (vid_id,))
+    db.commit()
+
+    return jsonify({"success": True, "deleted_game_id": game_id})
+
+
+@app.route("/api/admin/reset", methods=["POST"])
+def admin_reset():
+    """Wipe all video uploads, analysis data, and uploaded files. Fresh start."""
+    db = get_db()
+
+    # Collect file paths before deleting
+    rows = db.execute("SELECT file_path FROM videos").fetchall()
+    for row in rows:
+        fp = row["file_path"]
+        if fp and os.path.exists(fp):
+            try:
+                os.remove(fp)
+            except OSError:
+                pass
+
+    # Clear all analysis/video data (preserve seasons, games, players)
+    db.executescript("""
+        DELETE FROM events;
+        DELETE FROM detections;
+        DELETE FROM analysis_runs;
+        DELETE FROM videos;
+    """)
+    db.commit()
+
+    return jsonify({"success": True, "message": "All video data cleared."})
+
+
 @app.route("/upload", methods=["POST"])
 def upload_and_analyze():
     """Handle the film tool's 'Upload and Analyze' form (posts to /upload)."""

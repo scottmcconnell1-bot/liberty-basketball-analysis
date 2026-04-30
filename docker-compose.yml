@@ -1,0 +1,49 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist uploaded videos on the host
+      - ./uploads:/app/uploads
+      # Persist the SQLite database on the host
+      - ./film_analysis.db:/app/film_analysis.db
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+# ── Usage ────────────────────────────────────────────────────────────────
+#
+#   Build and start:
+#     docker compose up --build
+#
+#   Start in background:
+#     docker compose up -d --build
+#
+#   View logs:
+#     docker compose logs -f
+#
+#   Stop:
+#     docker compose down
+#
+#   Fresh start (wipe DB + uploads from inside the running container):
+#     docker compose exec web python -c "
+#       import sqlite3, os, glob
+#       for f in glob.glob('uploads/*'): os.remove(f)
+#       db = sqlite3.connect('film_analysis.db')
+#       db.executescript('DELETE FROM videos; DELETE FROM events; DELETE FROM detections; DELETE FROM analysis_runs;')
+#       db.commit(); db.close()
+#       print('Done')
+#     "
+#
+#   Run tests inside the container:
+#     docker compose exec web python -m pytest tests/ -v
+#
+# ── Notes ────────────────────────────────────────────────────────────────
+#
+#   - uploads/ and film_analysis.db are bind-mounted so they survive
+#     container rebuilds.
+#   - For GPU support, add the nvidia runtime and change the torch install
+#     in the Dockerfile to the CUDA build.
+#   - The YOLO model (yolov8n.pt) is baked into the image at build time.
