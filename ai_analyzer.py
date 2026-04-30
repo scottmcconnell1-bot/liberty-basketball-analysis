@@ -75,4 +75,12 @@ def run_ai_analysis(db_path, video_path, game_id):
         if 'db' in locals():
             db.close()
         print(f"[AI] Finished analysis for {game_id}. Processed {frame_number} frames.")
+        # Attempt to assign lightweight tracker IDs before event generation
+        try:
+            import tracker_assigner
+            print("[AI] Running tracker_assigner to populate tracker_id values...")
+            tracker_assigner.main(db_path, game_id, 80, 5)
+        except Exception as e:
+            print(f"[AI] Tracker assigner failed or not available: {e}")
+        # Generate events from detections (will use tracker_id if present)
         generate_events(game_id, db_path)
