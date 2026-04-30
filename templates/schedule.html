@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Schedule – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Schedule</h2>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <select class="form-control" id="season-select" style="width:auto;" onchange="loadGames()">
+      <option value="">All Seasons</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('season-modal')">Manage Seasons</button>
+    <button class="btn btn-primary btn-sm" onclick="openAddGame()">+ Add Game</button>
+  </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Date</th><th>Time</th><th>Program</th><th>Level</th><th>Opponent</th>
+      <th>Location</th><th>Status</th><th>Notes</th><th></th>
+    </tr></thead>
+    <tbody id="games-body">
+      <tr><td colspan="9" class="text-muted" style="padding:16px;">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Season Modal ──────────────────────────────── -->
+<div class="modal-backdrop" id="season-modal">
+  <div class="modal" style="max-width:560px;">
+    <h3>Manage Seasons</h3>
+    <div id="season-list" style="margin-bottom:16px;"></div>
+    <hr style="border-color:var(--color-border);margin-bottom:16px;">
+    <strong style="font-size:.85rem;">Add Season</strong>
+    <div id="season-form-error" class="alert alert-error" style="display:none;margin-top:8px;"></div>
+    <div class="form-group mt-2"><label>Name</label><input class="form-control" id="sf-name" placeholder="e.g. 2025-26 Boys Jr High"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>Start Date</label><input type="date" class="form-control" id="sf-start"></div>
+      <div class="form-group"><label>End Date</label><input type="date" class="form-control" id="sf-end"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('season-modal')">Close</button>
+      <button class="btn btn-primary" onclick="addSeason()">Add Season</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add / Edit Game Modal ─────────────────────── -->
+<div class="modal-backdrop" id="game-modal">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="game-modal-title">Add Game</h3>
+    <input type="hidden" id="gf-id">
+    <div id="game-form-error" class="alert alert-error" style="display:none;"></div>
+    <div class="form-group"><label>Season</label>
+      <select class="form-control" id="gf-season"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>Program</label><input class="form-control" id="gf-program" value="Liberty"></div>
+      <div class="form-group"><label>Level</label>
+        <select class="form-control" id="gf-level">
+          <option value="jr_high">Jr High</option>
+          <option value="varsity">Varsity</option>
+          <option value="jv">JV</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>Gender</label>
+        <select class="form-control" id="gf-gender">
+          <option value="boys">Boys</option>
+          <option value="girls">Girls</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Location</label>
+        <select class="form-control" id="gf-location">
+          <option value="home">Home</option>
+          <option value="away">Away</option>
+          <option value="tournament">Tournament</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>Date</label><input type="date" class="form-control" id="gf-date"></div>
+      <div class="form-group"><label>Time</label><input type="time" class="form-control" id="gf-time"></div>
+    </div>
+    <div class="form-group"><label>Opponent</label><input class="form-control" id="gf-opponent" placeholder="Opponent name"></div>
+    <div class="form-group"><label>Tournament (optional)</label><input class="form-control" id="gf-tournament"></div>
+    <div class="form-group"><label>Status</label>
+      <select class="form-control" id="gf-status">
+        <option value="scheduled">Scheduled</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="postponed">Postponed</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea class="form-control" id="gf-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('game-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGame()">Save</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let seasons = [];
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // ── Seasons ──────────────────────────────────────────────
+
+  async function loadSeasons() {
+    const r = await fetch('/api/seasons');
+    seasons = await r.json();
+    // populate season select
+    const sel = document.getElementById('season-select');
+    sel.innerHTML = '<option value="">All Seasons</option>' +
+      seasons.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    // populate modal list
+    const list = document.getElementById('season-list');
+    list.innerHTML = seasons.length === 0 ? '<p class="text-muted">No seasons yet.</p>' :
+      `<table><thead><tr><th>Name</th><th>Start</th><th>End</th><th></th></tr></thead><tbody>` +
+      seasons.map(s => `<tr>
+        <td>${s.name}</td><td>${s.start_date}</td><td>${s.end_date}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteSeason(${s.id})">Delete</button></td>
+      </tr>`).join('') + '</tbody></table>';
+  }
+
+  async function addSeason() {
+    const err = document.getElementById('season-form-error');
+    err.style.display = 'none';
+    const body = {
+      name: document.getElementById('sf-name').value.trim(),
+      start_date: document.getElementById('sf-start').value,
+      end_date: document.getElementById('sf-end').value,
+    };
+    if (!body.name || !body.start_date || !body.end_date) {
+      err.textContent = 'All fields are required.'; err.style.display = 'block'; return;
+    }
+    const r = await fetch('/api/seasons', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Error saving season.'; err.style.display = 'block'; return; }
+    document.getElementById('sf-name').value = '';
+    document.getElementById('sf-start').value = '';
+    document.getElementById('sf-end').value = '';
+    await loadSeasons();
+  }
+
+  async function deleteSeason(id) {
+    if (!confirm('Delete this season? This will also delete associated scheduled games.')) return;
+    await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
+    await loadSeasons();
+    loadGames();
+  }
+
+  // ── Games ────────────────────────────────────────────────
+
+  async function loadGames() {
+    const sid = document.getElementById('season-select').value;
+    const url = sid ? `/api/scheduled_games?season_id=${sid}` : '/api/scheduled_games';
+    const r = await fetch(url);
+    const games = await r.json();
+    const body = document.getElementById('games-body');
+    body.innerHTML = games.length === 0
+      ? '<tr><td colspan="9" class="text-muted" style="padding:16px;">No games scheduled.</td></tr>'
+      : games.map(g => `<tr>
+          <td>${g.game_date}</td>
+          <td>${g.game_time ?? '–'}</td>
+          <td>${g.program_name}</td>
+          <td>${g.level}</td>
+          <td>${g.opponent_name}</td>
+          <td><span class="badge badge-${g.location_type}">${g.location_type}</span></td>
+          <td><span class="badge badge-${g.status}">${g.status}</span></td>
+          <td>${g.notes ?? ''}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-secondary btn-sm" onclick='openEditGame(${JSON.stringify(g)})'>Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteGame(${g.id})">Del</button>
+          </td>
+        </tr>`).join('');
+  }
+
+  function populateGameSeasons() {
+    const sel = document.getElementById('gf-season');
+    sel.innerHTML = seasons.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  }
+
+  function openAddGame() {
+    document.getElementById('game-modal-title').textContent = 'Add Game';
+    document.getElementById('gf-id').value = '';
+    document.getElementById('gf-program').value = 'Liberty';
+    document.getElementById('gf-level').value = 'jr_high';
+    document.getElementById('gf-gender').value = 'boys';
+    document.getElementById('gf-location').value = 'home';
+    document.getElementById('gf-date').value = '';
+    document.getElementById('gf-time').value = '';
+    document.getElementById('gf-opponent').value = '';
+    document.getElementById('gf-tournament').value = '';
+    document.getElementById('gf-status').value = 'scheduled';
+    document.getElementById('gf-notes').value = '';
+    document.getElementById('game-form-error').style.display = 'none';
+    populateGameSeasons();
+    openModal('game-modal');
+  }
+
+  function openEditGame(g) {
+    document.getElementById('game-modal-title').textContent = 'Edit Game';
+    document.getElementById('gf-id').value = g.id;
+    populateGameSeasons();
+    document.getElementById('gf-season').value = g.season_id;
+    document.getElementById('gf-program').value = g.program_name;
+    document.getElementById('gf-level').value = g.level;
+    document.getElementById('gf-gender').value = g.gender;
+    document.getElementById('gf-location').value = g.location_type;
+    document.getElementById('gf-date').value = g.game_date;
+    document.getElementById('gf-time').value = g.game_time ?? '';
+    document.getElementById('gf-opponent').value = g.opponent_name;
+    document.getElementById('gf-tournament').value = g.tournament_name ?? '';
+    document.getElementById('gf-status').value = g.status;
+    document.getElementById('gf-notes').value = g.notes ?? '';
+    document.getElementById('game-form-error').style.display = 'none';
+    openModal('game-modal');
+  }
+
+  async function saveGame() {
+    const err = document.getElementById('game-form-error');
+    err.style.display = 'none';
+    const id = document.getElementById('gf-id').value;
+    const body = {
+      season_id: parseInt(document.getElementById('gf-season').value),
+      program_name: document.getElementById('gf-program').value.trim(),
+      level: document.getElementById('gf-level').value,
+      gender: document.getElementById('gf-gender').value,
+      location_type: document.getElementById('gf-location').value,
+      game_date: document.getElementById('gf-date').value,
+      game_time: document.getElementById('gf-time').value || null,
+      opponent_name: document.getElementById('gf-opponent').value.trim(),
+      tournament_name: document.getElementById('gf-tournament').value.trim() || null,
+      status: document.getElementById('gf-status').value,
+      notes: document.getElementById('gf-notes').value.trim() || null,
+    };
+    if (!body.opponent_name || !body.game_date) {
+      err.textContent = 'Date and Opponent are required.'; err.style.display = 'block'; return;
+    }
+    const url = id ? `/api/scheduled_games/${id}` : '/api/scheduled_games';
+    const method = id ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Error saving game.'; err.style.display = 'block'; return; }
+    closeModal('game-modal');
+    loadGames();
+  }
+
+  async function deleteGame(id) {
+    if (!confirm('Delete this game?')) return;
+    await fetch(`/api/scheduled_games/${id}`, { method: 'DELETE' });
+    loadGames();
+  }
+
+  // ── Init ────────────────────────────────────────────────
+  (async () => { await loadSeasons(); loadGames(); })();
+</script>
+{% endblock %}
