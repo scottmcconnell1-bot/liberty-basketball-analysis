@@ -1,3 +1,6 @@
+# Non-essential files (planning docs, old standalone HTML, dev scripts)
+EXTRA/
+
 # Python cache
 __pycache__/
 *.py[cod]
