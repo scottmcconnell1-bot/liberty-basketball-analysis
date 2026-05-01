@@ -183,6 +183,9 @@
     <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>
     <a href="/status" {% if request.endpoint == 'status_page' %}class="active"{% endif %}>Status</a>
     <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
+    <a href="/games" {% if request.endpoint == 'games_page' %}class="active"{% endif %}>Games</a>
+    <a href="/nfhs-matches" {% if request.endpoint == 'nfhs_matches_page' %}class="active"{% endif %}>NFHS Matches</a>
+    <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
   </nav>
   <main>
     {% block content %}{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Completed Games</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGameModal">
+                <i class="bi bi-plus-lg"></i> Add Game
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover" id="gamesTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Home Team</th>
+                        <th>Away Team</th>
+                        <th>Score</th>
+                        <th>Source</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="gamesBody">
+                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sources Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Film Sources</h5>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSourceModal">
+                        Add Source
+                    </button>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group" id="sourcesList">
+                        <li class="list-group-item text-muted">Loading...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Game Modal -->
+<div class="modal fade" id="addGameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Completed Game</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addGameForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Home Team</label>
+                        <input type="text" class="form-control" name="home_team" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Away Team</label>
+                        <input type="text" class="form-control" name="away_team" required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-3">
+                                <label class="form-label">Home Score</label>
+                                <input type="number" class="form-control" name="home_score" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="mb-3">
+                                <label class="form-label">Away Score</label>
+                                <input type="number" class="form-control" name="away_score" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
+                        <select class="form-select" name="source_id" id="sourceSelect">
+                            <option value="">Manual Entry</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Game</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Source Modal -->
+<div class="modal fade" id="addSourceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Film Source</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addSourceForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Source Name</label>
+                        <input type="text" class="form-control" name="name" required placeholder="e.g., Hudl, MaxPreps">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Source</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadGames() {
+    const response = await fetch('/api/games');
+    const games = await response.json();
+    const tbody = document.getElementById('gamesBody');
+    if (games.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No completed games yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = games.map(g => `
+        <tr>
+            <td>${g.date}</td>
+            <td>${g.home_team}</td>
+            <td>${g.away_team}</td>
+            <td>${g.home_score} - ${g.away_score}</td>
+            <td>${g.source_name ? `<span class="badge bg-info">${g.source_name}</span>` : '<span class="badge bg-secondary">Manual</span>'}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteGame(${g.id})"><i class="bi bi-trash"></i></button></td>
+        </tr>
+    `).join('');
+}
+
+async function loadSources() {
+    const response = await fetch('/api/sources');
+    const sources = await response.json();
+    const list = document.getElementById('sourcesList');
+    const select = document.getElementById('sourceSelect');
+    
+    if (sources.length === 0) {
+        list.innerHTML = '<li class="list-group-item text-muted">No sources added</li>';
+        return;
+    }
+    
+    list.innerHTML = sources.map(s => `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            ${s.name}
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteSource(${s.id})"><i class="bi bi-trash"></i></button>
+        </li>
+    `).join('');
+    
+    select.innerHTML = '<option value="">Manual Entry</option>' + sources.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+document.getElementById('addGameForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    if (data.source_id === '') delete data.source_id;
+    
+    const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    
+    if (response.ok) {
+        e.target.reset();
+        bootstrap.Modal.getInstance(document.getElementById('addGameModal')).hide();
+        loadGames();
+    }
+});
+
+document.getElementById('addSourceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    const response = await fetch('/api/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    
+    if (response.ok) {
+        e.target.reset();
+        bootstrap.Modal.getInstance(document.getElementById('addSourceModal')).hide();
+        loadSources();
+    }
+});
+
+async function deleteGame(id) {
+    if (!confirm('Delete this game?')) return;
+    await fetch(`/api/games/${id}`, { method: 'DELETE' });
+    loadGames();
+}
+
+async function deleteSource(id) {
+    if (!confirm('Delete this source?')) return;
+    await fetch(`/api/sources/${id}`, { method: 'DELETE' });
+    loadSources();
+}
+
+loadGames();
+loadSources();
+</script>
+{% endblock %}

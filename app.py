@@ -330,6 +330,199 @@ def api_scheduled_game_delete(game_id):
     return jsonify({"deleted": True})
 
 
+# ── API: Games (completed games) ───────────────────────────
+
+@app.route("/api/games", methods=["GET"])
+def api_games_list():
+    db = get_db()
+    rows = db.execute("SELECT * FROM games ORDER BY start_time DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/games", methods=["POST"])
+def api_games_create():
+    data = request.get_json(force=True)
+    required = ("source_type", "source_key")
+    missing = [k for k in required if not data.get(k)]
+    if missing:
+        return jsonify({"error": f"Missing fields: {missing}"}), 400
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO games
+           (scheduled_game_id, start_time, end_time, source_type, source_key,
+            nfhs_game_id, nfhs_url, home_score, away_score, result, is_conference)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            data.get("scheduled_game_id"),
+            data.get("start_time"),
+            data.get("end_time"),
+            data["source_type"],
+            data["source_key"],
+            data.get("nfhs_game_id"),
+            data.get("nfhs_url"),
+            data.get("home_score"),
+            data.get("away_score"),
+            data.get("result"),
+            int(bool(data.get("is_conference", False))),
+        ),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM games WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route("/api/games/<int:game_id>", methods=["GET"])
+def api_games_get(game_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM games WHERE id=?", (game_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(dict(row))
+
+
+@app.route("/api/games/<int:game_id>", methods=["PUT"])
+def api_games_update(game_id):
+    data = request.get_json(force=True)
+    db = get_db()
+    existing = db.execute("SELECT * FROM games WHERE id=?", (game_id,)).fetchone()
+    if not existing:
+        return jsonify({"error": "Not found"}), 404
+    db.execute(
+        """UPDATE games SET
+           scheduled_game_id=?, start_time=?, end_time=?, source_type=?, source_key=?,
+           nfhs_game_id=?, nfhs_url=?, home_score=?, away_score=?, result=?, is_conference=?,
+           updated_at=CURRENT_TIMESTAMP
+           WHERE id=?""",
+        (
+            data.get("scheduled_game_id", existing["scheduled_game_id"]),
+            data.get("start_time", existing["start_time"]),
+            data.get("end_time", existing["end_time"]),
+            data.get("source_type", existing["source_type"]),
+            data.get("source_key", existing["source_key"]),
+            data.get("nfhs_game_id", existing["nfhs_game_id"]),
+            data.get("nfhs_url", existing["nfhs_url"]),
+            data.get("home_score", existing["home_score"]),
+            data.get("away_score", existing["away_score"]),
+            data.get("result", existing["result"]),
+            int(data.get("is_conference", bool(existing["is_conference"]))),
+            game_id,
+        ),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM games WHERE id=?", (game_id,)).fetchone()
+    return jsonify(dict(row))
+
+
+@app.route("/api/games/<int:game_id>", methods=["DELETE"])
+def api_games_delete(game_id):
+    db = get_db()
+    db.execute("DELETE FROM games WHERE id=?", (game_id,))
+    db.commit()
+    return jsonify({"deleted": True})
+
+
+# ── API: Sources (film sources per game) ────────────────────
+
+@app.route("/api/sources", methods=["GET"])
+def api_sources_list():
+    db = get_db()
+    rows = db.execute("SELECT * FROM sources ORDER BY created_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/sources", methods=["POST"])
+def api_sources_create():
+    data = request.get_json(force=True)
+    required = ("game_id", "source_type", "source_path")
+    missing = [k for k in required if not data.get(k)]
+    if missing:
+        return jsonify({"error": f"Missing fields: {missing}"}), 400
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO sources (game_id, source_type, source_path)
+           VALUES (?,?,?)""",
+        (data["game_id"], data["source_type"], data["source_path"]),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM sources WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route("/api/sources/<int:source_id>", methods=["GET"])
+def api_sources_get(source_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM sources WHERE id=?", (source_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(dict(row))
+
+
+@app.route("/api/sources/<int:source_id>", methods=["DELETE"])
+def api_sources_delete(source_id):
+    db = get_db()
+    db.execute("DELETE FROM sources WHERE id=?", (source_id,))
+    db.commit()
+    return jsonify({"deleted": True})
+
+
+# ── API: NFHS Matches ──────────────────────────────────────
+
+@app.route("/api/nfhs_matches", methods=["GET"])
+def api_nfhs_matches_list():
+    db = get_db()
+    rows = db.execute("SELECT * FROM nfhs_matches ORDER BY created_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/nfhs_matches", methods=["POST"])
+def api_nfhs_matches_create():
+    data = request.get_json(force=True)
+    required = ("scheduled_game_id", "nfhs_game_id", "nfhs_url")
+    missing = [k for k in required if not data.get(k)]
+    if missing:
+        return jsonify({"error": f"Missing fields: {missing}"}), 400
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO nfhs_matches
+           (scheduled_game_id, nfhs_game_id, nfhs_url, match_status, confidence)
+           VALUES (?,?,?,?,?)""",
+        (
+            data["scheduled_game_id"],
+            data["nfhs_game_id"],
+            data["nfhs_url"],
+            data.get("match_status", "candidate"),
+            data.get("confidence"),
+        ),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM nfhs_matches WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route("/api/nfhs_matches/<int:match_id>/confirm", methods=["POST"])
+def api_nfhs_matches_confirm(match_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM nfhs_matches WHERE id=?", (match_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    db.execute("UPDATE nfhs_matches SET match_status='confirmed' WHERE id=?", (match_id,))
+    db.commit()
+    row = db.execute("SELECT * FROM nfhs_matches WHERE id=?", (match_id,)).fetchone()
+    return jsonify(dict(row))
+
+
+@app.route("/api/nfhs_matches/<int:match_id>/reject", methods=["POST"])
+def api_nfhs_matches_reject(match_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM nfhs_matches WHERE id=?", (match_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    db.execute("UPDATE nfhs_matches SET match_status='rejected' WHERE id=?", (match_id,))
+    db.commit()
+    row = db.execute("SELECT * FROM nfhs_matches WHERE id=?", (match_id,)).fetchone()
+    return jsonify(dict(row))
+
+
 # ── API: Events (film tagger) ─────────────────────────────
 
 @app.route("/api/save_event", methods=["POST"])
@@ -748,6 +941,22 @@ def status_page():
     </table>
     </body></html>"""
 
+# ── Additional Page Routes ─────────────────────────────────────
+@app.route("/games")
+def games_page():
+    return render_template("games.html")
+
+@app.route("/nfhs-matches")
+def nfhs_matches_page():
+    return render_template("nfhs_matches.html")
+
+@app.route("/dashboard")
+def dashboard_page():
+    return render_template("dashboard.html")
+
+@app.route("/users")
+def users_page():
+    return render_template("users.html")
 
 if __name__ == "__main__":
     with app.app_context():

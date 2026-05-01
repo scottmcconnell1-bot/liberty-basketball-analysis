@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">User Management</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody">
+                    <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadUsers() {
+    const response = await fetch('/api/users');
+    if (!response.ok) {
+        document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="text-danger">Access denied</td></tr>';
+        return;
+    }
+    const users = await response.json();
+    document.getElementById('usersBody').innerHTML = users.map(u => `
+        <tr>
+            <td>${u.username}</td>
+            <td>${u.email}</td>
+            <td>${u.is_admin ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>'}</td>
+            <td>${u.created_at}</td>
+            <td>${!u.is_admin ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id})">Delete</button>` : ''}</td>
+        </tr>
+    `).join('');
+}
+
+async function deleteUser(id) {
+    if (!confirm('Delete this user?')) return;
+    const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    if (response.ok) loadUsers();
+    else alert('Failed to delete user');
+}
+
+loadUsers();
+</script>
+{% endblock %}
