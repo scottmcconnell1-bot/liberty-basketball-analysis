@@ -10,6 +10,10 @@ Changelog
 - 2026-04-28: Clarified Phase 2.2 to include scheduled_games CRUD + /schedule UI.
 - 2026-04-28: Expanded Phase 3.1 (Games) with basic result fields (home_score, away_score, result, is_conference).
 - 2026-04-28: Added Phase 6 – Practices & Practice Reports (plans, coach notes, AI notes, date-range summaries).
+- 2026-05-01
+  - Clarified that the /schedule page uses a server-rendered games table as the primary flow.
+  - JS-based games loading (loadGames / renderGames) is treated as optional and is currently disabled in favor of simpler server rendering.
+  - Confirmed that the practices data model (Phase 6) is the source of truth for future practice-related features; no changes required based on recent discussion.
 
 Owner: Me (coach + builder)
 Assistants: Perplexity (design/brain), Hermes (repo/code agent)
