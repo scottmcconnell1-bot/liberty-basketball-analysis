@@ -1,4 +1,3 @@
-﻿Dockerfile: Python 3.11 slim, CPU-only PyTorch compatible
 FROM python:3.11-slim
 
 Install OS packages required for building common Python wheels
