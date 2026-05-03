@@ -2,7 +2,7 @@ Here is the merged final outline, with all content from the original plus the ne
 
 ***
 
-Hermes, you don't have access to Google Docs, so here is the  
+Rex, you don't have access to Google Docs, so here is the  
 master Liberty Project Outline in plain text for you to use as  
 the source of truth. Please read this carefully and then follow  
 the phases as described.
@@ -20,7 +20,7 @@ Changelog
   - Confirmed that the practices data model (Phase 6) is the source of truth for future practice-related features; no changes required based on recent discussion.
 
 Owner: Me (coach + builder)  
-Assistants: Perplexity (design/brain), Hermes (repo/code agent)
+Assistants: Perplexity (design/brain), Rex (repo/code agent)
 
 Core idea: A basketball film and analytics system that matches how I actually coach: schedules, games, film sources (NFHS/Pixellot/manual), stats, development, practices, and practice cut-ups, built in small, safe steps. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
 
@@ -37,18 +37,18 @@ Phase 0 -- Foundation & Principles
 
 - SQLite database, with schema.sql as the single source of truth.  
 - No heavy new dependencies (for example, big CV trackers) in early phases.  
-- Hermes:  
+- Rex:  
   - Proposes small tasks.  
   - Edits code/schema.  
   - Stops after each task and shows diffs.  
 - Me:  
   - Own the data model, terminology, and workflow.  
-  - Approve or adjust before Hermes moves on. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+  - Approve or adjust before Rex moves on. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
 
 Phase 1 -- Data Model & Schema  
 ------------------------------
 
-## 1.1 Existing Analysis Tables (do not break)
+## 1.1 Existing Analysis Tables 
 
 These tables already exist and support the current tagging/analysis flow:
 
@@ -56,9 +56,9 @@ These tables already exist and support the current tagging/analysis flow:
 - analysis_runs: status of video analysis runs.  
 - detections: per-frame detection data.
 
-Hermes must not drop or fundamentally change these without an explicit plan. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+Rex must not drop or fundamentally change these without an explicit plan. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
 
-## 1.2 Seasons, Schedules, Games, and Sources (DONE)
+## 1.2 Seasons, Schedules, Games, and Sources 
 
 Goal: Represent my world of seasons, games, NFHS/Pixellot/manual film, and multiple sources per game in a clean schema. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
 
@@ -129,7 +129,7 @@ Features:
 - Edit season name and dates if needed.  
 - (Optional later) Mark a season as "current" or "archived." [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
 
-Hermes tasks (stepwise):
+Rex tasks (stepwise):
 
 1. Wire basic season create/list/edit using the existing database.  
 2. Stop and show diffs (code plus any UI/CLI changes) for review. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
@@ -153,7 +153,7 @@ Features:
   - Edit and Delete actions.  
   - Consistent dropdowns for level/gender/status; status only shown when special (cancelled / rescheduled / completed).
 
-Hermes tasks:
+Rex tasks:
 
 1. Implement basic CRUD for scheduled_games wired to seasons (DB helpers + /api/scheduled_games endpoints).  
 2. Provide simple filters (by season, level, gender).  
@@ -188,7 +188,7 @@ Features:
   - result (win, loss, maybe tie)  
   - is_conference (BOOLEAN) [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
 
-Hermes tasks:
+Rex tasks:
 
 1. Add flows to create a game from a scheduled_game.  
 2. Add flows to create standalone games for scouting.  
@@ -204,7 +204,7 @@ Features:
   - Manual upload/local file paths.  
   - Multiple sources per game if needed.
 
-Hermes tasks:
+Rex tasks:
 
 1. Implement add/list/remove for sources per game.  
 2. Keep logic simple: just linking, no complex processing yet.  
@@ -232,7 +232,7 @@ Features:
   - Mark a candidate as confirmed or rejected.  
 - When a match is confirmed, update games and/or sources appropriately. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
 
-Hermes tasks:
+Rex tasks:
 
 1. Implement manual NFHS candidate add/list/confirm/reject.  
 2. On confirmation, wire up creation or update of games / sources in a simple, explicit way.  
@@ -277,7 +277,7 @@ Features:
   - ai_notes (TEXT) – AI’s analysis of the practice  
   - combined_summary (TEXT or JSON) – short structured summary with source tags (Coach vs AI vs film)
 
-Hermes tasks:
+Rex tasks:
 
 1. Propose and implement practices table in schema.sql (in small steps, with explicit diffs).  
 2. Ensure no existing tables are broken.  
@@ -294,7 +294,7 @@ Features:
   - View and edit the plan.  
   - Enter coach notes after practice.
 
-Hermes tasks:
+Rex tasks:
 
 1. Implement /practices route and a simple practices.html page (similar to /schedule): season/level picker, list, add/edit/delete.  
 2. Support plan_source selection: auto vs uploaded/manual.  
@@ -314,7 +314,7 @@ Features:
   - AI notes  
   - Combined summary (with labeled contributions)
 
-Hermes tasks:
+Rex tasks:
 
 1. Add endpoints or flows to trigger AI evaluation for a practice (using configured models).  
 2. Store ai_notes and combined_summary on the practices record.  
@@ -337,7 +337,7 @@ Features:
   - AI notes with film  
   - AI notes without film (plan + notes only)
 
-Hermes tasks:
+Rex tasks:
 
 - Implement a /practice-summary view or endpoint that:  
   - Accepts date range and filters.  
@@ -361,7 +361,7 @@ Details for this phase will be fleshed out after earlier phases are in good shap
 Always-On Process Rules  
 -----------------------
 
-- Hermes:  
+- Rex:  
   - Works only on clearly scoped tasks from this outline (or later revisions).  
   - Treats schema.sql and this outline as constraints, not suggestions.  
   - Stops after each task, shows diffs, and asks for approval.  
