@@ -6,7 +6,7 @@ High-level architecture
 - Ingest: file upload UI → uploads/ (Flask app) and analysis_runs table records job.
 - Detection: ai_analyzer runs YOLO on video frames, writes detections (+tracker_id) to detections table.
 - Tracking: integrate a multi-object tracker (ByteTrack / DeepSort / OC-SORT) to assign tracker_id per player across frames.
-- Events: event_generator converts detections+tracking into events (possession, dribble, shot attempt, assist, rebound, turnover, foul) and writes to events table with timestamp_ms and a link (video filename + timestamp/frame).
+- Events: event_generator converts detections+tracking into events (possession, shot attempt, assist, rebound, turnover, foul) and writes to events table with timestamp_ms and a link (video filename + timestamp/frame).
 - Stats: aggregator builds box scores and stat lines per player/team per game and persists them in a stats table (or derives on-demand from events table).
 - UI: Flask routes + templates present games, video player with time-linked event markers, box scores with clickable links, game summary and coach notes editable.
 - Persistence: film_analysis.db stores detections, events, analysis_runs, stats; nightly/periodic backups and season partitioning.
