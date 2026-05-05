@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Compare AI Runs – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Compare AI Runs</h2>
+    <span class="text-muted">{{ video.original_filename }} · {{ video.opponent or "Unknown opponent" }}</span>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('videos_page') }}">Back to Videos</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('film', filename=video.stored_filename, game_id=video.game_id) }}">Open Primary Run</a>
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Run a New Comparison Pass</h3>
+  <form method="post" action="{{ url_for('rerun_video_analysis', vid_id=video.id) }}">
+    <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="run_label">Run Label</label>
+        <input class="form-control" id="run_label" name="run_label" placeholder="Optional label, e.g. YOLOv8s + llama3.2" />
+      </div>
+      <div class="form-group">
+        <label>Current Settings Snapshot</label>
+        <div class="text-muted" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg);">
+          {{ current_detector_model }} · {{ current_ai_settings.inference_device }} · stride {{ current_ai_settings.frame_stride }}
+          <br>generator {{ current_ai_settings.event_generator_mode }}
+          {% if current_ai_settings.llm_model %}<br>{{ current_ai_settings.llm_provider }} / {{ current_ai_settings.llm_model }}{% endif %}
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Rerun AI with Current Settings</button>
+    </div>
+    <p class="text-muted mt-2">Each rerun gets its own analysis `game_id`, so detections and events stay separate for side-by-side comparison.</p>
+    <p class="text-muted">Detector and runtime settings affect the current video pipeline directly. Local LLM choices are captured in the snapshot so you can compare them as future AI-assisted steps are added.</p>
+  </form>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead>
+      <tr>
+        <th>Run</th>
+        <th>Status</th>
+        <th>Detector</th>
+        <th>Generator</th>
+        <th>Device</th>
+        <th>LLM</th>
+        <th>Detections</th>
+        <th>Events</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td>
+          <strong>{{ run.run_label or ("Run " ~ run.id) }}</strong>
+          <div class="text-muted">kind: {{ run.run_kind or "unknown" }}</div>
+          <div class="text-muted"><code>{{ run.game_id }}</code></div>
+        </td>
+        <td>
+          {{ run.status }}
+          {% if run.error_message %}
+          <div class="text-muted" style="color:#991b1b;">{{ run.error_message }}</div>
+          {% endif %}
+        </td>
+        <td>{{ run.detector_model or "Unknown" }}</td>
+        <td>{{ run.event_generator_mode or "legacy" }}</td>
+        <td>{{ run.inference_device or "Auto" }}{% if run.frame_stride %}<div class="text-muted">stride {{ run.frame_stride }}</div>{% endif %}</td>
+        <td>
+          {% if run.llm_model %}
+          {{ run.llm_provider }} / {{ run.llm_model }}
+          {% else %}
+          <span class="text-muted">Not set</span>
+          {% endif %}
+        </td>
+        <td>
+          {{ run.detection_count }}
+          <div class="text-muted">{% if run.detection_delta > 0 %}+{% endif %}{{ run.detection_delta }}</div>
+        </td>
+        <td>
+          {{ run.event_count }}
+          <div class="text-muted">{% if run.event_delta > 0 %}+{% endif %}{{ run.event_delta }}</div>
+        </td>
+        <td>{{ run.started_at or "—" }}</td>
+        <td style="white-space:nowrap;">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('film', filename=video.stored_filename, game_id=run.game_id) }}">Open in Film Tool</a>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not runs %}
+      <tr><td colspan="10" class="text-muted" style="padding:16px;">No analysis runs found for this video yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

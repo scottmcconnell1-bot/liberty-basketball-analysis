@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Dashboard</h2>
+  <span class="text-muted" id="season-label">Loading…</span>
+</div>
+
+<div class="stat-grid" id="stat-grid">
+  <div class="stat-box"><div class="label">Seasons</div><div class="value" id="s-seasons">–</div></div>
+  <div class="stat-box"><div class="label">Scheduled Games</div><div class="value" id="s-scheduled">–</div></div>
+  <div class="stat-box"><div class="label">Events Tagged</div><div class="value" id="s-events">–</div></div>
+  <div class="stat-box"><div class="label">Players</div><div class="value" id="s-players">–</div></div>
+</div>
+
+<div class="card mt-4">
+  <div class="page-header" style="margin-bottom:14px">
+    <strong>Upcoming Games</strong>
+    <a href="/schedule" class="btn btn-secondary btn-sm">View All</a>
+  </div>
+  <table>
+    <thead><tr>
+      <th>Date</th><th>Time</th><th>Opponent</th><th>Location</th><th>Status</th>
+    </tr></thead>
+    <tbody id="upcoming-body">
+      <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card mt-4">
+  <strong>Recent Events</strong>
+  <table class="mt-2">
+    <thead><tr>
+      <th>Game</th><th>Player</th><th>Event</th><th>Timestamp</th><th>Verified</th>
+    </tr></thead>
+    <tbody id="events-body">
+      <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function load() {
+    const r = await fetch('/api/dashboard');
+    const d = await r.json();
+    document.getElementById('s-seasons').textContent   = d.seasons   ?? 0;
+    document.getElementById('s-scheduled').textContent = d.scheduled ?? 0;
+    document.getElementById('s-events').textContent    = d.events    ?? 0;
+    document.getElementById('s-players').textContent   = d.players   ?? 0;
+
+    const upcoming = d.upcoming_games ?? [];
+    const ub = document.getElementById('upcoming-body');
+    ub.innerHTML = upcoming.length === 0
+      ? '<tr><td colspan="5" class="text-muted">No upcoming games scheduled.</td></tr>'
+      : upcoming.map(g => `<tr>
+          <td>${g.game_date}</td>
+          <td>${g.game_time ?? '–'}</td>
+          <td>${g.opponent_name}</td>
+          <td><span class="badge badge-${g.location_type}">${g.location_type}</span></td>
+          <td><span class="badge badge-${g.status}">${g.status}</span></td>
+        </tr>`).join('');
+
+    const events = d.recent_events ?? [];
+    const eb = document.getElementById('events-body');
+    eb.innerHTML = events.length === 0
+      ? '<tr><td colspan="5" class="text-muted">No events yet.</td></tr>'
+      : events.map(e => `<tr>
+          <td>${e.game_id}</td>
+          <td>${e.player ?? '–'}</td>
+          <td>${e.event_type}</td>
+          <td>${Math.round(e.timestamp_ms/1000)}s</td>
+          <td>${e.human_verified ? '✅' : '–'}</td>
+        </tr>`).join('');
+  }
+  load();
+</script>
+{% endblock %}

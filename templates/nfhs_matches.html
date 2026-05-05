@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}NFHS Matches – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>NFHS Matches</h2>
+    <p class="text-muted">Manually add, confirm, and reject NFHS candidates tied to your schedule.</p>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:start;">
+  <div class="card">
+    <h3 style="margin-bottom:18px;">Add NFHS Candidate</h3>
+    <form method="post" action="{{ url_for('nfhs_matches_add') }}">
+      <div class="form-group">
+        <label for="scheduled_game_id">Scheduled Game</label>
+        <select class="form-control" id="scheduled_game_id" name="scheduled_game_id" required>
+          <option value="">Select a scheduled game</option>
+          {% for scheduled_game in scheduled_games %}
+          <option value="{{ scheduled_game.id }}" {% if candidate_form.scheduled_game_id|string == scheduled_game.id|string %}selected{% endif %}>
+            {{ scheduled_game.game_date }} · {{ scheduled_game.opponent_name }} · {{ scheduled_game.season_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="nfhs_game_id">NFHS Game ID</label>
+        <input class="form-control" id="nfhs_game_id" name="nfhs_game_id" value="{{ candidate_form.nfhs_game_id }}" required>
+      </div>
+      <div class="form-group">
+        <label for="nfhs_url">NFHS URL</label>
+        <input class="form-control" id="nfhs_url" name="nfhs_url" value="{{ candidate_form.nfhs_url }}" required>
+      </div>
+      <div class="form-group">
+        <label for="confidence">Confidence (optional)</label>
+        <input type="number" min="0" max="1" step="0.01" class="form-control" id="confidence" name="confidence" value="{{ candidate_form.confidence }}">
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn btn-primary" type="submit">Add Candidate</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr>
+        <th>Scheduled Game</th><th>NFHS</th><th>Status</th><th>Confidence</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% if matches %}
+          {% for match in matches %}
+          <tr>
+            <td>
+              <strong>{{ match.game_date }}</strong><br>
+              <span class="text-muted">{{ match.opponent_name }} · {{ match.season_name }}{% if match.level %} · {{ match.level }}{% endif %}{% if match.gender %} · {{ match.gender }}{% endif %}</span>
+            </td>
+            <td>
+              <strong>{{ match.nfhs_game_id }}</strong><br>
+              <span class="text-muted">{{ match.nfhs_url }}</span>
+            </td>
+            <td><span class="badge badge-{{ match.match_status }}">{{ match.match_status }}</span></td>
+            <td>{% if match.confidence is not none %}{{ "%.2f"|format(match.confidence) }}{% else %}–{% endif %}</td>
+            <td style="white-space:nowrap;">
+              {% if match.match_status != "confirmed" %}
+              <form method="post" action="{{ url_for('nfhs_matches_confirm_page', match_id=match.id) }}" style="display:inline;">
+                <button class="btn btn-primary btn-sm" type="submit">Confirm</button>
+              </form>
+              {% endif %}
+              {% if match.match_status != "rejected" %}
+              <form method="post" action="{{ url_for('nfhs_matches_reject_page', match_id=match.id) }}" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="5" class="text-muted" style="padding:16px;">No NFHS candidates added yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-candidate { background: #fef3c7; color: #92400e; }
+  .badge-confirmed { background: #dcfce7; color: #166534; }
+  .badge-rejected { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

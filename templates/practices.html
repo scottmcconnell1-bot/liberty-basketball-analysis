@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Practices – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Practices</h2>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_summary_page') }}">Range Summary</a>
+    <a class="btn btn-primary btn-sm" href="#practice-form">+ Add Practice</a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" action="{{ url_for('practices_page') }}">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="season_id">Season</label>
+        <select class="form-control" id="season_id" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if filters.season_id == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="level">Level</label>
+        <select class="form-control" id="level" name="level">
+          <option value="">All Levels</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select class="form-control" id="status" name="status">
+          <option value="">All Statuses</option>
+          {% for value, label in practice_status_options %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Date</th><th>Season</th><th>Level</th><th>Status</th><th>Plan Source</th><th>Notes</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% if practices %}
+        {% for practice in practices %}
+        <tr>
+          <td>{{ practice.practice_date }}</td>
+          <td>{{ practice.season_name or "–" }}</td>
+          <td>{{ practice.level }}</td>
+          <td><span class="badge badge-{{ practice.status }}">{{ practice.status }}</span></td>
+          <td>{{ practice.plan_source }}</td>
+          <td>{{ (practice.coach_notes or practice.ai_notes or practice.combined_summary or "")[:100] }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None, edit_practice_id=practice.id) }}">Edit</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_report_page', practice_id=practice.id) }}">Report</a>
+            <form method="post" action="{{ url_for('practice_generate_notes', practice_id=practice.id) }}" style="display:inline;">
+              <button class="btn btn-primary btn-sm" type="submit">Generate Notes</button>
+            </form>
+            <form method="post" action="{{ url_for('practices_delete', practice_id=practice.id) }}" style="display:inline;">
+              <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+              <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+              <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="7" class="text-muted" style="padding:16px;">No practices match the current filters.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card" id="practice-form">
+  <h3 style="margin-bottom:18px;">{% if editing_practice %}Edit Practice{% else %}Add Practice{% endif %}</h3>
+  <form method="post" action="{{ url_for('practices_save') }}">
+    <input type="hidden" name="practice_id" value="{{ practice_form.id }}">
+    <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+    <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+    <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+    <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label for="practice-season">Season</label>
+        <select class="form-control" id="practice-season" name="season_id" required>
+          <option value="">Select a season</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if practice_form.season_id|string == season.id|string %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="practice-level">Level</label>
+        <select class="form-control" id="practice-level" name="level">
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if practice_form.level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="practice-date">Practice Date</label>
+        <input type="date" class="form-control" id="practice-date" name="practice_date" value="{{ practice_form.practice_date }}" required>
+      </div>
+      <div class="form-group">
+        <label for="practice-status">Status</label>
+        <select class="form-control" id="practice-status" name="status">
+          {% for value, label in practice_status_options %}
+          <option value="{{ value }}" {% if practice_form.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="plan_source">Plan Source</label>
+      <select class="form-control" id="plan_source" name="plan_source">
+        {% for value, label in practice_plan_source_options %}
+        <option value="{{ value }}" {% if practice_form.plan_source == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="plan_text">Practice Plan</label>
+      <textarea class="form-control" id="plan_text" name="plan_text" rows="4">{{ practice_form.plan_text }}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="coach_notes">Coach Notes</label>
+      <textarea class="form-control" id="coach_notes" name="coach_notes" rows="4">{{ practice_form.coach_notes }}</textarea>
+    </div>
+    <div class="modal-actions" style="margin-top:0;">
+      <a class="btn btn-secondary" href="{{ url_for('practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None) }}">Reset</a>
+      <button class="btn btn-primary" type="submit">Save Practice</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-planned { background: #e5e7eb; color: #374151; }
+  .badge-completed { background: #dcfce7; color: #166534; }
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

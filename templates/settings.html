@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Settings – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Settings</h2>
+    <span class="text-muted">Configure feature flags, analysis behavior, and the AI/runtime options that fit this machine.</span>
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+{% set active_tab = 'settings' %}
+{% include "_settings_tabs.html" %}
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Current Hardware</h3>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="label">GPU</div>
+      <div class="value" style="font-size:1.1rem;">{{ catalog.resource_status.gpu.name }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">GPU Memory</div>
+      <div class="value" style="font-size:1.1rem;">
+        {% if catalog.resource_status.gpu.available %}
+        {{ catalog.resource_status.gpu.memory_used_mb|int }} / {{ catalog.resource_status.gpu.memory_total_mb|int }} MB
+        {% else %}
+        Unavailable
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Packages</div>
+      <div style="font-size:.92rem;line-height:1.7;">
+        OpenCV: {{ "Yes" if catalog.packages.cv2 else "No" }}<br>
+        Ultralytics: {{ "Yes" if catalog.packages.ultralytics else "No" }}<br>
+        Torch: {{ "Yes" if catalog.packages.torch else "No" }}
+      </div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Local LLMs</div>
+      <div style="font-size:.92rem;line-height:1.7;">
+        {% if catalog.llm_model_options %}
+          {% for option in catalog.llm_model_options %}
+          {{ option.value }}{% if not loop.last %}<br>{% endif %}
+          {% endfor %}
+        {% else %}
+        None detected
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('settings_page') }}">
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Feature Flags</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
+      {% for name, value in runtime_settings.features.items() %}
+      <label class="form-group" style="display:flex;gap:10px;align-items:flex-start;background:#f8fafc;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);">
+        <input type="checkbox" name="feature_{{ name }}" {% if value %}checked{% endif %} style="width:auto;margin-top:3px;">
+        <span>
+          <strong>{{ name.replace('ENABLE_', '').replace('_', ' ').title() }}</strong><br>
+          <span class="text-muted">{{ name }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Analysis Behavior</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
+      {% for name, value in runtime_settings.analysis.items() %}
+      <label class="form-group" style="display:flex;gap:10px;align-items:flex-start;background:#f8fafc;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);">
+        <input type="checkbox" name="analysis_{{ name }}" {% if value %}checked{% endif %} style="width:auto;margin-top:3px;">
+        <span>
+          <strong>{{ name.replace('USE_', '').replace('_', ' ').title() }}</strong><br>
+          <span class="text-muted">{{ name }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Vision Runtime</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+      <div class="form-group">
+        <label for="ai_detector_model">Detector Model</label>
+        <select class="form-control" id="ai_detector_model" name="ai_detector_model">
+          {% for option in catalog.detector_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.detector_model == option.value %}selected{% endif %}>{{ option.label }}{% if option.recommended %} (Recommended){% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="text-muted mt-2">
+          {% for option in catalog.detector_options %}
+          <div><strong>{{ option.value }}</strong>: {{ option.note }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group" id="custom-detector-model-group">
+        <label for="ai_custom_detector_model">Custom Ultralytics Model or Weights</label>
+        <input class="form-control" id="ai_custom_detector_model" name="ai_custom_detector_model" value="{{ runtime_settings.ai.custom_detector_model }}" placeholder="e.g. /models/basketball.pt or yolo11l.pt">
+        <div class="text-muted mt-2">Used only when Detector Model is set to <code>custom</code>. Ollama models are for reasoning, not frame-by-frame detection.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_inference_device">Inference Device</label>
+        <select class="form-control" id="ai_inference_device" name="ai_inference_device">
+          {% for option in catalog.device_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.inference_device == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_event_generator_mode">Event Generator</label>
+        <select class="form-control" id="ai_event_generator_mode" name="ai_event_generator_mode">
+          {% for option in catalog.event_generator_mode_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.event_generator_mode == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+        <div class="text-muted mt-2">
+          {% for option in catalog.event_generator_mode_options %}
+          <div><strong>{{ option.label }}</strong>: {{ option.note }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_frame_stride">Frame Processing Rate</label>
+        <select class="form-control" id="ai_frame_stride" name="ai_frame_stride">
+          {% for option in catalog.frame_stride_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.frame_stride == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_tracker_max_distance">Tracker Max Distance</label>
+        <input class="form-control" id="ai_tracker_max_distance" name="ai_tracker_max_distance" type="number" min="1" value="{{ runtime_settings.ai.tracker_max_distance }}">
+      </div>
+
+      <div class="form-group">
+        <label for="ai_tracker_max_frame_gap">Tracker Max Frame Gap</label>
+        <input class="form-control" id="ai_tracker_max_frame_gap" name="ai_tracker_max_frame_gap" type="number" min="1" value="{{ runtime_settings.ai.tracker_max_frame_gap }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Local AI Models</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+      <div class="form-group">
+        <label for="ai_llm_provider">Provider</label>
+        <select class="form-control" id="ai_llm_provider" name="ai_llm_provider">
+          {% for option in catalog.llm_provider_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.llm_provider == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="ai_llm_model">Model</label>
+        <select class="form-control" id="ai_llm_model" name="ai_llm_model">
+          <option value="">None</option>
+          {% for option in catalog.llm_model_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.llm_model == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+        <div class="text-muted mt-2">These models are detected from the local Ollama install and saved for future AI-assisted workflows.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:10px;">
+    <button class="btn btn-primary" type="submit">Save Settings</button>
+  </div>
+</form>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Recommended Ollama Models</h3>
+  <div style="display:grid;gap:12px;">
+    {% for model in catalog.recommended_ollama_models %}
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f8fafc;">
+      <div>
+        <strong>{{ model.label }}{% if model.recommended %} (Recommended){% endif %}</strong>
+        <div class="text-muted"><code>{{ model.value }}</code> — {{ model.fit }}</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap;">
+        {% if model.installed %}
+        <span class="badge badge-home">Installed</span>
+        {% else %}
+        <form method="post" action="{{ url_for('pull_ollama_model') }}">
+          <input type="hidden" name="model_name" value="{{ model.value }}">
+          <button class="btn btn-secondary btn-sm" type="submit">Pull Model</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Pull a Different Ollama Model</h3>
+  <form method="post" action="{{ url_for('pull_ollama_model') }}">
+    <div style="display:grid;grid-template-columns:2fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="model_name">Model Name</label>
+        <input class="form-control" id="model_name" name="model_name" placeholder="e.g. qwen2.5:7b" />
+        <div class="text-muted mt-2">This starts `ollama pull` in the background and writes output to a log file in <code>/tmp</code>.</div>
+      </div>
+      <button class="btn btn-secondary" type="submit">Pull Model</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleCustomDetectorInput() {
+    const select = document.getElementById('ai_detector_model');
+    const group = document.getElementById('custom-detector-model-group');
+    if (!select || !group) return;
+    group.style.display = select.value === 'custom' ? 'block' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('ai_detector_model');
+    if (!select) return;
+    toggleCustomDetectorInput();
+    select.addEventListener('change', toggleCustomDetectorInput);
+  });
+</script>
+{% endblock %}

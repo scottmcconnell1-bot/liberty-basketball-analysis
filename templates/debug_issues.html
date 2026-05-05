@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Debug / Issues – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Debug / Issues</h2>
+    <span class="text-muted">Collect bugs, ideas, recommendations, and logs in one place.</span>
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <h3 style="margin-bottom:8px;">Report Bug, Issue, or Recommendation</h3>
+      <div class="text-muted">Use the slide-in reporter to stay on the page you are describing. The default source page is <code>{{ compose_source }}</code>.</div>
+    </div>
+    <button class="btn btn-primary" type="button" data-open-report-overlay>Open Report Form</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Saved Reports</h3>
+  <form method="get" action="{{ url_for('debug_page') }}" style="display:grid;grid-template-columns:180px 180px 1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label for="entry_type_filter">Type</label>
+      <select class="form-control" id="entry_type_filter" name="entry_type">
+        <option value="all" {% if filters.entry_type == 'all' %}selected{% endif %}>All</option>
+        <option value="bug" {% if filters.entry_type == 'bug' %}selected{% endif %}>Bug</option>
+        <option value="issue" {% if filters.entry_type == 'issue' %}selected{% endif %}>Issue</option>
+        <option value="recommendation" {% if filters.entry_type == 'recommendation' %}selected{% endif %}>Recommendation</option>
+        <option value="note" {% if filters.entry_type == 'note' %}selected{% endif %}>Note</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label for="entry_status_filter">Status</label>
+      <select class="form-control" id="entry_status_filter" name="entry_status">
+        <option value="all" {% if filters.entry_status == 'all' %}selected{% endif %}>All</option>
+        <option value="open" {% if filters.entry_status == 'open' %}selected{% endif %}>Open</option>
+        <option value="completed" {% if filters.entry_status == 'completed' %}selected{% endif %}>Completed</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label for="q">Search</label>
+      <input class="form-control" id="q" name="q" value="{{ filters.q }}" placeholder="Search titles, details, or page path">
+    </div>
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Title</th>
+          <th>Source</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issue_reports %}
+        <tr>
+          <td>#{{ issue.id }}</td>
+          <td>{{ issue.entry_type }}</td>
+           <td>
+             <strong>{{ issue.title }}</strong>
+             <div class="text-muted" style="margin-top:4px;">{{ issue.details }}</div>
+             {% if issue.browser_console %}
+             <details style="margin-top:10px;">
+               <summary class="text-muted" style="cursor:pointer;">Browser console attached</summary>
+               <pre style="margin-top:8px;max-height:220px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius);background:#111827;color:#e5e7eb;padding:12px;white-space:pre-wrap;">{{ issue.browser_console }}</pre>
+             </details>
+             {% endif %}
+           </td>
+          <td>{{ issue.source_path or "—" }}</td>
+          <td>
+            {% if issue.status == 'completed' %}
+            <span class="badge badge-home">Completed</span>
+            {% else %}
+            <span class="badge">Open</span>
+            {% endif %}
+          </td>
+          <td>{{ issue.created_at }}</td>
+          <td>
+            {% if issue.status != 'completed' %}
+            <form method="post" action="{{ url_for('complete_issue_report', issue_id=issue.id) }}">
+              <input type="hidden" name="return_to" value="{{ request.full_path if request.query_string else request.path }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Mark Completed</button>
+            </form>
+            {% else %}
+            <span class="text-muted">Completed {{ issue.completed_at or '' }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted">No reports saved yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Recent AI Failures</h3>
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Game ID</th>
+          <th>Error</th>
+          <th>Started</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for failure in recent_failures %}
+        <tr>
+          <td>#{{ failure.id }}</td>
+          <td><code>{{ failure.game_id }}</code></td>
+          <td>{{ failure.error_message }}</td>
+          <td>{{ failure.started_at or "—" }}</td>
+          <td>{{ failure.completed_at or "—" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted">No failed AI runs recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Application Logs</h3>
+  <form method="get" action="{{ url_for('debug_page') }}" style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label for="log_query">Log Filter</label>
+      <input class="form-control" id="log_query" name="log_query" value="{{ filters.log_query }}" placeholder="Filter log lines by text">
+    </div>
+    <button class="btn btn-secondary" type="submit">Filter Logs</button>
+  </form>
+  <div style="max-height:420px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius);background:#111827;color:#e5e7eb;padding:12px;font-family:monospace;font-size:.82rem;line-height:1.5;">
+    {% if app_log_lines %}
+      {% for line in app_log_lines %}
+      <div>{{ line }}</div>
+      {% endfor %}
+    {% else %}
+      <div>No matching log lines found.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

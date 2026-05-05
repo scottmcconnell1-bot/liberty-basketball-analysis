@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Practice Report – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Practice Report</h2>
+    <span class="text-muted">{{ practice.practice_date }}{% if practice.season_name %} · {{ practice.season_name }}{% endif %} · {{ practice.level }}</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page', season_id=practice.season_id) }}">Back to Practices</a>
+    <form method="post" action="{{ url_for('practice_generate_notes', practice_id=practice.id) }}">
+      <button class="btn btn-primary btn-sm" type="submit">Refresh AI Notes</button>
+    </form>
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" action="{{ url_for('practice_report_page', practice_id=practice.id) }}">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+      <label><input type="checkbox" name="show_plan" value="1" {% if show_plan %}checked{% endif %} style="width:auto;"> Show Plan</label>
+      <label><input type="checkbox" name="show_coach" value="1" {% if show_coach %}checked{% endif %} style="width:auto;"> Show Coach Notes</label>
+      <label><input type="checkbox" name="show_ai" value="1" {% if show_ai %}checked{% endif %} style="width:auto;"> Show AI Notes</label>
+      <label><input type="checkbox" name="show_combined" value="1" {% if show_combined %}checked{% endif %} style="width:auto;"> Show Combined Summary</label>
+      <button class="btn btn-secondary btn-sm" type="submit">Update View</button>
+    </div>
+  </form>
+</div>
+
+{% if show_plan %}
+<div class="card">
+  <h3 style="margin-bottom:12px;">Practice Plan</h3>
+  <p class="text-muted" style="margin-bottom:12px;">Source: {{ practice.plan_source }}</p>
+  <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.plan_text or "No plan recorded." }}</pre>
+</div>
+{% endif %}
+
+{% if show_coach %}
+<div class="card">
+  <h3 style="margin-bottom:12px;">Coach Notes</h3>
+  <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.coach_notes or "No coach notes recorded." }}</pre>
+</div>
+{% endif %}
+
+{% if show_ai %}
+<div class="card">
+  <h3 style="margin-bottom:12px;">AI Notes</h3>
+  <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.ai_notes or "No AI notes generated yet." }}</pre>
+</div>
+{% endif %}
+
+{% if show_combined %}
+<div class="card">
+  <h3 style="margin-bottom:12px;">Combined Summary</h3>
+  <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.combined_summary or "No combined summary generated yet." }}</pre>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Liberty Basketball{% endblock %}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --color-primary:   #01696f;
+      --color-primary-d: #015558;
+      --color-bg:        #f7f6f2;
+      --color-surface:   #ffffff;
+      --color-border:    #e2e0da;
+      --color-text:      #1a1a1a;
+      --color-muted:     #6b7280;
+      --color-success:   #059669;
+      --color-danger:    #dc2626;
+      --radius:          8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+
+    /* ── Nav ───────────────────────────── */
+    nav {
+      background: var(--color-primary);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 32px;
+    }
+
+    nav .brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    nav a {
+      color: rgba(255,255,255,0.82);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    nav .spacer { flex: 1; }
+
+    .report-link {
+      background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+      color: #fff !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35);
+      animation: reportPulse 1.8s ease-in-out infinite;
+      font-weight: 700;
+    }
+
+    .report-link:hover,
+    .report-link.active {
+      background: linear-gradient(135deg, #f97316, #dc2626, #db2777);
+      color: #fff;
+    }
+
+    @keyframes reportPulse {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35); }
+      50% { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,255,255,0.18), 0 12px 28px rgba(245,158,11,0.45); }
+    }
+
+    /* ── Main layout ────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+
+    /* ── Card ───────────────────────────── */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Buttons ────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover { background: var(--color-primary-d); }
+
+    .btn-secondary { background: var(--color-border); color: var(--color-text); }
+    .btn-secondary:hover { background: #d0cec8; }
+
+    .btn-danger { background: var(--color-danger); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+    /* ── Forms ──────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 4px; color: var(--color-muted); }
+    .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .form-control:focus { outline: none; border-color: var(--color-primary); }
+
+    /* ── Table ──────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead th { padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--color-border); }
+    tbody td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(1,105,111,0.04); }
+
+    /* ── Modal ──────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: 18px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+    /* ── Stat boxes ─────────────────────── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 16px; }
+    .stat-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 18px 20px; }
+    .stat-box .label { font-size: 0.78rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
+
+    /* ── Badge ──────────────────────────── */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; }
+    .badge-home { background: #dcfce7; color: #166534; }
+    .badge-away { background: #dbeafe; color: #1e40af; }
+    .badge-tournament { background: #fef9c3; color: #854d0e; }
+    .badge-win  { background: #dcfce7; color: #166534; }
+    .badge-loss { background: #fee2e2; color: #991b1b; }
+    .badge-scheduled { background: #f3f4f6; color: #4b5563; }
+
+    /* ── Utility ────────────────────────── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-header h2 { font-size: 1.25rem; font-weight: 700; }
+    .text-muted { color: var(--color-muted); font-size: 0.85rem; }
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+    .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 14px; }
+    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .resource-status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.82rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .resource-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      white-space: nowrap;
+    }
+    .resource-pill strong { color: #fff; }
+    .resource-status-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 20px 12px;
+      background: #111827;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      min-height: 42px;
+      align-items: center;
+    }
+    .report-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+      z-index: 110;
+    }
+    .report-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(460px, 100vw);
+      background: var(--color-surface);
+      box-shadow: -18px 0 48px rgba(15, 23, 42, 0.2);
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      z-index: 111;
+      display: flex;
+      flex-direction: column;
+    }
+    .report-drawer.open { transform: translateX(0); }
+    .report-drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .report-drawer-header,
+    .report-drawer-footer {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .report-drawer-footer {
+      border-top: 1px solid var(--color-border);
+      border-bottom: none;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .report-drawer-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .report-drawer-close {
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--color-muted);
+    }
+    .report-status-copy {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-top: 8px;
+    }
+    .report-drawer-note {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-bottom: 14px;
+    }
+    body.report-drawer-open {
+      overflow: hidden;
+    }
+  </style>
+  {% block head %}{% endblock %}
+  <script>
+    (function initLibertyIssueReporter() {
+      if (window.LibertyIssueReporter) return;
+
+      const entries = [];
+      const maxEntries = 80;
+      const maxChunkLength = 600;
+
+      function serialize(value) {
+        if (value == null) return String(value);
+        if (value instanceof Error) return value.stack || value.message || String(value);
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        try {
+          return JSON.stringify(value);
+        } catch (_err) {
+          return String(value);
+        }
+      }
+
+      function record(level, args) {
+        const text = args.map((arg) => serialize(arg).slice(0, maxChunkLength)).join(' ');
+        entries.push({
+          at: new Date().toISOString(),
+          level,
+          text,
+        });
+        if (entries.length > maxEntries) {
+          entries.splice(0, entries.length - maxEntries);
+        }
+      }
+
+      ['log', 'info', 'warn', 'error', 'debug'].forEach((level) => {
+        const original = console[level] ? console[level].bind(console) : null;
+        console[level] = (...args) => {
+          record(level, args);
+          if (original) original(...args);
+        };
+      });
+
+      window.addEventListener('error', (event) => {
+        record('error', [
+          event.message,
+          event.filename ? `${event.filename}:${event.lineno || 0}:${event.colno || 0}` : '',
+          event.error && event.error.stack ? event.error.stack : '',
+        ]);
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        record('error', ['Unhandled promise rejection', event.reason]);
+      });
+
+      window.LibertyIssueReporter = {
+        getConsoleText() {
+          return entries.map((entry) => `[${entry.at}] ${entry.level.toUpperCase()} ${entry.text}`).join('\n');
+        },
+        getCurrentPagePath() {
+          return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        },
+      };
+    })();
+  </script>
+</head>
+<body data-report-source-default="{% if compose_source is defined and compose_source %}{{ compose_source }}{% else %}{{ request.full_path if request.query_string else request.path }}{% endif %}">
+  <nav>
+    <a href="/" class="brand">🏀 Liberty Basketball</a>
+    <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
+    {% if features.ENABLE_SEASONS_SCHEDULE %}
+    <a href="/schedule" {% if request.endpoint == 'schedule' %}class="active"{% endif %}>Schedule</a>
+    {% endif %}
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>
+    <a href="/status" {% if request.endpoint == 'status_page' %}class="active"{% endif %}>Status</a>
+    {% endif %}
+    {% if features.ENABLE_MANUAL_TAG_MVP %}
+    <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
+    {% endif %}
+    {% if features.ENABLE_GAMES_SOURCES %}
+    <a href="/games" {% if request.endpoint == 'games_page' %}class="active"{% endif %}>Games</a>
+    {% endif %}
+    {% if features.ENABLE_NFHS_MATCHING %}
+    <a href="/nfhs-matches" {% if request.endpoint == 'nfhs_matches_page' %}class="active"{% endif %}>NFHS Matches</a>
+    {% endif %}
+    {% if features.ENABLE_PRACTICES %}
+    <a href="/practices" {% if request.endpoint == 'practices_page' or request.endpoint == 'practice_report_page' or request.endpoint == 'practice_summary_page' %}class="active"{% endif %}>Practices</a>
+    {% endif %}
+    <a href="/settings" {% if request.endpoint in ['settings_page', 'custom_weights_guide_page'] %}class="active"{% endif %}>Settings</a>
+    <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
+    <a href="/debug" {% if request.endpoint == 'debug_page' %}class="active"{% endif %}>Debug / Issues</a>
+    <span class="spacer"></span>
+    <a href="{{ url_for('debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+  </nav>
+  <div class="resource-status-bar" id="resource-status-bar">
+    <span class="resource-pill"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
+    <span class="resource-pill"><strong>App CPU</strong> <span data-resource="cpu-process">--</span></span>
+    <span class="resource-pill"><strong>RAM</strong> <span data-resource="memory-system">--</span></span>
+    <span class="resource-pill"><strong>App RAM</strong> <span data-resource="memory-process">--</span></span>
+    <span class="resource-pill"><strong>Power</strong> <span data-resource="power-live">--</span></span>
+    <span class="resource-pill"><strong>GPU</strong> <span data-resource="gpu-util">--</span></span>
+    <span class="resource-pill"><strong>GPU RAM</strong> <span data-resource="gpu-memory">--</span></span>
+  </div>
+  <div class="resource-status-details" id="gpu-process-details">GPU processes: loading…</div>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
+  <aside class="report-drawer" id="report-drawer" aria-hidden="true">
+    <div class="report-drawer-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <h3 style="margin:0;">Report Bug / Idea</h3>
+          <div class="report-status-copy">Stay on the page, describe what happened, and the browser console will be attached automatically.</div>
+        </div>
+        <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
+      </div>
+    </div>
+    <form id="report-drawer-form" method="post" action="{{ url_for('create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+      <div class="report-drawer-body">
+        <div id="report-drawer-message" class="alert" style="display:none;"></div>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;">
+          <div class="form-group">
+            <label for="report-entry-type">Type</label>
+            <select class="form-control" id="report-entry-type" name="entry_type">
+              <option value="bug">Bug</option>
+              <option value="issue" selected>Issue</option>
+              <option value="recommendation">Recommendation</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="report-title">Title</label>
+            <input class="form-control" id="report-title" name="title" placeholder="Short title for the problem or idea">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="report-details">Details</label>
+          <textarea class="form-control" id="report-details" name="details" rows="6" placeholder="What happened, what you expected, or what you want to improve."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="report-source-path">Source Page</label>
+          <input class="form-control" id="report-source-path" name="source_path">
+        </div>
+        <div class="report-drawer-note">Browser console output is captured when you submit.</div>
+        <input type="hidden" id="report-browser-console" name="browser_console">
+        <input type="hidden" id="report-return-to" name="return_to">
+      </div>
+      <div class="report-drawer-footer">
+        <button class="btn btn-secondary" type="button" id="report-drawer-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
+      </div>
+    </form>
+  </aside>
+  {% block scripts %}{% endblock %}
+  <script>
+    function setResourceValue(key, value) {
+      const el = document.querySelector(`[data-resource="${key}"]`);
+      if (el) el.textContent = value;
+    }
+
+    function formatPercent(value) {
+      return value == null ? '--' : `${Number(value).toFixed(0)}%`;
+    }
+
+    function formatMb(value) {
+      return value == null ? '--' : `${Number(value).toFixed(0)} MB`;
+    }
+
+    function formatWatts(value) {
+      return value == null ? null : `${Number(value).toFixed(1)} W`;
+    }
+
+    function formatPowerSummary(power) {
+      if (!power) return '--';
+      const parts = [];
+      if (power.cpu_watts != null) parts.push(`CPU ${formatWatts(power.cpu_watts)}`);
+      if (power.gpu_watts != null) parts.push(`GPU ${formatWatts(power.gpu_watts)}`);
+      if (power.total_watts != null && parts.length > 1) parts.push(`Total ${formatWatts(power.total_watts)}`);
+      return parts.length ? parts.join(' · ') : '--';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderGpuProcesses(processes) {
+      const el = document.getElementById('gpu-process-details');
+      if (!el) return;
+      if (!processes || !processes.length) {
+        el.textContent = 'GPU processes: none detected';
+        return;
+      }
+
+      el.innerHTML = processes.map((process) => `
+        <span class="resource-pill">
+          <strong>${escapeHtml((process.name || `PID ${process.pid}`) + (process.is_self_project ? '(self)' : ''))}</strong>
+          GPU ${formatMb(process.gpu_memory_mb)} · CPU ${formatPercent(process.cpu_percent)} · RAM ${formatMb(process.memory_mb)}
+        </span>
+      `).join('');
+    }
+
+    async function refreshResourceStatus() {
+      try {
+        const response = await fetch('/api/resource-status');
+        if (!response.ok) return;
+        const data = await response.json();
+        setResourceValue('cpu-system', formatPercent(data.cpu?.system_percent));
+        setResourceValue('cpu-process', formatPercent(data.application?.cpu_percent ?? data.cpu?.process_percent));
+        setResourceValue(
+          'memory-system',
+          data.memory?.used_gb == null ? '--' : `${data.memory.used_gb}/${data.memory.total_gb} GB (${formatPercent(data.memory.system_percent)})`
+        );
+        setResourceValue(
+          'memory-process',
+          data.application?.memory_mb == null ? '--' : formatMb(data.application.memory_mb)
+        );
+        setResourceValue('power-live', formatPowerSummary(data.power));
+        setResourceValue(
+          'gpu-util',
+          data.gpu?.available ? `${data.gpu.name} ${formatPercent(data.gpu.utilization_percent)}` : 'Unavailable'
+        );
+        setResourceValue(
+          'gpu-memory',
+          data.gpu?.available ? `${Number(data.gpu.memory_used_mb).toFixed(0)}/${Number(data.gpu.memory_total_mb).toFixed(0)} MB` : 'Unavailable'
+        );
+        renderGpuProcesses(data.gpu?.processes);
+      } catch (_err) {
+        setResourceValue('power-live', '--');
+        setResourceValue('gpu-util', 'Unavailable');
+        renderGpuProcesses([]);
+      }
+    }
+
+    (function initReportDrawer() {
+      const drawer = document.getElementById('report-drawer');
+      const backdrop = document.getElementById('report-drawer-backdrop');
+      const form = document.getElementById('report-drawer-form');
+      const message = document.getElementById('report-drawer-message');
+      const closeButton = document.getElementById('report-drawer-close');
+      const cancelButton = document.getElementById('report-drawer-cancel');
+      const submitButton = document.getElementById('report-drawer-submit');
+      const sourceInput = document.getElementById('report-source-path');
+      const returnToInput = document.getElementById('report-return-to');
+      const consoleInput = document.getElementById('report-browser-console');
+      const detailsInput = document.getElementById('report-details');
+      if (!drawer || !backdrop || !form || !sourceInput || !returnToInput || !consoleInput) return;
+
+      function getPreferredSourcePath() {
+        const configuredSource = document.body.dataset.reportSourceDefault || '';
+        const currentPath = window.LibertyIssueReporter?.getCurrentPagePath?.() || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (window.location.pathname === '/debug' && configuredSource && configuredSource !== currentPath) {
+          return configuredSource;
+        }
+        return currentPath;
+      }
+
+      function setReportMessage(kind, text) {
+        if (!message) return;
+        if (!text) {
+          message.style.display = 'none';
+          message.textContent = '';
+          message.className = 'alert';
+          return;
+        }
+        message.textContent = text;
+        message.className = `alert ${kind === 'error' ? 'alert-error' : 'alert-success'}`;
+        message.style.display = 'block';
+      }
+
+      function syncReportContext() {
+        const sourcePath = getPreferredSourcePath();
+        sourceInput.value = sourcePath;
+        returnToInput.value = sourcePath;
+        consoleInput.value = window.LibertyIssueReporter?.getConsoleText?.() || '';
+      }
+
+      function openDrawer() {
+        syncReportContext();
+        setReportMessage(null, '');
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        backdrop.classList.add('open');
+        document.body.classList.add('report-drawer-open');
+        window.setTimeout(() => detailsInput?.focus(), 0);
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        backdrop.classList.remove('open');
+        document.body.classList.remove('report-drawer-open');
+      }
+
+      document.querySelectorAll('[data-open-report-overlay]').forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          openDrawer();
+        });
+      });
+
+      [backdrop, closeButton, cancelButton].forEach((el) => {
+        el?.addEventListener('click', closeDrawer);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && drawer.classList.contains('open')) {
+          closeDrawer();
+        }
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        syncReportContext();
+        setReportMessage(null, '');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving…';
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+          const result = await response.json();
+          if (!response.ok || result.status !== 'ok') {
+            throw new Error(result.message || 'Unable to save report.');
+          }
+          setReportMessage('success', result.message || 'Report saved.');
+          form.reset();
+          document.getElementById('report-entry-type').value = 'issue';
+          syncReportContext();
+          window.setTimeout(closeDrawer, 700);
+        } catch (error) {
+          setReportMessage('error', error.message || 'Unable to save report.');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Save Report';
+        }
+      });
+
+      if (new URLSearchParams(window.location.search).get('compose') === '1') {
+        openDrawer();
+      }
+    })();
+
+    refreshResourceStatus();
+    setInterval(refreshResourceStatus, 2000);
+  </script>
+</body>
+</html>

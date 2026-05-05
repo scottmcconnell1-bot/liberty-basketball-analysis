@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Analysis Status – Liberty Basketball{% endblock %}
+{% block head %}
+<meta http-equiv="refresh" content="5">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Analysis Status</h2>
+    <div class="text-muted">Auto-refreshes every 5 seconds.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Runs</h3>
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Game ID</th>
+          <th>Video</th>
+          <th>Status</th>
+          <th>Started</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td>{{ run.id }}</td>
+          <td><code>{{ run.game_id }}</code></td>
+          <td>{{ run.video_path }}</td>
+          <td>
+            {% set status_colors = {'pending': '#f59e0b', 'running': '#3b82f6', 'completed': '#059669', 'failed': '#dc2626'} %}
+            <strong style="color:{{ status_colors.get(run.status, '#6b7280') }}">{{ run.status }}</strong>
+            {% if run.error_message %}
+            <div style="margin-top:4px;color:#dc2626;font-size:0.82rem;">{{ run.error_message }}</div>
+            {% endif %}
+          </td>
+          <td>{{ run.started_at or '–' }}</td>
+          <td>{{ run.completed_at or '–' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted">No uploads yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Detections &amp; Events per Game</h3>
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Game ID</th>
+          <th>Detections</th>
+          <th>Events Tagged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in detection_rows %}
+        <tr>
+          <td><code>{{ row.game_id }}</code></td>
+          <td>{{ row.detections }}</td>
+          <td>{{ row.events }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="text-muted">No data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

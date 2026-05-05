@@ -1,0 +1,6 @@
+<div class="card" style="padding:10px 12px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn {% if active_tab == 'settings' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" href="{{ url_for('settings_page') }}">Settings</a>
+    <a class="btn {% if active_tab == 'custom-weights' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" href="{{ url_for('custom_weights_guide_page') }}">Custom Weights Guide</a>
+  </div>
+</div>
