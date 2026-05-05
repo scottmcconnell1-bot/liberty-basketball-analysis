@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Practice Summary – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Practice Range Summary</h2>
+    <span class="text-muted">Review a date range, then generate a summary across the matching practices.</span>
+  </div>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page') }}">Back to Practices</a>
+</div>
+
+<div class="card">
+  <form method="get" action="{{ url_for('practice_summary_page') }}">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="season_id">Season</label>
+        <select class="form-control" id="season_id" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if filters.season_id == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="level">Level</label>
+        <select class="form-control" id="level" name="level">
+          <option value="">All Levels</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select class="form-control" id="status" name="status">
+          <option value="">All Statuses</option>
+          {% for value, label in practice_status_options %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="start_date">Start Date</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ filters.start_date }}">
+      </div>
+      <div class="form-group">
+        <label for="end_date">End Date</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ filters.end_date }}">
+      </div>
+      <button class="btn btn-primary" type="submit">Generate</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Range Summary</h3>
+  <pre style="white-space:pre-wrap;font-family:inherit;">{{ range_summary }}</pre>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr><th>Date</th><th>Season</th><th>Status</th><th>Summary</th></tr></thead>
+    <tbody>
+      {% if practices %}
+        {% for practice in practices %}
+        <tr>
+          <td>{{ practice.practice_date }}</td>
+          <td>{{ practice.season_name or "–" }}</td>
+          <td><span class="badge badge-{{ practice.status }}">{{ practice.status }}</span></td>
+          <td>{{ practice.combined_summary or practice.ai_notes or practice.coach_notes or "No summary recorded yet." }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="4" class="text-muted" style="padding:16px;">No practices match the selected range.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

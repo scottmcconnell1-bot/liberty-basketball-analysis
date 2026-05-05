@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Custom Weights Guide – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Custom Weights Guide</h2>
+    <span class="text-muted">How to use Ollama vision as an add-on, and how to train or plug in your own detector weights for this project.</span>
+  </div>
+</div>
+
+{% set active_tab = 'custom-weights' %}
+{% include "_settings_tabs.html" %}
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Short Answer: Can Ollama Vision Models Be Used?</h3>
+  <p><strong>Yes, but as an add-on layer, not as the main detector.</strong> This app's video pipeline is built around Ultralytics object detection, which is fast enough to scan full videos frame-by-frame. Ollama vision models are better for reasoning over selected frames or short clips.</p>
+  <p class="text-muted">Good add-on uses: reviewing candidate events, summarizing a clip, comparing reruns, explaining why a possession was tagged a certain way, or labeling a handful of already-detected moments. Poor fit: scanning an entire game video frame-by-frame as the primary detector.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Recommended Ollama Vision Use Cases</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+    <div class="stat-box" style="text-align:left;">
+      <div class="label">Good Fit</div>
+      <div style="font-size:.96rem;line-height:1.7;">
+        Clip explanation<br>
+        Event verification<br>
+        Human-readable summaries<br>
+        Side-by-side rerun comparisons
+      </div>
+    </div>
+    <div class="stat-box" style="text-align:left;">
+      <div class="label">Not a Good Fit</div>
+      <div style="font-size:.96rem;line-height:1.7;">
+        Full-game detection pass<br>
+        High-FPS object tracking<br>
+        Replacing YOLO for bounding boxes<br>
+        Real-time frame-by-frame inference
+      </div>
+    </div>
+  </div>
+  <p class="text-muted mt-2">Examples of vision-capable Ollama families to evaluate for add-on workflows include models like <code>llava</code>, <code>qwen2.5vl</code>, or <code>minicpm-v</code> when they are available in your Ollama environment. Treat them as reviewers or describers, not as the detector that populates <code>detections</code>.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Important Limitation in the Current App</h3>
+  <p>The current analyzer only persists <strong>person</strong> and <strong>ball</strong> detections into the database. If you train a custom model with extra classes like <code>rim</code>, <code>referee</code>, <code>made_shot</code>, or <code>screen</code>, those classes will not automatically show up in the app until the analyzer/event pipeline is expanded to store and use them.</p>
+  <p class="text-muted">So today, the safest custom-weight strategy is to train a model that is still excellent at <code>person</code> and <code>ball</code> detection in your gym and camera angles. That alone can improve downstream tracking and event heuristics.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">How to Create Your Own Custom Weights</h3>
+  <ol style="padding-left:18px;line-height:1.8;">
+    <li><strong>Choose the exact classes you want.</strong> For the current app, start with <code>person</code> and <code>ball</code>. Add more classes only if you also plan to expand the code that consumes them.</li>
+    <li><strong>Collect representative footage.</strong> Use clips from your actual gym, scoreboard lighting, camera height, sideline angle, uniforms, and ball color. Variety matters more than total file count.</li>
+    <li><strong>Extract frames.</strong> Pull frames from games, practices, crowded possessions, fast breaks, rebounds, and bad lighting. Include misses, occlusion, and empty frames so the model learns what not to detect.</li>
+    <li><strong>Annotate in YOLO format.</strong> Tools like CVAT, Label Studio, or Roboflow can export YOLO detection labels. Keep labeling rules consistent, especially for the ball when it is partially occluded.</li>
+    <li><strong>Split the dataset.</strong> Create train, validation, and test sets. Keep some games fully out of training so you can tell whether the model generalizes.</li>
+    <li><strong>Create a <code>dataset.yaml</code>.</strong> Point it at your train/val folders and define the class names in the exact order used by the labels.</li>
+    <li><strong>Train from a reasonable base model.</strong> Start from a small or medium detector close to your hardware budget, then compare.</li>
+    <li><strong>Review the validation output.</strong> Look at missed balls, false positives on shoes or logos, and whether player boxes stay stable when defenders overlap.</li>
+    <li><strong>Export the best weights.</strong> Ultralytics training typically writes a <code>best.pt</code> file under the run directory.</li>
+    <li><strong>Load that weight file into this app.</strong> In <strong>Settings</strong>, choose <code>Custom Ultralytics weights</code> and set the custom model field to the local <code>.pt</code> path or a supported model name.</li>
+    <li><strong>Rerun AI and compare.</strong> Use the compare workflow on the same video to measure whether your custom detector produced better detections or downstream events.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Example Training Command</h3>
+  <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f8fafc;">
+    <code>yolo detect train data=/path/to/dataset.yaml model=yolo11s.pt imgsz=1280 epochs=100 batch=8 device=0 project=training_runs name=liberty-ball-player</code>
+  </div>
+  <p class="text-muted mt-2">If your GPU is small, reduce <code>imgsz</code> or batch size, or start from <code>yolo11n.pt</code>. If you are CPU-only, training will be much slower; consider training elsewhere and copying the resulting <code>best.pt</code> onto this machine.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Suggested Dataset Structure</h3>
+  <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f8fafc;line-height:1.7;">
+    <code>
+      dataset/<br>
+      &nbsp;&nbsp;images/train/<br>
+      &nbsp;&nbsp;images/val/<br>
+      &nbsp;&nbsp;images/test/<br>
+      &nbsp;&nbsp;labels/train/<br>
+      &nbsp;&nbsp;labels/val/<br>
+      &nbsp;&nbsp;labels/test/<br>
+      &nbsp;&nbsp;dataset.yaml
+    </code>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Example <code>dataset.yaml</code></h3>
+  <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f8fafc;line-height:1.7;">
+    <code>
+      path: /path/to/dataset<br>
+      train: images/train<br>
+      val: images/val<br>
+      test: images/test<br>
+      <br>
+      names:<br>
+      &nbsp;&nbsp;0: person<br>
+      &nbsp;&nbsp;1: ball
+    </code>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">What Usually Improves Results the Most</h3>
+  <ol style="padding-left:18px;line-height:1.8;">
+    <li>More examples from your real gym and camera angle</li>
+    <li>Cleaner ball labels during occlusion and motion blur</li>
+    <li>Frames from difficult possessions, not just easy ones</li>
+    <li>Comparing small vs medium models on the same uploaded video</li>
+    <li>Using the compare page to test changes one rerun at a time</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Practical Workflow for This Project</h3>
+  <ol style="padding-left:18px;line-height:1.8;">
+    <li>Start with <code>yolo11n.pt</code> or <code>yolo11s.pt</code> in Settings.</li>
+    <li>If stock weights still miss the ball or merge players too often, train a custom detector focused on your footage.</li>
+    <li>Load the resulting <code>best.pt</code> through the custom detector field.</li>
+    <li>Rerun the same uploaded video and compare counts.</li>
+    <li>If you want richer labels later, add Ollama vision as a second-stage reviewer on top of detections rather than replacing the detector.</li>
+  </ol>
+</div>
+{% endblock %}

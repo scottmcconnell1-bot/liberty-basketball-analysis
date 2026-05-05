@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Games – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Games</h2>
+  <a class="btn btn-primary btn-sm" href="#game-form">+ Add Game</a>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Game</th><th>Schedule Link</th><th>Primary Source</th><th>Result</th><th>Conference</th><th>Extra Sources</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% if games %}
+        {% for game in games %}
+        <tr>
+          <td>
+            {% if game.game_date %}
+            <strong>{{ game.game_date }}</strong><br>
+            <span class="text-muted">{{ game.opponent_name }}{% if game.level %} · {{ game.level }}{% endif %}{% if game.gender %} · {{ game.gender }}{% endif %}</span>
+            {% else %}
+            <strong>Standalone scouting game</strong><br>
+            <span class="text-muted">{{ game.start_time or "No scheduled game linked" }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if game.scheduled_game_id %}
+            #{{ game.scheduled_game_id }}{% if game.season_name %} · {{ game.season_name }}{% endif %}
+            {% else %}
+            –
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{{ game.source_type }}">{{ game.source_type }}</span><br>
+            <span class="text-muted">{{ game.source_key }}</span>
+          </td>
+          <td>
+            {% if game.home_score is not none and game.away_score is not none %}
+            {{ game.home_score }}-{{ game.away_score }}
+            {% if game.result %}
+            <br><span class="badge badge-{{ game.result }}">{{ game.result }}</span>
+            {% endif %}
+            {% else %}
+            –
+            {% endif %}
+          </td>
+          <td>{{ "Yes" if game.is_conference else "No" }}</td>
+          <td>{{ game.source_count }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('games_page', edit_game_id=game.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('games_delete', game_id=game.id) }}" style="display:inline;">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="7" class="text-muted" style="padding:16px;">No games saved yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;">
+  <div class="card" id="game-form">
+    <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Game{% else %}Add Game{% endif %}</h3>
+    <form method="post" action="{{ url_for('games_save') }}">
+      <input type="hidden" name="game_id" value="{{ game_form.id }}">
+      <div class="form-group">
+        <label for="scheduled_game_id">Scheduled Game (optional)</label>
+        <select class="form-control" id="scheduled_game_id" name="scheduled_game_id">
+          <option value="">Standalone scouting game</option>
+          {% for scheduled_game in scheduled_games %}
+          <option value="{{ scheduled_game.id }}" {% if game_form.scheduled_game_id|string == scheduled_game.id|string %}selected{% endif %}>
+            {{ scheduled_game.game_date }} · {{ scheduled_game.opponent_name }} · {{ scheduled_game.season_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="start_time">Start Time</label>
+          <input type="datetime-local" class="form-control" id="start_time" name="start_time" value="{{ game_form.start_time }}">
+        </div>
+        <div class="form-group">
+          <label for="end_time">End Time</label>
+          <input type="datetime-local" class="form-control" id="end_time" name="end_time" value="{{ game_form.end_time }}">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="source_type">Primary Source Type</label>
+          <select class="form-control" id="source_type" name="source_type" required>
+            {% for value, label in game_source_type_options %}
+            <option value="{{ value }}" {% if game_form.source_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="source_key">Primary Source Key</label>
+          <input class="form-control" id="source_key" name="source_key" value="{{ game_form.source_key }}" required>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="nfhs_game_id">NFHS Game ID (optional)</label>
+          <input class="form-control" id="nfhs_game_id" name="nfhs_game_id" value="{{ game_form.nfhs_game_id }}">
+        </div>
+        <div class="form-group">
+          <label for="nfhs_url">NFHS URL (optional)</label>
+          <input class="form-control" id="nfhs_url" name="nfhs_url" value="{{ game_form.nfhs_url }}">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="home_score">Home Score</label>
+          <input type="number" class="form-control" id="home_score" name="home_score" value="{{ game_form.home_score }}">
+        </div>
+        <div class="form-group">
+          <label for="away_score">Away Score</label>
+          <input type="number" class="form-control" id="away_score" name="away_score" value="{{ game_form.away_score }}">
+        </div>
+        <div class="form-group">
+          <label for="result">Result</label>
+          <select class="form-control" id="result" name="result">
+            {% for value, label in game_result_options %}
+            <option value="{{ value }}" {% if game_form.result == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" name="is_conference" value="1" {% if game_form.is_conference %}checked{% endif %} style="width:auto;">
+          Conference game
+        </label>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <a class="btn btn-secondary" href="{{ url_for('games_page') }}">Reset</a>
+        <button class="btn btn-primary" type="submit">Save Game</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:18px;">Link Source to Game</h3>
+    <form method="post" action="{{ url_for('games_save_source') }}">
+      <div class="form-group">
+        <label for="source_game_id">Game</label>
+        <select class="form-control" id="source_game_id" name="game_id" required>
+          <option value="">Select a game</option>
+          {% for game in games %}
+          <option value="{{ game.id }}" {% if source_form.game_id|string == game.id|string %}selected{% endif %}>
+            {% if game.game_date %}{{ game.game_date }} · {{ game.opponent_name }}{% else %}Standalone game #{{ game.id }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="source_type_secondary">Source Type</label>
+        <select class="form-control" id="source_type_secondary" name="source_type" required>
+          {% for value, label in source_type_options %}
+          <option value="{{ value }}" {% if source_form.source_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="source_path">Source Path / URL</label>
+        <input class="form-control" id="source_path" name="source_path" value="{{ source_form.source_path }}" required>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn btn-primary" type="submit">Add Source</button>
+      </div>
+    </form>
+
+    <table style="margin-top:18px;">
+      <thead><tr><th>Game</th><th>Source</th><th></th></tr></thead>
+      <tbody>
+        {% if sources %}
+          {% for source in sources %}
+          <tr>
+            <td>{% if source.game_date %}{{ source.game_date }} · {{ source.opponent_name }}{% else %}Game #{{ source.game_id }}{% endif %}</td>
+            <td><strong>{{ source.source_type }}</strong><br><span class="text-muted">{{ source.source_path }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('games_delete_source', source_id=source.id) }}">
+                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="3" class="text-muted">No linked sources yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-manual { background: #e5e7eb; color: #374151; }
+  .badge-nfhs { background: #dbeafe; color: #1d4ed8; }
+  .badge-pixellot { background: #ede9fe; color: #6d28d9; }
+</style>
+{% endblock %}

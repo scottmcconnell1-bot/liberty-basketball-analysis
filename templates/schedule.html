@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Schedule – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Schedule</h2>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule') }}">Clear Filters</a>
+    <a class="btn btn-primary btn-sm" href="#schedule-game-form">+ Add Game</a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" action="{{ url_for('schedule') }}">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="season_id">Season</label>
+        <select class="form-control" id="season_id" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if filters.season_id == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="level">Level</label>
+        <select class="form-control" id="level" name="level">
+          <option value="">All Levels</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="gender">Gender</label>
+        <select class="form-control" id="gender" name="gender">
+          <option value="">All Genders</option>
+          {% for value, label in gender_options %}
+          <option value="{{ value }}" {% if filters.gender == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select class="form-control" id="status" name="status">
+          <option value="">All Statuses</option>
+          {% for value, label in status_options %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Season</th><th>Date</th><th>Time</th><th>Program</th><th>Level</th><th>Gender</th>
+      <th>Opponent</th><th>Location</th><th>Status</th><th>Notes</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% if games %}
+        {% for game in games %}
+        <tr>
+          <td>{{ game.season_name }}</td>
+          <td>{{ game.game_date }}</td>
+          <td>{{ game.game_time or "–" }}</td>
+          <td>{{ game.program_name }}</td>
+          <td>{{ game.level }}</td>
+          <td>{{ game.gender }}</td>
+          <td>{{ game.opponent_name }}</td>
+          <td><span class="badge badge-{{ game.location_type }}">{{ game.location_type }}</span></td>
+          <td>
+            {% if game.status != "scheduled" %}
+            <span class="badge badge-{{ game.status }}">{{ game.status }}</span>
+            {% else %}
+            –
+            {% endif %}
+          </td>
+          <td>{{ game.notes or "" }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('schedule_delete_game', game_id=game.id) }}" style="display:inline;">
+              <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+              <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+              <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+              <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="11" class="text-muted" style="padding:16px;">No games match the current filters.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
+  <div class="card" id="schedule-game-form">
+    <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Scheduled Game{% else %}Add Scheduled Game{% endif %}</h3>
+    <form method="post" action="{{ url_for('schedule_save_game') }}">
+      <input type="hidden" name="game_id" value="{{ game_form.id }}">
+      <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+      <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+      <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+      <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+      <div class="form-group">
+        <label for="game-season">Season</label>
+        <select class="form-control" id="game-season" name="season_id" required>
+          <option value="" {% if not seasons %}selected{% endif %}>Select a season</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if game_form.season_id|string == season.id|string %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="program_name">Program</label>
+          <input class="form-control" id="program_name" name="program_name" value="{{ game_form.program_name }}">
+        </div>
+        <div class="form-group">
+          <label for="level-select">Level</label>
+          <select class="form-control" id="level-select" name="level">
+            {% for value, label in level_options %}
+            <option value="{{ value }}" {% if game_form.level == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="gender-select">Gender</label>
+          <select class="form-control" id="gender-select" name="gender">
+            {% for value, label in gender_options %}
+            <option value="{{ value }}" {% if game_form.gender == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="location_type">Location</label>
+          <select class="form-control" id="location_type" name="location_type">
+            {% for value, label in location_options %}
+            <option value="{{ value }}" {% if game_form.location_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="game_date">Date</label>
+          <input type="date" class="form-control" id="game_date" name="game_date" value="{{ game_form.game_date }}" required>
+        </div>
+        <div class="form-group">
+          <label for="game_time">Time</label>
+          <input type="time" class="form-control" id="game_time" name="game_time" value="{{ game_form.game_time }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="opponent_name">Opponent</label>
+        <input class="form-control" id="opponent_name" name="opponent_name" value="{{ game_form.opponent_name }}" required>
+      </div>
+      <div class="form-group">
+        <label for="tournament_name">Tournament (optional)</label>
+        <input class="form-control" id="tournament_name" name="tournament_name" value="{{ game_form.tournament_name }}">
+      </div>
+      <div class="form-group">
+        <label for="game-status">Status</label>
+        <select class="form-control" id="game-status" name="status">
+          {% for value, label in status_options %}
+          <option value="{{ value }}" {% if game_form.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea class="form-control" id="notes" name="notes" rows="3">{{ game_form.notes }}</textarea>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <a class="btn btn-secondary" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Reset</a>
+        <button class="btn btn-primary" type="submit">Save Game</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="page-header" style="margin-bottom:14px;">
+      <h3 style="font-size:1rem;">Manage Seasons</h3>
+      {% if editing_season %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
+      {% endif %}
+    </div>
+    <table style="margin-bottom:18px;">
+      <thead><tr><th>Name</th><th>Start</th><th>End</th><th></th></tr></thead>
+      <tbody>
+        {% if seasons %}
+          {% for season in seasons %}
+          <tr>
+            <td>{{ season.name }}</td>
+            <td>{{ season.start_date }}</td>
+            <td>{{ season.end_date }}</td>
+            <td style="white-space:nowrap;">
+              <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('schedule_delete_season', season_id=season.id) }}" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="4" class="text-muted">No seasons yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <form method="post" action="{{ url_for('schedule_save_season') }}">
+      <input type="hidden" name="season_id" value="{{ season_form.id }}">
+      <div class="form-group">
+        <label for="season-name">Season Name</label>
+        <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys Jr High" value="{{ season_form.name }}" required>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="season-start">Start Date</label>
+          <input type="date" class="form-control" id="season-start" name="start_date" value="{{ season_form.start_date }}" required>
+        </div>
+        <div class="form-group">
+          <label for="season-end">End Date</label>
+          <input type="date" class="form-control" id="season-end" name="end_date" value="{{ season_form.end_date }}" required>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn btn-primary" type="submit">{% if editing_season %}Update Season{% else %}Add Season{% endif %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+  .badge-rescheduled { background: #fef3c7; color: #92400e; }
+  .badge-completed { background: #dbeafe; color: #1d4ed8; }
+</style>
+{% endblock %}

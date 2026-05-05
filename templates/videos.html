@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Video Library – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📹 Video Library</h2>
+  <div style="display:flex;gap:10px;">
+    <a href="/film" class="btn btn-primary">+ Upload New Video</a>
+    <button class="btn btn-danger" onclick="confirmClearAll()">🗑 Clear All Videos</button>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;padding:14px 20px;background:#f0fdfb;border-color:#99d4d6;">
+  <strong>ℹ️ How it works:</strong>
+  Each upload gets a unique timestamped filename so you can re-upload the same game multiple times.
+  Duplicates are flagged automatically. Click <em>Open in Film Tool</em> to tag events or view AI detections.
+  Use the 🗑 button on any row to permanently delete a video and its analysis data.
+</div>
+
+<div class="card" id="videos-card">
+  <div id="loading" style="color:#6b7280;padding:20px 0;">Loading videos…</div>
+  <table id="video-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>Original Filename</th>
+        <th>Opponent</th>
+        <th>Uploaded</th>
+        <th>Size</th>
+        <th>AI Status</th>
+        <th>Detections</th>
+        <th>Events</th>
+        <th>Runs</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="video-tbody"></tbody>
+  </table>
+  <div id="empty-msg" style="display:none;color:#6b7280;padding:20px 0;text-align:center;">
+    No videos uploaded yet. <a href="/film">Upload your first video →</a>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 12px;font-size:1rem;">Delete video?</h3>
+    <p id="delete-modal-desc" style="color:#4b5563;font-size:.9rem;margin-bottom:20px;"></p>
+    <p style="color:#dc2626;font-size:.82rem;margin-bottom:20px;">⚠️ This will permanently remove the file and all AI analysis data for this video.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Delete permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm clear-all modal -->
+<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;padding:28px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 12px;font-size:1rem;">Clear all videos?</h3>
+    <p style="color:#4b5563;font-size:.9rem;margin-bottom:16px;">This will permanently delete <strong>every video file and all AI analysis data</strong> (detections, events, analysis runs). Season and schedule data will be kept.</p>
+    <p style="color:#dc2626;font-size:.82rem;margin-bottom:20px;">⚠️ This cannot be undone.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeClearModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doResetAll()">Yes, clear everything</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const STATUS_COLORS = {
+  completed:   { bg: '#dcfce7', color: '#166534', label: '✅ Completed' },
+  running:     { bg: '#dbeafe', color: '#1e40af', label: '⏳ Running' },
+  pending:     { bg: '#fef9c3', color: '#854d0e', label: '🕐 Pending' },
+  failed:      { bg: '#fee2e2', color: '#991b1b', label: '❌ Failed' },
+  not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
+};
+
+function statusBadge(status) {
+  const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
+  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;">${s.label}</span>`;
+}
+
+function formatBytes(b) {
+  if (!b) return '—';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts.replace(' ', 'T') + 'Z');
+  return d.toLocaleString();
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Delete single video ─────────────────────────────────
+let pendingDeleteId = null;
+
+function confirmDelete(id, name) {
+  pendingDeleteId = id;
+  document.getElementById('delete-modal-desc').textContent = `"${name}"`;
+  const m = document.getElementById('delete-modal');
+  m.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+  try {
+    const r = await fetch(`/api/videos/${pendingDeleteId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    closeDeleteModal();
+    loadVideos();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Delete permanently';
+  }
+});
+
+// ── Clear all videos ────────────────────────────────────
+function confirmClearAll() {
+  document.getElementById('clear-modal').style.display = 'flex';
+}
+function closeClearModal() {
+  document.getElementById('clear-modal').style.display = 'none';
+}
+
+async function doResetAll() {
+  closeClearModal();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('video-table').style.display = 'none';
+  document.getElementById('empty-msg').style.display = 'none';
+  try {
+    const r = await fetch('/api/admin/reset', { method: 'POST' });
+    if (!r.ok) throw new Error('Reset failed');
+    loadVideos();
+  } catch (e) {
+    alert('Error during reset: ' + e.message);
+    loadVideos();
+  }
+}
+
+// ── Load video list ─────────────────────────────────────
+async function loadVideos() {
+  const resp = await fetch('/api/videos');
+  const videos = await resp.json();
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (!videos.length) {
+    document.getElementById('video-table').style.display = 'none';
+    document.getElementById('empty-msg').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('empty-msg').style.display = 'none';
+  const tbody = document.getElementById('video-tbody');
+  tbody.innerHTML = '';
+
+  for (const v of videos) {
+    const dupBadge = v.is_duplicate
+      ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">⚠️ Dup</span>`
+      : '';
+
+    const tr = document.createElement('tr');
+    tr.id = `video-row-${v.id}`;
+    tr.innerHTML = `
+      <td>
+        <span title="Stored as: ${escHtml(v.stored_filename)}">${escHtml(v.original_filename)}</span>
+        ${dupBadge}
+        <div style="font-size:.75rem;color:#9ca3af;margin-top:2px;">${escHtml(v.stored_filename)}</div>
+      </td>
+      <td>${escHtml(v.opponent || '—')}</td>
+      <td style="white-space:nowrap;">${formatDate(v.upload_timestamp)}</td>
+      <td>${formatBytes(v.file_size_bytes)}</td>
+      <td>${statusBadge(v.analysis_status || 'not_started')}</td>
+      <td style="text-align:center;">${v.detection_count ?? 0}</td>
+      <td style="text-align:center;">${v.event_count ?? 0}</td>
+      <td style="text-align:center;">${v.analysis_run_count ?? 0}</td>
+      <td style="white-space:nowrap;">
+        <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
+        <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm" style="margin-left:6px;">Compare AI</a>
+        <button class="btn btn-danger btn-sm" style="margin-left:6px;"
+          onclick="confirmDelete(${v.id}, '${escHtml(v.original_filename).replace(/'/g,"\\'")}')" title="Delete this video">🗑</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('video-table').style.display = 'table';
+}
+
+loadVideos();
+setInterval(loadVideos, 10000);
+</script>
+{% endblock %}

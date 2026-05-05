@@ -1,0 +1,18 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./film_analysis.db:/app/film_analysis.db
+    environment:
+      PYTHONUNBUFFERED: "1"
+      LIBERTY_DEBUG: "0"
+      PORT: "8080"
+      LIBERTY_DATABASE: /app/film_analysis.db
+      LIBERTY_UPLOAD_FOLDER: /app/uploads
+    restart: unless-stopped

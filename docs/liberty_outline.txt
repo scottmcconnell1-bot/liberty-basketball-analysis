@@ -1,0 +1,375 @@
+Operational note (2026-05-05): this file remains a product-planning/source-outline document. For current setup, deployment, transfer, and AI-handoff instructions, use README.md, docs/DEPLOYMENT.md, and docs/AI_AGENT_HANDOFF.md.
+
+Here is the merged final outline, with all content from the original plus the newer 2026-05-01 changelog block integrated at the top; this should now serve as your single **source** of truth. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+***
+
+Rex, you don't have access to Google Docs, so here is the  
+master Liberty Project Outline in plain text for you to use as  
+the source of truth. Please read this carefully and then follow  
+the phases as described.
+
+Liberty Master Project Outline  
+==============================
+
+Changelog  
+- 2026-04-28: Clarified Phase 2.2 to include scheduled_games CRUD + /schedule UI.  
+- 2026-04-28: Expanded Phase 3.1 (Games) with basic result fields (home_score, away_score, result, is_conference).  
+- 2026-04-28: Added Phase 6 – Practices & Practice Reports (plans, coach notes, AI notes, date-range summaries).  
+- 2026-05-01  
+  - Clarified that the /schedule page uses a server-rendered games table as the primary flow.  
+  - JS-based games loading (loadGames / renderGames) is treated as optional and is currently disabled in favor of simpler server rendering.  
+  - Confirmed that the practices data model (Phase 6) is the source of truth for future practice-related features; no changes required based on recent discussion.
+
+Owner: Me (coach + builder)  
+Assistants: Perplexity (design/brain), Rex (repo/code agent)
+
+Core idea: A basketball film and analytics system that matches how I actually coach: schedules, games, film sources (NFHS/Pixellot/manual), stats, development, practices, and practice cut-ups, built in small, safe steps. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Phase 0 -- Foundation & Principles  
+----------------------------------
+
+## 0.1 Goals
+
+- Build a long-term tool I actually use as a coach, not a toy demo.  
+- Keep everything reviewable: small tasks, clear diffs, and my approval between phases.  
+- Favor simple, robust features over clever complexity. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 0.2 Constraints & Practices
+
+- SQLite database, with schema.sql as the single source of truth.  
+- No heavy new dependencies (for example, big CV trackers) in early phases.  
+- Rex:  
+  - Proposes small tasks.  
+  - Edits code/schema.  
+  - Stops after each task and shows diffs.  
+- Me:  
+  - Own the data model, terminology, and workflow.  
+  - Approve or adjust before Rex moves on. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Phase 1 -- Data Model & Schema  
+------------------------------
+
+## 1.1 Existing Analysis Tables 
+
+These tables already exist and support the current tagging/analysis flow:
+
+- events: in-game events (possessions, dribbles, shots).  
+- analysis_runs: status of video analysis runs.  
+- detections: per-frame detection data.
+
+Rex must not drop or fundamentally change these without an explicit plan. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 1.2 Seasons, Schedules, Games, and Sources 
+
+Goal: Represent my world of seasons, games, NFHS/Pixellot/manual film, and multiple sources per game in a clean schema. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Tables:
+
+- seasons  
+  - id (PK)  
+  - name (TEXT, UNIQUE) -- for example, 2025-26.  
+  - start_date (DATE)  
+  - end_date (DATE)  
+  - created_at (TIMESTAMP)
+
+- scheduled_games  
+  - id (PK)  
+  - season_id → seasons.id (NOT NULL)  
+  - program_name (TEXT) -- for example, Liberty.  
+  - gender (TEXT) -- boys or girls.  
+  - level (TEXT) -- varsity, jv, jr_high.  
+  - game_date (DATE)  
+  - game_time (TIME)  
+  - location_type (TEXT) -- home, away, neutral.  
+  - opponent_name (TEXT)  
+  - tournament_name (TEXT, optional)  
+  - status (TEXT, default scheduled) -- scheduled, cancelled, rescheduled, completed.  
+  - notes (TEXT)  
+  - created_at, updated_at (TIMESTAMP)
+
+- games  
+  - id (PK)  
+  - scheduled_game_id → scheduled_games.id (nullable, supports scouting games not on my schedule).  
+  - start_time (TIMESTAMP, optional)  
+  - end_time (TIMESTAMP, optional)  
+  - source_type (TEXT, NOT NULL) -- pixellot, nfhs, manual.  
+  - source_key (TEXT, NOT NULL) -- NFHS game_id, Pixellot id, or local path.  
+  - nfhs_game_id (TEXT, optional)  
+  - nfhs_url (TEXT, optional)  
+  - created_at, updated_at (TIMESTAMP)
+
+- nfhs_matches  
+  - id (PK)  
+  - scheduled_game_id → scheduled_games.id (NOT NULL)  
+  - nfhs_game_id (TEXT, NOT NULL)  
+  - nfhs_url (TEXT, NOT NULL)  
+  - match_status (TEXT, default candidate) -- candidate, confirmed, rejected.  
+  - confidence (REAL, optional)  
+  - created_at (TIMESTAMP)
+
+- sources  
+  - id (PK)  
+  - game_id → games.id (NOT NULL)  
+  - source_type (TEXT, NOT NULL) -- nfhs_vod, manual_upload, local_file, etc.  
+  - source_path (TEXT, NOT NULL) -- file path or URL.  
+  - created_at, updated_at (TIMESTAMP)
+
+Status: Implemented in schema.sql with CREATE TABLE IF NOT EXISTS. This structure is locked in as the basis for all schedule, game, and film features. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Phase 2 -- Core Schedule & Season Management  
+--------------------------------------------
+
+Goal: Simple, reliable tools to manage seasons and scheduled games. No stats, NFHS automation, or heavy ingestion logic yet. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+## 2.1 Seasons CRUD
+
+Features:
+
+- Create a season with name, start_date, and end_date.  
+- List seasons (most recent first is fine).  
+- Edit season name and dates if needed.  
+- (Optional later) Mark a season as "current" or "archived." [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Rex tasks (stepwise):
+
+1. Wire basic season create/list/edit using the existing database.  
+2. Stop and show diffs (code plus any UI/CLI changes) for review. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+## 2.2 Scheduled Games CRUD + Schedule UI  (clarified 2026-04-28)
+
+Features:
+
+- Create a scheduled game for a season:  
+  - program_name, gender, level.  
+  - game_date, game_time, location_type, opponent_name.  
+  - optional tournament_name, notes.  
+- List scheduled games by:  
+  - season, date, level, gender.  
+- Edit/update scheduled games (time changes, cancellations, etc.).  
+- Set status: scheduled, cancelled, rescheduled, completed.  
+- /schedule page:  
+  - Season dropdown (from /api/seasons).  
+  - Table of scheduled games for the selected season.  
+  - Add Game form.  
+  - Edit and Delete actions.  
+  - Consistent dropdowns for level/gender/status; status only shown when special (cancelled / rescheduled / completed).
+
+Rex tasks:
+
+1. Implement basic CRUD for scheduled_games wired to seasons (DB helpers + /api/scheduled_games endpoints).  
+2. Provide simple filters (by season, level, gender).  
+3. Implement /schedule route and schedule.html:  
+   - Season picker.  
+   - Table with date, time, level, gender, opponent, status (special cases only), notes, actions.  
+   - Add Game form.  
+   - Edit/Delete flows.  
+4. Keep HTML/JS minimal (no frameworks), using fetch.  
+5. Stop and show diffs and example flows. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Out of scope for Phase 2:
+
+- NFHS integration.  
+- Video uploads.  
+- Changes to event tagging or stats. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Phase 3 -- Games & Film Sources  
+-------------------------------
+
+Goal: Tie real games and video sources to the schedule in a robust, coach-friendly way that supports NFHS, Pixellot, and manual film. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 3.1 Game Instances (Games CRUD)  (expanded 2026-04-28)
+
+Features:
+
+- Create games rows tied to scheduled_games whenever possible.  
+- Allow standalone games for scouting (no scheduled_game_id).  
+- Track start_time, end_time, source_type, source_key, and optional NFHS fields.  
+- Add basic result fields for later stats (added 2026-04-28):  
+  - home_score, away_score  
+  - result (win, loss, maybe tie)  
+  - is_conference (BOOLEAN) [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Rex tasks:
+
+1. Add flows to create a game from a scheduled_game.  
+2. Add flows to create standalone games for scouting.  
+3. Implement Games DB helpers and /api/games CRUD endpoints (create/list/get/update/delete), including result fields where approved.  
+4. Stop and show diffs. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 3.2 Video Sources
+
+Features:
+
+- Use sources to attach:  
+  - NFHS VOD links.  
+  - Manual upload/local file paths.  
+  - Multiple sources per game if needed.
+
+Rex tasks:
+
+1. Implement add/list/remove for sources per game.  
+2. Keep logic simple: just linking, no complex processing yet.  
+3. Stop and show diffs. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Out of scope for Phase 3:
+
+- Actual upload UI or video streaming implementation details.  
+- Advanced NFHS scraping or automation. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Phase 4 -- NFHS Matching & Light Automation  
+-------------------------------------------
+
+Goal: Make it easier to match scheduled games to NFHS games in a controlled, reviewable way. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+## 4.1 NFHS Candidates and Confirmation
+
+Features:
+
+- Use nfhs_matches to store:  
+  - candidate NFHS games for a scheduled_game.  
+  - match_status and confidence.  
+- Simple flows to:  
+  - Add a candidate manually by pasting NFHS URL/ID.  
+  - Mark a candidate as confirmed or rejected.  
+- When a match is confirmed, update games and/or sources appropriately. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Rex tasks:
+
+1. Implement manual NFHS candidate add/list/confirm/reject.  
+2. On confirmation, wire up creation or update of games / sources in a simple, explicit way.  
+3. Stop and wait for review before any scraping or heavier automation. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Out of scope for Phase 4:
+
+- Complex NFHS automation or scraping until the manual flow feels right. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Phase 5 -- Stats & Event Usage  
+------------------------------
+
+Goal: Tie events, analysis_runs, and detections into the new game structure for stats and breakdowns. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+High-level ideas:
+
+- Ensure events are linked to games (directly or via existing structure).  
+- Build simple box-score style stats for games from events.  
+- Provide basic breakdowns by game, team, player, and tag.
+
+Details will be specified once Phases 2–4 are working and stable. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Phase 6 -- Practices & Practice Reports  (added 2026-04-28)  
+-----------------------------------------------------------
+
+Goal: Track practices in the same world as games, with plans, evaluations, and summaries that actually help me coach. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+## 6.1 Practices Data Model
+
+Features:
+
+- Add a practices table linked to seasons and level (varsity, jv, jr_high).  
+- Fields (first pass):  
+  - id (PK)  
+  - season_id → seasons.id  
+  - level (TEXT)  
+  - practice_date (DATE)  
+  - status (TEXT) – planned, completed, cancelled  
+  - plan_source (TEXT) – auto or uploaded  
+  - plan_text (TEXT) – normalized practice plan  
+  - coach_notes (TEXT)  
+  - ai_notes (TEXT) – AI’s analysis of the practice  
+  - combined_summary (TEXT or JSON) – short structured summary with source tags (Coach vs AI vs film)
+
+Rex tasks:
+
+1. Propose and implement practices table in schema.sql (in small steps, with explicit diffs).  
+2. Ensure no existing tables are broken.  
+3. Stop and wait for review. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 6.2 Practices UI (/practices)
+
+Features:
+
+- Pick a season and level.  
+- See a list of practices (date, status).  
+- Add/edit/cancel practices.  
+- For each practice:  
+  - View and edit the plan.  
+  - Enter coach notes after practice.
+
+Rex tasks:
+
+1. Implement /practices route and a simple practices.html page (similar to /schedule): season/level picker, list, add/edit/delete.  
+2. Support plan_source selection: auto vs uploaded/manual.  
+3. Stop and show diffs. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+## 6.3 Practice AI Notes & Single-Practice Reports
+
+Features:
+
+- For a single practice:  
+  - Generate ai_notes using the plan + coach_notes (+ film/stats when available; otherwise clearly say “no film”).  
+  - Generate a combined_summary that labels sources: Coach vs AI vs film.  
+- Provide a “report builder” that lets me choose what the report includes:  
+  - Practice plan  
+  - Plan vs actual (where it deviated)  
+  - Coach notes  
+  - AI notes  
+  - Combined summary (with labeled contributions)
+
+Rex tasks:
+
+1. Add endpoints or flows to trigger AI evaluation for a practice (using configured models).  
+2. Store ai_notes and combined_summary on the practices record.  
+3. Implement a simple report view for a single practice that can toggle sections.  
+4. Stop and show diffs. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+## 6.4 Date-Range Practice Summaries
+
+Features:
+
+- Given a date range (and optional season/level), pull all practices in that range.  
+- Show a list of their summaries.  
+- Generate a range-level meta-summary:  
+  - Recurring strengths and weaknesses.  
+  - Drill or concept themes.  
+  - Evidence of progress over time.  
+  - Suggested focus for the next block of practices.  
+- Clearly tag what comes from:  
+  - Coach notes  
+  - AI notes with film  
+  - AI notes without film (plan + notes only)
+
+Rex tasks:
+
+- Implement a /practice-summary view or endpoint that:  
+  - Accepts date range and filters.  
+  - Queries practices and their summaries.  
+- Run an AI pass over those summaries to produce a range summary with source tags.  
+- Stop and show diffs and example outputs. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Phase 7 -- Player Development & Practice Engine  
+-----------------------------------------------
+
+Goal: Use the same foundation (games, film, events, practices) for player development and practice planning. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+High-level ideas:
+
+- Track development clips per player tied back to games and events.  
+- Build practice playlists from prior clips (e.g., turnovers, missed boxouts, good actions).  
+- Provide simple tools to assemble and track practice plans.
+
+Details for this phase will be fleshed out after earlier phases are in good shape. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/ac0b75d5-c626-454c-9c35-b949fc19ce35/Liberty-Master-Project-Outline.txt)
+
+Always-On Process Rules  
+-----------------------
+
+- Rex:  
+  - Works only on clearly scoped tasks from this outline (or later revisions).  
+  - Treats schema.sql and this outline as constraints, not suggestions.  
+  - Stops after each task, shows diffs, and asks for approval.  
+- Me:  
+  - Review each step before the next.  
+  - Adjust the outline and schema as needed (with help from Perplexity).  
+  - Keep everything connected to real coaching needs and my available time. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/168271520/22ac67b5-62fd-45e2-a45c-fdbb641f93d2/Liberty-Master-Project-Outline-1.txt)
+
+Would you like me to also propose a very short “Implementation Notes” section at the top that summarizes the 2026-05-01 decisions in 2–3 bullet points for quick reference?
