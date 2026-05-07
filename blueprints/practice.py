@@ -20,7 +20,7 @@ from flask import Blueprint, abort, g, redirect, render_template, request, url_f
 
 from helpers import require_feature, get_db, render_practices_page, fetch_practices_with_context
 from helpers import build_practice_ai_notes, build_practice_combined_summary, build_practice_range_summary
-from helpers import SCHEDULE_LEVEL_OPTIONS, PRACTICE_STATUS_OPTIONS
+from helpers import get_runtime_settings, SCHEDULE_LEVEL_OPTIONS, PRACTICE_STATUS_OPTIONS
 
 import player_development as pd_helpers
 
@@ -135,7 +135,7 @@ def practice_generate_notes(practice_id):
     practice = db.execute("SELECT * FROM practices WHERE id=?", (practice_id,)).fetchone()
     if not practice:
         abort(404)
-    ai_notes = build_practice_ai_notes(practice)
+    ai_notes = build_practice_ai_notes(practice, get_runtime_settings())
     combined_summary = build_practice_combined_summary(practice, ai_notes)
     db.execute(
         "UPDATE practices SET ai_notes=?, combined_summary=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",

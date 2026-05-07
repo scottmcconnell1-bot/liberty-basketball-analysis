@@ -78,10 +78,11 @@ KNOWN ISSUES / TECHNICAL DEBT
 ------------------------------
 1. ~~Dribble detection is heuristic-only~~ — improved with ByteTrack integration
 2. ~~tracker_assigner is lightweight centroid matching~~ — now uses ByteTrack via model.track()
-3. AI notes for practices are heuristic/rule-based — no LLM integration yet
+3. ~~AI notes for practices are heuristic/rule-based~~ — now uses Ollama LLM with heuristic fallback
 4. ~~No production WSGI server~~ — gunicorn configured
 5. ~~No automated backup/restore~~ — backup.sh script added
 6. ~~No deployment smoke tests~~ — smoke_test.sh script added
+7. ~~app.py monolith (3,297 lines)~~ — split into 7 Flask Blueprints
 
 PRODUCTION HARDENING (completed 2026-05-07)
 --------------------------------------------
@@ -90,13 +91,27 @@ PRODUCTION HARDENING (completed 2026-05-07)
 - deploy_production.sh: automated install/start/stop/restart/status/logs
 - backup.sh: backup/restore/list for DB and uploads
 - smoke_test.sh: HTTP health checks for all pages and APIs
-- 112 tests passing (90 original + 22 Phase 7)
+
+BLUEPRINT REFACTORING (completed 2026-05-07)
+---------------------------------------------
+- app.py split from 3,297 lines → 60-line blueprint registry
+- helpers.py: all 48 shared utility functions
+- 7 blueprint modules: core, games, clips, stats, practice, player_dev, ai
+- All url_for() calls updated to blueprint.endpoint format
+- 128 tests passing (112 original + 16 LLM)
+
+LLM INTEGRATION (completed 2026-05-07)
+----------------------------------------
+- call_ollama(): subprocess call to Ollama with timeout and error handling
+- generate_practice_ai_notes_llm(): generates notes via Ollama when configured
+- build_practice_ai_notes(): tries LLM first, falls back to heuristic
+- Feature flag: settings ai.llm_provider ("ollama" or "none") and ai.llm_model
+- 16 new tests for LLM functions
 
 NEXT STEPS
 ----------
 - Phase 8+: Per coach direction
-- LLM integration for practice AI notes
-- Consider splitting app.py into route blueprints as complexity grows
+- All Master Outline phases complete
 
 NEXT STEPS (per Master Project Outline)
 -----------------------------------------

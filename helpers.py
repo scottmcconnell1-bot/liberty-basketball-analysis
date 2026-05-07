@@ -322,6 +322,75 @@ def list_ollama_models():
     return models
 
 
+def call_ollama(prompt, model=None, timeout=60):
+    """Call Ollama to generate a response. Returns (success, text_or_error)."""
+    cmd = ["ollama", "run"]
+    if model:
+        cmd.append(model)
+    else:
+        cmd.append("llama3")
+    try:
+        result = subprocess.run(
+            cmd,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError:
+        return False, "Ollama is not installed."
+    except subprocess.TimeoutExpired:
+        return False, "Ollama request timed out."
+    except subprocess.SubprocessError as exc:
+        return False, f"Ollama error: {exc}"
+    if result.returncode != 0:
+        return False, result.stderr.strip() or "Ollama returned an error."
+    return True, result.stdout.strip()
+
+
+def generate_practice_ai_notes_llm(practice, settings_snapshot=None):
+    """Generate practice AI notes using Ollama LLM.
+
+    Falls back gracefully when Ollama is unavailable.
+    Returns (notes_text, source_tag) where source_tag is 'llm' or 'heuristic'.
+    """
+    if settings_snapshot is None:
+        settings_snapshot = get_runtime_settings()
+    provider = settings_snapshot.get("ai", {}).get("llm_provider", "none")
+    model = settings_snapshot.get("ai", {}).get("llm_model", "")
+
+    if provider != "ollama" or not model:
+        return None, "none"
+
+    available_models = list_ollama_models()
+    if model not in available_models:
+        return None, "none"
+
+    plan_text = practice.get("plan_text") or ""
+    coach_notes = practice.get("coach_notes") or ""
+    practice_date = practice.get("practice_date", "")
+    status = practice.get("status", "")
+
+    prompt = (
+        "You are an assistant basketball coach. Summarize this practice session "
+        "and suggest what to focus on next.\n\n"
+        f"Practice date: {practice_date}\n"
+        f"Status: {status}\n"
+        f"Practice plan:\n{plan_text or '(none)'}\n\n"
+        f"Coach notes:\n{coach_notes or '(none)'}\n\n"
+        "Respond in 3-4 sentences. First sentence: summarize the focus. "
+        "Second: note any concerns from the coach notes. "
+        "Third: recommend the next practice emphasis. "
+        "Keep it concise and actionable."
+    )
+
+    ok, text = call_ollama(prompt, model=model)
+    if ok and text:
+        return text, "llm"
+    return None, "none"
+
+
 def build_settings_catalog():
     resource_status = build_resource_status()
     gpu = resource_status["gpu"]
@@ -1158,7 +1227,18 @@ def summarize_text_block(text, fallback):
     return cleaned[:137].rstrip() + "..."
 
 
-def build_practice_ai_notes(practice):
+def build_practice_ai_notes(practice, settings_snapshot=None):
+    """Generate AI notes for a practice session.
+
+    Uses Ollama LLM when configured and available; falls back to
+    heuristic-based generation otherwise.
+    """
+    # Try LLM first
+    llm_notes, source = generate_practice_ai_notes_llm(practice, settings_snapshot)
+    if llm_notes:
+        return llm_notes
+
+    # Heuristic fallback
     theme = infer_practice_theme(practice["plan_text"], practice["coach_notes"])
     sentences = [
         f"Plan focus: {summarize_text_block(practice['plan_text'], 'No structured plan was entered.')}",
