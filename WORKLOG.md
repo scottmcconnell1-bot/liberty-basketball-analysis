@@ -1,67 +1,108 @@
 WORKLOG — Liberty Basketball Analysis
 Started: 2026-04-27
 
-CURRENT STATUS (where we left off)
-- Repository cloned from: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis
-- Local path: /home/smcconnell/projects/liberty-basketball-analysis
-- Flask app runs on port 8080 (development server). I moved the HTML template into templates/ so the app could render.
+CURRENT STATUS (updated 2026-05-07 by Rex)
+============================================
 
-AI pipeline files examined:
-- ai_analyzer.py
-  - Uses ultralytics YOLO model (yolov8n.pt) to run object detection on frames.
-  - Writes detections to the SQLite DB (film_analysis.db) into the detections table.
-  - Inserts: game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height
-  - Calls event_generator.generate_events(game_id, db_path) after finishing analysis.
+Repository: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis
+Local path: /home/monk-admin/PROJECTS/liberty-basketball-analysis
+Branch: jason-5-may-updates
+Flask app runs on port 8080 (development server) or 8081 (cloudflared tunnel)
 
-- event_generator.py
-  - get_detections(conn, game_id): reads detections into a pandas DataFrame.
-  - find_ball_possession(detections_df): implemented. It computes distances between ball and player detections per frame and flags the closest player as having the ball when within a possession_threshold (default 50 px). It expects column names like 'class_name', 'x_center', etc.
-  - find_dribbles(...): placeholder / not implemented. Contains notes to group by tracker_id and find continuous sequences.
-  - main(game_id, db_path): runs the pipeline: load detections -> determine possession -> (dribble detection incomplete)
+COMPLETED PHASES (per Master Project Outline)
+----------------------------------------------
 
-Database (film_analysis.db)
-- Tables: analysis_runs, detections, events
-- detections table columns (PRAGMA):
-  id | game_id | frame_number | timestamp_ms | object_class | confidence | x_center | y_center | width | height | created_at
-  (No tracker_id column at present.)
+Phase 1 — Data Model & Schema:
+  ✅ All tables created in schema.sql (analysis_runs, detections, events, seasons,
+     scheduled_games, games, nfhs_matches, sources, players, stats, practices,
+     videos, app_settings, issue_reports)
+  ✅ tracker_id column added to detections table
+  ✅ schema.sql is source of truth for DB
 
-NOTED MISMATCHES / POTENTIAL ISSUES (action items)
-1) Column names mismatch:
-   - ai_analyzer writes object_class into the DB. event_generator code expects a column named 'class_name'. We need to standardize on one name (recommendation: use 'class_name' or update event_generator to use 'object_class').
-2) Class label mismatch for the ball:
-   - ai_analyzer uses model names (likely 'person' and 'sports ball'). event_generator looks for 'ball'. Decide on a canonical label (e.g., 'ball') and map 'sports ball' -> 'ball' when inserting detections, or update event_generator to accept 'sports ball'.
-3) No tracker_id in detections:
-   - find_dribbles references tracker_id; current detections table has none. To identify dribbles and continuous possessions we must add tracking (DeepSort/ByteTrack or opencv tracker) and store tracker_id per detection. This requires DB schema update and changes to ai_analyzer to run tracking or to run a separate tracker pass.
-4) Dribble detection not implemented:
-   - Next technical step is to group possession frames by tracker_id and detect rhythmic vertical movement of the ball relative to the player (or repeated close ball distance toggling) to mark dribbles.
-5) Concurrency and DB locking:
-   - The analyzer runs in a separate process and writes to the DB. Using SQLite in a cloud-synced folder can produce file locks. Keep DB local and/or pause sync during runs.
+Phase 2 — Core Schedule & Season Management:
+  ✅ Seasons CRUD (season_management.py + /api/seasons + /schedule page)
+  ✅ Scheduled Games CRUD (season_management.py + /api/scheduled_games + /schedule page)
+  ✅ /schedule route and schedule.html with server-rendered games table
+  ✅ Filtering by season, level, gender, status
+  ✅ Cascade delete (deleting season removes its games)
+  ✅ Feature flag: ENABLE_SEASONS_SCHEDULE (default: True)
 
-IMMEDIATE NEXT STEPS (short-term task list)
-- [ ] Standardize column and class names between ai_analyzer.py and event_generator.py.
-      Suggestion: update ai_analyzer to insert object_class values 'person' and 'ball' (map 'sports ball'->'ball'), OR update event_generator to read 'object_class'.
-- [ ] Add tracker support and a tracker_id column to detections.
-- [ ] Implement find_dribbles() grouping by tracker_id and detecting dribble sequences.
-- [ ] Add unit/functional test: run ai_analyzer on a short sample (first N frames) and verify detections -> run event_generator.main(game_id, db_path) and confirm events are generated.
-- [ ] Commit WORKLOG.md and code changes to Git, push to GitHub so you can resume from another machine.
+Phase 3 — Games & Film Sources:
+  ✅ Games CRUD (/api/games) — create from scheduled_game or standalone
+  ✅ Result fields: home_score, away_score, result (win/loss), is_conference
+  ✅ Sources CRUD (/api/sources) — attach NFHS VOD links, manual uploads, local files
+  ✅ Multiple sources per game supported
+  ✅ Feature flag: ENABLE_GAMES_SOURCES (default: True)
 
-How to resume / commands to run (one-liners)
-- Activate venv and start app: cd /home/scmcconnell/projects/liberty-basketball-analysis && source .venv/bin/activate && python app.py
-- Run analyzer for a video (example):
+Phase 4 — NFHS Matching & Light Automation:
+  ✅ Manual NFHS candidate add (/api/nfhs_matches POST)
+  ✅ Confirm match (auto-creates game + nfhs_vod source)
+  ✅ Reject match
+  ✅ match_status tracking: candidate, confirmed, rejected
+
+Phase 5 — Stats & Event Usage:
+  ✅ stats.py aggregates events into box-score stats
+  ✅ Stats persisted to stats table (pts, fgm, fga, threes_made, threes_att, ast, reb, tov, stl, blk)
+  ✅ UNIQUE constraint on (game_id, player_id)
+
+Phase 6 — Practices & Practice Reports:
+  ✅ Practices table in schema.sql (season_id, level, practice_date, status, plan_source,
+     plan_text, coach_notes, ai_notes, combined_summary)
+  ✅ /practices route and practices.html — full CRUD with season/level/status filters
+  ✅ /practices/<id>/report — practice report page with toggleable sections
+     (plan, coach notes, AI notes, combined summary)
+  ✅ AI notes generation (build_practice_ai_notes) — heuristic-based theme inference
+     from plan + coach notes, with recommended next-block suggestions
+  ✅ Combined summary (build_practice_combined_summary) — Plan/Coach/AI/Film source tags
+  ✅ Date-range practice summary (/practice-summary) — counts, theme frequency, suggestions
+  ✅ Feature flag: ENABLE_PRACTICES (default: True)
+
+AI Pipeline:
+  ✅ ai_analyzer.py — YOLO detection, writes to detections table with tracker_id placeholder
+  ✅ Class name normalization: 'sports ball' → 'ball' in both ai_analyzer and event_generator
+  ✅ tracker_assigner.py — lightweight centroid-based tracker (nearest-neighbor matching)
+  ✅ event_generator.py — ball possession, dribble detection (heuristic), expanded event
+     generation (possession segments → shots, rebounds, assists, blocks, turnovers, fouls)
+  ✅ Config: USE_DRIBBLE_EVENTS=False, USE_DRIBBLE_HEURISTICS=True
+  ✅ event_generator_mode: "expanded" (default)
+
+Infrastructure:
+  ✅ Feature flags in config.py (ENABLE_* and USE_* pattern)
+  ✅ 90/90 tests passing (test_api.py, test_season_management.py, test_schema.py,
+     test_event_pipeline.py)
+  ✅ .gitignore properly configured
+  ✅ GitHub SSH auth via ~/.ssh/basketball_deploy_key
+  ✅ Cloudflare tunnel active (port 8081 for PROJECTS copy)
+
+KNOWN ISSUES / TECHNICAL DEBT
+------------------------------
+1. Dribble detection is heuristic-only (spatial bin fallback when no tracker_id)
+2. tracker_assigner is lightweight centroid matching — not ByteTrack/DeepSort
+3. AI notes for practices are heuristic/rule-based — no LLM integration yet
+4. No production WSGI server (gunicorn) configured yet
+5. No automated backup/restore tooling for DB and uploads
+
+NEXT STEPS (per Master Project Outline)
+-----------------------------------------
+1. Phase 2.5 — Manual Tagging & Bookmarks MVP (added 2026-05-04 to outline)
+2. Phase 7 — Player Development & Practice Engine
+   - Development clips per player tied to games/events
+   - Practice playlists from prior clips
+   - Practice plan assembly tools
+3. Production hardening (gunicorn + reverse proxy, backup/restore, smoke tests)
+4. Replace centroid tracker with ByteTrack/DeepSort for better ID persistence
+
+How to resume / commands to run
+--------------------------------
+- Activate venv and start app:
+  cd /home/monk-admin/PROJECTS/liberty-basketball-analysis && source .venv/bin/activate && python app.py
+- Run tests:
+  source .venv/bin/activate && python -m pytest tests/ -q
+- Run analyzer for a video:
   source .venv/bin/activate && python -c "from ai_analyzer import run_ai_analysis; run_ai_analysis('film_analysis.db', 'uploads/myvideo.mp4', 'game_001')"
 - Run event generation alone:
   source .venv/bin/activate && python -c "from event_generator import main; main('game_001', 'film_analysis.db')"
+- Run tracker assigner:
+  source .venv/bin/activate && python tracker_assigner.py --db film_analysis.db --game_id game_001
 
-Notes on GitHub / collaboration
-- Yes — the project is hosted on GitHub (private repo). To make progress portable between machines, commit local changes and push them. If you want, I can create the commit and push it for you (you should revoke the PAT you pasted earlier and set up gh/SSH auth instead).
-
-Log location
-- This Worklog file: /home/smcconnell/projects/liberty-basketball-analysis/WORKLOG.md (created by the assistant). Please back it up to GitHub by committing it.
-
-If you'd like I can now:
-- Commit and push WORKLOG.md to the repo (I can do it if you want me to push with the credentials you used earlier, or I can show the exact git commands for you to run),
-- Standardize the column names now (I can patch the code to make event_generator use 'object_class' and map 'sports ball'->'ball' in ai_analyzer),
-- Add a tracker_id column and scaffold tracker integration,
-- Implement dribble detection logic (I can start with a heuristic or integrate an existing tracker).
-
-— End of current snapshot
+— End of current snapshot (Rex, 2026-05-07)
