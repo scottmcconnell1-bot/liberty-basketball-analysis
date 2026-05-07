@@ -16,6 +16,10 @@ EXPECTED_TABLES = [
     "players",
     "stats",
     "practices",
+    "player_development_clips",
+    "practice_playlists",
+    "practice_playlist_clips",
+    "practice_plan_items",
 ]
 
 EXPECTED_COLUMNS = {

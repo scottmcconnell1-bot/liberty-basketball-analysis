@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Practice Playlists – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Practice Playlists</h2>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_playlists_page') }}">Clear Filters</a>
+    <a class="btn btn-primary btn-sm" href="#playlist-form">+ New Playlist</a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card">
+  <form method="get" action="{{ url_for('practice_playlists_page') }}">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="filter-season">Season</label>
+        <select class="form-control" id="filter-season" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if request.args.get('season_id')|int == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-level">Level</label>
+        <select class="form-control" id="filter-level" name="level">
+          <option value="">All Levels</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if request.args.get('level') == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-status">Status</label>
+        <select class="form-control" id="filter-status" name="status">
+          <option value="">All Statuses</option>
+          <option value="draft" {% if request.args.get('status') == 'draft' %}selected{% endif %}>Draft</option>
+          <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+          <option value="archived" {% if request.args.get('status') == 'archived' %}selected{% endif %}>Archived</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</div>
+
+<!-- Playlists Table -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Name</th><th>Season</th><th>Level</th><th>Status</th><th>Updated</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% if playlists %}
+        {% for pl in playlists %}
+        <tr>
+          <td><strong>{{ pl.name }}</strong></td>
+          <td>{{ pl.season_name or "–" }}</td>
+          <td>{{ pl.level }}</td>
+          <td><span class="badge badge-{{ pl.status }}">{{ pl.status }}</span></td>
+          <td>{{ pl.updated_at or pl.created_at }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_playlists_page') }}?view_playlist_id={{ pl.id }}">View</a>
+            <form method="post" action="{{ url_for('api_playlists_delete', playlist_id=pl.id) }}" style="display:inline;">
+              <input type="hidden" name="_method" value="DELETE">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="6" class="text-muted" style="padding:16px;">No playlists found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Playlist Detail / Add Clips -->
+{% if view_playlist %}
+<div class="card" id="playlist-detail">
+  <h3 style="margin-bottom:12px;">Playlist: {{ view_playlist.name }}</h3>
+  <p class="text-muted" style="margin-bottom:16px;">
+    {{ view_playlist.season_name or "No season" }} · {{ view_playlist.level }} · {{ view_playlist.status }}
+  </p>
+
+  {% if view_playlist.clips %}
+  <table style="margin-bottom:16px;">
+    <thead><tr><th>#</th><th>Player</th><th>Label</th><th>Category</th><th>Start</th><th>End</th><th></th></tr></thead>
+    <tbody>
+      {% for clip in view_playlist.clips %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ clip.player_name or "–" }}</td>
+        <td>{{ clip.clip_label }}</td>
+        <td><span class="badge">{{ clip.clip_category }}</span></td>
+        <td>{{ "%.1f"|format(clip.clip_start_ms / 1000) }}s</td>
+        <td>{{ "%.1f"|format(clip.clip_end_ms / 1000) }}s</td>
+        <td>
+          <form method="post" action="{{ url_for('api_playlists_remove_clip', playlist_id=view_playlist.id, clip_id=clip.id) }}" style="display:inline;">
+            <input type="hidden" name="_method" value="DELETE">
+            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted" style="margin-bottom:16px;">No clips in this playlist yet.</p>
+  {% endif %}
+
+  <h4 style="margin-bottom:12px;">Add Clip to Playlist</h4>
+  <form method="post" action="{{ url_for('api_playlists_add_clip', playlist_id=view_playlist.id) }}">
+    <div style="display:grid;grid-template-columns:2fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="add-clip-id">Clip ID</label>
+        <input class="form-control" id="add-clip-id" name="clip_id" type="number" required placeholder="Enter clip ID">
+      </div>
+      <button class="btn btn-primary" type="submit">Add Clip</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<!-- New Playlist Form -->
+<div class="card" id="playlist-form">
+  <h3 style="margin-bottom:18px;">Create New Playlist</h3>
+  <form method="post" action="{{ url_for('api_playlists_create') }}">
+    <div class="form-group">
+      <label for="playlist-name">Playlist Name *</label>
+      <input class="form-control" id="playlist-name" name="name" required placeholder="e.g. Turnover Review — Week 1">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label for="playlist-season">Season</label>
+        <select class="form-control" id="playlist-season" name="season_id">
+          <option value="">No season</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}">{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="playlist-level">Level</label>
+        <select class="form-control" id="playlist-level" name="level">
+          {% for value, label in level_options %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="playlist-status">Status</label>
+        <select class="form-control" id="playlist-status" name="status">
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:0;">
+      <button class="btn btn-primary" type="submit">Create Playlist</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-draft { background: #e5e7eb; color: #374151; }
+  .badge-active { background: #dcfce7; color: #166534; }
+  .badge-archived { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

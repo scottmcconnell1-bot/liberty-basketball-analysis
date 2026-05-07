@@ -204,3 +204,52 @@ CREATE TABLE IF NOT EXISTS issue_reports (
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP
 );
+
+-- — Player Development (Phase 7) ———————————————————————
+
+CREATE TABLE IF NOT EXISTS player_development_clips (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id       INTEGER REFERENCES players(id),
+    game_id         TEXT,
+    event_id        INTEGER REFERENCES events(id),
+    clip_start_ms   INTEGER NOT NULL,
+    clip_end_ms     INTEGER NOT NULL,
+    clip_label      TEXT NOT NULL,
+    clip_category   TEXT NOT NULL DEFAULT 'general',
+    season_id       INTEGER REFERENCES seasons(id),
+    notes           TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS practice_playlists (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    season_id       INTEGER REFERENCES seasons(id),
+    level           TEXT NOT NULL DEFAULT 'jr_high',
+    status          TEXT NOT NULL DEFAULT 'draft',
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS practice_playlist_clips (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    playlist_id     INTEGER NOT NULL REFERENCES practice_playlists(id) ON DELETE CASCADE,
+    clip_id         INTEGER NOT NULL REFERENCES player_development_clips(id) ON DELETE CASCADE,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(playlist_id, clip_id)
+);
+
+CREATE TABLE IF NOT EXISTS practice_plan_items (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    practice_id     INTEGER NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+    playlist_id     INTEGER REFERENCES practice_playlists(id),
+    item_type       TEXT NOT NULL DEFAULT 'drill',
+    title           TEXT NOT NULL,
+    description     TEXT,
+    duration_min    INTEGER,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
