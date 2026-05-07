@@ -873,90 +873,8 @@
         })();
     </script>
 {% endblock %}
-
 {% block content %}
 <div id="film-tool-root">
-
-
-<body>
-    <!-- ── Navigation bar ──────────────────────────────────── -->
-    <nav style="background:#01696f;padding:0 24px;display:flex;align-items:center;height:52px;gap:28px;font-family:sans-serif;">
-      <a href="/" style="color:#fff;font-weight:700;font-size:1rem;text-decoration:none;white-space:nowrap;">🏀 Liberty Basketball</a>
-      <a href="/" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Dashboard</a>
-      {% if features.ENABLE_SEASONS_SCHEDULE %}
-      <a href="/schedule" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Schedule</a>
-      {% endif %}
-      {% if features.ENABLE_AUTO_STATS_M1 %}
-      <a href="/videos" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Videos</a>
-      <a href="/status" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Status</a>
-      {% endif %}
-      <a href="/settings" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Settings</a>
-      <a href="/debug" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Debug / Issues</a>
-      <span style="flex:1;"></span>
-      <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link-nav" data-open-report-overlay>Report Bug / Idea</a>
-    </nav>
-    <div class="resource-status-bar" id="resource-status-bar">
-      <span class="resource-pill"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
-      <span class="resource-pill"><strong>App CPU</strong> <span data-resource="cpu-process">--</span></span>
-      <span class="resource-pill"><strong>RAM</strong> <span data-resource="memory-system">--</span></span>
-      <span class="resource-pill"><strong>App RAM</strong> <span data-resource="memory-process">--</span></span>
-      <span class="resource-pill"><strong>Power</strong> <span data-resource="power-live">--</span></span>
-      <span class="resource-pill"><strong>GPU</strong> <span data-resource="gpu-util">--</span></span>
-      <span class="resource-pill"><strong>GPU RAM</strong> <span data-resource="gpu-memory">--</span></span>
-    </div>
-    <div class="resource-status-details" id="gpu-process-details">GPU processes: loading…</div>
-    <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
-    <aside class="report-drawer" id="report-drawer" aria-hidden="true">
-        <div class="report-drawer-header">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                <div>
-                    <h3 style="margin:0;">Report Bug / Idea</h3>
-                    <div class="report-status-copy">Stay on this film page and send the current browser console with the report.</div>
-                </div>
-                <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
-            </div>
-        </div>
-        <form id="report-drawer-form" method="post" action="{{ url_for('core.create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
-            <div class="report-drawer-body">
-                <div id="report-drawer-message" class="status" style="display:none;border-top:none;margin-bottom:12px;"></div>
-                <div class="field" style="grid-template-columns:none;">
-                    <label for="report-entry-type">Type</label>
-                    <select class="input" id="report-entry-type" name="entry_type">
-                        <option value="bug">Bug</option>
-                        <option value="issue" selected>Issue</option>
-                        <option value="recommendation">Recommendation</option>
-                        <option value="note">Note</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="report-title">Title</label>
-                    <input class="input" id="report-title" name="title" placeholder="Short title for the problem or idea">
-                </div>
-                <div class="field">
-                    <label for="report-details">Details</label>
-                    <textarea class="input" id="report-details" name="details" rows="6" placeholder="What happened, what you expected, or what you want to improve."></textarea>
-                </div>
-                <div class="field">
-                    <label for="report-source-path">Source Page</label>
-                    <input class="input" id="report-source-path" name="source_path">
-                </div>
-                <div class="report-drawer-note">Browser console output is attached automatically when you submit.</div>
-                <input type="hidden" id="report-browser-console" name="browser_console">
-                <input type="hidden" id="report-return-to" name="return_to">
-            </div>
-            <div class="report-drawer-footer">
-                <button class="btn" type="button" id="report-drawer-cancel">Cancel</button>
-                <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
-            </div>
-        </form>
-    </aside>
-    {% if features.ENABLE_AUTO_STATS_M1 %}
-    <div id="ai-status-container" style="margin: 10px 0; font-family: sans-serif; padding: 4px 8px;">
-      <span><strong>AI Status:</strong> </span>
-      <span id="ai-status-text">not started</span>
-      <div class="tiny" id="ai-status-detail" style="margin-top:4px;">Waiting for a video selection.</div>
-    </div>
-    {% endif %}
     <div class="app">
         <div class="film-tool-topbar">
     <div class="film-tool-tabs">
@@ -965,10 +883,6 @@
       <button class="btn tab-btn" data-tab="reportsView" type="button">Reports</button>
     </div>
     <div class="actions no-print">
-
-                <button class="btn tab-btn active" data-tab="taggerView" type="button">Tagger</button>
-                <button class="btn tab-btn" data-tab="gamesView" type="button">Games</button>
-                <button class="btn tab-btn" data-tab="reportsView" type="button">Reports</button>
                 <button class="btn" id="resumeLastBtn" type="button">Resume Last Game</button>
                 <button class="btn" id="saveGameBtn" type="button">Save Game</button>
                 <button class="btn" id="manageTermsBtn" type="button">Manage Terms</button>
