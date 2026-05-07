@@ -106,3 +106,4 @@ How to resume / commands to run
   source .venv/bin/activate && python tracker_assigner.py --db film_analysis.db --game_id game_001
 
 — End of current snapshot (Rex, 2026-05-07)
+[2026-05-07 12:52:28 MDT] Commit 524d56b8 (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
