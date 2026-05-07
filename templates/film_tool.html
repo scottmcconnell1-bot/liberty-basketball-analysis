@@ -1,148 +1,22 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Film Tool</title>
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-    <style>
-        :root,
-        [data-theme="light"] {
-            --color-bg: #f7f6f2;
-            --color-surface: #f9f8f5;
-            --color-surface-2: #fbfbf9;
-            --color-surface-offset: #f3f0ec;
-            --color-border: #d4d1ca;
-            --color-divider: #dcd9d5;
-            --color-text: #28251d;
-            --color-text-muted: #66645f;
-            --color-text-faint: #9b9993;
-            --color-text-inverse: #f9f8f4;
-            --color-primary: #01696f;
-            --color-primary-hover: #0c4e54;
-            --color-primary-highlight: #cedcd8;
-            --color-error: #a12c7b;
-            --color-success: #437a22;
-            --color-warning: #964219;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, .06);
-            --shadow-md: 0 10px 30px rgba(0, 0, 0, .1);
-            --radius-md: .75rem;
-            --radius-lg: 1rem;
-            --radius-xl: 1.25rem;
-            --radius-full: 9999px;
-            --space-2: .5rem;
-            --space-3: .75rem;
-            --space-4: 1rem;
-            --space-5: 1.25rem;
-            --space-6: 1.5rem;
-            --space-8: 2rem;
-            --space-12: 3rem;
-            --text-xs: .78rem;
-            --text-sm: .92rem;
-            --text-base: 1rem;
-            --text-lg: 1.12rem;
-            --text-xl: 1.55rem;
-            --text-2xl: 2rem;
-            --font-body: 'Satoshi', Inter, sans-serif;
-        }
+{% block title %}Film Tool — Liberty Basketball{% endblock %}
 
-        [data-theme="dark"] {
-            --color-bg: #171614;
-            --color-surface: #1c1b19;
-            --color-surface-2: #201f1d;
-            --color-surface-offset: #22211f;
-            --color-border: #393836;
-            --color-divider: #2b2a28;
-            --color-text: #e1dfdb;
-            --color-text-muted: #a19f99;
-            --color-text-faint: #7d7a73;
-            --color-text-inverse: #f9f8f4;
-            --color-primary: #4f98a3;
-            --color-primary-hover: #227f8b;
-            --color-primary-highlight: #313b3b;
-            --color-error: #d163a7;
-            --color-success: #6daa45;
-            --color-warning: #bb653b;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, .2);
-            --shadow-md: 0 12px 32px rgba(0, 0, 0, .32);
-        }
+{% block head %}
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<style>
 
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0
-        }
-
-        html {
-            -webkit-text-size-adjust: none;
-            text-size-adjust: none;
-            scroll-behavior: smooth
-        }
-
-        body {
-            min-height: 100vh;
-            background: var(--color-bg);
-            color: var(--color-text);
-            font-family: var(--font-body);
-            font-size: var(--text-base);
-            line-height: 1.55
-        }
-
-        img,
-        svg,
-        video {
-            display: block;
-            max-width: 100%;
-            height: auto
-        }
-
-        input,
-        button,
-        select,
-        textarea {
-            font: inherit;
-            color: inherit
-        }
-
-        button {
-            cursor: pointer;
-            border: none;
-            background: none
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            border: 1px solid var(--color-border);
-            background: var(--color-surface-2);
-            padding: .65rem .75rem;
-            border-radius: var(--radius-md)
-        }
-
-        textarea {
+        #film-tool-root textarea{
             resize: vertical;
             min-height: 110px
         }
-
-        button:focus-visible,
-        input:focus-visible,
-        select:focus-visible,
-        textarea:focus-visible {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px
-        }
-
-        .app {
+        #film-tool-root .app{
             max-width: 1640px;
             margin: 0 auto;
             padding: var(--space-4)
         }
 
-        .topbar {
+        #film-tool-root .topbar{
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
@@ -151,13 +25,13 @@
             margin-bottom: var(--space-4)
         }
 
-        .brand {
+        #film-tool-root .brand{
             display: flex;
             gap: var(--space-3);
             align-items: center
         }
 
-        .logo {
+        #film-tool-root .logo{
             width: 52px;
             height: 52px;
             border-radius: 14px;
@@ -168,36 +42,32 @@
             overflow: hidden
         }
 
-        .logo img,
-        .logo svg {
+        #film-tool-root .logo svg{
             width: 100%;
             height: 100%;
             object-fit: contain
         }
+        #film-tool-root .logo img, 
 
-        .title h1 {
+        #film-tool-root .title h1{
             font-size: var(--text-xl);
             line-height: 1.1
         }
 
-        .title p {
+        #film-tool-root .title p{
             font-size: var(--text-sm);
             color: var(--color-text-muted);
             margin-top: .2rem
         }
 
-        .actions,
-        .inline-actions,
-        .video-controls,
-        .pill-buttons,
-        .report-actions,
-        .filters {
+        #film-tool-root .filters{
             display: flex;
             gap: .5rem;
             flex-wrap: wrap
         }
+        #film-tool-root .actions, #film-tool-root .inline-actions, #film-tool-root .video-controls, #film-tool-root .pill-buttons, #film-tool-root .report-actions, 
 
-        .btn {
+        #film-tool-root .btn{
             border: 1px solid var(--color-border);
             background: var(--color-surface);
             padding: .65rem 1rem;
@@ -210,30 +80,30 @@
             box-shadow: var(--shadow-sm)
         }
 
-        .btn:hover {
+        #film-tool-root .btn:hover{
             background: var(--color-surface-2)
         }
 
-        .btn-primary {
+        #film-tool-root .btn-primary{
             background: var(--color-primary);
             border-color: var(--color-primary);
             color: var(--color-text-inverse)
         }
 
-        .btn-primary:hover {
+        #film-tool-root .btn-primary:hover{
             background: var(--color-primary-hover)
         }
 
-        .btn-ghost {
+        #film-tool-root .btn-ghost{
             background: transparent;
             box-shadow: none
         }
 
-        .btn-danger {
+        #film-tool-root .btn-danger{
             color: var(--color-error)
         }
 
-        .btn-icon {
+        #film-tool-root .btn-icon{
             width: 32px;
             height: 32px;
             border-radius: 999px;
@@ -243,14 +113,14 @@
             justify-content: center
         }
 
-        .btn.active,
-        .tab-btn.active {
+        #film-tool-root .tab-btn.active{
             background: var(--color-primary);
             border-color: var(--color-primary);
             color: var(--color-text-inverse)
         }
+        #film-tool-root .btn.active, 
 
-        .report-link-nav {
+        #film-tool-root .report-link-nav{
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -265,11 +135,11 @@
             animation: reportPulse 1.8s ease-in-out infinite;
         }
 
-        .report-link-nav:hover {
+        #film-tool-root .report-link-nav:hover{
             background: linear-gradient(135deg, #f97316, #dc2626, #db2777);
         }
 
-        .report-drawer-backdrop {
+        #film-tool-root .report-drawer-backdrop{
             position: fixed;
             inset: 0;
             background: rgba(15, 23, 42, 0.45);
@@ -279,7 +149,7 @@
             z-index: 110;
         }
 
-        .report-drawer {
+        #film-tool-root .report-drawer{
             position: fixed;
             top: 0;
             right: 0;
@@ -294,22 +164,22 @@
             flex-direction: column;
         }
 
-        .report-drawer.open {
+        #film-tool-root .report-drawer.open{
             transform: translateX(0);
         }
 
-        .report-drawer-backdrop.open {
+        #film-tool-root .report-drawer-backdrop.open{
             opacity: 1;
             pointer-events: auto;
         }
 
-        .report-drawer-header,
-        .report-drawer-footer {
+        #film-tool-root .report-drawer-footer{
             padding: 18px 20px;
             border-bottom: 1px solid var(--color-border);
         }
+        #film-tool-root .report-drawer-header, 
 
-        .report-drawer-footer {
+        #film-tool-root .report-drawer-footer{
             border-top: 1px solid var(--color-border);
             border-bottom: none;
             display: flex;
@@ -317,48 +187,43 @@
             gap: 10px;
         }
 
-        .report-drawer-body {
-            padding: 18px 20px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .report-drawer-close {
+        #film-tool-root .report-drawer-close{
             background: transparent;
             border: none;
             font-size: 1.4rem;
             cursor: pointer;
             color: var(--color-text-muted);
         }
+        #film-tool-root .report-drawer-
 
-        .report-status-copy,
-        .report-drawer-note {
+        #film-tool-root .report-drawer-note{
             font-size: var(--text-xs);
             color: var(--color-text-muted);
         }
+        #film-tool-root .report-status-copy, 
 
-        .report-status-copy {
+        #film-tool-root .report-status-copy{
             margin-top: .35rem;
         }
 
-        .report-drawer-note {
+        #film-tool-root .report-drawer-note{
             margin-bottom: .8rem;
         }
 
-        @keyframes reportPulse {
+        @keyframes reportPulse{
             0%, 100% { transform: translateY(0); box-shadow: 0 8px 20px rgba(239, 68, 68, .35); }
             50% { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(245, 158, 11, .45); }
         }
 
-        .view {
+        #film-tool-root .view{
             display: none
         }
 
-        .view.active {
+        #film-tool-root .view.active{
             display: block
         }
 
-        .panel {
+        #film-tool-root .panel{
             background: var(--color-surface);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-lg);
@@ -366,7 +231,7 @@
             overflow: hidden
         }
 
-        .panel-head {
+        #film-tool-root .panel-head{
             padding: var(--space-4);
             border-bottom: 1px solid var(--color-divider);
             display: flex;
@@ -376,46 +241,43 @@
             flex-wrap: wrap
         }
 
-        .panel-head h2 {
+        #film-tool-root .panel-head h2{
             font-size: var(--text-lg);
             line-height: 1.15
         }
 
-        .panel-head p,
-        .muted {
+        #film-tool-root .muted{
             font-size: var(--text-sm);
             color: var(--color-text-muted)
         }
+        #film-tool-root .panel-head p, 
 
-        .panel-body {
-            padding: var(--space-4)
-        }
-
-        .status {
+        #film-tool-root .status{
             padding: .75rem .95rem;
             border-top: 1px solid var(--color-divider);
             font-size: var(--text-sm);
             color: var(--color-text-muted)
         }
+        #film-tool-root .panel-
 
-        .tiny {
+        #film-tool-root .tiny{
             font-size: var(--text-xs);
             color: var(--color-text-muted)
         }
 
-        .field {
+        #film-tool-root .field{
             display: grid;
             gap: .35rem;
             margin-bottom: .8rem
         }
 
-        .field label {
+        #film-tool-root .field label{
             font-size: var(--text-sm);
             font-weight: 700
         }
 
         /* Position starters dialog to the right, keep film visible */
-        #startersDialog {
+        #film-tool-root #startersDialog{
             max-width: 420px;
             width: min(420px, 100%);
             margin: 0;
@@ -425,26 +287,26 @@
         }
 
         /* Layout: focus on big video */
-        .grid-main {
+        #film-tool-root .grid-main{
             display: grid;
             grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr);
             gap: var(--space-4);
             align-items: start
         }
 
-        .info-grid {
+        #film-tool-root .info-grid{
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: .75rem
         }
 
-        .split {
+        #film-tool-root .split{
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: var(--space-4)
         }
 
-        .scorebar {
+        #film-tool-root .scorebar{
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             gap: .75rem;
@@ -453,19 +315,19 @@
         }
 
         /* One-row layout: buttons + running score */
-        .top-strip {
+        #film-tool-root .top-strip{
             display: flex;
             align-items: center;
             gap: .75rem;
             margin-bottom: .75rem;
         }
 
-        .top-strip>.btn,
-        .top-strip>.score-card {
+        #film-tool-root .top-strip>.score-card{
             flex: 1 1 0;
         }
+        #film-tool-root .top-strip>.btn, 
 
-        .top-strip .score-card {
+        #film-tool-root .top-strip .score-card{
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -473,12 +335,12 @@
             border-radius: var(--radius-full);
         }
 
-        .video-shell {
+        #film-tool-root .video-shell{
             display: grid;
             gap: .75rem
         }
 
-        .film-review-grid {
+        #film-tool-root .film-review-grid{
             display: grid;
             grid-template-columns: minmax(0, 1.8fr) minmax(320px, .95fr);
             gap: var(--space-4);
@@ -486,18 +348,18 @@
             margin-top: .75rem;
         }
 
-        .video-shell.large video {
+        #film-tool-root .video-shell.large video{
             max-height: 82vh
         }
 
-        video {
+        #film-tool-root video{
             width: 100%;
             max-height: 75vh;
             background: #000;
             border-radius: var(--radius-md)
         }
 
-        .video-meta {
+        #film-tool-root .video-meta{
             display: flex;
             justify-content: space-between;
             gap: .75rem;
@@ -505,7 +367,7 @@
             flex-wrap: wrap
         }
 
-        .scorebar {
+        #film-tool-root .scorebar{
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             gap: .75rem;
@@ -513,36 +375,36 @@
             margin-bottom: .75rem
         }
 
-        .score-card {
+        #film-tool-root .score-card{
             background: var(--color-surface-2);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             padding: .85rem 1rem
         }
 
-        .score-card .name {
+        #film-tool-root .score-card .name{
             font-size: var(--text-sm);
             color: var(--color-text-muted)
         }
 
-        .score-card .score {
+        #film-tool-root .score-card .score{
             font-size: var(--text-2xl);
             line-height: 1.05;
             margin-top: .15rem
         }
 
-        .event-group {
+        #film-tool-root .event-group{
             margin-top: .9rem
         }
 
-        .event-grid {
+        #film-tool-root .event-grid{
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: .35rem;
             margin-top: .35rem
         }
 
-        .event-grid .btn {
+        #film-tool-root .event-grid .btn{
             justify-content: flex-start;
             text-align: left;
             white-space: normal;
@@ -551,89 +413,89 @@
             border-radius: var(--radius-md)
         }
 
-        .event-grid .btn span {
+        #film-tool-root .event-grid .btn span{
             font-size: var(--text-xs);
             color: var(--color-text-muted)
         }
 
-        .table-wrap {
+        #film-tool-root .table-wrap{
             overflow: auto;
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             background: var(--color-surface-2)
         }
 
-        table {
+        #film-tool-root table{
             width: 100%;
             border-collapse: collapse;
             font-size: var(--text-sm)
         }
 
-        th,
-        td {
+        #film-tool-root td{
             padding: .65rem .7rem;
             border-bottom: 1px solid var(--color-divider);
             vertical-align: top;
             text-align: left
         }
+        #film-tool-root th, 
 
-        th {
+        #film-tool-root th{
             background: var(--color-surface-offset);
             position: sticky;
             top: 0;
             z-index: 1
         }
 
-        tr:hover td {
+        #film-tool-root tr:hover td{
             background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface-2))
         }
 
-        .row-actions {
+        #film-tool-root .row-actions{
             display: flex;
             gap: .35rem;
             justify-content: flex-end
         }
 
-        .kpi-grid {
+        #film-tool-root .kpi-grid{
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: .75rem
         }
 
-        .kpi {
+        #film-tool-root .kpi{
             background: var(--color-surface-2);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             padding: 1rem
         }
 
-        .kpi .label {
+        #film-tool-root .kpi .label{
             font-size: var(--text-xs);
             text-transform: uppercase;
             letter-spacing: .04em;
             color: var(--color-text-muted)
         }
 
-        .kpi .value {
+        #film-tool-root .kpi .value{
             font-size: var(--text-xl);
             line-height: 1.1;
             margin-top: .35rem
         }
 
-        .report-card,
-        .game-card {
+        #film-tool-root .game-card{
             background: var(--color-surface-2);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             padding: 1rem
         }
+        #film-tool-root .report-card, 
 
-        .list-stack {
+        #film-tool-root .list-stack{
             display: grid;
             gap: .75rem
         }
 
-        .ai-events-summary {
+        #film-tool-root .ai-events-summary{
             display: flex;
             justify-content: space-between;
             gap: .75rem;
@@ -642,22 +504,22 @@
             margin-bottom: .85rem;
         }
 
-        .ai-events-scroll {
+        #film-tool-root .ai-events-scroll{
             max-height: 52vh;
             overflow-y: auto;
             padding-right: .35rem;
         }
 
-        .ai-events-scroll::-webkit-scrollbar {
+        #film-tool-root .ai-events-scroll::-webkit-scrollbar{
             width: 10px;
         }
 
-        .ai-events-scroll::-webkit-scrollbar-thumb {
+        #film-tool-root .ai-events-scroll::-webkit-scrollbar-thumb{
             background: var(--color-border);
             border-radius: 999px;
         }
 
-        .ai-event-item {
+        #film-tool-root .ai-event-item{
             display: grid;
             gap: .45rem;
             padding: .75rem .85rem;
@@ -668,47 +530,47 @@
             transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
         }
 
-        .ai-event-item:hover {
+        #film-tool-root .ai-event-item:hover{
             border-color: var(--color-primary);
         }
 
-        .ai-event-item.active {
+        #film-tool-root .ai-event-item.active{
             border-color: var(--color-primary);
             background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-2));
             box-shadow: 0 0 0 1px var(--color-primary) inset;
         }
 
-        .ai-event-row {
+        #film-tool-root .ai-event-row{
             display: flex;
             justify-content: space-between;
             gap: .6rem;
             align-items: flex-start;
         }
 
-        .ai-event-time {
+        #film-tool-root .ai-event-time{
             white-space: nowrap;
             font-size: var(--text-xs);
             color: var(--color-text-muted);
         }
 
-        .ai-event-details {
+        #film-tool-root .ai-event-details{
             font-size: var(--text-xs);
             color: var(--color-text-muted);
             line-height: 1.45;
         }
 
-        .games-grid {
+        #film-tool-root .games-grid{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: .75rem
         }
 
-        .game-card.active {
+        #film-tool-root .game-card.active{
             border-color: var(--color-primary);
             box-shadow: 0 0 0 1px var(--color-primary) inset
         }
 
-        .badge {
+        #film-tool-root .badge{
             display: inline-flex;
             align-items: center;
             gap: .35rem;
@@ -718,18 +580,18 @@
             font-size: var(--text-xs)
         }
 
-        .empty-state {
+        #film-tool-root .empty-state{
             padding: 1rem;
             border: 1px dashed var(--color-border);
             border-radius: var(--radius-md);
             color: var(--color-text-muted)
         }
 
-        .hidden {
+        #film-tool-root .hidden{
             display: none !important
         }
 
-        dialog {
+        #film-tool-root dialog{
             border: none;
             padding: 0;
             border-radius: 20px;
@@ -740,11 +602,11 @@
             box-shadow: var(--shadow-md)
         }
 
-        dialog::backdrop {
+        #film-tool-root dialog::backdrop{
             background: rgba(0, 0, 0, .45)
         }
 
-        .resource-status-bar {
+        #film-tool-root .resource-status-bar{
             display: flex;
             flex-wrap: wrap;
             gap: .5rem;
@@ -754,7 +616,7 @@
             font-size: .82rem;
         }
 
-        .resource-pill {
+        #film-tool-root .resource-pill{
             display: inline-flex;
             align-items: center;
             gap: .35rem;
@@ -764,7 +626,7 @@
             white-space: nowrap;
         }
 
-        .resource-status-details {
+        #film-tool-root .resource-status-details{
             display: flex;
             flex-wrap: wrap;
             gap: .5rem;
@@ -776,16 +638,16 @@
             align-items: center;
         }
 
-        .upload-progress-shell {
+        #film-tool-root .upload-progress-shell{
             display: none;
             margin-top: .85rem;
         }
 
-        .upload-progress-shell.active {
+        #film-tool-root .upload-progress-shell.active{
             display: block;
         }
 
-        .upload-progress-bar {
+        #film-tool-root .upload-progress-bar{
             width: 100%;
             height: 12px;
             border-radius: 999px;
@@ -794,7 +656,7 @@
             border: 1px solid var(--color-border);
         }
 
-        .upload-progress-bar > span {
+        #film-tool-root .upload-progress-bar > span{
             display: block;
             height: 100%;
             width: 0%;
@@ -802,17 +664,16 @@
             transition: width .15s ease;
         }
 
-        .modal-head,
-        .modal-body,
-        .modal-foot {
+        #film-tool-root .modal-foot{
             padding: var(--space-4)
         }
+        #film-tool-root .modal-head, #film-tool-root .modal-body, 
 
-        .modal-head {
+        #film-tool-root .modal-head{
             border-bottom: 1px solid var(--color-divider)
         }
 
-        .modal-foot {
+        #film-tool-root .modal-foot{
             border-top: 1px solid var(--color-divider);
             display: flex;
             justify-content: flex-end;
@@ -820,7 +681,7 @@
             flex-wrap: wrap
         }
 
-        .term-list {
+        #film-tool-root .term-list{
             display: grid;
             gap: .4rem;
             max-height: 320px;
@@ -828,7 +689,7 @@
             margin-top: .5rem
         }
 
-        .term-item {
+        #film-tool-root .term-item{
             display: grid;
             grid-template-columns: 1fr auto auto;
             gap: .4rem;
@@ -839,41 +700,27 @@
             background: var(--color-surface-2)
         }
 
-        .term-item button {
-            padding: .35rem .65rem;
-            font-size: var(--text-xs);
-            border-radius: 999px;
-            border: 1px solid var(--color-border);
-            background: var(--color-surface)
-        }
-
+        #film-tool-root .term-item
         /* Focus mode: hide info, status, file picker, and top buttons */
-        .tagger-focus #gameInfoFields,
-        .tagger-focus #statusText,
-        .tagger-focus #videoField,
-        .tagger-focus #toggleInfoBtn,
-        .tagger-focus #newGameBtn {
+        #film-tool-root .tagger-focus #newGameBtn{
             display: none !important;
         }
+        #film-tool-root .tagger-focus #gameInfoFields, #film-tool-root .tagger-focus #statusText, #film-tool-root .tagger-focus #videoField, #film-tool-root .tagger-focus #toggleInfoBtn, 
 
         /* Make the video as big as practical in focus mode */
-        .tagger-focus #videoShell video {
+        #film-tool-root .tagger-focus #videoShell video{
             max-height: 85vh;
         }
 
         /* Ensure the exit X is visible and on top */
-        .focus-exit {
+        #film-tool-root .focus-exit{
             position: absolute;
             top: .75rem;
             right: .75rem;
             z-index: 10;
         }
 
-        @media print {
-            body {
-                background: #fff
-            }
-
+        @media print{
             .topbar,
             .report-actions,
             .filters,
@@ -897,7 +744,7 @@
             }
         }
 
-        @media (max-width:1180px) {
+        @media (max-width:1180px){
 
             .grid-main,
             .split {
@@ -913,7 +760,7 @@
             }
         }
 
-        @media (max-width:760px) {
+        @media (max-width:760px){
             .app {
                 padding: .75rem;
             }
@@ -935,13 +782,11 @@
             }
 
             .panel-head,
-            .panel-body {
-                padding: .9rem;
-            }
+            .panel-
         }
 
         /* Position Select Starters dialog on the right side, not over the film */
-        #startersDialog {
+        #film-tool-root #startersDialog{
             position: fixed;
             inset: auto;
             /* clear the browser's default centering */
@@ -956,15 +801,16 @@
         }
 
         /* Do not dim or block the video behind the starters dialog */
-        #startersDialog::backdrop {
+        #film-tool-root #startersDialog::backdrop{
             background: transparent;
         }
 
-        body.report-drawer-open {
+        #film-tool-root body.report-drawer-open{
             overflow: hidden;
         }
-    </style>
-    <script>
+    
+</style>
+<script>
         (function initLibertyIssueReporter() {
             if (window.LibertyIssueReporter) return;
 
@@ -1026,7 +872,11 @@
             };
         })();
     </script>
-</head>
+{% endblock %}
+
+{% block content %}
+<div id="film-tool-root">
+
 
 <body>
     <!-- ── Navigation bar ──────────────────────────────────── -->
@@ -1108,24 +958,14 @@
     </div>
     {% endif %}
     <div class="app">
-        <header class="topbar">
-            <div class="brand">
-                <div class="logo" aria-hidden="true">
-                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="32" cy="32" r="22"></circle>
-                        <path d="M22 12c5 6 5 34 0 40"></path>
-                        <path d="M42 12c-5 6-5 34 0 40"></path>
-                        <path d="M10 24h44"></path>
-                        <path d="M10 40h44"></path>
-                    </svg>
-                </div>
-                <div class="title">
-                    <h1>Film Tool</h1>
-                    <p>Tagger, games, and reports.</p>
-                </div>
-            </div>
-            <div class="actions no-print">
+        <div class="film-tool-topbar">
+    <div class="film-tool-tabs">
+      <button class="btn tab-btn active" data-tab="taggerView" type="button">Tagger</button>
+      <button class="btn tab-btn" data-tab="gamesView" type="button">Games</button>
+      <button class="btn tab-btn" data-tab="reportsView" type="button">Reports</button>
+    </div>
+    <div class="actions no-print">
+
                 <button class="btn tab-btn active" data-tab="taggerView" type="button">Tagger</button>
                 <button class="btn tab-btn" data-tab="gamesView" type="button">Games</button>
                 <button class="btn tab-btn" data-tab="reportsView" type="button">Reports</button>
@@ -1135,8 +975,9 @@
                 <button class="btn" id="manageRostersBtn" type="button">Manage Rosters</button>
                 <button class="btn" data-theme-toggle type="button">◐</button>
                 <button class="btn btn-primary" id="exportBtn" type="button">Export Game Data</button>
-            </div>
-        </header>
+            
+    </div>
+  </div>
 
         <section id="taggerView" class="view active">
             <main class="grid-main">
@@ -1346,7 +1187,6 @@
                         </div>
                     </div>
                 </section>
-
 
 
                 <section class="panel">
@@ -1648,7 +1488,22 @@
             </div>
         </form>
     </dialog>
-    <script>
+    
+
+    
+
+    
+
+    
+
+    
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
         const VOCAB_STORAGE_KEY = 'filmToolVocabularyV20260423final';
         const ROSTER_STORAGE_KEY = 'filmToolRostersV20260423final';
         const GAMES_STORAGE_KEY = 'filmToolSavedGamesV20260423final';
@@ -3718,9 +3573,11 @@ function exitFocusMode() {
         }
 
         document.addEventListener('DOMContentLoaded', init);
-    </script>
+    
+</script>
 
-    <script>
+<script>
+
       const gameId = "{{ game_id or '' }}";
       const autoStatsEnabled = {{ "true" if features.ENABLE_AUTO_STATS_M1 else "false" }};
       const statusTextEl = document.getElementById('ai-status-text');
@@ -3782,9 +3639,11 @@ function exitFocusMode() {
           updateStatusDetail('Upload a video or open a film link with a game_id.');
         }
       });
-    </script>
+    
+</script>
 
-    <script>
+<script>
+
       const bookmarkGameIdInput = document.getElementById('bookmarkGameId');
       const bookmarkLabelInput = document.getElementById('bookmarkLabel');
       const bookmarkNoteInput = document.getElementById('bookmarkNote');
@@ -3921,9 +3780,11 @@ function exitFocusMode() {
           loadManualBookmarks();
         }
       });
-    </script>
+    
+</script>
 
-    <script>
+<script>
+
       function setResourceValue(key, value) {
         const el = document.querySelector(`[data-resource="${key}"]`);
         if (el) el.textContent = value;
@@ -4109,9 +3970,11 @@ function exitFocusMode() {
 
       refreshResourceStatus();
       setInterval(refreshResourceStatus, 2000);
-    </script>
+    
+</script>
 
-    <script>
+<script>
+
       const aiUploadForm = document.getElementById('aiUploadForm');
       const uploadProgressShell = document.getElementById('uploadProgressShell');
       const uploadProgressBar = document.getElementById('uploadProgressBar');
@@ -4152,6 +4015,7 @@ function exitFocusMode() {
 
         xhr.send(formData);
       });
-    </script>
-</body>
-</html>
+    
+</script>
+
+{% endblock %}
