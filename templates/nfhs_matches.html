@@ -19,7 +19,7 @@
 <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:start;">
   <div class="card">
     <h3 style="margin-bottom:18px;">Add NFHS Candidate</h3>
-    <form method="post" action="{{ url_for('nfhs_matches_add') }}">
+    <form method="post" action="{{ url_for('games.nfhs_matches_add') }}">
       <div class="form-group">
         <label for="scheduled_game_id">Scheduled Game</label>
         <select class="form-control" id="scheduled_game_id" name="scheduled_game_id" required>
@@ -70,12 +70,12 @@
             <td>{% if match.confidence is not none %}{{ "%.2f"|format(match.confidence) }}{% else %}–{% endif %}</td>
             <td style="white-space:nowrap;">
               {% if match.match_status != "confirmed" %}
-              <form method="post" action="{{ url_for('nfhs_matches_confirm_page', match_id=match.id) }}" style="display:inline;">
+              <form method="post" action="{{ url_for('games.nfhs_matches_confirm_page', match_id=match.id) }}" style="display:inline;">
                 <button class="btn btn-primary btn-sm" type="submit">Confirm</button>
               </form>
               {% endif %}
               {% if match.match_status != "rejected" %}
-              <form method="post" action="{{ url_for('nfhs_matches_reject_page', match_id=match.id) }}" style="display:inline;">
+              <form method="post" action="{{ url_for('games.nfhs_matches_reject_page', match_id=match.id) }}" style="display:inline;">
                 <button class="btn btn-danger btn-sm" type="submit">Reject</button>
               </form>
               {% endif %}

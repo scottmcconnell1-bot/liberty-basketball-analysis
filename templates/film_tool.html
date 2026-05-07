@@ -1043,7 +1043,7 @@
       <a href="/settings" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Settings</a>
       <a href="/debug" style="color:rgba(255,255,255,0.82);text-decoration:none;font-size:.87rem;font-weight:500;padding:3px 8px;border-radius:6px;">Debug / Issues</a>
       <span style="flex:1;"></span>
-      <a href="{{ url_for('debug_page', compose='1', source=request.path) }}" class="report-link-nav" data-open-report-overlay>Report Bug / Idea</a>
+      <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link-nav" data-open-report-overlay>Report Bug / Idea</a>
     </nav>
     <div class="resource-status-bar" id="resource-status-bar">
       <span class="resource-pill"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
@@ -1066,7 +1066,7 @@
                 <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
             </div>
         </div>
-        <form id="report-drawer-form" method="post" action="{{ url_for('create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+        <form id="report-drawer-form" method="post" action="{{ url_for('core.create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
             <div class="report-drawer-body">
                 <div id="report-drawer-message" class="status" style="display:none;border-top:none;margin-bottom:12px;"></div>
                 <div class="field" style="grid-template-columns:none;">

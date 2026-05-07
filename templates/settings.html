@@ -56,7 +56,7 @@
   </div>
 </div>
 
-<form method="post" action="{{ url_for('settings_page') }}">
+<form method="post" action="{{ url_for('core.settings_page') }}">
   <div class="card">
     <h3 style="margin-bottom:12px;">Feature Flags</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
@@ -196,7 +196,7 @@
         {% if model.installed %}
         <span class="badge badge-home">Installed</span>
         {% else %}
-        <form method="post" action="{{ url_for('pull_ollama_model') }}">
+        <form method="post" action="{{ url_for('core.pull_ollama_model') }}">
           <input type="hidden" name="model_name" value="{{ model.value }}">
           <button class="btn btn-secondary btn-sm" type="submit">Pull Model</button>
         </form>
@@ -209,7 +209,7 @@
 
 <div class="card">
   <h3 style="margin-bottom:12px;">Pull a Different Ollama Model</h3>
-  <form method="post" action="{{ url_for('pull_ollama_model') }}">
+  <form method="post" action="{{ url_for('core.pull_ollama_model') }}">
     <div style="display:grid;grid-template-columns:2fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="model_name">Model Name</label>

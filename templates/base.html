@@ -388,7 +388,7 @@
     <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
     <a href="/debug" {% if request.endpoint == 'debug_page' %}class="active"{% endif %}>Debug / Issues</a>
     <span class="spacer"></span>
-    <a href="{{ url_for('debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+    <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
   </nav>
   <div class="resource-status-bar" id="resource-status-bar">
     <span class="resource-pill"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
@@ -414,7 +414,7 @@
         <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
       </div>
     </div>
-    <form id="report-drawer-form" method="post" action="{{ url_for('create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+    <form id="report-drawer-form" method="post" action="{{ url_for('core.create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
       <div class="report-drawer-body">
         <div id="report-drawer-message" class="alert" style="display:none;"></div>
         <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;">

@@ -25,7 +25,7 @@
 
 <div class="card">
   <h3 style="margin-bottom:12px;">Saved Reports</h3>
-  <form method="get" action="{{ url_for('debug_page') }}" style="display:grid;grid-template-columns:180px 180px 1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
+  <form method="get" action="{{ url_for('core.debug_page') }}" style="display:grid;grid-template-columns:180px 180px 1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
     <div class="form-group" style="margin-bottom:0;">
       <label for="entry_type_filter">Type</label>
       <select class="form-control" id="entry_type_filter" name="entry_type">
@@ -90,7 +90,7 @@
           <td>{{ issue.created_at }}</td>
           <td>
             {% if issue.status != 'completed' %}
-            <form method="post" action="{{ url_for('complete_issue_report', issue_id=issue.id) }}">
+            <form method="post" action="{{ url_for('core.complete_issue_report', issue_id=issue.id) }}">
               <input type="hidden" name="return_to" value="{{ request.full_path if request.query_string else request.path }}">
               <button class="btn btn-secondary btn-sm" type="submit">Mark Completed</button>
             </form>
@@ -139,7 +139,7 @@
 
 <div class="card">
   <h3 style="margin-bottom:12px;">Application Logs</h3>
-  <form method="get" action="{{ url_for('debug_page') }}" style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
+  <form method="get" action="{{ url_for('core.debug_page') }}" style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
     <div class="form-group" style="margin-bottom:0;">
       <label for="log_query">Log Filter</label>
       <input class="form-control" id="log_query" name="log_query" value="{{ filters.log_query }}" placeholder="Filter log lines by text">

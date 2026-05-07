@@ -8,8 +8,8 @@
     <span class="text-muted">{{ practice.practice_date }}{% if practice.season_name %} · {{ practice.season_name }}{% endif %} · {{ practice.level }}</span>
   </div>
   <div style="display:flex;gap:10px;align-items:center;">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page', season_id=practice.season_id) }}">Back to Practices</a>
-    <form method="post" action="{{ url_for('practice_generate_notes', practice_id=practice.id) }}">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practices_page', season_id=practice.season_id) }}">Back to Practices</a>
+    <form method="post" action="{{ url_for('practice.practice_generate_notes', practice_id=practice.id) }}">
       <button class="btn btn-primary btn-sm" type="submit">Refresh AI Notes</button>
     </form>
   </div>
@@ -20,7 +20,7 @@
 {% endif %}
 
 <div class="card">
-  <form method="get" action="{{ url_for('practice_report_page', practice_id=practice.id) }}">
+  <form method="get" action="{{ url_for('practice.practice_report_page', practice_id=practice.id) }}">
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
       <label><input type="checkbox" name="show_plan" value="1" {% if show_plan %}checked{% endif %} style="width:auto;"> Show Plan</label>
       <label><input type="checkbox" name="show_coach" value="1" {% if show_coach %}checked{% endif %} style="width:auto;"> Show Coach Notes</label>
