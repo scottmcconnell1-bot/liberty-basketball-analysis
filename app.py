@@ -3021,6 +3021,266 @@ def practice_summary_page():
         practice_status_options=PRACTICE_STATUS_OPTIONS,
     )
 
+
+# ═══════════════════════════════════════════════════════════════════
+# Phase 7 — Player Development & Practice Engine API
+# ═══════════════════════════════════════════════════════════════════
+
+import player_development as pd_helpers
+
+
+# ── Development Clips ──────────────────────────────────────────────
+
+@app.route("/api/clips")
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_list():
+    db = get_db()
+    player_id = request.args.get("player_id", type=int)
+    season_id = request.args.get("season_id", type=int)
+    category = request.args.get("category")
+    game_id = request.args.get("game_id")
+    clips = pd_helpers.get_clips(db, player_id=player_id, season_id=season_id,
+                                  category=category, game_id=game_id)
+    return jsonify(clips)
+
+
+@app.route("/api/clips", methods=["POST"])
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_create():
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        clip = pd_helpers.create_clip(
+            db,
+            clip_label=data["clip_label"],
+            clip_start_ms=int(data["clip_start_ms"]),
+            clip_end_ms=int(data["clip_end_ms"]),
+            player_id=data.get("player_id"),
+            game_id=data.get("game_id"),
+            event_id=data.get("event_id"),
+            clip_category=data.get("clip_category", "general"),
+            season_id=data.get("season_id"),
+            notes=data.get("notes"),
+        )
+        return jsonify(clip), 201
+    except (ValueError, KeyError) as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/clips/<int:clip_id>")
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_get(clip_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM player_development_clips WHERE id=?", (clip_id,)).fetchone()
+    if not row:
+        abort(404)
+    return jsonify(dict(row))
+
+
+@app.route("/api/clips/<int:clip_id>", methods=["PUT"])
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_update(clip_id):
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        clip = pd_helpers.update_clip(db, clip_id, **data)
+        return jsonify(clip)
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/clips/<int:clip_id>", methods=["DELETE"])
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_delete(clip_id):
+    db = get_db()
+    pd_helpers.delete_clip(db, clip_id)
+    return jsonify({"status": "deleted"})
+
+
+# ── Practice Playlists ─────────────────────────────────────────────
+
+@app.route("/api/playlists")
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_list():
+    db = get_db()
+    season_id = request.args.get("season_id", type=int)
+    level = request.args.get("level")
+    status = request.args.get("status")
+    playlists = pd_helpers.get_playlists(db, season_id=season_id, level=level, status=status)
+    return jsonify(playlists)
+
+
+@app.route("/api/playlists", methods=["POST"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_create():
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        playlist = pd_helpers.create_playlist(
+            db,
+            name=data["name"],
+            season_id=data.get("season_id"),
+            level=data.get("level", "jr_high"),
+            status=data.get("status", "draft"),
+        )
+        return jsonify(playlist), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/playlists/<int:playlist_id>")
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_get(playlist_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM practice_playlists WHERE id=?", (playlist_id,)).fetchone()
+    if not row:
+        abort(404)
+    clips = pd_helpers.get_playlist_clips(db, playlist_id)
+    result = dict(row)
+    result["clips"] = clips
+    return jsonify(result)
+
+
+@app.route("/api/playlists/<int:playlist_id>", methods=["PUT"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_update(playlist_id):
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        playlist = pd_helpers.update_playlist(db, playlist_id, **data)
+        return jsonify(playlist)
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/playlists/<int:playlist_id>", methods=["DELETE"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_delete(playlist_id):
+    db = get_db()
+    pd_helpers.delete_playlist(db, playlist_id)
+    return jsonify({"status": "deleted"})
+
+
+@app.route("/api/playlists/<int:playlist_id>/clips", methods=["POST"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_add_clip(playlist_id):
+    db = get_db()
+    data = request.get_json(force=True)
+    clip_id = data.get("clip_id")
+    if not clip_id:
+        return jsonify({"error": "clip_id is required"}), 400
+    pd_helpers.add_clip_to_playlist(db, playlist_id, int(clip_id),
+                                     sort_order=data.get("sort_order", 0))
+    return jsonify({"status": "added"}), 201
+
+
+@app.route("/api/playlists/<int:playlist_id>/clips/<int:clip_id>", methods=["DELETE"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_playlists_remove_clip(playlist_id, clip_id):
+    db = get_db()
+    pd_helpers.remove_clip_from_playlist(db, playlist_id, clip_id)
+    return jsonify({"status": "removed"})
+
+
+# ── Practice Plan Items ────────────────────────────────────────────
+
+@app.route("/api/practices/<int:practice_id>/plan-items")
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_plan_items_list(practice_id):
+    db = get_db()
+    items = pd_helpers.get_plan_items(db, practice_id)
+    return jsonify(items)
+
+
+@app.route("/api/practices/<int:practice_id>/plan-items", methods=["POST"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_plan_items_create(practice_id):
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        item = pd_helpers.create_plan_item(
+            db,
+            practice_id=practice_id,
+            title=data["title"],
+            playlist_id=data.get("playlist_id"),
+            item_type=data.get("item_type", "drill"),
+            description=data.get("description"),
+            duration_min=data.get("duration_min"),
+            sort_order=data.get("sort_order", 0),
+        )
+        return jsonify(item), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/plan-items/<int:item_id>", methods=["PUT"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_plan_items_update(item_id):
+    db = get_db()
+    data = request.get_json(force=True)
+    try:
+        item = pd_helpers.update_plan_item(db, item_id, **data)
+        return jsonify(item)
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/plan-items/<int:item_id>", methods=["DELETE"])
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def api_plan_items_delete(item_id):
+    db = get_db()
+    pd_helpers.delete_plan_item(db, item_id)
+    return jsonify({"status": "deleted"})
+
+
+# ── Player Development UI ──────────────────────────────────────────
+
+@app.route("/player-development")
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def player_development_page():
+    db = get_db()
+    seasons = db.execute("SELECT * FROM seasons ORDER BY start_date DESC, id DESC").fetchall()
+    players = db.execute("SELECT * FROM players ORDER BY name").fetchall()
+    player_id = request.args.get("player_id", type=int)
+    season_id = request.args.get("season_id", type=int)
+    category = request.args.get("category")
+    game_id = request.args.get("game_id")
+    clips = pd_helpers.get_clips(db, player_id=player_id, season_id=season_id,
+                                  category=category, game_id=game_id)
+    return render_template(
+        "player_development.html",
+        seasons=seasons,
+        players=players,
+        clips=clips,
+        level_options=SCHEDULE_LEVEL_OPTIONS,
+    )
+
+
+@app.route("/practice-playlists")
+@require_feature("ENABLE_PRACTICE_PLAYLISTS")
+def practice_playlists_page():
+    db = get_db()
+    seasons = db.execute("SELECT * FROM seasons ORDER BY start_date DESC, id DESC").fetchall()
+    playlists = pd_helpers.get_playlists(db)
+    view_playlist = None
+    view_playlist_id = request.args.get("view_playlist_id", type=int)
+    if view_playlist_id:
+        row = db.execute("SELECT * FROM practice_playlists WHERE id=?", (view_playlist_id,)).fetchone()
+        if row:
+            clips = pd_helpers.get_playlist_clips(db, view_playlist_id)
+            view_playlist = dict(row)
+            view_playlist["clips"] = clips
+    return render_template(
+        "practice_playlists.html",
+        seasons=seasons,
+        playlists=playlists,
+        view_playlist=view_playlist,
+        level_options=SCHEDULE_LEVEL_OPTIONS,
+    )
+
+
 @app.route("/dashboard")
 def dashboard_page():
     return render_template("dashboard.html")

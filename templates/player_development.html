@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Player Development – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Player Development</h2>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('player_development_page') }}">Clear Filters</a>
+    <a class="btn btn-primary btn-sm" href="#clip-form">+ Add Clip</a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card">
+  <form method="get" action="{{ url_for('player_development_page') }}">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="filter-player">Player</label>
+        <select class="form-control" id="filter-player" name="player_id">
+          <option value="">All Players</option>
+          {% for player in players %}
+          <option value="{{ player.id }}" {% if request.args.get('player_id')|int == player.id %}selected{% endif %}>{{ player.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-season">Season</label>
+        <select class="form-control" id="filter-season" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if request.args.get('season_id')|int == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-category">Category</label>
+        <select class="form-control" id="filter-category" name="category">
+          <option value="">All Categories</option>
+          <option value="turnover" {% if request.args.get('category') == 'turnover' %}selected{% endif %}>Turnover</option>
+          <option value="missed_boxout" {% if request.args.get('category') == 'missed_boxout' %}selected{% endif %}>Missed Boxout</option>
+          <option value="good_action" {% if request.args.get('category') == 'good_action' %}selected{% endif %}>Good Action</option>
+          <option value="defense" {% if request.args.get('category') == 'defense' %}selected{% endif %}>Defense</option>
+          <option value="offense" {% if request.args.get('category') == 'offense' %}selected{% endif %}>Offense</option>
+          <option value="general" {% if request.args.get('category') == 'general' %}selected{% endif %}>General</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-game">Game ID</label>
+        <input class="form-control" id="filter-game" name="game_id" value="{{ request.args.get('game_id', '') }}" placeholder="e.g. game_001">
+      </div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</div>
+
+<!-- Clips Table -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr>
+      <th>Player</th><th>Label</th><th>Category</th><th>Start</th><th>End</th>
+      <th>Game</th><th>Season</th><th>Notes</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% if clips %}
+        {% for clip in clips %}
+        <tr>
+          <td>{{ clip.player_name or "–" }}</td>
+          <td>{{ clip.clip_label }}</td>
+          <td><span class="badge">{{ clip.clip_category }}</span></td>
+          <td>{{ "%.1f"|format(clip.clip_start_ms / 1000) }}s</td>
+          <td>{{ "%.1f"|format(clip.clip_end_ms / 1000) }}s</td>
+          <td>{{ clip.game_id or "–" }}</td>
+          <td>{{ clip.season_name or "–" }}</td>
+          <td>{{ (clip.notes or "")[:60] }}</td>
+          <td style="white-space:nowrap;">
+            <form method="post" action="{{ url_for('api_clips_delete', clip_id=clip.id) }}" style="display:inline;">
+              <input type="hidden" name="_method" value="DELETE">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="9" class="text-muted" style="padding:16px;">No development clips found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Clip Form -->
+<div class="card" id="clip-form">
+  <h3 style="margin-bottom:18px;">Add Development Clip</h3>
+  <form method="post" action="{{ url_for('api_clips_create') }}" id="add-clip-form">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label for="clip-player">Player</label>
+        <select class="form-control" id="clip-player" name="player_id">
+          <option value="">No player</option>
+          {% for player in players %}
+          <option value="{{ player.id }}">{{ player.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="clip-season">Season</label>
+        <select class="form-control" id="clip-season" name="season_id">
+          <option value="">No season</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}">{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="clip-game">Game ID</label>
+        <input class="form-control" id="clip-game" name="game_id" placeholder="e.g. game_001">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="clip-label">Clip Label *</label>
+      <input class="form-control" id="clip-label" name="clip_label" required placeholder="e.g. Turnover vs press">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label for="clip-start">Start (ms) *</label>
+        <input class="form-control" id="clip-start" name="clip_start_ms" type="number" required placeholder="e.g. 15000">
+      </div>
+      <div class="form-group">
+        <label for="clip-end">End (ms) *</label>
+        <input class="form-control" id="clip-end" name="clip_end_ms" type="number" required placeholder="e.g. 20000">
+      </div>
+      <div class="form-group">
+        <label for="clip-category">Category</label>
+        <select class="form-control" id="clip-category" name="clip_category">
+          <option value="general">General</option>
+          <option value="turnover">Turnover</option>
+          <option value="missed_boxout">Missed Boxout</option>
+          <option value="good_action">Good Action</option>
+          <option value="defense">Defense</option>
+          <option value="offense">Offense</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="clip-notes">Notes</label>
+      <textarea class="form-control" id="clip-notes" name="notes" rows="2" placeholder="Optional notes about this clip"></textarea>
+    </div>
+    <div class="modal-actions" style="margin-top:0;">
+      <button class="btn btn-primary" type="submit">Save Clip</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
