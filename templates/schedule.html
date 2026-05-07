@@ -5,7 +5,7 @@
 <div class="page-header">
   <h2>Schedule</h2>
   <div style="display:flex;gap:10px;align-items:center;">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule') }}">Clear Filters</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule') }}">Clear Filters</a>
     <a class="btn btn-primary btn-sm" href="#schedule-game-form">+ Add Game</a>
   </div>
 </div>
@@ -18,7 +18,7 @@
 {% endif %}
 
 <div class="card">
-  <form method="get" action="{{ url_for('schedule') }}">
+  <form method="get" action="{{ url_for('core.schedule') }}">
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="season_id">Season</label>
@@ -88,8 +88,8 @@
           </td>
           <td>{{ game.notes or "" }}</td>
           <td style="white-space:nowrap;">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
-            <form method="post" action="{{ url_for('schedule_delete_game', game_id=game.id) }}" style="display:inline;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('core.schedule_delete_game', game_id=game.id) }}" style="display:inline;">
               <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
               <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
               <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
@@ -109,7 +109,7 @@
 <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
   <div class="card" id="schedule-game-form">
     <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Scheduled Game{% else %}Add Scheduled Game{% endif %}</h3>
-    <form method="post" action="{{ url_for('schedule_save_game') }}">
+    <form method="post" action="{{ url_for('core.schedule_save_game') }}">
       <input type="hidden" name="game_id" value="{{ game_form.id }}">
       <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
       <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
@@ -187,7 +187,7 @@
         <textarea class="form-control" id="notes" name="notes" rows="3">{{ game_form.notes }}</textarea>
       </div>
       <div class="modal-actions" style="margin-top:0;">
-        <a class="btn btn-secondary" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Reset</a>
+        <a class="btn btn-secondary" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Reset</a>
         <button class="btn btn-primary" type="submit">Save Game</button>
       </div>
     </form>
@@ -197,7 +197,7 @@
     <div class="page-header" style="margin-bottom:14px;">
       <h3 style="font-size:1rem;">Manage Seasons</h3>
       {% if editing_season %}
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
       {% endif %}
     </div>
     <table style="margin-bottom:18px;">
@@ -210,8 +210,8 @@
             <td>{{ season.start_date }}</td>
             <td>{{ season.end_date }}</td>
             <td style="white-space:nowrap;">
-              <a class="btn btn-secondary btn-sm" href="{{ url_for('schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">Edit</a>
-              <form method="post" action="{{ url_for('schedule_delete_season', season_id=season.id) }}" style="display:inline;">
+              <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('core.schedule_delete_season', season_id=season.id) }}" style="display:inline;">
                 <button class="btn btn-danger btn-sm" type="submit">Delete</button>
               </form>
             </td>
@@ -223,7 +223,7 @@
       </tbody>
     </table>
 
-    <form method="post" action="{{ url_for('schedule_save_season') }}">
+    <form method="post" action="{{ url_for('core.schedule_save_season') }}">
       <input type="hidden" name="season_id" value="{{ season_form.id }}">
       <div class="form-group">
         <label for="season-name">Season Name</label>

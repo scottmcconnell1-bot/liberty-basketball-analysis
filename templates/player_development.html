@@ -5,7 +5,7 @@
 <div class="page-header">
   <h2>Player Development</h2>
   <div style="display:flex;gap:10px;align-items:center;">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('player_development_page') }}">Clear Filters</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('player_dev.player_development_page') }}">Clear Filters</a>
     <a class="btn btn-primary btn-sm" href="#clip-form">+ Add Clip</a>
   </div>
 </div>
@@ -19,7 +19,7 @@
 
 <!-- Filters -->
 <div class="card">
-  <form method="get" action="{{ url_for('player_development_page') }}">
+  <form method="get" action="{{ url_for('player_dev.player_development_page') }}">
     <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="filter-player">Player</label>
@@ -80,7 +80,7 @@
           <td>{{ clip.season_name or "–" }}</td>
           <td>{{ (clip.notes or "")[:60] }}</td>
           <td style="white-space:nowrap;">
-            <form method="post" action="{{ url_for('api_clips_delete', clip_id=clip.id) }}" style="display:inline;">
+            <form method="post" action="{{ url_for('clips.api_clips_delete', clip_id=clip.id) }}" style="display:inline;">
               <input type="hidden" name="_method" value="DELETE">
               <button class="btn btn-danger btn-sm" type="submit">Delete</button>
             </form>
@@ -97,7 +97,7 @@
 <!-- Add Clip Form -->
 <div class="card" id="clip-form">
   <h3 style="margin-bottom:18px;">Add Development Clip</h3>
-  <form method="post" action="{{ url_for('api_clips_create') }}" id="add-clip-form">
+  <form method="post" action="{{ url_for('clips.api_clips_create') }}" id="add-clip-form">
     <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;">
       <div class="form-group">
         <label for="clip-player">Player</label>

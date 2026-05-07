@@ -5,7 +5,7 @@
 <div class="page-header">
   <h2>Practices</h2>
   <div style="display:flex;gap:10px;align-items:center;">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_summary_page') }}">Range Summary</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practice_summary_page') }}">Range Summary</a>
     <a class="btn btn-primary btn-sm" href="#practice-form">+ Add Practice</a>
   </div>
 </div>
@@ -18,7 +18,7 @@
 {% endif %}
 
 <div class="card">
-  <form method="get" action="{{ url_for('practices_page') }}">
+  <form method="get" action="{{ url_for('practice.practices_page') }}">
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="season_id">Season</label>
@@ -68,12 +68,12 @@
           <td>{{ practice.plan_source }}</td>
           <td>{{ (practice.coach_notes or practice.ai_notes or practice.combined_summary or "")[:100] }}</td>
           <td style="white-space:nowrap;">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None, edit_practice_id=practice.id) }}">Edit</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('practice_report_page', practice_id=practice.id) }}">Report</a>
-            <form method="post" action="{{ url_for('practice_generate_notes', practice_id=practice.id) }}" style="display:inline;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None, edit_practice_id=practice.id) }}">Edit</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practice_report_page', practice_id=practice.id) }}">Report</a>
+            <form method="post" action="{{ url_for('practice.practice_generate_notes', practice_id=practice.id) }}" style="display:inline;">
               <button class="btn btn-primary btn-sm" type="submit">Generate Notes</button>
             </form>
-            <form method="post" action="{{ url_for('practices_delete', practice_id=practice.id) }}" style="display:inline;">
+            <form method="post" action="{{ url_for('practice.practices_delete', practice_id=practice.id) }}" style="display:inline;">
               <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
               <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
               <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
@@ -91,7 +91,7 @@
 
 <div class="card" id="practice-form">
   <h3 style="margin-bottom:18px;">{% if editing_practice %}Edit Practice{% else %}Add Practice{% endif %}</h3>
-  <form method="post" action="{{ url_for('practices_save') }}">
+  <form method="post" action="{{ url_for('practice.practices_save') }}">
     <input type="hidden" name="practice_id" value="{{ practice_form.id }}">
     <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
     <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
@@ -144,7 +144,7 @@
       <textarea class="form-control" id="coach_notes" name="coach_notes" rows="4">{{ practice_form.coach_notes }}</textarea>
     </div>
     <div class="modal-actions" style="margin-top:0;">
-      <a class="btn btn-secondary" href="{{ url_for('practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None) }}">Reset</a>
+      <a class="btn btn-secondary" href="{{ url_for('practice.practices_page', season_id=filters.season_id, level=filters.level or None, status=filters.status or None) }}">Reset</a>
       <button class="btn btn-primary" type="submit">Save Practice</button>
     </div>
   </form>

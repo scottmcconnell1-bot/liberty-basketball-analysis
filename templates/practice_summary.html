@@ -7,11 +7,11 @@
     <h2>Practice Range Summary</h2>
     <span class="text-muted">Review a date range, then generate a summary across the matching practices.</span>
   </div>
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('practices_page') }}">Back to Practices</a>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practices_page') }}">Back to Practices</a>
 </div>
 
 <div class="card">
-  <form method="get" action="{{ url_for('practice_summary_page') }}">
+  <form method="get" action="{{ url_for('practice.practice_summary_page') }}">
     <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="season_id">Season</label>

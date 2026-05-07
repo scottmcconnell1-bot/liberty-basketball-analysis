@@ -8,8 +8,8 @@
     <span class="text-muted">{{ video.original_filename }} · {{ video.opponent or "Unknown opponent" }}</span>
   </div>
   <div style="display:flex;gap:10px;">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('videos_page') }}">Back to Videos</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('film', filename=video.stored_filename, game_id=video.game_id) }}">Open Primary Run</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.videos_page') }}">Back to Videos</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=video.game_id) }}">Open Primary Run</a>
   </div>
 </div>
 
@@ -19,7 +19,7 @@
 
 <div class="card">
   <h3 style="margin-bottom:12px;">Run a New Comparison Pass</h3>
-  <form method="post" action="{{ url_for('rerun_video_analysis', vid_id=video.id) }}">
+  <form method="post" action="{{ url_for('ai.rerun_video_analysis', vid_id=video.id) }}">
     <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
         <label for="run_label">Run Label</label>
@@ -90,7 +90,7 @@
         </td>
         <td>{{ run.started_at or "—" }}</td>
         <td style="white-space:nowrap;">
-          <a class="btn btn-primary btn-sm" href="{{ url_for('film', filename=video.stored_filename, game_id=run.game_id) }}">Open in Film Tool</a>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=run.game_id) }}">Open in Film Tool</a>
         </td>
       </tr>
       {% endfor %}
