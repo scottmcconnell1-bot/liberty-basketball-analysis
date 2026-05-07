@@ -68,26 +68,66 @@ def run_ai_analysis(db_path, video_path, game_id):
                 predict_kwargs["device"] = "cpu"
             elif inference_device == "cuda":
                 predict_kwargs["device"] = 0
-            results = model(frame, **predict_kwargs)
-            detections_to_add = []
 
-            for result in results:
-                for box in result.boxes:
-                    class_id = int(box.cls[0])
-                    # Normalize class names to pipeline canonical values
-                    raw_class_name = model.names[class_id]
-                    class_name = raw_class_name
-                    if raw_class_name in ['sports ball', 'sports_ball']:
-                        class_name = 'ball'
-                    if class_name in ['person', 'ball']:
-                        confidence = float(box.conf[0])
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        # tracker_id placeholder (None for now) — will be filled when tracking is added
-                        tracker_id = None
-                        detections_to_add.append((
-                            game_id, frame_number, timestamp_ms, class_name, confidence,
-                            (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, tracker_id
-                        ))
+            # Use ByteTrack via model.track() for production-quality tracking
+            # This assigns tracker_id directly during detection, which is more
+            # accurate than post-hoc centroid matching
+            try:
+                track_results = model.track(frame, persist=True, tracker="bytetrack.yaml",
+                                            classes=[0], **predict_kwargs)  # class 0 = person
+                detections_to_add = []
+                ball_results = model(frame, **predict_kwargs)
+
+                # Extract person detections with tracker IDs from ByteTrack
+                person_boxes = {}  # tracker_id -> box info
+                for result in track_results:
+                    if result.boxes.id is not None:
+                        for box in result.boxes:
+                            tid = int(box.id[0])
+                            class_id = int(box.cls[0])
+                            raw_class_name = model.names[class_id]
+                            if raw_class_name in ['person']:
+                                confidence = float(box.conf[0])
+                                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                                person_boxes[tid] = (game_id, frame_number, timestamp_ms,
+                                                     'person', confidence,
+                                                     (x1 + x2) // 2, (y1 + y2) // 2,
+                                                     x2 - x1, y2 - y1, tid)
+
+                # Extract ball detections (no tracking needed for ball)
+                for result in ball_results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        raw_class_name = model.names[class_id]
+                        if raw_class_name in ['sports ball', 'sports_ball']:
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            detections_to_add.append((
+                                game_id, frame_number, timestamp_ms, 'ball', confidence,
+                                (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, None
+                            ))
+
+                detections_to_add.extend(person_boxes.values())
+
+            except (TypeError, AttributeError):
+                # Fallback: model.track() not available, use detect + post-hoc tracker
+                results = model(frame, **predict_kwargs)
+                detections_to_add = []
+                for result in results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        raw_class_name = model.names[class_id]
+                        class_name = raw_class_name
+                        if raw_class_name in ['sports ball', 'sports_ball']:
+                            class_name = 'ball'
+                        if class_name in ['person', 'ball']:
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            tracker_id = None
+                            detections_to_add.append((
+                                game_id, frame_number, timestamp_ms, class_name, confidence,
+                                (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, tracker_id
+                            ))
             
             if detections_to_add:
                 cursor = db.cursor()
