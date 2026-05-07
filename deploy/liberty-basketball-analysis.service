@@ -10,7 +10,14 @@ Environment=LIBERTY_DEBUG=0
 Environment=PORT=8080
 Environment=LIBERTY_DATABASE=/opt/liberty-basketball-analysis/film_analysis.db
 Environment=LIBERTY_UPLOAD_FOLDER=/opt/liberty-basketball-analysis/uploads
-ExecStart=/opt/liberty-basketball-analysis/.venv/bin/python /opt/liberty-basketball-analysis/app.py
+ExecStart=/opt/liberty-basketball-analysis/.venv/bin/gunicorn \
+    --workers 2 \
+    --bind 127.0.0.1:8080 \
+    --timeout 120 \
+    --access-logfile /opt/liberty-basketball-analysis/logs/gunicorn-access.log \
+    --error-logfile /opt/liberty-basketball-analysis/logs/gunicorn-error.log \
+    --pid /opt/liberty-basketball-analysis/gunicorn.pid \
+    app:app
 Restart=on-failure
 RestartSec=5
 

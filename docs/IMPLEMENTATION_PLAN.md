@@ -1,34 +1,34 @@
 # Liberty Basketball Analysis — Implementation Snapshot
 
-Last updated: 2026-05-05
+Last updated: 2026-05-07
 
 ## Current state
 
-The project is running as a single Flask application with SQLite persistence and server-rendered templates. The codebase already supports:
+The project is running as a single Flask application with SQLite persistence and server-rendered templates. All phases through Phase 7 are complete:
 
-- season and scheduled game management
-- games and sources
-- NFHS match linking
-- video upload and AI-analysis run tracking
-- film review/manual tagging workflows
-- practice planning and reporting
-- debug/issue reporting with saved reports and application logs
-- local runtime telemetry for CPU, memory, GPU, and live power when the host exposes those metrics
+- **Phase 1:** Data model & schema (all tables)
+- **Phase 2:** Season & scheduled game management + /schedule UI
+- **Phase 3:** Games & film sources CRUD + NFHS matching
+- **Phase 4:** NFHS matching (manual candidate add/confirm/reject)
+- **Phase 5:** Stats aggregation from events
+- **Phase 6:** Practices & practice reports (AI notes, combined summaries, date-range summaries)
+- **Phase 7:** Player development clips, practice playlists, practice plan items
 
 ## Architecture summary
 
 ### Application layer
 
 - `app.py` owns the Flask routes, database bootstrap, feature-flag injection, resource-status API, and page rendering.
-- `config.py` contains feature flags and runtime path configuration via environment variables.
-- `templates/` contains the UI for dashboard, film tool, schedule, settings, debug/issues, practices, and supporting pages.
+- `config.py` contains feature flags and runtime environment configuration.
+- `templates/` contains the UI for all pages.
+- `player_development.py` — Phase 7 helper module for clips, playlists, and plan items.
 
 ### Analysis pipeline
 
 - `ai_analyzer.py` runs background analysis jobs.
 - `event_generator.py` turns detections into persisted events.
 - `stats.py` aggregates event data into stats structures.
-- `tracker_assigner.py` and supporting helpers provide tracking-related logic.
+- `tracker_assigner.py` provides lightweight centroid-based tracking.
 
 ### Persistence
 
@@ -38,31 +38,48 @@ The project is running as a single Flask application with SQLite persistence and
 
 ## Deployment modes
 
-The project is now documented and supported in two primary modes:
+### Production (gunicorn + nginx)
 
-1. **Standalone Python install**
-   - Uses `.venv`, `requirements.txt`, and `python app.py`
-   - Can be managed with systemd using `deploy/liberty-basketball-analysis.service`
+- `deploy/liberty-basketball-analysis.service` — systemd service using gunicorn
+- `deploy/nginx-liberty-basketball-analysis.conf` — nginx reverse proxy config
+- `deploy/deploy_production.sh` — automated install/start/stop/restart script
+- `scripts/backup.sh` — backup/restore for DB and uploads
+- `scripts/smoke_test.sh` — deployment smoke tests
 
-2. **Container install**
-   - Uses `Dockerfile` and `docker-compose.yml`
-   - GPU hosts can opt into `docker-compose.gpu.yml`
+### Standalone Python install
+
+- Uses `.venv`, `requirements.txt`, and `python app.py`
+- Can be managed with systemd using `deploy/liberty-basketball-analysis.service`
+
+### Container install
+
+- Uses `Dockerfile` and `docker-compose.yml`
+- GPU hosts can opt into `docker-compose.gpu.yml`
 
 ## Operational assets
 
 - `scripts/setup_project.py` — text UI installer for standalone or container setup
 - `scripts/build_transfer_bundle.sh` — creates a migration tarball for another server
+- `scripts/backup.sh` — backup/restore tooling
+- `scripts/smoke_test.sh` — deployment smoke tests
 - `docs/DEPLOYMENT.md` — operational runbook
 - `docs/AI_AGENT_HANDOFF.md` — AI handoff brief
 
+## Test suite
+
+112 tests passing:
+- `test_api.py` — Integration tests for all Flask API endpoints
+- `test_season_management.py` — Unit tests for season/scheduled game helpers
+- `test_schema.py` — Schema verification (all tables and columns)
+- `test_event_pipeline.py` — Tracker and event pipeline tests
+- `test_player_development.py` — Phase 7 tests (clips, playlists, plan items)
+
 ## Next likely engineering work
 
-These are the most natural follow-on tasks after the current deployment and handoff refresh:
-
-1. Harden production serving for standalone installs (for example gunicorn + reverse proxy if needed)
-2. Expand AI event quality and tracking accuracy
-3. Add more explicit backup/restore tooling for uploads and SQLite snapshots
-4. Add deployment smoke tests for standalone and container flows
+1. ~~Harden production serving~~ — gunicorn + nginx config done
+2. Expand AI event quality and tracking accuracy (ByteTrack/DeepSort)
+3. ~~Add backup/restore tooling~~ — done
+4. ~~Add deployment smoke tests~~ — done
 5. Split large templates or route groups if future work increases complexity further
 
 ## Notes
