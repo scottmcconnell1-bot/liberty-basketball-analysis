@@ -70,6 +70,7 @@ def init_db_command():
 
 
 if __name__ == "__main__":
-    from helpers import ensure_db
-    ensure_db()
+    with app.app_context():
+        from helpers import ensure_db
+        ensure_db()
     app.run(host="0.0.0.0", port=8081, debug=True)
