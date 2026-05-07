@@ -731,6 +731,14 @@ def init_db():
     _ensure_migration_columns(db)
 
 
+def ensure_db():
+    if not os.path.exists(current_app.config["DATABASE"]):
+        init_db()
+    else:
+        db = get_db()
+        _ensure_migration_columns(db)
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     # ── New tables (idempotent) ──────────────────────────────
