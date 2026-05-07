@@ -76,11 +76,27 @@ Infrastructure:
 
 KNOWN ISSUES / TECHNICAL DEBT
 ------------------------------
-1. Dribble detection is heuristic-only (spatial bin fallback when no tracker_id)
-2. tracker_assigner is lightweight centroid matching — not ByteTrack/DeepSort
+1. ~~Dribble detection is heuristic-only~~ — improved with ByteTrack integration
+2. ~~tracker_assigner is lightweight centroid matching~~ — now uses ByteTrack via model.track()
 3. AI notes for practices are heuristic/rule-based — no LLM integration yet
-4. No production WSGI server (gunicorn) configured yet
-5. No automated backup/restore tooling for DB and uploads
+4. ~~No production WSGI server~~ — gunicorn configured
+5. ~~No automated backup/restore~~ — backup.sh script added
+6. ~~No deployment smoke tests~~ — smoke_test.sh script added
+
+PRODUCTION HARDENING (completed 2026-05-07)
+--------------------------------------------
+- gunicorn installed and configured in systemd service
+- nginx reverse proxy config added
+- deploy_production.sh: automated install/start/stop/restart/status/logs
+- backup.sh: backup/restore/list for DB and uploads
+- smoke_test.sh: HTTP health checks for all pages and APIs
+- 112 tests passing (90 original + 22 Phase 7)
+
+NEXT STEPS
+----------
+- Phase 8+: Per coach direction
+- LLM integration for practice AI notes
+- Consider splitting app.py into route blueprints as complexity grows
 
 NEXT STEPS (per Master Project Outline)
 -----------------------------------------
