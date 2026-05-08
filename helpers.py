@@ -827,6 +827,8 @@ def _ensure_migration_columns(db):
         ("events", "human_verified", "ALTER TABLE events ADD COLUMN human_verified INTEGER NOT NULL DEFAULT 0"),
         ("events", "confidence",     "ALTER TABLE events ADD COLUMN confidence REAL"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
+        ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
+        ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
     ]
     existing = {
         (row[1], row[2]): True

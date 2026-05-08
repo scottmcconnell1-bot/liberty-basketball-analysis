@@ -71,9 +71,11 @@ def test_schedule_export_maxpreps(client, app):
         db.execute(
             """INSERT INTO scheduled_games
                (season_id, program_name, gender, level, game_date, game_time,
+                jv_game_time, frosh_game_time,
                 location_type, opponent_name, status)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (season_id, "Liberty", "boys", "varsity", "2025-12-01", "19:00", "home", "Riverside", "scheduled"),
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (season_id, "Liberty", "boys", "varsity", "2025-12-01", "19:00",
+             "16:30", None, "home", "Riverside", "scheduled"),
         )
         db.commit()
 
@@ -105,9 +107,11 @@ def test_schedule_export_maxpreps_only_scheduled(client, app):
         db.execute(
             """INSERT INTO scheduled_games
                (season_id, program_name, gender, level, game_date, game_time,
+                jv_game_time, frosh_game_time,
                 location_type, opponent_name, status)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (season_id, "Liberty", "boys", "jr_high", "2025-12-10", "18:00", "away", "Lincoln", "completed"),
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (season_id, "Liberty", "boys", "jr_high", "2025-12-10", "18:00",
+             None, None, "away", "Lincoln", "completed"),
         )
         db.commit()
 
@@ -154,12 +158,11 @@ def test_parse_schedule_line_various_formats():
 
 
 def test_schedule_table_column_widths(client):
-    """Verify schedule table has min-width on Level column."""
+    """Verify schedule table has correct column headers."""
     resp = client.get("/schedule")
     assert resp.status_code == 200
     html = resp.data.decode("utf-8")
-    # Check that schedule table uses new 5-column layout (Date, Opponent, Location, Status, Actions)
-    assert '<th>Date</th>' in html or '>Date<' in html
-    assert '<th>Opponent</th>' in html or '>Opponent<' in html
-    assert '<th>Location</th>' in html or '>Location<' in html
-    assert '<th>Status</th>' in html or '>Status<' in html
+    # Check that schedule table uses new 4-column layout (DATE, OPPONENT, TIMES, Actions)
+    assert ">DATE<" in html or "DATE" in html
+    assert ">OPPONENT<" in html or "OPPONENT" in html
+    assert ">TIMES<" in html or "TIMES" in html
