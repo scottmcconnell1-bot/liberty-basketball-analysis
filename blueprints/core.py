@@ -394,6 +394,16 @@ def _parse_schedule_text(text, pdf_team="boys_hs"):
     for line in joined_lines:
         if len(line) < 10:
             continue
+        # Jr High: detect "A team" / "B team" continuation lines
+        # e.g. "B 4:30" or "B team 4:30" on a line after the opponent
+        ab_continuation = re.match(r'^[AaBb]\s*(?:team)?\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$', line.strip())
+        if ab_continuation and games and games[-1].get('level') == 'jr_high':
+            time_val = _normalize_time(ab_continuation.group(1))
+            if line.strip().upper().startswith('B'):
+                games[-1]['jv_game_time'] = time_val  # B team
+            else:
+                games[-1]['game_time'] = time_val  # A team
+            continue
         game = _parse_schedule_line(line, pdf_team=pdf_team)
         if game:
             games.append(game)
@@ -442,8 +452,14 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
             frosh_time = _normalize_time(time_parts[1])
             varsity_time = _normalize_time(time_parts[2])
         elif len(time_parts) == 2:
-            jv_time = _normalize_time(time_parts[0])
-            varsity_time = _normalize_time(time_parts[1])
+            # For Jr High: 2 times = B team (first) / A team (second)
+            # For HS: 2 times = JV / Varsity
+            if _team_level == 'jr_high':
+                jv_time = _normalize_time(time_parts[0])  # B team
+                varsity_time = _normalize_time(time_parts[1])  # A team
+            else:
+                jv_time = _normalize_time(time_parts[0])
+                varsity_time = _normalize_time(time_parts[1])
         elif len(time_parts) == 1:
             varsity_time = _normalize_time(time_parts[0])
 
@@ -523,6 +539,31 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
             remainder = remainder[:loc_match.start()] + remainder[loc_match.end():]
             remainder = remainder.strip()
 
+    # Detect A team / B team pattern (Jr High format)
+    # Patterns: "B team 4:30 / A team 6:00" or "B 4:30/A 6:00" or "4:30 B / 6:00 A"
+    # B team plays first (earlier time), A team plays second
+    is_jr_high = 'jr_high' == _team_level
+    if is_jr_high and not jv_time and not varsity_time:
+        # Check for A/B team time patterns like "B 4:30 / A 6:00" or "4:30B/6:00A"
+        ab_time_match = re.search(
+            r'(\d{1,2}:\d{2})\s*(?:B|b)\s*/\s*(\d{1,2}:\d{2})\s*(?:A|a)', remainder
+        )
+        if ab_time_match:
+            jv_time = _normalize_time(ab_time_match.group(1))  # B team → jv_game_time
+            varsity_time = _normalize_time(ab_time_match.group(2))  # A team → game_time
+            remainder = remainder[:ab_time_match.start()] + remainder[ab_time_match.end():]
+            remainder = remainder.strip()
+        else:
+            # Check for "B team 4:30 / A team 6:00" format
+            ab_time_match2 = re.search(
+                r'[Bb]\s*(?:team)?\s*(\d{1,2}:\d{2})\s*/\s*[Aa]\s*(?:team)?\s*(\d{1,2}:\d{2})', remainder
+            )
+            if ab_time_match2:
+                jv_time = _normalize_time(ab_time_match2.group(1))  # B team → jv_game_time
+                varsity_time = _normalize_time(ab_time_match2.group(2))  # A team → game_time
+                remainder = remainder[:ab_time_match2.start()] + remainder[ab_time_match2.end():]
+                remainder = remainder.strip()
+
     # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
     # This handles the PDF column layout where times appear after (H)/(A)
     if not varsity_time:
@@ -536,8 +577,13 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
                 frosh_time = _normalize_time(time_parts[1])
                 varsity_time = _normalize_time(time_parts[2])
             elif len(time_parts) == 2:
-                jv_time = _normalize_time(time_parts[0])
-                varsity_time = _normalize_time(time_parts[1])
+                # Jr High: 2 times = B team (first) / A team (second)
+                if _team_level == 'jr_high':
+                    jv_time = _normalize_time(time_parts[0])  # B team
+                    varsity_time = _normalize_time(time_parts[1])  # A team
+                else:
+                    jv_time = _normalize_time(time_parts[0])
+                    varsity_time = _normalize_time(time_parts[1])
             elif len(time_parts) == 1:
                 varsity_time = _normalize_time(time_parts[0])
 
