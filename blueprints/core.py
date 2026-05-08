@@ -781,13 +781,12 @@ def _get_or_create_default_season(db):
 
 
 def _detect_season_from_text(text, pdf_team="boys_hs"):
-    """Parse the PDF header/title lines to determine the season name and date range.
+    """Parse the PDF text to determine the season name and date range.
 
-    Looks for patterns like:
-      '2025-26 Boys Basketball Schedule'
-      'Liberty Charter 2025-2026 Girls Basketball'
-      '2025-2026 Season'
-      '2025-26 Season'
+    Scans the full text (not just header) for year clues in:
+      1. Header lines: "2025-26 Boys Basketball Schedule"
+      2. Date patterns in game lines: "11/4/25", "12/2/2025", "1/5/26"
+      3. Standalone 4-digit years near "season"/"schedule" keywords
 
     Returns a dict: {name, start_date, end_date} or None if no season detected.
 
@@ -798,24 +797,21 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     """
     import re, datetime
 
-    # Look at the first 30 lines for season/year clues
-    lines = text.splitlines()[:30]
-    header_text = "\n".join(lines)
-
-    # Try to find a season year pattern: "2025-26", "2025-2026", "2025/26", "2025 2026"
-    # Also match single year like "2025" near words like "season" or "schedule"
-    year_patterns = [
-        # "2025-26" or "2025-2026" or "2025/26"
-        r'(20\d{2})\s*[-/]\s*(?:20)?(\d{2})\b',
-        # "2025-2026" full form
-        r'(20\d{2})\s*[-/]\s*(20\d{2})',
-        # "2025 2026" space-separated
-        r'(20\d{2})\s+(20\d{2})',
-    ]
+    lines = text.splitlines()
+    header_text = "\n".join(lines[:30])
+    full_text = text
 
     year1 = None
     year2 = None
-    for pat in year_patterns:
+
+    # ── Strategy 1: Header season-year pattern ──────────────────
+    # "2025-26", "2025-2026", "2025/26", "2025 2026"
+    header_patterns = [
+        r'(20\d{2})\s*[-/]\s*(?:20)?(\d{2})\b',   # 2025-26, 2025/26
+        r'(20\d{2})\s*[-/]\s*(20\d{2})',            # 2025-2026
+        r'(20\d{2})\s+(20\d{2})',                    # 2025 2026
+    ]
+    for pat in header_patterns:
         m = re.search(pat, header_text)
         if m:
             year1 = int(m.group(1))
@@ -823,8 +819,51 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
             year2 = int(year2_raw) if len(year2_raw) == 4 else year1 // 100 * 100 + int(year2_raw)
             break
 
+    # ── Strategy 2: 2-digit years in date patterns ─────────────
+    # e.g. "11/4/25", "12/02/25", "1/5/26", "01/05/2026"
     if year1 is None:
-        # Fallback: find all 4-digit years in header, take first two distinct ones
+        # Find all dates with 2-digit or 4-digit years: M/D/YY, M/D/YYYY, MM/DD/YY, etc.
+        date_year_matches = re.finditer(
+            r'(?:^|\s)(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})(?:\s|$)',
+            full_text, re.MULTILINE
+        )
+        years_from_dates = []
+        months_from_dates = []
+        for m in date_year_matches:
+            month = int(m.group(1))
+            day = int(m.group(2))
+            yr_raw = m.group(3)
+            if len(yr_raw) == 2:
+                yr = 2000 + int(yr_raw)
+            else:
+                yr = int(yr_raw)
+            if 2020 <= yr <= 2030 and 1 <= month <= 12 and 1 <= day <= 31:
+                years_from_dates.append(yr)
+                months_from_dates.append(month)
+
+        if years_from_dates:
+            # Count occurrences of each year
+            from collections import Counter
+            year_counts = Counter(years_from_dates)
+            most_common = year_counts.most_common()
+            # The most common year is likely year1 (start of season)
+            # If we see two distinct years, the later one is year2
+            distinct_years = sorted(set(years_from_dates))
+            if len(distinct_years) >= 2:
+                year1 = distinct_years[0]
+                year2 = distinct_years[-1]
+            else:
+                year1 = distinct_years[0]
+                # Infer year2 from months: if we see months > 6 (Jul+), year2 = year1
+                # Otherwise year2 = year1 + 1 (season spans winter)
+                max_month = max(months_from_dates) if months_from_dates else 0
+                if max_month >= 7:
+                    year2 = year1
+                else:
+                    year2 = year1 + 1
+
+    # ── Strategy 3: 4-digit years anywhere in header ───────────
+    if year1 is None:
         all_years = [int(m.group(1)) for m in re.finditer(r'(20\d{2})', header_text)]
         distinct = []
         for y in all_years:
@@ -835,6 +874,48 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
         elif len(distinct) == 1:
             year1 = distinct[0]
             year2 = year1 + 1
+
+    # ── Strategy 4: Infer from month patterns alone ─────────────
+    # If we see months 11,12 and 1,2 together, it's a winter season
+    if year1 is None:
+        month_mentions = set()
+        # Look for month names and abbreviations
+        for m in re.finditer(
+            r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\b',
+            full_text, re.IGNORECASE
+        ):
+            month_mentions.add(m.group(1).capitalize()[:3])
+        # Also look for numeric months in date-like patterns
+        for m in re.finditer(r'(?:^|\s)(\d{1,2})[/\-]\d{1,2}(?:[/\-]\d{2,4})?(?:\s|$)', full_text, re.MULTILINE):
+            mo = int(m.group(1))
+            if 1 <= mo <= 12:
+                month_mentions.add(['Jan','Feb','Mar','Apr','May','Jun',
+                                    'Jul','Aug','Sep','Oct','Nov','Dec'][mo-1])
+
+        has_fall = bool(month_mentions & {'Oct', 'Nov', 'Dec'})
+        has_winter = bool(month_mentions & {'Jan', 'Feb', 'Mar'})
+
+        if has_fall and has_winter:
+            # Winter season spanning two years — use current year logic
+            today = datetime.date.today()
+            # If we're in the first half of the year (Jan-Jun), season started last year
+            if today.month <= 6:
+                year1 = today.year - 1
+                year2 = today.year
+            else:
+                year1 = today.year
+                year2 = today.year + 1
+        elif has_fall:
+            year1 = datetime.date.today().year
+            year2 = year1 + 1
+        elif has_winter:
+            today = datetime.date.today()
+            if today.month <= 6:
+                year1 = today.year - 1
+                year2 = today.year
+            else:
+                year1 = today.year
+                year2 = year1 + 1
 
     if year1 is None:
         return None
