@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+{% block title %}Playbook – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Playbook</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <select class="form-control" style="width:auto" onchange="filterByCategory(this)">
+      <option value="">All Categories</option>
+      {% for value, label in categories %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
+           id="playSearch" oninput="filterPlays(this.value)">
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
+{% if view_mode == "list" %}
+<div class="card">
+  <h3 style="margin-bottom:16px;">Plays</h3>
+  {% if plays %}
+  <div class="table-responsive">
+  <table>
+    <thead><tr>
+      <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
+    </tr></thead>
+    <tbody id="playsTableBody">
+      {% for play in plays %}
+      <tr class="play-row" data-category="{{ play.category }}" data-name="{{ play.name.lower() }}">
+        <td><strong>{{ play.name }}</strong></td>
+        <td><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem;">
+          {{ play.category or 'offense' }}
+        </span></td>
+        <td class="text-muted">{{ play.playbook_name or '—' }}</td>
+        <td class="text-muted">
+          {% if play.diagram_json %}
+          {{ play.diagram_json.count('step_number') if play.diagram_json else '—' }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-muted" style="font-size:0.75rem;">{{ play.updated_at[:16] if play.updated_at else '' }}</td>
+        <td style="white-space:nowrap;">
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
+          <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}" style="display:inline;">
+            <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="text-muted">No plays yet. <a href="{{ url_for('playbook.playbook_create') }}">Create your first play</a>.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
+{% if view_mode in ("editor", "view") %}
+{% set is_readonly = view_mode == "view" %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+
+  <!-- Left: Court Canvas -->
+  <div class="card" style="padding:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        {% if not is_readonly %}
+        <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Add Step</button>
+        <button class="btn btn-secondary btn-sm" onclick="duplicateStep()">Duplicate</button>
+        <button class="btn btn-danger btn-sm" onclick="removeStep()">Remove Step</button>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
+          <option value="select">Select / Move</option>
+          <option value="dribble">Dribble Arrow</option>
+          <option value="pass">Pass Arrow</option>
+          <option value="screen">Screen Arrow</option>
+        </select>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
+        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
+        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
+        {% if is_readonly %}
+        <button class="btn btn-primary btn-sm" onclick="playAnimation()">▶ Play All</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Court SVG Canvas -->
+    <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
+           xmlns="http://www.w3.org/2000/svg">
+        <!-- Half court background -->
+        <rect x="0" y="0" width="500" height="470" fill="#fff" stroke="#c4a882" stroke-width="4"/>
+        <rect x="0" y="0" width="500" height="470" fill="none" stroke="#333" stroke-width="3"/>
+
+        <!-- Court lines -->
+        <!-- Center circle -->
+        <circle cx="250" cy="470" r="60" fill="none" stroke="#333" stroke-width="2"/>
+        <!-- Center line -->
+        <line x1="250" y1="470" x2="250" y2="470" stroke="#333" stroke-width="2"/>
+
+        <!-- Paint / key area -->
+        <rect x="170" y="310" width="160" height="160" fill="none" stroke="#333" stroke-width="2"/>
+        <!-- Free throw circle -->
+        <circle cx="250" cy="310" r="60" fill="none" stroke="#333" stroke-width="2" stroke-dasharray="8,4"/>
+
+        <!-- 3-point arc -->
+        <path d="M 30 470 L 30 140 A 220 220 0 0 0 470 470" fill="none" stroke="#333" stroke-width="2"/>
+
+        <!-- Restricted area -->
+        <path d="M 210 470 A 40 40 0 0 1 290 470" fill="none" stroke="#333" stroke-width="2"/>
+
+        <!-- Backboard -->
+        <line x1="230" y1="465" x2="270" y2="465" stroke="#333" stroke-width="4"/>
+        <!-- Rim -->
+        <circle cx="250" cy="460" r="8" fill="none" stroke="#eb5757" stroke-width="3"/>
+
+        <!-- Layer for arrows/connections -->
+        <g id="arrowLayer"></g>
+
+        <!-- Layer for players (SVG groups: circle + text) -->
+        <g id="playerLayer"></g>
+      </svg>
+    </div>
+
+    <!-- Step notes -->
+    <div style="margin-top:10px;">
+      <label for="stepNotes" style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px;">
+        Step Notes
+      </label>
+      <textarea class="form-control" id="stepNotes" rows="2" placeholder="Add notes for this step..."
+                {% if is_readonly %}readonly{% endif %}></textarea>
+    </div>
+  </div>
+
+  <!-- Right: Play Details Panel -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <h4 style="margin-bottom:12px;">{% if is_readonly %}Play Details{% else %}Save Play{% endif %}</h4>
+      {% if not is_readonly %}
+      <form method="post" action="{{ url_for('playbook.playbook_save') }}" id="playForm">
+        <input type="hidden" name="play_id" value="{{ editing_play.id if editing_play else '' }}">
+        <input type="hidden" name="diagram_json" id="diagramJsonInput" value="">
+        <input type="hidden" name="steps_json" id="stepsJsonInput" value="">
+        <div class="form-group">
+          <label for="playName">Play Name</label>
+          <input class="form-control" id="playName" name="name" required
+                 value="{{ editing_play.name if editing_play else '' }}" placeholder="e.g. Box Zone Entry">
+        </div>
+        <div class="form-group">
+          <label for="playCategory">Category</label>
+          <select class="form-control" id="playCategory" name="category">
+            {% for value, label in categories %}
+            <option value="{{ value }}" {% if editing_play and editing_play.category == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="playDescription">Description</label>
+          <textarea class="form-control" id="playDescription" name="description" rows="2"
+                    placeholder="Brief description of the play...">{{ editing_play.description if editing_play else '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="playTags">Tags (comma-separated)</label>
+          <input class="form-control" id="playTags" name="tags"
+                 value="{{ editing_play.tags if editing_play else '' }}" placeholder="e.g. zone, press break">
+        </div>
+        <div class="form-group">
+          <label for="playPlaybook">Add to Playbook</label>
+          <select class="form-control" id="playPlaybook" name="playbook_id">
+            <option value="">— None —</option>
+            {% for pb in playbooks %}
+            <option value="{{ pb.id }}" {% if editing_play and editing_play.playbook_id == pb.id %}selected{% endif %}>{{ pb.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%;">💾 Save Play</button>
+      </form>
+      {% else %}
+      <p style="font-weight:600;font-size:1.1rem;margin-bottom:4px;">{{ editing_play.name }}</p>
+      <p class="text-muted" style="margin-bottom:8px;">{{ editing_play.description or 'No description' }}</p>
+      <span class="badge" style="background:#e0e7ff;color:#3730a3;">{{ editing_play.category or 'offense' }}</span>
+      {% if editing_play.tags %}
+      <div style="margin-top:8px;">
+        {% for tag in editing_play.tags.split(',') %}
+        <span class="badge" style="background:#f3f4f6;color:#6b7280;margin-right:4px;">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div style="margin-top:12px;">
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_list') }}">Back to Library</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Step list -->
+    <div class="card">
+      <h4 style="margin-bottom:12px;">Steps <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
+      <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block head %}
+<style>
+  .player-token {
+    cursor: grab;
+    user-select: none;
+  }
+  .player-token:active {
+    cursor: grabbing;
+  }
+  .player-token circle {
+    transition: stroke-width 0.15s;
+  }
+  .player-token:hover circle {
+    stroke-width: 3;
+  }
+  .step-item {
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s;
+  }
+  .step-item:hover { background: #f3f4f6; }
+  .step-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+  @media (max-width: 768px) {
+    div[style*="grid-template-columns:1fr 300px"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Playbook Canvas State ────────────────────────────────
+const COURT_W = 500, COURT_H = 470;
+const PLAYER_RADIUS = 16;
+const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6']; // 1=red, 2=blue, 3=green, 4=orange, 5=purple
+const PLAYER_LABELS = ['1', '2', '3', '4', '5'];
+
+let steps = [];
+let currentStep = 0;
+let selectedPlayer = null;
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+let currentTool = 'select';
+let arrowStart = null;
+
+// Initialize from server data if editing
+const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
+const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
+const isReadOnly = {{ 'true' if view_mode == 'view' else 'false' }};
+
+function initSteps() {
+  if (editingSteps && editingSteps.length > 0) {
+    steps = editingSteps.map(s => ({
+      positions: JSON.parse(s.positions_json || '{}'),
+      movements: JSON.parse(s.movements_json || '[]'),
+      label: s.label || '',
+      notes: s.notes || '',
+    }));
+  } else {
+    // Default: single step with 5 players in basic positions
+    steps = [{
+      positions: {
+        '1': { x: 250, y: 420 },  // PG top
+        '2': { x: 120, y: 350 },   // SG left wing
+        '3': { x: 380, y: 350 },   // SF right wing
+        '4': { x: 140, y: 250 },   // PF left post
+        '5': { x: 360, y: 250 },   // C right post
+      },
+      movements: [],
+      label: 'Initial',
+      notes: '',
+    }];
+  }
+  renderStep();
+  updateStepList();
+}
+
+function renderStep() {
+  const step = steps[currentStep];
+  if (!step) return;
+
+  // Render players
+  const playerLayer = document.getElementById('playerLayer');
+  playerLayer.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const pid = String(i + 1);
+    const pos = step.positions[pid] || { x: 100 + i * 80, y: 300 + i * 20 };
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'player-token');
+    g.setAttribute('data-player', pid);
+    g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('r', PLAYER_RADIUS);
+    circle.setAttribute('fill', PLAYER_COLORS[i]);
+    circle.setAttribute('stroke', '#fff');
+    circle.setAttribute('stroke-width', '2');
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dy', '5');
+    text.setAttribute('fill', '#fff');
+    text.setAttribute('font-size', '12');
+    text.setAttribute('font-weight', '700');
+    text.textContent = PLAYER_LABELS[i];
+
+    g.appendChild(circle);
+    g.appendChild(text);
+
+    if (!isReadOnly) {
+      g.addEventListener('mousedown', (e) => startDrag(e, pid));
+      g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
+    }
+
+    playerLayer.appendChild(g);
+  }
+
+  // Render arrows for this step
+  renderArrows(step);
+
+  // Update step label
+  document.getElementById('stepLabel').textContent =
+    `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  document.getElementById('stepNotes').value = step.notes || '';
+  document.getElementById('stepCount').textContent = `(${steps.length})`;
+}
+
+function renderArrows(step) {
+  const arrowLayer = document.getElementById('arrowLayer');
+  arrowLayer.innerHTML = '';
+  if (!step.movements) return;
+
+  step.movements.forEach((m, idx) => {
+    const from = step.positions[m.from];
+    const to = step.positions[m.to];
+    if (!from || !to) return;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let d = '';
+
+    if (m.type === 'dribble') {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#ef4444');
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('marker-end', 'url(#arrowhead-red)');
+    } else if (m.type === 'pass') {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#3b82f6');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', '8,4');
+      path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (m.type === 'screen') {
+      // Curved line for screen
+      const mx = (from.x + to.x) / 2 + (to.y - from.y) * 0.15;
+      const my = (from.y + to.y) / 2 - (to.x - from.x) * 0.15;
+      d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#f59e0b');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', '4,4');
+    }
+
+    path.setAttribute('d', d);
+    arrowLayer.appendChild(path);
+  });
+
+  // Ensure arrowhead markers exist
+  addArrowheadMarkers();
+}
+
+function addArrowheadMarkers() {
+  const svg = document.getElementById('courtSvg');
+  if (svg.querySelector('#arrowhead-red')) return;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+  const mkRed = makeArrowhead('arrowhead-red', '#ef4444');
+  const mkBlue = makeArrowhead('arrowhead-blue', '#3b82f6');
+  defs.appendChild(mkRed);
+  defs.appendChild(mkBlue);
+
+  svg.insertBefore(defs, svg.firstChild);
+}
+
+function makeArrowhead(id, color) {
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', id);
+  marker.setAttribute('viewBox', '0 0 10 10');
+  marker.setAttribute('refX', '9');
+  marker.setAttribute('refY', '5');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('orient', 'auto');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', '0 0, 10 5, 0 10');
+  polygon.setAttribute('fill', color);
+  marker.appendChild(polygon);
+  return marker;
+}
+
+// ── Dragging ─────────────────────────────────────────────
+function startDrag(e, pid) {
+  if (currentTool !== 'select') {
+    handleToolClick(e, pid);
+    return;
+  }
+  isDragging = true;
+  selectedPlayer = pid;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+function startDragTouch(e, pid) {
+  if (e.touches.length !== 1) return;
+  if (currentTool !== 'select') return;
+  isDragging = true;
+  selectedPlayer = pid;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging || !selectedPlayer) return;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(COURT_W - PLAYER_RADIUS, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(COURT_H - PLAYER_RADIUS, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(COURT_W - PLAYER_RADIUS, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(COURT_H - PLAYER_RADIUS, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('mouseup', () => { isDragging = false; selectedPlayer = null; });
+document.addEventListener('touchend', () => { isDragging = false; selectedPlayer = null; });
+
+// ── Tools (arrows) ───────────────────────────────────────
+function handleToolClick(e, pid) {
+  if (!arrowStart) {
+    arrowStart = pid;
+    // Highlight the selected player
+    const tokens = document.querySelectorAll(`.player-token[data-player="${pid}"] circle`);
+    tokens.forEach(c => c.setAttribute('stroke-width', '4'));
+  } else if (arrowStart === pid) {
+    // Deselect
+    const tokens = document.querySelectorAll(`.player-token[data-player="${pid}"] circle`);
+    tokens.forEach(c => c.setAttribute('stroke-width', '2'));
+    arrowStart = null;
+  } else {
+    // Create arrow from arrowStart → pid
+    const type = currentTool; // dribble, pass, screen
+    if (['dribble', 'pass', 'screen'].includes(type)) {
+      steps[currentStep].movements.push({ from: arrowStart, to: pid, type });
+    }
+    arrowStart = null;
+    renderStep();
+  }
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  arrowStart = null;
+  document.getElementById('toolSelect').value = tool;
+}
+
+// ── Step Management ──────────────────────────────────────
+function addStep() {
+  const prevStep = steps[currentStep];
+  steps.push({
+    positions: JSON.parse(JSON.stringify(prevStep.positions)),
+    movements: [],
+    label: '',
+    notes: '',
+  });
+  currentStep = steps.length - 1;
+  renderStep();
+  updateStepList();
+}
+
+function duplicateStep() {
+  const src = steps[currentStep];
+  steps.splice(currentStep + 1, 0, {
+    positions: JSON.parse(JSON.stringify(src.positions)),
+    movements: JSON.parse(JSON.stringify(src.movements)),
+    label: src.label ? src.label + ' (copy)' : '',
+    notes: src.notes || '',
+  });
+  currentStep++;
+  renderStep();
+  updateStepList();
+}
+
+function removeStep() {
+  if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
+  steps.splice(currentStep, 1);
+  if (currentStep >= steps.length) currentStep = steps.length - 1;
+  renderStep();
+  updateStepList();
+}
+
+function prevStep() {
+  if (currentStep > 0) { saveCurrentStepNotes(); currentStep--; renderStep(); updateStepList(); }
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) { saveCurrentStepNotes(); currentStep++; renderStep(); updateStepList(); }
+}
+
+function saveCurrentStepNotes() {
+  steps[currentStep].notes = document.getElementById('stepNotes').value;
+}
+
+function updateStepList() {
+  const list = document.getElementById('stepList');
+  list.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-item' + (i === currentStep ? ' active' : '');
+    div.textContent = `Step ${i + 1}${s.label ? ' — ' + s.label : ''}`;
+    div.onclick = () => { saveCurrentStepNotes(); currentStep = i; renderStep(); updateStepList(); };
+    list.appendChild(div);
+  });
+}
+
+// ── Playback animation ───────────────────────────────────
+let animInterval = null;
+function playAnimation() {
+  if (animInterval) { clearInterval(animInterval); animInterval = null; return; }
+  currentStep = 0;
+  renderStep();
+  updateStepList();
+  animInterval = setInterval(() => {
+    if (currentStep < steps.length - 1) {
+      currentStep++;
+      renderStep();
+      updateStepList();
+    } else {
+      clearInterval(animInterval);
+      animInterval = null;
+    }
+  }, 1500);
+}
+
+// ── Save to hidden form fields ───────────────────────────
+document.getElementById('playForm')?.addEventListener('submit', function(e) {
+  saveCurrentStepNotes();
+  const playData = {
+    name: document.getElementById('playName').value,
+    category: document.getElementById('playCategory').value,
+  };
+  document.getElementById('diagramJsonInput').value = JSON.stringify(playData);
+  document.getElementById('stepsJsonInput').value = JSON.stringify(steps);
+});
+
+// ── Filtering ────────────────────────────────────────────
+function filterByCategory(sel) {
+  const cat = sel.value;
+  document.querySelectorAll('.play-row').forEach(row => {
+    row.style.display = (!cat || row.dataset.category === cat) ? '' : 'none';
+  });
+}
+
+function filterPlays(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.play-row').forEach(row => {
+    const match = !q || row.dataset.name.includes(q);
+    row.style.display = match ? '' : 'none';
+  });
+}
+
+// ── Init ─────────────────────────────────────────────────
+initSteps();
+
+// Tab key handling for step label
+document.getElementById('stepNotes')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    document.getElementById('playForm')?.requestSubmit?.();
+  }
+});
+</script>
+{% endblock %}

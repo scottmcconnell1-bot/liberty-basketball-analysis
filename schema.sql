@@ -252,7 +252,40 @@ CREATE TABLE IF NOT EXISTS practice_plan_items (
     title           TEXT NOT NULL,
     description     TEXT,
     duration_min    INTEGER,
-    sort_order      INTEGER NOT NULL DEFAULT 0,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ── Playbook ──────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS playbooks (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    description     TEXT,
+    created_by      TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS plays (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    playbook_id     INTEGER REFERENCES playbooks(id) ON DELETE SET NULL,
+    name            TEXT NOT NULL,
+    description     TEXT,
+    category        TEXT NOT NULL DEFAULT 'offense',
+    tags            TEXT,
+    diagram_json    TEXT,
+    created_by      TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS play_steps (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    play_id         INTEGER NOT NULL REFERENCES plays(id) ON DELETE CASCADE,
+    step_number     INTEGER NOT NULL DEFAULT 0,
+    label           TEXT,
+    positions_json  TEXT NOT NULL DEFAULT '{}',
+    movements_json  TEXT NOT NULL DEFAULT '[]',
+    notes           TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
