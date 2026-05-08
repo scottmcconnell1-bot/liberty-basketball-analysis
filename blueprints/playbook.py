@@ -50,7 +50,8 @@ def playbook_list():
     """Playbook list / plays library page."""
     db = get_db()
     plays = db.execute(
-        """SELECT p.*, pb.name as playbook_name
+        """SELECT p.*, pb.name as playbook_name,
+                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
            FROM plays p
            LEFT JOIN playbooks pb ON pb.id = p.playbook_id
            ORDER BY p.updated_at DESC"""
@@ -142,6 +143,42 @@ def playbook_delete(play_id):
     db.commit()
     flash("Play deleted.", "success")
     return redirect(url_for("playbook.playbook_list"))
+
+
+@playbook_bp.route("/playbook/play/<int:play_id>/duplicate", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_duplicate(play_id):
+    """Duplicate a play (copy with new name)."""
+    db = get_db()
+    play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        flash("Play not found.", "error")
+        return redirect(url_for("playbook.playbook_list"))
+    steps = db.execute(
+        "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
+    ).fetchall()
+    cur = db.execute(
+        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
+           VALUES (?,?,?,?,?,?)""",
+        (
+            play["name"] + " (copy)",
+            play["description"],
+            play["category"],
+            play["tags"],
+            play["playbook_id"],
+            play["diagram_json"],
+        ),
+    )
+    new_id = cur.lastrowid
+    for step in steps:
+        db.execute(
+            """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes)
+               VALUES (?,?,?,?,?,?)""",
+            (new_id, step["step_number"], step["label"], step["positions_json"], step["movements_json"], step["notes"]),
+        )
+    db.commit()
+    flash("Play duplicated.", "success")
+    return redirect(url_for("playbook.playbook_edit", play_id=new_id))
 
 
 @playbook_bp.route("/playbook/save", methods=["POST"])
