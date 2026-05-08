@@ -240,6 +240,272 @@ def schedule_delete_game(game_id):
     )
 
 
+# ── PDF Import ──────────────────────────────────────────
+
+@core.route("/api/schedule/import-pdf", methods=["POST"])
+@require_feature("ENABLE_SEASONS_SCHEDULE")
+def schedule_import_pdf():
+    if "pdf" not in request.files:
+        return {"error": "No PDF file provided"}, 400
+    pdf_file = request.files["pdf"]
+    if not pdf_file.filename.lower().endswith(".pdf"):
+        return {"error": "File must be a PDF"}, 400
+    try:
+        import io
+        try:
+            import pdfplumber
+            text = ""
+            with pdfplumber.open(pdf_file) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except ImportError:
+            try:
+                import PyPDF2
+                reader = PyPDF2.PdfReader(pdf_file)
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() or ""
+            except ImportError:
+                return {"error": "PDF parsing requires pdfplumber or PyPDF2. Install with: pip install pdfplumber"}, 500
+        if not text.strip():
+            return {"error": "Could not extract text from PDF. Try a different file."}, 400
+        games = _parse_schedule_text(text)
+        return {"games": games}
+    except Exception as e:
+        return {"error": f"Failed to parse PDF: {str(e)}"}, 500
+
+
+def _parse_schedule_text(text):
+    """Parse extracted PDF text into game dicts. Handles common schedule formats."""
+    import re, datetime
+    games = []
+    lines = text.splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line or len(line) < 10:
+            continue
+        game = _parse_schedule_line(line)
+        if game:
+            games.append(game)
+    return games
+
+
+def _parse_schedule_line(line):
+    """Try to parse a single line of schedule text into a game dict."""
+    import re, datetime
+    # Pattern: date (various formats) + opponent + optional time + optional location
+    date_patterns = [
+        r'(\d{1,2}/\d{1,2}/\d{2,4})',
+        r'(\d{4}-\d{2}-\d{2})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\d{1,2}\s+\w+\s+\d{4})',
+    ]
+    date_str = None
+    for pat in date_patterns:
+        m = re.search(pat, line)
+        if m:
+            date_str = m.group(1)
+            break
+    if not date_str:
+        return None
+    # Normalize date
+    game_date = None
+    for fmt in ['%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%B %d, %Y', '%b %d, %Y', '%d %B %Y', '%d %b %Y']:
+        try:
+            game_date = datetime.datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
+            break
+        except ValueError:
+            continue
+    if not game_date:
+        return None
+    # Detect opponent — text after date that looks like a team name
+    remainder = line.replace(date_str, '', 1).strip()
+    # Remove common prefixes (but NOT @ or at which are location markers)
+    remainder = re.sub(r'^\s*[:\-–—]\s*', '', remainder)
+    # Detect time
+    time_str = None
+    time_match = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)', remainder)
+    if time_match:
+        time_str = time_match.group(1)
+        remainder = remainder.replace(time_str, '').strip()
+    # Detect level and gender from full remainder BEFORE extracting opponent
+    level = 'jr_high'
+    level_lower = remainder.lower()
+    if 'varsity' in level_lower:
+        level = 'varsity'
+    elif 'junior varsity' in level_lower or ' jv ' in level_lower:
+        level = 'jv'
+    gender = 'boys'
+    if 'girls' in level_lower:
+        gender = 'girls'
+
+    # Detect location keywords
+    location_type = 'home'
+    loc_match = re.search(r'(?:\s|^)(@|at|vs\.?)\s+', remainder, re.IGNORECASE)
+    if loc_match:
+        pre_loc = remainder[:loc_match.start()].strip()
+        post_loc = remainder[loc_match.end():].strip()
+        if loc_match.group(1).lower() in ('@', 'at'):
+            location_type = 'away'
+            opponent = post_loc
+        else:
+            pre_loc_clean = re.sub(r'\b(versus|vs\.?)\b', '', pre_loc, flags=re.IGNORECASE).strip()
+            # Check if pre_loc_clean is only a level/gender keyword
+            pre_is_only_keyword = not re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', pre_loc_clean, flags=re.IGNORECASE).strip()
+            if not pre_loc_clean and post_loc:
+                opponent = post_loc
+            elif pre_is_only_keyword and post_loc:
+                opponent = post_loc
+            else:
+                opponent = pre_loc_clean if pre_loc_clean else post_loc
+    else:
+        opponent = remainder
+
+    # Clean up opponent — remove level/gender markers
+    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'\s+', ' ', opponent).strip()
+    opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
+    # Normalize time
+    game_time = None
+    if time_str:
+        try:
+            for fmt in ['%I:%M %p', '%I:%M%p', '%I:%M', '%H:%M']:
+                try:
+                    game_time = datetime.datetime.strptime(time_str.strip(), fmt).strftime('%H:%M')
+                    break
+                except ValueError:
+                    continue
+        except Exception:
+            pass
+    return {
+        "game_date": game_date,
+        "game_time": game_time or "",
+        "opponent_name": opponent,
+        "level": level,
+        "gender": gender,
+        "location_type": location_type,
+        "status": "scheduled",
+        "notes": "",
+    }
+
+
+@core.route("/api/schedule/import-pdf/confirm", methods=["POST"])
+@require_feature("ENABLE_SEASONS_SCHEDULE")
+def schedule_import_pdf_confirm():
+    data = request.get_json(force=True)
+    games = data.get("games", [])
+    if not games:
+        return {"error": "No games to import"}, 400
+    db = get_db()
+    imported = 0
+    errors = []
+    # Get or create a default season
+    season_id = _get_or_create_default_season(db)
+    for i, g in enumerate(games):
+        game_date = (g.get("game_date") or "").strip()
+        opponent = (g.get("opponent_name") or "").strip()
+        if not game_date or not opponent:
+            errors.append(f"Row {i+1}: date and opponent required")
+            continue
+        try:
+            db.execute(
+                """INSERT INTO scheduled_games
+                   (season_id, program_name, gender, level, game_date, game_time,
+                    location_type, opponent_name, status, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    season_id,
+                    "Liberty",
+                    (g.get("gender") or "boys").strip(),
+                    (g.get("level") or "jr_high").strip(),
+                    game_date,
+                    (g.get("game_time") or "").strip() or None,
+                    (g.get("location_type") or "home").strip(),
+                    opponent,
+                    "scheduled",
+                    (g.get("notes") or "").strip() or None,
+                ),
+            )
+            imported += 1
+        except Exception as e:
+            errors.append(f"Row {i+1}: {str(e)}")
+    db.commit()
+    if errors:
+        return {"imported": imported, "errors": errors}, 200
+    return {"imported": imported, "message": f"Imported {imported} games"}
+
+
+def _get_or_create_default_season(db):
+    """Get the most recent season, or create a default one."""
+    row = db.execute("SELECT id FROM seasons ORDER BY start_date DESC LIMIT 1").fetchone()
+    if row:
+        return row["id"]
+    import datetime
+    year = datetime.date.today().year
+    cur = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
+        (f"{year}-{year+1} Season", f"{year}-09-01", f"{year+1}-06-30"),
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+# ── MaxPreps Export ──────────────────────────────────────
+
+@core.route("/schedule/export/maxpreps")
+@require_feature("ENABLE_SEASONS_SCHEDULE")
+def schedule_export_maxpreps():
+    db = get_db()
+    games = db.execute(
+        """SELECT sg.id, sg.game_date, sg.game_time, sg.opponent_name,
+                  sg.level, sg.gender, sg.location_type, sg.status, sg.program_name,
+                  s.name as season_name
+           FROM scheduled_games sg
+           JOIN seasons s ON s.id = sg.season_id
+           WHERE sg.status = 'scheduled'
+           ORDER BY sg.game_date, sg.game_time"""
+    ).fetchall()
+    # Build CSV in MaxPreps-compatible format
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    # MaxPreps standard columns
+    writer.writerow([
+        "Date", "Time", "Opponent", "Location", "Level", "Gender", "Conference", "Season"
+    ])
+    for g in games:
+        location = "Away" if g["location_type"] == "away" else "Home"
+        writer.writerow([
+            g["game_date"],
+            g["game_time"] or "",
+            g["opponent_name"],
+            location,
+            _level_display_name(g["level"]),
+            _gender_display_name(g["gender"]),
+            "No",
+            g["season_name"] or "",
+        ])
+    response = output.getvalue()
+    from flask import Response
+    return Response(
+        response,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=maxpreps_schedule_export.csv"},
+    )
+
+
+def _level_display_name(val):
+    mapping = {"jr_high": "Jr High", "jv": "JV", "varsity": "Varsity"}
+    return mapping.get(val, val)
+
+
+def _gender_display_name(val):
+    mapping = {"boys": "Boys", "girls": "Girls"}
+    return mapping.get(val, val)
+
+
 @core.route("/videos")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def videos_page():

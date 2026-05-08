@@ -4,9 +4,25 @@
 {% block content %}
 <div class="page-header">
   <h2>Schedule</h2>
-  <div style="display:flex;gap:10px;align-items:center;">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule') }}">Clear Filters</a>
     <a class="btn btn-primary btn-sm" href="#schedule-game-form">+ Add Game</a>
+    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pdf-upload-input').click()">📄 Import PDF</button>
+    <input type="file" id="pdf-upload-input" accept=".pdf" style="display:none" onchange="importPdf(this)">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule_export_maxpreps') }}" target="_blank">📤 Export MaxPreps</a>
+  </div>
+</div>
+
+<!-- PDF Import Preview Modal -->
+<div id="pdf-import-modal" class="modal-backdrop">
+  <div class="modal" style="max-width:700px;">
+    <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
+    <p class="text-muted" style="margin-bottom:16px;">Review the extracted games below. Edit any fields, then click "Import All Games".</p>
+    <div id="pdf-preview-area" style="max-height:400px;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closePdfImportModal()">Cancel</button>
+      <button class="btn btn-primary" id="pdf-import-btn" onclick="submitPdfImport()">Import All Games</button>
+    </div>
   </div>
 </div>
 
@@ -65,8 +81,17 @@
 <div class="table-responsive">
   <table>
     <thead><tr>
-      <th>Season</th><th>Date</th><th>Time</th><th>Program</th><th>Level</th><th>Gender</th>
-      <th>Opponent</th><th>Location</th><th>Status</th><th>Notes</th><th></th>
+      <th style="min-width:80px">Season</th>
+      <th style="min-width:90px">Date</th>
+      <th style="min-width:60px">Time</th>
+      <th style="min-width:70px">Program</th>
+      <th style="min-width:80px">Level</th>
+      <th style="min-width:70px">Gender</th>
+      <th style="min-width:100px">Opponent</th>
+      <th style="min-width:60px">Loc</th>
+      <th style="min-width:70px">Status</th>
+      <th style="min-width:80px">Notes</th>
+      <th></th>
     </tr></thead>
     <tbody>
       {% if games %}
@@ -254,5 +279,94 @@
   .badge-cancelled { background: #fee2e2; color: #991b1b; }
   .badge-rescheduled { background: #fef3c7; color: #92400e; }
   .badge-completed { background: #dbeafe; color: #1d4ed8; }
+  .pdf-preview-table { width:100%; font-size:0.82rem; }
+  .pdf-preview-table th { padding:6px 8px; font-size:0.72rem; }
+  .pdf-preview-table td { padding:4px 8px; }
+  .pdf-preview-table input, .pdf-preview-table select { padding:4px 6px; font-size:0.8rem; width:100%; }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── PDF Import ──────────────────────────────────────────
+let pdfExtractedGames = [];
+
+function importPdf(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('pdf', file);
+  fetch('/api/schedule/import-pdf', {
+    method: 'POST',
+    body: formData,
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert('Error: ' + data.error); return; }
+    pdfExtractedGames = data.games || [];
+    renderPdfPreview();
+    document.getElementById('pdf-import-modal').classList.add('open');
+  })
+  .catch(err => alert('Import failed: ' + err.message))
+  .finally(() => { input.value = ''; });
+}
+
+function renderPdfPreview() {
+  const area = document.getElementById('pdf-preview-area');
+  if (!pdfExtractedGames.length) {
+    area.innerHTML = '<p class="text-muted">No games found in PDF.</p>';
+    return;
+  }
+  let html = '<table class="pdf-preview-table"><thead><tr>' +
+    '<th>Date</th><th>Time</th><th>Opponent</th><th>Level</th><th>Gender</th><th>Location</th>' +
+    '</tr></thead><tbody>';
+  pdfExtractedGames.forEach((g, i) => {
+    html += '<tr>' +
+      '<td><input type="date" value="' + (g.game_date||'') + '" onchange="pdfExtractedGames['+i+'].game_date=this.value"></td>' +
+      '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>' +
+      '<td><input type="text" value="' + (g.opponent_name||'') + '" onchange="pdfExtractedGames['+i+'].opponent_name=this.value"></td>' +
+      '<td><select onchange="pdfExtractedGames['+i+'].level=this.value">' +
+        '<option value="jr_high"' + (g.level==='jr_high'?' selected':'') + '>Jr High</option>' +
+        '<option value="jv"' + (g.level==='jv'?' selected':'') + '>JV</option>' +
+        '<option value="varsity"' + (g.level==='varsity'?' selected':'') + '>Varsity</option>' +
+      '</select></td>' +
+      '<td><select onchange="pdfExtractedGames['+i+'].gender=this.value">' +
+        '<option value="boys"' + (g.gender==='boys'?' selected':'') + '>Boys</option>' +
+        '<option value="girls"' + (g.gender==='girls'?' selected':'') + '>Girls</option>' +
+      '</select></td>' +
+      '<td><select onchange="pdfExtractedGames['+i+'].location_type=this.value">' +
+        '<option value="home"' + (g.location_type==='home'?' selected':'') + '>Home</option>' +
+        '<option value="away"' + (g.location_type==='away'?' selected':'') + '>Away</option>' +
+        '<option value="neutral"' + (g.location_type==='neutral'?' selected':'') + '>Neutral</option>' +
+      '</select></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  area.innerHTML = html;
+}
+
+function closePdfImportModal() {
+  document.getElementById('pdf-import-modal').classList.remove('open');
+  pdfExtractedGames = [];
+}
+
+function submitPdfImport() {
+  const btn = document.getElementById('pdf-import-btn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  fetch('/api/schedule/import-pdf/confirm', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({games: pdfExtractedGames}),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert('Error: ' + data.error); return; }
+    closePdfImportModal();
+    window.location.reload();
+  })
+  .catch(err => alert('Import failed: ' + err.message))
+  .finally(() => { btn.disabled = false; btn.textContent = 'Import All Games'; });
+}
+</script>
 {% endblock %}
