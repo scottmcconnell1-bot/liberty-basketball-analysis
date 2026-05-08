@@ -21,7 +21,7 @@ from config import Config
 
 app = Flask(__name__)
 app.config.from_object(Config)
-
+app.config["SECRET_KEY"] = app.config.get("SECRET_KEY") or "liberty-basketball-dev-secret-key-2026"
 app.config.setdefault("DATABASE", "film_analysis.db")
 app.config.setdefault("UPLOAD_FOLDER", "uploads")
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -34,6 +34,7 @@ from blueprints.stats import stats_bp
 from blueprints.practice import practice
 from blueprints.player_dev import player_dev
 from blueprints.ai import ai_bp
+from blueprints.playbook import playbook_bp
 
 app.register_blueprint(core)
 app.register_blueprint(games_bp)
@@ -42,6 +43,7 @@ app.register_blueprint(stats_bp)
 app.register_blueprint(practice)
 app.register_blueprint(player_dev)
 app.register_blueprint(ai_bp)
+app.register_blueprint(playbook_bp)
 
 # ── Template Context Processors ──────────────────────────────
 from helpers import get_runtime_settings
