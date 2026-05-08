@@ -408,8 +408,7 @@ function importPdf(input) {
 
 function closePdfTeamModal() {
   document.getElementById('pdf-team-modal').classList.remove('open');
-  if (pdfUploadInput) pdfUploadInput.value = '';
-  pdfUploadInput = null;
+  // Don't clear pdfUploadInput here — uploadPdfWithTeam needs the file
 }
 
 function uploadPdfWithTeam() {
@@ -421,7 +420,7 @@ function uploadPdfWithTeam() {
   const input = pdfUploadInput;
   if (!input) return;
   const file = input.files[0];
-  if (!file) return;
+  if (!file) { alert('No file selected. Please try again.'); return; }
   const formData = new FormData();
   formData.append('pdf', file);
   formData.append('team', pdfSelectedTeam);
