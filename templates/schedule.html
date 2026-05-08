@@ -219,6 +219,9 @@
 <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
   <div class="card" id="schedule-game-form" data-frame="2.6">
     <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Scheduled Game{% else %}Add Scheduled Game{% endif %}</h3>
+    {% if editing_game %}
+    <script>window.addEventListener('load',function(){document.getElementById('schedule-game-form').scrollIntoView({behavior:'smooth'});});</script>
+    {% endif %}
     <form method="post" action="{{ url_for('core.schedule_save_game') }}">
       <input type="hidden" name="game_id" value="{{ game_form.id }}">
       <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">

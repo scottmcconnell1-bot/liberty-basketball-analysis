@@ -192,3 +192,7 @@ How to resume / commands to run
 - PDF import preview modal shows detected season banner
 - Fix: schedule.html times column shows B/A for Jr High instead of JV/Varsity
 - 160+ tests pass
+
+[2026-05-08 15:08:36 ] Commit 87ac836f (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
+
+[2026-05-08 17:11:29 ] Commit f5a0ff7a (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
