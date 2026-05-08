@@ -38,6 +38,7 @@
   <div class="modal" style="max-width:700px;">
     <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
     <p class="text-muted" style="margin-bottom:16px;">Review the extracted games below. Edit any fields, then click "Import All Games".</p>
+    <div id="pdf-season-info" style="margin-bottom:12px;"></div>
     <div id="pdf-preview-area" style="max-height:400px;overflow-y:auto;"></div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="closePdfImportModal()">Cancel</button>
@@ -161,14 +162,26 @@
               {{ times | join(' / ') }}
             </div>
             <div style="font-size:0.68rem;color:#9ca3af;margin-top:2px;">
-              {% if game.jv_game_time and game.game_time %}
-                JV / Varsity
-              {% elif game.jv_game_time and game.frosh_game_time and game.game_time %}
-                JV / Frosh / Varsity
-              {% elif game.game_time and not game.jv_game_time %}
-                Varsity only
-              {% elif game.jv_game_time and not game.game_time %}
-                JV only
+              {% if game.level == 'jr_high' %}
+                {% if game.jv_game_time and game.frosh_game_time and game.game_time %}
+                  B / A / V
+                {% elif game.jv_game_time and game.game_time %}
+                  B / A
+                {% elif game.game_time and not game.jv_game_time %}
+                  A only
+                {% elif game.jv_game_time and not game.game_time %}
+                  B only
+                {% endif %}
+              {% else %}
+                {% if game.jv_game_time and game.game_time %}
+                  JV / Varsity
+                {% elif game.jv_game_time and game.frosh_game_time and game.game_time %}
+                  JV / Frosh / Varsity
+                {% elif game.game_time and not game.jv_game_time %}
+                  Varsity only
+                {% elif game.jv_game_time and not game.game_time %}
+                  JV only
+                {% endif %}
               {% endif %}
             </div>
             {% if game.status == 'completed' %}
@@ -399,6 +412,7 @@
 let pdfExtractedGames = [];
 let pdfSelectedTeam = 'boys_hs';
 let pdfUploadInput = null;
+let pdfDetectedSeason = null;
 
 function importPdf(input) {
   pdfUploadInput = input;
@@ -432,7 +446,9 @@ function uploadPdfWithTeam() {
   .then(data => {
     if (data.error) { alert('Error: ' + data.error); return; }
     pdfExtractedGames = data.games || [];
+    pdfDetectedSeason = data.season || null;
     renderPdfPreview();
+    renderPdfSeasonInfo();
     document.getElementById('pdf-import-modal').classList.add('open');
   })
   .catch(err => alert('Import failed: ' + err.message))
@@ -489,9 +505,19 @@ function renderPdfPreview() {
   area.innerHTML = html;
 }
 
+function renderPdfSeasonInfo() {
+  const el = document.getElementById('pdf-season-info');
+  if (!pdfDetectedSeason) {
+    el.innerHTML = '<div class="alert alert-warning" style="margin:0;padding:8px 12px;font-size:0.85rem;">⚠️ Could not detect season from PDF. Games will be imported into the most recent season.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="alert" style="margin:0;padding:8px 12px;font-size:0.85rem;background:#ecfdf5;color:#065f46;border:1px solid #d1fae5;">📅 <strong>Detected Season:</strong> ' + pdfDetectedSeason.name + ' <span style="color:#6b7280;">(' + pdfDetectedSeason.start_date + ' → ' + pdfDetectedSeason.end_date + ')</span></div>';
+}
+
 function closePdfImportModal() {
   document.getElementById('pdf-import-modal').classList.remove('open');
   pdfExtractedGames = [];
+  pdfDetectedSeason = null;
 }
 
 function submitPdfImport() {
@@ -501,7 +527,7 @@ function submitPdfImport() {
   fetch('/api/schedule/import-pdf/confirm', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam}),
+    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: pdfDetectedSeason}),
   })
   .then(r => r.json())
   .then(data => {

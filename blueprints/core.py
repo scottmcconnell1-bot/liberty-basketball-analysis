@@ -281,7 +281,8 @@ def schedule_import_pdf():
         if not text.strip():
             return {"error": "Could not extract text from PDF. Try a different file."}, 400
         games = _parse_schedule_text(text, pdf_team=pdf_team)
-        return {"games": games}
+        season_info = _detect_season_from_text(text, pdf_team=pdf_team)
+        return {"games": games, "season": season_info}
     except Exception as e:
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
@@ -693,13 +694,14 @@ def schedule_import_pdf_confirm():
     data = request.get_json(force=True)
     games = data.get("games", [])
     pdf_team = (data.get("team") or "boys_hs").strip()
+    season_info = data.get("season")  # detected from PDF header
     if not games:
         return {"error": "No games to import"}, 400
     db = get_db()
     imported = 0
     errors = []
-    # Get or create a default season
-    season_id = _get_or_create_default_season(db)
+    # Get or create the correct season based on PDF header detection
+    season_id = _get_or_create_season_for_pdf(db, season_info)
     for i, g in enumerate(games):
         game_date = (g.get("game_date") or "").strip()
         opponent = (g.get("opponent_name") or "").strip()
@@ -749,6 +751,138 @@ def _get_or_create_default_season(db):
     cur = db.execute(
         "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
         (f"{year}-{year+1} Season", f"{year}-09-01", f"{year+1}-06-30"),
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def _detect_season_from_text(text, pdf_team="boys_hs"):
+    """Parse the PDF header/title lines to determine the season name and date range.
+
+    Looks for patterns like:
+      '2025-26 Boys Basketball Schedule'
+      'Liberty Charter 2025-2026 Girls Basketball'
+      '2025-2026 Season'
+      '2025-26 Season'
+
+    Returns a dict: {name, start_date, end_date} or None if no season detected.
+
+    Season date logic:
+      - High School (boys_hs, girls_hs): Nov(year1) → Mar(year2)  e.g. 2025-11-01 to 2026-03-31
+      - Jr High Girls (jr_girls):        Nov(year1) → Mar(year2)  same as HS
+      - Jr High Boys (jr_boys):          Jan(year2) → Feb(year2)  e.g. 2026-01-01 to 2026-02-28
+    """
+    import re, datetime
+
+    # Look at the first 30 lines for season/year clues
+    lines = text.splitlines()[:30]
+    header_text = "\n".join(lines)
+
+    # Try to find a season year pattern: "2025-26", "2025-2026", "2025/26", "2025 2026"
+    # Also match single year like "2025" near words like "season" or "schedule"
+    year_patterns = [
+        # "2025-26" or "2025-2026" or "2025/26" or "2025 2026"
+        r'(20\d{2})\s*[-/\s]\s*(?:20)?(\d{2})\b',
+        # "2025-2026" full form
+        r'(20\d{2})\s*[-/]\s*(20\d{2})',
+    ]
+
+    year1 = None
+    year2 = None
+    for pat in year_patterns:
+        m = re.search(pat, header_text)
+        if m:
+            year1 = int(m.group(1))
+            year2_raw = m.group(2)
+            year2 = int(year2_raw) if len(year2_raw) == 4 else year1 // 100 * 100 + int(year2_raw)
+            break
+
+    if year1 is None:
+        # Fallback: look for any 4-digit year near "season" or "schedule"
+        for line in lines:
+            if re.search(r'season|schedule', line, re.IGNORECASE):
+                m = re.search(r'(20\d{2})', line)
+                if m:
+                    year1 = int(m.group(1))
+                    year2 = year1 + 1
+                    break
+
+    if year1 is None:
+        return None
+
+    # Determine team type for date range
+    is_jr_boys = pdf_team == "jr_boys"
+    is_jr_girls = pdf_team == "jr_girls"
+    is_hs = pdf_team in ("boys_hs", "girls_hs")
+
+    # Build season name from header if possible
+    # Try to extract a title line like "2025-26 Boys Basketball Schedule"
+    season_name = None
+    for line in lines:
+        line_s = line.strip()
+        if re.search(r'20\d{2}.*?(?:season|schedule)', line_s, re.IGNORECASE) or \
+           re.search(r'(?:season|schedule).*?20\d{2}', line_s, re.IGNORECASE):
+            # Clean up the line for use as season name
+            season_name = re.sub(r'\s+', ' ', line_s).strip()
+            # Truncate if too long
+            if len(season_name) > 60:
+                season_name = season_name[:60].strip()
+            break
+
+    if not season_name:
+        # Build a sensible default
+        yr_short = str(year2)[-2:]
+        if is_jr_boys:
+            season_name = f"{year1}-{yr_short} Jr High Boys"
+        elif is_jr_girls:
+            season_name = f"{year1}-{yr_short} Jr High Girls"
+        elif pdf_team == "girls_hs":
+            season_name = f"{year1}-{yr_short} Girls HS"
+        else:
+            season_name = f"{year1}-{yr_short} Boys HS"
+
+    # Determine date range
+    if is_jr_boys:
+        # Jr High Boys: Jan(year2) - Feb(year2)
+        start_date = f"{year2}-01-01"
+        end_date = f"{year2}-02-28"
+    else:
+        # HS Boys/Girls, Jr High Girls: Nov(year1) - Mar(year2)
+        start_date = f"{year1}-11-01"
+        end_date = f"{year2}-03-31"
+
+    return {
+        "name": season_name,
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+
+
+def _get_or_create_season_for_pdf(db, season_info):
+    """Find an existing season matching the detected info, or create a new one.
+
+    Matches by name (exact) or by overlapping date range.
+    """
+    if not season_info:
+        return _get_or_create_default_season(db)
+
+    # Try exact name match
+    row = db.execute("SELECT id FROM seasons WHERE name = ?", (season_info["name"],)).fetchone()
+    if row:
+        return row["id"]
+
+    # Try overlapping date range match
+    row = db.execute(
+        "SELECT id FROM seasons WHERE start_date = ? AND end_date = ?",
+        (season_info["start_date"], season_info["end_date"]),
+    ).fetchone()
+    if row:
+        return row["id"]
+
+    # Create new season
+    cur = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
+        (season_info["name"], season_info["start_date"], season_info["end_date"]),
     )
     db.commit()
     return cur.lastrowid
