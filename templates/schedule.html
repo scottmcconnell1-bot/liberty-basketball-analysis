@@ -13,6 +13,26 @@
   </div>
 </div>
 
+<!-- PDF Import Team Selector Modal -->
+<div id="pdf-team-modal" class="modal-backdrop">
+  <div class="modal" style="max-width:400px;">
+    <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
+    <p class="text-muted" style="margin-bottom:16px;">Which team is this schedule for?</p>
+    <div class="form-group">
+      <label for="pdf-team-select">Team</label>
+      <select class="form-control" id="pdf-team-select">
+        {% for value, label in team_options %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closePdfTeamModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="uploadPdfWithTeam()">Upload PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- PDF Import Preview Modal -->
 <div id="pdf-import-modal" class="modal-backdrop">
   <div class="modal" style="max-width:700px;">
@@ -84,7 +104,7 @@
       <th style="min-width:120px;">DATE</th>
       <th>OPPONENT</th>
       <th style="min-width:130px;">TIMES</th>
-      <th style="min-width:80px;"></th>
+      <th style="min-width:70px;"></th>
     </tr></thead>
     <tbody>
       {% if games %}
@@ -201,10 +221,18 @@
           {% endfor %}
         </select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
         <div class="form-group">
           <label for="program_name">Program</label>
           <input class="form-control" id="program_name" name="program_name" value="{{ game_form.program_name }}">
+        </div>
+        <div class="form-group">
+          <label for="team-select">Team</label>
+          <select class="form-control" id="team-select" name="team">
+            {% for value, label in team_options %}
+            <option value="{{ value }}" {% if game_form.team == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div class="form-group">
           <label for="level-select">Level</label>
@@ -369,12 +397,34 @@
 <script>
 // ── PDF Import ──────────────────────────────────────────
 let pdfExtractedGames = [];
+let pdfSelectedTeam = 'boys_hs';
+let pdfUploadInput = null;
 
 function importPdf(input) {
+  pdfUploadInput = input;
+  // Show team selector first
+  document.getElementById('pdf-team-modal').classList.add('open');
+}
+
+function closePdfTeamModal() {
+  document.getElementById('pdf-team-modal').classList.remove('open');
+  if (pdfUploadInput) pdfUploadInput.value = '';
+  pdfUploadInput = null;
+}
+
+function uploadPdfWithTeam() {
+  const teamSelect = document.getElementById('pdf-team-select');
+  pdfSelectedTeam = teamSelect.value;
+  closePdfTeamModal();
+
+  // Now upload the PDF with the team
+  const input = pdfUploadInput;
+  if (!input) return;
   const file = input.files[0];
   if (!file) return;
   const formData = new FormData();
   formData.append('pdf', file);
+  formData.append('team', pdfSelectedTeam);
   fetch('/api/schedule/import-pdf', {
     method: 'POST',
     body: formData,
@@ -387,7 +437,7 @@ function importPdf(input) {
     document.getElementById('pdf-import-modal').classList.add('open');
   })
   .catch(err => alert('Import failed: ' + err.message))
-  .finally(() => { input.value = ''; });
+  .finally(() => { input.value = ''; pdfUploadInput = null; });
 }
 
 function renderPdfPreview() {
@@ -397,7 +447,7 @@ function renderPdfPreview() {
     return;
   }
   let html = '<table class="pdf-preview-table"><thead><tr>' +
-    '<th>Date</th><th>JV Time</th><th>Frosh Time</th><th>Var Time</th><th>Opponent</th><th>Level</th><th>Gender</th><th>Location</th>' +
+    '<th>Date</th><th>JV Time</th><th>Frosh Time</th><th>Var Time</th><th>Opponent</th><th>Team</th><th>Level</th><th>Gender</th><th>Location</th>' +
     '</tr></thead><tbody>';
   pdfExtractedGames.forEach((g, i) => {
     html += '<tr>' +
@@ -406,6 +456,12 @@ function renderPdfPreview() {
       '<td><input type="time" value="' + (g.frosh_game_time||'') + '" onchange="pdfExtractedGames['+i+'].frosh_game_time=this.value"></td>' +
       '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>' +
       '<td><input type="text" value="' + (g.opponent_name||'') + '" onchange="pdfExtractedGames['+i+'].opponent_name=this.value"></td>' +
+      '<td><select onchange="pdfExtractedGames['+i+'].team=this.value">' +
+        '<option value="boys_hs"' + (g.team==='boys_hs'?' selected':'') + '>Boys HS</option>' +
+        '<option value="girls_hs"' + (g.team==='girls_hs'?' selected':'') + '>Girls HS</option>' +
+        '<option value="jr_boys"' + (g.team==='jr_boys'?' selected':'') + '>Jr High Boys</option>' +
+        '<option value="jr_girls"' + (g.team==='jr_girls'?' selected':'') + '>Jr High Girls</option>' +
+      '</select></td>' +
       '<td><select onchange="pdfExtractedGames['+i+'].level=this.value">' +
         '<option value="jr_high"' + (g.level==='jr_high'?' selected':'') + '>Jr High</option>' +
         '<option value="jv"' + (g.level==='jv'?' selected':'') + '>JV</option>' +
@@ -438,7 +494,7 @@ function submitPdfImport() {
   fetch('/api/schedule/import-pdf/confirm', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({games: pdfExtractedGames}),
+    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam}),
   })
   .then(r => r.json())
   .then(data => {
