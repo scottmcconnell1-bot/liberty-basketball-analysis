@@ -181,3 +181,14 @@ How to resume / commands to run
 
 [2026-05-08 09:05:51 ] Commit 86b585e4 (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
 [2026-05-08 11:06:43 MDT] Commit 0a9d8e97 — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
+
+[2026-05-08 13:07:47 ] Commit 456eb69b — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
+
+[2026-05-08 14:00 MDT] Commit ad86599c — PDF season auto-detection + Jr High A/B schedule labels
+- New: _detect_season_from_text() parses PDF header for year patterns (2025-26, 2025-2026)
+- New: _get_or_create_season_for_pdf() matches/creates correct season
+- HS Boys/Girls, Jr High Girls: Nov(year1)→Mar(year2); Jr High Boys: Jan(year2)→Feb(year2)
+- /api/schedule/import-pdf returns detected season; confirm endpoint uses it
+- PDF import preview modal shows detected season banner
+- Fix: schedule.html times column shows B/A for Jr High instead of JV/Varsity
+- 160+ tests pass
