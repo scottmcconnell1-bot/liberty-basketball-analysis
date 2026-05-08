@@ -2,7 +2,7 @@
 {% block title %}Games – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="3.1">
   <h2>Games</h2>
   <a class="btn btn-primary btn-sm" href="#game-form">+ Add Game</a>
 </div>
@@ -14,9 +14,9 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" data-frame="3.2">
 <div class="table-responsive">
-  <table>
+  <table data-frame="3.2t">
     <thead><tr>
       <th>Game</th><th>Schedule Link</th><th>Primary Source</th><th>Result</th><th>Conference</th><th>Extra Sources</th><th></th>
     </tr></thead>
@@ -73,7 +73,7 @@
 </div>
 
 <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;">
-  <div class="card" id="game-form">
+  <div class="card" id="game-form" data-frame="3.3">
     <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Game{% else %}Add Game{% endif %}</h3>
     <form method="post" action="{{ url_for('games.games_save') }}">
       <input type="hidden" name="game_id" value="{{ game_form.id }}">
@@ -153,9 +153,9 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="card" data-frame="3.4">
     <h3 style="margin-bottom:18px;">Link Source to Game</h3>
-    <form method="post" action="{{ url_for('games.games_save_source') }}">
+    <form method="post" action="{{ url_for('games.games_save_source') }}" id="link-source-form">
       <div class="form-group">
         <label for="source_game_id">Game</label>
         <select class="form-control" id="source_game_id" name="game_id" required>
@@ -184,7 +184,7 @@
       </div>
     </form>
 
-    <table style="margin-top:18px;">
+    <table data-frame="3.5" style="margin-top:18px;">
       <thead><tr><th>Game</th><th>Source</th><th></th></tr></thead>
       <tbody>
         {% if sources %}

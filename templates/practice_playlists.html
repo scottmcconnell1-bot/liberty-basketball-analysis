@@ -2,7 +2,7 @@
 {% block title %}Practice Playlists – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="8.1">
   <h2>Practice Playlists</h2>
   <div style="display:flex;gap:10px;align-items:center;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('player_dev.practice_playlists_page') }}">Clear Filters</a>
@@ -18,7 +18,7 @@
 {% endif %}
 
 <!-- Filters -->
-<div class="card">
+<div class="card" data-frame="8.2">
   <form method="get" action="{{ url_for('player_dev.practice_playlists_page') }}">
     <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
@@ -54,12 +54,12 @@
 </div>
 
 <!-- Playlists Table -->
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" data-frame="8.3">
   <table>
     <thead><tr>
       <th>Name</th><th>Season</th><th>Level</th><th>Status</th><th>Updated</th><th></th>
     </tr></thead>
-    <tbody>
+    <tbody data-frame="8.3t">
       {% if playlists %}
         {% for pl in playlists %}
         <tr>
@@ -132,7 +132,7 @@
 {% endif %}
 
 <!-- New Playlist Form -->
-<div class="card" id="playlist-form">
+<div class="card" id="playlist-form" data-frame="8.5">
   <h3 style="margin-bottom:18px;">Create New Playlist</h3>
   <form method="post" action="{{ url_for('player_dev.api_playlists_create') }}">
     <div class="form-group">

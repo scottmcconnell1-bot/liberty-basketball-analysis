@@ -2,7 +2,7 @@
 {% block title %}Practices – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="9.1">
   <h2>Practices</h2>
   <div style="display:flex;gap:10px;align-items:center;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practice_summary_page') }}">Range Summary</a>
@@ -17,7 +17,7 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card">
+<div class="card" data-frame="9.2">
   <form method="get" action="{{ url_for('practice.practices_page') }}">
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">

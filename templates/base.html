@@ -314,8 +314,83 @@
     body.report-drawer-open {
       overflow: hidden;
     }
+
+    /* ── Frame Labels (Review Mode) ─────────── */
+    .frame-label {
+      display: none;
+      position: absolute;
+      top: -8px;
+      right: -4px;
+      z-index: 10;
+      background: #dc2626;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1.2;
+      pointer-events: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .frame-label.active { display: block; }
+    .card, .modal, .stat-box, .form-group, table, .table-responsive {
+      position: relative;
+    }
   </style>
   {% block head %}{% endblock %}
+  <script>
+    // ── Frame Label Review Mode ──────────────
+    (function() {
+      const STORAGE_KEY = 'liberty-frame-labels';
+      let labelsActive = localStorage.getItem(STORAGE_KEY) === '1';
+
+      function toggleLabels(on) {
+        labelsActive = on;
+        localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+        document.querySelectorAll('.frame-label').forEach(el => el.classList.toggle('active', on));
+        const btn = document.getElementById('frame-label-toggle');
+        if (btn) btn.textContent = on ? '🏷 Hide Labels' : '🏷 Show Labels';
+      }
+
+      // Inject toggle button
+      function injectToggle() {
+        if (document.getElementById('frame-label-toggle')) return;
+        const nav = document.querySelector('nav');
+        if (!nav) return;
+        const btn = document.createElement('button');
+        btn.id = 'frame-label-toggle';
+        btn.className = 'btn btn-sm';
+        btn.style.cssText = 'background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:2px 8px;font-size:0.7rem;margin-left:auto;';
+        btn.textContent = labelsActive ? '🏷 Hide Labels' : '🏷 Show Labels';
+        btn.addEventListener('click', () => toggleLabels(!labelsActive));
+        nav.insertBefore(btn, nav.querySelector('.report-link'));
+        if (labelsActive) {
+          // Auto-activate after DOM ready
+          setTimeout(() => toggleLabels(true), 100);
+        }
+      }
+
+      // Auto-inject labels on elements with data-frame
+      function processFrames() {
+        document.querySelectorAll('[data-frame]').forEach(el => {
+          if (el.querySelector('.frame-label')) return;
+          const label = document.createElement('span');
+          label.className = 'frame-label' + (labelsActive ? ' active' : '');
+          label.textContent = el.getAttribute('data-frame');
+          el.style.position = 'relative';
+          el.appendChild(label);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { injectToggle(); processFrames(); });
+      } else {
+        injectToggle();
+        processFrames();
+      }
+      // For dynamically added content
+      window.libertyProcessFrameLabels = processFrames;
+    })();
   <script>
     (function initLibertyIssueReporter() {
       if (window.LibertyIssueReporter) return;

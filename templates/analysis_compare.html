@@ -2,7 +2,7 @@
 {% block title %}Compare AI Runs – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="18.1">
   <div>
     <h2>Compare AI Runs</h2>
     <span class="text-muted">{{ video.original_filename }} · {{ video.opponent or "Unknown opponent" }}</span>
@@ -17,7 +17,7 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card">
+<div class="card" data-frame="18.2">
   <h3 style="margin-bottom:12px;">Run a New Comparison Pass</h3>
   <form method="post" action="{{ url_for('ai.rerun_video_analysis', vid_id=video.id) }}">
     <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end;">
@@ -40,8 +40,8 @@
   </form>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-  <table>
+<div class="card" style="padding:0;overflow:hidden;" data-frame="18.3">
+  <table data-frame="18.3t">
     <thead>
       <tr>
         <th>Run</th>

@@ -2,7 +2,7 @@
 {% block title %}Practice Summary – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="10.1">
   <div>
     <h2>Practice Range Summary</h2>
     <span class="text-muted">Review a date range, then generate a summary across the matching practices.</span>
@@ -10,7 +10,7 @@
   <a class="btn btn-secondary btn-sm" href="{{ url_for('practice.practices_page') }}">Back to Practices</a>
 </div>
 
-<div class="card">
+<div class="card" data-frame="10.2">
   <form method="get" action="{{ url_for('practice.practice_summary_page') }}">
     <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
@@ -53,13 +53,13 @@
   </form>
 </div>
 
-<div class="card">
+<div class="card" data-frame="10.3">
   <h3 style="margin-bottom:12px;">Range Summary</h3>
   <pre style="white-space:pre-wrap;font-family:inherit;">{{ range_summary }}</pre>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-  <table>
+<div class="card" style="padding:0;overflow:hidden;" data-frame="10.4">
+  <table data-frame="10.4t">
     <thead><tr><th>Date</th><th>Season</th><th>Status</th><th>Summary</th></tr></thead>
     <tbody>
       {% if practices %}

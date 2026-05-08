@@ -17,7 +17,7 @@
 {% endif %}
 
 <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:start;">
-  <div class="card">
+  <div class="card" data-frame="16.1">
     <h3 style="margin-bottom:18px;">Add NFHS Candidate</h3>
     <form method="post" action="{{ url_for('games.nfhs_matches_add') }}">
       <div class="form-group">
@@ -49,8 +49,8 @@
     </form>
   </div>
 
-  <div class="card" style="padding:0;overflow:hidden;">
-    <table>
+  <div class="card" style="padding:0;overflow:hidden;" data-frame="16.2">
+    <table data-frame="16.2t">
       <thead><tr>
         <th>Scheduled Game</th><th>NFHS</th><th>Status</th><th>Confidence</th><th></th>
       </tr></thead>

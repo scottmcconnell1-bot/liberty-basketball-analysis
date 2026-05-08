@@ -876,7 +876,7 @@
 {% block content %}
 <div id="film-tool-root">
     <div class="app">
-        <div class="film-tool-topbar">
+        <div class="film-tool-topbar" data-frame="5.1">
     <div class="film-tool-tabs">
       <button class="btn tab-btn active" data-tab="taggerView" type="button">Tagger</button>
       <button class="btn tab-btn" data-tab="gamesView" type="button">Games</button>
@@ -893,7 +893,7 @@
     </div>
   </div>
 
-        <section id="taggerView" class="view active">
+        <section id="taggerView" class="view active" data-frame="5.2">
             <main class="grid-main">
                 <section class="panel" style="position:relative">
                     <button class="btn btn-icon btn-ghost focus-exit hidden" id="focusExitBtn" type="button">✕</button>
@@ -1135,7 +1135,7 @@
             </main>
         </section>
 
-        <section id="gamesView" class="view">
+        <section id="gamesView" class="view" data-frame="5.8">
             <div class="split">
                 <section class="panel">
                     <div class="panel-head">
@@ -1162,7 +1162,7 @@
             </div>
         </section>
 
-        <section id="reportsView" class="view">
+        <section id="reportsView" class="view" data-frame="5.9">
             <div class="list-stack">
                 <section class="panel print-target" id="reportPrintArea">
                     <div class="panel-head">

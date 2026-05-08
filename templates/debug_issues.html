@@ -13,7 +13,7 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card">
+<div class="card" data-frame="17.1">
   <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
     <div>
       <h3 style="margin-bottom:8px;">Report Bug, Issue, or Recommendation</h3>
@@ -23,7 +23,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" data-frame="17.3">
   <h3 style="margin-bottom:12px;">Saved Reports</h3>
   <form method="get" action="{{ url_for('core.debug_page') }}" style="display:grid;grid-template-columns:180px 180px 1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
     <div class="form-group" style="margin-bottom:0;">
@@ -107,7 +107,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" data-frame="17.4">
   <h3 style="margin-bottom:12px;">Recent AI Failures</h3>
   <div style="overflow:auto;">
     <table>
@@ -137,7 +137,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" data-frame="17.5">
   <h3 style="margin-bottom:12px;">Application Logs</h3>
   <form method="get" action="{{ url_for('core.debug_page') }}" style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
     <div class="form-group" style="margin-bottom:0;">
