@@ -81,26 +81,37 @@
 <div class="table-responsive">
   <table class="schedule-table">
     <thead><tr>
-      <th style="min-width:110px;">Date</th>
-      <th>Opponent</th>
-      <th style="min-width:90px;">Location</th>
-      <th style="min-width:80px;">Status</th>
-      <th style="min-width:70px;"></th>
+      <th style="min-width:120px;">DATE</th>
+      <th>OPPONENT</th>
+      <th style="min-width:130px;">TIMES</th>
+      <th style="min-width:80px;"></th>
     </tr></thead>
     <tbody>
       {% if games %}
         {% for game in games %}
         <tr>
-          <!-- Date column: date + time + tournament -->
+          <!-- Date column -->
           <td>
             <div style="font-weight:600;">{{ game.game_date }}</div>
-            {% if game.game_time %}
-            <div style="font-size:0.78rem;color:#6b7280;">{{ game.game_time }}</div>
-            {% endif %}
             {% if game.tournament_name %}
-            <div style="font-size:0.72rem;color:#2563eb;margin-top:2px;">🏆 {{ game.tournament_name }}</div>
+            <div style="font-size:0.72rem;color:#2563eb;margin-top:2px;">{{ game.tournament_name }}</div>
             {% endif %}
-            {% if game.level or game.gender %}
+            <div style="margin-top:3px;">
+              <span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:0.65rem;">{{ game.season_name }}</span>
+            </div>
+          </td>
+          <!-- Opponent column: name + (H)/(A) + badges -->
+          <td>
+            <div style="font-weight:600;">
+              {{ game.opponent_name }}
+              {% if game.location_type == 'home' %}
+              <span style="color:#059669;font-size:0.8rem;margin-left:4px;">(H)</span>
+              {% elif game.location_type == 'away' %}
+              <span style="color:#dc2626;font-size:0.8rem;margin-left:4px;">(A)</span>
+              {% elif game.location_type == 'neutral' %}
+              <span style="color:#6b7280;font-size:0.8rem;margin-left:4px;">(N)</span>
+              {% endif %}
+            </div>
             <div style="margin-top:3px;">
               {% if game.level == 'varsity' %}
               <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:0.65rem;">Varsity</span>
@@ -115,46 +126,40 @@
               <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:0.65rem;margin-left:2px;">Boys</span>
               {% endif %}
             </div>
-            {% endif %}
-          </td>
-          <!-- Opponent column: name + away indicator + notes -->
-          <td>
-            <div style="font-weight:600;">
-              {% if game.location_type == 'away' %}<span style="color:#dc2626;font-size:0.8rem;margin-right:3px;">@</span>{% endif %}
-              {{ game.opponent_name }}
-            </div>
-            {% if game.program_name and game.program_name != 'Liberty' %}
-            <div style="font-size:0.78rem;color:#6b7280;">{{ game.program_name }}</div>
-            {% endif %}
             {% if game.notes %}
-            <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ game.notes }}</div>
+            <div style="font-size:0.75rem;color:#9ca3af;margin-top:3px;">{{ game.notes }}</div>
             {% endif %}
-            <div style="margin-top:3px;">
-              <span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:0.65rem;">{{ game.season_name }}</span>
+          </td>
+          <!-- Times column: JV / Frosh / Varsity -->
+          <td>
+            {% set times = [] %}
+            {% if game.jv_game_time %}{% set _ = times.append(game.jv_game_time) %}{% endif %}
+            {% if game.frosh_game_time %}{% set _ = times.append(game.frosh_game_time) %}{% endif %}
+            {% if game.game_time %}{% set _ = times.append(game.game_time) %}{% endif %}
+            {% if times %}
+            <div style="font-weight:600;font-size:0.9rem;letter-spacing:0.3px;">
+              {{ times | join(' / ') }}
             </div>
-          </td>
-          <!-- Location column -->
-          <td>
-            {% if game.location_type == 'home' %}
-            <span class="badge" style="background:#d1fae5;color:#065f46;">Home</span>
-            {% elif game.location_type == 'away' %}
-            <span class="badge" style="background:#fee2e2;color:#991b1b;">Away</span>
-            {% elif game.location_type == 'neutral' %}
-            <span class="badge" style="background:#f3f4f6;color:#4b5563;">Neutral</span>
-            {% else %}
-            <span class="badge" style="background:#f3f4f6;color:#6b7280;">{{ game.location_type }}</span>
-            {% endif %}
-          </td>
-          <!-- Status column -->
-          <td>
+            <div style="font-size:0.68rem;color:#9ca3af;margin-top:2px;">
+              {% if game.jv_game_time and game.game_time %}
+                JV / Varsity
+              {% elif game.jv_game_time and game.frosh_game_time and game.game_time %}
+                JV / Frosh / Varsity
+              {% elif game.game_time and not game.jv_game_time %}
+                Varsity only
+              {% elif game.jv_game_time and not game.game_time %}
+                JV only
+              {% endif %}
+            </div>
             {% if game.status == 'completed' %}
-            <span class="badge badge-completed">Completed</span>
+            <span class="badge badge-completed" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Completed</span>
             {% elif game.status == 'cancelled' %}
-            <span class="badge badge-cancelled">Cancelled</span>
+            <span class="badge badge-cancelled" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Cancelled</span>
             {% elif game.status == 'rescheduled' %}
-            <span class="badge badge-rescheduled">Rescheduled</span>
+            <span class="badge badge-rescheduled" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Rescheduled</span>
+            {% endif %}
             {% else %}
-            <span class="badge badge-scheduled">Scheduled</span>
+            <span style="color:#9ca3af;">TBD</span>
             {% endif %}
           </td>
           <!-- Actions -->
@@ -171,7 +176,7 @@
         </tr>
         {% endfor %}
       {% else %}
-      <tr><td colspan="5" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
+      <tr><td colspan="4" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
       {% endif %}
     </tbody>
   </table>
@@ -228,14 +233,27 @@
           </select>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <!-- Date + Times row -->
+      <div class="form-group">
+        <label for="game_date">Date</label>
+        <input type="date" class="form-control" id="game_date" name="game_date" value="{{ game_form.game_date }}" required>
+      </div>
+      <!-- Times: JV / Frosh / Varsity -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
         <div class="form-group">
-          <label for="game_date">Date</label>
-          <input type="date" class="form-control" id="game_date" name="game_date" value="{{ game_form.game_date }}" required>
+          <label for="jv_game_time">JV Time</label>
+          <input type="time" class="form-control" id="jv_game_time" name="jv_game_time" value="{{ game_form.get('jv_game_time', '') }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Leave blank if no JV</div>
         </div>
         <div class="form-group">
-          <label for="game_time">Time</label>
+          <label for="frosh_game_time">Frosh Time</label>
+          <input type="time" class="form-control" id="frosh_game_time" name="frosh_game_time" value="{{ game_form.get('frosh_game_time', '') }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Optional</div>
+        </div>
+        <div class="form-group">
+          <label for="game_time">Varsity Time</label>
           <input type="time" class="form-control" id="game_time" name="game_time" value="{{ game_form.game_time }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Primary game time</div>
         </div>
       </div>
       <div class="form-group">
@@ -379,11 +397,13 @@ function renderPdfPreview() {
     return;
   }
   let html = '<table class="pdf-preview-table"><thead><tr>' +
-    '<th>Date</th><th>Time</th><th>Opponent</th><th>Level</th><th>Gender</th><th>Location</th>' +
+    '<th>Date</th><th>JV Time</th><th>Frosh Time</th><th>Var Time</th><th>Opponent</th><th>Level</th><th>Gender</th><th>Location</th>' +
     '</tr></thead><tbody>';
   pdfExtractedGames.forEach((g, i) => {
     html += '<tr>' +
       '<td><input type="date" value="' + (g.game_date||'') + '" onchange="pdfExtractedGames['+i+'].game_date=this.value"></td>' +
+      '<td><input type="time" value="' + (g.jv_game_time||'') + '" onchange="pdfExtractedGames['+i+'].jv_game_time=this.value"></td>' +
+      '<td><input type="time" value="' + (g.frosh_game_time||'') + '" onchange="pdfExtractedGames['+i+'].frosh_game_time=this.value"></td>' +
       '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>' +
       '<td><input type="text" value="' + (g.opponent_name||'') + '" onchange="pdfExtractedGames['+i+'].opponent_name=this.value"></td>' +
       '<td><select onchange="pdfExtractedGames['+i+'].level=this.value">' +

@@ -176,6 +176,8 @@ def schedule_save_game():
         (form.get("level") or "jr_high").strip() or "jr_high",
         game_date,
         (form.get("game_time") or "").strip() or None,
+        (form.get("jv_game_time") or "").strip() or None,
+        (form.get("frosh_game_time") or "").strip() or None,
         (form.get("location_type") or "home").strip() or "home",
         opponent_name,
         (form.get("tournament_name") or "").strip() or None,
@@ -187,6 +189,7 @@ def schedule_save_game():
         db.execute(
             """UPDATE scheduled_games SET
                season_id=?, program_name=?, gender=?, level=?, game_date=?, game_time=?,
+               jv_game_time=?, frosh_game_time=?,
                location_type=?, opponent_name=?, tournament_name=?, status=?, notes=?,
                updated_at=CURRENT_TIMESTAMP
                WHERE id=?""",
@@ -197,8 +200,9 @@ def schedule_save_game():
         db.execute(
             """INSERT INTO scheduled_games
                (season_id, program_name, gender, level, game_date, game_time,
+                jv_game_time, frosh_game_time,
                 location_type, opponent_name, tournament_name, status, notes)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             values,
         )
         message = "Scheduled game created."
@@ -278,13 +282,105 @@ def schedule_import_pdf():
 
 
 def _parse_schedule_text(text):
-    """Parse extracted PDF text into game dicts. Handles common schedule formats."""
+    """Parse extracted PDF text into game dicts. Handles common schedule formats
+    including multi-time layouts like '4:30/6:00/7:30' (JV/So/Varsity).
+
+    Handles two main PDF layouts:
+    1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
+       (times appear on same line or next line after opponent)
+    2. Row-based: '12/2 Marsing 7:30p' all on one line
+    """
     import re, datetime
     games = []
     lines = text.splitlines()
+
+    # Pre-process: detect column-based layout by looking for DATE/OPPONENT/TIMES headers
+    has_column_layout = False
     for line in lines:
-        line = line.strip()
-        if not line or len(line) < 10:
+        if re.match(r'\s*DATE\s+OPPONENT\s+TIMES', line, re.IGNORECASE):
+            has_column_layout = True
+            break
+
+    if has_column_layout:
+        # Column-based layout: join continuation lines and split into game entries
+        # Pattern: date followed by opponent, then times (on same or next line)
+        joined_lines = []
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line:
+                i += 1
+                continue
+
+            # Skip header/footer lines
+            if re.search(r'^DATE\s+OPPONENT\s+TIMES', line, re.IGNORECASE):
+                i += 1
+                continue
+            if re.search(r'Revised \d+/\d+/\d+|Schedule and times|Schedule Legend|\* Denotes|THANK YOU|Advanced Family', line):
+                i += 1
+                continue
+            if re.search(r'Printable|America\'s Source|Liberty Charter Basketball Schedule|^LIBERTY CHARTER', line):
+                i += 1
+                continue
+
+            # Check if this line starts with a date pattern
+            has_date = bool(re.search(
+                r'(\w+,?\s+\w+\s+\d{1,2}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})',
+                line
+            ))
+
+            if has_date:
+                # This is a new game line — check if next line is just times (no date, short)
+                full_line = line
+                # Look ahead for time-only continuation lines
+                while i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if not next_line:
+                        break
+                    # If next line starts with a date, it's a new game
+                    if re.search(r'^\w+,?\s+\w+\s+\d{1,2}|^\d{1,2}/\d{1,2}/\d{2,4}', next_line):
+                        break
+                    # Only join if next line is purely times (e.g. "4:30/6:00/7:30")
+                    if re.match(r'^\d{1,2}:\d{2}(?:\s*/\s*\d{1,2}:\d{2})+$', next_line):
+                        full_line += ' ' + next_line
+                        i += 1
+                    else:
+                        break
+                joined_lines.append(full_line)
+            i += 1
+    else:
+        # Row-based layout: join time-only lines to previous game line
+        joined_lines = []
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line:
+                i += 1
+                continue
+
+            # Check if this line is a "time-only" line
+            time_only = re.match(r'^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?\s*/?\s*)+$', line)
+            if time_only and joined_lines:
+                joined_lines[-1] = joined_lines[-1] + ' TIMES:' + line
+                i += 1
+                continue
+
+            # Check if this line is a continuation of the previous
+            if joined_lines and not re.search(
+                r'\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2}|\w+\s+\d{1,2},?\s+\d{4}',
+                line
+            ):
+                prev = joined_lines[-1]
+                if 'TIMES:' not in prev and len(line) < 80:
+                    joined_lines[-1] = prev + ' ' + line
+                    i += 1
+                    continue
+
+            joined_lines.append(line)
+            i += 1
+
+    for line in joined_lines:
+        if len(line) < 10:
             continue
         game = _parse_schedule_line(line)
         if game:
@@ -292,15 +388,57 @@ def _parse_schedule_text(text):
     return games
 
 
+def _normalize_time(time_str):
+    """Convert a time string to HH:MM format."""
+    import datetime
+    time_str = time_str.strip()
+    for fmt in ['%I:%M %p', '%I:%M%p', '%I:%M', '%H:%M']:
+        try:
+            return datetime.datetime.strptime(time_str, fmt).strftime('%H:%M')
+        except ValueError:
+            continue
+    return time_str  # Return as-is if can't parse
+
+
 def _parse_schedule_line(line):
-    """Try to parse a single line of schedule text into a game dict."""
+    """Try to parse a single line of schedule text into a game dict.
+    Handles formats like:
+      'TUES, DEC 2 MARSING (H) TIMES:4:30/6:00/7:30'
+      '12/2 Marsing (Marsing, ID) 7:30p'
+      '1/5 @ Idaho City (A) 7:30p'
+    """
     import re, datetime
-    # Pattern: date (various formats) + opponent + optional time + optional location
+
+    jv_time = None
+    frosh_time = None
+    varsity_time = None
+    tournament_name = None
+
+    # Check for TIMES: marker (from joined lines)
+    times_match = re.search(r'TIMES:(.+)$', line)
+    if times_match:
+        times_str = times_match.group(1).strip()
+        line = line[:times_match.start()].strip()
+        time_parts = [t.strip() for t in times_str.split('/')]
+        if len(time_parts) == 3:
+            jv_time = _normalize_time(time_parts[0])
+            frosh_time = _normalize_time(time_parts[1])
+            varsity_time = _normalize_time(time_parts[2])
+        elif len(time_parts) == 2:
+            jv_time = _normalize_time(time_parts[0])
+            varsity_time = _normalize_time(time_parts[1])
+        elif len(time_parts) == 1:
+            varsity_time = _normalize_time(time_parts[0])
+
+    # Pattern: date (various formats) — order matters, try most specific first
     date_patterns = [
-        r'(\d{1,2}/\d{1,2}/\d{2,4})',
-        r'(\d{4}-\d{2}-\d{2})',
-        r'(\w+\s+\d{1,2},?\s+\d{4})',
-        r'(\d{1,2}\s+\w+\s+\d{4})',
+        r'(\w+\s*-\s*\w+,?\s+\w+\s+\d{1,2}\s*-\s*\d{1,2})',  # Thurs-Sat, Dec 4-6
+        r'(\w+\s+\d{1,2}\s*-\s*\d{1,2},?\s+\d{4})',          # Dec 4-6, 2025
+        r'(\w+\s+\d{1,2},?\s+\d{4})',                         # December 1, 2025
+        r'(\d{1,2}/\d{1,2}/\d{2,4})',                         # 12/01/2025
+        r'(\d{4}-\d{2}-\d{2})',                               # 2025-12-01
+        r'(\w+,?\s+\w+\s+\d{1,2})',                           # TUES, DEC 2
+        r'(\d{1,2}\s+\w+\s+\d{4})',                           # 1 December 2025
     ]
     date_str = None
     for pat in date_patterns:
@@ -310,82 +448,156 @@ def _parse_schedule_line(line):
             break
     if not date_str:
         return None
+
     # Normalize date
     game_date = None
-    for fmt in ['%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%B %d, %Y', '%b %d, %Y', '%d %B %Y', '%d %b %Y']:
+    # Handle date ranges: "Thurs-Sat, Dec 4-6" → use first date "Dec 4"
+    date_for_parse = re.sub(r'\w+\s*-\s*\w+,?\s+', '', date_str)  # "Dec 4-6" from "Thurs-Sat, Dec 4-6"
+    date_for_parse = re.sub(r'\s*-\s*\d{1,2}(,|$)', r'\1', date_for_parse)  # "Dec 4-6" → "Dec 4"
+    # Strip day-of-week prefix (e.g. "TUES, " or "Thurs-Sat, " already handled above)
+    date_for_parse = re.sub(r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|THURS|TUES|WED|THUR|FRI|SAT|SUN),?\s+', '', date_for_parse, flags=re.IGNORECASE).strip()
+
+    # First try parsing directly
+    for fmt in ['%B %d, %Y', '%b %d, %Y', '%B %d %Y', '%b %d %Y',
+                '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d',
+                '%B %d', '%b %d',
+                '%d %B %Y', '%d %b %Y']:
         try:
-            game_date = datetime.datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
+            parsed = datetime.datetime.strptime(date_for_parse, fmt)
+            if parsed.year == 1900:
+                parsed = parsed.replace(year=datetime.datetime.now().year)
+            game_date = parsed.strftime('%Y-%m-%d')
             break
         except ValueError:
             continue
+    # If that failed, try the original date_str
+    if not game_date:
+        date_clean = re.sub(r'^\w+,?\s+', '', date_str).strip()
+        for fmt in ['%b %d %Y', '%B %d %Y', '%b %d', '%B %d',
+                    '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d',
+                    '%B %d, %Y', '%b %d, %Y', '%d %B %Y', '%d %b %Y']:
+            try:
+                parsed = datetime.datetime.strptime(date_clean, fmt)
+                if parsed.year == 1900:
+                    parsed = parsed.replace(year=datetime.datetime.now().year)
+                game_date = parsed.strftime('%Y-%m-%d')
+                break
+            except ValueError:
+                continue
     if not game_date:
         return None
-    # Detect opponent — text after date that looks like a team name
-    remainder = line.replace(date_str, '', 1).strip()
-    # Remove common prefixes (but NOT @ or at which are location markers)
-    remainder = re.sub(r'^\s*[:\-–—]\s*', '', remainder)
-    # Detect time
-    time_str = None
-    time_match = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)', remainder)
-    if time_match:
-        time_str = time_match.group(1)
-        remainder = remainder.replace(time_str, '').strip()
-    # Detect level and gender from full remainder BEFORE extracting opponent
-    level = 'jr_high'
-    level_lower = remainder.lower()
-    if 'varsity' in level_lower:
-        level = 'varsity'
-    elif 'junior varsity' in level_lower or ' jv ' in level_lower:
-        level = 'jv'
-    gender = 'boys'
-    if 'girls' in level_lower:
-        gender = 'girls'
 
-    # Detect location keywords
+    # Get remainder after date
+    remainder = line[line.index(date_str) + len(date_str):].strip()
+    remainder = re.sub(r'^\s*[:\\-–—]\s*', '', remainder)
+
+    # Detect location: (H), (A), (N) or @/at prefix
     location_type = 'home'
-    loc_match = re.search(r'(?:\s|^)(@|at|vs\.?)\s+', remainder, re.IGNORECASE)
-    if loc_match:
-        pre_loc = remainder[:loc_match.start()].strip()
-        post_loc = remainder[loc_match.end():].strip()
-        if loc_match.group(1).lower() in ('@', 'at'):
-            location_type = 'away'
-            opponent = post_loc
-        else:
-            pre_loc_clean = re.sub(r'\b(versus|vs\.?)\b', '', pre_loc, flags=re.IGNORECASE).strip()
-            # Check if pre_loc_clean is only a level/gender keyword
-            pre_is_only_keyword = not re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', pre_loc_clean, flags=re.IGNORECASE).strip()
-            if not pre_loc_clean and post_loc:
-                opponent = post_loc
-            elif pre_is_only_keyword and post_loc:
-                opponent = post_loc
-            else:
-                opponent = pre_loc_clean if pre_loc_clean else post_loc
+    loc_h = re.search(r'\((H|A|N)\)', remainder, re.IGNORECASE)
+    if loc_h:
+        loc_code = loc_h.group(1).upper()
+        location_type = {'H': 'home', 'A': 'away', 'N': 'neutral'}.get(loc_code, 'home')
+        remainder = remainder[:loc_h.start()] + remainder[loc_h.end():]
+        remainder = remainder.strip()
     else:
-        opponent = remainder
+        loc_match = re.search(r'(?:^|\s)(@|at)\s+', remainder, re.IGNORECASE)
+        if loc_match:
+            location_type = 'away'
+            remainder = remainder[:loc_match.start()] + remainder[loc_match.end():]
+            remainder = remainder.strip()
 
-    # Clean up opponent — remove level/gender markers
-    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', opponent, flags=re.IGNORECASE).strip()
+    # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
+    # This handles the PDF column layout where times appear after (H)/(A)
+    if not varsity_time:
+        multi_time_match = re.search(r'(\d{1,2}:\d{2}(?:\s*/\s*\d{1,2}:\d{2})+)\s*$', remainder)
+        if multi_time_match:
+            times_str = multi_time_match.group(1)
+            remainder = remainder[:multi_time_match.start()].strip()
+            time_parts = [t.strip() for t in times_str.split('/')]
+            if len(time_parts) == 3:
+                jv_time = _normalize_time(time_parts[0])
+                frosh_time = _normalize_time(time_parts[1])
+                varsity_time = _normalize_time(time_parts[2])
+            elif len(time_parts) == 2:
+                jv_time = _normalize_time(time_parts[0])
+                varsity_time = _normalize_time(time_parts[1])
+            elif len(time_parts) == 1:
+                varsity_time = _normalize_time(time_parts[0])
+
+    # Detect single time if not already found
+    if not varsity_time:
+        time_match = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)', remainder)
+        if time_match:
+            time_str = time_match.group(1)
+            remainder = remainder[:time_match.start()] + remainder[time_match.end():]
+            remainder = remainder.strip()
+            varsity_time = _normalize_time(time_str)
+
+    # Detect tournament names and vs. pattern
+    # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
+    # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
+    # Detect tournament names and vs. pattern
+    # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
+    # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
+    # "Girls vs Eastside" → opponent=Eastside, gender=girls
+    level = 'jr_high'  # Default level, may be overridden by vs. handler or level detection below
+    gender = 'boys'    # Default gender, may be overridden by vs. handler or detection below
+    vs_match = re.search(r'(.+?)\s+vs\.?\s+(.+?)$', remainder, re.IGNORECASE)
+    if vs_match:
+        pre_vs = vs_match.group(1).strip()
+        post_vs = vs_match.group(2).strip()
+        # Check if pre_vs is a level/gender keyword
+        pre_is_keyword = bool(re.match(r'^(varsity|jv|junior varsity|boys|girls|freshman)$', pre_vs, re.IGNORECASE))
+        if pre_is_keyword:
+            remainder = post_vs
+            if re.match(r'^varsity$', pre_vs, re.IGNORECASE):
+                level = 'varsity'
+            elif re.match(r'^(jv|junior varsity)$', pre_vs, re.IGNORECASE):
+                level = 'jv'
+            elif re.match(r'^girls$', pre_vs, re.IGNORECASE):
+                gender = 'girls'
+            elif re.match(r'^boys$', pre_vs, re.IGNORECASE):
+                gender = 'boys'
+        elif len(pre_vs.split()) >= 2:
+            tournament_name = pre_vs
+            remainder = post_vs
+        else:
+            remainder = post_vs
+
+    # Detect level and gender from remainder (if not already set by vs. handler)
+    if level == 'jr_high':
+        level_lower = remainder.lower()
+        if 'varsity' in level_lower:
+            level = 'varsity'
+        elif 'junior varsity' in level_lower or ' jv ' in level_lower:
+            level = 'jv'
+    if gender == 'boys':
+        if 'girls' in remainder.lower():
+            gender = 'girls'
+
+    # Clean up opponent name
+    opponent = remainder
+    opponent = re.sub(r'\*+', '', opponent).strip()  # Remove conference markers like *
+    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman|tbd)\b', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'\b(vs\.?|versus)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\s+', ' ', opponent).strip()
     opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
-    # Normalize time
-    game_time = None
-    if time_str:
-        try:
-            for fmt in ['%I:%M %p', '%I:%M%p', '%I:%M', '%H:%M']:
-                try:
-                    game_time = datetime.datetime.strptime(time_str.strip(), fmt).strftime('%H:%M')
-                    break
-                except ValueError:
-                    continue
-        except Exception:
-            pass
+    opponent = re.sub(r'\(H\)|\(A\)|\(N\)', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'\s+', ' ', opponent).strip()
+
+    if not opponent:
+        return None
+
     return {
         "game_date": game_date,
-        "game_time": game_time or "",
+        "game_time": varsity_time or "",
+        "jv_game_time": jv_time or "",
+        "frosh_game_time": frosh_time or "",
         "opponent_name": opponent,
         "level": level,
         "gender": gender,
         "location_type": location_type,
+        "tournament_name": tournament_name or "",
         "status": "scheduled",
         "notes": "",
     }
@@ -413,8 +625,9 @@ def schedule_import_pdf_confirm():
             db.execute(
                 """INSERT INTO scheduled_games
                    (season_id, program_name, gender, level, game_date, game_time,
-                    location_type, opponent_name, status, notes)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    jv_game_time, frosh_game_time,
+                    location_type, opponent_name, tournament_name, status, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     season_id,
                     "Liberty",
@@ -422,8 +635,11 @@ def schedule_import_pdf_confirm():
                     (g.get("level") or "jr_high").strip(),
                     game_date,
                     (g.get("game_time") or "").strip() or None,
+                    (g.get("jv_game_time") or "").strip() or None,
+                    (g.get("frosh_game_time") or "").strip() or None,
                     (g.get("location_type") or "home").strip(),
                     opponent,
+                    (g.get("tournament_name") or "").strip() or None,
                     "scheduled",
                     (g.get("notes") or "").strip() or None,
                 ),
@@ -459,8 +675,9 @@ def _get_or_create_default_season(db):
 def schedule_export_maxpreps():
     db = get_db()
     games = db.execute(
-        """SELECT sg.id, sg.game_date, sg.game_time, sg.opponent_name,
-                  sg.level, sg.gender, sg.location_type, sg.status, sg.program_name,
+        """SELECT sg.id, sg.game_date, sg.game_time, sg.jv_game_time, sg.frosh_game_time,
+                  sg.opponent_name, sg.level, sg.gender, sg.location_type, sg.status,
+                  sg.program_name, sg.tournament_name,
                   s.name as season_name
            FROM scheduled_games sg
            JOIN seasons s ON s.id = sg.season_id
@@ -473,17 +690,21 @@ def schedule_export_maxpreps():
     writer = csv.writer(output)
     # MaxPreps standard columns
     writer.writerow([
-        "Date", "Time", "Opponent", "Location", "Level", "Gender", "Conference", "Season"
+        "Date", "JV Time", "So Time", "Varsity Time", "Opponent", "Location",
+        "Level", "Gender", "Tournament", "Conference", "Season"
     ])
     for g in games:
         location = "Away" if g["location_type"] == "away" else "Home"
         writer.writerow([
             g["game_date"],
+            g["jv_game_time"] or "",
+            g["frosh_game_time"] or "",
             g["game_time"] or "",
             g["opponent_name"],
             location,
             _level_display_name(g["level"]),
             _gender_display_name(g["gender"]),
+            g["tournament_name"] or "",
             "No",
             g["season_name"] or "",
         ])
