@@ -829,6 +829,7 @@ def _ensure_migration_columns(db):
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
+        ("scheduled_games", "team", "ALTER TABLE scheduled_games ADD COLUMN team TEXT NOT NULL DEFAULT 'boys_hs'"),
     ]
     existing = {
         (row[1], row[2]): True
@@ -869,6 +870,12 @@ SCHEDULE_STATUS_OPTIONS = [
     ("cancelled", "Cancelled"),
     ("rescheduled", "Rescheduled"),
     ("completed", "Completed"),
+]
+SCHEDULE_TEAM_OPTIONS = [
+    ("boys_hs", "Boys High School"),
+    ("girls_hs", "Girls High School"),
+    ("jr_boys", "Jr High Boys"),
+    ("jr_girls", "Jr High Girls"),
 ]
 GAME_SOURCE_TYPE_OPTIONS = [
     ("manual", "Manual"),
@@ -980,10 +987,13 @@ def render_schedule_page(
             else (filters["season_id"] or (seasons[0]["id"] if seasons else ""))
         ),
         "program_name": edit_game["program_name"] if edit_game else "Liberty",
+        "team": edit_game["team"] if edit_game else "boys_hs",
         "gender": edit_game["gender"] if edit_game else "boys",
         "level": edit_game["level"] if edit_game else "jr_high",
         "game_date": edit_game["game_date"] if edit_game else "",
         "game_time": edit_game["game_time"] if edit_game else "",
+        "jv_game_time": edit_game["jv_game_time"] if edit_game else "",
+        "frosh_game_time": edit_game["frosh_game_time"] if edit_game else "",
         "location_type": edit_game["location_type"] if edit_game else "home",
         "opponent_name": edit_game["opponent_name"] if edit_game else "",
         "tournament_name": edit_game["tournament_name"] if edit_game else "",
@@ -1013,6 +1023,7 @@ def render_schedule_page(
         gender_options=SCHEDULE_GENDER_OPTIONS,
         location_options=SCHEDULE_LOCATION_OPTIONS,
         status_options=SCHEDULE_STATUS_OPTIONS,
+        team_options=SCHEDULE_TEAM_OPTIONS,
     )
 
 

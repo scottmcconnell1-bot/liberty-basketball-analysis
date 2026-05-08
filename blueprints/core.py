@@ -156,10 +156,13 @@ def schedule_save_game():
                 "id": game_id,
                 "season_id": season_id,
                 "program_name": (form.get("program_name") or "Liberty").strip(),
+                "team": (form.get("team") or "boys_hs").strip(),
                 "gender": (form.get("gender") or "boys").strip(),
                 "level": (form.get("level") or "jr_high").strip(),
                 "game_date": game_date,
                 "game_time": (form.get("game_time") or "").strip(),
+                "jv_game_time": (form.get("jv_game_time") or "").strip(),
+                "frosh_game_time": (form.get("frosh_game_time") or "").strip(),
                 "location_type": (form.get("location_type") or "home").strip(),
                 "opponent_name": opponent_name,
                 "tournament_name": (form.get("tournament_name") or "").strip(),
@@ -172,6 +175,7 @@ def schedule_save_game():
     values = (
         int(season_id),
         (form.get("program_name") or "Liberty").strip() or "Liberty",
+        (form.get("team") or "boys_hs").strip() or "boys_hs",
         (form.get("gender") or "boys").strip() or "boys",
         (form.get("level") or "jr_high").strip() or "jr_high",
         game_date,
@@ -188,7 +192,7 @@ def schedule_save_game():
     if game_id:
         db.execute(
             """UPDATE scheduled_games SET
-               season_id=?, program_name=?, gender=?, level=?, game_date=?, game_time=?,
+               season_id=?, program_name=?, team=?, gender=?, level=?, game_date=?, game_time=?,
                jv_game_time=?, frosh_game_time=?,
                location_type=?, opponent_name=?, tournament_name=?, status=?, notes=?,
                updated_at=CURRENT_TIMESTAMP
@@ -199,10 +203,10 @@ def schedule_save_game():
     else:
         db.execute(
             """INSERT INTO scheduled_games
-               (season_id, program_name, gender, level, game_date, game_time,
+               (season_id, program_name, team, gender, level, game_date, game_time,
                 jv_game_time, frosh_game_time,
                 location_type, opponent_name, tournament_name, status, notes)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             values,
         )
         message = "Scheduled game created."
@@ -254,6 +258,7 @@ def schedule_import_pdf():
     pdf_file = request.files["pdf"]
     if not pdf_file.filename.lower().endswith(".pdf"):
         return {"error": "File must be a PDF"}, 400
+    pdf_team = (request.form.get("team") or "boys_hs").strip()
     try:
         import io
         try:
@@ -275,15 +280,22 @@ def schedule_import_pdf():
                 return {"error": "PDF parsing requires pdfplumber or PyPDF2. Install with: pip install pdfplumber"}, 500
         if not text.strip():
             return {"error": "Could not extract text from PDF. Try a different file."}, 400
-        games = _parse_schedule_text(text)
+        games = _parse_schedule_text(text, pdf_team=pdf_team)
         return {"games": games}
     except Exception as e:
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
 
-def _parse_schedule_text(text):
+def _parse_schedule_text(text, pdf_team="boys_hs"):
     """Parse extracted PDF text into game dicts. Handles common schedule formats
-    including multi-time layouts like '4:30/6:00/7:30' (JV/So/Varsity).
+    including multi-time layouts like '4:30/6:00/7:30' (JV/Frosh/Varsity).
+
+    The pdf_team parameter sets default gender/level based on which team
+    the user selected before uploading:
+      boys_hs   → gender=boys,  level=varsity
+      girls_hs  → gender=girls, level=varsity
+      jr_boys   → gender=boys,  level=jr_high
+      jr_girls  → gender=girls, level=jr_high
 
     Handles two main PDF layouts:
     1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
@@ -382,7 +394,7 @@ def _parse_schedule_text(text):
     for line in joined_lines:
         if len(line) < 10:
             continue
-        game = _parse_schedule_line(line)
+        game = _parse_schedule_line(line, pdf_team=pdf_team)
         if game:
             games.append(game)
     return games
@@ -400,12 +412,17 @@ def _normalize_time(time_str):
     return time_str  # Return as-is if can't parse
 
 
-def _parse_schedule_line(line):
+def _parse_schedule_line(line, pdf_team="boys_hs"):
     """Try to parse a single line of schedule text into a game dict.
     Handles formats like:
-      'TUES, DEC 2 MARSING (H) TIMES:4:30/6:00/7:30'
+      'TUES, DEC 2 MARSING (H) 4:30/6:00/7:30'
       '12/2 Marsing (Marsing, ID) 7:30p'
       '1/5 @ Idaho City (A) 7:30p'
+
+    pdf_team sets default gender/level:
+      boys_hs/girls_hs → level=varsity
+      jr_boys/jr_girls → level=jr_high
+      gender is boys for *_hs/boys_*, girls for girls_*
     """
     import re, datetime
 
@@ -540,8 +557,12 @@ def _parse_schedule_line(line):
     # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
     # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
     # "Girls vs Eastside" → opponent=Eastside, gender=girls
-    level = 'jr_high'  # Default level, may be overridden by vs. handler or level detection below
-    gender = 'boys'    # Default gender, may be overridden by vs. handler or detection below
+    # Derive defaults from the selected team
+    _team_gender = "girls" if "girls" in pdf_team else "boys"
+    _team_level = "jr_high" if "jr_" in pdf_team else "varsity"
+
+    level = _team_level  # May be overridden by vs. handler or level detection below
+    gender = _team_gender  # May be overridden by vs. handler or detection below
     vs_match = re.search(r'(.+?)\s+vs\.?\s+(.+?)$', remainder, re.IGNORECASE)
     if vs_match:
         pre_vs = vs_match.group(1).strip()
@@ -565,13 +586,13 @@ def _parse_schedule_line(line):
             remainder = post_vs
 
     # Detect level and gender from remainder (if not already set by vs. handler)
-    if level == 'jr_high':
+    if level == _team_level:
         level_lower = remainder.lower()
         if 'varsity' in level_lower:
             level = 'varsity'
         elif 'junior varsity' in level_lower or ' jv ' in level_lower:
             level = 'jv'
-    if gender == 'boys':
+    if gender == _team_gender:
         if 'girls' in remainder.lower():
             gender = 'girls'
 
@@ -594,6 +615,7 @@ def _parse_schedule_line(line):
         "jv_game_time": jv_time or "",
         "frosh_game_time": frosh_time or "",
         "opponent_name": opponent,
+        "team": pdf_team,
         "level": level,
         "gender": gender,
         "location_type": location_type,
@@ -608,6 +630,7 @@ def _parse_schedule_line(line):
 def schedule_import_pdf_confirm():
     data = request.get_json(force=True)
     games = data.get("games", [])
+    pdf_team = (data.get("team") or "boys_hs").strip()
     if not games:
         return {"error": "No games to import"}, 400
     db = get_db()
@@ -624,13 +647,14 @@ def schedule_import_pdf_confirm():
         try:
             db.execute(
                 """INSERT INTO scheduled_games
-                   (season_id, program_name, gender, level, game_date, game_time,
+                   (season_id, program_name, team, gender, level, game_date, game_time,
                     jv_game_time, frosh_game_time,
                     location_type, opponent_name, tournament_name, status, notes)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     season_id,
                     "Liberty",
+                    pdf_team,
                     (g.get("gender") or "boys").strip(),
                     (g.get("level") or "jr_high").strip(),
                     game_date,
@@ -676,7 +700,7 @@ def schedule_export_maxpreps():
     db = get_db()
     games = db.execute(
         """SELECT sg.id, sg.game_date, sg.game_time, sg.jv_game_time, sg.frosh_game_time,
-                  sg.opponent_name, sg.level, sg.gender, sg.location_type, sg.status,
+                  sg.team, sg.opponent_name, sg.level, sg.gender, sg.location_type, sg.status,
                   sg.program_name, sg.tournament_name,
                   s.name as season_name
            FROM scheduled_games sg
@@ -690,8 +714,8 @@ def schedule_export_maxpreps():
     writer = csv.writer(output)
     # MaxPreps standard columns
     writer.writerow([
-        "Date", "JV Time", "So Time", "Varsity Time", "Opponent", "Location",
-        "Level", "Gender", "Tournament", "Conference", "Season"
+        "Date", "JV Time", "Frosh Time", "Varsity Time", "Opponent", "Location",
+        "Team", "Level", "Gender", "Tournament", "Conference", "Season"
     ])
     for g in games:
         location = "Away" if g["location_type"] == "away" else "Home"
@@ -702,6 +726,7 @@ def schedule_export_maxpreps():
             g["game_time"] or "",
             g["opponent_name"],
             location,
+            _team_display_name(g["team"]),
             _level_display_name(g["level"]),
             _gender_display_name(g["gender"]),
             g["tournament_name"] or "",
@@ -715,6 +740,16 @@ def schedule_export_maxpreps():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=maxpreps_schedule_export.csv"},
     )
+
+
+def _team_display_name(val):
+    mapping = {
+        "boys_hs": "Boys HS",
+        "girls_hs": "Girls HS",
+        "jr_boys": "Jr High Boys",
+        "jr_girls": "Jr High Girls",
+    }
+    return mapping.get(val, val)
 
 
 def _level_display_name(val):
