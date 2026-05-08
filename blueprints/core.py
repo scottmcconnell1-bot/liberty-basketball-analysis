@@ -280,14 +280,14 @@ def schedule_import_pdf():
                 return {"error": "PDF parsing requires pdfplumber or PyPDF2. Install with: pip install pdfplumber"}, 500
         if not text.strip():
             return {"error": "Could not extract text from PDF. Try a different file."}, 400
-        games = _parse_schedule_text(text, pdf_team=pdf_team)
         season_info = _detect_season_from_text(text, pdf_team=pdf_team)
+        games = _parse_schedule_text(text, pdf_team=pdf_team, season_info=season_info)
         return {"games": games, "season": season_info}
     except Exception as e:
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
 
-def _parse_schedule_text(text, pdf_team="boys_hs"):
+def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     """Parse extracted PDF text into game dicts. Handles common schedule formats
     including multi-time layouts like '4:30/6:00/7:30' (JV/Frosh/Varsity).
 
@@ -298,6 +298,9 @@ def _parse_schedule_text(text, pdf_team="boys_hs"):
       jr_boys   → gender=boys,  level=jr_high
       jr_girls  → gender=girls, level=jr_high
 
+    season_info: optional dict with {start_date, end_date} used to infer
+    the correct year for dates that lack a year (e.g. "DEC 2" → "2025-12-02").
+
     Handles two main PDF layouts:
     1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
        (times appear on same line or next line after opponent)
@@ -306,6 +309,22 @@ def _parse_schedule_text(text, pdf_team="boys_hs"):
     import re, datetime
     games = []
     lines = text.splitlines()
+
+    # Build a month→year mapping from season_info for dates without a year
+    # e.g. for season 2025-11-01→2026-03-31: Nov,Dec→2025; Jan,Feb,Mar→2026
+    month_year_map = {}
+    if season_info and season_info.get("start_date") and season_info.get("end_date"):
+        s_start = datetime.date.fromisoformat(season_info["start_date"])
+        s_end = datetime.date.fromisoformat(season_info["end_date"])
+        # Map every month in the season range to its correct year
+        d = s_start
+        while d <= s_end:
+            month_year_map[d.month] = d.year
+            # advance to next month
+            if d.month == 12:
+                d = datetime.date(d.year + 1, 1, 1)
+            else:
+                d = datetime.date(d.year, d.month + 1, 1)
 
     # Pre-process: detect column-based layout by looking for DATE/OPPONENT/TIMES headers
     has_column_layout = False
@@ -405,7 +424,7 @@ def _parse_schedule_text(text, pdf_team="boys_hs"):
             else:
                 games[-1]['game_time'] = time_val  # A team
             continue
-        game = _parse_schedule_line(line, pdf_team=pdf_team)
+        game = _parse_schedule_line(line, pdf_team=pdf_team, month_year_map=month_year_map)
         if game:
             games.append(game)
     return games
@@ -423,7 +442,7 @@ def _normalize_time(time_str):
     return time_str  # Return as-is if can't parse
 
 
-def _parse_schedule_line(line, pdf_team="boys_hs"):
+def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     """Try to parse a single line of schedule text into a game dict.
     Handles formats like:
       'TUES, DEC 2 MARSING (H) 4:30/6:00/7:30'
@@ -434,6 +453,9 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
       boys_hs/girls_hs → level=varsity
       jr_boys/jr_girls → level=jr_high
       gender is boys for *_hs/boys_*, girls for girls_*
+
+    month_year_map: optional dict mapping month number → year, used to
+    infer the correct year for dates without a year (e.g. "DEC 2").
     """
     import re, datetime
 
@@ -505,7 +527,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
         try:
             parsed = datetime.datetime.strptime(date_for_parse, fmt)
             if parsed.year == 1900:
-                parsed = parsed.replace(year=datetime.datetime.now().year)
+                inferred_year = month_year_map.get(parsed.month, datetime.datetime.now().year) if month_year_map else datetime.datetime.now().year
+                parsed = parsed.replace(year=inferred_year)
             game_date = parsed.strftime('%Y-%m-%d')
             break
         except ValueError:
@@ -519,7 +542,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
             try:
                 parsed = datetime.datetime.strptime(date_clean, fmt)
                 if parsed.year == 1900:
-                    parsed = parsed.replace(year=datetime.datetime.now().year)
+                    inferred_year = month_year_map.get(parsed.month, datetime.datetime.now().year) if month_year_map else datetime.datetime.now().year
+                    parsed = parsed.replace(year=inferred_year)
                 game_date = parsed.strftime('%Y-%m-%d')
                 break
             except ValueError:
