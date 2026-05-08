@@ -140,3 +140,5 @@ How to resume / commands to run
 [2026-05-07 12:52:28 MDT] Commit 524d56b8 (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
 
 [2026-05-07 16:54:50 ] Commit 5c5b4caa (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
+
+[2026-05-07 18:56:37 ] Commit 20cb6f0d — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
