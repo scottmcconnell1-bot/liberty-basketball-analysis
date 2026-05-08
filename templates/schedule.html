@@ -445,15 +445,23 @@ function renderPdfPreview() {
     area.innerHTML = '<p class="text-muted">No games found in PDF.</p>';
     return;
   }
+  // Dynamic headers based on team type
+  const isJrHigh = pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_');
+  const time1Label = isJrHigh ? 'B Team Time' : 'JV Time';
+  const time2Label = isJrHigh ? 'A Team Time' : 'Frosh Time';
+  const time3Label = isJrHigh ? '' : 'Var Time';
   let html = '<table class="pdf-preview-table"><thead><tr>' +
-    '<th>Date</th><th>JV Time</th><th>Frosh Time</th><th>Var Time</th><th>Opponent</th><th>Team</th><th>Level</th><th>Gender</th><th>Location</th>' +
+    '<th>Date</th><th>' + time1Label + '</th><th>' + time2Label + '</th>' + (time3Label ? '<th>' + time3Label + '</th>' : '') + '<th>Opponent</th><th>Team</th><th>Level</th><th>Gender</th><th>Location</th>' +
     '</tr></thead><tbody>';
   pdfExtractedGames.forEach((g, i) => {
     html += '<tr>' +
       '<td><input type="date" value="' + (g.game_date||'') + '" onchange="pdfExtractedGames['+i+'].game_date=this.value"></td>' +
       '<td><input type="time" value="' + (g.jv_game_time||'') + '" onchange="pdfExtractedGames['+i+'].jv_game_time=this.value"></td>' +
-      '<td><input type="time" value="' + (g.frosh_game_time||'') + '" onchange="pdfExtractedGames['+i+'].frosh_game_time=this.value"></td>' +
-      '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>' +
+      '<td><input type="time" value="' + (g.frosh_game_time||'') + '" onchange="pdfExtractedGames['+i+'].frosh_game_time=this.value"></td>';
+  if (!isJrHigh) {
+    html += '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>';
+  }
+  html +=
       '<td><input type="text" value="' + (g.opponent_name||'') + '" onchange="pdfExtractedGames['+i+'].opponent_name=this.value"></td>' +
       '<td><select onchange="pdfExtractedGames['+i+'].team=this.value">' +
         '<option value="boys_hs"' + (g.team==='boys_hs'?' selected':'') + '>Boys HS</option>' +
