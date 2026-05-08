@@ -2,7 +2,7 @@
 {% block title %}Practice Report – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="11.1">
   <div>
     <h2>Practice Report</h2>
     <span class="text-muted">{{ practice.practice_date }}{% if practice.season_name %} · {{ practice.season_name }}{% endif %} · {{ practice.level }}</span>
@@ -19,7 +19,7 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card">
+<div class="card" data-frame="11.2">
   <form method="get" action="{{ url_for('practice.practice_report_page', practice_id=practice.id) }}">
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
       <label><input type="checkbox" name="show_plan" value="1" {% if show_plan %}checked{% endif %} style="width:auto;"> Show Plan</label>
@@ -32,7 +32,7 @@
 </div>
 
 {% if show_plan %}
-<div class="card">
+<div class="card" data-frame="11.3">
   <h3 style="margin-bottom:12px;">Practice Plan</h3>
   <p class="text-muted" style="margin-bottom:12px;">Source: {{ practice.plan_source }}</p>
   <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.plan_text or "No plan recorded." }}</pre>
@@ -40,21 +40,21 @@
 {% endif %}
 
 {% if show_coach %}
-<div class="card">
+<div class="card" data-frame="11.4">
   <h3 style="margin-bottom:12px;">Coach Notes</h3>
   <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.coach_notes or "No coach notes recorded." }}</pre>
 </div>
 {% endif %}
 
 {% if show_ai %}
-<div class="card">
+<div class="card" data-frame="11.5">
   <h3 style="margin-bottom:12px;">AI Notes</h3>
   <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.ai_notes or "No AI notes generated yet." }}</pre>
 </div>
 {% endif %}
 
 {% if show_combined %}
-<div class="card">
+<div class="card" data-frame="11.6">
   <h3 style="margin-bottom:12px;">Combined Summary</h3>
   <pre style="white-space:pre-wrap;font-family:inherit;">{{ practice.combined_summary or "No combined summary generated yet." }}</pre>
 </div>

@@ -2,7 +2,7 @@
 {% block title %}Video Library – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="4.1">
   <h2>📹 Video Library</h2>
   <div style="display:flex;gap:10px;">
     <a href="/film" class="btn btn-primary">+ Upload New Video</a>
@@ -17,10 +17,10 @@
   Use the 🗑 button on any row to permanently delete a video and its analysis data.
 </div>
 
-<div class="card" id="videos-card">
+<div class="card" id="videos-card" data-frame="4.2">
   <div id="loading" style="color:#6b7280;padding:20px 0;">Loading videos…</div>
   <div class="table-responsive">
-  <table id="video-table" style="display:none;">
+  <table id="video-table" style="display:none;" data-frame="4.2t">
     <thead>
       <tr>
         <th>Original Filename</th>
@@ -43,7 +43,7 @@
 </div>
 
 <!-- Confirm delete modal -->
-<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;" data-frame="4.3">
   <div style="background:#fff;border-radius:8px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
     <h3 style="margin:0 0 12px;font-size:1rem;">Delete video?</h3>
     <p id="delete-modal-desc" style="color:#4b5563;font-size:.9rem;margin-bottom:20px;"></p>
@@ -56,7 +56,7 @@
 </div>
 
 <!-- Confirm clear-all modal -->
-<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;" data-frame="4.4">
   <div style="background:#fff;border-radius:8px;padding:28px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
     <h3 style="margin:0 0 12px;font-size:1rem;">Clear all videos?</h3>
     <p style="color:#4b5563;font-size:.9rem;margin-bottom:16px;">This will permanently delete <strong>every video file and all AI analysis data</strong> (detections, events, analysis runs). Season and schedule data will be kept.</p>

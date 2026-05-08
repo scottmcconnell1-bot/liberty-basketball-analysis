@@ -12,7 +12,8 @@
 {% set active_tab = 'custom-weights' %}
 {% include "_settings_tabs.html" %}
 
-<div class="card">
+<div data-frame="13.1" style="display:none"></div>
+<div class="card" data-frame="13.2">
   <h3 style="margin-bottom:12px;">Short Answer: Can Ollama Vision Models Be Used?</h3>
   <p><strong>Yes, but as an add-on layer, not as the main detector.</strong> This app's video pipeline is built around Ultralytics object detection, which is fast enough to scan full videos frame-by-frame. Ollama vision models are better for reasoning over selected frames or short clips.</p>
   <p class="text-muted">Good add-on uses: reviewing candidate events, summarizing a clip, comparing reruns, explaining why a possession was tagged a certain way, or labeling a handful of already-detected moments. Poor fit: scanning an entire game video frame-by-frame as the primary detector.</p>

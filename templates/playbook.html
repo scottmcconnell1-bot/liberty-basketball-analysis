@@ -2,7 +2,7 @@
 {% block title %}Playbook – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="6.1">
   <h2>Playbook</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
@@ -26,7 +26,7 @@
 
 <!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
 {% if view_mode == "list" %}
-<div class="card">
+<div class="card" data-frame="6.2">
   <h3 style="margin-bottom:16px;">Plays</h3>
   {% if plays %}
   <div class="table-responsive">
@@ -34,7 +34,7 @@
     <thead><tr>
       <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
     </tr></thead>
-    <tbody id="playsTableBody">
+    <tbody id="playsTableBody" data-frame="6.2t">
       {% for play in plays %}
       <tr class="play-row" data-category="{{ play.category }}" data-name="{{ play.name.lower() }}">
         <td><strong>{{ play.name }}</strong></td>
@@ -73,7 +73,7 @@
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <!-- Left: Court Canvas -->
-  <div class="card" style="padding:12px;">
+  <div class="card" style="padding:12px;" data-frame="6.3">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         {% if not is_readonly %}
@@ -148,7 +148,7 @@
 
   <!-- Right: Play Details Panel -->
   <div>
-    <div class="card" style="margin-bottom:16px;">
+    <div class="card" style="margin-bottom:16px;" data-frame="6.4">
       <h4 style="margin-bottom:12px;">{% if is_readonly %}Play Details{% else %}Save Play{% endif %}</h4>
       {% if not is_readonly %}
       <form method="post" action="{{ url_for('playbook.playbook_save') }}" id="playForm">
@@ -208,7 +208,7 @@
     </div>
 
     <!-- Step list -->
-    <div class="card">
+    <div class="card" data-frame="6.5">
       <h4 style="margin-bottom:12px;">Steps <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
       <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
         <!-- Populated by JS -->

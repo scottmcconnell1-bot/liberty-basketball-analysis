@@ -16,7 +16,7 @@
 {% set active_tab = 'settings' %}
 {% include "_settings_tabs.html" %}
 
-<div class="card">
+<div class="card" data-frame="12.2">
   <h3 style="margin-bottom:12px;">Current Hardware</h3>
   <div class="stat-grid">
     <div class="stat-box">
@@ -56,7 +56,7 @@
   </div>
 </div>
 
-<form method="post" action="{{ url_for('core.settings_page') }}">
+<form method="post" action="{{ url_for('core.settings_page') }}" data-frame="12.3">
   <div class="card">
     <h3 style="margin-bottom:12px;">Feature Flags</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
@@ -87,7 +87,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" data-frame="12.4">
     <h3 style="margin-bottom:12px;">Vision Runtime</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
       <div class="form-group">
@@ -154,7 +154,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" data-frame="12.5">
     <h3 style="margin-bottom:12px;">Local AI Models</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
       <div class="form-group">
@@ -178,12 +178,12 @@
     </div>
   </div>
 
-  <div style="display:flex;justify-content:flex-end;gap:10px;">
+  <div style="display:flex;justify-content:flex-end;gap:10px;" data-frame="12.6">
     <button class="btn btn-primary" type="submit">Save Settings</button>
   </div>
 </form>
 
-<div class="card">
+<div class="card" data-frame="12.7">
   <h3 style="margin-bottom:12px;">Recommended Ollama Models</h3>
   <div style="display:grid;gap:12px;">
     {% for model in catalog.recommended_ollama_models %}
@@ -207,7 +207,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" data-frame="12.8">
   <h3 style="margin-bottom:12px;">Pull a Different Ollama Model</h3>
   <form method="post" action="{{ url_for('core.pull_ollama_model') }}">
     <div style="display:grid;grid-template-columns:2fr auto;gap:12px;align-items:end;">

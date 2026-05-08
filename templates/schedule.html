@@ -2,7 +2,7 @@
 {% block title %}Schedule – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="2.1">
   <h2>Schedule</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule') }}">Clear Filters</a>
@@ -14,7 +14,7 @@
 </div>
 
 <!-- PDF Import Team Selector Modal -->
-<div id="pdf-team-modal" class="modal-backdrop">
+<div id="pdf-team-modal" class="modal-backdrop" data-frame="2.2">
   <div class="modal" style="max-width:400px;">
     <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
     <p class="text-muted" style="margin-bottom:16px;">Which team is this schedule for?</p>
@@ -34,7 +34,7 @@
 </div>
 
 <!-- PDF Import Preview Modal -->
-<div id="pdf-import-modal" class="modal-backdrop">
+<div id="pdf-import-modal" class="modal-backdrop" data-frame="2.3">
   <div class="modal" style="max-width:700px;">
     <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
     <p class="text-muted" style="margin-bottom:16px;">Review the extracted games below. Edit any fields, then click "Import All Games".</p>
@@ -53,7 +53,7 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
-<div class="card">
+<div class="card" data-frame="2.4">
   <form method="get" action="{{ url_for('core.schedule') }}">
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
@@ -97,9 +97,9 @@
   </form>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" data-frame="2.5">
 <div class="table-responsive">
-  <table class="schedule-table">
+  <table class="schedule-table" data-frame="2.5t">
     <thead><tr>
       <th style="min-width:120px;">DATE</th>
       <th>OPPONENT</th>
@@ -204,7 +204,7 @@
 </div>
 
 <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
-  <div class="card" id="schedule-game-form">
+  <div class="card" id="schedule-game-form" data-frame="2.6">
     <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Scheduled Game{% else %}Add Scheduled Game{% endif %}</h3>
     <form method="post" action="{{ url_for('core.schedule_save_game') }}">
       <input type="hidden" name="game_id" value="{{ game_form.id }}">
@@ -311,14 +311,14 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="card" data-frame="2.7">
     <div class="page-header" style="margin-bottom:14px;">
       <h3 style="font-size:1rem;">Manage Seasons</h3>
       {% if editing_season %}
       <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
       {% endif %}
     </div>
-    <table style="margin-bottom:18px;">
+    <table data-frame="2.7t" style="margin-bottom:18px;">
       <thead><tr><th>Name</th><th>Start</th><th>End</th><th></th></tr></thead>
       <tbody>
         {% if seasons %}
@@ -341,7 +341,7 @@
       </tbody>
     </table>
 
-    <form method="post" action="{{ url_for('core.schedule_save_season') }}">
+    <form method="post" action="{{ url_for('core.schedule_save_season') }}" data-frame="2.8">
       <input type="hidden" name="season_id" value="{{ season_form.id }}">
       <div class="form-group">
         <label for="season-name">Season Name</label>

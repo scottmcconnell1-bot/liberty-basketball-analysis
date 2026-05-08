@@ -2,7 +2,7 @@
 {% block title %}Player Development – Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" data-frame="7.1">
   <h2>Player Development</h2>
   <div style="display:flex;gap:10px;align-items:center;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('player_dev.player_development_page') }}">Clear Filters</a>
@@ -18,7 +18,7 @@
 {% endif %}
 
 <!-- Filters -->
-<div class="card">
+<div class="card" data-frame="7.2">
   <form method="get" action="{{ url_for('player_dev.player_development_page') }}">
     <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
       <div class="form-group">
@@ -61,13 +61,13 @@
 </div>
 
 <!-- Clips Table -->
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" data-frame="7.3">
   <table>
     <thead><tr>
       <th>Player</th><th>Label</th><th>Category</th><th>Start</th><th>End</th>
       <th>Game</th><th>Season</th><th>Notes</th><th></th>
     </tr></thead>
-    <tbody>
+    <tbody data-frame="7.3t">
       {% if clips %}
         {% for clip in clips %}
         <tr>
@@ -95,7 +95,7 @@
 </div>
 
 <!-- Add Clip Form -->
-<div class="card" id="clip-form">
+<div class="card" id="clip-form" data-frame="7.4">
   <h3 style="margin-bottom:18px;">Add Development Clip</h3>
   <form method="post" action="{{ url_for('clips.api_clips_create') }}" id="add-clip-form">
     <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;">
