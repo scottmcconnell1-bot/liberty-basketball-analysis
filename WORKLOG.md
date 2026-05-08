@@ -113,6 +113,33 @@ NEXT STEPS
 - Phase 8+: Per coach direction
 - All Master Outline phases complete
 
+SCHEDULE TAB ENHANCEMENTS (completed 2026-05-07)
+-------------------------------------------------
+- Multi-time layout: JV / Frosh / Varsity times per game (jv_game_time, frosh_game_time, game_time columns)
+- Schedule table redesigned: DATE | OPPONENT | TIMES | Actions
+- Times column shows "JV / Frosh / Varsity", "JV / Varsity", "Varsity only", or "JV only" labels
+- Add Scheduled Game form: JV Time, Frosh Time, Varsity Time fields
+- PDF schedule import: full rewrite for column-based layout, multi-time patterns, date ranges, vs. patterns
+- Team selector on PDF upload: Boys HS, Girls HS, Jr High Boys, Jr High Girls
+- Parser uses team to auto-set gender/level defaults
+- MaxPreps CSV export: includes JV/Frosh/Varsity time columns + Team column
+- Frosh (not Sophomore) naming throughout
+- All 156 tests pass
+
+PATRIOT LOGO (completed 2026-05-07)
+------------------------------------
+- Replaced 🏀 emoji in nav bar with Liberty Charter Patriot mascot logo
+- Downloaded from school website (finalsite CDN)
+- Served from static/img/patriot-logo.jpg with 28px height, flex-aligned
+
+FEATURE PLANNED (documented in docs/FEATURE_PLAYBOOK_MESSAGING_MOBILE.md)
+------------------------------------------------------------------------
+1. Playbook — Interactive court canvas, draggable players, step animations, organize into playbooks
+2. Plays Import — PDF/image upload, auto-extract diagrams, side-by-side editor
+3. Messaging — GameChanger-style team chat, DMs, announcements, file attachments, notifications
+4. Mobile Responsive — Bottom nav, hamburger menu, card layouts, PWA support
+Implementation order: Finish schedule tab → Playbook MVP → Plays Import → Messaging → Mobile
+
 NEXT STEPS (per Master Project Outline)
 -----------------------------------------
 1. Phase 2.5 — Manual Tagging & Bookmarks MVP (added 2026-05-04 to outline)
