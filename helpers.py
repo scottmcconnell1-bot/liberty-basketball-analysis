@@ -996,25 +996,10 @@ def render_schedule_page(
         "end_date": edit_season["end_date"] if edit_season else "",
     }
 
-    # Build a map of season_id -> games for the season cards (all games, unfiltered)
-    _all_season_games = db.execute(
-        """SELECT sg.*, s.name AS season_name
-           FROM scheduled_games sg
-           JOIN seasons s ON s.id = sg.season_id
-           ORDER BY sg.game_date, sg.game_time, sg.id"""
-    ).fetchall()
-    season_games_map = {}
-    for _g in _all_season_games:
-        _sid = _g["season_id"]
-        if _sid not in season_games_map:
-            season_games_map[_sid] = []
-        season_games_map[_sid].append(_g)
-
     return render_template(
         "schedule.html",
         seasons=seasons,
         games=games,
-        season_games_map=season_games_map,
         filters=filters,
         error=error,
         message=message,

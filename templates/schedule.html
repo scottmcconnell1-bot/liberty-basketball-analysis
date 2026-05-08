@@ -79,40 +79,85 @@
 
 <div class="card" style="padding:0;overflow:hidden;">
 <div class="table-responsive">
-  <table>
+  <table class="schedule-table">
     <thead><tr>
-      <th style="min-width:80px">Season</th>
-      <th style="min-width:90px">Date</th>
-      <th style="min-width:60px">Time</th>
-      <th style="min-width:70px">Program</th>
-      <th style="min-width:80px">Level</th>
-      <th style="min-width:70px">Gender</th>
-      <th style="min-width:100px">Opponent</th>
-      <th style="min-width:60px">Loc</th>
-      <th style="min-width:70px">Status</th>
-      <th style="min-width:80px">Notes</th>
-      <th></th>
+      <th style="min-width:110px;">Date</th>
+      <th>Opponent</th>
+      <th style="min-width:90px;">Location</th>
+      <th style="min-width:80px;">Status</th>
+      <th style="min-width:70px;"></th>
     </tr></thead>
     <tbody>
       {% if games %}
         {% for game in games %}
         <tr>
-          <td>{{ game.season_name }}</td>
-          <td>{{ game.game_date }}</td>
-          <td>{{ game.game_time or "–" }}</td>
-          <td>{{ game.program_name }}</td>
-          <td>{{ game.level }}</td>
-          <td>{{ game.gender }}</td>
-          <td>{{ game.opponent_name }}</td>
-          <td><span class="badge badge-{{ game.location_type }}">{{ game.location_type }}</span></td>
+          <!-- Date column: date + time + tournament -->
           <td>
-            {% if game.status != "scheduled" %}
-            <span class="badge badge-{{ game.status }}">{{ game.status }}</span>
-            {% else %}
-            –
+            <div style="font-weight:600;">{{ game.game_date }}</div>
+            {% if game.game_time %}
+            <div style="font-size:0.78rem;color:#6b7280;">{{ game.game_time }}</div>
+            {% endif %}
+            {% if game.tournament_name %}
+            <div style="font-size:0.72rem;color:#2563eb;margin-top:2px;">🏆 {{ game.tournament_name }}</div>
+            {% endif %}
+            {% if game.level or game.gender %}
+            <div style="margin-top:3px;">
+              {% if game.level == 'varsity' %}
+              <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:0.65rem;">Varsity</span>
+              {% elif game.level == 'jv' %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:0.65rem;">JV</span>
+              {% elif game.level == 'jr_high' %}
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.65rem;">Jr High</span>
+              {% endif %}
+              {% if game.gender == 'girls' %}
+              <span class="badge" style="background:#fce7f3;color:#9d174d;font-size:0.65rem;margin-left:2px;">Girls</span>
+              {% elif game.gender == 'boys' %}
+              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:0.65rem;margin-left:2px;">Boys</span>
+              {% endif %}
+            </div>
             {% endif %}
           </td>
-          <td>{{ game.notes or "" }}</td>
+          <!-- Opponent column: name + away indicator + notes -->
+          <td>
+            <div style="font-weight:600;">
+              {% if game.location_type == 'away' %}<span style="color:#dc2626;font-size:0.8rem;margin-right:3px;">@</span>{% endif %}
+              {{ game.opponent_name }}
+            </div>
+            {% if game.program_name and game.program_name != 'Liberty' %}
+            <div style="font-size:0.78rem;color:#6b7280;">{{ game.program_name }}</div>
+            {% endif %}
+            {% if game.notes %}
+            <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ game.notes }}</div>
+            {% endif %}
+            <div style="margin-top:3px;">
+              <span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:0.65rem;">{{ game.season_name }}</span>
+            </div>
+          </td>
+          <!-- Location column -->
+          <td>
+            {% if game.location_type == 'home' %}
+            <span class="badge" style="background:#d1fae5;color:#065f46;">Home</span>
+            {% elif game.location_type == 'away' %}
+            <span class="badge" style="background:#fee2e2;color:#991b1b;">Away</span>
+            {% elif game.location_type == 'neutral' %}
+            <span class="badge" style="background:#f3f4f6;color:#4b5563;">Neutral</span>
+            {% else %}
+            <span class="badge" style="background:#f3f4f6;color:#6b7280;">{{ game.location_type }}</span>
+            {% endif %}
+          </td>
+          <!-- Status column -->
+          <td>
+            {% if game.status == 'completed' %}
+            <span class="badge badge-completed">Completed</span>
+            {% elif game.status == 'cancelled' %}
+            <span class="badge badge-cancelled">Cancelled</span>
+            {% elif game.status == 'rescheduled' %}
+            <span class="badge badge-rescheduled">Rescheduled</span>
+            {% else %}
+            <span class="badge badge-scheduled">Scheduled</span>
+            {% endif %}
+          </td>
+          <!-- Actions -->
           <td style="white-space:nowrap;">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
             <form method="post" action="{{ url_for('core.schedule_delete_game', game_id=game.id) }}" style="display:inline;">
@@ -126,7 +171,7 @@
         </tr>
         {% endfor %}
       {% else %}
-      <tr><td colspan="11" class="text-muted" style="padding:16px;">No games match the current filters.</td></tr>
+      <tr><td colspan="5" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
       {% endif %}
     </tbody>
   </table>
@@ -223,164 +268,53 @@
   <div class="card">
     <div class="page-header" style="margin-bottom:14px;">
       <h3 style="font-size:1rem;">Manage Seasons</h3>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('add-season-form').classList.toggle('hidden')">+ Add Season</button>
-        {% if editing_season %}
-        <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Add Season Form (collapsible) -->
-    <div id="add-season-form" class="hidden" style="margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
       {% if editing_season %}
-      <h4 style="margin-bottom:12px;font-size:0.95rem;">Edit Season</h4>
-      {% else %}
-      <h4 style="margin-bottom:12px;font-size:0.95rem;">Add New Season</h4>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
       {% endif %}
-      <form method="post" action="{{ url_for('core.schedule_save_season') }}">
-        <input type="hidden" name="season_id" value="{{ season_form.id }}">
-        <div class="form-group">
-          <label for="season-name">Season Name</label>
-          <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys Varsity" value="{{ season_form.name }}" required>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label for="season-start">Start Date</label>
-            <input type="date" class="form-control" id="season-start" name="start_date" value="{{ season_form.start_date }}" required>
-          </div>
-          <div class="form-group">
-            <label for="season-end">End Date</label>
-            <input type="date" class="form-control" id="season-end" name="end_date" value="{{ season_form.end_date }}" required>
-          </div>
-        </div>
-        <div class="modal-actions" style="margin-top:8px;">
-          <button class="btn btn-secondary btn-sm" type="button" onclick="document.getElementById('add-season-form').classList.add('hidden')">Cancel</button>
-          <button class="btn btn-primary btn-sm" type="submit">{% if editing_season %}Update Season{% else %}Add Season{% endif %}</button>
-        </div>
-      </form>
     </div>
-
-    <!-- Season Cards (MaxPreps style) -->
-    {% if seasons %}
-      {% for season in seasons %}
-      <div class="season-card" style="margin-bottom:24px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-        <!-- Season Header (school info style) -->
-        <div class="season-header" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:16px 20px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-            <div>
-              <div style="font-size:1.2rem;font-weight:700;">Liberty Charter Basketball</div>
-              <div style="font-size:0.85rem;opacity:0.9;margin-top:2px;">
-                <strong>{{ season.name }}</strong> · Patriots · Nampa, ID
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <a class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">✏️ Edit</a>
-              <form method="post" action="{{ url_for('core.schedule_delete_season', season_id=season.id) }}" style="display:inline;" onsubmit="return confirm('Delete this season and all its games?')">
-                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" type="submit">🗑️</button>
+    <table style="margin-bottom:18px;">
+      <thead><tr><th>Name</th><th>Start</th><th>End</th><th></th></tr></thead>
+      <tbody>
+        {% if seasons %}
+          {% for season in seasons %}
+          <tr>
+            <td>{{ season.name }}</td>
+            <td>{{ season.start_date }}</td>
+            <td>{{ season.end_date }}</td>
+            <td style="white-space:nowrap;">
+              <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('core.schedule_delete_season', season_id=season.id) }}" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
               </form>
-              <span class="badge" style="background:rgba(255,255,255,0.25);color:#fff;font-size:0.75rem;">{{ season.start_date }} → {{ season.end_date }}</span>
-            </div>
-          </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="4" class="text-muted">No seasons yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <form method="post" action="{{ url_for('core.schedule_save_season') }}">
+      <input type="hidden" name="season_id" value="{{ season_form.id }}">
+      <div class="form-group">
+        <label for="season-name">Season Name</label>
+        <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys Jr High" value="{{ season_form.name }}" required>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="season-start">Start Date</label>
+          <input type="date" class="form-control" id="season-start" name="start_date" value="{{ season_form.start_date }}" required>
         </div>
-
-        <!-- Schedule Table (MaxPreps style) -->
-        <div style="padding:12px 16px 16px;">
-          {% set ns = namespace(has_games=false) %}
-          <!-- We need to get season_games from backend; for now show all filtered games that this season -->
-          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-            <thead>
-              <tr style="border-bottom:2px solid #1e3a5f;">
-                <th style="text-align:left;padding:8px 12px;width:100px;color:#1e3a5f;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Date</th>
-                <th style="text-align:left;padding:8px 12px;color:#1e3a5f;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Opponent</th>
-                <th style="text-align:left;padding:8px 12px;width:160px;color:#1e3a5f;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set season_games = season_games_map.get(season.id, []) %}
-              {% if season_games %}
-                {% for game in season_games %}
-                {% set ns.has_games = true %}
-                <tr style="border-bottom:1px solid #f3f4f6;{% if game.status == 'completed' %}background:#f0fdf4;{% elif game.status == 'cancelled' %}background:#fef2f2;{% endif %}">
-                  <td style="padding:10px 12px;white-space:nowrap;vertical-align:top;">
-                    <div style="font-weight:600;">{{ game.game_date }}</div>
-                    {% if game.game_time %}
-                    <div style="font-size:0.75rem;color:#6b7280;">{{ game.game_time }}</div>
-                    {% endif %}
-                  </td>
-                  <td style="padding:10px 12px;vertical-align:top;">
-                    <div style="font-weight:600;">
-                      {% if game.location_type == 'away' %}
-                      <span style="color:#6b7280;font-size:0.75rem;">@</span>
-                      {% elif game.location_type == 'neutral' %}
-                      <span style="color:#6b7280;font-size:0.75rem;">vs</span>
-                      {% endif %}
-                      {{ game.opponent_name }}
-                      {% if game.level == 'varsity' %}
-                      <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:0.65rem;margin-left:4px;">V</span>
-                      {% elif game.level == 'jv' %}
-                      <span class="badge" style="background:#fef3c7;color:#92400e;font-size:0.65rem;margin-left:4px;">JV</span>
-                      {% endif %}
-                      {% if game.gender == 'girls' %}
-                      <span class="badge" style="background:#fce7f3;color:#9d174d;font-size:0.65rem;margin-left:2px;">G</span>
-                      {% endif %}
-                    </div>
-                    {% if game.program_name and game.program_name != 'Liberty' %}
-                    <div style="font-size:0.75rem;color:#6b7280;">{{ game.program_name }}</div>
-                    {% endif %}
-                  </td>
-                  <td style="padding:10px 12px;vertical-align:top;">
-                    {% if game.tournament_name %}
-                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:2px;">🏆 {{ game.tournament_name }}</div>
-                    {% endif %}
-                    <div>
-                      {% if game.status == 'completed' %}
-                      <span class="badge badge-completed" style="font-size:0.7rem;">Completed</span>
-                      {% elif game.status == 'cancelled' %}
-                      <span class="badge badge-cancelled" style="font-size:0.7rem;">Cancelled</span>
-                      {% elif game.status == 'rescheduled' %}
-                      <span class="badge badge-rescheduled" style="font-size:0.7rem;">Rescheduled</span>
-                      {% else %}
-                      <span class="badge badge-scheduled" style="font-size:0.7rem;">Scheduled</span>
-                      {% endif %}
-                      {% if game.location_type == 'home' %}
-                      <span class="badge" style="background:#d1fae5;color:#065f46;font-size:0.7rem;">Home</span>
-                      {% elif game.location_type == 'away' %}
-                      <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:0.7rem;">Away</span>
-                      {% else %}
-                      <span class="badge" style="background:#f3f4f6;color:#4b5563;font-size:0.7rem;">Neutral</span>
-                      {% endif %}
-                    </div>
-                    {% if game.notes %}
-                    <div style="font-size:0.72rem;color:#9ca3af;margin-top:2px;">{{ game.notes }}</div>
-                    {% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              {% else %}
-              <tr><td colspan="3" style="padding:20px;text-align:center;color:#9ca3af;font-size:0.85rem;">No games in this season yet.</td></tr>
-              {% endif %}
-            </tbody>
-          </table>
-
-          <!-- Legend -->
-          {% if ns.has_games %}
-          <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f3f4f6;font-size:0.72rem;color:#9ca3af;">
-            <strong style="color:#6b7280;">Legend:</strong>
-            <span style="margin-left:8px;"><span style="color:#1d4ed8;font-weight:700;">V</span> = Varsity</span>
-            <span style="margin-left:8px;"><span style="color:#92400e;font-weight:700;">JV</span> = Junior Varsity</span>
-            <span style="margin-left:8px;"><span style="color:#9d174d;font-weight:700;">G</span> = Girls</span>
-            <span style="margin-left:8px;"><strong>@</strong> = Away</span>
-          </div>
-          {% endif %}
+        <div class="form-group">
+          <label for="season-end">End Date</label>
+          <input type="date" class="form-control" id="season-end" name="end_date" value="{{ season_form.end_date }}" required>
         </div>
       </div>
-      {% endfor %}
-    {% else %}
-    <div style="padding:20px;text-align:center;color:#9ca3af;font-size:0.85rem;">
-      No seasons yet. Click "+ Add Season" to create one.
-    </div>
-    {% endif %}
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn btn-primary" type="submit">{% if editing_season %}Update Season{% else %}Add Season{% endif %}</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
@@ -389,12 +323,25 @@
 <style>
   .badge-cancelled { background: #fee2e2; color: #991b1b; }
   .badge-rescheduled { background: #fef3c7; color: #92400e; }
-  .season-card { page-break-inside: avoid; }
-  .season-header { page-break-inside: avoid; }
-  .hidden { display: none !important; }
   .badge-completed { background: #dbeafe; color: #1d4ed8; }
   .pdf-preview-table { width:100%; font-size:0.82rem; }
-  .pdf-preview-table th { padding:6px 8px; font-size:0.72rem; }
+  .schedule-table { font-size:0.875rem; }
+  .schedule-table th {
+    background:#f8fafc;
+    color:#374151;
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    padding:10px 12px;
+    border-bottom:2px solid #e5e7eb;
+  }
+  .schedule-table td {
+    padding:12px;
+    border-bottom:1px solid #f3f4f6;
+    vertical-align:top;
+  }
+  .schedule-table tr:hover { background:#fafbfc; }
+  .schedule-table tr:last-child td { border-bottom:none; }
   .pdf-preview-table td { padding:4px 8px; }
   .pdf-preview-table input, .pdf-preview-table select { padding:4px 6px; font-size:0.8rem; width:100%; }
 </style>
