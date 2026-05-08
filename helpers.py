@@ -802,6 +802,43 @@ def _ensure_migration_columns(db):
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(playlist_id, clip_id)
         );
+        CREATE TABLE IF NOT EXISTS playbooks (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            name            TEXT NOT NULL,
+            description     TEXT,
+            created_by      TEXT,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS plays (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            playbook_id     INTEGER REFERENCES playbooks(id) ON DELETE SET NULL,
+            name            TEXT NOT NULL,
+            description     TEXT,
+            category        TEXT NOT NULL DEFAULT 'offense',
+            tags            TEXT,
+            diagram_json    TEXT,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS play_steps (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            play_id         INTEGER NOT NULL REFERENCES plays(id) ON DELETE CASCADE,
+            step_number     INTEGER NOT NULL,
+            label           TEXT,
+            positions_json  TEXT,
+            movements_json  TEXT,
+            notes           TEXT,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS playbook_plays (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            playbook_id     INTEGER NOT NULL REFERENCES playbooks(id) ON DELETE CASCADE,
+            play_id         INTEGER NOT NULL REFERENCES plays(id) ON DELETE CASCADE,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(playbook_id, play_id)
+        );
         CREATE TABLE IF NOT EXISTS practice_plan_items (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             practice_id     INTEGER NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
@@ -813,6 +850,14 @@ def _ensure_migration_columns(db):
             sort_order      INTEGER NOT NULL DEFAULT 0,
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS users (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            username        TEXT NOT NULL UNIQUE,
+            email           TEXT NOT NULL UNIQUE,
+            password_hash   TEXT NOT NULL,
+            is_admin        INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
     """)
     # ── New columns on existing tables ──────────────────────

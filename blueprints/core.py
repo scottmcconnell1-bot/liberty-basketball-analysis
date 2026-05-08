@@ -1100,3 +1100,27 @@ def dashboard_page():
 @core.route("/users")
 def users_page():
     return render_template("users.html")
+
+
+@core.route("/api/users")
+def api_users_list():
+    """Return all users as JSON."""
+    db = get_db()
+    users = db.execute(
+        "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
+    ).fetchall()
+    return jsonify([dict(u) for u in users])
+
+
+@core.route("/api/users/<int:user_id>", methods=["DELETE"])
+def api_users_delete(user_id):
+    """Delete a non-admin user."""
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    if user["is_admin"]:
+        return jsonify({"error": "Cannot delete admin user"}), 403
+    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    return jsonify({"status": "deleted"})
