@@ -767,10 +767,10 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
 
     Returns a dict: {name, start_date, end_date} or None if no season detected.
 
-    Season date logic:
-      - High School (boys_hs, girls_hs): Nov(year1) → Mar(year2)  e.g. 2025-11-01 to 2026-03-31
-      - Jr High Girls (jr_girls):        Nov(year1) → Mar(year2)  same as HS
-      - Jr High Boys (jr_boys):          Jan(year2) → Feb(year2)  e.g. 2026-01-01 to 2026-02-28
+    Season date logic (based on actual Liberty Charter season dates):
+      - High School (boys_hs, girls_hs):  Nov(year1) → Mar(year2)  e.g. 2025-11-01 to 2026-03-31
+      - Jr High Girls (jr_girls):         Nov(year1) → Dec(year1)  e.g. 2025-11-01 to 2025-12-31
+      - Jr High Boys (jr_boys):           Jan(year2) → Feb(year2)  e.g. 2026-01-01 to 2026-02-28
     """
     import re, datetime
 
@@ -781,10 +781,12 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     # Try to find a season year pattern: "2025-26", "2025-2026", "2025/26", "2025 2026"
     # Also match single year like "2025" near words like "season" or "schedule"
     year_patterns = [
-        # "2025-26" or "2025-2026" or "2025/26" or "2025 2026"
-        r'(20\d{2})\s*[-/\s]\s*(?:20)?(\d{2})\b',
+        # "2025-26" or "2025-2026" or "2025/26"
+        r'(20\d{2})\s*[-/]\s*(?:20)?(\d{2})\b',
         # "2025-2026" full form
         r'(20\d{2})\s*[-/]\s*(20\d{2})',
+        # "2025 2026" space-separated
+        r'(20\d{2})\s+(20\d{2})',
     ]
 
     year1 = None
@@ -798,14 +800,17 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
             break
 
     if year1 is None:
-        # Fallback: look for any 4-digit year near "season" or "schedule"
-        for line in lines:
-            if re.search(r'season|schedule', line, re.IGNORECASE):
-                m = re.search(r'(20\d{2})', line)
-                if m:
-                    year1 = int(m.group(1))
-                    year2 = year1 + 1
-                    break
+        # Fallback: find all 4-digit years in header, take first two distinct ones
+        all_years = [int(m.group(1)) for m in re.finditer(r'(20\d{2})', header_text)]
+        distinct = []
+        for y in all_years:
+            if y not in distinct:
+                distinct.append(y)
+        if len(distinct) >= 2:
+            year1, year2 = distinct[0], distinct[1]
+        elif len(distinct) == 1:
+            year1 = distinct[0]
+            year2 = year1 + 1
 
     if year1 is None:
         return None
@@ -841,13 +846,17 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
         else:
             season_name = f"{year1}-{yr_short} Boys HS"
 
-    # Determine date range
+    # Determine date range based on actual Liberty Charter season dates
     if is_jr_boys:
-        # Jr High Boys: Jan(year2) - Feb(year2)
+        # Jr High Boys: Jan(year2) - Feb(year2)  e.g. Jan 2026 - Feb 2026
         start_date = f"{year2}-01-01"
         end_date = f"{year2}-02-28"
+    elif is_jr_girls:
+        # Jr High Girls: Nov(year1) - Dec(year1)  e.g. Nov 2025 - Dec 2025
+        start_date = f"{year1}-11-01"
+        end_date = f"{year1}-12-31"
     else:
-        # HS Boys/Girls, Jr High Girls: Nov(year1) - Mar(year2)
+        # HS Boys/Girls: Nov(year1) - Mar(year2)  e.g. Nov 2025 - Mar 2026
         start_date = f"{year1}-11-01"
         end_date = f"{year2}-03-31"
 
