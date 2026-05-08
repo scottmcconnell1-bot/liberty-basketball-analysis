@@ -136,6 +136,48 @@ class TestPlaybookDelete:
         assert row is None
 
 
+class TestPlaybookDuplicate:
+    def test_duplicate_play(self, client, db):
+        """Duplicating a play should create a copy with same steps."""
+        # Create a play with steps
+        cur = db.execute(
+            "INSERT INTO plays (name, category, description, tags) VALUES (?, ?, ?, ?)",
+            ("Original Play", "offense", "A test play", "test, zone"),
+        )
+        play_id = cur.lastrowid
+        db.execute(
+            "INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes) VALUES (?,?,?,?,?,?)",
+            (play_id, 0, "Step 1", '{"1":{"x":250,"y":420}}', '[]', "First step"),
+        )
+        db.execute(
+            "INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes) VALUES (?,?,?,?,?,?)",
+            (play_id, 1, "Step 2", '{"1":{"x":200,"y":400}}', '[]', "Second step"),
+        )
+        db.commit()
+
+        # Duplicate
+        r = client.post(f"/playbook/play/{play_id}/duplicate", follow_redirects=True)
+        assert r.status_code == 200
+
+        # Verify copy exists
+        row = db.execute("SELECT * FROM plays WHERE name = ?", ("Original Play (copy)",)).fetchone()
+        assert row is not None
+        assert row["category"] == "offense"
+        assert row["description"] == "A test play"
+        assert row["tags"] == "test, zone"
+
+        # Verify steps were copied
+        copy_id = row["id"]
+        steps = db.execute("SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (copy_id,)).fetchall()
+        assert len(steps) == 2
+        assert steps[0]["label"] == "Step 1"
+        assert steps[1]["label"] == "Step 2"
+
+    def test_duplicate_nonexistent_play(self, client):
+        r = client.post("/playbook/play/99999/duplicate", follow_redirects=True)
+        assert r.status_code == 200
+
+
 class TestPlaybookAPI:
     def test_api_get_play(self, client, db):
         cur = db.execute(
