@@ -158,7 +158,8 @@ def test_schedule_table_column_widths(client):
     resp = client.get("/schedule")
     assert resp.status_code == 200
     html = resp.data.decode("utf-8")
-    # Check that Level column has min-width
-    assert "min-width:80px" in html
-    # Check that "Loc" shorthand is used for Location
-    assert ">Loc</th>" in html or ">Loc<" in html
+    # Check that schedule table uses new 5-column layout (Date, Opponent, Location, Status, Actions)
+    assert '<th>Date</th>' in html or '>Date<' in html
+    assert '<th>Opponent</th>' in html or '>Opponent<' in html
+    assert '<th>Location</th>' in html or '>Location<' in html
+    assert '<th>Status</th>' in html or '>Status<' in html
