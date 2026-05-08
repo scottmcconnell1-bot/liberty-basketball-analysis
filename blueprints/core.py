@@ -436,6 +436,10 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
     """
     import re, datetime
 
+    # Derive defaults from the selected team (must be defined early for Jr High detection)
+    _team_gender = "girls" if "girls" in pdf_team else "boys"
+    _team_level = "jr_high" if "jr_" in pdf_team else "varsity"
+
     jv_time = None
     frosh_time = None
     varsity_time = None
@@ -467,15 +471,17 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
     date_patterns = [
         r'(\w+\s*-\s*\w+,?\s+\w+\s+\d{1,2}\s*-\s*\d{1,2})',  # Thurs-Sat, Dec 4-6
         r'(\w+\s+\d{1,2}\s*-\s*\d{1,2},?\s+\d{4})',          # Dec 4-6, 2025
-        r'(\w+\s+\d{1,2},?\s+\d{4})',                         # December 1, 2025
+        r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2},?\s+\d{4})',  # December 1, 2025
+        r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2})',  # DEC 4, December 1 (month + day, no year)
         r'(\d{1,2}/\d{1,2}/\d{2,4})',                         # 12/01/2025
+        r'(?:^|(?<=\s))(\d{1,2}/\d{1,2})(?!\d)(?!\s*:)(?!/)',  # 12/2 (no year, at word boundary)
         r'(\d{4}-\d{2}-\d{2})',                               # 2025-12-01
-        r'(\w+,?\s+\w+\s+\d{1,2})',                           # TUES, DEC 2
+        r'((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|THURS|TUES|WED|THUR|FRI|SAT|SUN),?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2})',  # TUES, DEC 2
         r'(\d{1,2}\s+\w+\s+\d{4})',                           # 1 December 2025
     ]
     date_str = None
     for pat in date_patterns:
-        m = re.search(pat, line)
+        m = re.search(pat, line, re.IGNORECASE)
         if m:
             date_str = m.group(1)
             break
@@ -492,7 +498,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
 
     # First try parsing directly
     for fmt in ['%B %d, %Y', '%b %d, %Y', '%B %d %Y', '%b %d %Y',
-                '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d',
+                '%m/%d/%Y', '%m/%d/%y', '%m/%d', '%Y-%m-%d',
                 '%B %d', '%b %d',
                 '%d %B %Y', '%d %b %Y']:
         try:
@@ -522,7 +528,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
 
     # Get remainder after date
     remainder = line[line.index(date_str) + len(date_str):].strip()
-    remainder = re.sub(r'^\s*[:\\-–—]\s*', '', remainder)
+    remainder = re.sub(r'^\s*[:\\\-–—]\s*', '', remainder)
 
     # Detect location: (H), (A), (N) or @/at prefix
     location_type = 'home'
@@ -540,21 +546,21 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
             remainder = remainder.strip()
 
     # Detect A team / B team pattern (Jr High format)
-    # Patterns: "B team 4:30 / A team 6:00" or "B 4:30/A 6:00" or "4:30 B / 6:00 A"
+    # Patterns: "B team 4:30 / A team 6:00" or "B 4:30/A 6:00" or "4:30B/6:00A" or "4:30 B / 6:00 A"
     # B team plays first (earlier time), A team plays second
-    is_jr_high = 'jr_high' == _team_level
+    is_jr_high = _team_level == 'jr_high'
     if is_jr_high and not jv_time and not varsity_time:
-        # Check for A/B team time patterns like "B 4:30 / A 6:00" or "4:30B/6:00A"
+        # Check for compact format: "4:30B/6:00A" or "4:30 B/6:00 A"
         ab_time_match = re.search(
-            r'(\d{1,2}:\d{2})\s*(?:B|b)\s*/\s*(\d{1,2}:\d{2})\s*(?:A|a)', remainder
+            r'(\d{1,2}:\d{2})\s*([Bb])\s*/\s*(\d{1,2}:\d{2})\s*([Aa])', remainder
         )
         if ab_time_match:
             jv_time = _normalize_time(ab_time_match.group(1))  # B team → jv_game_time
-            varsity_time = _normalize_time(ab_time_match.group(2))  # A team → game_time
+            varsity_time = _normalize_time(ab_time_match.group(3))  # A team → game_time
             remainder = remainder[:ab_time_match.start()] + remainder[ab_time_match.end():]
             remainder = remainder.strip()
         else:
-            # Check for "B team 4:30 / A team 6:00" format
+            # Check for "B team 4:30 / A team 6:00" or "B 4:30 / A 6:00" format
             ab_time_match2 = re.search(
                 r'[Bb]\s*(?:team)?\s*(\d{1,2}:\d{2})\s*/\s*[Aa]\s*(?:team)?\s*(\d{1,2}:\d{2})', remainder
             )
@@ -563,6 +569,16 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
                 varsity_time = _normalize_time(ab_time_match2.group(2))  # A team → game_time
                 remainder = remainder[:ab_time_match2.start()] + remainder[ab_time_match2.end():]
                 remainder = remainder.strip()
+            else:
+                # Check for "4:30 B / 6:00 A" format (time before letter)
+                ab_time_match3 = re.search(
+                    r'(\d{1,2}:\d{2})\s+[Bb]\s*/\s*(\d{1,2}:\d{2})\s+[Aa]', remainder
+                )
+                if ab_time_match3:
+                    jv_time = _normalize_time(ab_time_match3.group(1))
+                    varsity_time = _normalize_time(ab_time_match3.group(2))
+                    remainder = remainder[:ab_time_match3.start()] + remainder[ab_time_match3.end():]
+                    remainder = remainder.strip()
 
     # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
     # This handles the PDF column layout where times appear after (H)/(A)
@@ -599,13 +615,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
     # Detect tournament names and vs. pattern
     # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
     # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
-    # Detect tournament names and vs. pattern
-    # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
-    # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
     # "Girls vs Eastside" → opponent=Eastside, gender=girls
-    # Derive defaults from the selected team
-    _team_gender = "girls" if "girls" in pdf_team else "boys"
-    _team_level = "jr_high" if "jr_" in pdf_team else "varsity"
+    # _team_level and _team_gender already defined above
 
     level = _team_level  # May be overridden by vs. handler or level detection below
     gender = _team_gender  # May be overridden by vs. handler or detection below
@@ -613,23 +624,26 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
     if vs_match:
         pre_vs = vs_match.group(1).strip()
         post_vs = vs_match.group(2).strip()
-        # Check if pre_vs is a level/gender keyword
-        pre_is_keyword = bool(re.match(r'^(varsity|jv|junior varsity|boys|girls|freshman)$', pre_vs, re.IGNORECASE))
-        if pre_is_keyword:
-            remainder = post_vs
-            if re.match(r'^varsity$', pre_vs, re.IGNORECASE):
-                level = 'varsity'
-            elif re.match(r'^(jv|junior varsity)$', pre_vs, re.IGNORECASE):
-                level = 'jv'
-            elif re.match(r'^girls$', pre_vs, re.IGNORECASE):
-                gender = 'girls'
-            elif re.match(r'^boys$', pre_vs, re.IGNORECASE):
-                gender = 'boys'
-        elif len(pre_vs.split()) >= 2:
-            tournament_name = pre_vs
-            remainder = post_vs
-        else:
-            remainder = post_vs
+        # Check if pre_vs looks like a date — if so, this isn't a real vs. pattern
+        pre_is_date = bool(re.match(r'^(\w+\s+\d{1,2}|\d{1,2}/\d{1,2})$', pre_vs))
+        if not pre_is_date:
+            # Check if pre_vs is a level/gender keyword
+            pre_is_keyword = bool(re.match(r'^(varsity|jv|junior varsity|boys|girls|freshman)$', pre_vs, re.IGNORECASE))
+            if pre_is_keyword:
+                remainder = post_vs
+                if re.match(r'^varsity$', pre_vs, re.IGNORECASE):
+                    level = 'varsity'
+                elif re.match(r'^(jv|junior varsity)$', pre_vs, re.IGNORECASE):
+                    level = 'jv'
+                elif re.match(r'^girls$', pre_vs, re.IGNORECASE):
+                    gender = 'girls'
+                elif re.match(r'^boys$', pre_vs, re.IGNORECASE):
+                    gender = 'boys'
+            elif len(pre_vs.split()) >= 2:
+                tournament_name = pre_vs
+                remainder = post_vs
+            else:
+                remainder = post_vs
 
     # Detect level and gender from remainder (if not already set by vs. handler)
     if level == _team_level:
@@ -647,6 +661,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs"):
     opponent = re.sub(r'\*+', '', opponent).strip()  # Remove conference markers like *
     opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman|tbd)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\b(vs\.?|versus)\b', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'^\s*vs\.?\s*', '', opponent, flags=re.IGNORECASE).strip()  # Remove leading "vs."
+    opponent = re.sub(r'^\.\s*', '', opponent).strip()  # Remove leading orphaned period
     opponent = re.sub(r'\s+', ' ', opponent).strip()
     opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
     opponent = re.sub(r'\(H\)|\(A\)|\(N\)', '', opponent, flags=re.IGNORECASE).strip()
