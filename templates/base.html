@@ -82,6 +82,68 @@
 
     nav .spacer { flex: 1 0 auto; }
 
+    /* ── Dropdown menus ─────────────────── */
+    .nav-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-dropdown > a {
+      cursor: pointer;
+    }
+
+    .nav-dropdown > a::after {
+      content: '▾';
+      font-size: 0.65rem;
+      margin-left: 3px;
+      opacity: 0.7;
+    }
+
+    .nav-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: var(--color-primary-d);
+      border-radius: 0 0 var(--radius) var(--radius);
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 200;
+      padding: 4px 0;
+    }
+
+    .nav-dropdown .dropdown-menu a {
+      display: block;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.85);
+      border-radius: 0;
+      white-space: nowrap;
+    }
+
+    .nav-dropdown .dropdown-menu a:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    .nav-dropdown .dropdown-menu .dropdown-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+      margin: 4px 0;
+    }
+
+    .nav-dropdown:hover .dropdown-menu,
+    .nav-dropdown:focus-within .dropdown-menu {
+      display: block;
+    }
+
+    .nav-dropdown:hover > a,
+    .nav-dropdown:focus-within > a {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
     .report-link {
       background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
       color: #fff !important;
@@ -459,39 +521,61 @@
   <nav>
     <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> Liberty Basketball</a>
     <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
-    {% if features.ENABLE_SEASONS_SCHEDULE %}
-    <a href="/schedule" {% if request.endpoint == 'schedule' %}class="active"{% endif %}>Schedule</a>
+    {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
+    <div class="nav-dropdown">
+      <a href="/schedule">Teams</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_SEASONS_SCHEDULE %}
+        <a href="/schedule" {% if request.endpoint == 'schedule' %}class="active"{% endif %}>Schedule</a>
+        {% endif %}
+        {% if features.ENABLE_GAMES_SOURCES %}
+        <a href="/games" {% if request.endpoint == 'games_page' %}class="active"{% endif %}>Games</a>
+        {% endif %}
+        {% if features.ENABLE_PRACTICES %}
+        <a href="/practices" {% if request.endpoint == 'practices_page' or request.endpoint == 'practice_report_page' or request.endpoint == 'practice_summary_page' %}class="active"{% endif %}>Practices</a>
+        {% endif %}
+        {% if features.ENABLE_PRACTICE_PLAYLISTS %}
+        <a href="/practice-playlists" {% if request.endpoint == 'practice_playlists_page' %}class="active"{% endif %}>Playlists</a>
+        {% endif %}
+        {% if features.ENABLE_PLAYER_DEVELOPMENT %}
+        <a href="/player-development" {% if request.endpoint == 'player_development_page' %}class="active"{% endif %}>Player Dev</a>
+        {% endif %}
+      </div>
+    </div>
     {% endif %}
-    {% if features.ENABLE_AUTO_STATS_M1 %}
-    <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>
-    <a href="/status" {% if request.endpoint == 'status_page' %}class="active"{% endif %}>Status</a>
-    {% endif %}
-    {% if features.ENABLE_MANUAL_TAG_MVP %}
-    <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
-    {% endif %}
-    {% if features.ENABLE_GAMES_SOURCES %}
-    <a href="/games" {% if request.endpoint == 'games_page' %}class="active"{% endif %}>Games</a>
-    {% endif %}
-    {% if features.ENABLE_NFHS_MATCHING %}
-    <a href="/nfhs-matches" {% if request.endpoint == 'nfhs_matches_page' %}class="active"{% endif %}>NFHS Matches</a>
+    {% if features.ENABLE_AUTO_STATS_M1 or features.ENABLE_MANUAL_TAG_MVP %}
+    <div class="nav-dropdown">
+      <a href="/film">Film & Stats</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_MANUAL_TAG_MVP %}
+        <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
+        {% endif %}
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>
+        <a href="/status" {% if request.endpoint == 'status_page' %}class="active"{% endif %}>Status</a>
+        {% endif %}
+      </div>
+    </div>
     {% endif %}
     {% if features.ENABLE_PRACTICES %}
     <a href="/playbook" {% if request.endpoint.startswith('playbook.') %}class="active"{% endif %}>Playbook</a>
     <a href="/messages" {% if request.endpoint.startswith('messaging.') %}class="active"{% endif %}>💬 Messages</a>
-    <a href="/practices" {% if request.endpoint == 'practices_page' or request.endpoint == 'practice_report_page' or request.endpoint == 'practice_summary_page' %}class="active"{% endif %}>Practices</a>
     {% endif %}
-    {% if features.ENABLE_PLAYER_DEVELOPMENT %}
-    <a href="/player-development" {% if request.endpoint == 'player_development_page' %}class="active"{% endif %}>Player Dev</a>
-    {% endif %}
-    {% if features.ENABLE_PRACTICE_PLAYLISTS %}
-    <a href="/practice-playlists" {% if request.endpoint == 'practice_playlists_page' %}class="active"{% endif %}>Playlists</a>
-    {% endif %}
-    <a href="/settings" {% if request.endpoint in ['settings_page', 'custom_weights_guide_page'] %}class="active"{% endif %}>Settings</a>
-    <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
-    <a href="/debug" {% if request.endpoint == 'debug_page' %}class="active"{% endif %}>Debug / Issues</a>
+    <div class="nav-dropdown">
+      <a href="/settings">More</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_NFHS_MATCHING %}
+        <a href="/nfhs-matches" {% if request.endpoint == 'nfhs_matches_page' %}class="active"{% endif %}>NFHS Matches</a>
+        {% endif %}
+        <div class="dropdown-divider"></div>
+        <a href="/settings" {% if request.endpoint in ['settings_page', 'custom_weights_guide_page'] %}class="active"{% endif %}>Settings</a>
+        <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
+        <a href="/debug" {% if request.endpoint == 'debug_page' %}class="active"{% endif %}>Debug / Issues</a>
+      </div>
+    </div>
     <span class="spacer"></span>
     {% if session.get('user_id') %}
-    <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-msg-badge" style="display:none;">0</span></a>
+    <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-badge" style="display:none;">0</span></a>
     <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
     <a href="{{ url_for('users.logout') }}">Logout</a>
     {% else %}
