@@ -42,7 +42,7 @@
 
 {% block scripts %}
 <script>
-  /** Format "2026-03-02" + "19:00" → "Mar 2 - 7:00pm" */
+  /** Format "2026-03-02" + "19:00" → "Mar 2 - 7:00pm" (with time) or "Mar 2" (time=null) */
   function formatGameDate(dateStr, timeStr) {
     if (!dateStr) return 'TBD';
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -50,20 +50,16 @@
     if (parts.length < 3) return dateStr;
     const m = months[parseInt(parts[1], 10) - 1] || '';
     const d = parseInt(parts[2], 10);
-    let timePart = '';
-    if (timeStr) {
-      // Handle "19:00" or "19:00:00"
-      const tp = timeStr.split(':');
-      if (tp.length >= 2) {
-        let h = parseInt(tp[0], 10);
-        const min = tp[1].padStart(2, '0');
-        const ampm = h >= 12 ? 'pm' : 'am';
-        if (h === 0) h = 12;
-        else if (h > 12) h -= 12;
-        timePart = ` - ${h}:${min}${ampm}`;
-      }
-    }
-    return `${m} ${d}${timePart}`;
+    if (!timeStr) return `${m} ${d}`;
+    // Handle "19:00" or "19:00:00"
+    const tp = timeStr.split(':');
+    if (tp.length < 2) return `${m} ${d}`;
+    let h = parseInt(tp[0], 10);
+    const min = tp[1].padStart(2, '0');
+    const ampm = h >= 12 ? 'pm' : 'am';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    return `${m} ${d} ${h}:${min}${ampm}`;
   }
 
   async function load() {
@@ -156,7 +152,8 @@
           const loc = g.location_type || 'home';
           const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
           const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
-          return `<tr><td class="sched-date">${formatGameDate(g.game_date, g.game_time)}</td><td class="sched-opp">${g.opponent_name}</td><td><span class="loc-badge ${locClass}">${locLabel}</span></td></tr>`;
+          const shortDate = formatGameDate(g.game_date, null); // date only, no time
+          return `<tr><td class="sched-date">${shortDate}</td><td class="sched-opp">${g.opponent_name}</td><td><span class="loc-badge ${locClass}">${locLabel}</span></td></tr>`;
         }).join('');
         scheduleHtml += '</tbody></table>';
       }
