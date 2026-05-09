@@ -1477,46 +1477,72 @@ def _scrape_maxpreps_ranking(state, gender):
     Returns (ranking_int, url_str) or (None, None) if not found.
     Uses agent-browser to render the JS-heavy MaxPreps site.
     """
-    import subprocess, json, os, tempfile
+    import subprocess, re, time
 
-    # Build the MaxPreps rankings URL
-    # Pattern: https://www.maxpreps.com/{state}/rankings/basketball/{gender}/
     state_slug = state.lower().replace(" ", "-")
     gender_slug = "boys" if gender == "boys" else "girls"
-    url = f"https://www.maxpreps.com/{state_slug}/rankings/basketball/{gender_slug}/"
 
-    # Use agent-browser to fetch the rendered page
+    # MaxPreps state slugs don't always match the full state name
+    # Map known exceptions
+    state_slug_overrides = {
+        "idaho": "id",
+    }
+    state_slug = state_slug_overrides.get(state_slug, state_slug)
+
+    # MaxPreps uses a specific URL pattern with class division IDs
+    # Try the direct class-2A URL pattern first (Idaho 2A is Liberty's division)
+    # The statedivisionid UUID is specific to Idaho 2A boys/girls
+    # We navigate through the site to find the right page
+    base_url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/"
+    rankings_url = f"{base_url}class/class-2a/rankings/1/"
+
+    # Known statedivisionid values for Idaho 2A
+    # Boys 2A: b006084a-35a3-4277-b62e-8782f19ac85a
+    # Girls 2A: 17ff4bb2-1a40-4f38-a3e1-637f78af15f2
+    division_ids = {
+        ("id", "boys"): "b006084a-35a3-4277-b62e-8782f19ac85a",
+        ("id", "girls"): "17ff4bb2-1a40-4f38-a3e1-637f78af15f2",
+    }
+
+    div_id = division_ids.get((state_slug, gender_slug))
+
+    if div_id:
+        # Girls URL uses basketball/genders/ path, boys uses basketball/
+        if gender_slug == "girls":
+            url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+        else:
+            url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+    else:
+        # Fall back: navigate the site to find the rankings page
+        url = rankings_url
+
     try:
         # Navigate to the rankings page
         nav_result = subprocess.run(
             ["agent-browser", "navigate", url],
             capture_output=True, text=True, timeout=30
         )
-        import time
-        time.sleep(3)
+        time.sleep(4)
 
-        # Get the page text
-        text_result = subprocess.run(
-            ["agent-browser", "get-text"],
-            capture_output=True, text=True, timeout=20
+        # Get the accessibility tree snapshot (works with agent-browser)
+        snap_result = subprocess.run(
+            ["agent-browser", "snapshot"],
+            capture_output=True, text=True, timeout=30
         )
-        page_text = text_result.stdout
+        snapshot = snap_result.stdout
 
-        # Search for Liberty in the rankings
-        # MaxPreps rankings are typically numbered lists
-        lines = page_text.split("\n")
+        # Parse the snapshot to find Liberty's ranking
+        # The snapshot format shows cells in rows: rank number, team name, record, etc.
+        # Look for "Liberty" in a cell, then find the rank number in the same row
+        lines = snapshot.split("\n")
         for i, line in enumerate(lines):
             if "liberty" in line.lower():
-                # Look for a ranking number near this line
-                # Check previous lines for a number
-                for j in range(max(0, i - 3), i):
-                    num_match = __import__("re").match(r"^\s*(\d+)\s*$", lines[j])
+                # Look backward in the same row for a rank number
+                # Rows in snapshot are grouped; look at previous lines for a bare number
+                for j in range(max(0, i - 5), i):
+                    num_match = re.match(r'\s+- cell "(\d+)"', lines[j])
                     if num_match:
                         return int(num_match.group(1)), url
-                # Also check if the line itself contains a number
-                num_match = __import__("re").search(r"(\d+)", line)
-                if num_match:
-                    return int(num_match.group(1)), url
 
         return None, url
     except Exception:
