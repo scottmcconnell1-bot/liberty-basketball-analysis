@@ -535,7 +535,8 @@
         <a href="/practices" {% if request.endpoint == 'practices_page' or request.endpoint == 'practice_report_page' or request.endpoint == 'practice_summary_page' %}class="active"{% endif %}>Practices</a>
         {% endif %}
         {% if features.ENABLE_PRACTICE_PLAYLISTS %}
-        <a href="/practice-playlists" {% if request.endpoint == 'practice_playlists_page' %}class="active"{% endif %}>Playlists</a>
+        <div class="dropdown-divider"></div>
+        <a href="/practice-playlists" {% if request.endpoint == 'practice_playlists_page' %}class="active"{% endif %} style="padding-left:22px;font-size:0.76rem;color:rgba(255,255,255,0.7);">└ Practice Plans</a>
         {% endif %}
         {% if features.ENABLE_PLAYER_DEVELOPMENT %}
         <a href="/player-development" {% if request.endpoint == 'player_development_page' %}class="active"{% endif %}>Player Dev</a>
