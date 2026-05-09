@@ -46,3 +46,22 @@
 [2026-05-08 17:11:29 ] Commit f5a0ff7a (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
 
 [2026-05-08 21:13:21 MDT] Commit 77a77181 (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
+
+[2026-05-09 08:43 MDT] Commit af6bef32 — UI standardization + dropdown/resource bar fixes
+- Standardize UI across all pages
+- Fix dropdown menus (remove overflow hidden on nav clipping dropdowns)
+- Fix broken template (restore report drawer script, remove resource bar CSS)
+- Move resource status bar from global nav to Debug page only
+- Fix dropdown z-index so menus appear above CPU/resource bar
+- Uncommitted changes: film_analysis.db, templates/index.html
+
+[2026-05-09 14:xx MDT] Commit c8ddb20e — Dashboard team cards + MaxPreps rankings
+- Frame 1.1: 3x2 team card grid (Varsity Boys/Girls, JV Boys/Girls, Jr High Boys/Girls)
+- Each card: Overall record + Conference record (from games.is_conference)
+- Last game result with W/L color coding and score
+- Simplified upcoming schedule table: Date | Opponent | H/A/T
+- MaxPreps ranking badge on varsity cards with ↻ Update button
+- GET/POST /api/teams/rankings endpoint (scrapes MaxPreps Idaho via agent-browser)
+- Wednesday 8 AM cron job for auto ranking refresh
+- maxpreps_rankings table migration in helpers.py
+- 160 tests pass
