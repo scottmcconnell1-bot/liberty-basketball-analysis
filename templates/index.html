@@ -7,11 +7,9 @@
   <span class="text-muted" id="season-label">Loading…</span>
 </div>
 
-<div class="stat-grid" id="stat-grid" data-frame="1.1">
-  <div class="stat-box" data-frame="1.1a"><div class="label">Seasons</div><div class="value" id="s-seasons">–</div></div>
-  <div class="stat-box" data-frame="1.1b"><div class="label">Scheduled Games</div><div class="value" id="s-scheduled">–</div></div>
-  <div class="stat-box" data-frame="1.1c"><div class="label">Events Tagged</div><div class="value" id="s-events">–</div></div>
-  <div class="stat-box" data-frame="1.1d"><div class="label">Players</div><div class="value" id="s-players">–</div></div>
+<!-- ── Team Sections (1.1) ─────────────────────────────────── -->
+<div data-frame="1.1" id="team-sections">
+  <div class="team-grid" id="team-grid"></div>
 </div>
 
 <div class="card mt-4" data-frame="1.2">
@@ -47,11 +45,6 @@
   async function load() {
     const r = await fetch('/api/dashboard');
     const d = await r.json();
-    document.getElementById('s-seasons').textContent   = d.seasons   ?? 0;
-    document.getElementById('s-scheduled').textContent = d.scheduled ?? 0;
-    document.getElementById('s-events').textContent    = d.events    ?? 0;
-    document.getElementById('s-players').textContent   = d.players   ?? 0;
-
     const upcoming = d.upcoming_games ?? [];
     const ub = document.getElementById('upcoming-body');
     ub.innerHTML = upcoming.length === 0
@@ -75,7 +68,125 @@
           <td>${Math.round(e.timestamp_ms/1000)}s</td>
           <td>${e.human_verified ? '✅' : '–'}</td>
         </tr>`).join('');
+
+    // Load team sections
+    const tr = await fetch('/api/teams/schedule');
+    const teams = await tr.json();
+
+    // Load rankings
+    let rankings = {};
+    try {
+      const rr = await fetch('/api/teams/rankings');
+      const rd = await rr.json();
+      rankings = rd.rankings || {};
+    } catch(e) { /* rankings optional */ }
+
+    const grid = document.getElementById('team-grid');
+    grid.innerHTML = teams.map(t => {
+      const isVarsity = t.key === 'varsity_boys' || t.key === 'varsity_girls';
+      const rankData = rankings[t.key] || {};
+      const rankNum = rankData.ranking;
+      const rankUrl = rankData.ranking_url || '#';
+      const rankDate = rankData.scraped_at ? new Date(rankData.scraped_at).toLocaleDateString() : null;
+
+      // Record display: Overall | Conference
+      const overall = `${t.wins}-${t.losses}`;
+      const conf = (t.conf_wins + t.conf_losses) > 0 ? `${t.conf_wins}-${t.conf_losses}` : '0-0';
+
+      // Ranking badge (varsity only)
+      let rankHtml = '';
+      if (isVarsity) {
+        const rankBadge = rankNum ? `<span class="team-rank">#${rankNum}</span>` : `<span class="team-rank rank-na">—</span>`;
+        const rankDateHtml = rankDate ? `<span class="rank-date">Updated ${rankDate}</span>` : '';
+        rankHtml = `
+          <div class="team-ranking">
+            <div class="rank-row">
+              ${rankBadge}
+              <a href="${rankUrl}" target="_blank" class="rank-link" title="View on MaxPreps">ⓘ</a>
+              <button class="btn btn-sm rank-update-btn" onclick="updateRanking('${t.key}')" title="Check latest ranking">↻ Update</button>
+            </div>
+            ${rankDateHtml}
+          </div>`;
+      }
+
+      // Last game
+      let lastGameHtml = '';
+      if (t.last_game) {
+        const lg = t.last_game;
+        const resClass = lg.result === 'win' ? 'result-win' : (lg.result === 'loss' ? 'result-loss' : '');
+        const score = (lg.home_score != null && lg.away_score != null) ? ` (${lg.home_score}-${lg.away_score})` : '';
+        lastGameHtml = `<div class="last-game">Last: <span class="${resClass}">${lg.result?.toUpperCase() ?? '–'}</span> vs ${lg.opponent_name}${score}</div>`;
+      } else {
+        lastGameHtml = `<div class="last-game">No games played yet</div>`;
+      }
+
+      // Upcoming: simplified Date | Opponent | H/A
+      let scheduleHtml = '<div class="schedule-label">Upcoming</div>';
+      if (t.upcoming.length === 0) {
+        scheduleHtml += '<div class="no-games">No upcoming games</div>';
+      } else {
+        scheduleHtml += '<table class="schedule-table"><thead><tr><th>Date</th><th>Opponent</th><th></th></tr></thead><tbody>';
+        scheduleHtml += t.upcoming.map(g => {
+          const loc = g.location_type || 'home';
+          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
+          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
+          return `<tr><td class="sched-date">${g.game_date}</td><td class="sched-opp">${g.opponent_name}</td><td><span class="loc-badge ${locClass}">${locLabel}</span></td></tr>`;
+        }).join('');
+        scheduleHtml += '</tbody></table>';
+      }
+
+      return `<div class="team-card" data-frame="1.1-${t.key}">
+        <div class="team-card-top">
+          <div class="team-name">${t.label}</div>
+          ${rankHtml}
+        </div>
+        <div class="team-records">
+          <div class="record-block"><span class="record-label">Overall</span><span class="record-val">${overall}</span></div>
+          <div class="record-block"><span class="record-label">Conference</span><span class="record-val">${conf}</span></div>
+        </div>
+        ${lastGameHtml}
+        ${scheduleHtml}
+      </div>`;
+    }).join('');
+    if (window.libertyProcessFrameLabels) window.libertyProcessFrameLabels();
+
+    // Auto-refresh rankings status
+    window._rankingsLoaded = true;
   }
+
+  async function updateRanking(teamKey) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    try {
+      const fd = new FormData();
+      fd.append('state', 'Idaho');
+      const r = await fetch('/api/teams/rankings', { method: 'POST', body: fd });
+      const d = await r.json();
+      const rk = d.rankings[teamKey];
+      if (rk && rk.ranking) {
+        // Update the ranking display without full reload
+        const card = document.querySelector(`[data-frame="1.1-${teamKey}"]`);
+        if (card) {
+          const rankBadge = card.querySelector('.team-rank');
+          if (rankBadge) {
+            rankBadge.textContent = '#' + rk.ranking;
+            rankBadge.classList.remove('rank-na');
+          }
+          const rankDate = card.querySelector('.rank-date');
+          if (rankDate) rankDate.textContent = 'Updated just now';
+          const rankLink = card.querySelector('.rank-link');
+          if (rankLink && rk.ranking_url) rankLink.href = rk.ranking_url;
+        }
+      }
+    } catch(e) {
+      alert('Failed to update ranking. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '↻ Update';
+    }
+  }
+
   load();
 </script>
 {% endblock %}

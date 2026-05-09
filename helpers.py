@@ -859,6 +859,15 @@ def _ensure_migration_columns(db):
             is_admin        INTEGER NOT NULL DEFAULT 0,
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS maxpreps_rankings (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_key        TEXT NOT NULL,
+            state           TEXT NOT NULL DEFAULT 'Idaho',
+            ranking         INTEGER,
+            ranking_url     TEXT,
+            scraped_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(team_key, state)
+        );
     """)
     # ── New columns on existing tables ──────────────────────
     col_migrations = [

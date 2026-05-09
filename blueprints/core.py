@@ -1390,6 +1390,172 @@ def api_dashboard():
     })
 
 
+TEAM_SECTIONS = [
+    {"key": "varsity_boys",  "label": "Varsity Boys",  "team": "boys_hs",  "level": "varsity"},
+    {"key": "varsity_girls", "label": "Varsity Girls", "team": "girls_hs", "level": "varsity"},
+    {"key": "jv_boys",        "label": "JV Boys",        "team": "boys_hs",  "level": "jv"},
+    {"key": "jv_girls",       "label": "JV Girls",       "team": "girls_hs", "level": "jv"},
+    {"key": "jr_high_boys",   "label": "Jr High Boys",   "team": "jr_boys",  "level": None},
+    {"key": "jr_high_girls",  "label": "Jr High Girls",  "team": "jr_girls", "level": None},
+]
+
+
+@core.route("/api/teams/schedule")
+def api_teams_schedule():
+    db = get_db()
+    result = []
+    for sec in TEAM_SECTIONS:
+        # Build WHERE clause for team + optional level
+        where = "WHERE sg.team = ?"
+        params = [sec["team"]]
+        if sec["level"]:
+            where += " AND sg.level = ?"
+            params.append(sec["level"])
+
+        # Overall record: count wins/losses from completed games
+        record_rows = db.execute(
+            f"""SELECT g.result, COUNT(*) as cnt
+                FROM games g
+                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+                {where} AND g.result IS NOT NULL AND g.result != ''
+                GROUP BY g.result""",
+            params,
+        ).fetchall()
+        wins = sum(r["cnt"] for r in record_rows if r["result"] == "win")
+        losses = sum(r["cnt"] for r in record_rows if r["result"] == "loss")
+
+        # Conference record: only is_conference=1
+        conf_record_rows = db.execute(
+            f"""SELECT g.result, COUNT(*) as cnt
+                FROM games g
+                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+                {where} AND g.is_conference = 1 AND g.result IS NOT NULL AND g.result != ''
+                GROUP BY g.result""",
+            params,
+        ).fetchall()
+        conf_wins = sum(r["cnt"] for r in conf_record_rows if r["result"] == "win")
+        conf_losses = sum(r["cnt"] for r in conf_record_rows if r["result"] == "loss")
+
+        # Upcoming schedule (next 5 games)
+        upcoming = db.execute(
+            f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
+                       sg.location_type, sg.status, sg.tournament_name
+                FROM scheduled_games sg
+                {where} AND sg.game_date >= date('now') AND sg.status != 'cancelled'
+                ORDER BY sg.game_date, sg.game_time
+                LIMIT 5""",
+            params,
+        ).fetchall()
+
+        # Last game played (most recent completed)
+        last_game = db.execute(
+            f"""SELECT sg.game_date, sg.opponent_name, sg.location_type,
+                       g.home_score, g.away_score, g.result
+                FROM games g
+                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+                {where} AND g.result IS NOT NULL AND g.result != ''
+                ORDER BY sg.game_date DESC
+                LIMIT 1""",
+            params,
+        ).fetchone()
+
+        result.append({
+            "key": sec["key"],
+            "label": sec["label"],
+            "wins": wins,
+            "losses": losses,
+            "conf_wins": conf_wins,
+            "conf_losses": conf_losses,
+            "upcoming": [dict(r) for r in upcoming],
+            "last_game": dict(last_game) if last_game else None,
+        })
+    return jsonify(result)
+
+
+def _scrape_maxpreps_ranking(state, gender):
+    """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
+    Returns (ranking_int, url_str) or (None, None) if not found.
+    Uses agent-browser to render the JS-heavy MaxPreps site.
+    """
+    import subprocess, json, os, tempfile
+
+    # Build the MaxPreps rankings URL
+    # Pattern: https://www.maxpreps.com/{state}/rankings/basketball/{gender}/
+    state_slug = state.lower().replace(" ", "-")
+    gender_slug = "boys" if gender == "boys" else "girls"
+    url = f"https://www.maxpreps.com/{state_slug}/rankings/basketball/{gender_slug}/"
+
+    # Use agent-browser to fetch the rendered page
+    try:
+        # Navigate to the rankings page
+        nav_result = subprocess.run(
+            ["agent-browser", "navigate", url],
+            capture_output=True, text=True, timeout=30
+        )
+        import time
+        time.sleep(3)
+
+        # Get the page text
+        text_result = subprocess.run(
+            ["agent-browser", "get-text"],
+            capture_output=True, text=True, timeout=20
+        )
+        page_text = text_result.stdout
+
+        # Search for Liberty in the rankings
+        # MaxPreps rankings are typically numbered lists
+        lines = page_text.split("\n")
+        for i, line in enumerate(lines):
+            if "liberty" in line.lower():
+                # Look for a ranking number near this line
+                # Check previous lines for a number
+                for j in range(max(0, i - 3), i):
+                    num_match = __import__("re").match(r"^\s*(\d+)\s*$", lines[j])
+                    if num_match:
+                        return int(num_match.group(1)), url
+                # Also check if the line itself contains a number
+                num_match = __import__("re").search(r"(\d+)", line)
+                if num_match:
+                    return int(num_match.group(1)), url
+
+        return None, url
+    except Exception:
+        return None, url
+
+
+@core.route("/api/teams/rankings", methods=["GET", "POST"])
+def api_teams_rankings():
+    """GET: Return cached MaxPreps rankings for varsity teams.
+    POST: Trigger a fresh scrape of MaxPreps and update the cache.
+    Optional query param: state (default: Idaho)
+    """
+    db = get_db()
+    state = request.args.get("state", "Idaho") if request.method == "GET" else request.form.get("state", "Idaho")
+
+    if request.method == "POST":
+        # Scrape fresh rankings for both varsity teams
+        for team_key, gender in [("varsity_boys", "boys"), ("varsity_girls", "girls")]:
+            ranking, url = _scrape_maxpreps_ranking(state, gender)
+            db.execute(
+                """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
+                   VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                   ON CONFLICT(team_key, state) DO UPDATE SET
+                     ranking = excluded.ranking,
+                     ranking_url = excluded.ranking_url,
+                     scraped_at = excluded.scraped_at""",
+                (team_key, state, ranking, url),
+            )
+        db.commit()
+
+    # Return cached rankings
+    rows = db.execute(
+        "SELECT team_key, state, ranking, ranking_url, scraped_at FROM maxpreps_rankings WHERE state = ?",
+        (state,),
+    ).fetchall()
+    rankings = {r["team_key"]: dict(r) for r in rows}
+    return jsonify({"state": state, "rankings": rankings})
+
+
 @core.route("/api/resource-status")
 def api_resource_status():
     return jsonify(build_resource_status())

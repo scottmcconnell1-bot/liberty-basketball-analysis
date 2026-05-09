@@ -260,6 +260,40 @@
     .stat-box .label { font-size: 0.78rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
     .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--color-primary); overflow-wrap: break-word; }
 
+    /* ── Team Dashboard ──────────────────── */
+    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .team-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; }
+    .team-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .team-name { font-size: 0.95rem; font-weight: 700; }
+    .team-records { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .record-block { display: flex; flex-direction: column; align-items: center; }
+    .record-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); }
+    .record-val { font-size: 1.15rem; font-weight: 700; color: var(--color-primary); }
+    .last-game { font-size: 0.78rem; color: var(--color-muted); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .last-game .result-win { color: #166534; font-weight: 600; }
+    .last-game .result-loss { color: #991b1b; font-weight: 600; }
+    .team-ranking { text-align: right; }
+    .rank-row { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .team-rank { font-size: 1.1rem; font-weight: 700; color: #b45309; }
+    .team-rank.rank-na { color: var(--color-muted); font-size: 0.9rem; }
+    .rank-link { font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
+    .rank-link:hover { color: var(--color-primary); }
+    .rank-date { font-size: 0.65rem; color: var(--color-muted); margin-top: 2px; }
+    .rank-update-btn { font-size: 0.65rem; padding: 2px 6px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; color: var(--color-muted); }
+    .rank-update-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .rank-update-btn:disabled { opacity: 0.5; cursor: wait; }
+    .schedule-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 6px; }
+    .schedule-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .schedule-table th { text-align: left; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); padding: 2px 4px; border-bottom: 1px solid var(--color-border); }
+    .schedule-table td { padding: 4px 4px; border-bottom: 1px solid var(--color-border); }
+    .schedule-table .sched-date { font-weight: 600; white-space: nowrap; width: 70px; }
+    .schedule-table .sched-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .loc-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; min-width: 18px; text-align: center; }
+    .loc-home { background: #dcfce7; color: #166534; }
+    .loc-away { background: #dbeafe; color: #1e40af; }
+    .loc-tournament { background: #fef9c3; color: #854d0e; }
+    .no-games { font-size: 0.8rem; color: var(--color-muted); padding: 4px 0; }
+
     /* ── Badge ──────────────────────────── */
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; }
     .badge-home { background: #dcfce7; color: #166534; }
