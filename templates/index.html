@@ -96,8 +96,8 @@
       // Ranking badge (varsity only)
       let rankHtml = '';
       if (isVarsity) {
-        const rankBadge = rankNum ? `<span class="team-rank">#${rankNum}</span>` : `<span class="team-rank rank-na">—</span>`;
-        const rankDateHtml = rankDate ? `<span class="rank-date">Updated ${rankDate}</span>` : '';
+        const rankBadge = rankNum ? `<span class="team-rank">${rankNum}</span>` : `<span class="team-rank rank-na">Not Ranked</span>`;
+        const rankDateHtml = rankDate ? `<span class="rank-date">Updated ${rankDate}</span>` : '<span class="rank-date">Never updated</span>';
         rankHtml = `
           <div class="team-ranking">
             <div class="rank-row">
@@ -107,6 +107,9 @@
             </div>
             ${rankDateHtml}
           </div>`;
+      } else {
+        // Non-varsity: empty placeholder to keep card heights consistent
+        rankHtml = `<div class="team-ranking team-ranking-empty"></div>`;
       }
 
       // Last game
@@ -155,9 +158,8 @@
   }
 
   async function updateRanking(teamKey) {
-    const btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳';
+    const btn = document.querySelector(`[data-frame="1.1-${teamKey}"] .rank-update-btn`);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
     try {
       const fd = new FormData();
       fd.append('state', 'Idaho');
