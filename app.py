@@ -36,7 +36,10 @@ from blueprints.player_dev import player_dev
 from blueprints.ai import ai_bp
 from blueprints.playbook import playbook_bp
 from blueprints.messaging import messaging_bp
+from blueprints.users import users_bp, _current_user
 
+app.register_blueprint(messaging_bp)
+app.register_blueprint(users_bp)
 app.register_blueprint(core)
 app.register_blueprint(games_bp)
 app.register_blueprint(clips_bp)
@@ -45,7 +48,6 @@ app.register_blueprint(practice)
 app.register_blueprint(player_dev)
 app.register_blueprint(ai_bp)
 app.register_blueprint(playbook_bp)
-app.register_blueprint(messaging_bp)
 
 # ── Template Context Processors ──────────────────────────────
 from helpers import get_runtime_settings

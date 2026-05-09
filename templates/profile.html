@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Profile — Liberty Basketball{% endblock %}
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+  <div class="page-header">
+    <h2>My Profile</h2>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3 style="margin-bottom:16px;">Account Info</h3>
+    <form method="post" action="{{ url_for('users.profile_edit') }}">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+        {% if user.avatar_url %}
+        <img src="{{ user.avatar_url }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+        {% else %}
+        <div style="width:64px;height:64px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:600;color:#1d4ed8;">{{ user.display_name[0] }}</div>
+        {% endif %}
+        <div>
+          <div style="font-weight:600;font-size:1.1rem;">{{ user.display_name }}</div>
+          <div class="text-muted" style="font-size:0.85rem;">{{ user.email }} · {{ user.role|capitalize }}</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="display_name">Display Name</label>
+        <input class="form-control" type="text" id="display_name" name="display_name" value="{{ user.display_name }}">
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input class="form-control" type="tel" id="phone" name="phone" value="{{ user.phone or '' }}" placeholder="+1 (555) 000-0000">
+      </div>
+      <div class="form-group">
+        <label for="avatar_url">Avatar URL</label>
+        <input class="form-control" type="url" id="avatar_url" name="avatar_url" value="{{ user.avatar_url or '' }}" placeholder="https://...">
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:16px;">Quick Links</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <a href="{{ url_for('users.settings_notifications') }}" class="btn btn-secondary" style="text-align:left;">🔔 Notification Preferences</a>
+      <a href="{{ url_for('messaging.messages') }}" class="btn btn-secondary" style="text-align:left;">💬 My Messages</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

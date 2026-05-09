@@ -490,6 +490,14 @@
     <a href="/users" {% if request.endpoint == 'users_page' %}class="active"{% endif %}>Users</a>
     <a href="/debug" {% if request.endpoint == 'debug_page' %}class="active"{% endif %}>Debug / Issues</a>
     <span class="spacer"></span>
+    {% if session.get('user_id') %}
+    <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-msg-badge" style="display:none;">0</span></a>
+    <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
+    <a href="{{ url_for('users.logout') }}">Logout</a>
+    {% else %}
+    <a href="{{ url_for('users.login') }}">Sign In</a>
+    <a href="{{ url_for('users.register') }}">Register</a>
+    {% endif %}
     <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
   </nav>
   <div class="resource-status-bar" id="resource-status-bar">
@@ -752,6 +760,33 @@
 
     refreshResourceStatus();
     setInterval(refreshResourceStatus, 2000);
+  </script>
+
+  {# — Notification polling (logged-in users) — #}
+  <script>
+  (function() {
+    var userId = {{ session.get('user_id') or 'null' }};
+    if (!userId) return;
+
+    function pollNotifications() {
+      fetch('/api/notifications')
+        .then(function(r) { return r.json(); })
+        .then(function(notifs) {
+          var badge = document.getElementById('nav-msg-badge');
+          if (!badge) return;
+          var unread = notifs.length;
+          if (unread > 0) {
+            badge.textContent = unread > 9 ? '9+' : unread;
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        })
+        .catch(function() {});
+    }
+    pollNotifications();
+    setInterval(pollNotifications, 30000);
+  })();
   </script>
 </body>
 </html>
