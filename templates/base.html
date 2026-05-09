@@ -261,8 +261,8 @@
     .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--color-primary); overflow-wrap: break-word; }
 
     /* ── Team Dashboard ──────────────────── */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .team-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; }
+    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 16px; }
+    .team-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; }
     .team-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
     .team-name { font-size: 0.95rem; font-weight: 700; }
     .team-records { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
@@ -272,7 +272,8 @@
     .last-game { font-size: 0.78rem; color: var(--color-muted); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
     .last-game .result-win { color: #166534; font-weight: 600; }
     .last-game .result-loss { color: #991b1b; font-weight: 600; }
-    .team-ranking { text-align: right; }
+    .team-ranking { text-align: right; min-height: 48px; }
+    .team-ranking-empty { min-height: 48px; }
     .rank-row { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
     .team-rank { font-size: 1.1rem; font-weight: 700; color: #b45309; }
     .team-rank.rank-na { color: var(--color-muted); font-size: 0.9rem; }
@@ -286,7 +287,7 @@
     .schedule-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     .schedule-table th { text-align: left; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); padding: 2px 4px; border-bottom: 1px solid var(--color-border); }
     .schedule-table td { padding: 4px 4px; border-bottom: 1px solid var(--color-border); }
-    .schedule-table .sched-date { font-weight: 600; white-space: nowrap; width: 70px; }
+    .schedule-table .sched-date { font-weight: 600; white-space: nowrap; width: 90px; }
     .schedule-table .sched-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .loc-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; min-width: 18px; text-align: center; }
     .loc-home { background: #dcfce7; color: #166534; }
