@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS issue_reports (
     completed_at TIMESTAMP
 );
 
--- — Player Development (Phase 7) ———————————————————————
+-- ── Player Development (Phase 7) ──────────────────────────
 
 CREATE TABLE IF NOT EXISTS player_development_clips (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -252,6 +252,8 @@ CREATE TABLE IF NOT EXISTS practice_plan_items (
     title           TEXT NOT NULL,
     description     TEXT,
     duration_min    INTEGER,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -290,12 +292,12 @@ CREATE TABLE IF NOT EXISTS play_steps (
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ── Messaging ────────────────────────────────────────────────
+-- ── Messaging ─────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS conversations (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     title           TEXT,
-    type            TEXT NOT NULL DEFAULT 'direct',  -- direct, group, announcement
+    type            TEXT NOT NULL DEFAULT 'direct',
     created_by      TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -304,7 +306,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS conversation_members (
     conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_id         TEXT NOT NULL,
-    role            TEXT NOT NULL DEFAULT 'member',  -- owner, admin, member
+    role            TEXT NOT NULL DEFAULT 'member',
     last_read_at    TIMESTAMP,
     joined_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (conversation_id, user_id)
@@ -324,4 +326,64 @@ CREATE TABLE IF NOT EXISTS message_read_receipts (
     user_id         TEXT NOT NULL,
     read_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (message_id, user_id)
+);
+
+-- ── User Accounts ─────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS users (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    email           TEXT UNIQUE NOT NULL,
+    password_hash   TEXT NOT NULL,
+    display_name    TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'player',
+    avatar_url      TEXT,
+    phone           TEXT,
+    is_active       INTEGER NOT NULL DEFAULT 1,
+    email_verified  INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at   TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token   TEXT UNIQUE NOT NULL,
+    ip_address      TEXT,
+    user_agent      TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at      TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_notification_prefs (
+    user_id                 INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    notify_email_messages   INTEGER NOT NULL DEFAULT 1,
+    notify_email_schedule   INTEGER NOT NULL DEFAULT 1,
+    notify_push_messages    INTEGER NOT NULL DEFAULT 1,
+    notify_push_schedule    INTEGER NOT NULL DEFAULT 1,
+    notify_sms_game_reminder INTEGER NOT NULL DEFAULT 0,
+    quiet_hours_start       TEXT,
+    quiet_hours_end         TEXT,
+    updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint        TEXT NOT NULL,
+    p256dh          TEXT NOT NULL,
+    auth_key        TEXT NOT NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, endpoint)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type            TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    body            TEXT,
+    link            TEXT,
+    is_read         INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
