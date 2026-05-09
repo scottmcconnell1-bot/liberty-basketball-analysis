@@ -80,3 +80,9 @@ if __name__ == "__main__":
         from helpers import ensure_db
         ensure_db()
     app.run(host="0.0.0.0", port=8081, debug=True)
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Serve service worker with correct MIME type."""
+    return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}

@@ -847,6 +847,63 @@
     setInterval(refreshResourceStatus, 2000);
   </script>
 
+  {# — Service Worker + Push Subscription — #}
+  <script>
+  (function() {
+    var userId = {{ session.get('user_id') or 'null' }};
+    if (!userId) return;
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    }
+
+    // Subscribe to push notifications
+    function subscribePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      navigator.serviceWorker.ready.then(function(reg) {
+        reg.pushManager.getSubscription().then(function(sub) {
+          if (sub) return; // already subscribed
+          // Get VAPID public key from server
+          fetch('/api/push/vapid-public-key')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.key) return;
+              return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(data.key),
+              });
+            })
+            .then(function(sub) {
+              return fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(sub.toJSON()),
+              });
+            })
+            .catch(function() {});
+        });
+      });
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      var rawData = window.atob(base64);
+      var outputArray = new Uint8Array(rawData.length);
+      for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Auto-subscribe on load (browser will prompt permission)
+    if (Notification.permission === 'granted') {
+      subscribePush();
+    }
+  })();
+  </script>
+
   {# — Notification polling (logged-in users) — #}
   <script>
   (function() {

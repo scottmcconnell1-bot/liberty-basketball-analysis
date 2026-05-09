@@ -117,6 +117,14 @@ def messages_api_send():
     )
     db.commit()
 
+    # Send notifications to conversation members
+    try:
+        from services.notifications import notify_message_received
+        notify_message_received(db, cur.lastrowid, conversation_id, sender_id, body)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Notification error: {e}")
+
     return jsonify({
         "id": cur.lastrowid,
         "conversation_id": conversation_id,

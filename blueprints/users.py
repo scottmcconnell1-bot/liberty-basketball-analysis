@@ -322,3 +322,23 @@ def api_push_unsubscribe():
     db.execute("DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?", (user["id"], endpoint))
     db.commit()
     return jsonify({"ok": True})
+
+
+@users_bp.route("/api/push/vapid-public-key")
+@login_required
+def api_push_vapid_public_key():
+    """Return the VAPID public key for push subscription."""
+    from flask import current_app
+    key = current_app.config.get("VAPID_PUBLIC_KEY", "")
+    # Convert PEM to raw base64url if needed
+    if key.startswith("-----"):
+        import base64
+        lines = key.strip().split("\n")
+        # Extract the base64 content between headers
+        b64 = "".join(l.strip() for l in lines if not l.startswith("-----"))
+        # DER -> raw 65-byte key (skip DER header)
+        der = base64.b64decode(b64)
+        # P-256 public key in DER: 26-byte header + 65 bytes raw key
+        raw = der[-65:]
+        key = base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+    return jsonify({"key": key})
