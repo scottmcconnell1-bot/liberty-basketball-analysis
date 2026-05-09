@@ -2,6 +2,18 @@
 {% block title %}Debug / Issues – Liberty Basketball{% endblock %}
 
 {% block content %}
+
+{# — Server Resource Monitor (admin-only) — #}
+<div class="resource-status-bar" id="resource-status-bar" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 20px;background:#0f172a;color:#e2e8f0;font-size:0.82rem;border-bottom:1px solid rgba(255,255,255,0.08);margin:-32px -20px 24px -20px;">
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>App CPU</strong> <span data-resource="cpu-process">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>RAM</strong> <span data-resource="memory-system">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>App RAM</strong> <span data-resource="memory-process">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>Power</strong> <span data-resource="power-live">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>GPU</strong> <span data-resource="gpu-util">--</span></span>
+  <span class="resource-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);white-space:nowrap;"><strong>GPU RAM</strong> <span data-resource="gpu-memory">--</span></span>
+</div>
+
 <div class="page-header">
   <div>
     <h2>Debug / Issues</h2>
@@ -156,4 +168,58 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  function setResourceValue(key, value) {
+    var el = document.querySelector('[data-resource="' + key + '"]');
+    if (el) el.textContent = value;
+  }
+  function formatPercent(v) { return v == null ? '--' : Number(v).toFixed(0) + '%'; }
+  function formatMb(v) { return v == null ? '--' : Number(v).toFixed(0) + ' MB'; }
+  function formatWatts(v) { return v == null ? null : Number(v).toFixed(1) + ' W'; }
+  function formatPowerSummary(p) {
+    if (!p) return '--';
+    var parts = [];
+    if (p.cpu_watts != null) parts.push('CPU ' + formatWatts(p.cpu_watts));
+    if (p.gpu_watts != null) parts.push('GPU ' + formatWatts(p.gpu_watts));
+    if (p.total_watts != null && parts.length > 1) parts.push('Total ' + formatWatts(p.total_watts));
+    return parts.length ? parts.join(' \u00b7 ') : '--';
+  }
+  function escapeHtml(v) {
+    return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function renderGpuProcesses(processes) {
+    var el = document.getElementById('gpu-process-details');
+    if (!el) return;
+    if (!processes || !processes.length) { el.textContent = 'GPU processes: none detected'; return; }
+    el.innerHTML = processes.map(function(p) {
+      return '<span class="resource-pill"><strong>' + escapeHtml((p.name || 'PID ' + p.pid) + (p.is_self_project ? '(self)' : '')) + '</strong> GPU ' + formatMb(p.gpu_memory_mb) + ' \u00b7 CPU ' + formatPercent(p.cpu_percent) + ' \u00b7 RAM ' + formatMb(p.memory_mb) + '</span>';
+    }).join('');
+  }
+  function refreshResourceStatus() {
+    fetch('/api/resource-status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        setResourceValue('cpu-system', formatPercent(data.cpu && data.cpu.system_percent));
+        setResourceValue('cpu-process', formatPercent(data.application && data.application.cpu_percent || data.cpu && data.cpu.process_percent));
+        setResourceValue('memory-system', data.memory && data.memory.used_gb == null ? '--' : data.memory.used_gb + '/' + data.memory.total_gb + ' GB (' + formatPercent(data.memory.system_percent) + ')');
+        setResourceValue('memory-process', data.application && data.application.memory_mb == null ? '--' : formatMb(data.application.memory_mb));
+        setResourceValue('power-live', formatPowerSummary(data.power));
+        setResourceValue('gpu-util', data.gpu && data.gpu.available ? data.gpu.name + ' ' + formatPercent(data.gpu.utilization_percent) : 'Unavailable');
+        setResourceValue('gpu-memory', data.gpu && data.gpu.available ? Number(data.gpu.memory_used_mb).toFixed(0) + '/' + Number(data.gpu.memory_total_mb).toFixed(0) + ' MB' : 'Unavailable');
+        renderGpuProcesses(data.gpu && data.gpu.processes);
+      })
+      .catch(function() {
+        setResourceValue('power-live', '--');
+        setResourceValue('gpu-util', 'Unavailable');
+        renderGpuProcesses([]);
+      });
+  }
+  refreshResourceStatus();
+  setInterval(refreshResourceStatus, 2000);
+})();
+</script>
 {% endblock %}
