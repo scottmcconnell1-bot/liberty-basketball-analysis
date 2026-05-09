@@ -510,11 +510,36 @@ function renderPdfPreview() {
 
 function renderPdfSeasonInfo() {
   const el = document.getElementById('pdf-season-info');
-  if (!pdfDetectedSeason) {
-    el.innerHTML = '<div class="alert alert-warning" style="margin:0;padding:8px 12px;font-size:0.85rem;">⚠️ Could not detect season from PDF. Games will be imported into the most recent season.</div>';
-    return;
-  }
-  el.innerHTML = '<div class="alert" style="margin:0;padding:8px 12px;font-size:0.85rem;background:#ecfdf5;color:#065f46;border:1px solid #d1fae5;">📅 <strong>Detected Season:</strong> ' + pdfDetectedSeason.name + ' <span style="color:#6b7280;">(' + pdfDetectedSeason.start_date + ' → ' + pdfDetectedSeason.end_date + ')</span></div>';
+  const detected = pdfDetectedSeason;
+  // Default dates: if detected use those, else guess from current date
+  let startDate = detected ? detected.start_date : '';
+  let endDate = detected ? detected.end_date : '';
+  let seasonName = detected ? detected.name : '';
+
+  el.innerHTML = `
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:4px;">
+      <div style="font-weight:600;color:#0369a1;margin-bottom:10px;font-size:0.9rem;">📅 Confirm Season for Imported Games</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Name</label>
+          <input type="text" id="pdf-season-name" value="${seasonName}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Team</label>
+          <input type="text" id="pdf-team-display" value="${pdfSelectedTeam}" disabled style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:#f9fafb;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Start Date</label>
+          <input type="date" id="pdf-season-start" value="${startDate}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season End Date</label>
+          <input type="date" id="pdf-season-end" value="${endDate}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:#9ca3af;">Detected: ${detected ? detected.name + ' (' + detected.start_date + ' → ' + detected.end_date + ')' : 'none — please set manually'}</div>
+    </div>
+  `;
 }
 
 function closePdfImportModal() {
@@ -527,10 +552,32 @@ function submitPdfImport() {
   const btn = document.getElementById('pdf-import-btn');
   btn.disabled = true;
   btn.textContent = 'Importing…';
+
+  // Read user-confirmed season info from the form
+  const seasonName = document.getElementById('pdf-season-name').value.trim();
+  const seasonStart = document.getElementById('pdf-season-start').value;
+  const seasonEnd = document.getElementById('pdf-season-end').value;
+
+  if (!seasonName || !seasonStart || !seasonEnd) {
+    alert('Please fill in season name, start date, and end date.');
+    btn.disabled = false;
+    btn.textContent = 'Import All Games';
+    return;
+  }
+
+  const confirmedSeason = {
+    name: seasonName,
+    start_date: seasonStart,
+    end_date: seasonEnd,
+  };
+
+  // Extract raw date strings for server-side re-parsing with confirmed dates
+  const rawDates = pdfExtractedGames.map(g => g.raw_date || '');
+
   fetch('/api/schedule/import-pdf/confirm', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: pdfDetectedSeason}),
+    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: confirmedSeason, raw_dates: rawDates}),
   })
   .then(r => r.json())
   .then(data => {

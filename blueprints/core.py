@@ -698,6 +698,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
 
     return {
         "game_date": game_date,
+        "raw_date": date_str or "",
         "game_time": varsity_time or "",
         "jv_game_time": jv_time or "",
         "frosh_game_time": frosh_time or "",
@@ -718,17 +719,42 @@ def schedule_import_pdf_confirm():
     data = request.get_json(force=True)
     games = data.get("games", [])
     pdf_team = (data.get("team") or "boys_hs").strip()
-    season_info = data.get("season")  # detected from PDF header
+    season_info = data.get("season")  # user-confirmed season info
+    raw_dates = data.get("raw_dates", [])  # raw date strings for re-parsing
     if not games:
         return {"error": "No games to import"}, 400
     db = get_db()
     imported = 0
     errors = []
-    # Get or create the correct season based on PDF header detection
+    # Get or create the correct season based on user-confirmed info
     season_id = _get_or_create_season_for_pdf(db, season_info)
+
+    # Build month_year_map from confirmed season dates for re-parsing
+    month_year_map = {}
+    if season_info and season_info.get("start_date") and season_info.get("end_date"):
+        import datetime as _dt
+        s_start = _dt.date.fromisoformat(season_info["start_date"])
+        s_end = _dt.date.fromisoformat(season_info["end_date"])
+        d = s_start
+        while d <= s_end:
+            month_year_map[d.month] = d.year
+            if d.month == 12:
+                d = _dt.date(d.year + 1, 1, 1)
+            else:
+                d = _dt.date(d.year, d.month + 1, 1)
+
     for i, g in enumerate(games):
         game_date = (g.get("game_date") or "").strip()
         opponent = (g.get("opponent_name") or "").strip()
+
+        # Re-parse date from raw string if available and month_year_map exists
+        if raw_dates and month_year_map and i < len(raw_dates):
+            raw = raw_dates[i]
+            if raw:
+                parsed_date = _reparse_date_with_map(raw, month_year_map)
+                if parsed_date:
+                    game_date = parsed_date
+
         if not game_date or not opponent:
             errors.append(f"Row {i+1}: date and opponent required")
             continue
@@ -763,6 +789,33 @@ def schedule_import_pdf_confirm():
     if errors:
         return {"imported": imported, "errors": errors}, 200
     return {"imported": imported, "message": f"Imported {imported} games"}
+
+
+def _reparse_date_with_map(date_str, month_year_map):
+    """Re-parse a date string (e.g. 'DEC 2', '11/4', '1/5') using a month→year map.
+    Returns YYYY-MM-DD string or None."""
+    import re, datetime
+    if not date_str or not month_year_map:
+        return None
+    # Already has a 4-digit year — return as-is
+    if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+        return date_str
+    # Try various formats
+    cleaned = date_str.strip()
+    # Strip day-of-week prefix
+    cleaned = re.sub(r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|THURS|TUES|WED|THUR|FRI|SAT|SUN),?\s+', '', cleaned, flags=re.IGNORECASE).strip()
+    for fmt in ['%B %d, %Y', '%b %d, %Y', '%B %d %Y', '%b %d %Y',
+                '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d',
+                '%B %d', '%b %d', '%m/%d']:
+        try:
+            parsed = datetime.datetime.strptime(cleaned, fmt)
+            if parsed.year == 1900:
+                inferred = month_year_map.get(parsed.month, datetime.datetime.now().year)
+                parsed = parsed.replace(year=inferred)
+            return parsed.strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    return None
 
 
 def _get_or_create_default_season(db):
