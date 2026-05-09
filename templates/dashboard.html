@@ -1,69 +1,48 @@
 {% extends "base.html" %}
+{% block title %}Dashboard — Liberty Basketball{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Dashboard</h1>
-    
-    <div class="row mb-4" data-frame="D1">
-        <div class="col-md-4">
-            <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <h5 class="card-title">Completed Games</h5>
-                    <h2 id="totalGames">-</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-success">
-                <div class="card-body">
-                    <h5 class="card-title">Scheduled Games</h5>
-                    <h2 id="totalScheduled">-</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <h5 class="card-title">Pending NFHS Matches</h5>
-                    <h2 id="totalPending">-</h2>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="page-header">
+  <h2>Dashboard</h2>
+</div>
 
-    <div class="row" data-frame="D2">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Games by Month</div>
-                <div class="card-body">
-                    <canvas id="gamesChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Games by Source</div>
-                <div class="card-body">
-                    <canvas id="sourceChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Stat boxes -->
+<div class="stat-grid" data-frame="D1">
+  <div class="stat-box">
+    <div class="label">Completed Games</div>
+    <div class="value" id="totalGames">—</div>
+  </div>
+  <div class="stat-box">
+    <div class="label">Scheduled Games</div>
+    <div class="value" id="totalScheduled">—</div>
+  </div>
+  <div class="stat-box">
+    <div class="label">Pending NFHS</div>
+    <div class="value" id="totalPending">—</div>
+  </div>
+</div>
 
-    <!-- ── Messaging Widget ────────────────────────────────────── -->
-    <div class="row mt-4" data-frame="D3">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>💬 Recent Messages</span>
-                    <a href="/messages" class="btn btn-sm btn-outline-primary">Open Inbox</a>
-                </div>
-                <div class="card-body" id="dashboard-messages" style="max-height:300px;overflow-y:auto;">
-                    <div class="text-muted" style="padding:16px;text-align:center;">Loading messages…</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Charts row -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;" data-frame="D2">
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Games by Month</h3>
+    <canvas id="gamesChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Games by Source</h3>
+    <canvas id="sourceChart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Messaging widget -->
+<div class="card" style="margin-top:16px;" data-frame="D3">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <h3 style="margin:0;">💬 Recent Messages</h3>
+    <a href="/messages" class="btn btn-sm btn-secondary">Open Inbox</a>
+  </div>
+  <div id="dashboard-messages" style="max-height:250px;overflow-y:auto;">
+    <div class="text-muted" style="padding:16px;text-align:center;">Loading messages…</div>
+  </div>
 </div>
 {% endblock %}
 
@@ -71,53 +50,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 async function loadDashboard() {
+  try {
     const response = await fetch('/api/dashboard');
     const data = await response.json();
     document.getElementById('totalGames').textContent = data.total_games || 0;
     document.getElementById('totalScheduled').textContent = data.total_scheduled || 0;
     document.getElementById('totalPending').textContent = data.total_pending || 0;
-    
-    if (data.games_by_month) {
-        new Chart(document.getElementById('gamesChart').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: data.games_by_month.map(d => d.month),
-                datasets: [{ label: 'Games', data: data.games_by_month.map(d => d.count), backgroundColor: 'rgba(54, 162, 235, 0.7)' }]
-            }
-        });
+
+    if (data.games_by_month && data.games_by_month.length) {
+      new Chart(document.getElementById('gamesChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: data.games_by_month.map(d => d.month),
+          datasets: [{ label: 'Games', data: data.games_by_month.map(d => d.count), backgroundColor: 'rgba(1,105,111,0.7)' }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
     }
-    if (data.source_stats) {
-        new Chart(document.getElementById('sourceChart').getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: data.source_stats.map(d => d.source || 'Manual'),
-                datasets: [{ data: data.source_stats.map(d => d.count), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'] }]
-            }
-        });
+    if (data.source_stats && data.source_stats.length) {
+      new Chart(document.getElementById('sourceChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: data.source_stats.map(d => d.source || 'Manual'),
+          datasets: [{ data: data.source_stats.map(d => d.count), backgroundColor: ['#01696f', '#059669', '#f59e0b', '#dc2626'] }]
+        },
+        options: { responsive: true }
+      });
     }
+  } catch(e) {
+    console.error('Dashboard load failed:', e);
+  }
 }
 
 async function loadDashboardMessages() {
-    try {
-        const resp = await fetch('/api/messages/conversations');
-        const convs = await resp.json();
-        const el = document.getElementById('dashboard-messages');
-        if (!convs || !convs.length) {
-            el.innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">No messages yet. <a href="/messages">Start a conversation</a></div>';
-            return;
-        }
-        let html = '';
-        for (const conv of convs.slice(0, 5)) {
-            html += '<div style="padding:10px 0;border-bottom:1px solid #f3f4f6;">';
-            html += '<div style="font-weight:600;font-size:0.85rem;">' + (conv.title || 'Direct Message') + '</div>';
-            html += '<div style="font-size:0.78rem;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (conv.last_message || 'No messages') + '</div>';
-            html += '<div style="font-size:0.65rem;color:#9ca3af;">' + conv.message_count + ' msg' + (conv.message_count !== 1 ? 's' : '') + '</div>';
-            html += '</div>';
-        }
-        el.innerHTML = html;
-    } catch(e) {
-        document.getElementById('dashboard-messages').innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">Unable to load messages</div>';
+  try {
+    const resp = await fetch('/api/messages/conversations');
+    const convs = await resp.json();
+    const el = document.getElementById('dashboard-messages');
+    if (!convs || !convs.length) {
+      el.innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">No messages yet. <a href="/messages">Start a conversation</a></div>';
+      return;
     }
+    let html = '';
+    for (const conv of convs.slice(0, 5)) {
+      html += '<div style="padding:10px 0;border-bottom:1px solid var(--color-border);">';
+      html += '<div style="font-weight:600;font-size:0.9rem;">' + (conv.title || 'Direct Message') + '</div>';
+      html += '<div class="text-muted" style="font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (conv.last_message || 'No messages') + '</div>';
+      html += '<div style="font-size:0.75rem;color:var(--color-muted);margin-top:2px;">' + conv.message_count + ' message' + (conv.message_count !== 1 ? 's' : '') + '</div>';
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    document.getElementById('dashboard-messages').innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">Unable to load messages</div>';
+  }
 }
 
 loadDashboard();

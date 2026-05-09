@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Profile — Liberty Basketball{% endblock %}
+{% block title %}My Profile — Liberty Basketball{% endblock %}
 {% block content %}
-<div style="max-width:600px;margin:0 auto;">
-  <div class="page-header">
-    <h2>My Profile</h2>
-  </div>
+<div class="page-header">
+  <h2>My Profile</h2>
+</div>
 
-  <div class="card" style="margin-bottom:16px;">
+<div class="profile-layout">
+  <div class="card">
     <h3 style="margin-bottom:16px;">Account Info</h3>
     <form method="post" action="{{ url_for('users.profile_edit') }}">
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+      <div class="profile-identity">
         {% if user.avatar_url %}
-        <img src="{{ user.avatar_url }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+        <img src="{{ user.avatar_url }}" alt="" class="profile-avatar">
         {% else %}
-        <div style="width:64px;height:64px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:600;color:#1d4ed8;">{{ user.display_name[0] }}</div>
+        <div class="profile-avatar profile-avatar-placeholder">{{ user.display_name[0] }}</div>
         {% endif %}
         <div>
-          <div style="font-weight:600;font-size:1.1rem;">{{ user.display_name }}</div>
+          <div class="profile-name">{{ user.display_name }}</div>
           <div class="text-muted" style="font-size:0.85rem;">{{ user.email }} · {{ user.role|capitalize }}</div>
         </div>
       </div>
@@ -38,10 +38,55 @@
 
   <div class="card">
     <h3 style="margin-bottom:16px;">Quick Links</h3>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <a href="{{ url_for('users.settings_notifications') }}" class="btn btn-secondary" style="text-align:left;">🔔 Notification Preferences</a>
-      <a href="{{ url_for('messaging.messages') }}" class="btn btn-secondary" style="text-align:left;">💬 My Messages</a>
+    <div class="profile-links">
+      <a href="{{ url_for('users.settings_notifications') }}" class="btn btn-secondary">🔔 Notification Preferences</a>
+      <a href="{{ url_for('messaging.messages') }}" class="btn btn-secondary">💬 My Messages</a>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.profile-layout {
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.profile-avatar-placeholder {
+  background: #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+.profile-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.profile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profile-links .btn {
+  text-align: left;
+  justify-content: flex-start;
+}
+</style>
 {% endblock %}
