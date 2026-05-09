@@ -607,8 +607,10 @@
   </aside>
   {% block scripts %}{% endblock %}
 
-  {# — Service Worker + Push Subscription — #}
-      const drawer = document.getElementById('report-drawer');
+  {# — Report Drawer — #}
+  <script>
+  (function initReportDrawer() {
+    const drawer = document.getElementById('report-drawer');
       const backdrop = document.getElementById('report-drawer-backdrop');
       const form = document.getElementById('report-drawer-form');
       const message = document.getElementById('report-drawer-message');
