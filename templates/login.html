@@ -1,17 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Login — Liberty Basketball{% endblock %}
+{% block title %}Sign In — Liberty Basketball{% endblock %}
 {% block content %}
-<div style="max-width:420px;margin:60px auto;">
-  <div class="card" style="padding:32px;">
-    <div style="text-align:center;margin-bottom:24px;">
-      <img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" style="height:48px;margin-bottom:12px;">
-      <h2 style="font-size:1.3rem;">Liberty Basketball</h2>
-      <p class="text-muted" style="font-size:0.85rem;">Sign in to your account</p>
+<div class="auth-container">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="auth-logo">
+      <h2>Liberty Basketball</h2>
+      <p class="text-muted">Sign in to your account</p>
     </div>
 
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
     <form method="post" action="{{ url_for('users.login') }}">
       <div class="form-group">
@@ -22,13 +26,48 @@
         <label for="password">Password</label>
         <input class="form-control" type="password" id="password" name="password" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">Sign In</button>
+      <button type="submit" class="btn btn-primary btn-block">Sign In</button>
     </form>
 
-    <div style="text-align:center;margin-top:16px;font-size:0.85rem;">
+    <div class="auth-footer">
       <span class="text-muted">Don't have an account?</span>
       <a href="{{ url_for('users.register') }}">Create one</a>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.auth-container {
+  max-width: 420px;
+  margin: 60px auto;
+  padding: 0 16px;
+}
+.auth-card {
+  padding: 32px;
+}
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.auth-header h2 {
+  font-size: 1.3rem;
+  margin: 12px 0 4px;
+}
+.auth-logo {
+  height: 48px;
+  border-radius: 4px;
+}
+.auth-footer {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.85rem;
+}
+.btn-block {
+  width: 100%;
+  margin-top: 8px;
+  justify-content: center;
+}
+</style>
 {% endblock %}
