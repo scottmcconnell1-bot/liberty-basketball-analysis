@@ -49,6 +49,21 @@
             </div>
         </div>
     </div>
+
+    <!-- ── Messaging Widget ────────────────────────────────────── -->
+    <div class="row mt-4" data-frame="D3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>💬 Recent Messages</span>
+                    <a href="/messages" class="btn btn-sm btn-outline-primary">Open Inbox</a>
+                </div>
+                <div class="card-body" id="dashboard-messages" style="max-height:300px;overflow-y:auto;">
+                    <div class="text-muted" style="padding:16px;text-align:center;">Loading messages…</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -81,6 +96,31 @@ async function loadDashboard() {
         });
     }
 }
+
+async function loadDashboardMessages() {
+    try {
+        const resp = await fetch('/api/messages/conversations');
+        const convs = await resp.json();
+        const el = document.getElementById('dashboard-messages');
+        if (!convs || !convs.length) {
+            el.innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">No messages yet. <a href="/messages">Start a conversation</a></div>';
+            return;
+        }
+        let html = '';
+        for (const conv of convs.slice(0, 5)) {
+            html += '<div style="padding:10px 0;border-bottom:1px solid #f3f4f6;">';
+            html += '<div style="font-weight:600;font-size:0.85rem;">' + (conv.title || 'Direct Message') + '</div>';
+            html += '<div style="font-size:0.78rem;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (conv.last_message || 'No messages') + '</div>';
+            html += '<div style="font-size:0.65rem;color:#9ca3af;">' + conv.message_count + ' msg' + (conv.message_count !== 1 ? 's' : '') + '</div>';
+            html += '</div>';
+        }
+        el.innerHTML = html;
+    } catch(e) {
+        document.getElementById('dashboard-messages').innerHTML = '<div class="text-muted" style="padding:16px;text-align:center;">Unable to load messages</div>';
+    }
+}
+
 loadDashboard();
+loadDashboardMessages();
 </script>
 {% endblock %}
