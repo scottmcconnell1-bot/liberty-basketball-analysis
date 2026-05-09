@@ -281,40 +281,6 @@
     .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 14px; }
     .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .resource-status-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 10px 20px;
-      background: #0f172a;
-      color: #e2e8f0;
-      font-size: 0.82rem;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      position: relative;
-      z-index: 100;
-    }
-    .resource-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
-      white-space: nowrap;
-    }
-    .resource-pill strong { color: #fff; }
-    .resource-status-details {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 8px 20px 12px;
-      background: #111827;
-      color: #cbd5e1;
-      font-size: 0.78rem;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      min-height: 42px;
-      align-items: center;
-    }
     .report-drawer-backdrop {
       position: fixed;
       inset: 0;
@@ -589,16 +555,6 @@
     {% endif %}
     <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
   </nav>
-  <div class="resource-status-bar" id="resource-status-bar">
-    <span class="resource-pill"><strong>CPU</strong> <span data-resource="cpu-system">--</span></span>
-    <span class="resource-pill"><strong>App CPU</strong> <span data-resource="cpu-process">--</span></span>
-    <span class="resource-pill"><strong>RAM</strong> <span data-resource="memory-system">--</span></span>
-    <span class="resource-pill"><strong>App RAM</strong> <span data-resource="memory-process">--</span></span>
-    <span class="resource-pill"><strong>Power</strong> <span data-resource="power-live">--</span></span>
-    <span class="resource-pill"><strong>GPU</strong> <span data-resource="gpu-util">--</span></span>
-    <span class="resource-pill"><strong>GPU RAM</strong> <span data-resource="gpu-memory">--</span></span>
-  </div>
-  <div class="resource-status-details" id="gpu-process-details">GPU processes: loading…</div>
   <main>
     {% block content %}{% endblock %}
   </main>
@@ -650,91 +606,8 @@
     </form>
   </aside>
   {% block scripts %}{% endblock %}
-  <script>
-    function setResourceValue(key, value) {
-      const el = document.querySelector(`[data-resource="${key}"]`);
-      if (el) el.textContent = value;
-    }
 
-    function formatPercent(value) {
-      return value == null ? '--' : `${Number(value).toFixed(0)}%`;
-    }
-
-    function formatMb(value) {
-      return value == null ? '--' : `${Number(value).toFixed(0)} MB`;
-    }
-
-    function formatWatts(value) {
-      return value == null ? null : `${Number(value).toFixed(1)} W`;
-    }
-
-    function formatPowerSummary(power) {
-      if (!power) return '--';
-      const parts = [];
-      if (power.cpu_watts != null) parts.push(`CPU ${formatWatts(power.cpu_watts)}`);
-      if (power.gpu_watts != null) parts.push(`GPU ${formatWatts(power.gpu_watts)}`);
-      if (power.total_watts != null && parts.length > 1) parts.push(`Total ${formatWatts(power.total_watts)}`);
-      return parts.length ? parts.join(' · ') : '--';
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function renderGpuProcesses(processes) {
-      const el = document.getElementById('gpu-process-details');
-      if (!el) return;
-      if (!processes || !processes.length) {
-        el.textContent = 'GPU processes: none detected';
-        return;
-      }
-
-      el.innerHTML = processes.map((process) => `
-        <span class="resource-pill">
-          <strong>${escapeHtml((process.name || `PID ${process.pid}`) + (process.is_self_project ? '(self)' : ''))}</strong>
-          GPU ${formatMb(process.gpu_memory_mb)} · CPU ${formatPercent(process.cpu_percent)} · RAM ${formatMb(process.memory_mb)}
-        </span>
-      `).join('');
-    }
-
-    async function refreshResourceStatus() {
-      try {
-        const response = await fetch('/api/resource-status');
-        if (!response.ok) return;
-        const data = await response.json();
-        setResourceValue('cpu-system', formatPercent(data.cpu?.system_percent));
-        setResourceValue('cpu-process', formatPercent(data.application?.cpu_percent ?? data.cpu?.process_percent));
-        setResourceValue(
-          'memory-system',
-          data.memory?.used_gb == null ? '--' : `${data.memory.used_gb}/${data.memory.total_gb} GB (${formatPercent(data.memory.system_percent)})`
-        );
-        setResourceValue(
-          'memory-process',
-          data.application?.memory_mb == null ? '--' : formatMb(data.application.memory_mb)
-        );
-        setResourceValue('power-live', formatPowerSummary(data.power));
-        setResourceValue(
-          'gpu-util',
-          data.gpu?.available ? `${data.gpu.name} ${formatPercent(data.gpu.utilization_percent)}` : 'Unavailable'
-        );
-        setResourceValue(
-          'gpu-memory',
-          data.gpu?.available ? `${Number(data.gpu.memory_used_mb).toFixed(0)}/${Number(data.gpu.memory_total_mb).toFixed(0)} MB` : 'Unavailable'
-        );
-        renderGpuProcesses(data.gpu?.processes);
-      } catch (_err) {
-        setResourceValue('power-live', '--');
-        setResourceValue('gpu-util', 'Unavailable');
-        renderGpuProcesses([]);
-      }
-    }
-
-    (function initReportDrawer() {
+  {# — Service Worker + Push Subscription — #}
       const drawer = document.getElementById('report-drawer');
       const backdrop = document.getElementById('report-drawer-backdrop');
       const form = document.getElementById('report-drawer-form');
@@ -847,8 +720,6 @@
       }
     })();
 
-    refreshResourceStatus();
-    setInterval(refreshResourceStatus, 2000);
   </script>
 
   {# — Service Worker + Push Subscription — #}
