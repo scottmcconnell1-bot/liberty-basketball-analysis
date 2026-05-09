@@ -6,6 +6,7 @@
   <h2>Playbook</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
     <select class="form-control" style="width:auto" onchange="filterByCategory(this)">
       <option value="">All Categories</option>
       {% for value, label in categories %}

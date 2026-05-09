@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Import Plays — Liberty Basketball{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>📥 Import Plays</h2>
+  <p class="text-muted">Upload a PDF or image of a play diagram to import into your playbook.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+
+  <!-- Left: Upload + Preview -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="margin-bottom:12px;">1. Upload Diagram</h3>
+      <div id="import-dropzone" style="border:2px dashed #d1d5db;border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('import-file').click()">
+        <div style="font-size:2rem;margin-bottom:8px;">📄</div>
+        <div style="font-weight:600;margin-bottom:4px;">Drop PDF or image here</div>
+        <div class="text-muted" style="font-size:0.85rem;">or click to browse • PDF, PNG, JPG</div>
+        <input type="file" id="import-file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="handleImportFile(this)">
+      </div>
+      <div id="import-status" style="margin-top:8px;font-size:0.85rem;"></div>
+    </div>
+
+    <div class="card" id="preview-card" style="display:none;">
+      <h3 style="margin-bottom:12px;">2. Preview</h3>
+      <div id="preview-area" style="text-align:center;">
+        <img id="preview-image" src="" alt="Preview" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #e5e7eb;">
+      </div>
+      <div id="extracted-images-area" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Right: Play Details Form -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="margin-bottom:12px;">3. Play Details</h3>
+      <form id="import-save-form" onsubmit="return false;">
+        <div class="form-group">
+          <label for="import-name">Play Name *</label>
+          <input class="form-control" id="import-name" name="name" placeholder="e.g. 1-4 High Post" required>
+        </div>
+        <div class="form-group">
+          <label for="import-description">Description</label>
+          <textarea class="form-control" id="import-description" name="description" rows="2" placeholder="Brief description of the play"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label for="import-category">Category</label>
+            <select class="form-control" id="import-category" name="category">
+              {% for value, label in categories %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="import-playbook">Playbook</label>
+            <select class="form-control" id="import-playbook" name="playbook_id">
+              <option value="">— None —</option>
+              {% for pb in playbooks %}
+              <option value="{{ pb.id }}">{{ pb.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="import-tags">Tags</label>
+          <input class="form-control" id="import-tags" name="tags" placeholder="e.g. half-court, press-break">
+        </div>
+        <input type="hidden" id="import-diagram-json" name="diagram_json" value="{}">
+        <input type="hidden" id="import-steps-json" name="steps_json" value="[]">
+        <input type="hidden" id="import-source-image" name="source_image" value="">
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:12px;">4. Side-by-Side Editor</h3>
+      <p class="text-muted" style="font-size:0.85rem;margin-bottom:12px;">After importing, you can fine-tune player positions on the interactive canvas.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="btn-save-import" onclick="saveImport()" disabled>💾 Save Play</button>
+        <a class="btn btn-secondary" href="{{ url_for('playbook.playbook_list') }}">Cancel</a>
+      </div>
+      <div id="save-status" style="margin-top:8px;font-size:0.85rem;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let importData = null;
+
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('import-status');
+  status.innerHTML = '<span style="color:#2563eb;">⏳ Uploading and extracting…</span>';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/playbook/import/parse', {
+    method: 'POST',
+    body: formData,
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      status.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error + '</span>';
+      return;
+    }
+    importData = data;
+    status.innerHTML = '<span style="color:#16a34a;">✅ ' + data.filename + ' uploaded</span>';
+
+    // Show preview
+    document.getElementById('preview-card').style.display = 'block';
+    document.getElementById('preview-image').src = data.file_url;
+    document.getElementById('import-source-image').value = data.file_url;
+
+    // Show extracted images if any
+    const extractedArea = document.getElementById('extracted-images-area');
+    if (data.extracted_images && data.extracted_images.length > 0) {
+      let html = '<div style="font-weight:600;margin-bottom:8px;font-size:0.85rem;">Extracted diagrams:</div>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+      data.extracted_images.forEach((img, i) => {
+        html += '<img src="' + img.url + '" style="max-width:120px;max-height:120px;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;" onclick="selectExtractedImage(\'' + img.url + '\')" title="Page ' + img.page + '">';
+      });
+      html += '</div>';
+      extractedArea.innerHTML = html;
+    } else {
+      extractedArea.innerHTML = '';
+    }
+
+    // Enable save
+    document.getElementById('btn-save-import').disabled = false;
+
+    // Auto-fill name from filename
+    const nameInput = document.getElementById('import-name');
+    if (!nameInput.value) {
+      nameInput.value = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+    }
+  })
+  .catch(err => {
+    status.innerHTML = '<span style="color:#dc2626;">❌ Upload failed: ' + err.message + '</span>';
+  });
+}
+
+function selectExtractedImage(url) {
+  document.getElementById('preview-image').src = url;
+  document.getElementById('import-source-image').value = url;
+}
+
+function saveImport() {
+  const btn = document.getElementById('btn-save-import');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    name: document.getElementById('import-name').value.trim(),
+    description: document.getElementById('import-description').value.trim(),
+    category: document.getElementById('import-category').value,
+    playbook_id: document.getElementById('import-playbook').value,
+    tags: document.getElementById('import-tags').value.trim(),
+    diagram_json: document.getElementById('import-diagram-json').value,
+    steps_json: document.getElementById('import-steps-json').value,
+    source_image: document.getElementById('import-source-image').value,
+  };
+
+  fetch('/playbook/import/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      status.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error + '</span>';
+      btn.disabled = false;
+      btn.textContent = '💾 Save Play';
+      return;
+    }
+    status.innerHTML = '<span style="color:#16a34a;">✅ ' + data.message + ' — redirecting…</span>';
+    setTimeout(() => { window.location.href = data.redirect; }, 800);
+  })
+  .catch(err => {
+    status.innerHTML = '<span style="color:#dc2626;">❌ Save failed: ' + err.message + '</span>';
+    btn.disabled = false;
+    btn.textContent = '💾 Save Play';
+  });
+}
+
+// Drag-and-drop visual feedback
+const dropzone = document.getElementById('import-dropzone');
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#2563eb'; });
+dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = '#d1d5db'; });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.style.borderColor = '#d1d5db';
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    const input = document.getElementById('import-file');
+    input.files = files;
+    handleImportFile(input);
+  }
+});
+</script>
+{% endblock %}

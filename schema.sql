@@ -289,3 +289,39 @@ CREATE TABLE IF NOT EXISTS play_steps (
     notes           TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ── Messaging ────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    title           TEXT,
+    type            TEXT NOT NULL DEFAULT 'direct',  -- direct, group, announcement
+    created_by      TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS conversation_members (
+    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id         TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'member',  -- owner, admin, member
+    last_read_at    TIMESTAMP,
+    joined_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id       TEXT NOT NULL,
+    body            TEXT NOT NULL,
+    attachment_url  TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS message_read_receipts (
+    message_id      INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id         TEXT NOT NULL,
+    read_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (message_id, user_id)
+);

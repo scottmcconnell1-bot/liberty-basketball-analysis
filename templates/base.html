@@ -477,6 +477,7 @@
     {% endif %}
     {% if features.ENABLE_PRACTICES %}
     <a href="/playbook" {% if request.endpoint.startswith('playbook.') %}class="active"{% endif %}>Playbook</a>
+    <a href="/messages" {% if request.endpoint.startswith('messaging.') %}class="active"{% endif %}>💬 Messages</a>
     <a href="/practices" {% if request.endpoint == 'practices_page' or request.endpoint == 'practice_report_page' or request.endpoint == 'practice_summary_page' %}class="active"{% endif %}>Practices</a>
     {% endif %}
     {% if features.ENABLE_PLAYER_DEVELOPMENT %}
