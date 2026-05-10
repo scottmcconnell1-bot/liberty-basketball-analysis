@@ -224,12 +224,13 @@
     .form-control:focus { outline: none; border-color: var(--color-primary); }
 
     /* ── Table ──────────────────────────── */
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 600px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-responsive table { min-width: 100%; }
     thead th { padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--color-border); }
     tbody td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); word-break: break-word; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover { background: rgba(1,105,111,0.04); }
-    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* ── Modal ──────────────────────────── */
     .modal-backdrop {
@@ -285,7 +286,7 @@
     .rank-update-btn:disabled { opacity: 0.5; cursor: wait; }
     .schedule-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 6px; }
     .schedule-list { display: grid; grid-template-columns: 1fr; gap: 2px; }
-    .sched-row { display: grid; grid-template-columns: 130px 1fr 24px; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--color-border); }
+    .sched-row { display: grid; grid-template-columns: 140px 1fr 24px; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--color-border); }
     .sched-date { font-weight: 600; font-size: 0.75rem; white-space: nowrap; }
     .sched-opp { font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sched-row .loc-badge { justify-self: center; }
