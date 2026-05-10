@@ -177,20 +177,24 @@
         lastGameHtml = `<div class="last-game">No games played yet</div>`;
       }
 
-      // Upcoming: simplified Date | Opponent | H/A
+      // Upcoming: stacked card layout
       let scheduleHtml = '<div class="schedule-label">Upcoming</div>';
       if (t.upcoming.length === 0) {
         scheduleHtml += '<div class="no-games">No upcoming games</div>';
       } else {
-        scheduleHtml += '<table class="schedule-table"><thead><tr><th>Date</th><th>Opponent</th><th></th></tr></thead><tbody>';
+        scheduleHtml += '<div class="schedule-list">';
         scheduleHtml += t.upcoming.map(g => {
           const loc = g.location_type || 'home';
           const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
           const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
           const shortDate = formatGameDate(g.game_date, g.game_time);
-          return `<tr><td class="sched-date">${shortDate}</td><td class="sched-opp">${g.opponent_name}</td><td><span class="loc-badge ${locClass}">${locLabel}</span></td></tr>`;
+          return `<div class="sched-row">
+            <span class="sched-date">${shortDate}</span>
+            <span class="sched-opp">${g.opponent_name}</span>
+            <span class="loc-badge ${locClass}">${locLabel}</span>
+          </div>`;
         }).join('');
-        scheduleHtml += '</tbody></table>';
+        scheduleHtml += '</div>';
       }
 
       return `<div class="team-card" data-frame="1.1-${t.key}">
