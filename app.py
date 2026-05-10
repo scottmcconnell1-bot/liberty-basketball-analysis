@@ -15,7 +15,7 @@ Blueprint modules:
 """
 
 import os
-from flask import Flask
+from flask import Flask, g
 
 from config import Config
 
@@ -59,6 +59,15 @@ def inject_feature_flags():
         "features": settings["features"],
         "analysis_config": settings["analysis"],
     }
+
+# ── Teardown ─────────────────────────────────────────────────
+@app.teardown_appcontext
+def close_db(exception):
+    """Close the database connection at the end of each request."""
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
 
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess
