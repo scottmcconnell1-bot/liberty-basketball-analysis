@@ -218,6 +218,16 @@ How to resume / commands to run
 - maxpreps_rankings table migration
 - 160 tests pass
 
+[2026-05-10 11:14 MDT] Cron status check:
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- 5 latest commits:
+  - 6b2645b2 — fix: add DB teardown + busy_timeout to fix photo upload lock
+  - 010f19e8 — Fix schedule layout: proper 3-column grid for aligned rows
+  - eac86c7d — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-10 09:12 MDT
+  - 7143ce40 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-10 07:09 MDT
+  - 2d797564 — Fix card layout: 2-column grid + stacked schedule rows
+- Uncommitted: tests/screenshots/ (untracked), tests/test_ui_overflow.py (untracked), tests/test_visual_regression.py (untracked)
+
 [2026-05-10 09:12 MDT] Cron status check:
 - Branch: jason-5-may-updates (ahead of origin/jason-5-may-updates by 1 commit)
 - 5 latest commits:
