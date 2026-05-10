@@ -20,18 +20,6 @@
     <div class="text-muted">Loading…</div>
   </div>
 </div>
-
-<div class="card mt-4" data-frame="1.3">
-  <strong>Recent Events</strong>
-  <table class="mt-2" data-frame="1.3t">
-    <thead><tr>
-      <th>Game</th><th>Player</th><th>Event</th><th>Timestamp</th><th>Verified</th>
-    </tr></thead>
-    <tbody id="events-body">
-      <tr><td colspan="5" class="text-muted">Loading…</td></tr>
-    </tbody>
-  </table>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -105,23 +93,7 @@
 
     await loadPhotos();
 
-    // ── Dashboard data (events + team sections) ──────────
-    const r = await fetch('/api/dashboard');
-    const d = await r.json();
-
-    const events = d.recent_events ?? [];
-    const eb = document.getElementById('events-body');
-    eb.innerHTML = events.length === 0
-      ? '<tr><td colspan="5" class="text-muted">No events yet.</td></tr>'
-      : events.map(e => `<tr>
-          <td>${e.game_id}</td>
-          <td>${e.player ?? '–'}</td>
-          <td>${e.event_type}</td>
-          <td>${Math.round(e.timestamp_ms/1000)}s</td>
-          <td>${e.human_verified ? '✅' : '–'}</td>
-        </tr>`).join('');
-
-    // Load team sections
+    // ── Team sections ──────────────────────────────────────
     const tr = await fetch('/api/teams/schedule');
     const teams = await tr.json();
 

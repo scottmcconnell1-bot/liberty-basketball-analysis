@@ -895,6 +895,14 @@ def _ensure_migration_columns(db):
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
         ("scheduled_games", "team", "ALTER TABLE scheduled_games ADD COLUMN team TEXT NOT NULL DEFAULT 'boys_hs'"),
         ("practice_plan_items", "sort_order", "ALTER TABLE practice_plan_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"),
+        ("users", "display_name", "ALTER TABLE users ADD COLUMN display_name TEXT"),
+        ("users", "role", "ALTER TABLE users ADD COLUMN role TEXT"),
+        ("users", "avatar_url", "ALTER TABLE users ADD COLUMN avatar_url TEXT"),
+        ("users", "phone", "ALTER TABLE users ADD COLUMN phone TEXT"),
+        ("users", "is_active", "ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"),
+        ("users", "email_verified", "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0"),
+        ("users", "updated_at", "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP"),
+        ("users", "last_login_at", "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"),
     ]
     existing = {
         (row[1], row[2]): True

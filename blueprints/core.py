@@ -1171,10 +1171,8 @@ def api_teams_photos_list():
     """Return all team photos grouped by team_key."""
     db = get_db()
     rows = db.execute(
-        """SELECT tp.id, tp.team_key, tp.filename, tp.original_name, tp.caption,
-                  tp.created_at, u.display_name as uploaded_by_name
+        """SELECT tp.id, tp.team_key, tp.filename, tp.original_name, tp.caption, tp.created_at
            FROM team_photos tp
-           LEFT JOIN users u ON u.id = tp.uploaded_by
            ORDER BY tp.team_key, tp.created_at DESC"""
     ).fetchall()
     photos = {}
