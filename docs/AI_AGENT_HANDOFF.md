@@ -70,6 +70,14 @@ Feature flags live in `config.py`.
 - `templates/debug_issues.html`
 - `templates/status.html`
 
+### Testing
+
+- `tests/conftest.py` — pytest fixtures (app, client, db)
+- `tests/test_ui_audit.py` — structural HTML audit (forms, buttons, tables, API endpoints)
+- `tests/test_ui_comprehensive.py` — functional page tests (content, forms, CRUD)
+- `tests/test_ui_overflow.py` — **visual overflow & layout audit** (see `docs/UI_OVERFLOW_AUDIT.md`)
+- `docs/UI_OVERFLOW_AUDIT.md` — documentation for the overflow audit script
+
 ### Docs and operations
 
 - `README.md`
@@ -106,6 +114,20 @@ Important facts:
 
 When making changes, preserve both standalone and container install paths.
 ```
+
+## UI quality checks
+
+After CSS/template changes, run the overflow audit to catch visual breakage:
+
+```bash
+# Start dev server first
+.venv/bin/python app.py
+
+# Run the audit
+.venv/bin/python tests/test_ui_overflow.py
+```
+
+See `docs/UI_OVERFLOW_AUDIT.md` for details on issue types and how to fix them.
 
 ## Operational expectations for the next agent
 
