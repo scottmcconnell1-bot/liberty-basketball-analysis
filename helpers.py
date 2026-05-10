@@ -669,6 +669,7 @@ def get_db():
         )
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA journal_mode=WAL")
+        g.db.execute("PRAGMA busy_timeout = 10000")
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
 
