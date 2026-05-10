@@ -12,9 +12,25 @@
   <div class="team-grid" id="team-grid"></div>
 </div>
 
-<div class="card mt-4" data-frame="1.2">
-  <div class="page-header" style="margin-bottom:14px">
+<!-- ── Team Photos (1.2) ───────────────────────────────────── -->
+<div class="card mt-4" data-frame="1.2" id="team-photos-card">
+  <div class="team-photos-header">
     <strong>Team Photos</strong>
+    <div class="team-photos-controls">
+      <label class="team-photos-select-label">Team:
+        <select id="photo-team-select" class="team-photos-select" onchange="renderPhotosForTeam(this.value)">
+          <option value="varsity_boys">Varsity Boys</option>
+          <option value="varsity_girls">Varsity Girls</option>
+          <option value="jv_boys">JV Boys</option>
+          <option value="jv_girls">JV Girls</option>
+          <option value="jr_high_boys">Jr High Boys</option>
+          <option value="jr_high_girls">Jr High Girls</option>
+        </select>
+      </label>
+      <label class="btn btn-sm btn-secondary photo-upload-btn" id="photo-upload-label">📷 Upload
+        <input type="file" accept="image/*" style="display:none" id="photo-upload-input" onchange="uploadPhoto(this)">
+      </label>
+    </div>
   </div>
   <div id="team-photos-grid" class="team-photos-grid">
     <div class="text-muted">Loading…</div>
@@ -77,45 +93,42 @@
   async function load() {
     // ── Team Photos (1.2) ──────────────────────────────────
     const photosGrid = document.getElementById('team-photos-grid');
+    let allPhotos = {}; // cached photos data
+    let currentTeamKey = 'varsity_boys';
+
+    const labels = {
+      varsity_boys:'Varsity Boys', varsity_girls:'Varsity Girls',
+      jv_boys:'JV Boys', jv_girls:'JV Girls',
+      jr_high_boys:'Jr High Boys', jr_high_girls:'Jr High Girls'
+    };
+
+    window.renderPhotosForTeam = function(teamKey) {
+      currentTeamKey = teamKey;
+      const teamPhotos = allPhotos[teamKey] || [];
+      if (teamPhotos.length === 0) {
+        photosGrid.innerHTML = '<div class="no-photos">No photos yet for ' + labels[teamKey] + '</div>';
+        return;
+      }
+      let html = '<div class="team-photo-strip">';
+      for (const p of teamPhotos) {
+        const url = '/uploads/team_photos/' + encodeURIComponent(p.filename);
+        html += '<div class="photo-thumb" data-photo-id="' + p.id + '">';
+        html += '<img src="' + url + '" alt="' + p.original_name + '" loading="lazy" onclick="window.open(\'_blank\').document.write(\'<img src=\\\'' + url + '\\\' style=\\\'max-width:100%;max-height:100vh;margin:auto;display:block\\\'>\');">';
+        if (p.caption) html += '<div class="photo-caption">' + p.caption + '</div>';
+        html += '<div class="photo-actions">';
+        html += '<a href="' + url + '" download="' + p.original_name + '" class="btn btn-sm btn-secondary" title="Download">⬇</a>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deletePhoto(' + p.id + ',\'' + teamKey + '\')" title="Delete">✕</button>';
+        html += '</div></div>';
+      }
+      html += '</div>';
+      photosGrid.innerHTML = html;
+    }
 
     async function loadPhotos() {
       try {
         const pr = await fetch('/api/teams/photos');
-        const photos = await pr.json();
-        const allKeys = [
-          'varsity_boys','varsity_girls','jv_boys','jv_girls','jr_high_boys','jr_high_girls'
-        ];
-        const labels = {
-          varsity_boys:'Varsity Boys', varsity_girls:'Varsity Girls',
-          jv_boys:'JV Boys', jv_girls:'JV Girls',
-          jr_high_boys:'Jr High Boys', jr_high_girls:'Jr High Girls'
-        };
-
-        let html = '';
-        for (const key of allKeys) {
-          const teamPhotos = photos[key] || [];
-          html += `<div class="team-photo-section" data-team="${key}">`;
-          html += `<div class="team-photo-header"><span class="team-photo-label">${labels[key]}</span>`;
-          html += `<label class="btn btn-sm btn-secondary photo-upload-btn">📷 Upload<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto('${key}',this)"></label>`;
-          html += `</div>`;
-          html += `<div class="team-photo-strip" id="photo-strip-${key}">`;
-          if (teamPhotos.length === 0) {
-            html += `<div class="no-photos">No photos yet</div>`;
-          } else {
-            for (const p of teamPhotos) {
-              const url = `/uploads/team_photos/${encodeURIComponent(p.filename)}`;
-              html += `<div class="photo-thumb" data-photo-id="${p.id}">`;
-              html += `<img src="${url}" alt="${p.original_name}" loading="lazy" onclick="window.open('_blank').document.write('<img src=\\'${url}\\' style=\\'max-width:100%;max-height:100vh;margin:auto;display:block\\'>');">`;
-              if (p.caption) html += `<div class="photo-caption">${p.caption}</div>`;
-              html += `<div class="photo-actions">`;
-              html += `<a href="${url}" download="${p.original_name}" class="btn btn-sm btn-secondary" title="Download">⬇</a>`;
-              html += `<button class="btn btn-sm btn-danger" onclick="deletePhoto(${p.id},'${key}')" title="Delete">✕</button>`;
-              html += `</div></div>`;
-            }
-          }
-          html += `</div></div>`;
-        }
-        photosGrid.innerHTML = html;
+        allPhotos = await pr.json();
+        renderPhotosForTeam(currentTeamKey);
       } catch(e) {
         photosGrid.innerHTML = '<div class="text-muted">Error loading photos</div>';
       }
@@ -248,7 +261,8 @@
     }
   }
 
-  async function uploadPhoto(teamKey, input) {
+  async function uploadPhoto(input) {
+    const teamKey = document.getElementById('photo-team-select').value;
     const file = input.files[0];
     if (!file) return;
     const caption = prompt('Add a caption (optional):', '') || '';
@@ -260,7 +274,7 @@
       const r = await fetch('/api/teams/photos/upload', { method: 'POST', body: fd });
       if (!r.ok) { const e = await r.json(); alert(e.error || 'Upload failed'); return; }
       input.value = '';
-      await load();
+      await loadPhotos();
     } catch(e) {
       alert('Upload failed: ' + e.message);
     }
@@ -271,7 +285,7 @@
     try {
       const r = await fetch(`/api/teams/photos/${photoId}`, { method: 'DELETE' });
       if (!r.ok) { alert('Delete failed'); return; }
-      await load();
+      await loadPhotos();
     } catch(e) {
       alert('Delete failed: ' + e.message);
     }
