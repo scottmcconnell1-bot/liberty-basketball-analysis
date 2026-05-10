@@ -24,24 +24,54 @@
 
 {% block scripts %}
 <script>
-  /** Format "2026-03-02" + "19:00" → "Mar 2 - 7:00pm" (with time) or "Mar 2" (time=null) */
+  /** Format a date string to "Wed 4 Nov 25 7:00pm"
+   * Accepts "Wed, 04 Nov 2026 00:00:00 GMT" or "2026-11-04" + time "19:00"
+   */
   function formatGameDate(dateStr, timeStr) {
     if (!dateStr) return 'TBD';
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    const m = months[parseInt(parts[1], 10) - 1] || '';
-    const d = parseInt(parts[2], 10);
-    if (!timeStr) return `${m} ${d}`;
-    // Handle "19:00" or "19:00:00"
-    const tp = timeStr.split(':');
-    if (tp.length < 2) return `${m} ${d}`;
-    let h = parseInt(tp[0], 10);
-    const min = tp[1].padStart(2, '0');
-    const ampm = h >= 12 ? 'pm' : 'am';
-    if (h === 0) h = 12;
-    else if (h > 12) h -= 12;
-    return `${m} ${d} ${h}:${min}${ampm}`;
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    let d, m, y, dayName;
+
+    // Try "Wed, 04 Nov 2026 00:00:00 GMT" format
+    const rfcMatch = dateStr.match(/^(\w+),\s+(\d{1,2})\s+(\w+)\s+(\d{4})/);
+    if (rfcMatch) {
+      dayName = rfcMatch[1].substring(0, 3);
+      d = parseInt(rfcMatch[2], 10);
+      m = rfcMatch[3].substring(0, 3);
+      y = rfcMatch[4].substring(2); // last 2 digits
+    } else {
+      // Try "2026-11-04" format
+      const parts = dateStr.split('-');
+      if (parts.length >= 3) {
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        d = parseInt(parts[2], 10);
+        m = months[monthIdx] || '';
+        y = parts[0].substring(2);
+        // Compute day of week
+        const dt = new Date(parts[0], monthIdx, d);
+        dayName = days[dt.getDay()];
+      } else {
+        return dateStr;
+      }
+    }
+
+    // Parse time
+    let timePart = '';
+    if (timeStr) {
+      const tp = timeStr.split(':');
+      if (tp.length >= 2) {
+        let h = parseInt(tp[0], 10);
+        const min = tp[1].padStart(2, '0');
+        const ampm = h >= 12 ? 'pm' : 'am';
+        if (h === 0) h = 12;
+        else if (h > 12) h -= 12;
+        timePart = ` ${h}:${min}${ampm}`;
+      }
+    }
+
+    return `${dayName} ${d} ${m} ${y}${timePart}`;
   }
 
   async function load() {
@@ -157,7 +187,7 @@
           const loc = g.location_type || 'home';
           const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
           const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
-          const shortDate = formatGameDate(g.game_date, null); // date only, no time
+          const shortDate = formatGameDate(g.game_date, g.game_time);
           return `<tr><td class="sched-date">${shortDate}</td><td class="sched-opp">${g.opponent_name}</td><td><span class="loc-badge ${locClass}">${locLabel}</span></td></tr>`;
         }).join('');
         scheduleHtml += '</tbody></table>';
