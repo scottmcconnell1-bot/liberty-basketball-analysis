@@ -1158,6 +1158,98 @@ def uploaded_file(filename):
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
+# ── Team Photos ──────────────────────────────────────────────
+
+ALLOWED_PHOTO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+def _allowed_photo(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_PHOTO_EXTENSIONS
+
+
+@core.route("/api/teams/photos")
+def api_teams_photos_list():
+    """Return all team photos grouped by team_key."""
+    db = get_db()
+    rows = db.execute(
+        """SELECT tp.id, tp.team_key, tp.filename, tp.original_name, tp.caption,
+                  tp.created_at, u.display_name as uploaded_by_name
+           FROM team_photos tp
+           LEFT JOIN users u ON u.id = tp.uploaded_by
+           ORDER BY tp.team_key, tp.created_at DESC"""
+    ).fetchall()
+    photos = {}
+    for r in rows:
+        key = r["team_key"]
+        if key not in photos:
+            photos[key] = []
+        photos[key].append(dict(r))
+    return jsonify(photos)
+
+
+@core.route("/api/teams/photos/upload", methods=["POST"])
+def api_teams_photos_upload():
+    """Upload a team photo. Requires 'file' and 'team_key' in form data."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+    if not _allowed_photo(file.filename):
+        return jsonify({"error": "File type not allowed"}), 400
+
+    team_key = request.form.get("team_key", "")
+    caption = request.form.get("caption", "")
+
+    # Build safe filename: team_key + timestamp + ext
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    safe_name = f"{team_key}_{int(__import__('time').time())}.{ext}"
+
+    upload_dir = current_app.config["UPLOAD_FOLDER"]
+    os.makedirs(os.path.join(upload_dir, "team_photos"), exist_ok=True)
+    filepath = os.path.join(upload_dir, "team_photos", safe_name)
+    file.save(filepath)
+
+    # Get current user id (or NULL if not logged in)
+    from flask import g
+    user_id = g.get("user", {}).get("id") if hasattr(g, "user") else None
+
+    db = get_db()
+    db.execute(
+        """INSERT INTO team_photos (team_key, filename, original_name, caption, uploaded_by)
+           VALUES (?, ?, ?, ?, ?)""",
+        (team_key, safe_name, file.filename, caption, user_id),
+    )
+    db.commit()
+
+    return jsonify({
+        "id": db.execute("SELECT last_insert_rowid()").fetchone()[0],
+        "filename": safe_name,
+        "original_name": file.filename,
+        "team_key": team_key,
+        "caption": caption,
+    }), 201
+
+
+@core.route("/api/teams/photos/<int:photo_id>", methods=["DELETE"])
+def api_teams_photos_delete(photo_id):
+    """Delete a team photo by id."""
+    db = get_db()
+    row = db.execute("SELECT filename FROM team_photos WHERE id = ?", (photo_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Photo not found"}), 404
+
+    # Remove file from disk
+    filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], "team_photos", row["filename"])
+    try:
+        os.remove(filepath)
+    except OSError:
+        pass
+
+    db.execute("DELETE FROM team_photos WHERE id = ?", (photo_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @core.route("/settings", methods=["GET", "POST"])
 def settings_page():
     db = get_db()

@@ -868,6 +868,16 @@ def _ensure_migration_columns(db):
             scraped_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(team_key, state)
         );
+        CREATE TABLE IF NOT EXISTS team_photos (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_key        TEXT NOT NULL,
+            filename        TEXT NOT NULL,
+            original_name   TEXT NOT NULL,
+            caption         TEXT,
+            uploaded_by     INTEGER,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (uploaded_by) REFERENCES users(id)
+        );
     """)
     # ── New columns on existing tables ──────────────────────
     col_migrations = [
