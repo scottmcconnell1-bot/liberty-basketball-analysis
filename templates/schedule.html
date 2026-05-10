@@ -464,6 +464,8 @@ function renderPdfPreview() {
     area.innerHTML = '<p class="text-muted">No games found in PDF.</p>';
     return;
   }
+  // Store original dates so server can detect user edits
+  pdfExtractedGames.forEach(g => { if (!g._original_date) g._original_date = g.game_date; });
   // Dynamic headers based on team type
   const isJrHigh = pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_');
   const time1Label = isJrHigh ? 'B Team Time' : 'JV Time';
@@ -572,12 +574,14 @@ function submitPdfImport() {
   };
 
   // Extract raw date strings for server-side re-parsing with confirmed dates
+  // Also send original parsed dates so server knows if user edited them
   const rawDates = pdfExtractedGames.map(g => g.raw_date || '');
+  const originalDates = pdfExtractedGames.map(g => g._original_date || g.game_date || '');
 
   fetch('/api/schedule/import-pdf/confirm', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: confirmedSeason, raw_dates: rawDates}),
+    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: confirmedSeason, raw_dates: rawDates, original_dates: originalDates}),
   })
   .then(r => r.json())
   .then(data => {

@@ -721,6 +721,7 @@ def schedule_import_pdf_confirm():
     pdf_team = (data.get("team") or "boys_hs").strip()
     season_info = data.get("season")  # user-confirmed season info
     raw_dates = data.get("raw_dates", [])  # raw date strings for re-parsing
+    original_dates = data.get("original_dates", [])  # original parsed dates for edit detection
     if not games:
         return {"error": "No games to import"}, 400
     db = get_db()
@@ -747,10 +748,12 @@ def schedule_import_pdf_confirm():
         game_date = (g.get("game_date") or "").strip()
         opponent = (g.get("opponent_name") or "").strip()
 
-        # Re-parse date from raw string if available and month_year_map exists
+        # Re-parse date from raw string only if user didn't edit it.
+        # Compare submitted game_date to original_date — if they differ, user edited it.
         if raw_dates and month_year_map and i < len(raw_dates):
             raw = raw_dates[i]
-            if raw:
+            original_date = (original_dates[i] or "").strip() if i < len(original_dates) else ""
+            if raw and game_date == original_date:
                 parsed_date = _reparse_date_with_map(raw, month_year_map)
                 if parsed_date:
                     game_date = parsed_date
@@ -973,10 +976,22 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     if year1 is None:
         return None
 
-    # Determine team type for date range
+    # Determine team type for date range (needed for sanity clamp below)
     is_jr_boys = pdf_team == "jr_boys"
     is_jr_girls = pdf_team == "jr_girls"
     is_hs = pdf_team in ("boys_hs", "girls_hs")
+
+    # Sanity clamp: if detected years are more than 1 year in the future,
+    # the PDF likely had a typo or misread year — clamp to current year range.
+    import datetime as _dt
+    _today = _dt.date.today()
+    _max_year = _today.year + 1
+    if year2 > _max_year:
+        year2 = _today.year
+        year1 = year2 - 1 if is_jr_boys else year2
+    if year1 > _max_year:
+        year1 = _today.year
+        year2 = year1 + 1
 
     # Build season name from header if possible
     # Try to extract a title line like "2025-26 Boys Basketball Schedule"
