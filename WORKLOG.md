@@ -218,6 +218,16 @@ How to resume / commands to run
 - maxpreps_rankings table migration
 - 160 tests pass
 
+[2026-05-10 09:12 MDT] Cron status check:
+- Branch: jason-5-may-updates (ahead of origin/jason-5-may-updates by 1 commit)
+- 5 latest commits:
+  - 7143ce40 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-10 07:09 MDT
+  - 2d797564 — Fix card layout: 2-column grid + stacked schedule rows
+  - e687b02d — Fix card layout: opponent names no longer truncated
+  - 540c93bb — Fix date format: show 'Wed 4 Nov 25 7:00pm' instead of raw RFC date
+  - 5dee44dc — Fix photo upload: WAL mode, timeout, and subfolder serving
+- Uncommitted: film_analysis.db (modified — expected), film_analysis.db-shm/db-wal (untracked)
+
 [2026-05-10 07:09 MDT] Cron status check:
 - Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
 - 5 latest commits:
