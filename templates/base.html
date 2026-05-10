@@ -285,11 +285,11 @@
     .rank-update-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
     .rank-update-btn:disabled { opacity: 0.5; cursor: wait; }
     .schedule-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 6px; }
-    .schedule-list { display: grid; grid-template-columns: 1fr; gap: 2px; }
-    .sched-row { display: grid; grid-template-columns: 140px 1fr 24px; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--color-border); }
-    .sched-date { font-weight: 600; font-size: 0.75rem; white-space: nowrap; }
-    .sched-opp { font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sched-row .loc-badge { justify-self: center; }
+    .schedule-list { display: grid; grid-template-columns: 1fr; gap: 0; }
+    .sched-row { display: grid; grid-template-columns: 150px 1fr 28px; gap: 12px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--color-border); }
+    .sched-date { font-weight: 600; font-size: 0.78rem; white-space: nowrap; text-align: right; color: var(--color-text); border-right: 2px solid var(--color-border); }
+    .sched-opp { font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sched-row .loc-badge { justify-self: center; font-weight: 700; }
     .loc-home { background: #dcfce7; color: #166534; }
     .loc-away { background: #dbeafe; color: #1e40af; }
     .loc-tournament { background: #fef9c3; color: #854d0e; }
@@ -301,12 +301,12 @@
     .team-photos-select-label { font-size: 0.82rem; color: var(--color-muted); display: flex; align-items: center; gap: 6px; }
     .team-photos-select { font-size: 0.82rem; padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); }
     .team-photos-grid { width: 100%; }
-    .team-photo-strip { display: flex; gap: 10px; flex-wrap: wrap; }
-    .photo-thumb { position: relative; width: 140px; border-radius: 6px; overflow: hidden; border: 1px solid var(--color-border); background: #f8f8f8; flex-shrink: 0; }
-    .photo-thumb img { width: 140px; height: 105px; object-fit: cover; display: block; cursor: zoom-in; }
-    .photo-thumb .photo-caption { font-size: 0.65rem; color: var(--color-muted); padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .photo-thumb .photo-actions { display: flex; gap: 4px; justify-content: flex-end; padding: 2px 4px 4px; }
-    .photo-thumb .photo-actions .btn { font-size: 0.6rem; padding: 1px 5px; }
+    .team-photo-strip { display: flex; gap: 12px; flex-wrap: wrap; }
+    .photo-thumb { position: relative; width: 280px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); background: #f8f8f8; flex-shrink: 0; }
+    .photo-thumb img { width: 280px; height: 210px; object-fit: cover; display: block; cursor: zoom-in; }
+    .photo-thumb .photo-caption { font-size: 0.72rem; color: var(--color-muted); padding: 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .photo-thumb .photo-actions { display: flex; gap: 4px; justify-content: flex-end; padding: 2px 6px 6px; }
+    .photo-thumb .photo-actions .btn { font-size: 0.65rem; padding: 2px 8px; }
     .no-photos { font-size: 0.82rem; color: var(--color-muted); font-style: italic; padding: 12px 0; }
 
     /* ── Badge ──────────────────────────── */
