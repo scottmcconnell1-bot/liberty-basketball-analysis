@@ -665,8 +665,10 @@ def get_db():
         g.db = sqlite3.connect(
             current_app.config["DATABASE"],
             detect_types=sqlite3.PARSE_DECLTYPES,
+            timeout=10,
         )
         g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA journal_mode=WAL")
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
 
