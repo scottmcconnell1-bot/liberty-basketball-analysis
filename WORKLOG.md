@@ -217,3 +217,20 @@ How to resume / commands to run
 - Wednesday 8 AM cron job for auto ranking refresh
 - maxpreps_rankings table migration
 - 160 tests pass
+
+[2026-05-10 07:09 MDT] Cron status check:
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- 5 latest commits:
+  - 2d797564 — Fix card layout: 2-column grid + stacked schedule rows
+  - e687b02d — Fix card layout: opponent names no longer truncated
+  - 540c93bb — Fix date format: show 'Wed 4 Nov 25 7:00pm' instead of raw RFC date
+  - 5dee44dc — Fix photo upload: WAL mode, timeout, and subfolder serving
+  - 90cc839a — Fix team photos API and remove Recent Events section
+- Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified), film_analysis.db (modified — expected), film_analysis.db-shm/db-wal (untracked)
+
+[2026-05-09 19:00 MDT] Cron status check — 3 new commits since 16:52:
+- 2fb039d8 — Fix team card widths: compact date format, table-layout fixed, card overflow
+- 538388bc — Compact date/time format in dashboard cards and upcoming games
+- af3a0808 — Equal card heights, fix MaxPreps scraper URLs, add girls 2A ranking
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- Uncommitted: PROGRESS.md (modified), film_analysis.db (modified — expected)
