@@ -1153,7 +1153,7 @@ def film(filename=None):
     )
 
 
-@core.route("/uploads/<filename>")
+@core.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
