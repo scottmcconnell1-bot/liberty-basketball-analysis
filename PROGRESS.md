@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-10 13:17 MDT] Latest commits (5 latest on jason-5-may-updates):
+- bca8c1ec — fix: UI overflow audit - all 17 pages passing
+- 0124d839 — feat: team photos section with selector dropdown
+- cc0f08ff — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-10 11:14 MDT
+- 6b2645b2 — fix: add DB teardown + busy_timeout to fix photo upload lock
+- 010f19e8 — Fix schedule layout: proper 3-column grid for aligned rows
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- Uncommitted changes: film_analysis.db (modified), templates/base.html (modified)
+
 [2026-05-10 11:14 MDT] Latest commits (5 latest on jason-5-may-updates):
 - 6b2645b2 — fix: add DB teardown + busy_timeout to fix photo upload lock
 - 010f19e8 — Fix schedule layout: proper 3-column grid for aligned rows
