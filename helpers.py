@@ -635,10 +635,27 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
 def start_analysis_subprocess(game_id, video_path):
     import sys
 
-    subprocess.Popen(
-        [sys.executable, "ai_analyzer.py", current_app.config["DATABASE"], video_path, game_id],
-        cwd=os.path.dirname(os.path.abspath(__file__)),
-    )
+    log_path = f"/tmp/liberty-basketball-ai-{game_id}.log"
+    log_file = open(log_path, "w")
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "ai_analyzer.py", current_app.config["DATABASE"], video_path, game_id],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        if proc is not None:
+            log_file.write(f"[launcher] Started ai_analyzer.py PID={proc.pid} for {game_id}\n")
+        else:
+            log_file.write(f"[launcher] Popen returned None for {game_id}\n")
+        log_file.flush()
+    except Exception as e:
+        log_file.write(f"[launcher] Failed to start: {e}\n")
+        log_file.flush()
+        raise
+    finally:
+        log_file.close()
 
 
 def build_run_summary(run_row):

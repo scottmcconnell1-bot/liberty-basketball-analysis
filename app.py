@@ -88,7 +88,7 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    app.run(host="0.0.0.0", port=8081, debug=True)
+    app.run(host="0.0.0.0", port=8081, debug=True, use_reloader=False)
 
 
 @app.route("/sw.js")
