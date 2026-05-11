@@ -348,13 +348,6 @@
     align-items: center;
     flex-wrap: wrap;
 }
-#film-tool-root .video-controls {
-    display: flex;
-    gap: .35rem;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
 /* ── Event Tagging Buttons ────────────────────────────────── */
 #film-tool-root .event-group {
     margin-top: .9rem;
