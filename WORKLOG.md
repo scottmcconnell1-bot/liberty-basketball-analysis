@@ -164,6 +164,16 @@ How to resume / commands to run
   source .venv/bin/activate && python tracker_assigner.py --db film_analysis.db --game_id game_001
 
 — End of current snapshot (Rex, 2026-05-07)
+[2026-05-10 15:20 MDT] Cron status check:
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- 5 latest commits:
+  - b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+  - 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+  - e8bcd584 — fix: team photos full-width, one per row
+  - 25e1d194 — fix: improve schedule column layout + enlarge team photos
+  - bca8c1ec — fix: UI overflow audit - all 17 pages passing
+- Uncommitted: none (working tree clean)
+
 [2026-05-07 12:52:28 MDT] Commit 524d56b8 (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
 
 [2026-05-07 16:54:50 ] Commit 5c5b4caa (dirty) — Phase 2: Seasons CRUD done, Scheduled-games CRUD pending; Phase 3: Games schema ready
@@ -264,3 +274,8 @@ How to resume / commands to run
 - af3a0808 — Equal card heights, fix MaxPreps scraper URLs, add girls 2A ranking
 - Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
 - Uncommitted: PROGRESS.md (modified), film_analysis.db (modified — expected)
+
+[2026-05-10 19:44 MDT] Cron status check — no new commits since 19:00 yesterday:
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- HEAD: b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+- Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified)

@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-10 15:20 MDT] Latest commits (5 latest on jason-5-may-updates):
+- b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+- 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+- e8bcd584 — fix: team photos full-width, one per row
+- 25e1d194 — fix: improve schedule column layout + enlarge team photos
+- bca8c1ec — fix: UI overflow audit - all 17 pages passing
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- Uncommitted changes: none (working tree clean)
+
 [2026-05-10 13:17 MDT] Latest commits (5 latest on jason-5-may-updates):
 - bca8c1ec — fix: UI overflow audit - all 17 pages passing
 - 0124d839 — feat: team photos section with selector dropdown
@@ -50,3 +59,11 @@
 - Move resource status bar from global nav to Debug page only
 
 ... [full historical content]...
+
+[2026-05-10 19:44 MDT] Latest commits (5 latest on jason-5-may-updates):
+- b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+- 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+- e8bcd584 — fix: team photos full-width, one per row
+- 25e1d194 — fix: improve schedule column layout + enlarge team photos
+- bca8c1ec — fix: UI overflow audit - all 17 pages passing
+Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified)
