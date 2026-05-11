@@ -1,0 +1,728 @@
+/* Film Tool — Liberty Basketball */
+/* Scoped under #film-tool-root to avoid leaking into base.html */
+
+/* ── Reset / Base ─────────────────────────────────────────── */
+#film-tool-root textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+/* ── App Shell ────────────────────────────────────────────── */
+#film-tool-root .app {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: var(--space-4);
+}
+
+/* ── Top Bar: Tabs + Actions ──────────────────────────────── */
+#film-tool-root .film-tool-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+}
+
+#film-tool-root .film-tool-tabs {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+#film-tool-root .btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: .65rem 1rem;
+    border-radius: var(--radius-full);
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    font-size: inherit;
+    color: inherit;
+    text-decoration: none;
+}
+#film-tool-root .btn:hover {
+    background: var(--color-surface-2);
+}
+#film-tool-root .btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+
+#film-tool-root .btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+#film-tool-root .btn-primary:hover {
+    background: var(--color-primary-hover);
+}
+
+#film-tool-root .btn-ghost {
+    background: transparent;
+    box-shadow: none;
+}
+
+#film-tool-root .btn-danger {
+    color: var(--color-error);
+}
+
+#film-tool-root .btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#film-tool-root .tab-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+
+/* ── Report Bug Nav Link ──────────────────────────────────── */
+#film-tool-root .report-link-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .45rem .8rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+    color: #fff !important;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, .35);
+    animation: reportPulse 1.8s ease-in-out infinite;
+}
+#film-tool-root .report-link-nav:hover {
+    background: linear-gradient(135deg, #f97316, #dc2626, #db2777);
+}
+
+/* ── Report Drawer ────────────────────────────────────────── */
+#film-tool-root .report-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    z-index: 110;
+}
+#film-tool-root .report-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(460px, 100vw);
+    background: var(--color-surface);
+    box-shadow: -18px 0 48px rgba(15, 23, 42, .2);
+    transform: translateX(100%);
+    transition: transform .2s ease;
+    z-index: 111;
+    display: flex;
+    flex-direction: column;
+}
+#film-tool-root .report-drawer.open {
+    transform: translateX(0);
+}
+#film-tool-root .report-drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+#film-tool-root .report-drawer-header,
+#film-tool-root .report-drawer-footer {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+#film-tool-root .report-drawer-footer {
+    border-top: 1px solid var(--color-border);
+    border-bottom: none;
+}
+#film-tool-root .report-drawer-close {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: var(--color-text-muted);
+}
+#film-tool-root .report-drawer-note {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-bottom: .8rem;
+}
+#film-tool-root .report-status-copy {
+    margin-top: .35rem;
+}
+
+#film-tool-root body.report-drawer-open {
+    overflow: hidden;
+}
+
+@keyframes reportPulse {
+    0%, 100% { transform: translateY(0); box-shadow: 0 8px 20px rgba(239, 68, 68, .35); }
+    50% { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(245, 158, 11, .45); }
+}
+
+/* ── View Panels ──────────────────────────────────────────── */
+#film-tool-root .view {
+    display: none;
+}
+#film-tool-root .view.active {
+    display: block;
+}
+
+/* ── Panel (card container) ───────────────────────────────── */
+#film-tool-root .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+#film-tool-root .panel-head {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+#film-tool-root .panel-head h2 {
+    font-size: var(--text-lg);
+    line-height: 1.15;
+}
+#film-tool-root .panel-head p {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+#film-tool-root .status {
+    padding: .75rem .95rem;
+    border-top: 1px solid var(--color-divider);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+/* ── Utility ──────────────────────────────────────────────── */
+#film-tool-root .muted {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+#film-tool-root .tiny {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+#film-tool-root .hidden {
+    display: none !important;
+}
+#film-tool-root .no-print {
+    /* hidden in print via @media print below */
+}
+
+/* ── Form Fields ──────────────────────────────────────────── */
+#film-tool-root .field {
+    display: grid;
+    gap: .35rem;
+    margin-bottom: .8rem;
+}
+#film-tool-root .field label {
+    font-size: var(--text-sm);
+    font-weight: 700;
+}
+#film-tool-root .field input,
+#film-tool-root .field select,
+#film-tool-root .field textarea {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: .5rem .65rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+}
+
+/* ── Starters Dialog ──────────────────────────────────────── */
+#film-tool-root #startersDialog {
+    max-width: 420px;
+    width: min(420px, 100%);
+    margin: 0;
+    position: fixed;
+    top: 4rem;
+    right: 1.5rem;
+    left: auto;
+    transform: none;
+}
+#film-tool-root #startersDialog::backdrop {
+    background: transparent;
+}
+
+/* ── Layout Grids ─────────────────────────────────────────── */
+#film-tool-root .grid-main {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr);
+    gap: var(--space-4);
+    align-items: start;
+}
+#film-tool-root .info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+}
+#film-tool-root .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+#film-tool-root .film-review-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(320px, .95fr);
+    gap: var(--space-4);
+    align-items: start;
+    margin-top: .75rem;
+}
+#film-tool-root .list-stack {
+    display: grid;
+    gap: .75rem;
+}
+
+/* ── Score ────────────────────────────────────────────────── */
+#film-tool-root .top-strip {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .75rem;
+}
+#film-tool-root .top-strip > .score-card {
+    flex: 1 1 0;
+}
+#film-tool-root .score-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .55rem .75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#film-tool-root .score-card .name {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+#film-tool-root .score-card .score {
+    font-size: var(--text-2xl);
+    line-height: 1.05;
+    margin-top: .15rem;
+}
+
+/* ── Video ────────────────────────────────────────────────── */
+#film-tool-root .video-shell {
+    display: grid;
+    gap: .75rem;
+}
+#film-tool-root .video-shell.large video {
+    max-height: 82vh;
+}
+#film-tool-root video {
+    width: 100%;
+    max-height: 75vh;
+    background: #000;
+    border-radius: var(--radius-md);
+}
+#film-tool-root .video-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+#film-tool-root .video-controls {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ── Event Tagging Buttons ────────────────────────────────── */
+#film-tool-root .event-group {
+    margin-top: .9rem;
+}
+#film-tool-root .event-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35rem;
+    margin-top: .35rem;
+}
+#film-tool-root .event-grid .btn {
+    justify-content: flex-start;
+    text-align: left;
+    white-space: normal;
+    min-height: 2.8rem;
+    padding: .5rem .7rem;
+    border-radius: var(--radius-md);
+}
+#film-tool-root .event-grid .btn span {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+#film-tool-root .table-wrap {
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-2);
+}
+#film-tool-root table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+#film-tool-root th {
+    background: var(--color-surface-offset);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: .65rem .7rem;
+    border-bottom: 1px solid var(--color-divider);
+    vertical-align: top;
+    text-align: left;
+}
+#film-tool-root td {
+    padding: .65rem .7rem;
+    border-bottom: 1px solid var(--color-divider);
+    vertical-align: top;
+    text-align: left;
+}
+#film-tool-root tr:hover td {
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface-2));
+}
+#film-tool-root .row-actions {
+    display: flex;
+    gap: .35rem;
+    justify-content: flex-end;
+}
+
+/* ── KPI Boxes ────────────────────────────────────────────── */
+#film-tool-root .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem;
+}
+#film-tool-root .kpi {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+#film-tool-root .kpi .label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-text-muted);
+}
+#film-tool-root .kpi .value {
+    font-size: var(--text-xl);
+    line-height: 1.1;
+    margin-top: .35rem;
+}
+
+/* ── Game Cards ───────────────────────────────────────────── */
+#film-tool-root .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: .75rem;
+}
+#film-tool-root .game-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+#film-tool-root .game-card.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+/* ── Badges ───────────────────────────────────────────────── */
+#film-tool-root .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .28rem .55rem;
+    border-radius: 999px;
+    background: var(--color-primary-highlight);
+    font-size: var(--text-xs);
+}
+
+/* ── Empty State ──────────────────────────────────────────── */
+#film-tool-root .empty-state {
+    padding: 1rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+}
+
+/* ── Modals (dialogs) ─────────────────────────────────────── */
+#film-tool-root dialog {
+    border: none;
+    padding: 0;
+    border-radius: 20px;
+    max-width: 840px;
+    width: min(840px, calc(100% - 2rem));
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+}
+#film-tool-root dialog::backdrop {
+    background: rgba(0, 0, 0, .45);
+}
+#film-tool-root .modal-head {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+}
+#film-tool-root .modal-body {
+    padding: var(--space-4);
+    overflow-y: auto;
+    max-height: 70vh;
+}
+#film-tool-root .modal-foot {
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+/* ── Term / Vocabulary / Roster Lists ─────────────────────── */
+#film-tool-root .term-list {
+    display: grid;
+    gap: .4rem;
+    max-height: 320px;
+    overflow: auto;
+    margin-top: .5rem;
+}
+#film-tool-root .term-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: .4rem;
+    align-items: center;
+    padding: .55rem .65rem;
+    border-radius: .8rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+}
+
+/* ── Resource Status Bar (server hardware monitor) ────────── */
+#film-tool-root .resource-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: .7rem 1rem;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: .82rem;
+}
+#film-tool-root .resource-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+    white-space: nowrap;
+}
+#film-tool-root .resource-status-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: .6rem 1rem .9rem;
+    background: #111827;
+    color: #cbd5e1;
+    font-size: .78rem;
+    min-height: 42px;
+    align-items: center;
+}
+
+/* ── Upload Progress ──────────────────────────────────────── */
+#film-tool-root .upload-progress-shell {
+    display: none;
+    margin-top: .85rem;
+}
+#film-tool-root .upload-progress-shell.active {
+    display: block;
+}
+#film-tool-root .upload-progress-bar {
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    background: var(--color-surface-offset);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+#film-tool-root .upload-progress-bar > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    transition: width .15s ease;
+}
+
+/* ── AI Events Timeline ───────────────────────────────────── */
+#film-tool-root .ai-events-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: .85rem;
+}
+#film-tool-root .ai-events-scroll {
+    max-height: 52vh;
+    overflow-y: auto;
+    padding-right: .35rem;
+}
+#film-tool-root .ai-events-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+#film-tool-root .ai-events-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+}
+#film-tool-root .ai-event-item {
+    display: grid;
+    gap: .45rem;
+    padding: .75rem .85rem;
+    border-radius: .9rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+#film-tool-root .ai-event-item:hover {
+    border-color: var(--color-primary);
+}
+#film-tool-root .ai-event-item.active {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-2));
+    box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+#film-tool-root .ai-event-row {
+    display: flex;
+    justify-content: space-between;
+    gap: .6rem;
+    align-items: flex-start;
+}
+#film-tool-root .ai-event-time {
+    white-space: nowrap;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+#film-tool-root .ai-event-details {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: 1.45;
+}
+
+/* ── Inline Action Rows ───────────────────────────────────── */
+#film-tool-root .inline-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ── Pill Buttons (radio-style button groups) ─────────────── */
+#film-tool-root .pill-buttons {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+}
+#film-tool-root .pill-buttons label {
+    cursor: pointer;
+}
+
+/* ── Focus Mode (hide distractions for tagging) ───────────── */
+#film-tool-root .tagger-focus #newGameBtn,
+#film-tool-root .tagger-focus #gameInfoFields,
+#film-tool-root .tagger-focus #statusText,
+#film-tool-root .tagger-focus #videoField,
+#film-tool-root .tagger-focus #toggleInfoBtn {
+    display: none !important;
+}
+#film-tool-root .tagger-focus #videoShell video {
+    max-height: 85vh;
+}
+#film-tool-root .focus-exit {
+    position: absolute;
+    top: .75rem;
+    right: .75rem;
+    z-index: 10;
+}
+
+/* ── Print ────────────────────────────────────────────────── */
+@media print {
+    .topbar,
+    .report-actions,
+    .filters,
+    .no-print {
+        display: none !important;
+    }
+    .view {
+        display: none !important;
+    }
+    .view.print-target {
+        display: block !important;
+    }
+    .panel,
+    .report-card,
+    .table-wrap {
+        border: none;
+        box-shadow: none;
+    }
+}
+
+/* ── Responsive: Tablet ───────────────────────────────────── */
+@media (max-width: 1180px) {
+    #film-tool-root .grid-main,
+    #film-tool-root .split,
+    #film-tool-root .film-review-grid {
+        grid-template-columns: 1fr;
+    }
+    #film-tool-root .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #film-tool-root .info-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ── Responsive: Mobile ───────────────────────────────────── */
+@media (max-width: 760px) {
+    #film-tool-root .app {
+        padding: .75rem;
+    }
+    #film-tool-root .info-grid,
+    #film-tool-root .kpi-grid,
+    #film-tool-root .split,
+    #film-tool-root .film-review-grid,
+    #film-tool-root .grid-main {
+        grid-template-columns: 1fr;
+    }
+    #film-tool-root .event-grid {
+        grid-template-columns: 1fr;
+    }
+}
