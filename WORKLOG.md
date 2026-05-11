@@ -306,5 +306,20 @@ How to resume / commands to run
   - b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
   - 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
   - e8bcd584 — fix: team photos full-width, one per row
+[2026-05-11 11:54 MDT] Check-in:
+- Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+- Latest commits:
+  - b5dc86d9 — Fix AI analysis: install libgl1, increase frame_stride to 5, add processing time estimate
+  - cf8fe83f — Film controls: single line with horizontal scroll
+  - 11838f45 — Redesign film tool Tagger view — video-first layout, collapsible sections, color-coded tag buttons, prominent scoreboard
+  - e6e0791b — Rebuild film_tool.html — extract CSS/JS, clean structure, remove dead code
+  - ec332b44 — Lock in Teams/Schedule tab state — PROGRESS + WORKLOG updates
+- Uncommitted: none (working tree clean)
+
+[2026-05-11 07:49 MDT] Previous check-in:
+  - ec332b44 — Lock in Teams/Schedule tab state — PROGRESS + WORKLOG updates
+  - b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+  - 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+  - e8bcd584 — fix: team photos full-width, one per row
 - Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified), film_analysis.db (modified)
 - No new commits since 2026-05-11 07:49 check.

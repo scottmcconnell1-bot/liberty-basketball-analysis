@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-11 11:54 MDT] Latest commits (5 latest on jason-5-may-updates):
+- b5dc86d9 — Fix AI analysis: install libgl1, increase frame_stride to 5, add processing time estimate
+- cf8fe83f — Film controls: single line with horizontal scroll
+- 11838f45 — Redesign film tool Tagger view — video-first layout, collapsible sections, color-coded tag buttons, prominent scoreboard
+- e6e0791b — Rebuild film_tool.html — extract CSS/JS, clean structure, remove dead code
+- ec332b44 — Lock in Teams/Schedule tab state — PROGRESS + WORKLOG updates
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: none (working tree clean)
+
 [2026-05-10 15:20 MDT] Latest commits (5 latest on jason-5-may-updates):
 - b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
 - 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
