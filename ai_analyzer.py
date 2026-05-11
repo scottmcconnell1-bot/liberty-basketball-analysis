@@ -69,14 +69,13 @@ def run_ai_analysis(db_path, video_path, game_id):
             elif inference_device == "cuda":
                 predict_kwargs["device"] = 0
 
-            # Use ByteTrack via model.track() for production-quality tracking
-            # This assigns tracker_id directly during detection, which is more
-            # accurate than post-hoc centroid matching
+            # Single-pass: use model.track() for persons (with ByteTrack IDs)
+            # then a separate lightweight detect for ball only.
+            # This avoids running full detection twice on all classes.
             try:
                 track_results = model.track(frame, persist=True, tracker="bytetrack.yaml",
                                             classes=[0], **predict_kwargs)  # class 0 = person
                 detections_to_add = []
-                ball_results = model(frame, **predict_kwargs)
 
                 # Extract person detections with tracker IDs from ByteTrack
                 person_boxes = {}  # tracker_id -> box info
@@ -94,7 +93,8 @@ def run_ai_analysis(db_path, video_path, game_id):
                                                      (x1 + x2) // 2, (y1 + y2) // 2,
                                                      x2 - x1, y2 - y1, tid)
 
-                # Extract ball detections (no tracking needed for ball)
+                # Ball detection: only look for sports_ball class (faster than full detect)
+                ball_results = model(frame, classes=[32], **predict_kwargs)  # class 32 = sports ball in COCO
                 for result in ball_results:
                     for box in result.boxes:
                         class_id = int(box.cls[0])
