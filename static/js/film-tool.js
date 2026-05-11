@@ -1519,6 +1519,7 @@ function initFromAutosave() {
 
 // ── Init ────────────────────────────────────────────────────
 function init() {
+    try {
     // Cache DOM references
     rowsBody = document.getElementById('rowsBody');
     statusText = document.getElementById('statusText');
@@ -1613,6 +1614,7 @@ function init() {
     initResourceMonitor();
     initReportDrawer();
     initAiUpload();
+    } catch (err) { console.error('Film tool init error:', err); }
 }
 
 document.addEventListener('DOMContentLoaded', init);
