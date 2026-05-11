@@ -86,14 +86,19 @@
   /* Video Controls */
   .ft-vid-controls {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: .35rem;
     padding: .5rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .ft-vid-controls::-webkit-scrollbar { display: none; }
   .ft-vid-controls .btn {
     padding: .4rem .65rem;
     min-height: 34px;
     font-size: .8rem;
+    flex-shrink: 0;
   }
 
   /* Game Info Collapsible */
