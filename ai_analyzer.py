@@ -51,12 +51,15 @@ def run_ai_analysis(db_path, video_path, game_id):
     """
     print(f"[AI] Starting analysis for {game_id} on {video_path}")
     ai_settings = dict(AI_DEFAULTS)
+    frame_number = 0  # initialize here so finally block can always reference it
 
     def get_db():
         db = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
         db.row_factory = sqlite3.Row
         return db
 
+    cap = None
+    db = None
     try:
         runtime_settings = load_all_settings(
             feature_defaults={},
@@ -75,7 +78,6 @@ def run_ai_analysis(db_path, video_path, game_id):
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             print(f"[AI] Error: Could not open video file {video_path}")
-            cap.release()
             return
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -242,9 +244,9 @@ def run_ai_analysis(db_path, video_path, game_id):
         import traceback
         traceback.print_exc()
     finally:
-        if 'cap' in locals() and cap.isOpened():
+        if cap is not None and cap.isOpened():
             cap.release()
-        if 'db' in locals():
+        if db is not None:
             db.close()
         print(f"[AI] Finished analysis for {game_id}. Processed {frame_number} frames.")
         # Attempt to assign lightweight tracker IDs before event generation

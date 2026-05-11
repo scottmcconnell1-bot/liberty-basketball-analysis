@@ -240,6 +240,9 @@ def delete_video(vid_id):
         except OSError:
             pass  # Don't fail if file already gone
 
+    # Null out duplicate_of_id references to this video (FK constraint)
+    db.execute("UPDATE videos SET duplicate_of_id=NULL WHERE duplicate_of_id=?", (vid_id,))
+
     # Delete all related analysis data
     for run_game_id in run_game_ids:
         db.execute("DELETE FROM events WHERE game_id=?", (run_game_id,))
@@ -250,30 +253,6 @@ def delete_video(vid_id):
     db.commit()
 
     return jsonify({"success": True, "deleted_game_id": game_id})
-
-
-
-    # Collect file paths before deleting
-    rows = db.execute("SELECT file_path FROM videos").fetchall()
-    for row in rows:
-        fp = row["file_path"]
-        if fp and os.path.exists(fp):
-            try:
-                os.remove(fp)
-            except OSError:
-                pass
-
-    # Clear all analysis/video data (preserve seasons, games, players)
-    db.executescript("""
-        DELETE FROM events;
-        DELETE FROM detections;
-        DELETE FROM analysis_runs;
-        DELETE FROM stats;
-        DELETE FROM videos;
-    """)
-    db.commit()
-
-    return jsonify({"success": True, "message": "All video data cleared."})
 
 
 @ai_bp.route("/upload", methods=["POST"])
