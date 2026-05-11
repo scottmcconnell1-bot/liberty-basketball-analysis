@@ -67,3 +67,21 @@
 - 25e1d194 — fix: improve schedule column layout + enlarge team photos
 - bca8c1ec — fix: UI overflow audit - all 17 pages passing
 Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified)
+
+[2026-05-11 07:49 MDT] Latest commits (5 latest on jason-5-may-updates):
+- e6e0791b — Rebuild film_tool.html — extract CSS/JS, clean structure, remove dead code
+- ec332b44 — Lock in Teams/Schedule tab state — PROGRESS + WORKLOG updates
+- b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+- 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+- e8bcd584 — fix: team photos full-width, one per row
+Uncommitted: WORKLOG.md (modified), film_analysis.db (modified)
+
+[2026-05-11 09:51 MDT] Latest commits (5 latest on jason-5-may-updates):
+- e6e0791b — Rebuild film_tool.html — extract CSS/JS, clean structure, remove dead code
+- ec332b44 — Lock in Teams/Schedule tab state — PROGRESS + WORKLOG updates
+- b8ca54dd — fix: jr high boys year 2027→2026 + preview date edits now respected
+- 330de984 — docs: annotate dashboard complete in IMPLEMENTATION_PLAN.md
+- e8bcd584 — fix: team photos full-width, one per row
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: PROGRESS.md (modified), WORKLOG.md (modified), film_analysis.db (modified)
+No new commits since 2026-05-11 07:49 check.

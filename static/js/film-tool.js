@@ -355,15 +355,16 @@ function renderEventButtons() {
         const box = document.getElementById(id);
         if (!box) return;
         box.innerHTML = '';
-        eventDefs.filter(x => x.group === group).forEach(def => {
-            const btn = document.createElement('button');
-            btn.className = 'btn'; btn.type = 'button';
-            btn.innerHTML = `<div>${def.label}</div>${def.hotkey ? `<span>${def.hotkey}</span>` : '<span>&nbsp;</span>'}`;
-            btn.addEventListener('click', () => openQuickTag(def));
-            box.appendChild(btn);
-        });
-    });
-}
+                eventDefs.filter(x => x.group === group).forEach(def => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn';
+                    btn.type = 'button';
+                    btn.innerHTML = `<span>${def.label}</span>${def.hotkey ? `<span class="ft-hotkey">${def.hotkey}</span>` : ''}`;
+                    btn.addEventListener('click', () => openQuickTag(def));
+                    box.appendChild(btn);
+                });
+            });
+    }
 
 // ── Quick Tag Dialog ────────────────────────────────────────
 function commitTag(def, { team = '', player = '' }) {
@@ -1588,6 +1589,16 @@ function init() {
     initFromAutosave();
 
     if (uploadedVideoUrl) loadHostedVideo(uploadedVideoUrl, uploadedVideoName);
+
+    // Collapsible sections
+    document.getElementById('ftAiUploadToggle')?.addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('ftAiUploadBody').classList.toggle('open');
+    });
+    document.getElementById('ftGameInfoToggle')?.addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('ftGameInfoBody').classList.toggle('open');
+    });
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game_id');

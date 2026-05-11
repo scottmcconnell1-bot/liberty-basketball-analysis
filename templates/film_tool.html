@@ -5,27 +5,299 @@
 {% block head %}
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/film-tool.css') }}">
+<style>
+  /* ── Tagger View Redesign ────────────────────────────────── */
+  .ft-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  /* Scoreboard */
+  .ft-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+  .ft-score-team {
+    text-align: center;
+    min-width: 120px;
+  }
+  .ft-score-team .ft-team-name {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .ft-score-team .ft-team-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-top: .25rem;
+  }
+  .ft-score-vs {
+    font-size: .75rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    padding: .5rem;
+  }
+
+  /* Video Area */
+  .ft-video-wrap {
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: .75rem;
+  }
+  .ft-video-wrap video {
+    width: 100%;
+    max-height: 65vh;
+    display: block;
+  }
+  .ft-video-bar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    background: #111;
+    color: #e2e8f0;
+    font-size: .8rem;
+  }
+  .ft-video-bar .ft-time {
+    font-family: monospace;
+    font-size: .9rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .ft-video-bar .ft-last-tag {
+    margin-left: auto;
+    color: #94a3b8;
+    font-size: .75rem;
+  }
+
+  /* Video Controls */
+  .ft-vid-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    padding: .5rem 0;
+  }
+  .ft-vid-controls .btn {
+    padding: .4rem .65rem;
+    min-height: 34px;
+    font-size: .8rem;
+  }
+
+  /* Game Info Collapsible */
+  .ft-game-info-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 0;
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-divider);
+    margin-bottom: .75rem;
+  }
+  .ft-game-info-toggle:hover { color: var(--color-text); }
+  .ft-game-info-toggle .ft-chevron { transition: transform .2s; }
+  .ft-game-info-toggle.open .ft-chevron { transform: rotate(90deg); }
+  .ft-game-info-body {
+    display: none;
+    margin-bottom: 1rem;
+  }
+  .ft-game-info-body.open { display: block; }
+
+  /* Tagging Panel */
+  .ft-tag-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .ft-tag-panel-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ft-tag-panel-header h3 {
+    font-size: .95rem;
+    font-weight: 600;
+  }
+  .ft-tag-panel-header .ft-event-count {
+    font-size: .75rem;
+    color: var(--color-text-muted);
+  }
+  .ft-tag-groups {
+    padding: .75rem;
+  }
+  .ft-tag-group {
+    margin-bottom: .75rem;
+  }
+  .ft-tag-group:last-child { margin-bottom: 0; }
+  .ft-tag-group-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-text-muted);
+    margin-bottom: .35rem;
+    padding-left: .25rem;
+  }
+  .ft-tag-group-label.flow { color: #6366f1; }
+  .ft-tag-group-label.offense { color: #10b981; }
+  .ft-tag-group-label.defense { color: #f59e0b; }
+
+  .ft-tag-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .3rem;
+  }
+  .ft-tag-grid .btn {
+    padding: .5rem .4rem;
+    min-height: 2.4rem;
+    font-size: .8rem;
+    border-radius: var(--radius-sm);
+    justify-content: flex-start;
+  }
+  .ft-tag-grid .btn .ft-hotkey {
+    margin-left: auto;
+    font-size: .65rem;
+    opacity: .6;
+    font-weight: 600;
+  }
+
+  /* Tag action bar */
+  .ft-tag-actions {
+    display: flex;
+    gap: .35rem;
+    padding: .5rem .75rem;
+    border-top: 1px solid var(--color-divider);
+    background: var(--color-surface-offset);
+  }
+  .ft-tag-actions .btn {
+    padding: .35rem .6rem;
+    min-height: 30px;
+    font-size: .75rem;
+  }
+
+  /* Bookmarks compact */
+  .ft-bookmarks {
+    margin-top: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .ft-bookmarks-header {
+    padding: .6rem 1rem;
+    border-bottom: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ft-bookmarks-header h3 { font-size: .85rem; font-weight: 600; }
+  .ft-bookmarks-body { padding: .75rem; }
+
+  /* Top bar redesign */
+  .ft-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+  .ft-tabs {
+    display: flex;
+    gap: .25rem;
+    background: var(--color-surface-offset);
+    border-radius: var(--radius-full);
+    padding: .2rem;
+  }
+  .ft-tabs .btn {
+    padding: .4rem 1rem;
+    min-height: 34px;
+    font-size: .85rem;
+    border-radius: var(--radius-full);
+    background: transparent;
+    box-shadow: none;
+  }
+  .ft-tabs .btn.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .ft-topbar-actions {
+    display: flex;
+    gap: .35rem;
+  }
+  .ft-topbar-actions .btn {
+    padding: .4rem .75rem;
+    min-height: 34px;
+    font-size: .8rem;
+  }
+
+  /* AI Upload collapsible */
+  .ft-ai-upload-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    margin-bottom: .75rem;
+    background: var(--color-surface-offset);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--color-text-muted);
+  }
+  .ft-ai-upload-toggle:hover { color: var(--color-text); }
+  .ft-ai-upload-body { display: none; margin-bottom: 1rem; }
+  .ft-ai-upload-body.open { display: block; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .ft-layout { grid-template-columns: 1fr; }
+    .ft-tag-panel { order: -1; }
+    .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .ft-scoreboard { padding: .75rem; gap: .75rem; }
+    .ft-score-team .ft-team-score { font-size: 1.75rem; }
+    .ft-tag-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 <div id="film-tool-root">
 
   <!-- ═══════════════════════════════════════════════════════
-       TOP BAR: Tabs + Action Buttons
+       TOP BAR
        ═══════════════════════════════════════════════════════ -->
-  <div class="film-tool-topbar" data-frame="5.1">
-    <div class="film-tool-tabs">
-      <button class="btn tab-btn active" data-tab="taggerView" type="button">Tagger</button>
-      <button class="btn tab-btn" data-tab="gamesView" type="button">Games</button>
-      <button class="btn tab-btn" data-tab="reportsView" type="button">Reports</button>
+  <div class="ft-topbar">
+    <div class="ft-tabs">
+      <button class="btn active" data-tab="taggerView" type="button">🎬 Tagger</button>
+      <button class="btn" data-tab="gamesView" type="button">📋 Games</button>
+      <button class="btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
-    <div class="actions no-print">
-      <button class="btn" id="resumeLastBtn" type="button">Resume Last Game</button>
-      <button class="btn" id="saveGameBtn" type="button">Save Game</button>
-      <button class="btn" id="manageTermsBtn" type="button">Manage Terms</button>
-      <button class="btn" id="manageRostersBtn" type="button">Manage Rosters</button>
+    <div class="ft-topbar-actions">
+      <button class="btn" id="resumeLastBtn" type="button">↩ Resume</button>
+      <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
+      <button class="btn" id="manageTermsBtn" type="button">Terms</button>
+      <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
       <button class="btn" data-theme-toggle type="button">◐</button>
-      <button class="btn btn-primary" id="exportBtn" type="button">Export Game Data</button>
+      <button class="btn btn-primary" id="exportBtn" type="button">Export</button>
     </div>
   </div>
 
@@ -33,20 +305,33 @@
        TAGGER VIEW
        ═══════════════════════════════════════════════════════ -->
   <section id="taggerView" class="view active" data-frame="5.2">
-    <main class="grid-main">
 
-      <!-- ── Left Column: Video + AI Events ────────────────── -->
-      <section class="panel" style="position:relative">
-        <button class="btn btn-icon btn-ghost focus-exit hidden" id="focusExitBtn" type="button">✕</button>
-        <div class="panel-body">
+    <!-- Scoreboard -->
+    <div class="ft-scoreboard">
+      <div class="ft-score-team">
+        <div class="ft-team-name" id="leftScoreName">Our Team</div>
+        <div class="ft-team-score" id="leftScoreValue">0</div>
+      </div>
+      <div class="ft-score-vs">VS</div>
+      <div class="ft-score-team">
+        <div class="ft-team-name" id="rightScoreName">Opponent</div>
+        <div class="ft-team-score" id="rightScoreValue">0</div>
+      </div>
+    </div>
 
-          <!-- AI Upload Form -->
-          {% if features.ENABLE_AUTO_STATS_M1 %}
-          <form action="/upload" method="post" enctype="multipart/form-data" id="aiUploadForm" style="margin-bottom:2rem;padding:1rem;border:1px dashed var(--color-border);border-radius:var(--radius-md);width:100%;">
-            <div class="field">
-              <label style="font-size:var(--text-lg);font-weight:700;">Run AI Analysis</label>
-              <p class="tiny" style="margin-bottom:.75rem;">Upload a video to the server to run the full AI analysis. This is separate from the local tagging tools below.</p>
-            </div>
+    <div class="ft-layout">
+
+      <!-- ── Left: Video + Controls + Bookmarks ────────────── -->
+      <div>
+
+        <!-- AI Upload (collapsible) -->
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <div class="ft-ai-upload-toggle" id="ftAiUploadToggle">
+          <span class="ft-chevron">▶</span>
+          <span>🤖 Run AI Analysis — Upload video for auto-detection</span>
+        </div>
+        <div class="ft-ai-upload-body" id="ftAiUploadBody">
+          <form action="/upload" method="post" enctype="multipart/form-data" id="aiUploadForm">
             <div class="split">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
@@ -57,224 +342,203 @@
                 <input type="text" id="aiOpponent" name="opponent" placeholder="Enter Opponent Name">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:.5rem;">Upload and Analyze</button>
+            <button type="submit" class="btn btn-primary">Upload and Analyze</button>
             <div class="upload-progress-shell" id="uploadProgressShell">
               <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
               <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting to upload…</div>
             </div>
           </form>
+        </div>
+        {% endif %}
+
+        <!-- Video Player -->
+        <div class="ft-video-wrap" id="filmReviewGrid">
+          <video id="video" controls></video>
+        </div>
+        <div class="ft-video-bar">
+          <span class="ft-time" id="timeDisplay">0:00.0</span>
+          <span style="flex:1"></span>
+          <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+        </div>
+        <div class="tiny" style="padding:.25rem 0 .5rem;">
+          {% if uploaded_video_url %}
+          Server video <code>{{ filename }}</code> will auto-load below.
+          {% else %}
+          For tagging only. This does not run AI analysis.
           {% endif %}
+        </div>
 
-          <!-- Top Strip: Buttons + Score -->
-          <div class="top-strip">
-            <button class="btn btn-ghost" id="toggleInfoBtn" type="button">Hide game info</button>
-            <button class="btn btn-ghost" id="newGameBtn" type="button">Start New Game</button>
-            <div class="score-card">
-              <div class="name" id="leftScoreName">Our Team</div>
-              <div class="score" id="leftScoreValue">0</div>
+        <!-- Video Controls -->
+        <div class="ft-vid-controls no-print">
+          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
+          <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">▶ / ⏸</button>
+          <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
+          <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
+          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
+        </div>
+
+        <!-- Game Info (collapsible) -->
+        <div class="ft-game-info-toggle" id="ftGameInfoToggle">
+          <span class="ft-chevron">▶</span>
+          <span>📝 Game Info</span>
+        </div>
+        <div class="ft-game-info-body" id="ftGameInfoBody">
+          <div class="info-grid">
+            <div class="field">
+              <label for="gameType">Game Type</label>
+              <select id="gameType">
+                <option value="my">My Game</option>
+                <option value="scout">Scout Game</option>
+              </select>
             </div>
-            <div class="score-card">
-              <div class="name" id="rightScoreName">Opponent</div>
-              <div class="score" id="rightScoreValue">0</div>
+            <div class="field">
+              <label for="competitionType">Competition</label>
+              <select id="competitionType">
+                <option value="non-conference">Non-Conference</option>
+                <option value="conference">Conference</option>
+                <option value="tournament">Tournament</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="gameDate">Game date</label>
+              <input id="gameDate" placeholder="e.g. 2026-01-15">
             </div>
           </div>
-
-          <!-- Game Info Fields -->
-          <div id="gameInfoFields">
-            <div class="info-grid">
-              <div class="field">
-                <label for="gameType">Game Type</label>
-                <select id="gameType">
-                  <option value="my">My Game</option>
-                  <option value="scout">Scout Game</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="competitionType">Competition</label>
-                <select id="competitionType">
-                  <option value="non-conference">Non-Conference</option>
-                  <option value="conference">Conference</option>
-                  <option value="tournament">Tournament</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="gameDate">Game date</label>
-                <input id="gameDate" placeholder="e.g. 2026-01-15">
-              </div>
+          <div class="info-grid">
+            <div class="field">
+              <label for="ourTeamName">Our Team</label>
+              <input id="ourTeamName" value="Liberty">
             </div>
-            <div class="info-grid">
-              <div class="field">
-                <label for="ourTeamName">Our Team</label>
-                <input id="ourTeamName" value="Liberty">
-              </div>
-              <div class="field">
-                <label for="opponent">Opponent</label>
-                <input id="opponent" placeholder="e.g. Riverstone">
-              </div>
-              <div class="field">
-                <label for="gameResult">Result</label>
-                <select id="gameResult">
-                  <option value="">Not set</option>
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                </select>
-              </div>
+            <div class="field">
+              <label for="opponent">Opponent</label>
+              <input id="opponent" placeholder="e.g. Riverstone">
             </div>
-            <div class="info-grid">
-              <div class="field">
-                <label for="homeTeamName">Home team</label>
-                <input id="homeTeamName" placeholder="e.g. Liberty">
-              </div>
-              <div class="field">
-                <label for="awayTeamName">Away team</label>
-                <input id="awayTeamName" placeholder="e.g. Riverstone">
-              </div>
-              <div class="field">
-                <label for="outputDir">Output Folder</label>
-                <div class="inline-actions">
-                  <input id="outputDir" placeholder="e.g. G:/My Drive/film-analysis">
-                  <button class="btn" id="chooseOutputBtn" type="button">Select</button>
-                </div>
-                <span class="tiny">Browser support varies. If picker is blocked, paste the path manually.</span>
-              </div>
+            <div class="field">
+              <label for="gameResult">Result</label>
+              <select id="gameResult">
+                <option value="">Not set</option>
+                <option value="win">Win</option>
+                <option value="loss">Loss</option>
+              </select>
             </div>
           </div>
-
-          <!-- Video + AI Events Grid -->
-          <div class="film-review-grid" id="filmReviewGrid">
-            <div class="video-shell large" id="videoShell">
-              <div class="field no-print" id="videoField">
-                <label for="videoFileInput">Local Video Playback</label>
-                <input id="videoFileInput" type="file" accept="video/mp4,video/*">
-                <span class="tiny">
-                  {% if uploaded_video_url %}
-                  Server video <code>{{ filename }}</code> will auto-load below. Pick a local file only if you want to override it.
-                  {% else %}
-                  For tagging only. This does not run AI analysis.
-                  {% endif %}
-                </span>
-              </div>
-              <video id="video" controls></video>
-              <div class="video-controls no-print">
-                <button class="btn btn-ghost" type="button" id="vidToStartBtn">&lt;</button>
-                <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
-                <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
-                <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
-                <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
-                <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
-                <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">Play / Pause</button>
-                <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
-                <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
-                <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
-                <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
-                <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
-                <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
-                <button class="btn btn-ghost" type="button" id="vidToEndBtn">&gt;</button>
-              </div>
-              <div class="video-meta">
-                <span class="muted">Time <span id="timeDisplay">0:00.0</span></span>
-                <span class="tiny">Last tagged time <span id="lastTaggedTime">—</span></span>
+          <div class="info-grid">
+            <div class="field">
+              <label for="homeTeamName">Home team</label>
+              <input id="homeTeamName" placeholder="e.g. Liberty">
+            </div>
+            <div class="field">
+              <label for="awayTeamName">Away team</label>
+              <input id="awayTeamName" placeholder="e.g. Riverstone">
+            </div>
+            <div class="field">
+              <label for="outputDir">Output Folder</label>
+              <div class="inline-actions">
+                <input id="outputDir" placeholder="e.g. G:/My Drive/film-analysis">
+                <button class="btn" id="chooseOutputBtn" type="button">Select</button>
               </div>
             </div>
-
-            <!-- AI Events Panel -->
-            {% if features.ENABLE_AUTO_STATS_M1 %}
-            <section class="panel" id="aiEventsPanel">
-              <div class="panel-head">
-                <div>
-                  <h2>AI Generated Events</h2>
-                  <p>Independent scrolling event timeline that syncs to the current video position.</p>
-                </div>
-              </div>
-              <div class="panel-body">
-                <div class="ai-events-summary">
-                  <span class="badge" id="aiEventsCount">0 events</span>
-                  <span class="tiny" id="aiCurrentEventLabel">No active event at the current playback position.</span>
-                </div>
-                <div class="ai-events-scroll" id="aiEventsScroller">
-                  <div class="list-stack" id="aiEventsList">
-                    <div class="empty-state">No AI events generated yet. Run analysis to see results.</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-            {% endif %}
           </div>
         </div>
-        <div class="status" id="statusText">Ready.</div>
-      </section>
 
-      <!-- ── Right Column: Bookmarks + Tagging ────────────── -->
-      <div class="list-stack">
-
-        <!-- Manual Bookmarks -->
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Manual Bookmarks</h2>
-              <p>Quick DB-backed bookmarks tied to the current <code>game_id</code>.</p>
+        <!-- Bookmarks -->
+        <div class="ft-bookmarks">
+          <div class="ft-bookmarks-header">
+            <h3>🔖 Bookmarks</h3>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button" style="padding:.25rem .5rem;min-height:26px;font-size:.75rem;">Refresh</button>
             </div>
           </div>
-          <div class="panel-body">
+          <div class="ft-bookmarks-body">
             <div class="field">
               <label for="bookmarkGameId">Game ID</label>
               <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
-              <span class="tiny">Use the inferred game ID from an uploaded analysis run, or enter your own manual key like <code>practice_clip_01</code>.</span>
             </div>
             <div class="split">
               <div class="field">
-                <label for="bookmarkLabel">Bookmark Label</label>
-                <input id="bookmarkLabel" placeholder="e.g. Press break clip">
+                <label for="bookmarkLabel">Label</label>
+                <input id="bookmarkLabel" placeholder="e.g. Press break">
               </div>
               <div class="field">
-                <label for="bookmarkNote">Bookmark Note</label>
-                <input id="bookmarkNote" placeholder="Optional note">
+                <label for="bookmarkNote">Note</label>
+                <input id="bookmarkNote" placeholder="Optional">
               </div>
             </div>
-            <div class="inline-actions no-print" style="margin-top:.95rem;align-items:center">
-              <button class="btn btn-primary" id="saveBookmarkBtn" type="button">Save Current Time</button>
-              <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button">Refresh</button>
-              <span class="tiny" id="bookmarkStatus">No bookmarks loaded.</span>
-            </div>
-            <div class="list-stack" id="manualBookmarksList" style="margin-top:1rem;">
+            <button class="btn btn-primary" id="saveBookmarkBtn" type="button" style="margin-top:.5rem;">Save Current Time</button>
+            <span class="tiny" id="bookmarkStatus" style="margin-left:.5rem;">No bookmarks loaded.</span>
+            <div class="list-stack" id="manualBookmarksList" style="margin-top:.75rem;">
               <div class="empty-state">Choose a game ID to load bookmarks.</div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Tagging Buttons -->
-        <section class="panel">
+        <!-- Status -->
+        <div class="status" id="statusText" style="margin-top:.75rem;">Ready.</div>
+      </div>
+
+      <!-- ── Right: Tagging Buttons ─────────────────────────── -->
+      <div>
+        <div class="ft-tag-panel">
+          <div class="ft-tag-panel-header">
+            <h3>Tag Events</h3>
+            <span class="ft-event-count" id="eventCountText">0 tagged</span>
+          </div>
+          <div class="ft-tag-groups">
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label flow">⚡ Possession / Flow</div>
+              <div class="ft-tag-grid" id="groupFlow"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label offense">🏀 Scoring / Offense</div>
+              <div class="ft-tag-grid" id="groupOffense"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label defense">🛡 Defense / Misc</div>
+              <div class="ft-tag-grid" id="groupDefense"></div>
+            </div>
+          </div>
+          <div class="ft-tag-actions">
+            <button class="btn btn-ghost" id="undoBtn" type="button">↩ Undo</button>
+            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
+            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
+            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+          </div>
+        </div>
+
+        <!-- AI Events Panel -->
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <div class="panel" id="aiEventsPanel" style="margin-top:1rem;">
           <div class="panel-head">
             <div>
-              <h2>Tagging</h2>
-              <p>Big film, simple buttons, and NFHS-consistent stats.</p>
+              <h2>🤖 AI Events</h2>
+              <p>Independent scrolling event timeline that syncs to the current video position.</p>
             </div>
           </div>
           <div class="panel-body">
-            <div class="event-group">
-              <div class="tiny">Possession / flow</div>
-              <div class="event-grid" id="groupFlow"></div>
+            <div class="ai-events-summary">
+              <span class="badge" id="aiEventsCount">0 events</span>
+              <span class="tiny" id="aiCurrentEventLabel">No active event</span>
             </div>
-            <div class="event-group">
-              <div class="tiny">Scoring / offense</div>
-              <div class="event-grid" id="groupOffense"></div>
-            </div>
-            <div class="event-group">
-              <div class="tiny">Defense / misc</div>
-              <div class="event-grid" id="groupDefense"></div>
-            </div>
-            <div class="inline-actions no-print" style="margin-top:.95rem;align-items:center">
-              <button class="btn btn-ghost" id="undoBtn" type="button">Undo</button>
-              <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
-              <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
-              <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
-              <span class="tiny" id="eventCountText">Events tagged 0</span>
+            <div class="ai-events-scroll" id="aiEventsScroller">
+              <div class="list-stack" id="aiEventsList">
+                <div class="empty-state">No AI events yet. Run analysis to see results.</div>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
+        {% endif %}
+      </div>
 
-      </div><!-- /right column list-stack -->
-    </main>
+    </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════════
@@ -283,26 +547,12 @@
   <section id="gamesView" class="view" data-frame="5.8">
     <div class="split">
       <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>My Games</h2>
-            <p>Saved games for Liberty.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="games-grid" id="myGamesList"></div>
-        </div>
+        <div class="panel-head"><div><h2>📋 My Games</h2><p>Saved games for Liberty.</p></div></div>
+        <div class="panel-body"><div class="games-grid" id="myGamesList"></div></div>
       </section>
       <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Scout Games</h2>
-            <p>Separate to keep coach clutter down.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="games-grid" id="scoutGamesList"></div>
-        </div>
+        <div class="panel-head"><div><h2>🔍 Scout Games</h2><p>Separate to keep coach clutter down.</p></div></div>
+        <div class="panel-body"><div class="games-grid" id="scoutGamesList"></div></div>
       </section>
     </div>
   </section>
@@ -312,16 +562,11 @@
        ═══════════════════════════════════════════════════════ -->
   <section id="reportsView" class="view" data-frame="5.9">
     <div class="list-stack">
-
-      <!-- Report Output -->
       <section class="panel print-target" id="reportPrintArea">
         <div class="panel-head">
-          <div>
-            <h2>Reports</h2>
-            <p>Box scores, player totals, and quick team stats.</p>
-          </div>
+          <div><h2>📊 Reports</h2><p>Box scores, player totals, and quick team stats.</p></div>
           <div class="report-actions no-print">
-            <button class="btn" id="saveReportBtn" type="button">Save Report</button>
+            <button class="btn" id="saveReportBtn" type="button">Save</button>
             <button class="btn" id="printReportBtn" type="button">Print</button>
           </div>
         </div>
@@ -355,10 +600,7 @@
             <div class="report-card">
               <div class="tiny">Main table</div>
               <div class="table-wrap" style="margin-top:.6rem;max-height:420px">
-                <table>
-                  <thead><tr id="reportHeadRow"></tr></thead>
-                  <tbody id="reportTableBody"></tbody>
-                </table>
+                <table><thead><tr id="reportHeadRow"></tr></thead><tbody id="reportTableBody"></tbody></table>
               </div>
             </div>
             <div class="report-card">
@@ -368,82 +610,42 @@
           </div>
         </div>
       </section>
-
-      <!-- Current Tagged Events Table -->
       <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Current tagged rows</h2>
-            <p>Editable event table for the active tagging game.</p>
-          </div>
-        </div>
+        <div class="panel-head"><div><h2>Current tagged rows</h2><p>Editable event table for the active tagging game.</p></div></div>
         <div class="panel-body">
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>#</th><th>Label</th><th>Player</th><th>Quarter</th><th>Team</th>
-                  <th>Side</th><th>Category</th><th>Event Type</th><th>Result</th>
-                  <th>Start</th><th>Duration</th><th>Notes</th><th>Row</th>
-                </tr>
-              </thead>
+              <thead><tr><th>#</th><th>Label</th><th>Player</th><th>Quarter</th><th>Team</th><th>Side</th><th>Category</th><th>Event Type</th><th>Result</th><th>Start</th><th>Duration</th><th>Notes</th><th>Row</th></tr></thead>
               <tbody id="rowsBody"></tbody>
             </table>
           </div>
         </div>
       </section>
-
     </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════════
        MODALS
        ═══════════════════════════════════════════════════════ -->
-
-  <!-- Manage Terms Dialog -->
   <dialog id="termDialog">
     <form method="dialog">
       <div class="modal-head"><h2>Manage terms</h2></div>
       <div class="modal-body">
-        <div class="field">
-          <label for="termFieldSelect">Field</label>
-          <select id="termFieldSelect"></select>
-        </div>
-        <div class="field">
-          <label for="newTermInput">Add new term</label>
-          <input id="newTermInput" placeholder="Example Horns">
-          <button class="btn btn-primary" id="saveNewTermBtn" type="button">Add Term</button>
-        </div>
+        <div class="field"><label for="termFieldSelect">Field</label><select id="termFieldSelect"></select></div>
+        <div class="field"><label for="newTermInput">Add new term</label><input id="newTermInput" placeholder="Example Horns"><button class="btn btn-primary" id="saveNewTermBtn" type="button">Add Term</button></div>
         <div class="term-list" id="termList"></div>
       </div>
-      <div class="modal-foot">
-        <button class="btn" value="cancel">Close</button>
-      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
     </form>
   </dialog>
 
-  <!-- Manage Rosters Dialog -->
   <dialog id="rosterDialog">
     <form method="dialog">
       <div class="modal-head"><h2>Manage rosters</h2></div>
       <div class="modal-body">
         <div class="split">
-          <div class="field">
-            <label>Level</label>
-            <div class="pill-buttons">
-              <label class="tiny"><input type="radio" name="level" value="jrhigh" checked> Jr High</label>
-              <label class="tiny"><input type="radio" name="level" value="jv"> JV</label>
-              <label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label>
-            </div>
-          </div>
-          <div class="field">
-            <label>Gender</label>
-            <div class="pill-buttons">
-              <label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label>
-              <label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label>
-              <label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label>
-            </div>
-          </div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh" checked> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label></div></div>
+          <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
         </div>
         <div class="pill-buttons" style="margin:.5rem 0 1rem">
           <button class="btn roster-side-btn active" type="button" data-side="our">Our</button>
@@ -451,24 +653,14 @@
           <button class="btn roster-side-btn" type="button" data-side="home">Home</button>
           <button class="btn roster-side-btn" type="button" data-side="away">Away</button>
         </div>
-        <div class="field">
-          <label for="rosterCsvInput">Import roster file</label>
-          <input id="rosterCsvInput" type="file" accept=".csv,text/csv">
-          <span class="tiny">Supports CSV rows like C,45,Jasper Musgrave,8 and ignores headers like POS,#,NAME,GRADE.</span>
-        </div>
+        <div class="field"><label for="rosterCsvInput">Import roster file</label><input id="rosterCsvInput" type="file" accept=".csv,text/csv"><span class="tiny">Supports CSV rows like C,45,Jasper Musgrave,8.</span></div>
         <div class="term-list" id="playerList"></div>
-        <div class="field">
-          <label>Add player</label>
-          <button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button>
-        </div>
+        <div class="field"><label>Add player</label><button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button></div>
       </div>
-      <div class="modal-foot">
-        <button class="btn" value="cancel">Close</button>
-      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
     </form>
   </dialog>
 
-  <!-- Add Player Dialog -->
   <dialog id="playerDialog">
     <form method="dialog">
       <div class="modal-head"><h2>Add player</h2></div>
@@ -478,55 +670,33 @@
         <div class="field"><label for="playerNameInput">Name</label><input id="playerNameInput" placeholder="Jasper Musgrave"></div>
         <div class="field"><label for="playerGradeInput">Grade</label><input id="playerGradeInput" placeholder="8"></div>
       </div>
-      <div class="modal-foot">
-        <button class="btn" type="button" id="playerCancelBtn">Cancel</button>
-        <button class="btn btn-primary" type="button" id="playerSaveBtn">Save</button>
-      </div>
+      <div class="modal-foot"><button class="btn" type="button" id="playerCancelBtn">Cancel</button><button class="btn btn-primary" type="button" id="playerSaveBtn">Save</button></div>
     </form>
   </dialog>
 
-  <!-- Quick Tag Dialog -->
   <dialog id="quickTagDialog">
-    <div class="modal-head">
-      <h2 id="quickDialogTitle">Tag event</h2>
-      <p class="tiny" id="quickTagLabel"></p>
-    </div>
+    <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
     <div class="modal-body" id="quickTagBody"></div>
-    <div class="modal-foot">
-      <span class="tiny">Select what applies, then tag.</span>
-      <button class="btn" id="quickTagCancelBtn" type="button">Cancel</button>
-    </div>
+    <div class="modal-foot"><span class="tiny">Select what applies, then tag.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
   </dialog>
 
-  <!-- Starters Dialog -->
   <dialog id="startersDialog">
     <form method="dialog">
       <div class="modal-head"><h2>Select Liberty starters</h2></div>
       <div class="modal-body">
         <p class="tiny" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent is optional.</p>
         <div class="split" style="margin-top:.75rem">
-          <div class="field">
-            <label>Liberty starters</label>
-            <div class="term-list" id="libertyStartersList"></div>
-          </div>
-          <div class="field">
-            <label>Opponent starters (optional)</label>
-            <div class="term-list" id="opponentStartersList"></div>
-          </div>
+          <div class="field"><label>Liberty starters</label><div class="term-list" id="libertyStartersList"></div></div>
+          <div class="field"><label>Opponent starters (optional)</label><div class="term-list" id="opponentStartersList"></div></div>
         </div>
         <p class="tiny" style="margin-top:.75rem">This records who starts; minutes still come from SUB tags.</p>
       </div>
-      <div class="modal-foot">
-        <button class="btn" value="cancel">Cancel</button>
-        <button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button>
-      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
     </form>
-  </dialog>
-
-  <!-- Report Drawer Backdrop -->
-  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
+  </div>
 
   <!-- Report Drawer -->
+  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
   <div class="report-drawer" id="report-drawer" aria-hidden="true">
     <div class="report-drawer-header">
       <h2>Report Bug / Idea</h2>
@@ -534,29 +704,11 @@
     </div>
     <div class="report-drawer-body" style="flex:1;overflow-y:auto;padding:18px 20px;">
       <form id="report-drawer-form" action="{{ url_for('core.debug_page', compose='1') }}" method="post" enctype="multipart/form-data">
-        <div class="field">
-          <label for="report-entry-type">Type</label>
-          <select id="report-entry-type" name="entry_type">
-            <option value="issue">Bug / Issue</option>
-            <option value="idea">Idea / Feature</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="report-details">Details</label>
-          <textarea id="report-details" name="details" placeholder="Describe the issue or idea..."></textarea>
-        </div>
-        <div class="field">
-          <label for="report-source-path">Page</label>
-          <input id="report-source-path" name="source_path" readonly>
-        </div>
-        <div class="field">
-          <label for="report-return-to">Return to</label>
-          <input id="report-return-to" name="return_to" type="hidden">
-        </div>
-        <div class="field">
-          <label for="report-browser-console">Browser Console</label>
-          <textarea id="report-browser-console" name="browser_console" readonly style="height:120px;font-family:monospace;font-size:.7rem;"></textarea>
-        </div>
+        <div class="field"><label for="report-entry-type">Type</label><select id="report-entry-type" name="entry_type"><option value="issue">Bug / Issue</option><option value="idea">Idea / Feature</option></select></div>
+        <div class="field"><label for="report-details">Details</label><textarea id="report-details" name="details" placeholder="Describe the issue or idea..."></textarea></div>
+        <div class="field"><label for="report-source-path">Page</label><input id="report-source-path" name="source_path" readonly></div>
+        <input type="hidden" id="report-return-to" name="return_to">
+        <div class="field"><label for="report-browser-console">Browser Console</label><textarea id="report-browser-console" name="browser_console" readonly style="height:120px;font-family:monospace;font-size:.7rem;"></textarea></div>
         <div id="report-drawer-message" class="report-status-copy" style="display:none;"></div>
     </div>
     <div class="report-drawer-footer">
@@ -571,7 +723,6 @@
 
 {% block scripts %}
 <script>
-  // Pass server-side values to JS
   window.ENABLE_AUTO_STATS_M1 = {{ "true" if features.ENABLE_AUTO_STATS_M1 else "false" }};
   window.FILM_TOOL_UPLOADED_VIDEO_URL = {{ uploaded_video_url|tojson|safe }};
   window.FILM_TOOL_UPLOADED_VIDEO_NAME = {{ filename|tojson|safe }};
