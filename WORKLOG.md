@@ -323,3 +323,10 @@ How to resume / commands to run
   - e8bcd584 — fix: team photos full-width, one per row
 - Uncommitted: PROGRESS.md (modified), WORKLOG.md (modified), film_analysis.db (modified)
 - No new commits since 2026-05-11 07:49 check.
+
+[2026-05-11 13:56 MDT] Check-in:
+  - c990bf23 — Fix AI analysis subprocess + delete video bugs
+  - 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
+  - cd0fe16d — Optimize AI analyzer: stride=3, class-filtered ball detection
+  - (3 new commits since 11:54 check)
+- Uncommitted: none (working tree clean)
