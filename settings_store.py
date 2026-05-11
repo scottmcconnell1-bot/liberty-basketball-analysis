@@ -7,6 +7,7 @@ AI_DEFAULTS = {
     "event_generator_mode": "expanded",
     "inference_device": "auto",
     "frame_stride": 3,
+    "detection_stride": 15,
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
     "llm_provider": "ollama",
@@ -16,6 +17,7 @@ AI_DEFAULTS = {
 
 INT_SETTING_KEYS = {
     "ai.frame_stride",
+    "ai.detection_stride",
     "ai.tracker_max_distance",
     "ai.tracker_max_frame_gap",
 }
