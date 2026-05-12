@@ -352,3 +352,11 @@ How to resume / commands to run
   - Tests: 188 passed, 0 failed
   - All Master Outline phases 1-7 complete. Dashboard complete.
   - Next: Mobile/PWA or Playbook per coach direction.
+
+[2026-05-12 08:15 MDT] Cron status check:
+  - Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+  - 1 new commit since last check:
+    - f068a0d9 — fix: increase upload limit to 4GB + better error messages for film tool
+  - Uncommitted: scripts/check_tunnel_url.sh (untracked)
+  - All Master Outline phases 1-7 complete. Dashboard complete.
+  - Next: Mobile/PWA or Playbook per coach direction.
