@@ -1429,18 +1429,29 @@ function initAiUpload() {
 
     aiUploadForm.addEventListener('submit', (event) => {
         event.preventDefault();
+        const fileInput = document.getElementById('aiVideoFile');
+        const file = fileInput?.files?.[0];
+        if (!file) { if (uploadProgressText) uploadProgressText.textContent = 'Please select a video file first.'; return; }
+
         const formData = new FormData(aiUploadForm);
         const xhr = new XMLHttpRequest();
         xhr.open('POST', aiUploadForm.action);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.timeout = 3600000; // 1 hour timeout for large files
         uploadProgressShell?.classList.add('active');
         if (uploadProgressBar) uploadProgressBar.style.width = '0%';
         if (uploadProgressText) uploadProgressText.textContent = 'Starting upload…';
+
         xhr.upload.addEventListener('progress', (progressEvent) => {
-            if (!progressEvent.lengthComputable) return;
+            if (!progressEvent.lengthComputable) {
+                if (uploadProgressText) uploadProgressText.textContent = 'Uploading… (size unknown)';
+                return;
+            }
             const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+            const loadedMB = (progressEvent.loaded / 1024 / 1024).toFixed(1);
+            const totalMB = (progressEvent.total / 1024 / 1024).toFixed(1);
             if (uploadProgressBar) uploadProgressBar.style.width = `${percent}%`;
-            if (uploadProgressText) uploadProgressText.textContent = `Uploading video… ${percent}%`;
+            if (uploadProgressText) uploadProgressText.textContent = `Uploading… ${percent}% (${loadedMB} / ${totalMB} MB)`;
         });
         xhr.addEventListener('load', () => {
             if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large. Maximum upload size is 4 GB.'; return; }
@@ -1451,7 +1462,7 @@ function initAiUpload() {
             window.location.href = payload.redirect_url;
         });
         xhr.addEventListener('error', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed. Check your connection and try again.'; });
-        xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. The file may be too large or your connection too slow.'; });
+        xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. The file may be too large or your connection too slow. Try a smaller clip or check your network.'; });
         xhr.send(formData);
     });
 }

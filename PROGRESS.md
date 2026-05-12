@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-12 08:15 MDT] Latest commits (5 latest on jason-5-may-updates):
+- f068a0d9 — fix: increase upload limit to 4GB + better error messages for film tool
+- c5efac92 — Wrap init() in try-catch to prevent JS errors from blocking initAiUpload
+- c990bf23 — Fix AI analysis subprocess + delete video bugs
+- 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
+- cd0fe16d — Optimize AI analyzer: stride=3, class-filtered ball detection
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: scripts/check_tunnel_url.sh (untracked)
+
 [2026-05-12 06:12 MDT] Latest commits (5 latest on jason-5-may-updates):
 - c5efac92 — Wrap init() in try-catch to prevent JS errors from blocking initAiUpload
 - c990bf23 — Fix AI analysis subprocess + delete video bugs
