@@ -24,6 +24,7 @@ app.config.from_object(Config)
 app.config["SECRET_KEY"] = app.config.get("SECRET_KEY") or "liberty-basketball-dev-secret-key-2026"
 app.config.setdefault("DATABASE", "film_analysis.db")
 app.config.setdefault("UPLOAD_FOLDER", "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024 * 1024  # 4 GB max upload
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 # ── Register Blueprints ──────────────────────────────────────

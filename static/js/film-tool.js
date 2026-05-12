@@ -1443,13 +1443,15 @@ function initAiUpload() {
             if (uploadProgressText) uploadProgressText.textContent = `Uploading video… ${percent}%`;
         });
         xhr.addEventListener('load', () => {
-            if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed.'; return; }
+            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large. Maximum upload size is 4 GB.'; return; }
+            if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = `Upload failed (HTTP ${xhr.status}). Please try again or use a smaller file.`; return; }
             const payload = JSON.parse(xhr.responseText);
             if (uploadProgressBar) uploadProgressBar.style.width = '100%';
             if (uploadProgressText) uploadProgressText.textContent = 'Upload complete. Redirecting to film tool…';
             window.location.href = payload.redirect_url;
         });
-        xhr.addEventListener('error', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed.'; });
+        xhr.addEventListener('error', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed. Check your connection and try again.'; });
+        xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. The file may be too large or your connection too slow.'; });
         xhr.send(formData);
     });
 }

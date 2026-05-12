@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-12 06:12 MDT] Latest commits (5 latest on jason-5-may-updates):
+- c5efac92 — Wrap init() in try-catch to prevent JS errors from blocking initAiUpload
+- c990bf23 — Fix AI analysis subprocess + delete video bugs
+- 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
+- cd0fe16d — Optimize AI analyzer: stride=3, class-filtered ball detection
+- b5dc86d9 — Fix AI analysis: install libgl1, increase frame_stride to 5, add processing time estimate
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: WORKLOG.md (modified), film_analysis.db (modified)
+
 [2026-05-11 13:56 MDT] Latest commits (5 latest on jason-5-may-updates):
 - c990bf23 — Fix AI analysis subprocess + delete video bugs
 - 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
