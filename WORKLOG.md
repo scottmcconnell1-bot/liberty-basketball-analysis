@@ -360,3 +360,17 @@ How to resume / commands to run
   - Uncommitted: scripts/check_tunnel_url.sh (untracked)
   - All Master Outline phases 1-7 complete. Dashboard complete.
   - Next: Mobile/PWA or Playbook per coach direction.
+
+[2026-05-12 10:20 MDT] Cron status check:
+  - Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+  - 1 new commit since last check:
+    - d5a49db1 — fix: improve upload timeout handling and progress display for large files
+  - 5 latest commits:
+    - d5a49db1 — fix: improve upload timeout handling and progress display for large files
+    - f068a0d9 — fix: increase upload limit to 4GB + better error messages for film tool
+    - c5efac92 — Wrap init() in try-catch to prevent JS errors from blocking initAiUpload
+    - c990bf23 — Fix AI analysis subprocess + delete video bugs
+    - 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
+  - Uncommitted: none (working tree clean)
+  - All Master Outline phases 1-7 complete. Dashboard complete.
+  - Next: Mobile/PWA or Playbook per coach direction.
