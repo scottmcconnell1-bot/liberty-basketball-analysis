@@ -140,15 +140,30 @@ FEATURE PLANNED (documented in docs/FEATURE_PLAYBOOK_MESSAGING_MOBILE.md)
 4. Mobile Responsive — Bottom nav, hamburger menu, card layouts, PWA support
 Implementation order: Finish schedule tab → Playbook MVP → Plays Import → Messaging → Mobile
 
-NEXT STEPS (per Master Project Outline)
------------------------------------------
-1. Phase 2.5 — Manual Tagging & Bookmarks MVP (added 2026-05-04 to outline)
-2. Phase 7 — Player Development & Practice Engine
-   - Development clips per player tied to games/events
-   - Practice playlists from prior clips
-   - Practice plan assembly tools
-3. Production hardening (gunicorn + reverse proxy, backup/restore, smoke tests)
-4. Replace centroid tracker with ByteTrack/DeepSort for better ID persistence
+[2026-05-12 11:00 MDT] Architecture Decision — Hosting & Storage
+- VPS + Backblaze B2: VPS runs the app, B2 stores film files
+- Cloudflare Tunnel for access from school/phone/anywhere
+- Nightly GitHub backup of SQLite database
+- Long-term: migrate to school server when ready
+- Film pipeline: upload → B2 storage → AI analysis → data in SQLite
+- Current data: 37MB DB + 273MB uploads (mostly test files), 3 video records
+- Next: set up VPS, deploy app, configure B2, test film upload pipeline
+
+[2026-05-12 11:00 MDT] Repo Inventory & Decisions (all repos)
+- Liberty Basketball: VPS + B2 + Cloudflare Tunnel (data-intensive, film files)
+- Classroom Manager: Local on Scott's work PC, GitHub backup
+- Finances: Stay on Render, GitHub auto-backup for data persistence
+- Dinner Planner: Stay on Render, add data persistence later (recipe ratings/meal plans)
+- Harbor Room: Empty/testing, no action needed
+
+NEXT STEPS (updated 2026-05-12)
+------------------------------------------
+1. Set up VPS with persistent storage for Liberty Basketball
+2. Configure Backblaze B2 for film file storage
+3. Set up Cloudflare Tunnel for school/phone access
+4. Add nightly GitHub backup for database
+5. Build film upload → B2 → AI analysis pipeline
+6. Eventually migrate to school server
 
 How to resume / commands to run
 --------------------------------
@@ -373,6 +388,15 @@ How to resume / commands to run
     - 2ea7dd43 — AI analyzer: optical flow tracking for 10x speedup
   - All Master Outline phases 1-7 complete. Dashboard complete.
   - Next: Mobile/PWA or Playbook per coach direction.
+
+[2026-05-12 ~11:00 MDT] Film tool upload fix + Cloudflare named tunnel:
+- Diagnosed upload failure: Cloudflare quick tunnel drops connections on large file uploads
+- Increased Flask MAX_CONTENT_LENGTH to 4GB (was default 16MB)
+- Improved upload JS: 1hr XHR timeout, file validation, MB progress display, better error messages
+- Set up Cloudflare named tunnel "liberty-film-room" (replaces ephemeral quick tunnel)
+- Named tunnel running with 4 edge connections, awaiting hostname configuration
+- User purchased domain via Cloudflare Registrar, configuring public hostname next
+- Commits: f068a0d9, d5a49db1
 
 ---
 [2026-05-12 12:24 MDT] Cron status check:
