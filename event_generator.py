@@ -1,4 +1,5 @@
 import json
+import math
 import sqlite3
 import pandas as pd
 from scipy.spatial import distance
@@ -39,54 +40,58 @@ def get_detections(conn, game_id):
     return df
 
 
-def find_ball_possession(detections_df, possession_threshold=50):
+def find_ball_possession(detections_df, possession_threshold=None):
     """
     Analyzes detections to determine ball possession for each frame.
     Adds 'has_ball' and 'ball_distance' columns to the player detections.
+
+    possession_threshold: max distance (pixels) for ball possession.
+        If None, auto-calculated from video resolution (10% of frame diagonal).
     """
     print("INFO: Analyzing ball possession.")
-    # Ensure dataframe is sorted by frame number
     detections_df = detections_df.sort_values('frame_number').reset_index(drop=True)
 
-    # Initialize columns
     detections_df['has_ball'] = False
     detections_df['ball_distance'] = float('inf')
 
-    # Group by frame and analyze possession
+    # Auto-calculate threshold from video resolution if not provided
+    if possession_threshold is None:
+        x_max = detections_df['x_center'].max() * 1.5  # estimate frame width
+        y_max = detections_df['y_center'].max() * 1.5  # estimate frame height
+        diagonal = math.sqrt(x_max**2 + y_max**2)
+        possession_threshold = diagonal * 0.10  # 10% of frame diagonal
+        print(f"INFO: Auto possession threshold: {possession_threshold:.0f}px (diagonal={diagonal:.0f}px)")
+
     for frame, frame_df in detections_df.groupby('frame_number'):
         ball_detection = frame_df[frame_df['class_name'] == 'ball']
         player_detections = frame_df[frame_df['class_name'] == 'person']
 
-        # Skip frames without a ball or players
         if ball_detection.empty or player_detections.empty:
             continue
 
         ball_coords = (ball_detection.iloc[0]['x_center'], ball_detection.iloc[0]['y_center'])
-        
+
         player_indices = player_detections.index
         player_coords = list(zip(player_detections['x_center'], player_detections['y_center']))
-        
+
         if not player_coords:
             continue
-            
-        # Calculate distances from ball to all players
+
         distances = distance.cdist([ball_coords], player_coords, 'euclidean')[0]
-        
+
         min_dist_index = distances.argmin()
         min_dist = distances[min_dist_index]
-        
-        # Assign possession if within threshold
+
         if min_dist <= possession_threshold:
             closest_player_original_index = player_indices[min_dist_index]
             detections_df.loc[closest_player_original_index, 'has_ball'] = True
 
-        # Store all distances for potential future use
         for i, player_index in enumerate(player_indices):
             detections_df.loc[player_index, 'ball_distance'] = distances[i]
 
     possession_events = detections_df[detections_df['has_ball'] == True]
     print(f"INFO: Identified {len(possession_events)} instances of player possession.")
-    
+
     return detections_df
 
 
@@ -118,7 +123,15 @@ def build_ball_track(detections_df):
     return ball_df.groupby("frame_number", as_index=False).first()
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=120, max_gap_frames=4, min_segment_frames=3):
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=1):
+    """
+    Build possession segments from detections with ball possession data.
+
+    Args:
+        max_ball_distance: max distance for ball possession (auto-calculated if None)
+        max_gap_frames: max gap between frames in a single possession segment
+        min_segment_frames: minimum frames for a valid segment (lowered to 1 for sparse ball data)
+    """
     players = detections_with_possession_df[detections_with_possession_df["class_name"] == "person"].copy()
     if players.empty:
         return []
@@ -131,16 +144,22 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=1
             (players["y_center"] // 60).astype(int).astype(str)
         )
 
-    players = players[players["ball_distance"].notna() & (players["ball_distance"] < float("inf"))].copy()
-    if players.empty:
-        return []
+    # Filter to players who have the ball
+    has_ball = players[players["has_ball"] == True].copy()
+    if has_ball.empty:
+        # Fallback: use closest player to ball on each frame
+        players = players[players["ball_distance"].notna() & (players["ball_distance"] < float("inf"))].copy()
+        if players.empty:
+            return []
+        frame_best = (
+            players.sort_values(["frame_number", "ball_distance"])
+            .groupby("frame_number", as_index=False)
+            .first()
+        )
+    else:
+        frame_best = has_ball
 
-    frame_best = (
-        players.sort_values(["frame_number", "ball_distance"])
-        .groupby("frame_number", as_index=False)
-        .first()
-    )
-    frame_best = frame_best[frame_best["ball_distance"] <= max_ball_distance].sort_values("frame_number")
+    frame_best = frame_best.sort_values("frame_number")
     if frame_best.empty:
         return []
 
@@ -170,7 +189,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=1
                         "player_x_start": int(segment_df.iloc[0]["x_center"]),
                         "player_x_end": int(segment_df.iloc[-1]["x_center"]),
                         "player_y_median": float(segment_df["y_center"].median()),
-                        "mean_ball_distance": float(segment_df["ball_distance"].mean()),
+                        "mean_ball_distance": float(segment_df["ball_distance"].mean()) if "ball_distance" in segment_df.columns else 0.0,
                     }
                 )
             current_rows = [row]
@@ -188,7 +207,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=1
                 "player_x_start": int(segment_df.iloc[0]["x_center"]),
                 "player_x_end": int(segment_df.iloc[-1]["x_center"]),
                 "player_y_median": float(segment_df["y_center"].median()),
-                "mean_ball_distance": float(segment_df["ball_distance"].mean()),
+                "mean_ball_distance": float(segment_df["ball_distance"].mean()) if "ball_distance" in segment_df.columns else 0.0,
             }
         )
     return segments
