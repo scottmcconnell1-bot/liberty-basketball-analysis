@@ -337,7 +337,7 @@ def _detect_transitions(detections, events, conn):
     # Group detections by frame to get ball speed per frame
     ball_detections = detections[detections["object_class"] == "ball"].sort_values("frame_number")
 
-    if len(ball_dections) < 10:
+    if len(ball_detections) < 10:
         return plays
 
     # Calculate ball velocity between consecutive frames
