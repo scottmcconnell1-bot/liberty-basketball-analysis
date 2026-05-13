@@ -512,6 +512,87 @@ NEXT STEPS (per Scott's direction):
 5. Add learning/feedback loop from human corrections
 
 ---
+
+[2026-05-13 21:00 MDT] Scouting System + NFHS Integration — Major Build Session
+================================================================================
+
+WHAT WAS BUILT:
+
+1. NFHS Network Login & Game Lookup
+   - New nfhs.py module: OAuth login via member.nfhsnetwork.com/oauth/token
+   - Game lookup via search-api.nfhsnetwork.com/v3/search?id=<game_id>
+   - Supports alphanumeric GameIDs (e.g., gam12d9559efc) and full URLs
+   - Returns: teams, gender, level, date, status, score, VOD availability, headline
+   - Credentials stored encrypted (XOR obfuscation) in nfhs_credentials table
+   - Session tokens cached to disk with expiry checking
+
+2. Scouting Report System
+   - 10 new DB tables: scouting_reports, scouting_personnel, scouting_offensive_sets,
+     scouting_defensive_tendencies, scouting_tendencies, scouting_situational,
+     scouting_mismatches, scouting_practice_points, scouting_clips, nfhs_credentials
+   - Full CRUD API for all sections
+   - Auto-generate from AI events: analyzes events table → personnel roles, shot tendencies, turnover patterns
+   - Tabbed report editor UI (Overview, Personnel, Offense, Defense, Tendencies, Situational, Mismatches, Practice, Clips)
+   - Printable report template
+
+3. Updated Scouting Dashboard (/scouting)
+   - NFHS login form (email + password)
+   - Game lookup: paste GameID → see teams, gender, level, VOD status
+   - Download film: uses yt-dlp with OAuth token for authenticated downloads
+   - Reports list with create/edit/print
+
+4. Infrastructure Fixes
+   - Fixed gunicorn path: must use .venv/bin/gunicorn (not system)
+   - Fixed extract_nfhs_game_id() to support alphanumeric IDs
+   - Fixed port 8081 conflict (old gunicorn process blocking restart)
+
+HOW SCOTT WANTS IT TO WORK — NFHS FLOW:
+1. User goes to /scouting page
+2. If no NFHS credentials stored → show login form (email + password)
+3. On login: authenticate against NFHS, save encrypted credentials, show game lookup
+4. User pastes GameID (or URL) → click "Look Up Game"
+5. System shows: teams playing, gender, level, date, status, VOD availability
+6. If VOD available → click "Download Film" → downloads via yt-dlp with auth token
+7. After download → create scouting report, run AI analysis, auto-generate tendencies
+
+HOW SCOTT WANTS IT TO WORK — SCOUTING REPORT FLOW:
+1. Create new scouting report (opponent, date, optional NFHS GameID)
+2. Download film via NFHS or manual upload
+3. Run AI analysis on film
+4. Click "Auto-Generate" → system populates:
+   - Personnel (by jersey number, since names may not be known)
+   - Shot selection tendencies
+   - Turnover patterns
+5. Coach reviews and edits each section
+6. Add practice points (top 3 things to work on)
+7. Print/share scouting report
+
+KEY DESIGN DECISIONS:
+- Jersey numbers used instead of player names (Scott won't always know names)
+- NFHS GameID format: alphanumeric (e.g., gam12d9559efc), not just numeric
+- Credentials encrypted at rest (XOR obfuscation — not crypto-secure but better than plaintext)
+- OAuth tokens cached to disk, refreshed on expiry
+- Quick Cloudflare tunnel changes URL on restart — always provide new URL when it changes
+
+GAME LOOKUP TEST RESULT (gam12d9559efc):
+- Matchup: Shaker Senior High School (Bison) vs Albertus Magnus High School (Falcons)
+- Gender: Girls
+- Level: Varsity
+- Type: NYSPHSAA Class AAA Semifinals #2
+- Date: 2026-03-19, Troy, NY
+- Status: Complete, VOD available
+
+COMMITS:
+- 89356c20 — Add NFHS login, game lookup, and scouting report system
+- (plus prior commits for dribble removal, AI film breakdown spec, etc.)
+
+CURRENT URL: https://practitioners-friend-distant-billy.trycloudflare.com
+(Quick tunnel — changes on restart)
+
+UNPUSHED COMMITS: 1 (89356c20)
+
+---
+
 [2026-05-13 12:56 MDT] Cron status check
 - Branch: jason-5-may-updates (ahead of origin by 2 commits, unpushed)
 - Working tree: clean (no uncommitted changes)
@@ -523,3 +604,18 @@ NEXT STEPS (per Scott's direction):
   - 8a549712 — fix: align upload form fields (Video File / Opponent)
   - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
 - Note: 2 newest commits (74788927, c65705d0) are local-only and not yet pushed to origin.
+
+---
+[2026-05-13 14:59 MDT] Cron status check
+- Branch: jason-5-may-updates (ahead of origin by 4 commits, unpushed)
+- Working tree: dirty — blueprints/scouting.py (modified), schema.sql (modified), templates/scouting.html (modified), nfhs.py (untracked)
+- New commits since 12:56 check:
+  - 92ac45fb — feat: add scouting system - reports, NFHS download, personnel, tendencies, practice points
+  - a679e68d — docs: add AI Film Breakdown spec from Scott's document
+- Prior commits on branch (still unpushed):
+  - 74788927 — docs: log intended AI analysis use - minutes, shots, play recognition, scouting
+  - c65705d0 — Remove dribble from all AI analysis code
+  - 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+  - 8a549712 — fix: align upload form fields (Video File / Opponent)
+  - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+- Note: 4 newest commits are local-only and not yet pushed. Active development on scouting system with uncommitted edits to blueprint, schema, and template files.

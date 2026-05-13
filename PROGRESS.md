@@ -218,3 +218,13 @@ No new commits since 06:44 check. Project stable; working tree has minor uncommi
 - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
 Branch: jason-5-may-updates (ahead of origin by 2 commits)
 Uncommitted changes: none (working tree clean)
+
+[2026-05-13 14:59 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 92ac45fb — feat: add scouting system - reports, NFHS download, personnel, tendencies, practice points
+- a679e68d — docs: add AI Film Breakdown spec from Scott's document
+- 74788927 — docs: log intended AI analysis use - minutes, shots, play recognition, scouting
+- c65705d0 — Remove dribble from all AI analysis code
+- 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+Branch: jason-5-may-updates (ahead of origin by 4 commits)
+Uncommitted changes: blueprints/scouting.py (modified), schema.sql (modified), templates/scouting.html (modified), nfhs.py (untracked)
+2 new commits since 12:56 check: major scouting system feature + AI Film Breakdown spec doc. Working tree has active edits to scouting blueprint, schema, template, plus new nfhs.py utility.
