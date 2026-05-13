@@ -33,8 +33,112 @@ from datetime import date
 from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort, current_app
 
 from helpers import get_db, require_feature
+from nfhs import login_nfhs, lookup_game, download_nfhs_vod, _encrypt_password, _decrypt_password
 
 scouting_bp = Blueprint("scouting", __name__)
+
+
+# ── NFHS Credentials ─────────────────────────────────────────
+
+@scouting_bp.route("/api/scouting/nfhs/credentials", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_nfhs_get_credentials():
+    """Check if NFHS credentials are stored."""
+    db = get_db()
+    cred = db.execute("SELECT id, email, is_active, last_login_at, last_login_status FROM nfhs_credentials WHERE is_active=1 ORDER BY id DESC LIMIT 1").fetchone()
+    if cred:
+        return jsonify({"has_credentials": True, "email": cred["email"], "last_login_at": cred["last_login_at"], "last_login_status": cred["last_login_status"]})
+    return jsonify({"has_credentials": False})
+
+
+@scouting_bp.route("/api/scouting/nfhs/credentials", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_nfhs_save_credentials():
+    """Save NFHS login credentials."""
+    data = request.get_json() or request.form
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    # Test login first
+    result = login_nfhs(email, password)
+    if not result["success"]:
+        return jsonify({"error": result["message"], "login_failed": True}), 401
+
+    # Encrypt and store
+    encrypted = _encrypt_password(password)
+    db = get_db()
+    # Deactivate old credentials
+    db.execute("UPDATE nfhs_credentials SET is_active=0 WHERE email=?", (email,))
+    db.execute("""
+        INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
+        VALUES (?, ?, 1, CURRENT_TIMESTAMP, 'success')
+    """, (email, encrypted))
+    db.commit()
+
+    return jsonify({"status": "saved", "email": email, "message": "Credentials saved and verified"})
+
+
+@scouting_bp.route("/api/scouting/nfhs/login", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_nfhs_login():
+    """Log in to NFHS Network with provided or stored credentials."""
+    data = request.get_json() or request.form
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
+
+    # If no password provided, try stored credentials
+    if not password:
+        db = get_db()
+        cred = db.execute("SELECT password_enc FROM nfhs_credentials WHERE email=? AND is_active=1", (email,)).fetchone()
+        if cred:
+            password = _decrypt_password(cred["password_enc"])
+        else:
+            return jsonify({"error": "No stored credentials. Provide email and password."}), 400
+
+    result = login_nfhs(email, password)
+
+    # Update stored login status
+    db = get_db()
+    encrypted = _encrypt_password(password)
+    existing = db.execute("SELECT id FROM nfhs_credentials WHERE email=?", (email,)).fetchone()
+    if existing:
+        db.execute("UPDATE nfhs_credentials SET last_login_at=CURRENT_TIMESTAMP, last_login_status=?, updated_at=CURRENT_TIMESTAMP WHERE email=?",
+                   ("success" if result["success"] else "failed", email))
+    else:
+        db.execute("""
+            INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
+            VALUES (?, ?, 1, CURRENT_TIMESTAMP, ?)
+        """, (email, encrypted, "success" if result["success"] else "failed"))
+    db.commit()
+
+    return jsonify(result)
+
+
+# ── NFHS Game Lookup ─────────────────────────────────────────
+
+@scouting_bp.route("/api/scouting/nfhs/lookup", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_nfhs_lookup():
+    """Look up game metadata by GameID."""
+    data = request.get_json() or request.form
+    game_id = data.get("game_id") or data.get("nfhs_game_id")
+    if not game_id:
+        return jsonify({"error": "Missing game_id"}), 400
+
+    # Extract numeric ID
+    game_id = extract_nfhs_game_id(game_id)
+    if not game_id:
+        return jsonify({"error": "Invalid NFHS GameID"}), 400
+
+    # Get credentials
+    email, password = _get_stored_credentials()
+    if not email:
+        return jsonify({"error": "No NFHS credentials stored. Please log in first.", "needs_login": True}), 401
+
+    result = lookup_game(game_id, email, password)
+    return jsonify(result)
 
 
 # ── NFHS VOD Downloader ──────────────────────────────────────
@@ -43,7 +147,7 @@ def extract_nfhs_game_id(url_or_id):
     """Extract NFHS GameID from a URL or return the raw ID.
 
     Supports formats:
-    - Raw GameID: '12345678'
+    - Raw GameID: 'gam12d9559efc' or '12345678'
     - Full URL: 'https://www.nfhsnetwork.com/game/12345678'
     - Embed URL: 'https://www.nfhsnetwork.com/embed/12345678'
     - Developer window GameID from network tab
@@ -53,17 +157,17 @@ def extract_nfhs_game_id(url_or_id):
 
     url_or_id = url_or_id.strip()
 
-    # If it's already a numeric ID, return it
-    if re.match(r'^\d{6,10}$', url_or_id):
+    # If it's already an alphanumeric GameID (NFHS uses formats like 'gam12d9559efc')
+    if re.match(r'^[a-zA-Z0-9]{6,20}$', url_or_id):
         return url_or_id
 
     # Extract from URL patterns
     patterns = [
-        r'/game/(\d+)',
-        r'/embed/(\d+)',
-        r'[?&]gameId=(\d+)',
-        r'[?&]game_id=(\d+)',
-        r'/videos/(\d+)',
+        r'/game/([a-zA-Z0-9]+)',
+        r'/embed/([a-zA-Z0-9]+)',
+        r'[?&]gameId=([a-zA-Z0-9]+)',
+        r'[?&]game_id=([a-zA-Z0-9]+)',
+        r'/videos/([a-zA-Z0-9]+)',
     ]
     for pattern in patterns:
         match = re.search(pattern, url_or_id)
@@ -73,88 +177,13 @@ def extract_nfhs_game_id(url_or_id):
     return None
 
 
-def download_nfhs_vod(game_id, output_dir):
-    """Download NFHS VOD using yt-dlp or streamlink.
-
-    NFHS Network uses HLS streaming. We try multiple approaches:
-    1. yt-dlp (supports many sites)
-    2. Direct HLS extraction via streamlink
-    3. Manual download via curl if m3u8 URL is known
-
-    Returns: (success: bool, file_path: str, error: str)
-    """
-    game_id = extract_nfhs_game_id(game_id)
-    if not game_id:
-        return False, None, "Invalid NFHS GameID"
-
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, f"nfhs_{game_id}.mp4")
-
-    # Try yt-dlp first
-    nfhs_url = f"https://www.nfhsnetwork.com/game/{game_id}"
-
-    try:
-        # Check if yt-dlp is available
-        result = subprocess.run(
-            ["yt-dlp", "--version"],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            # Download with yt-dlp
-            cmd = [
-                "yt-dlp",
-                "--no-check-certificates",
-                "-o", output_path,
-                "--merge-output-format", "mp4",
-                "--retries", "3",
-                "--fragment-retries", "3",
-                nfhs_url
-            ]
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=7200  # 2 hour max
-            )
-            if result.returncode == 0 and os.path.exists(output_path):
-                return True, output_path, None
-            else:
-                error_msg = result.stderr[-500:] if result.stderr else "yt-dlp failed"
-                return False, None, f"yt-dlp error: {error_msg}"
-    except FileNotFoundError:
-        pass  # yt-dlp not installed
-    except subprocess.TimeoutExpired:
-        return False, None, "Download timed out (2 hour limit)"
-
-    # Try streamlink as fallback
-    try:
-        result = subprocess.run(
-            ["streamlink", "--version"],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            cmd = [
-                "streamlink",
-                "--output", output_path,
-                "--force",
-                nfhs_url,
-                "best"
-            ]
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=7200
-            )
-            if result.returncode == 0 and os.path.exists(output_path):
-                return True, output_path, None
-            else:
-                error_msg = result.stderr[-500:] if result.stderr else "streamlink failed"
-                return False, None, f"streamlink error: {error_msg}"
-    except FileNotFoundError:
-        pass
-    except subprocess.TimeoutExpired:
-        return False, None, "Download timed out"
-
-    # If neither tool is available, return instructions
-    return False, None, (
-        "No download tool available. Install yt-dlp: pip install yt-dlp. "
-        f"Or manually download from: {nfhs_url}"
-    )
+def _get_stored_credentials():
+    """Get stored NFHS credentials. Returns (email, password) or (None, None)."""
+    db = get_db()
+    cred = db.execute("SELECT email, password_enc FROM nfhs_credentials WHERE is_active=1 ORDER BY id DESC LIMIT 1").fetchone()
+    if cred:
+        return cred["email"], _decrypt_password(cred["password_enc"])
+    return None, None
 
 
 # ── Scouting Report CRUD ─────────────────────────────────────
@@ -481,28 +510,31 @@ def api_scouting_nfhs_download():
     if not game_id:
         return jsonify({"error": f"Could not extract NFHS GameID from: {data.get('game_id')}"}), 400
 
-    output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
-    success, file_path, error = download_nfhs_vod(game_id, output_dir)
+    # Get credentials
+    email, password = _get_stored_credentials()
+    if not email:
+        return jsonify({"error": "No NFHS credentials stored. Please log in first.", "needs_login": True}), 401
 
-    if success:
-        # Create a game record for this download
+    output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
+    result = download_nfhs_vod(game_id, email, password, output_dir)
+
+    if result["success"]:
         db = get_db()
-        file_size = os.path.getsize(file_path)
         cur = db.execute("""
             INSERT INTO games (source_type, source_key, nfhs_game_id)
             VALUES ('nfhs_vod', ?, ?)
-        """, (file_path, game_id))
+        """, (result["file_path"], game_id))
         db.commit()
 
         return jsonify({
             "status": "downloaded",
-            "file_path": file_path,
-            "file_size": file_size,
+            "file_path": result["file_path"],
+            "file_size": result["file_size"],
             "game_id": cur.lastrowid,
             "nfhs_game_id": game_id,
         })
     else:
-        return jsonify({"error": error, "nfhs_game_id": game_id}), 400
+        return jsonify({"error": result["error"], "nfhs_game_id": game_id}), 400
 
 
 # ── Auto-Generate from AI Events ────────────────────────────
