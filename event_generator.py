@@ -434,7 +434,7 @@ def main(game_id, db_path):
     Analyzes raw detection data to identify and store basketball events.
     """
     print(f"INFO: Starting event generation for game_id: {game_id}")
-    
+
     conn = None
     try:
         conn = get_db_connection(db_path)
@@ -446,10 +446,18 @@ def main(game_id, db_path):
         )
         ai_settings = runtime_settings["ai"]
         detections_df = get_detections(conn, game_id)
-        
+
         if detections_df.empty:
             print("INFO: No detections found for this game. Exiting.")
             return True
+
+        # Step 1: Interpolate ball positions between anchor frames
+        # This is critical because ball detection only runs on anchor frames
+        # and we need ball positions on every frame with person detections
+        ball_count_before = len(detections_df[detections_df['class_name'] == 'ball'])
+        detections_df = _interpolate_ball(detections_df)
+        ball_count_after = len(detections_df[detections_df['class_name'] == 'ball'])
+        print(f"INFO: Ball detections: {ball_count_before} → {ball_count_after} (after interpolation)")
 
         # Step 2: Determine who has the ball in each frame
         detections_with_possession_df = find_ball_possession(detections_df)
@@ -468,9 +476,9 @@ def main(game_id, db_path):
             persist_events(conn, game_id, [])
 
         print("INFO: Successfully completed event generation pipeline.")
-        
+
         return True
-        
+
     except (sqlite3.Error, ImportError) as e:
         print(f"ERROR: An error occurred in event_generator: {e}")
         return False
@@ -478,3 +486,74 @@ def main(game_id, db_path):
         if conn:
             conn.close()
             print("INFO: Database connection closed.")
+
+
+def _interpolate_ball(detections_df):
+    """
+    Interpolate ball positions between anchor frames.
+
+    Ball detection only runs on anchor frames (every N frames), so we only
+    see the ball a few times per possession. This function estimates ball
+    positions on frames between anchor detections using linear interpolation,
+    giving us ball positions on every frame that has person detections.
+    """
+    ball_df = detections_df[detections_df['class_name'] == 'ball'].sort_values('frame_number')
+    person_df = detections_df[detections_df['class_name'] == 'person'].sort_values('frame_number')
+
+    if len(ball_df) < 2 or person_df.empty:
+        return detections_df
+
+    person_frames = set(person_df['frame_number'].values)
+    ball_frames = set(ball_df['frame_number'].values)
+
+    # Build anchor positions
+    anchor_frames = sorted(ball_df['frame_number'].values)
+    anchor_positions = {}
+    for _, row in ball_df.iterrows():
+        anchor_positions[row['frame_number']] = (row['x_center'], row['y_center'])
+
+    # Interpolate for person-only frames
+    new_rows = []
+    for frame in person_frames:
+        if frame in ball_frames:
+            continue
+
+        # Find nearest anchor frames
+        before = None
+        after = None
+        for af in anchor_frames:
+            if af <= frame:
+                before = af
+            if af >= frame and after is None:
+                after = af
+
+        if before is not None and after is not None and before != after:
+            t = (frame - before) / (after - before)
+            bx, by = anchor_positions[before]
+            ax, ay = anchor_positions[after]
+            ix = bx + t * (ax - bx)
+            iy = by + t * (ay - by)
+
+            # Get timestamp from person detection
+            person_row = person_df[person_df['frame_number'] == frame]
+            ts = person_row['timestamp_ms'].values[0] if len(person_row) > 0 and 'timestamp_ms' in person_row.columns else 0
+
+            new_rows.append({
+                'frame_number': frame,
+                'x_center': ix,
+                'y_center': iy,
+                'class_name': 'ball',
+                'confidence': 0.3,
+                'object_class': 'ball',
+                'timestamp_ms': ts,
+                'width': ball_df['width'].mean() if 'width' in ball_df.columns else 20,
+                'height': ball_df['height'].mean() if 'height' in ball_df.columns else 20,
+                'tracker_id': None,
+            })
+
+    if new_rows:
+        interp_df = pd.DataFrame(new_rows)
+        detections_df = pd.concat([detections_df, interp_df], ignore_index=True)
+        detections_df = detections_df.sort_values(['frame_number', 'class_name']).reset_index(drop=True)
+
+    return detections_df
