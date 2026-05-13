@@ -371,3 +371,72 @@ def upload_and_analyze():
     </body></html>
     """
 
+
+@ai_bp.route("/upload_only", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def upload_only():
+    """Upload a video for manual tagging only (no AI analysis)."""
+    if "video" not in request.files:
+        return "No video file provided", 400
+    f = request.files["video"]
+    if not f.filename:
+        return "Empty filename", 400
+
+    opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+    original_filename = secure_filename(f.filename)
+    stem, ext = os.path.splitext(original_filename)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    stored_filename = f"{stem}_{ts}{ext}"
+    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
+    f.save(dest)
+    file_size = os.path.getsize(dest)
+
+    db = get_db()
+    game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
+
+    db.execute(
+        """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
+                               opponent, game_id, is_duplicate, duplicate_of_id)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (original_filename, stored_filename, dest, file_size, opponent, game_id, 0, None),
+    )
+    db.commit()
+
+    film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "status": "uploaded",
+            "stored_filename": stored_filename,
+            "game_id": game_id,
+            "redirect_url": film_url,
+            "analysis_message": None,
+        })
+
+    return f"""<!DOCTYPE html>
+    <html><head>
+    <meta http-equiv="refresh" content="4;url={film_url}">
+    <style>
+      body{{font-family:sans-serif;padding:40px;background:#f7f6f2;max-width:640px;margin:auto;}}
+      .card{{background:#fff;border:1px solid #e2e0da;border-radius:8px;padding:28px;margin-top:24px;}}
+      code{{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em;}}
+      .nav a{{margin-right:16px;color:#01696f;text-decoration:none;font-weight:500;}}
+    </style>
+    </head><body>
+    <div class="nav"><a href="/">⬅ Dashboard</a><a href="/videos">📹 All Videos</a></div>
+    <div class="card">
+      <h2>📹 Upload complete</h2>
+      <p><strong>Original filename:</strong> {original_filename}</p>
+      <p><strong>Stored as:</strong> <code>{stored_filename}</code></p>
+      <p><strong>Opponent:</strong> {opponent}</p>
+      <p><strong>File size:</strong> {file_size/1_000_000:.1f} MB</p>
+      <p style="margin-top:16px;">Ready for manual tagging.</p>
+      <p style="margin-top:20px;color:#6b7280;font-size:.9em;">
+        Redirecting to film tool in 4 seconds…
+        <a href="{film_url}">click here</a> to go now.
+      </p>
+    </div>
+    </body></html>
+    """
+
