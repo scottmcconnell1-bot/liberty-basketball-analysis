@@ -90,80 +90,6 @@ def find_ball_possession(detections_df, possession_threshold=50):
     return detections_df
 
 
-def find_dribbles(detections_with_possession_df, min_sequence_frames=6, y_movement_thresh=3):
-    """Identifies dribble events from possession data.
-
-    This function tries to work even when explicit tracker_id values are not present.
-    If tracker_id exists, grouping is done by tracker_id. Otherwise a simple spatial-temporal
-    heuristic groups player detections into temporary buckets based on proximity.
-    """
-    print("INFO: Identifying dribble events.")
-    dribble_events = []
-
-    # Filter for player detections that have the ball
-    player_possessions = detections_with_possession_df[
-        (detections_with_possession_df['class_name'] == 'person') &
-        (detections_with_possession_df['has_ball'] == True)
-    ].sort_values(by=['frame_number'])
-
-    print(f"DEBUG: Found {len(player_possessions)} total possession frames to analyze for dribbles.")
-
-    if player_possessions.empty:
-        return dribble_events
-
-    # If tracker_id is available and not all-NA, group by it
-    if 'tracker_id' in player_possessions.columns and player_possessions['tracker_id'].notna().any():
-        groups = player_possessions.groupby('tracker_id')
-    else:
-        # Create a coarse spatial bin 'person_key' to approximate identity across nearby frames
-        # This is a fallback heuristic when no tracking is available.
-        bp = player_possessions.copy()
-        bp['person_key'] = ((bp['x_center'] // 50).astype(int).astype(str) + '_' + (bp['y_center'] // 50).astype(int).astype(str))
-        groups = bp.groupby('person_key')
-
-    for key, group in groups:
-        group = group.sort_values('frame_number')
-        # Find contiguous sequences of frames (allow small gaps of up to 2 frames)
-        seq = []
-        last_frame = None
-        sequences = []
-        for _, row in group.iterrows():
-            fn = int(row['frame_number'])
-            if last_frame is None or fn - last_frame <= 2:
-                seq.append(row)
-            else:
-                sequences.append(pd.DataFrame(seq))
-                seq = [row]
-            last_frame = fn
-        if seq:
-            sequences.append(pd.DataFrame(seq))
-
-        # Analyze each contiguous sequence for dribble-like vertical movement
-        for s in sequences:
-            if len(s) < min_sequence_frames:
-                continue
-            # Examine ball y_center changes (we need ball positions). We approximate by using ball_distance and player y
-            # If there is significant vertical movement of the ball relative to the player across the sequence, mark dribble
-            y_vals = s['y_center'].astype(float)
-            y_std = y_vals.diff().abs().median()
-            if pd.isna(y_std):
-                continue
-            if y_std >= y_movement_thresh:
-                # Create a dribble event at the start timestamp
-                event = {
-                    'game_id': s.iloc[0]['game_id'],
-                    'player': str(key),
-                    'event_type': 'dribble',
-                    'shot_result': None,
-                    'timestamp_ms': int(s.iloc[0]['timestamp_ms']),
-                    'details_json': str({'frames': list(s['frame_number'])})
-                }
-                dribble_events.append(event)
-
-    print(f"INFO: Identified {len(dribble_events)} dribble events.")
-    return dribble_events
-
-
 def make_event(game_id, event_type, timestamp_ms, player=None, shot_result=None, confidence=0.45, details=None):
     return {
         "game_id": game_id,
@@ -495,14 +421,10 @@ def main(game_id, db_path):
         conn = get_db_connection(db_path)
         runtime_settings = load_all_settings(
             feature_defaults={},
-            analysis_defaults={
-                "USE_DRIBBLE_EVENTS": AnalysisConfig.USE_DRIBBLE_EVENTS,
-                "USE_DRIBBLE_HEURISTICS": AnalysisConfig.USE_DRIBBLE_HEURISTICS,
-            },
+            analysis_defaults={},
             ai_defaults=AI_DEFAULTS,
             db=conn,
         )
-        analysis_settings = runtime_settings["analysis"]
         ai_settings = runtime_settings["ai"]
         detections_df = get_detections(conn, game_id)
         
@@ -513,13 +435,6 @@ def main(game_id, db_path):
         # Step 2: Determine who has the ball in each frame
         detections_with_possession_df = find_ball_possession(detections_df)
 
-        dribbles = []
-        if analysis_settings["USE_DRIBBLE_HEURISTICS"]:
-            dribbles = find_dribbles(detections_with_possession_df)
-            print(f"INFO: Identified {len(dribbles)} dribble events (heuristic).")
-        else:
-            print("INFO: Dribble heuristics disabled by configuration.")
-
         generator_mode = ai_settings.get("event_generator_mode", "legacy")
         events_to_persist = []
 
@@ -528,39 +443,8 @@ def main(game_id, db_path):
             ball_track = build_ball_track(detections_df)
             print(f"INFO: Built {len(segments)} possession segments for expanded generation.")
             events_to_persist = generate_expanded_events_from_segments(game_id, segments, ball_track)
-            if analysis_settings["USE_DRIBBLE_EVENTS"] and dribbles:
-                events_to_persist.extend(
-                    make_event(
-                        ev["game_id"],
-                        ev["event_type"],
-                        ev["timestamp_ms"],
-                        player=ev.get("player"),
-                        shot_result=ev.get("shot_result"),
-                        confidence=0.55,
-                        details={"legacy_dribble": True},
-                    )
-                    for ev in dribbles
-                )
             print(f"INFO: Expanded generator produced {len(events_to_persist)} events.")
             persist_events(conn, game_id, events_to_persist)
-        elif analysis_settings["USE_DRIBBLE_EVENTS"] and dribbles:
-            events_to_persist = [
-                make_event(
-                    ev["game_id"],
-                    ev["event_type"],
-                    ev["timestamp_ms"],
-                    player=ev.get("player"),
-                    shot_result=ev.get("shot_result"),
-                    confidence=0.55,
-                    details={"legacy_dribble": True},
-                )
-                for ev in dribbles
-            ]
-            persist_events(conn, game_id, events_to_persist)
-            print(f"INFO: Persisted {len(events_to_persist)} dribble events to the database.")
-        elif dribbles:
-            print("INFO: Dribble events not persisted because USE_DRIBBLE_EVENTS is disabled.")
-            persist_events(conn, game_id, [])
         else:
             persist_events(conn, game_id, [])
 

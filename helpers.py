@@ -512,13 +512,13 @@ def build_settings_catalog():
         "event_generator_mode_options": [
             {
                 "value": "legacy",
-                "label": "Legacy dribble-only generator",
-                "note": "Keeps the existing generator behavior and only tries to persist dribble events.",
+                "label": "Legacy generator",
+                "note": "Basic event generation from detections.",
             },
             {
                 "value": "expanded",
                 "label": "Expanded heuristic generator",
-                "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, fouls, and dribbles.",
+                "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
             },
         ],
         "llm_provider_options": llm_provider_options,

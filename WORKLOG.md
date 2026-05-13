@@ -444,3 +444,31 @@ How to resume / commands to run
     - 6c91da2b — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 12:24 MDT
     - 6bda59c1 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 10:20 MDT
   - No new user-facing commits since 16:34 check. Project stable, awaiting next coach direction.
+---
+[2026-05-13 06:44 MDT] Cron status check:
+  - Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+  - Working tree: 1 modified (film_analysis.db), 1 untracked (scripts/tunnel-watchdog.sh)
+  - Latest commits:
+    - 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+    - 8a549712 — fix: align upload form fields (Video File / Opponent)
+    - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+    - 4b169313 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 18:36 MDT
+    - 5d2fa01b — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 16:34 MDT
+  - 3 new commits since 18:36 check: CSS fixes for upload form + major upload workflow refactor (tagging/AI split, client-side compression). Project active.
+
+[2026-05-13 08:50 MDT] Cron status check:
+  - Branch: jason-5-may-updates (up to date with origin)
+  - Working tree: 2 modified (PROGRESS.md, WORKLOG.md), 1 db change (film_analysis.db), 1 untracked (scripts/tunnel-watchdog.sh)
+  - Latest commits:
+    - 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+    - 8a549712 — fix: align upload form fields (Video File / Opponent)
+    - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+    - 4b169313 — docs: cron status check 2026-05-12 18:36 MDT
+    - 5d2fa01b — docs: cron status check 2026-05-12 16:34 MDT
+  - No new commits since 06:44 check. Project stable.
+
+[2026-05-13 10:53 MDT] Cron status check:
+  - Branch: jason-5-may-updates (up to date with origin)
+  - No new commits since 06:44 MDT check
+  - Uncommitted: PROGRESS.md, WORKLOG.md (modified), film_analysis.db (modified); scripts/tunnel-watchdog.sh (untracked)
+  - Project stable, no action needed

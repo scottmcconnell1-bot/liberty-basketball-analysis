@@ -16,8 +16,7 @@ class Features:
 
 
 class AnalysisConfig:
-    USE_DRIBBLE_EVENTS = False
-    USE_DRIBBLE_HEURISTICS = True
+    pass
 
 
 class Config:

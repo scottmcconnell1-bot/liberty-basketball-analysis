@@ -727,7 +727,6 @@ def test_settings_page_persists_updates(client, db):
         "feature_ENABLE_GAMES_SOURCES": "on",
         "feature_ENABLE_NFHS_MATCHING": "on",
         "feature_ENABLE_PRACTICES": "on",
-        "analysis_USE_DRIBBLE_HEURISTICS": "on",
         "ai_detector_model": "custom",
         "ai_custom_detector_model": "yolo11s.pt",
         "ai_inference_device": "cpu",
@@ -749,7 +748,6 @@ def test_settings_page_persists_updates(client, db):
     assert stored["ai.event_generator_mode"] == "expanded"
     assert stored["ai.frame_stride"] == "2"
     assert stored["ai.tracker_max_distance"] == "95"
-    assert stored["analysis.USE_DRIBBLE_HEURISTICS"] == "1"
 
 
 def test_pull_ollama_model_starts_background_pull(client, monkeypatch):

@@ -84,7 +84,6 @@
         <button class="btn btn-secondary btn-sm" onclick="redoStep()" title="Redo (Ctrl+Y)">↪ Redo</button>
         <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
           <option value="select">Select / Move</option>
-          <option value="dribble">Dribble Arrow</option>
           <option value="pass">Pass Arrow</option>
           <option value="screen">Screen Arrow</option>
         </select>
@@ -489,13 +488,7 @@ function renderArrows(step) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     let d = '';
 
-    if (m.type === 'dribble') {
-      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-      path.setAttribute('stroke', '#ef4444');
-      path.setAttribute('stroke-width', '3');
-      path.setAttribute('fill', 'none');
-      path.setAttribute('marker-end', 'url(#arrowhead-red)');
-    } else if (m.type === 'pass') {
+    if (m.type === 'pass') {
       d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
       path.setAttribute('stroke', '#3b82f6');
       path.setAttribute('stroke-width', '2.5');
@@ -629,7 +622,7 @@ function handleToolClick(e, pid) {
   } else {
     saveUndoState();
     const type = currentTool;
-    if (['dribble', 'pass', 'screen'].includes(type)) {
+    if (['pass', 'screen'].includes(type)) {
       steps[currentStep].movements.push({ from: arrowStart, to: pid, type });
     }
     highlightPlayer(arrowStart, false);
