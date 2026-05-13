@@ -261,6 +261,16 @@ def run_ai_analysis(db_path, video_path, game_id):
         # Generate events from detections (will use tracker_id if present)
         generate_events(game_id, db_path)
 
+        # Run enhanced film analysis (minutes, shots, plays, player effect)
+        try:
+            from film_analysis import run_enhanced_analysis
+            cap = cv2.VideoCapture(video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            cap.release()
+            run_enhanced_analysis(db_path, game_id, fps)
+        except Exception as e:
+            print(f"[AI] Enhanced analysis failed or not available: {e}")
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:

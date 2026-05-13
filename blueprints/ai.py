@@ -80,9 +80,14 @@ def get_analysis_status(game_id):
 @ai_bp.route("/api/stats/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_stats(game_id):
-    from stats import refresh_stats
+    from stats import refresh_stats, get_enhanced_stats
     db = get_db()
-    return jsonify(refresh_stats(db, game_id))
+    basic = refresh_stats(db, game_id)
+    enhanced = get_enhanced_stats(db, game_id)
+    return jsonify({
+        "basic": basic,
+        "enhanced": enhanced,
+    })
 
 
 # ── API: Upload video ─────────────────────────────────────
