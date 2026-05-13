@@ -333,25 +333,29 @@
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <div class="ft-ai-upload-toggle" id="ftAiUploadToggle">
           <span class="ft-chevron">▶</span>
-          <span>🤖 Run AI Analysis — Upload video for auto-detection</span>
+          <span>🤖 Upload Video — Tag manually or run AI analysis</span>
         </div>
         <div class="ft-ai-upload-body" id="ftAiUploadBody">
-          <form action="/upload" method="post" enctype="multipart/form-data" id="aiUploadForm">
-            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">🤖 AI auto-detection runs in the background. A 2-min clip takes ~20s; a full game may take 3-5 min. You can close this page and check the <a href="/status" style="color:var(--color-primary);">Status page</a> for progress.</p>
+          <form enctype="multipart/form-data" id="aiUploadForm">
+            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Large files are compressed automatically before upload.</p>
             <div class="split">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
                 <input type="file" id="aiVideoFile" name="video" accept="video/mp4,video/*" required>
+                <span class="tiny" id="fileSizeInfo" style="color:var(--color-text-muted);margin-top:.25rem;"></span>
               </div>
               <div class="field">
                 <label for="aiOpponent">Opponent</label>
                 <input type="text" id="aiOpponent" name="opponent" placeholder="Enter Opponent Name">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary">Upload and Analyze</button>
+            <div class="split" style="margin-top:.75rem;gap:.5rem;">
+              <button type="button" class="btn btn-secondary" id="uploadTagBtn">📝 Upload for Tagging</button>
+              <button type="button" class="btn btn-primary" id="uploadAiBtn">🤖 Upload & AI Analyze</button>
+            </div>
             <div class="upload-progress-shell" id="uploadProgressShell">
               <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
-              <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting to upload…</div>
+              <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting…</div>
             </div>
           </form>
         </div>

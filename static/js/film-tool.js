@@ -1425,26 +1425,117 @@ function initAiUpload() {
     const uploadProgressShell = document.getElementById('uploadProgressShell');
     const uploadProgressBar = document.getElementById('uploadProgressBar');
     const uploadProgressText = document.getElementById('uploadProgressText');
+    const fileInput = document.getElementById('aiVideoFile');
+    const fileSizeInfo = document.getElementById('fileSizeInfo');
     if (!aiUploadForm) return;
 
-    aiUploadForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const fileInput = document.getElementById('aiVideoFile');
-        const file = fileInput?.files?.[0];
-        if (!file) { if (uploadProgressText) uploadProgressText.textContent = 'Please select a video file first.'; return; }
+    // Show selected file size
+    fileInput?.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (!file) { fileSizeInfo.textContent = ''; return; }
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        const sizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2);
+        let msg = `Selected: ${sizeMB} MB`;
+        if (file.size > 1024 * 1024 * 1024) msg += ` (${sizeGB} GB)`;
+        if (file.size > 500 * 1024 * 1024) {
+            msg += ' — will be compressed before upload';
+        }
+        fileSizeInfo.textContent = msg;
+    });
 
-        const formData = new FormData(aiUploadForm);
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', aiUploadForm.action);
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.timeout = 3600000; // 1 hour timeout for large files
+    // Shared upload function
+    function uploadFile(url, useCompression) {
+        const file = fileInput?.files?.[0];
+        if (!file) { uploadProgressText.textContent = 'Please select a video file first.'; return; }
+
         uploadProgressShell?.classList.add('active');
+        if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+
+        // Compress if file is > 500MB and compression is requested
+        if (useCompression && file.size > 500 * 1024 * 1024) {
+            compressAndUpload(file, url);
+            return;
+        }
+
+        doUpload(file, url);
+    }
+
+    function compressAndUpload(originalFile, url) {
+        if (uploadProgressText) uploadProgressText.textContent = 'Compressing video… this may take a few minutes.';
+
+        // Use browser's video compression via canvas + MediaRecorder
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(originalFile);
+        video.muted = true;
+
+        video.onloadedmetadata = () => {
+            const canvas = document.createElement('canvas');
+            // Scale down to 720p max for compression
+            const maxW = 1280, maxH = 720;
+            let w = video.videoWidth, h = video.videoHeight;
+            if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+            if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+
+            const stream = canvas.captureStream(30);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 2000000 });
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const compressedSizeMB = (blob.size / 1024 / 1024).toFixed(1);
+                const originalSizeMB = (originalFile.size / 1024 / 1024).toFixed(1);
+                if (uploadProgressText) uploadProgressText.textContent = `Compressed: ${originalSizeMB} MB → ${compressedSizeMB} MB. Uploading…`;
+                doUpload(blob, url, originalFile.name.replace(/\.[^.]+$/, '.webm'));
+            };
+
+            recorder.start();
+            video.play();
+
+            video.ontimeupdate = () => {
+                ctx.drawImage(video, 0, 0, w, h);
+                const progress = video.duration > 0 ? (video.currentTime / video.duration * 100) : 0;
+                if (uploadProgressBar) uploadProgressBar.style.width = `${progress}%`;
+                if (uploadProgressText) uploadProgressText.textContent = `Compressing… ${progress.toFixed(0)}%`;
+            };
+
+            video.onended = () => {
+                recorder.stop();
+                URL.revokeObjectURL(video.src);
+            };
+
+            video.onerror = () => {
+                // Compression failed, upload original
+                if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
+                doUpload(originalFile, url);
+            };
+        };
+
+        video.onerror = () => {
+            if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
+            doUpload(originalFile, url);
+        };
+    }
+
+    function doUpload(fileOrBlob, url, filename) {
+        const formData = new FormData();
+        const opponent = document.getElementById('aiOpponent')?.value?.trim() || 'unknown';
+        formData.append('video', fileOrBlob, filename || fileOrBlob.name || 'video.mp4');
+        formData.append('opponent', opponent);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.timeout = 3600000; // 1 hour
         if (uploadProgressBar) uploadProgressBar.style.width = '0%';
         if (uploadProgressText) uploadProgressText.textContent = 'Starting upload…';
 
         xhr.upload.addEventListener('progress', (progressEvent) => {
             if (!progressEvent.lengthComputable) {
-                if (uploadProgressText) uploadProgressText.textContent = 'Uploading… (size unknown)';
+                if (uploadProgressText) uploadProgressText.textContent = 'Uploading…';
                 return;
             }
             const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
@@ -1454,16 +1545,24 @@ function initAiUpload() {
             if (uploadProgressText) uploadProgressText.textContent = `Uploading… ${percent}% (${loadedMB} / ${totalMB} MB)`;
         });
         xhr.addEventListener('load', () => {
-            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large. Maximum upload size is 4 GB.'; return; }
-            if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = `Upload failed (HTTP ${xhr.status}). Please try again or use a smaller file.`; return; }
+            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large even after compression. Try a shorter clip.'; return; }
+            if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = `Upload failed (HTTP ${xhr.status}). Please try again.`; return; }
             const payload = JSON.parse(xhr.responseText);
             if (uploadProgressBar) uploadProgressBar.style.width = '100%';
-            if (uploadProgressText) uploadProgressText.textContent = 'Upload complete. Redirecting to film tool…';
+            if (uploadProgressText) uploadProgressText.textContent = 'Upload complete. Redirecting…';
             window.location.href = payload.redirect_url;
         });
         xhr.addEventListener('error', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed. Check your connection and try again.'; });
-        xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. The file may be too large or your connection too slow. Try a smaller clip or check your network.'; });
+        xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. Try a shorter clip or check your network.'; });
         xhr.send(formData);
+    }
+
+    // Button handlers
+    document.getElementById('uploadTagBtn')?.addEventListener('click', () => {
+        uploadFile('/upload_only', true);
+    });
+    document.getElementById('uploadAiBtn')?.addEventListener('click', () => {
+        uploadFile('/upload', true);
     });
 }
 
