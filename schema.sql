@@ -513,3 +513,96 @@ CREATE TABLE IF NOT EXISTS scouting_clips (
     source          TEXT,  -- 'ai_detected', 'manual_tag'
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ── Enhanced Film Analysis ──────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS player_minutes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         TEXT NOT NULL,
+    tracker_id      INTEGER NOT NULL,
+    jersey_number   INTEGER,  -- if known
+    player_name     TEXT,     -- if known
+    first_frame     INTEGER NOT NULL,
+    last_frame      INTEGER NOT NULL,
+    total_frames    INTEGER NOT NULL,
+    minutes_played  REAL NOT NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, tracker_id)
+);
+
+CREATE TABLE IF NOT EXISTS shot_classifications (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id        INTEGER REFERENCES events(id) ON DELETE CASCADE,
+    game_id         TEXT NOT NULL,
+    tracker_id      INTEGER,
+    jersey_number   INTEGER,
+    shot_type       TEXT NOT NULL,  -- '2pt', '3pt', 'ft'
+    shot_result     TEXT NOT NULL,  -- 'make', 'miss'
+    court_x         REAL,  -- normalized court position (0-1)
+    court_y         REAL,  -- normalized court position (0-1)
+    confidence      REAL,
+    timestamp_ms    INTEGER NOT NULL,
+    details_json    TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS play_recognitions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         TEXT NOT NULL,
+    play_type       TEXT NOT NULL,  -- 'pick_and_roll', 'isolation', 'transition', 'post_up', 'zone_press', 'man_to_man', 'fast_break', 'half_court_set'
+    play_subtype    TEXT,           -- e.g., 'pnr_ball_handler', 'pnr_screener', 'iso_left', 'iso_right'
+    start_frame     INTEGER NOT NULL,
+    end_frame       INTEGER NOT NULL,
+    start_timestamp_ms INTEGER NOT NULL,
+    end_timestamp_ms INTEGER,
+    primary_tracker_id INTEGER,  -- main player involved
+    secondary_tracker_id INTEGER,  -- screener, helper, etc.
+    confidence      REAL,
+    details_json    TEXT,  -- JSON with player positions, movement vectors
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS player_effect (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         TEXT NOT NULL,
+    tracker_id      INTEGER NOT NULL,
+    jersey_number   INTEGER,
+    plus_minus      INTEGER DEFAULT 0,  -- score differential while on court
+    possessions_on  INTEGER DEFAULT 0,
+    possessions_off INTEGER DEFAULT 0,
+    points_for      INTEGER DEFAULT 0,
+    points_against  INTEGER DEFAULT 0,
+    ortg            REAL,  -- offensive rating
+    drtg            REAL,  -- defensive rating
+    net_rating      REAL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, tracker_id)
+);
+
+CREATE TABLE IF NOT EXISTS scouting_tendencies_aggregated (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    opponent_name   TEXT NOT NULL,
+    tendency_type   TEXT NOT NULL,  -- 'shot_selection', 'drive_direction', 'play_type', 'defensive_scheme', 'transition', 'late_clock'
+    category        TEXT,           -- sub-category
+    description     TEXT NOT NULL,
+    games_observed  INTEGER DEFAULT 1,
+    frequency       TEXT,           -- 'always', 'often', 'sometimes', 'rarely' or percentage
+    confidence      REAL,
+    last_updated    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    details_json    TEXT,
+    UNIQUE(opponent_name, tendency_type, category)
+);
+
+CREATE TABLE IF NOT EXISTS human_corrections (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         TEXT NOT NULL,
+    event_id        INTEGER REFERENCES events(id) ON DELETE SET NULL,
+    correction_type TEXT NOT NULL,  -- 'add_event', 'remove_event', 'change_event', 'change_shot_type', 'change_play_type', 'change_player'
+    original_value  TEXT,
+    corrected_value TEXT NOT NULL,
+    field_changed   TEXT NOT NULL,
+    timestamp_ms    INTEGER,
+    notes           TEXT,
+    applied_to_model INTEGER DEFAULT 0,  -- whether this correction has been used to improve the model
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -77,5 +77,124 @@ def refresh_stats(db, game_id):
                 stat["blk"],
             ),
         )
+
+    # Enhance with minutes played and shot type breakdowns from enhanced analysis tables
+    _enhance_stats_from_analysis(db, game_id)
+
     db.commit()
     return aggregated
+
+
+def _enhance_stats_from_analysis(db, game_id):
+    """Add minutes played and shot type breakdowns from enhanced analysis."""
+
+    # Add minutes played from player_minutes table
+    minutes_rows = db.execute(
+        "SELECT tracker_id, minutes_played FROM player_minutes WHERE game_id=?", (game_id,)
+    ).fetchall()
+
+    for mrow in minutes_rows:
+        tracker_id = mrow["tracker_id"]
+        minutes = mrow["minutes_played"]
+        # Find matching stats row by tracker_id → player_id mapping
+        player = db.execute(
+            "SELECT id, name FROM players WHERE tracker_id=? AND (SELECT game_id FROM stats WHERE player_id=? LIMIT 1)=?",
+            (tracker_id, tracker_id, game_id)
+        ).fetchone()
+        if player:
+            db.execute(
+                "UPDATE stats SET minutes=? WHERE game_id=? AND player_id=?",
+                (minutes, game_id, player["id"])
+            )
+
+    # Add shot type breakdowns from shot_classifications table
+    shot_rows = db.execute("""
+        SELECT tracker_id, shot_type, shot_result, COUNT(*) as cnt
+        FROM shot_classifications
+        WHERE game_id=?
+        GROUP BY tracker_id, shot_type, shot_result
+    """, (game_id,)).fetchall()
+
+    for srow in shot_rows:
+        tracker_id = srow["tracker_id"]
+        shot_type = srow["shot_type"]
+        shot_result = srow["shot_result"]
+        cnt = srow["cnt"]
+
+        # Find matching stats row
+        player = db.execute(
+            "SELECT id FROM players WHERE tracker_id=? LIMIT 1", (tracker_id,)
+        ).fetchone()
+        if not player:
+            continue
+
+        player_id = player["id"]
+
+        # Update appropriate columns based on shot type
+        if shot_type == "3pt":
+            if shot_result == "make":
+                db.execute("UPDATE stats SET threes_made=threes_made+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
+            db.execute("UPDATE stats SET threes_att=threes_att+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
+        elif shot_type == "2pt":
+            if shot_result == "make":
+                db.execute("UPDATE stats SET fgm=fgm+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
+            db.execute("UPDATE stats SET fga=fga+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
+
+
+def get_enhanced_stats(db, game_id):
+    """
+    Get enhanced stats including minutes played, shot breakdowns, and player effect.
+
+    Returns a dict with:
+    - basic_stats: standard box score stats
+    - minutes: minutes played per player
+    - shot_breakdown: 2pt/3pt/FT per player
+    - player_effect: +/- per player
+    - plays: recognized plays summary
+    """
+    basic = aggregate_stats(db, game_id)
+
+    # Minutes
+    minutes = db.execute("""
+        SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, p.name
+        FROM player_minutes pm
+        LEFT JOIN players p ON p.tracker_id = pm.tracker_id
+        WHERE pm.game_id = ?
+        ORDER BY pm.minutes_played DESC
+    """, (game_id,)).fetchall()
+
+    # Shot breakdown
+    shots = db.execute("""
+        SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
+        FROM shot_classifications sc
+        WHERE sc.game_id = ?
+        GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
+        ORDER BY sc.tracker_id, sc.shot_type
+    """, (game_id,)).fetchall()
+
+    # Player effect
+    effects = db.execute("""
+        SELECT pe.tracker_id, pe.plus_minus, pe.possessions_on, pe.points_for,
+               pe.points_against, pe.ortg, pe.drtg, pe.net_rating, p.name
+        FROM player_effect pe
+        LEFT JOIN players p ON p.tracker_id = pe.tracker_id
+        WHERE pe.game_id = ?
+        ORDER BY pe.net_rating DESC
+    """, (game_id,)).fetchall()
+
+    # Plays summary
+    plays = db.execute("""
+        SELECT play_type, COUNT(*) as cnt
+        FROM play_recognitions
+        WHERE game_id = ?
+        GROUP BY play_type
+        ORDER BY cnt DESC
+    """, (game_id,)).fetchall()
+
+    return {
+        "basic_stats": [dict(s) for s in basic],
+        "minutes": [dict(m) for m in minutes],
+        "shot_breakdown": [dict(s) for s in shots],
+        "player_effect": [dict(e) for e in effects],
+        "plays_summary": [dict(p) for p in plays],
+    }
