@@ -1,5 +1,15 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-13 06:44 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+- 8a549712 — fix: align upload form fields (Video File / Opponent)
+- afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+- 4b169313 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 18:36 MDT
+- 5d2fa01b — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 16:34 MDT
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: film_analysis.db (modified), scripts/tunnel-watchdog.sh (untracked)
+3 new commits since 18:36 check: upload form CSS fixes + major upload workflow refactor (tagging + AI analysis split, client-side compression).
+
 [2026-05-12 16:34 MDT] Latest commits (5 latest on jason-5-may-updates):
 - 2b51a872 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 14:31 MDT
 - bf94bde2 — docs: update WORKLOG with film tool fix and cloudflare tunnel work
@@ -179,3 +189,23 @@ Uncommitted changes: none (working tree clean)
 Branch: jason-5-may-updates (ahead of origin/jason-5-may-updates by 1 commit)
 Uncommitted changes: none (working tree clean)
 No new user-facing commits since 16:34 check. Project stable.
+
+[2026-05-13 08:50 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+- 8a549712 — fix: align upload form fields (Video File / Opponent)
+- afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+- 4b169313 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 18:36 MDT
+- 5d2fa01b — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 16:34 MDT
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: PROGRESS.md, WORKLOG.md (modified), film_analysis.db (modified); scripts/tunnel-watchdog.sh (untracked)
+No new commits since 06:44 check. Project stable; working tree has minor uncommitted edits.
+
+[2026-05-13 10:53 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+- 8a549712 — fix: align upload form fields (Video File / Opponent)
+- afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+- 4b169313 — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 18:36 MDT
+- 5d2fa01b — docs: update PROGRESS.md and WORKLOG.md for cron status check 2026-05-12 16:34 MDT
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: PROGRESS.md, WORKLOG.md (modified), film_analysis.db (modified); scripts/tunnel-watchdog.sh (untracked)
+No new commits since 06:44 check. Project stable; working tree has minor uncommitted edits.

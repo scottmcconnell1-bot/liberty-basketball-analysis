@@ -63,10 +63,7 @@ def run_ai_analysis(db_path, video_path, game_id):
     try:
         runtime_settings = load_all_settings(
             feature_defaults={},
-            analysis_defaults={
-                "USE_DRIBBLE_EVENTS": AnalysisConfig.USE_DRIBBLE_EVENTS,
-                "USE_DRIBBLE_HEURISTICS": AnalysisConfig.USE_DRIBBLE_HEURISTICS,
-            },
+            analysis_defaults={},
             ai_defaults=AI_DEFAULTS,
             db_path=db_path,
         )

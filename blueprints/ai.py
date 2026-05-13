@@ -23,7 +23,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from helpers import (
-    AI_DEFAULTS, ai_runtime_available, analysis_option_enabled, append_query_params, build_analysis_settings_snapshot,
+    AI_DEFAULTS, ai_runtime_available, append_query_params, build_analysis_settings_snapshot,
     build_resource_status, build_rerun_game_id, build_run_summary,
     build_settings_catalog, default_run_label, display_detector_model,
     ensure_primary_run_metadata, extract_local_path, get_db,
@@ -51,7 +51,6 @@ def get_analysis_status(game_id):
             "detection_count": 0,
             "event_count": 0,
             "event_generation_summary": "AI analysis has not started yet.",
-            "auto_event_persistence_enabled": analysis_option_enabled("USE_DRIBBLE_EVENTS"),
         })
 
     payload = dict(row)
@@ -66,14 +65,13 @@ def get_analysis_status(game_id):
         payload["event_generation_summary"] = (
             "YOLO currently detects players and the ball. The expanded heuristic generator tries to "
             "derive possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, "
-            "blocks, fouls, and dribbles from those detections."
+            "blocks, and fouls from those detections."
         )
     else:
         payload["event_generation_summary"] = (
-            "YOLO currently detects players and the ball. Auto-tagged events come from the legacy "
-            "dribble-only heuristic, so a completed upload can still show zero tagged events."
+            "YOLO currently detects players and the ball. Auto-tagged events come from the "
+            "heuristic event generator."
         )
-    payload["auto_event_persistence_enabled"] = analysis_option_enabled("USE_DRIBBLE_EVENTS")
     return jsonify(payload)
 
 
