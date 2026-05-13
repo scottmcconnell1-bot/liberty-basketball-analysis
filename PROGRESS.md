@@ -209,3 +209,12 @@ No new commits since 06:44 check. Project stable; working tree has minor uncommi
 Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
 Uncommitted changes: PROGRESS.md, WORKLOG.md (modified), film_analysis.db (modified); scripts/tunnel-watchdog.sh (untracked)
 No new commits since 06:44 check. Project stable; working tree has minor uncommitted edits.
+
+[2026-05-13 12:56 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 74788927 — docs: log intended AI analysis use - minutes, shots, play recognition, scouting
+- c65705d0 — Remove dribble from all AI analysis code
+- 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+- 8a549712 — fix: align upload form fields (Video File / Opponent)
+- afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+Branch: jason-5-may-updates (ahead of origin by 2 commits)
+Uncommitted changes: none (working tree clean)

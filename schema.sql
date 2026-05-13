@@ -387,3 +387,118 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read         INTEGER NOT NULL DEFAULT 0,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ── Scouting ───────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS scouting_reports (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         INTEGER REFERENCES games(id),
+    opponent_name   TEXT NOT NULL,
+    scout_date      DATE NOT NULL,
+    film_source     TEXT,  -- 'nfhs_vod', 'pixellot', 'manual_upload'
+    nfhs_game_id    TEXT,
+    status          TEXT NOT NULL DEFAULT 'draft',  -- 'draft', 'in_progress', 'completed'
+    offensive_identity TEXT,
+    defensive_identity TEXT,
+    tempo           TEXT,  -- 'fast', 'slow', 'methodical', 'varies'
+    executive_summary TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_personnel (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    jersey_number   INTEGER,
+    player_name     TEXT,
+    role            TEXT NOT NULL,  -- 'ball_handler', 'go_to_scorer', 'rim_protector', 'best_rebounder', 'spot_up_shooter', 'role_player'
+    notes           TEXT,
+    usage_rate      REAL,  -- estimated % of possessions used
+    ppp             REAL,  -- points per possession when involved
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_offensive_sets (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    set_name        TEXT NOT NULL,  -- 'horns', 'sideline_out', 'early_pnr', 'isolation', 'spread_pnr', 'post_up'
+    trigger_action  TEXT,  -- what starts the set
+    frequency       INTEGER DEFAULT 0,  -- times observed
+    ppp             REAL,  -- points per possession on this set
+    result_vs_pressure TEXT,  -- what they do when pressured
+    notes           TEXT,
+    clip_timestamps TEXT,  -- JSON array of {game_time, quarter, description}
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_defensive_tendencies (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    scheme          TEXT NOT NULL,  -- 'man', 'zone_23', 'zone_32', 'press', 'trap'
+    pnr_coverage    TEXT,  -- 'drop', 'switch', 'ice', 'show', 'hedge'
+    frequency       REAL,  -- % of possessions
+    ppp_allowed     REAL,
+    weak_rotations  TEXT,  -- JSON array of weak rotation points
+    notes           TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_tendencies (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    tendency_type   TEXT NOT NULL,  -- 'offensive', 'defensive', 'situational', 'habit'
+    category        TEXT,  -- 'shot_selection', 'drive_direction', 'late_clock', 'transition', 'rebounding', 'turnover'
+    description     TEXT NOT NULL,
+    frequency       TEXT,  -- 'always', 'often', 'sometimes', 'rarely' or percentage
+    clip_timestamps TEXT,  -- JSON array of {game_time, quarter, description}
+    exploitable     INTEGER DEFAULT 0,  -- 1 if this is something we can exploit
+    practice_drill  TEXT,  -- mapped drill to counter this
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_situational (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    situation       TEXT NOT NULL,  -- 'late_shot_clock', 'end_of_quarter', 'out_of_bounds', 'press_breaker', 'foul_game'
+    description     TEXT NOT NULL,
+    frequency       INTEGER DEFAULT 0,
+    ppp             REAL,
+    clip_timestamps TEXT,
+    notes           TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_mismatches (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    opponent_jersey INTEGER,
+    opponent_name   TEXT,
+    vulnerability   TEXT NOT NULL,  -- 'struggles_vs_smaller', 'struggles_vs_bigger', 'poor_closeout', 'slow_rotation', 'turnover_under_pressure'
+    exploit_action  TEXT,  -- what we should do to exploit
+    notes           TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_practice_points (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    point_number    INTEGER NOT NULL,  -- 1, 2, 3
+    description     TEXT NOT NULL,
+    drill_name      TEXT,
+    measurable_target TEXT,  -- e.g., "reduce open corner 3s off PnR by 50%"
+    clip_timestamps TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS scouting_clips (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
+    clip_type       TEXT NOT NULL,  -- 'offensive_set', 'defensive_action', 'tendency', 'mismatch', 'situational', 'practice_example'
+    game_time       TEXT,  -- e.g., "Q2 5:32"
+    quarter         INTEGER,
+    description     TEXT NOT NULL,
+    coach_cue       TEXT,  -- short cue line for pre-game meeting
+    video_timestamp_ms INTEGER,  -- timestamp in the source video
+    source          TEXT,  -- 'ai_detected', 'manual_tag'
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

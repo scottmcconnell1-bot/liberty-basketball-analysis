@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% block title %}Scouting Report - Liberty Basketball{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 id="report-title">Scouting Report</h1>
+  <div class="header-actions">
+    <a href="#" id="print-link" class="btn btn-secondary btn-sm" target="_blank">📄 Print</a>
+    <button class="btn btn-primary btn-sm" onclick="autoGenerate()">🤖 Auto-Generate from AI</button>
+  </div>
+</div>
+
+<div id="report-data" data-report-id="{{ report_id }}"></div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="personnel">Personnel</button>
+  <button class="tab-btn" data-tab="offense">Offense</button>
+  <button class="tab-btn" data-tab="defense">Defense</button>
+  <button class="tab-btn" data-tab="tendencies">Tendencies</button>
+  <button class="tab-btn" data-tab="situational">Situational</button>
+  <button class="tab-btn" data-tab="mismatches">Mismatches</button>
+  <button class="tab-btn" data-tab="practice">Practice</button>
+  <button class="tab-btn" data-tab="clips">Clips</button>
+</div>
+
+<!-- Overview Tab -->
+<div class="tab-content active" id="tab-overview">
+  <div class="card">
+    <div class="card-header"><h2>Executive Summary</h2></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>Offensive Identity</label>
+        <input type="text" id="offensive-identity" class="form-control" placeholder="e.g., Motion offense with heavy PnR">
+      </div>
+      <div class="form-group">
+        <label>Defensive Identity</label>
+        <input type="text" id="defensive-identity" class="form-control" placeholder="e.g., Man-to-man with drop coverage">
+      </div>
+      <div class="form-group">
+        <label>Tempo</label>
+        <select id="tempo" class="form-control">
+          <option value="">Select...</option>
+          <option value="fast">Fast-paced</option>
+          <option value="methodical">Slow/Methodical</option>
+          <option value="varies">Varies</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Executive Summary</label>
+        <textarea id="executive-summary" class="form-control" rows="4" placeholder="Top-level summary for coaches..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveOverview()">Save Overview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Personnel Tab -->
+<div class="tab-content" id="tab-personnel">
+  <div class="card">
+    <div class="card-header">
+      <h2>Key Personnel</h2>
+      <button class="btn btn-primary btn-sm" onclick="addPersonnel()">+ Add Player</button>
+    </div>
+    <div class="card-body" id="personnel-list">
+      <div class="empty-state">No personnel added yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Offense Tab -->
+<div class="tab-content" id="tab-offense">
+  <div class="card">
+    <div class="card-header">
+      <h2>Offensive Sets</h2>
+      <button class="btn btn-primary btn-sm" onclick="addOffensiveSet()">+ Add Set</button>
+    </div>
+    <div class="card-body" id="offensive-sets-list">
+      <div class="empty-state">No offensive sets added yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Defense Tab -->
+<div class="tab-content" id="tab-defense">
+  <div class="card">
+    <div class="card-header">
+      <h2>Defensive Tendencies</h2>
+      <button class="btn btn-primary btn-sm" onclick="addDefensiveTendency()">+ Add Tendency</button>
+    </div>
+    <div class="card-body" id="defensive-list">
+      <div class="empty-state">No defensive tendencies added yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tendencies Tab -->
+<div class="tab-content" id="tab-tendencies">
+  <div class="card">
+    <div class="card-header">
+      <h2>Tendencies & Habits</h2>
+      <button class="btn btn-primary btn-sm" onclick="addTendency()">+ Add Tendency</button>
+    </div>
+    <div class="card-body" id="tendencies-list">
+      <div class="empty-state">No tendencies added yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Situational Tab -->
+<div class="tab-content" id="tab-situational">
+  <div class="card">
+    <div class="card-header">
+      <h2>Situational Plays</h2>
+      <button class="btn btn-primary btn-sm" onclick="addSituational()">+ Add Situation</button>
+    </div>
+    <div class="card-body" id="situational-list">
+      <div class="empty-state">No situational plays added yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Mismatches Tab -->
+<div class="tab-content" id="tab-mismatches">
+  <div class="card">
+    <div class="card-header">
+      <h2>Mismatches & Vulnerabilities</h2>
+      <button class="btn btn-primary btn-sm" onclick="addMismatch()">+ Add Mismatch</button>
+    </div>
+    <div class="card-body" id="mismatches-list">
+      <div class="empty-state">No mismatches identified yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Practice Tab -->
+<div class="tab-content" id="tab-practice">
+  <div class="card">
+    <div class="card-header">
+      <h2>Practice Points (Top 3)</h2>
+    </div>
+    <div class="card-body" id="practice-points-list">
+      <div class="empty-state">No practice points defined yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Clips Tab -->
+<div class="tab-content" id="tab-clips">
+  <div class="card">
+    <div class="card-header">
+      <h2>Scouting Clips</h2>
+      <button class="btn btn-primary btn-sm" onclick="addClip()">+ Add Clip</button>
+    </div>
+    <div class="card-body" id="clips-list">
+      <div class="empty-state">No clips tagged yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const reportId = document.getElementById('report-data').dataset.reportId;
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Load report data
+function loadReport() {
+  fetch(`/api/scouting/reports/${reportId}`)
+    .then(r => r.json())
+    .then(data => {
+      const report = data.report;
+      document.getElementById('report-title').textContent = `Scouting: ${report.opponent_name}`;
+      document.getElementById('print-link').href = `/scouting/reports/${reportId}/print`;
+      document.getElementById('offensive-identity').value = report.offensive_identity || '';
+      document.getElementById('defensive-identity').value = report.defensive_identity || '';
+      document.getElementById('tempo').value = report.tempo || '';
+      document.getElementById('executive-summary').value = report.executive_summary || '';
+
+      renderPersonnel(data.personnel);
+      renderOffensiveSets(data.offensive_sets);
+      renderDefensive(data.defensive_tendencies);
+      renderTendencies(data.tendencies);
+      renderSituational(data.situational);
+      renderMismatches(data.mismatches);
+      renderPracticePoints(data.practice_points);
+      renderClips(data.clips);
+    });
+}
+
+function saveOverview() {
+  const data = {
+    offensive_identity: document.getElementById('offensive-identity').value,
+    defensive_identity: document.getElementById('defensive-identity').value,
+    tempo: document.getElementById('tempo').value,
+    executive_summary: document.getElementById('executive-summary').value,
+  };
+  fetch(`/api/scouting/reports/${reportId}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(() => alert('Overview saved'));
+}
+
+function autoGenerate() {
+  if (!confirm('Auto-generate scouting data from AI events? This will add personnel and tendencies based on detected events.')) return;
+  fetch(`/api/scouting/reports/${reportId}/generate`, {method: 'POST'})
+    .then(r => r.json())
+    .then(result => {
+      if (result.error) { alert(result.error); return; }
+      alert(result.message);
+      loadReport();
+    });
+}
+
+// Personnel
+function renderPersonnel(list) {
+  const el = document.getElementById('personnel-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No personnel added yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Role</th><th>Usage</th><th>PPP</th><th>Notes</th></tr></thead><tbody>' +
+    list.map(p => `<tr>
+      <td>${p.jersey_number || '-'}</td>
+      <td>${p.player_name || 'Unknown'}</td>
+      <td>${p.role}</td>
+      <td>${p.usage_rate ? (p.usage_rate * 100).toFixed(0) + '%' : '-'}</td>
+      <td>${p.ppp || '-'}</td>
+      <td>${p.notes || ''}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addPersonnel() {
+  const jersey = prompt('Jersey number:');
+  const name = prompt('Player name (optional):');
+  const role = prompt('Role (ball_handler, go_to_scorer, rim_protector, best_rebounder, spot_up_shooter, role_player):');
+  if (!role) return;
+  fetch(`/api/scouting/reports/${reportId}/personnel`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({jersey_number: jersey ? parseInt(jersey) : null, player_name: name, role})
+  }).then(() => loadReport());
+}
+
+// Offensive Sets
+function renderOffensiveSets(list) {
+  const el = document.getElementById('offensive-sets-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No offensive sets added yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Set</th><th>Trigger</th><th>Frequency</th><th>PPP</th><th>vs Pressure</th></tr></thead><tbody>' +
+    list.map(s => `<tr>
+      <td>${s.set_name}</td>
+      <td>${s.trigger_action || '-'}</td>
+      <td>${s.frequency}</td>
+      <td>${s.ppp || '-'}</td>
+      <td>${s.result_vs_pressure || '-'}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addOffensiveSet() {
+  const set_name = prompt('Set name (horns, sideline_out, early_pnr, isolation, spread_pnr, post_up):');
+  if (!set_name) return;
+  const trigger = prompt('Trigger action:');
+  const frequency = prompt('Times observed:');
+  const ppp = prompt('Points per possession:');
+  fetch(`/api/scouting/reports/${reportId}/offensive-sets`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({set_name, trigger_action: trigger, frequency: parseInt(frequency) || 0, ppp: parseFloat(ppp) || null})
+  }).then(() => loadReport());
+}
+
+// Defensive
+function renderDefensive(list) {
+  const el = document.getElementById('defensive-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No defensive tendencies added yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Scheme</th><th>PnR Coverage</th><th>Frequency</th><th>PPP Allowed</th><th>Weak Rotations</th></tr></thead><tbody>' +
+    list.map(d => `<tr>
+      <td>${d.scheme}</td>
+      <td>${d.pnr_coverage || '-'}</td>
+      <td>${d.frequency ? (d.frequency * 100).toFixed(0) + '%' : '-'}</td>
+      <td>${d.ppp_allowed || '-'}</td>
+      <td>${d.weak_rotations || '-'}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addDefensiveTendency() {
+  const scheme = prompt('Scheme (man, zone_23, zone_32, press, trap):');
+  if (!scheme) return;
+  const pnr = prompt('PnR coverage (drop, switch, ice, show, hedge):');
+  fetch(`/api/scouting/reports/${reportId}/defensive-tendencies`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({scheme, pnr_coverage: pnr})
+  }).then(() => loadReport());
+}
+
+// Tendencies
+function renderTendencies(list) {
+  const el = document.getElementById('tendencies-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No tendencies added yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Type</th><th>Category</th><th>Description</th><th>Frequency</th><th>Exploitable</th><th>Drill</th></tr></thead><tbody>' +
+    list.map(t => `<tr>
+      <td>${t.tendency_type}</td>
+      <td>${t.category || '-'}</td>
+      <td>${t.description}</td>
+      <td>${t.frequency || '-'}</td>
+      <td>${t.exploitable ? '⚠️ Yes' : 'No'}</td>
+      <td>${t.practice_drill || '-'}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addTendency() {
+  const tendency_type = prompt('Type (offensive, defensive, situational, habit):');
+  const description = prompt('Description:');
+  if (!description) return;
+  const exploitable = confirm('Is this exploitable?') ? 1 : 0;
+  const practice_drill = prompt('Practice drill to counter:');
+  fetch(`/api/scouting/reports/${reportId}/tendencies`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tendency_type, description, exploitable, practice_drill})
+  }).then(() => loadReport());
+}
+
+// Situational
+function renderSituational(list) {
+  const el = document.getElementById('situational-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No situational plays added yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Situation</th><th>Description</th><th>Frequency</th><th>PPP</th></tr></thead><tbody>' +
+    list.map(s => `<tr>
+      <td>${s.situation}</td>
+      <td>${s.description}</td>
+      <td>${s.frequency}</td>
+      <td>${s.ppp || '-'}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addSituational() {
+  const situation = prompt('Situation (late_shot_clock, end_of_quarter, out_of_bounds, press_breaker, foul_game):');
+  const description = prompt('Description:');
+  if (!description) return;
+  fetch(`/api/scouting/reports/${reportId}/situational`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({situation, description})
+  }).then(() => loadReport());
+}
+
+// Mismatches
+function renderMismatches(list) {
+  const el = document.getElementById('mismatches-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No mismatches identified yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Vulnerability</th><th>Exploit With</th></tr></thead><tbody>' +
+    list.map(m => `<tr>
+      <td>${m.opponent_jersey || '-'}</td>
+      <td>${m.opponent_name || 'Unknown'}</td>
+      <td>${m.vulnerability}</td>
+      <td>${m.exploit_action}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addMismatch() {
+  const jersey = prompt('Opponent jersey number:');
+  const vulnerability = prompt('Vulnerability (struggles_vs_smaller, struggles_vs_bigger, poor_closeout, slow_rotation, turnover_under_pressure):');
+  const exploit = prompt('How to exploit:');
+  if (!vulnerability) return;
+  fetch(`/api/scouting/reports/${reportId}/mismatches`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({opponent_jersey: jersey ? parseInt(jersey) : null, vulnerability, exploit_action: exploit})
+  }).then(() => loadReport());
+}
+
+// Practice Points
+function renderPracticePoints(list) {
+  const el = document.getElementById('practice-points-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No practice points defined yet.</div>'; return; }
+  el.innerHTML = list.map((p, i) => `
+    <div class="card mb-2">
+      <h3>Point ${i + 1}: ${p.description}</h3>
+      ${p.drill_name ? `<p><strong>Drill:</strong> ${p.drill_name}</p>` : ''}
+      ${p.measurable_target ? `<p><strong>Target:</strong> ${p.measurable_target}</p>` : ''}
+    </div>
+  `).join('');
+}
+
+// Clips
+function renderClips(list) {
+  const el = document.getElementById('clips-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No clips tagged yet.</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Type</th><th>Time</th><th>Description</th><th>Coach Cue</th><th>Source</th></tr></thead><tbody>' +
+    list.map(c => `<tr>
+      <td>${c.clip_type}</td>
+      <td>${c.game_time || '-'}</td>
+      <td>${c.description}</td>
+      <td>${c.coach_cue || '-'}</td>
+      <td>${c.source}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function addClip() {
+  const clip_type = prompt('Clip type (offensive_set, defensive_action, tendency, mismatch, situational, practice_example):');
+  const description = prompt('Description:');
+  const coach_cue = prompt('Coach cue line:');
+  if (!description) return;
+  fetch(`/api/scouting/reports/${reportId}/clips`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({clip_type, description, coach_cue})
+  }).then(() => loadReport());
+}
+
+// Initialize
+loadReport();
+</script>
+{% endblock %}

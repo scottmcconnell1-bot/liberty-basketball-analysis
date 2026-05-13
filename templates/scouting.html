@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Scouting - Liberty Basketball{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🏀 Scouting</h1>
+  <p class="text-muted">Opponent scouting reports and game preparation</p>
+</div>
+
+<div class="row">
+  <div class="col-8">
+    <div class="card">
+      <div class="card-header">
+        <h2>Scouting Reports</h2>
+        <button class="btn btn-primary btn-sm" onclick="showCreateReport()">+ New Report</button>
+      </div>
+      <div class="card-body">
+        <div id="reports-list">
+          <div class="empty-state">Loading reports...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card">
+      <div class="card-header"><h2>NFHS Download</h2></div>
+      <div class="card-body">
+        <p class="text-muted small">Paste an NFHS GameID or URL to download film.</p>
+        <div class="form-group">
+          <label>NFHS GameID or URL</label>
+          <input type="text" id="nfhs-game-id" class="form-control" placeholder="e.g., 12345678 or full URL">
+        </div>
+        <button class="btn btn-primary" onclick="downloadNFHS()">Download Film</button>
+        <div id="nfhs-download-status" class="mt-2 small"></div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><h2>Quick Stats</h2></div>
+      <div class="card-body">
+        <div id="scouting-stats">
+          <div class="empty-state">No reports yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Report Modal -->
+<dialog id="create-report-dialog">
+  <h2>New Scouting Report</h2>
+  <form id="create-report-form" onsubmit="createReport(event)">
+    <div class="form-group">
+      <label>Opponent</label>
+      <input type="text" name="opponent_name" class="form-control" required placeholder="e.g., Riverstone">
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" name="scout_date" class="form-control" required>
+    </div>
+    <div class="form-group">
+      <label>NFHS GameID (optional)</label>
+      <input type="text" name="nfhs_game_id" class="form-control" placeholder="For film download">
+    </div>
+    <div class="form-group">
+      <label>Film Source</label>
+      <select name="film_source" class="form-control">
+        <option value="manual_upload">Manual Upload</option>
+        <option value="nfhs_vod">NFHS VOD</option>
+        <option value="pixellot">Pixellot</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeDialog('create-report-dialog')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Create Report</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+document.addEventListener('load', loadReports);
+
+function loadReports() {
+  fetch('/api/scouting/reports')
+    .then(r => r.json())
+    .then(reports => {
+      const el = document.getElementById('reports-list');
+      if (!reports.length) {
+        el.innerHTML = '<div class="empty-state">No scouting reports yet. Create one to get started.</div>';
+        return;
+      }
+      el.innerHTML = '<table><thead><tr><th>Opponent</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+        reports.map(r => `<tr>
+          <td><a href="/scouting/reports/${r.id}">${r.opponent_name || 'Unknown'}</td>
+          <td>${r.scout_date}</td>
+          <td><span class="badge badge-${r.status === 'completed' ? 'success' : r.status === 'in_progress' ? 'warning' : 'secondary'}">${r.status}</span></td>
+          <td>
+            <a href="/scouting/reports/${r.id}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="/scouting/reports/${r.id}/print" class="btn btn-sm btn-secondary" target="_blank">Print</a>
+          </td>
+        </tr>`).join('') + '</tbody></table>';
+    });
+}
+
+function showCreateReport() {
+  document.getElementById('create-report-dialog').showModal();
+  document.querySelector('#create-report-form [name="scout_date"]').value = new Date().toISOString().split('T')[0];
+}
+
+function createReport(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form));
+  fetch('/api/scouting/reports', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(result => {
+    closeDialog('create-report-dialog');
+    loadReports();
+    window.location.href = `/scouting/reports/${result.id}`;
+  });
+}
+
+function downloadNFHS() {
+  const gameId = document.getElementById('nfhs-game-id').value.trim();
+  if (!gameId) { alert('Enter an NFHS GameID or URL'); return; }
+  const status = document.getElementById('nfhs-download-status');
+  status.textContent = 'Downloading... this may take several minutes.';
+  fetch('/api/scouting/nfhs/download', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({game_id: gameId})
+  })
+  .then(r => r.json())
+  .then(result => {
+    if (result.error) {
+      status.innerHTML = `<span class="text-error">Error: ${result.error}</span>`;
+    } else {
+      status.innerHTML = `<span class="text-success">Downloaded! Game ID: ${result.game_id}, Size: ${(result.file_size / 1024 / 1024).toFixed(1)} MB</span>`;
+    }
+  })
+  .catch(err => {
+    status.innerHTML = `<span class="text-error">Error: ${err.message}</span>`;
+  });
+}
+
+function closeDialog(id) {
+  document.getElementById(id).close();
+}
+</script>
+{% endblock %}
