@@ -28,3 +28,5 @@ uploads/
 
 # OS
 .DS_Store
+*.db-shm
+*.db-wal
