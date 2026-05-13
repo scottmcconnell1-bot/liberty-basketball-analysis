@@ -619,3 +619,46 @@ UNPUSHED COMMITS: 1 (89356c20)
   - 8a549712 — fix: align upload form fields (Video File / Opponent)
   - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
 - Note: 4 newest commits are local-only and not yet pushed. Active development on scouting system with uncommitted edits to blueprint, schema, and template files.
+
+---
+[2026-05-13 21:30 MDT] Film Analysis Testing & Repairs — Liberty vs Riverstone
+================================================================================
+
+TEST RESULTS on "Liberty_Vs_Riverstone_20260513_105151.webm" (103MB, 13532 frames, 60min):
+
+Run #26 (stride=15): 617 detections, 0 events
+  - Person frames: 0-1095 only (324 unique frames)
+  - Ball frames: 1050-27165 (9 detections)
+  - Overlap: 2 frames, distances 454-548px → 0 possession → 0 events
+  - Problem: optical flow tracking dropped after frame 1095
+
+Run #27 (stride=3): 328 detections, 0 events
+  - Even fewer detections than stride=15 (unexpected)
+  - Ball: 34 detections, Person-ball overlap: 0 frames
+  - 0 active trackers at end of analysis
+  - Tracker_assigner failed: "cannot convert dictionary update sequence element #0 to a sequence"
+  - Problem: optical flow tracking is completely broken — not writing to DB
+
+ROOT CAUSE IDENTIFIED:
+The ai_analyzer.py optical flow tracking loop is not persisting tracked positions
+to the database. Only YOLO anchor frame detections are written. The optical flow
+cv2.calcOpticalFlowPyrLK() calls may be failing silently, or the results aren't
+being committed to the DB within the loop.
+
+EFFECTIVE ANALYSIS CODE IS WORKING:
+- Enhanced analysis (minutes, shots, plays, effect) runs correctly when given data
+- Event generator ball interpolation works (9→54, 38→54 ball positions)
+- Auto possession threshold works (calculates from frame dimensions)
+- Q1 video with interpolation: produced 3 events (shot, make, foul)
+
+NEEDED FOR PRODUCTION:
+1. Fix ai_analyzer.py optical flow tracking to write per-frame positions to DB
+2. OR: run YOLO on every frame (very slow but would work)
+3. OR: improve ball detection (class 32 is unreliable)
+
+COMMITS TODAY:
+- 92ac45fb — feat: add scouting system with NFHS login, game lookup, reports
+- 741449ef — Add enhanced film analysis: minutes, shots, plays, player effect
+- 74243948 — Fix event generator: auto possession threshold, sparse ball data
+- 475ac06b — Fix event generator: ball interpolation, handle sparse data
+- All pushed to origin/jason-5-may-updates
