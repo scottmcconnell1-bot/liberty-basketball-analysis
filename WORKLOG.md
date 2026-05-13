@@ -472,3 +472,41 @@ How to resume / commands to run
   - No new commits since 06:44 MDT check
   - Uncommitted: PROGRESS.md, WORKLOG.md (modified), film_analysis.db (modified); scripts/tunnel-watchdog.sh (untracked)
   - Project stable, no action needed
+
+[2026-05-13 14:30 MDT] Dribble Removal + AI Analysis Intent Discussion
+========================================
+Dribble removed from all AI analysis code (12 files changed, 88 insertions, 288 deletions).
+Commit: c65705d0.
+
+CRITICAL: Scott's intended use of the program (from prior discussion, not previously logged):
+------------------------------------------------------------------------
+The AI film analysis is meant to track:
+1. **Minutes played** — which player is on the court at each point in the game
+2. **Shots** — broken down into 2pt, 3pt, and free throw (FT) made/attempts
+3. **Play recognition** — identifying offensive/defensive plays (pick and roll, isolation, zone press, etc.)
+4. **Player effect on game** — impact metrics like +/- (score changes while player is on court)
+5. **Scouting** — finding plays and player tendencies across games
+   - "Player X tends to drive left 70% of the time in pick and roll"
+   - "Team Y runs zone press after made baskets"
+6. **Learning/improvement** — system should get better over time from human corrections
+   - When coach corrects an AI event, that feedback should improve future predictions
+
+The practice sections and player development sections exist to support this:
+- Practice plans should connect to game film (what to work on based on game analysis)
+- Player development should track tendencies and improvement over time
+- Scouting section should aggregate patterns across opponents
+
+CURRENT GAPS:
+- Minutes played: NOT tracked (need to calculate from frame appearances per player)
+- Shot types: event generator marks "shot" + "make/miss" but does NOT distinguish 2pt vs 3pt vs FT
+- Play recognition: NOT implemented (no pattern matching on player movement sequences)
+- Player effect (+/-): NOT implemented (no score tracking per player on court)
+- Scouting tendencies: NOT implemented (no cross-game aggregation)
+- Learning from corrections: NOT implemented (human feedback not fed back to models)
+
+NEXT STEPS (per Scott's direction):
+1. Add minutes played tracking (calculate from detection frame data)
+2. Add shot type classification (2pt/3pt/FT based on court position)
+3. Build play recognition (pattern matching on movement data)
+4. Build scouting tendencies (aggregate stats across games)
+5. Add learning/feedback loop from human corrections
