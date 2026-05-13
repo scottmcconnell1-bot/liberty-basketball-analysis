@@ -271,15 +271,17 @@
   .ft-ai-upload-body.open { display: block; }
 
   /* AI Upload form alignment */
-  .ft-ai-upload-body .split {
-    align-items: end;
+  #film-tool-root .ft-ai-upload-body .split {
+    align-items: stretch;
   }
-  .ft-ai-upload-body .field {
+  #film-tool-root .ft-ai-upload-body .field {
     display: flex;
     flex-direction: column;
   }
-  .ft-ai-upload-body .field input[type="text"] {
+  #film-tool-root .ft-ai-upload-body .field input[type="text"],
+  #film-tool-root .ft-ai-upload-body .field input[type="file"] {
     height: 42px;
+    box-sizing: border-box;
   }
 
   /* Responsive */
