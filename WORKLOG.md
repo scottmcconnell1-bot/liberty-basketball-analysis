@@ -510,3 +510,16 @@ NEXT STEPS (per Scott's direction):
 3. Build play recognition (pattern matching on movement data)
 4. Build scouting tendencies (aggregate stats across games)
 5. Add learning/feedback loop from human corrections
+
+---
+[2026-05-13 12:56 MDT] Cron status check
+- Branch: jason-5-may-updates (ahead of origin by 2 commits, unpushed)
+- Working tree: clean (no uncommitted changes)
+- New commits since last check:
+  - 74788927 — docs: log intended AI analysis use - minutes, shots, play recognition, scouting
+  - c65705d0 — Remove dribble from all AI analysis code
+- Prior commits still on branch:
+  - 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
+  - 8a549712 — fix: align upload form fields (Video File / Opponent)
+  - afdedacc — feat: split upload into tagging + AI analysis, add client-side compression
+- Note: 2 newest commits (74788927, c65705d0) are local-only and not yet pushed to origin.

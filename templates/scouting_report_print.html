@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Scouting Report - Print{% endblock %}
+{% block content %}
+<div class="print-container">
+  <button class="btn btn-secondary no-print" onclick="window.print()">🖨️ Print</button>
+  <a href="/scouting/reports/{{ report_id }}" class="btn btn-secondary no-print">← Back to Editor</a>
+
+  <div id="print-report">
+    <div class="empty-state">Loading report...</div>
+  </div>
+</div>
+
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .page-header { display: none; }
+  .print-container { max-width: 100%; }
+}
+.print-container { max-width: 800px; margin: 0 auto; }
+.scouting-section { margin-bottom: 24px; page-break-inside: avoid; }
+.scouting-section h2 { border-bottom: 2px solid #333; padding-bottom: 4px; }
+.scouting-section h3 { margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 12px; }
+th { background: #f5f5f5; }
+.bullet-list { padding-left: 20px; }
+.bullet-list li { margin-bottom: 4px; }
+.practice-point { background: #f9f9f9; border-left: 4px solid #01696f; padding: 12px; margin: 8px 0; }
+</style>
+
+<script>
+const reportId = {{ report_id }};
+
+fetch(`/api/scouting/reports/${reportId}`)
+  .then(r => r.json())
+  .then(data => {
+    const r = data.report;
+    let html = `
+      <h1 style="text-align:center">Scouting Report: ${r.opponent_name}</h1>
+      <p style="text-align:center;color:#666">Scout Date: ${r.scout_date} | Status: ${r.status}</p>
+    `;
+
+    // Executive Summary
+    html += `<div class="scouting-section"><h2>Executive Summary</h2>`;
+    if (r.offensive_identity) html += `<p><strong>Offensive Identity:</strong> ${r.offensive_identity}</p>`;
+    if (r.defensive_identity) html += `<p><strong>Defensive Identity:</strong> ${r.defensive_identity}</p>`;
+    if (r.tempo) html += `<p><strong>Tempo:</strong> ${r.tempo}</p>`;
+    if (r.executive_summary) html += `<p>${r.executive_summary}</p>`;
+    html += `</div>`;
+
+    // Personnel
+    if (data.personnel.length) {
+      html += `<div class="scouting-section"><h2>Key Personnel</h2><table>
+        <tr><th>#</th><th>Name</th><th>Role</th><th>Usage</th><th>PPP</th><th>Notes</th></tr>`;
+      data.personnel.forEach(p => {
+        html += `<tr><td>${p.jersey_number || '-'}</td><td>${p.player_name || 'Unknown'}</td><td>${p.role}</td><td>${p.usage_rate ? (p.usage_rate*100).toFixed(0)+'%' : '-'}</td><td>${p.ppp || '-'}</td><td>${p.notes || ''}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    // Offensive Sets
+    if (data.offensive_sets.length) {
+      html += `<div class="scouting-section"><h2>Offensive Sets</h2><table>
+        <tr><th>Set</th><th>Trigger</th><th>Frequency</th><th>PPP</th><th>vs Pressure</th></tr>`;
+      data.offensive_sets.forEach(s => {
+        html += `<tr><td>${s.set_name}</td><td>${s.trigger_action || '-'}</td><td>${s.frequency}</td><td>${s.ppp || '-'}</td><td>${s.result_vs_pressure || '-'}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    // Defensive Tendencies
+    if (data.defensive_tendencies.length) {
+      html += `<div class="scouting-section"><h2>Defensive Tendencies</h2><table>
+        <tr><th>Scheme</th><th>PnR Coverage</th><th>Frequency</th><th>PPP Allowed</th></tr>`;
+      data.defensive_tendencies.forEach(d => {
+        html += `<tr><td>${d.scheme}</td><td>${d.pnr_coverage || '-'}</td><td>${d.frequency ? (d.frequency*100).toFixed(0)+'%' : '-'}</td><td>${d.ppp_allowed || '-'}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    // Tendencies
+    if (data.tendencies.length) {
+      html += `<div class="scouting-section"><h2>Tendencies & Habits</h2><ul class="bullet-list">`;
+      data.tendencies.forEach(t => {
+        html += `<li>${t.exploitable ? '⚠️ ' : ''}<strong>${t.tendency_type}:</strong> ${t.description} ${t.frequency ? '(' + t.frequency + ')' : ''}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    // Situational
+    if (data.situational.length) {
+      html += `<div class="scouting-section"><h2>Situational Plays</h2><table>
+        <tr><th>Situation</th><th>Description</th><th>Frequency</th><th>PPP</th></tr>`;
+      data.situational.forEach(s => {
+        html += `<tr><td>${s.situation}</td><td>${s.description}</td><td>${s.frequency}</td><td>${s.ppp || '-'}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    // Mismatches
+    if (data.mismatches.length) {
+      html += `<div class="scouting-section"><h2>Mismatches & Vulnerabilities</h2><table>
+        <tr><th>#</th><th>Name</th><th>Vulnerability</th><th>Exploit With</th></tr>`;
+      data.mismatches.forEach(m => {
+        html += `<tr><td>${m.opponent_jersey || '-'}</td><td>${m.opponent_name || 'Unknown'}</td><td>${m.vulnerability}</td><td>${m.exploit_action}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    // Practice Points
+    if (data.practice_points.length) {
+      html += `<div class="scouting-section"><h2>Practice Points</h2>`;
+      data.practice_points.forEach((p, i) => {
+        html += `<div class="practice-point">
+          <h3>${i + 1}. ${p.description}</h3>
+          ${p.drill_name ? `<p><strong>Drill:</strong> ${p.drill_name}</p>` : ''}
+          ${p.measurable_target ? `<p><strong>Target:</strong> ${p.measurable_target}</p>` : ''}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Clips
+    if (data.clips.length) {
+      html += `<div class="scouting-section"><h2>Tape Package</h2><table>
+        <tr><th>Type</th><th>Time</th><th>Description</th><th>Coach Cue</th></tr>`;
+      data.clips.forEach(c => {
+        html += `<tr><td>${c.clip_type}</td><td>${c.game_time || '-'}</td><td>${c.description}</td><td>${c.coach_cue || '-'}</td></tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    document.getElementById('print-report').innerHTML = html;
+  });
+</script>
+{% endblock %}
