@@ -490,6 +490,17 @@ CREATE TABLE IF NOT EXISTS scouting_practice_points (
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS nfhs_credentials (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    email           TEXT NOT NULL,
+    password_enc    TEXT NOT NULL,  -- encrypted password
+    is_active       INTEGER NOT NULL DEFAULT 1,
+    last_login_at   TIMESTAMP,
+    last_login_status TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS scouting_clips (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,
