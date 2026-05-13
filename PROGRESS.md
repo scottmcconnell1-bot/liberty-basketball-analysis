@@ -1,5 +1,15 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-13 17:03 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 01a0ae40 — docs: update WORKLOG with film analysis test results and root cause
+- 475ac06b — Fix event generator: ball interpolation, auto possession threshold, sparse data handling
+- 74243948 — Fix event generator: auto possession threshold, sparse ball data handling
+- 741449ef — Add enhanced film analysis: minutes, shot classification, play recognition, player effect
+- 73a502e7 — docs: update WORKLOG with scouting system build session details
+Branch: jason-5-may-updates (up to date with origin/jason-5-may-updates)
+Uncommitted changes: ai_analyzer.py (modified), film_analysis.db (modified), film_analysis.db-shm (untracked), film_analysis.db-wal (untracked)
+1 new commit since 06:44 check: WORKLOG updated with film analysis test results and root cause.
+
 [2026-05-13 06:44 MDT] Latest commits (5 latest on jason-5-may-updates):
 - 9a1f7ad6 — fix: align upload form fields with proper CSS scoping
 - 8a549712 — fix: align upload form fields (Video File / Opponent)

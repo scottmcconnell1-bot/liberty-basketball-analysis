@@ -5,6 +5,7 @@ from ultralytics import YOLO
 from event_generator import main as generate_events
 import sqlite3
 import sys
+import math
 import numpy as np
 
 from config import AnalysisConfig
@@ -150,54 +151,66 @@ def run_ai_analysis(db_path, video_path, game_id):
             ball_detections = []
 
             if frame_number % detection_stride == 0:
-                # Clear old flow trackers — re-detect and re-initialize
-                active_trackers = []
+                # Detect persons
+                results = model(frame, classes=[0], verbose=False)
+                new_detections = []
+                for result in results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        if model.names[class_id] == 'person':
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
+                # Match new detections to existing active trackers by proximity
+                matched_trackers = []
+                used_detections = set()
+
+                for tid, points, prev_frame in active_trackers:
+                    # Get last known position from points
+                    if points is not None and len(points) > 0:
+                        pts = points.reshape(-1, 2)
+                        last_cx = float(pts[:, 0].mean())
+                        last_cy = float(pts[:, 1].mean())
+                    else:
+                        continue
+
+                    # Find closest new detection
+                    best_dist = float('inf')
+                    best_idx = -1
+                    for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                        if i in used_detections:
+                            continue
+                        dist = math.sqrt((cx - last_cx)**2 + (cy - last_cy)**2)
+                        if dist < best_dist and dist < 150:  # max 150px movement between anchors
+                            best_dist = dist
+                            best_idx = i
+
+                    if best_idx >= 0:
+                        # Match found — reuse tracker ID
+                        cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[best_idx]
+                        used_detections.add(best_idx)
+                        matched_trackers.append(tid)
+                        yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
+                                                  'person', conf, cx, cy, w, h, tid)
+                        pts = bbox_to_points(x1, y1, x2, y2)
+                        active_trackers[matched_trackers.index(tid)] = (tid, pts, gray)
+
+                # Create new trackers for unmatched detections
+                for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                    if i not in used_detections:
+                        tid = next_tracker_id
+                        next_tracker_id += 1
+                        matched_trackers.append(tid)
+                        yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
+                                                  'person', conf, cx, cy, w, h, tid)
+                        pts = bbox_to_points(x1, y1, x2, y2)
+                        active_trackers.append((tid, pts, gray))
+
+                # Ball detection on anchor frames
                 try:
-                    # Detect persons with ByteTrack for consistent IDs
-                    track_results = model.track(frame, persist=True, tracker="bytetrack.yaml",
-                                                classes=[0], **predict_kwargs)
-
-                    for result in track_results:
-                        if result.boxes.id is not None:
-                            for box in result.boxes:
-                                tid = int(box.id[0])
-                                class_id = int(box.cls[0])
-                                raw_class_name = model.names[class_id]
-                                if raw_class_name == 'person':
-                                    confidence = float(box.conf[0])
-                                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                                    yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
-                                                              'person', confidence,
-                                                              (x1 + x2) // 2, (y1 + y2) // 2,
-                                                              x2 - x1, y2 - y1, tid)
-
-                                    # Initialize optical flow points for this player
-                                    pts = bbox_to_points(x1, y1, x2, y2)
-                                    active_trackers.append((tid, pts, gray))
-
-                except (TypeError, AttributeError):
-                    # Fallback: detect without ByteTrack
-                    results = model(frame, classes=[0], **predict_kwargs)
-                    local_id = next_tracker_id
-                    for result in results:
-                        for box in result.boxes:
-                            class_id = int(box.cls[0])
-                            if model.names[class_id] == 'person':
-                                confidence = float(box.conf[0])
-                                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                                yolo_person_boxes[local_id] = (game_id, frame_number, timestamp_ms,
-                                                               'person', confidence,
-                                                               (x1 + x2) // 2, (y1 + y2) // 2,
-                                                               x2 - x1, y2 - y1, local_id)
-                                pts = bbox_to_points(x1, y1, x2, y2)
-                                active_trackers.append((local_id, pts, gray))
-                                local_id += 1
-                    next_tracker_id = local_id
-
-                # Ball detection on anchor frames only (class 32 = sports ball in COCO)
-                try:
-                    ball_results = model(frame, classes=[32], **predict_kwargs)
+                    ball_results = model(frame, classes=[32], verbose=False)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
@@ -210,7 +223,7 @@ def run_ai_analysis(db_path, video_path, game_id):
                                     (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, None
                                 ))
                 except Exception:
-                    pass  # Ball detection is best-effort
+                    pass
 
             # --- Phase 3: Write all detections for this frame ---
             all_detections = []
