@@ -270,6 +270,18 @@
   .ft-ai-upload-body { display: none; margin-bottom: 1rem; }
   .ft-ai-upload-body.open { display: block; }
 
+  /* AI Upload form alignment */
+  .ft-ai-upload-body .split {
+    align-items: end;
+  }
+  .ft-ai-upload-body .field {
+    display: flex;
+    flex-direction: column;
+  }
+  .ft-ai-upload-body .field input[type="text"] {
+    height: 42px;
+  }
+
   /* Responsive */
   @media (max-width: 1100px) {
     .ft-layout { grid-template-columns: 1fr; }
@@ -338,7 +350,7 @@
         <div class="ft-ai-upload-body" id="ftAiUploadBody">
           <form enctype="multipart/form-data" id="aiUploadForm">
             <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Large files are compressed automatically before upload.</p>
-            <div class="split">
+            <div class="split ai-upload-fields">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
                 <input type="file" id="aiVideoFile" name="video" accept="video/mp4,video/*" required>
