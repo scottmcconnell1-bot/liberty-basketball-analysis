@@ -669,3 +669,14 @@ COMMITS TODAY:
 - 1 new commit since last check: 01a0ae40 (docs: update WORKLOG with film analysis test results and root cause)
 - Uncommitted: ai_analyzer.py modified, film_analysis.db modified (+ db-shm, db-wal untracked)
 - No new user-facing changes since 06:44 check; working tree has local dev modifications.
+
+===
+2026-05-13 19:06 MDT — Cron Status Check
+- Branch: jason-5-may-updates (up to date with origin)
+- 4 new commits since 17:03 check:
+  - 2752ead6 — Fix shot classification and player effect errors
+  - b5b29e08 — Fix tracker persistence and shot classification
+  - e319bc92 — Rewrite ball detection: YOLO + virtual ball estimator
+  - 7da9054f — Fix ai_analyzer.py: tracker persistence across anchor frames
+- Uncommitted: film_analysis.db (modified)
+- Notable: significant rework of ball detection pipeline (YOLO + virtual ball estimator), plus fixes to shot classification and tracker persistence.
