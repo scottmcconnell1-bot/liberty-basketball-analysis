@@ -520,19 +520,19 @@ def calculate_player_effect(conn, game_id, fps=30.0):
                 points = 1
 
             score_events.append({
-                "frame": event.get("source_frame", 0),
                 "timestamp_ms": event["timestamp_ms"],
+                "frame": event.get("source_frame", 0) or 0,
                 "points": points,
                 "player": event["player"],
             })
 
     # For each player, calculate +/- by checking which score events happened
-    # while they were on their respective ends
+    # while they were on court
     results = []
     for pm in minutes:
         tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"] or 0
-        last_frame = pm["last_frame"] or 0
+        first_frame = pm.get("first_frame") or 0
+        last_frame = pm.get("last_frame") or 0
         if first_frame == 0 and last_frame == 0:
             continue
 
@@ -540,13 +540,27 @@ def calculate_player_effect(conn, game_id, fps=30.0):
         points_for = 0
         points_against = 0
         for se in score_events:
-            se_frame = se["frame"] or 0
+            se_frame = se.get("frame", 0)
+            se_ts = se.get("timestamp_ms", 0)
+            # Use frame if available, otherwise approximate from timestamp
             if se_frame > 0 and first_frame <= se_frame <= last_frame:
                 points_for += se["points"]
             elif se_frame > 0:
                 points_against += se["points"]
+            elif se_ts > 0:
+                # Fallback: use timestamp comparison
+                # Convert player frame range to approximate timestamp range
+                player_duration_frames = max(1, last_frame - first_frame)
+                fps_est = fps  # passed from caller
+                player_duration_ms = (player_duration_frames / fps_est) * 1000
+                player_start_ms = (first_frame / fps_est) * 1000
+                player_end_ms = player_start_ms + player_duration_ms
+                if player_start_ms <= se_ts <= player_end_ms:
+                    points_for += se["points"]
+                else:
+                    points_against += se["points"]
 
-        frame_diff = last_frame - first_frame
+        frame_diff = max(1, last_frame - first_frame)
         if frame_diff <= 0:
             frame_diff = 1
         possessions = max(1, frame_diff / (fps * 24))  # ~24 sec per possession
