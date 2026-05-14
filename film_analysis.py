@@ -122,7 +122,7 @@ def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0):
     return "2pt", 0.80
 
 
-def classify_all_shots(conn, game_id):
+def classify_all_shots(conn, game_id, video_width=1280, video_height=720):
     """
     Classify all shot events for a game.
 
@@ -161,8 +161,8 @@ def classify_all_shots(conn, game_id):
             # Normalize position based on court
             # In video coordinates, we need to know which team is on which end
             # For now, assume: lower half of frame = one end, upper half = other
-            court_x = pos["x_center"] / 1920.0  # assuming 1920 width
-            court_y = pos["y_center"] / 1080.0  # assuming 1080 height
+            court_x = pos["x_center"] / float(video_width)
+            court_y = pos["y_center"] / float(video_height)
 
             shot_type, confidence = classify_shot_type(court_x, court_y)
         else:
@@ -528,24 +528,28 @@ def calculate_player_effect(conn, game_id, fps=30.0):
 
     # For each player, calculate +/- by checking which score events happened
     # while they were on their respective ends
-    # Simplified: track total scoring events during player's time on court
     results = []
     for pm in minutes:
         tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"]
-        last_frame = pm["last_frame"]
+        first_frame = pm["first_frame"] or 0
+        last_frame = pm["last_frame"] or 0
+        if first_frame == 0 and last_frame == 0:
+            continue
 
         # Score events during this player's time on court
         points_for = 0
         points_against = 0
         for se in score_events:
-            if first_frame <= se["frame"] <= last_frame:
-                # Simplified: assume player's team = player's end of court
+            se_frame = se["frame"] or 0
+            if se_frame > 0 and first_frame <= se_frame <= last_frame:
                 points_for += se["points"]
-            else:
+            elif se_frame > 0:
                 points_against += se["points"]
 
-        possessions = max(1, (last_frame - first_frame) / (fps * 24))  # ~24 sec per possession
+        frame_diff = last_frame - first_frame
+        if frame_diff <= 0:
+            frame_diff = 1
+        possessions = max(1, frame_diff / (fps * 24))  # ~24 sec per possession
         plus_minus = points_for - points_against
         ortg = (points_for / possessions) * 100 if possessions > 0 else 0
         drtg = (points_against / possessions) * 100 if possessions > 0 else 0
@@ -592,11 +596,25 @@ def run_enhanced_analysis(db_path, game_id, fps=30.0):
     conn = get_db(db_path)
 
     try:
+        # Get video dimensions from the video file
+        video_width, video_height = 1280, 720  # defaults
+        try:
+            video_path_row = conn.execute("SELECT video_path FROM analysis_runs WHERE game_id = ? LIMIT 1", (game_id,)).fetchone()
+            if video_path_row and video_path_row[0]:
+                import cv2 as _cv2
+                _cap = _cv2.VideoCapture(video_path_row[0])
+                if _cap.isOpened():
+                    video_width = int(_cap.get(_cv2.CAP_PROP_FRAME_WIDTH))
+                    video_height = int(_cap.get(_cv2.CAP_PROP_FRAME_HEIGHT))
+                    _cap.release()
+        except Exception:
+            pass
+
         # Step 1: Minutes played
         minutes = calculate_player_minutes(conn, game_id, fps)
 
         # Step 2: Shot classification
-        shots = classify_all_shots(conn, game_id)
+        shots = classify_all_shots(conn, game_id, video_width, video_height)
 
         # Step 3: Play recognition
         plays = recognize_plays(conn, game_id)
