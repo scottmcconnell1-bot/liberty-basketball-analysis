@@ -72,6 +72,8 @@ def run_ai_analysis(db_path, video_path, game_id):
         model = YOLO(resolve_detector_model(ai_settings))
         inference_device = ai_settings["inference_device"]
         detection_stride = max(1, int(ai_settings.get("detection_stride", 15)))
+        # Clamp to minimum 5 for performance — stride < 5 is too slow for full games
+        detection_stride = max(5, detection_stride)
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -195,8 +197,9 @@ def run_ai_analysis(db_path, video_path, game_id):
                             continue
                         dist = math.sqrt((cx - last_cx)**2 + (cy - last_cy)**2)
                         frame_gap = frame_number - last_frame
-                        # Allow larger distance for trackers not seen recently
-                        max_dist = 200 if frame_gap < 30 else 100
+                        # Tighter distance threshold to prevent ID proliferation
+                        # At stride=5, players move ~30-60px between anchor frames
+                        max_dist = 80 if frame_gap < 15 else 50
                         if dist < best_dist and dist < max_dist:
                             best_dist = dist
                             best_idx = i
