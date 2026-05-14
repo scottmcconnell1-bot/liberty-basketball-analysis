@@ -133,27 +133,29 @@ def classify_all_shots(conn, game_id):
 
     # Get all shot events for this game
     shot_events = conn.execute("""
-        SELECT e.*, d.x_center, d.y_center, d.tracker_id, d.frame_number
+        SELECT e.*
         FROM events e
-        LEFT JOIN detections d ON d.game_id = e.game_id AND d.frame_number = e.source_frame AND d.tracker_id IS NOT NULL
-        WHERE e.game_id = e.game_id AND e.game_id = ?
+        WHERE e.game_id = ?
           AND e.event_type IN ('shot', 'make', 'miss')
     """, (game_id,)).fetchall()
 
     results = []
     for event in shot_events:
-        tracker_id = event["tracker_id"]
+        tracker_id = event["player"]  # events use 'player' column, not 'tracker_id'
         shot_result = "make" if event["event_type"] == "make" else "miss"
         timestamp_ms = event["timestamp_ms"]
-
-        # Get player position at shot time (use the detection closest to the shot event)
+        
+        # Get player position at shot time using timestamp proximity
+        # Find the detection closest in time for this player/tracker
         pos = conn.execute("""
-            SELECT x_center, y_center, (width * height) as bbox_area
+            SELECT x_center, y_center, width, height, tracker_id, frame_number
             FROM detections
-            WHERE game_id = ? AND frame_number = ?
-            ORDER BY tracker_id = ? DESC, confidence DESC
+            WHERE game_id = ? AND object_class = 'person'
+              AND tracker_id IS NOT NULL
+              AND ABS(timestamp_ms - ?) < 500
+            ORDER BY ABS(timestamp_ms - ?) ASC, confidence DESC
             LIMIT 1
-        """, (game_id, event["source_frame"], tracker_id or -1)).fetchone()
+        """, (game_id, timestamp_ms, timestamp_ms)).fetchone()
 
         if pos:
             # Normalize position based on court
