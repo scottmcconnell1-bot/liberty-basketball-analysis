@@ -173,34 +173,36 @@ def run_ai_analysis(db_path, video_path, game_id):
                             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                             new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
-                # Match new detections to existing trackers using global registry
-                # This prevents tracker fragmentation when optical flow temporarily loses a player
+                # Match new detections to existing trackers
+                # Strategy: only match against trackers seen recently (within 60 frames)
+                # AND within a reasonable distance. This prevents ID proliferation from
+                # stale trackers while still handling temporary occlusions.
                 matched_trackers = []
                 used_detections = set()
                 
-                # Sort registry by last seen frame (most recent first) for priority matching
-                sorted_trackers = sorted(tracker_registry.items(), key=lambda x: -x[1][2])
+                # Build candidate list: trackers seen in last 60 frames, sorted by recency
+                candidates = []
+                for tid, (last_cx, last_cy, last_frame) in tracker_registry.items():
+                    frame_gap = frame_number - last_frame
+                    if frame_gap < 60:  # only consider recent trackers
+                        # Skip if already in active_trackers (handled by optical flow)
+                        if any(t[0] == tid for t in active_trackers):
+                            continue
+                        candidates.append((tid, last_cx, last_cy, last_frame))
+                # Sort by most recent first
+                candidates.sort(key=lambda x: -x[3])
                 
-                for tid, (last_cx, last_cy, last_frame) in sorted_trackers:
-                    # Skip if this tracker was already matched this frame
+                for tid, last_cx, last_cy, last_frame in candidates:
                     if tid in matched_trackers:
                         continue
-                    # Skip trackers that are already in active_trackers (they'll be updated via flow)
-                    if any(t[0] == tid for t in active_trackers):
-                        continue
                     
-                    # Find closest new detection
                     best_dist = float('inf')
                     best_idx = -1
                     for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
                         if i in used_detections:
                             continue
                         dist = math.sqrt((cx - last_cx)**2 + (cy - last_cy)**2)
-                        frame_gap = frame_number - last_frame
-                        # Tighter distance threshold to prevent ID proliferation
-                        # At stride=5, players move ~30-60px between anchor frames
-                        max_dist = 80 if frame_gap < 15 else 50
-                        if dist < best_dist and dist < max_dist:
+                        if dist < best_dist and dist < 100:  # max 100px matching radius
                             best_dist = dist
                             best_idx = i
                     
@@ -212,7 +214,6 @@ def run_ai_analysis(db_path, video_path, game_id):
                                                   'person', conf, cx, cy, w, h, tid)
                         pts = bbox_to_points(x1, y1, x2, y2)
                         active_trackers.append((tid, pts, gray))
-                        # Update registry
                         tracker_registry[tid] = (cx, cy, frame_number)
 
                 # Create new trackers for unmatched detections
