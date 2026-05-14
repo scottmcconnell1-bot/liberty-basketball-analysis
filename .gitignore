@@ -30,3 +30,4 @@ uploads/
 .DS_Store
 *.db-shm
 *.db-wal
+film_analysis.db
