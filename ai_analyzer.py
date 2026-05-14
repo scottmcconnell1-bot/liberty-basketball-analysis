@@ -91,6 +91,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         active_trackers = []
         next_tracker_id = 1
         prev_gray = None
+        ball_positions_all = []  # Track all ball positions for virtual ball estimation
 
         # Lucas-Kanade parameters
         lk_params = dict(
@@ -151,8 +152,8 @@ def run_ai_analysis(db_path, video_path, game_id):
             ball_detections = []
 
             if frame_number % detection_stride == 0:
-                # Detect persons
-                results = model(frame, classes=[0], verbose=False)
+                # Detect persons (class 0) at standard confidence
+                results = model(frame, classes=[0], conf=0.25, verbose=False)
                 new_detections = []
                 for result in results:
                     for box in result.boxes:
@@ -208,9 +209,17 @@ def run_ai_analysis(db_path, video_path, game_id):
                         pts = bbox_to_points(x1, y1, x2, y2)
                         active_trackers.append((tid, pts, gray))
 
-                # Ball detection on anchor frames
+                # Ball detection strategy:
+                # YOLOv8n barely detects basketballs (15-30px at 720p), so we use:
+                # 1. YOLO at conf=0.01 as a weak signal
+                # 2. Player-proximity heuristic: ball is inferred near the player most likely to have it
+                #    based on who was closest to the last known ball position
+                # This "virtual ball" approach is more reliable than direct detection for small fast balls
+                ball_positions = []
+                
+                # --- YOLO ball detection (weak signal) ---
                 try:
-                    ball_results = model(frame, classes=[32], verbose=False)
+                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
@@ -218,12 +227,64 @@ def run_ai_analysis(db_path, video_path, game_id):
                             if raw_class_name in ['sports ball', 'sports_ball']:
                                 confidence = float(box.conf[0])
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                                ball_detections.append((
-                                    game_id, frame_number, timestamp_ms, 'ball', confidence,
-                                    (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1, None
-                                ))
+                                w, h = x2 - x1, y2 - y1
+                                if 8 < w < 80 and 8 < h < 80 and 0.3 < w/max(h,1) < 3.0:
+                                    cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                                    ball_positions.append((cx, cy, confidence, x1, y1, x2, y2))
                 except Exception:
                     pass
+                
+                # --- Virtual ball: infer from player positions ---
+                # If YOLO didn't find a ball, estimate ball position from game context:
+                # The ball is almost always near a player. We track the last known ball
+                # position and estimate it moves toward the nearest player.
+                if len(ball_positions) == 0 and len(new_detections) > 0:
+                    # Get player centers
+                    player_centers = [(cx, cy) for cx, cy, conf, x1, y1, x2, y2, w, h in new_detections]
+                    
+                    if len(ball_positions_all) > 0:
+                        # We have a previous ball position — estimate ball moved toward nearest player
+                        last_ball = ball_positions_all[-1]
+                        last_bx, last_by = last_ball[0], last_ball[1]
+                        
+                        # Find nearest player to last ball position
+                        min_dist = float('inf')
+                        nearest_player = None
+                        for cx, cy in player_centers:
+                            dist = math.sqrt((cx - last_bx)**2 + (cy - last_by)**2)
+                            if dist < min_dist:
+                                min_dist = dist
+                                nearest_player = (cx, cy)
+                        
+                        if nearest_player:
+                            # Estimate ball is between last position and nearest player
+                            # (weighted toward player since they likely have it)
+                            est_x = int(last_bx * 0.3 + nearest_player[0] * 0.7)
+                            est_y = int(last_by * 0.3 + nearest_player[1] * 0.7)
+                            ball_positions.append((est_x, est_y, 0.1, est_x-10, est_y-10, est_x+10, est_y+10))
+                    else:
+                        # No previous ball — estimate ball is near the center-most player in the paint area
+                        # (y_center > frame_height * 0.4 roughly = inside the court)
+                        fh = frame.shape[0]
+                        court_players = [(cx, cy) for cx, cy in player_centers if cy > fh * 0.3]
+                        if court_players:
+                            # Pick the player closest to the center of the frame (likely ball handler)
+                            frame_cx = frame.shape[1] // 2
+                            best = min(court_players, key=lambda p: abs(p[0] - frame_cx) + abs(p[1] - fh//2))
+                            ball_positions.append((best[0], best[1] - 15, 0.08, best[0]-10, best[1]-25, best[0]+10, best[1]-5))
+                
+                # Store ball positions for next frame's estimation
+                ball_positions_all.extend(ball_positions)
+                # Keep only last 300 ball positions to bound memory
+                if len(ball_positions_all) > 300:
+                    ball_positions_all = ball_positions_all[-300:]
+                
+                # Write ball detections
+                for (cx, cy, conf, x1, y1, x2, y2) in ball_positions:
+                    ball_detections.append((
+                        game_id, frame_number, timestamp_ms, 'ball', max(conf, 0.05),
+                        cx, cy, max(x2 - x1, 10), max(y2 - y1, 10), None
+                    ))
 
             # --- Phase 3: Write all detections for this frame ---
             all_detections = []
