@@ -92,6 +92,10 @@ def run_ai_analysis(db_path, video_path, game_id):
         next_tracker_id = 1
         prev_gray = None
         ball_positions_all = []  # Track all ball positions for virtual ball estimation
+        
+        # Global tracker registry: tracker_id -> (last_cx, last_cy, last_frame)
+        # Used to match detections to ANY previously seen tracker, not just active ones
+        tracker_registry = {}
 
         # Lucas-Kanade parameters
         lk_params = dict(
@@ -143,6 +147,9 @@ def run_ai_analysis(db_path, video_path, game_id):
                             ))
                             # Update points for next iteration (only keep good ones)
                             still_active.append((tid, valid_pts.reshape(-1, 1, 2), gray))
+                            # Update registry with latest position
+                            if tid in tracker_registry:
+                                tracker_registry[tid] = (x + w // 2, y + h // 2, frame_number)
                 # If too many points lost, tracker drops (player left frame or heavy occlusion)
 
             active_trackers = still_active
@@ -164,19 +171,22 @@ def run_ai_analysis(db_path, video_path, game_id):
                             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                             new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
-                # Match new detections to existing active trackers by proximity
+                # Match new detections to existing trackers using global registry
+                # This prevents tracker fragmentation when optical flow temporarily loses a player
                 matched_trackers = []
                 used_detections = set()
-
-                for tid, points, prev_frame in active_trackers:
-                    # Get last known position from points
-                    if points is not None and len(points) > 0:
-                        pts = points.reshape(-1, 2)
-                        last_cx = float(pts[:, 0].mean())
-                        last_cy = float(pts[:, 1].mean())
-                    else:
+                
+                # Sort registry by last seen frame (most recent first) for priority matching
+                sorted_trackers = sorted(tracker_registry.items(), key=lambda x: -x[1][2])
+                
+                for tid, (last_cx, last_cy, last_frame) in sorted_trackers:
+                    # Skip if this tracker was already matched this frame
+                    if tid in matched_trackers:
                         continue
-
+                    # Skip trackers that are already in active_trackers (they'll be updated via flow)
+                    if any(t[0] == tid for t in active_trackers):
+                        continue
+                    
                     # Find closest new detection
                     best_dist = float('inf')
                     best_idx = -1
@@ -184,19 +194,23 @@ def run_ai_analysis(db_path, video_path, game_id):
                         if i in used_detections:
                             continue
                         dist = math.sqrt((cx - last_cx)**2 + (cy - last_cy)**2)
-                        if dist < best_dist and dist < 150:  # max 150px movement between anchors
+                        frame_gap = frame_number - last_frame
+                        # Allow larger distance for trackers not seen recently
+                        max_dist = 200 if frame_gap < 30 else 100
+                        if dist < best_dist and dist < max_dist:
                             best_dist = dist
                             best_idx = i
-
+                    
                     if best_idx >= 0:
-                        # Match found — reuse tracker ID
                         cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[best_idx]
                         used_detections.add(best_idx)
                         matched_trackers.append(tid)
                         yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
                                                   'person', conf, cx, cy, w, h, tid)
                         pts = bbox_to_points(x1, y1, x2, y2)
-                        active_trackers[matched_trackers.index(tid)] = (tid, pts, gray)
+                        active_trackers.append((tid, pts, gray))
+                        # Update registry
+                        tracker_registry[tid] = (cx, cy, frame_number)
 
                 # Create new trackers for unmatched detections
                 for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
@@ -208,6 +222,8 @@ def run_ai_analysis(db_path, video_path, game_id):
                                                   'person', conf, cx, cy, w, h, tid)
                         pts = bbox_to_points(x1, y1, x2, y2)
                         active_trackers.append((tid, pts, gray))
+                        # Register new tracker
+                        tracker_registry[tid] = (cx, cy, frame_number)
 
                 # Ball detection strategy:
                 # YOLOv8n barely detects basketballs (15-30px at 720p), so we use:
