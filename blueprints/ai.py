@@ -90,6 +90,49 @@ def get_stats(game_id):
     })
 
 
+# ── API: Full Analysis Results ──────────────────────────────
+
+@ai_bp.route("/api/analysis/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_results(game_id):
+    """Return full analysis results: box score, shots, plays, player effect."""
+    from stats import refresh_stats, get_enhanced_stats
+    db = get_db()
+    basic = refresh_stats(db, game_id)
+    enhanced = get_enhanced_stats(db, game_id)
+
+    # Events summary
+    events_summary = db.execute("""
+        SELECT event_type, COUNT(*) as cnt
+        FROM events WHERE game_id=?
+        GROUP BY event_type ORDER BY cnt DESC
+    """, (game_id,)).fetchall()
+
+    # Top events timeline (last 50)
+    recent_events = db.execute("""
+        SELECT event_type, player, shot_result, timestamp_ms, details_json
+        FROM events WHERE game_id=?
+        ORDER BY timestamp_ms DESC LIMIT 50
+    """, (game_id,)).fetchall()
+
+    return jsonify({
+        "game_id": game_id,
+        "basic_stats": basic,
+        "enhanced": enhanced,
+        "events_summary": [dict(e) for e in events_summary],
+        "recent_events": [dict(e) for e in recent_events],
+    })
+
+
+# ── Page: Analysis Results ──────────────────────────────────
+
+@ai_bp.route("/analysis/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def analysis_results_page(game_id):
+    """Render the analysis results dashboard for a game."""
+    return render_template("analysis_results.html", game_id=game_id)
+
+
 # ── API: Upload video ─────────────────────────────────────
 
 @ai_bp.route("/api/upload_video", methods=["POST"])
