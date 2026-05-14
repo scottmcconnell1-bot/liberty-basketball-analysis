@@ -247,3 +247,21 @@ Uncommitted changes: none (working tree clean)
 Branch: jason-5-may-updates (ahead of origin by 4 commits)
 Uncommitted changes: blueprints/scouting.py (modified), schema.sql (modified), templates/scouting.html (modified), nfhs.py (untracked)
 2 new commits since 12:56 check: major scouting system feature + AI Film Breakdown spec doc. Working tree has active edits to scouting blueprint, schema, template, plus new nfhs.py utility.
+
+[2026-05-14 07:13 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+- 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+- b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+- a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+- 2752ead6 — Fix shot classification and player effect errors
+Branch: jason-5-may-updates (up to date with origin)
+Working tree: clean — no uncommitted changes.
+
+[2026-05-14 09:21 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+- 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+- b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+- a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+- 2752ead6 — Fix shot classification and player effect errors
+Branch: jason-5-may-updates (up to date with origin)
+Uncommitted changes: modified — PROGRESS.md, WORKLOG.md, app.py, blueprints/ai.py, film_analysis.py, templates/videos.html; untracked — templates/analysis_results.html

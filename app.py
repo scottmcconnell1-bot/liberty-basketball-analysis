@@ -64,6 +64,21 @@ def inject_feature_flags():
         "analysis_config": settings["analysis"],
     }
 
+# ── CSP Header ───────────────────────────────────────────────
+@app.after_request
+def set_csp(response):
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' ws: wss:; "
+        "media-src 'self' blob:; "
+        "worker-src 'self' blob:"
+    )
+    return response
+
 # ── Teardown ─────────────────────────────────────────────────
 @app.teardown_appcontext
 def close_db(exception):

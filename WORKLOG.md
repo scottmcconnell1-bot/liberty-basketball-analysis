@@ -680,3 +680,28 @@ COMMITS TODAY:
   - 7da9054f — Fix ai_analyzer.py: tracker persistence across anchor frames
 - Uncommitted: film_analysis.db (modified)
 - Notable: significant rework of ball detection pipeline (YOLO + virtual ball estimator), plus fixes to shot classification and tracker persistence.
+
+===
+2026-05-14 07:13 MDT — Cron Status Check
+- Branch: jason-5-may-updates (up to date with origin)
+- 5 latest commits:
+  - 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+  - 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+  - b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+  - a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+  - 2752ead6 — Fix shot classification and player effect errors
+- Working tree: clean (no uncommitted changes)
+
+===
+2026-05-14 09:21 MDT — Cron Status Check
+- Branch: jason-5-may-updates (up to date with origin)
+- No new commits since last check (07:13 MDT)
+- 5 latest commits:
+  - 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+  - 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+  - b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+  - a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+  - 2752ead6 — Fix shot classification and player effect errors
+- Uncommitted changes present:
+  - Modified: PROGRESS.md, WORKLOG.md, app.py, blueprints/ai.py, film_analysis.py, templates/videos.html
+  - Untracked: templates/analysis_results.html

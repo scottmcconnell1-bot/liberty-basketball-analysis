@@ -291,9 +291,14 @@ def _detect_pick_and_roll(detections, events, conn):
     possession_changes = events[events["event_type"].isin(["possession_change", "turnover", "assist"])]
 
     for _, event in possession_changes.iterrows():
-        frame = event.get("source_frame", 0)
-        if frame == 0:
-            continue
+        frame = event.get("source_frame", 0) or 0
+        if not frame or frame == 0:
+            # Derive frame from timestamp_ms using fps
+            ts = event.get("timestamp_ms", 0) or 0
+            if ts > 0:
+                frame = int(ts / 1000.0 * 3.75)  # fps=3.75
+            else:
+                continue
 
         # Look at detections around this event
         window = detections[
@@ -521,7 +526,7 @@ def calculate_player_effect(conn, game_id, fps=30.0):
 
             score_events.append({
                 "timestamp_ms": event["timestamp_ms"],
-                "frame": event.get("source_frame", 0) or 0,
+                "frame": event["source_frame"] or 0,
                 "points": points,
                 "player": event["player"],
             })
@@ -531,8 +536,8 @@ def calculate_player_effect(conn, game_id, fps=30.0):
     results = []
     for pm in minutes:
         tracker_id = pm["tracker_id"]
-        first_frame = pm.get("first_frame") or 0
-        last_frame = pm.get("last_frame") or 0
+        first_frame = pm["first_frame"] or 0
+        last_frame = pm["last_frame"] or 0
         if first_frame == 0 and last_frame == 0:
             continue
 
