@@ -20,39 +20,19 @@ def resolve_detector_model(ai_settings):
     return selected_model
 
 
-def bbox_to_points(x1, y1, x2, y2, num_points=8):
-    """Generate tracking points inside a bbox using a grid pattern."""
-    xs = np.linspace(x1 + 5, x2 - 5, num_points // 2, dtype=np.float32)
-    ys = np.linspace(y1 + 5, y2 - 5, 2, dtype=np.float32)
-    points = []
-    for y in ys:
-        for x in xs:
-            points.append([x, y])
-    return np.array(points, dtype=np.float32).reshape(-1, 1, 2)
-
-
-def points_to_bbox(points):
-    """Convert tracked points back to a bounding box."""
-    pts = points.reshape(-1, 2)
-    x_min, y_min = pts.min(axis=0)
-    x_max, y_max = pts.max(axis=0)
-    return int(x_min), int(y_min), int(x_max - x_min), int(y_max - y_min)
-
-
 def run_ai_analysis(db_path, video_path, game_id):
-    """Run object detection + optical flow tracking on a video and save results to the database.
+    """Run object detection + tracking on a video and save results to the database.
 
     Strategy:
-    - Run YOLO detection every N frames (detection_stride) for anchor detections
-    - Between anchors, use Lucas-Kanade optical flow to propagate player positions
-    - Ball is only searched on anchor frames (moves too fast for flow tracking)
-    - This gives per-frame position data at a fraction of the compute cost
-
-    Performance: ~3-5 min for a 90-min game on CPU (vs 30-45 min with detection-only)
+    - Run YOLO detection on every frame (~0.04s/frame, ~9 min total)
+    - Maintain a pool of active tracks with last known positions
+    - Match YOLO detections to nearest active track (greedy, max 200px)
+    - Tracks not matched for 120 frames are retired
+    - New detections far from all active tracks create new tracker IDs
     """
     print(f"[AI] Starting analysis for {game_id} on {video_path}")
     ai_settings = dict(AI_DEFAULTS)
-    frame_number = 0  # initialize here so finally block can always reference it
+    frame_number = 0
 
     def get_db():
         db = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
@@ -71,46 +51,25 @@ def run_ai_analysis(db_path, video_path, game_id):
         ai_settings = runtime_settings["ai"]
         model = YOLO(resolve_detector_model(ai_settings))
         inference_device = ai_settings["inference_device"]
-        detection_stride = max(1, int(ai_settings.get("detection_stride", 15)))
-        # Clamp to minimum 5 for performance — stride < 5 is too slow for full games
-        detection_stride = max(5, detection_stride)
 
-        cap = cv2.VideoCapture(video_path)
+        cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
         if not cap.isOpened():
             print(f"[AI] Error: Could not open video file {video_path}")
             return
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"[AI] Video: {total_frames} frames @ {fps:.1f}fps, "
-              f"YOLO every {detection_stride} frames, optical flow between")
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, YOLO every frame")
 
         frame_number = 0
         db = get_db()
 
-        # Optical flow tracking state
-        # Each entry: (tracker_id, points, prev_gray_frame)
-        active_trackers = []
+        # Active tracks: dict of tracker_id -> (cx, cy, last_seen_frame)
+        tracks = {}
         next_tracker_id = 1
-        prev_gray = None
-        ball_positions_all = []  # Track all ball positions for virtual ball estimation
-        
-        # Global tracker registry: tracker_id -> (last_cx, last_cy, last_frame)
-        # Used to match detections to ANY previously seen tracker, not just active ones
-        tracker_registry = {}
-
-        # Lucas-Kanade parameters
-        lk_params = dict(
-            winSize=(21, 21),
-            maxLevel=3,
-            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01)
-        )
-
-        predict_kwargs = {"verbose": False}
-        if inference_device == "cpu":
-            predict_kwargs["device"] = "cpu"
-        elif inference_device == "cuda":
-            predict_kwargs["device"] = 0
+        ball_positions_all = []
+        MAX_MATCH_DIST = 200  # Max pixel distance to match a detection to a track
+        MAX_TRACK_GAP = 120   # Retire tracks not seen in this many frames
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -118,126 +77,66 @@ def run_ai_analysis(db_path, video_path, game_id):
                 break
 
             timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # --- Phase 1: Update optical flow trackers on every frame ---
-            flow_detections = []
-            still_active = []
-            for tid, points, prev_frame in active_trackers:
-                if prev_frame is None or points is None or len(points) == 0:
-                    continue
+            # --- Run YOLO person detection ---
+            results = model(frame, classes=[0], conf=0.25, verbose=False)
+            new_detections = []
+            for result in results:
+                for box in result.boxes:
+                    class_id = int(box.cls[0])
+                    if model.names[class_id] == 'person':
+                        confidence = float(box.conf[0])
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                        new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
-                # Forward flow: track points from prev frame to current
-                new_points, status, err = cv2.calcOpticalFlowPyrLK(
-                    prev_frame, gray, points, None, **lk_params
-                )
+            # --- Match detections to active tracks (greedy nearest-neighbor) ---
+            person_rows = []
+            used_tracks = set()
+            used_dets = set()
 
-                if new_points is not None:
-                    # Filter to only good points
-                    good = status.reshape(-1) == 1
-                    if good.sum() >= 3:  # Need at least 3 good points
-                        valid_pts = new_points[good]
-                        x, y, w, h = points_to_bbox(valid_pts)
-
-                        # Sanity check
-                        fh, fw = frame.shape[:2]
-                        if 0 <= x < fw and 0 <= y < fh and 10 < w < fw // 2 and 10 < h < fh // 2:
-                            flow_detections.append((
-                                game_id, frame_number, timestamp_ms,
-                                'person', 0.5,
-                                x + w // 2, y + h // 2, w, h, tid
-                            ))
-                            # Update points for next iteration (only keep good ones)
-                            still_active.append((tid, valid_pts.reshape(-1, 1, 2), gray))
-                            # Update registry with latest position
-                            if tid in tracker_registry:
-                                tracker_registry[tid] = (x + w // 2, y + h // 2, frame_number)
-                # If too many points lost, tracker drops (player left frame or heavy occlusion)
-
-            active_trackers = still_active
-
-            # --- Phase 2: Run YOLO detection on anchor frames ---
-            yolo_person_boxes = {}
-            ball_detections = []
-
-            if frame_number % detection_stride == 0:
-                # Detect persons (class 0) at standard confidence
-                results = model(frame, classes=[0], conf=0.25, verbose=False)
-                new_detections = []
-                for result in results:
-                    for box in result.boxes:
-                        class_id = int(box.cls[0])
-                        if model.names[class_id] == 'person':
-                            confidence = float(box.conf[0])
-                            x1, y1, x2, y2 = map(int, box.xyxy[0])
-                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
-
-                # Match new detections to existing trackers
-                # Strategy: only match against trackers seen recently (within 60 frames)
-                # AND within a reasonable distance. This prevents ID proliferation from
-                # stale trackers while still handling temporary occlusions.
-                matched_trackers = []
-                used_detections = set()
-                
-                # Build candidate list: trackers seen in last 60 frames, sorted by recency
-                candidates = []
-                for tid, (last_cx, last_cy, last_frame) in tracker_registry.items():
-                    frame_gap = frame_number - last_frame
-                    if frame_gap < 60:  # only consider recent trackers
-                        # Skip if already in active_trackers (handled by optical flow)
-                        if any(t[0] == tid for t in active_trackers):
-                            continue
-                        candidates.append((tid, last_cx, last_cy, last_frame))
-                # Sort by most recent first
-                candidates.sort(key=lambda x: -x[3])
-                
-                for tid, last_cx, last_cy, last_frame in candidates:
-                    if tid in matched_trackers:
+            # Build all (distance, det_idx, track_id) pairs for active tracks
+            match_pairs = []
+            for det_idx, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                for tid, (track_cx, track_cy, last_frame) in tracks.items():
+                    if frame_number - last_frame > MAX_TRACK_GAP:
                         continue
-                    
-                    best_dist = float('inf')
-                    best_idx = -1
-                    for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
-                        if i in used_detections:
-                            continue
-                        dist = math.sqrt((cx - last_cx)**2 + (cy - last_cy)**2)
-                        if dist < best_dist and dist < 100:  # max 100px matching radius
-                            best_dist = dist
-                            best_idx = i
-                    
-                    if best_idx >= 0:
-                        cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[best_idx]
-                        used_detections.add(best_idx)
-                        matched_trackers.append(tid)
-                        yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
-                                                  'person', conf, cx, cy, w, h, tid)
-                        pts = bbox_to_points(x1, y1, x2, y2)
-                        active_trackers.append((tid, pts, gray))
-                        tracker_registry[tid] = (cx, cy, frame_number)
+                    dist = math.sqrt((cx - track_cx)**2 + (cy - track_cy)**2)
+                    if dist < MAX_MATCH_DIST:
+                        match_pairs.append((dist, det_idx, tid))
 
-                # Create new trackers for unmatched detections
-                for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
-                    if i not in used_detections:
-                        tid = next_tracker_id
-                        next_tracker_id += 1
-                        matched_trackers.append(tid)
-                        yolo_person_boxes[tid] = (game_id, frame_number, timestamp_ms,
-                                                  'person', conf, cx, cy, w, h, tid)
-                        pts = bbox_to_points(x1, y1, x2, y2)
-                        active_trackers.append((tid, pts, gray))
-                        # Register new tracker
-                        tracker_registry[tid] = (cx, cy, frame_number)
+            # Sort by distance — assign closest pairs first
+            match_pairs.sort(key=lambda x: x[0])
 
-                # Ball detection strategy:
-                # YOLOv8n barely detects basketballs (15-30px at 720p), so we use:
-                # 1. YOLO at conf=0.01 as a weak signal
-                # 2. Player-proximity heuristic: ball is inferred near the player most likely to have it
-                #    based on who was closest to the last known ball position
-                # This "virtual ball" approach is more reliable than direct detection for small fast balls
+            for dist, det_idx, tid in match_pairs:
+                if det_idx in used_dets or tid in used_tracks:
+                    continue
+                cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[det_idx]
+                used_dets.add(det_idx)
+                used_tracks.add(tid)
+                tracks[tid] = (cx, cy, frame_number)
+                person_rows.append((game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
+
+            # Create new tracks for unmatched detections
+            for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                if i not in used_dets:
+                    tid = next_tracker_id
+                    next_tracker_id += 1
+                    tracks[tid] = (cx, cy, frame_number)
+                    person_rows.append((game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
+
+            # Retire stale tracks
+            stale_tids = [tid for tid, (cx, cy, lf) in tracks.items()
+                          if frame_number - lf > MAX_TRACK_GAP]
+            for tid in stale_tids:
+                del tracks[tid]
+
+            # --- Ball detection (every 5th frame) ---
+            ball_rows = []
+            player_centers = [(cx, cy) for cx, cy, conf, x1, y1, x2, y2, w, h in new_detections]
+
+            if frame_number % 5 == 0:
                 ball_positions = []
-                
-                # --- YOLO ball detection (weak signal) ---
                 try:
                     ball_results = model(frame, classes=[32], conf=0.01, verbose=False)
                     for result in ball_results:
@@ -247,71 +146,41 @@ def run_ai_analysis(db_path, video_path, game_id):
                             if raw_class_name in ['sports ball', 'sports_ball']:
                                 confidence = float(box.conf[0])
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                                w, h = x2 - x1, y2 - y1
-                                if 8 < w < 80 and 8 < h < 80 and 0.3 < w/max(h,1) < 3.0:
+                                w_box, h_box = x2 - x1, y2 - y1
+                                if 8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0:
                                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                                     ball_positions.append((cx, cy, confidence, x1, y1, x2, y2))
                 except Exception:
                     pass
-                
-                # --- Virtual ball: infer from player positions ---
-                # If YOLO didn't find a ball, estimate ball position from game context:
-                # The ball is almost always near a player. We track the last known ball
-                # position and estimate it moves toward the nearest player.
-                if len(ball_positions) == 0 and len(new_detections) > 0:
-                    # Get player centers
-                    player_centers = [(cx, cy) for cx, cy, conf, x1, y1, x2, y2, w, h in new_detections]
-                    
+
+                if len(ball_positions) == 0 and len(player_centers) > 0:
                     if len(ball_positions_all) > 0:
-                        # We have a previous ball position — estimate ball moved toward nearest player
                         last_ball = ball_positions_all[-1]
                         last_bx, last_by = last_ball[0], last_ball[1]
-                        
-                        # Find nearest player to last ball position
-                        min_dist = float('inf')
-                        nearest_player = None
-                        for cx, cy in player_centers:
-                            dist = math.sqrt((cx - last_bx)**2 + (cy - last_by)**2)
-                            if dist < min_dist:
-                                min_dist = dist
-                                nearest_player = (cx, cy)
-                        
-                        if nearest_player:
-                            # Estimate ball is between last position and nearest player
-                            # (weighted toward player since they likely have it)
-                            est_x = int(last_bx * 0.3 + nearest_player[0] * 0.7)
-                            est_y = int(last_by * 0.3 + nearest_player[1] * 0.7)
-                            ball_positions.append((est_x, est_y, 0.1, est_x-10, est_y-10, est_x+10, est_y+10))
+                        nearest = min(player_centers, key=lambda p: (p[0]-last_bx)**2 + (p[1]-last_by)**2)
+                        est_x = int(last_bx * 0.3 + nearest[0] * 0.7)
+                        est_y = int(last_by * 0.3 + nearest[1] * 0.7)
+                        ball_positions.append((est_x, est_y, 0.1, est_x-10, est_y-10, est_x+10, est_y+10))
                     else:
-                        # No previous ball — estimate ball is near the center-most player in the paint area
-                        # (y_center > frame_height * 0.4 roughly = inside the court)
                         fh = frame.shape[0]
                         court_players = [(cx, cy) for cx, cy in player_centers if cy > fh * 0.3]
                         if court_players:
-                            # Pick the player closest to the center of the frame (likely ball handler)
                             frame_cx = frame.shape[1] // 2
-                            best = min(court_players, key=lambda p: abs(p[0] - frame_cx) + abs(p[1] - fh//2))
-                            ball_positions.append((best[0], best[1] - 15, 0.08, best[0]-10, best[1]-25, best[0]+10, best[1]-5))
-                
-                # Store ball positions for next frame's estimation
+                            best = min(court_players, key=lambda p: abs(p[0]-frame_cx) + abs(p[1]-fh//2))
+                            ball_positions.append((best[0], best[1]-15, 0.08, best[0]-10, best[1]-25, best[0]+10, best[1]-5))
+
                 ball_positions_all.extend(ball_positions)
-                # Keep only last 300 ball positions to bound memory
                 if len(ball_positions_all) > 300:
                     ball_positions_all = ball_positions_all[-300:]
-                
-                # Write ball detections
+
                 for (cx, cy, conf, x1, y1, x2, y2) in ball_positions:
-                    ball_detections.append((
+                    ball_rows.append((
                         game_id, frame_number, timestamp_ms, 'ball', max(conf, 0.05),
-                        cx, cy, max(x2 - x1, 10), max(y2 - y1, 10), None
+                        cx, cy, max(x2-x1, 10), max(y2-y1, 10), None
                     ))
 
-            # --- Phase 3: Write all detections for this frame ---
-            all_detections = []
-            all_detections.extend(flow_detections)              # Optical flow tracked positions
-            all_detections.extend(yolo_person_boxes.values())   # YOLO anchor detections
-            all_detections.extend(ball_detections)              # Ball on anchor frames
-
+            # --- Write detections ---
+            all_detections = person_rows + ball_rows
             if all_detections:
                 cursor = db.cursor()
                 cursor.executemany(
@@ -322,13 +191,11 @@ def run_ai_analysis(db_path, video_path, game_id):
                 db.commit()
 
             frame_number += 1
-            if frame_number % 500 == 0:
+            if frame_number % 2000 == 0:
                 elapsed = frame_number / fps
                 pct = frame_number / total_frames * 100 if total_frames > 0 else 0
                 print(f"[AI] Frame {frame_number}/{total_frames} ({pct:.0f}%) "
-                      f"@ {elapsed:.0f}s elapsed, {len(active_trackers)} active trackers")
-
-            prev_gray = gray
+                      f"@ {elapsed:.0f}s, {len(tracks)} active, {next_tracker_id-1} total IDs")
 
     except Exception as e:
         print(f"[AI] An error occurred during analysis: {e}")
@@ -339,31 +206,16 @@ def run_ai_analysis(db_path, video_path, game_id):
             cap.release()
         if db is not None:
             db.close()
-        print(f"[AI] Finished analysis for {game_id}. Processed {frame_number} frames.")
-        # Attempt to assign lightweight tracker IDs before event generation
-        try:
-            import tracker_assigner
-            print("[AI] Running tracker_assigner to populate tracker_id values...")
-            tracker_assigner.main(
-                db_path,
-                game_id,
-                int(ai_settings["tracker_max_distance"]),
-                int(ai_settings["tracker_max_frame_gap"]),
-            )
-        except Exception as e:
-            print(f"[AI] Tracker assigner failed or not available: {e}")
-        # Generate events from detections (will use tracker_id if present)
+        print(f"[AI] Finished detection for {game_id}. Processed {frame_number} frames.")
         generate_events(game_id, db_path)
-
-        # Run enhanced film analysis (minutes, shots, plays, player effect)
         try:
             from film_analysis import run_enhanced_analysis
-            cap = cv2.VideoCapture(video_path)
+            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
             fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
             cap.release()
             run_enhanced_analysis(db_path, game_id, fps)
         except Exception as e:
-            print(f"[AI] Enhanced analysis failed or not available: {e}")
+            print(f"[AI] Enhanced analysis failed: {e}")
 
 
 if __name__ == '__main__':
@@ -373,7 +225,6 @@ if __name__ == '__main__':
 
     db_path, video_path, game_id = sys.argv[1], sys.argv[2], sys.argv[3]
 
-    # Mark as running
     _conn = sqlite3.connect(db_path)
     _conn.execute(
         "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE game_id=? AND status='pending'",
@@ -384,7 +235,6 @@ if __name__ == '__main__':
 
     try:
         run_ai_analysis(db_path, video_path, game_id)
-        # Mark as completed
         _conn = sqlite3.connect(db_path)
         _conn.execute(
             "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE game_id=?",

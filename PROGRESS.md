@@ -1,5 +1,14 @@
 # Progress Log -- Liberty Basketball Analysis
 
+[2026-05-13 19:06 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 2752ead6 — Fix shot classification and player effect errors
+- b5b29e08 — Fix tracker persistence and shot classification
+- e319bc92 — Rewrite ball detection: YOLO + virtual ball estimator
+- 7da9054f — Fix ai_analyzer.py: tracker persistence across anchor frames
+- 01a0ae40 — docs: update WORKLOG with film analysis test results and root cause
+Branch: jason-5-may-updates (up to date with origin)
+Uncommitted changes: film_analysis.db (modified)
+
 [2026-05-13 17:03 MDT] Latest commits (5 latest on jason-5-may-updates):
 - 01a0ae40 — docs: update WORKLOG with film analysis test results and root cause
 - 475ac06b — Fix event generator: ball interpolation, auto possession threshold, sparse data handling
