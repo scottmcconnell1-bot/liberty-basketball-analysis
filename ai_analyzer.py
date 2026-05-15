@@ -6,14 +6,14 @@ from event_generator import main as generate_events
 import sqlite3
 
 def run_ai_analysis(db_path, video_path, game_id):
-    frame_number = 0  # start at 0 so it always exists
     """Run object detection on a video and save results to the database."""
     print(f"[AI] Starting analysis for {game_id} on {video_path}")
     
-    # The function now runs in a separate process, so it needs to connect to the DB on its own.
     def get_db():
         db = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA busy_timeout=10000")
         return db
 
     try:
@@ -21,7 +21,6 @@ def run_ai_analysis(db_path, video_path, game_id):
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             print(f"[AI] Error: Could not open video file {video_path}")
-            cap.release()
             return
 
         frame_number = 0
@@ -39,7 +38,6 @@ def run_ai_analysis(db_path, video_path, game_id):
             for result in results:
                 for box in result.boxes:
                     class_id = int(box.cls[0])
-                    # Normalize class names to pipeline canonical values
                     raw_class_name = model.names[class_id]
                     class_name = raw_class_name
                     if raw_class_name in ['sports ball', 'sports_ball']:
@@ -47,7 +45,6 @@ def run_ai_analysis(db_path, video_path, game_id):
                     if class_name in ['person', 'ball']:
                         confidence = float(box.conf[0])
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        # tracker_id placeholder (None for now) — will be filled when tracking is added
                         tracker_id = None
                         detections_to_add.append((
                             game_id, frame_number, timestamp_ms, class_name, confidence,
@@ -64,8 +61,17 @@ def run_ai_analysis(db_path, video_path, game_id):
                 db.commit()
 
             frame_number += 1
-            if frame_number % 100 == 0:
+            if frame_number % 500 == 0:
                 print(f"[AI] Processed frame {frame_number} for {game_id}")
+                # Write progress to analysis_runs
+                try:
+                    db.execute(
+                        "UPDATE analysis_runs SET completed_at = CURRENT_TIMESTAMP WHERE game_id = ? AND status = 'running'",
+                        (game_id,)
+                    )
+                    db.commit()
+                except:
+                    pass
 
     except Exception as e:
         print(f"[AI] An error occurred during analysis: {e}")
