@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liberty Basketball — Games</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+    h1 { color: #e94560; margin-bottom: 20px; }
+    h2 { color: #0f3460; background: #e94560; padding: 8px 16px; border-radius: 4px; margin: 20px 0 10px; font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #333; }
+    th { background: #16213e; color: #e94560; font-weight: 600; }
+    tr:hover { background: #16213e; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pixellot { background: #0f3460; color: #4ecca3; }
+    .badge-nfhs { background: #533483; color: #e94560; }
+    .badge-manual { background: #444; color: #ccc; }
+    .badge-W { background: #1a5c1a; color: #4ecca3; }
+    .badge-L { background: #5c1a1a; color: #e94560; }
+    .badge-T { background: #5c5c1a; color: #ccc; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-primary { background: #e94560; color: #fff; }
+    .btn-primary:hover { background: #c73652; }
+    .btn-danger { background: #5c1a1a; color: #e94560; }
+    .btn-danger:hover { background: #7a2020; }
+    .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+    .empty { color: #666; font-style: italic; padding: 20px; text-align: center; }
+    .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .form-row label { display: flex; flex-direction: column; font-size: 0.8rem; color: #aaa; }
+    .form-row input, .form-row select { padding: 6px 10px; border: 1px solid #333; border-radius: 4px; background: #16213e; color: #eee; font-size: 0.85rem; }
+    .form-row input:focus, .form-row select:focus { outline: none; border-color: #e94560; }
+    .score-input { width: 60px; }
+    .source-tag { display: inline-block; background: #16213e; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin: 2px; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <h1>🏀 Liberty Basketball — Games</h1>
+    <div>
+      <a href="/schedule" class="btn btn-primary">← Schedule</a>
+      <a href="/" class="btn btn-primary">← Film Tool</a>
+    </div>
+  </div>
+
+  <!-- Create Game Form -->
+  <h2>Create New Game</h2>
+  <form id="createGameForm">
+    <div class="form-row">
+      <label>Scheduled Game
+        <select name="scheduled_game_id" id="scheduled_game_id">
+          <option value="">-- Standalone (scouting) --</option>
+          {% for sg in scheduled_games %}
+          <option value="{{ sg.id }}">{{ sg.game_date }} vs {{ sg.opponent_name }} ({{ sg.level }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Source Type
+        <select name="source_type" required>
+          <option value="pixellot">Pixellot</option>
+          <option value="nfhs">NFHS</option>
+          <option value="manual">Manual</option>
+        </select>
+      </label>
+      <label>Source Key
+        <input type="text" name="source_key" placeholder="NFHS ID, Pixellot ID, or file path" required style="width:250px">
+      </label>
+    </div>
+    <div class="form-row">
+      <label>NFHS Game ID
+        <input type="text" name="nfhs_game_id" placeholder="Optional">
+      </label>
+      <label>NFHS URL
+        <input type="text" name="nfhs_url" placeholder="Optional" style="width:250px">
+      </label>
+      <label>Home Score
+        <input type="number" name="home_score" value="0" class="score-input">
+      </label>
+      <label>Away Score
+        <input type="number" name="away_score" value="0" class="score-input">
+      </label>
+      <label>Result
+        <select name="result">
+          <option value="">--</option>
+          <option value="W">Win</option>
+          <option value="L">Loss</option>
+          <option value="T">Tie</option>
+        </select>
+      </label>
+      <label>Conference
+        <select name="is_conference">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Game</button>
+  </form>
+
+  <!-- Games List -->
+  <h2>All Games</h2>
+  <table id="gamesTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Source</th>
+        <th>Source Key</th>
+        <th>Score</th>
+        <th>Result</th>
+        <th>Conference</th>
+        <th>Sources</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if games %}
+        {% for game in games %}
+        <tr>
+          <td>{{ game.id }}</td>
+          <td><span class="badge badge-{{ game.source_type }}">{{ game.source_type }}</span></td>
+          <td>{{ game.source_key }}</td>
+          <td>{{ game.home_score }} - {{ game.away_score }}</td>
+          <td>{% if game.result %}<span class="badge badge-{{ game.result }}">{{ game.result }}</span>{% endif %}</td>
+          <td>{{ 'Yes' if game.is_conference else 'No' }}</td>
+          <td>
+            <span class="source-tag">Video sources appear here</span>
+          </td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="deleteGame({{ game.id }})">Delete</button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="8" class="empty">No games created yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <script>
+    document.getElementById('createGameForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        source_type: form.source_type.value,
+        source_key: form.source_key.value,
+        scheduled_game_id: form.scheduled_game_id.value ? parseInt(form.scheduled_game_id.value) : null,
+        nfhs_game_id: form.nfhs_game_id.value || null,
+        nfhs_url: form.nfhs_url.value || null,
+        home_score: parseInt(form.home_score.value) || 0,
+        away_score: parseInt(form.away_score.value) || 0,
+        result: form.result.value || null,
+        is_conference: parseInt(form.is_conference.value) || 0,
+      };
+      const resp = await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (resp.ok) location.reload();
+      else { const err = await resp.json(); alert('Error: ' + err.message); }
+    });
+
+    async function deleteGame(id) {
+      if (!confirm('Delete this game?')) return;
+      const resp = await fetch('/api/games/' + id, { method: 'DELETE' });
+      if (resp.ok) location.reload();
+      else alert('Failed to delete');
+    }
+  </script>
+</body>
+</html>
