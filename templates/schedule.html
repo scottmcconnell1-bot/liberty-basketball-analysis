@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liberty Basketball — Schedule</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+    h1 { color: #e94560; margin-bottom: 20px; }
+    h2 { color: #0f3460; background: #e94560; padding: 8px 16px; border-radius: 4px; margin: 20px 0 10px; font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #333; }
+    th { background: #16213e; color: #e94560; font-weight: 600; }
+    tr:hover { background: #16213e; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+    .badge-home { background: #0f3460; color: #4ecca3; }
+    .badge-away { background: #533483; color: #e94560; }
+    .badge-neutral { background: #444; color: #ccc; }
+    .badge-scheduled { background: #0f3460; color: #4ecca3; }
+    .badge-completed { background: #1a5c1a; color: #4ecca3; }
+    .badge-cancelled { background: #5c1a1a; color: #e94560; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-primary { background: #e94560; color: #fff; }
+    .btn-primary:hover { background: #c73652; }
+    .btn-danger { background: #5c1a1a; color: #e94560; }
+    .btn-danger:hover { background: #7a2020; }
+    .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+    .empty { color: #666; font-style: italic; padding: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <h1>🏀 Liberty Basketball — Schedule</h1>
+    <a href="/" class="btn btn-primary">← Back to Film Tool</a>
+  </div>
+
+  {% if seasons %}
+    {% for season in seasons %}
+      <h2>{{ season.name }} ({{ season.start_date }} → {{ season.end_date }})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Opponent</th>
+            <th>Level</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(found=false) %}
+          {% for game in games %}
+            {% if game.season_id == season.id %}
+              {% set ns.found = true %}
+              <tr>
+                <td>{{ game.game_date }}</td>
+                <td>{{ game.game_time }}</td>
+                <td>{{ game.opponent_name }}
+                  {% if game.tournament_name %}<br><small style="color:#888">{{ game.tournament_name }}</small>{% endif %}
+                </td>
+                <td>{{ game.level }}</td>
+                <td><span class="badge badge-{{ game.location_type }}">{{ game.location_type }}</span></td>
+                <td><span class="badge badge-{{ game.status }}">{{ game.status }}</span></td>
+                <td>{{ game.notes or '' }}</td>
+                <td>
+                  <button class="btn btn-danger btn-sm" onclick="deleteGame({{ game.id }})">Delete</button>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+          {% if not ns.found %}
+            <tr><td colspan="8" class="empty">No games scheduled for this season.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    {% endfor %}
+  {% else %}
+    <p class="empty">No seasons found. <a href="/" style="color:#e94560">Go to Film Tool</a> to get started.</p>
+  {% endif %}
+
+  <script>
+    async function deleteGame(id) {
+      if (!confirm('Delete this scheduled game?')) return;
+      const resp = await fetch('/api/scheduled_games/' + id, { method: 'DELETE' });
+      if (resp.ok) location.reload();
+      else alert('Failed to delete');
+    }
+  </script>
+</body>
+</html>
