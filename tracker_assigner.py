@@ -112,15 +112,23 @@ def assign_trackers_bytetrack(detections, model_name="yolov8n.pt", tracker_type=
 def write_tracker_ids(conn, det_to_track):
     cur = conn.cursor()
     updates = 0
-    for det_id, t_id in det_to_track.items():
-        cur.execute('UPDATE detections SET tracker_id = ? WHERE id = ?', (int(t_id), int(det_id)))
-        updates += 1
-    conn.commit()
+    # Wrap all updates in a single transaction for performance
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        for det_id, t_id in det_to_track.items():
+            cur.execute('UPDATE detections SET tracker_id = ? WHERE id = ?', (int(t_id), int(det_id)))
+            updates += 1
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     return updates
 
 
 def main(db_path, game_id, max_distance, max_frame_gap, tracker_type="centroid"):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout = 10000")
     try:
         detections = load_detections(conn, game_id)
         if not detections:

@@ -37,6 +37,8 @@ def run_ai_analysis(db_path, video_path, game_id):
     def get_db():
         db = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA busy_timeout = 10000")
         return db
 
     cap = None
@@ -213,11 +215,19 @@ def run_ai_analysis(db_path, video_path, game_id):
         print(f"[AI] An error occurred during analysis: {e}")
         import traceback
         traceback.print_exc()
-    finally:
-        if cap is not None and cap.isOpened():
-            cap.release()
-        if db is not None:
-            db.close()
+        # Mark analysis_runs as failed
+        try:
+            _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
+            _pconn.execute(
+                "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE game_id=? AND status='running'",
+                (str(e)[:500], game_id)
+            )
+            _pconn.commit()
+            _pconn.close()
+        except Exception:
+            pass
+    else:
+        # Only run post-processing if no exception occurred
         print(f"[AI] Finished detection for {game_id}. Processed {frame_number} frames.")
         # Update progress: detection done
         try:
@@ -253,6 +263,11 @@ def run_ai_analysis(db_path, video_path, game_id):
             run_enhanced_analysis(db_path, game_id, fps)
         except Exception as e:
             print(f"[AI] Enhanced analysis failed: {e}")
+    finally:
+        if cap is not None and cap.isOpened():
+            cap.release()
+        if db is not None:
+            db.close()
 
 
 if __name__ == '__main__':

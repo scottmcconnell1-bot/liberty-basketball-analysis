@@ -226,11 +226,11 @@ function renderPersonnel(list) {
   el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Role</th><th>Usage</th><th>PPP</th><th>Notes</th></tr></thead><tbody>' +
     list.map(p => `<tr>
       <td>${p.jersey_number || '-'}</td>
-      <td>${p.player_name || 'Unknown'}</td>
-      <td>${p.role}</td>
+      <td>${escapeHtml(p.player_name) || 'Unknown'}</td>
+      <td>${escapeHtml(p.role)}</td>
       <td>${p.usage_rate ? (p.usage_rate * 100).toFixed(0) + '%' : '-'}</td>
       <td>${p.ppp || '-'}</td>
-      <td>${p.notes || ''}</td>
+      <td>${escapeHtml(p.notes) || ''}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -252,11 +252,11 @@ function renderOffensiveSets(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No offensive sets added yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>Set</th><th>Trigger</th><th>Frequency</th><th>PPP</th><th>vs Pressure</th></tr></thead><tbody>' +
     list.map(s => `<tr>
-      <td>${s.set_name}</td>
-      <td>${s.trigger_action || '-'}</td>
+      <td>${escapeHtml(s.set_name)}</td>
+      <td>${escapeHtml(s.trigger_action) || '-'}</td>
       <td>${s.frequency}</td>
       <td>${s.ppp || '-'}</td>
-      <td>${s.result_vs_pressure || '-'}</td>
+      <td>${escapeHtml(s.result_vs_pressure) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -279,11 +279,11 @@ function renderDefensive(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No defensive tendencies added yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>Scheme</th><th>PnR Coverage</th><th>Frequency</th><th>PPP Allowed</th><th>Weak Rotations</th></tr></thead><tbody>' +
     list.map(d => `<tr>
-      <td>${d.scheme}</td>
-      <td>${d.pnr_coverage || '-'}</td>
+      <td>${escapeHtml(d.scheme)}</td>
+      <td>${escapeHtml(d.pnr_coverage) || '-'}</td>
       <td>${d.frequency ? (d.frequency * 100).toFixed(0) + '%' : '-'}</td>
       <td>${d.ppp_allowed || '-'}</td>
-      <td>${d.weak_rotations || '-'}</td>
+      <td>${escapeHtml(d.weak_rotations) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -304,12 +304,12 @@ function renderTendencies(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No tendencies added yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>Type</th><th>Category</th><th>Description</th><th>Frequency</th><th>Exploitable</th><th>Drill</th></tr></thead><tbody>' +
     list.map(t => `<tr>
-      <td>${t.tendency_type}</td>
-      <td>${t.category || '-'}</td>
-      <td>${t.description}</td>
-      <td>${t.frequency || '-'}</td>
+      <td>${escapeHtml(t.tendency_type)}</td>
+      <td>${escapeHtml(t.category) || '-'}</td>
+      <td>${escapeHtml(t.description)}</td>
+      <td>${escapeHtml(t.frequency) || '-'}</td>
       <td>${t.exploitable ? '⚠️ Yes' : 'No'}</td>
-      <td>${t.practice_drill || '-'}</td>
+      <td>${escapeHtml(t.practice_drill) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -332,8 +332,8 @@ function renderSituational(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No situational plays added yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>Situation</th><th>Description</th><th>Frequency</th><th>PPP</th></tr></thead><tbody>' +
     list.map(s => `<tr>
-      <td>${s.situation}</td>
-      <td>${s.description}</td>
+      <td>${escapeHtml(s.situation)}</td>
+      <td>${escapeHtml(s.description)}</td>
       <td>${s.frequency}</td>
       <td>${s.ppp || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
@@ -357,9 +357,9 @@ function renderMismatches(list) {
   el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Vulnerability</th><th>Exploit With</th></tr></thead><tbody>' +
     list.map(m => `<tr>
       <td>${m.opponent_jersey || '-'}</td>
-      <td>${m.opponent_name || 'Unknown'}</td>
-      <td>${m.vulnerability}</td>
-      <td>${m.exploit_action}</td>
+      <td>${escapeHtml(m.opponent_name) || 'Unknown'}</td>
+      <td>${escapeHtml(m.vulnerability)}</td>
+      <td>${escapeHtml(m.exploit_action)}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -381,9 +381,9 @@ function renderPracticePoints(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No practice points defined yet.</div>'; return; }
   el.innerHTML = list.map((p, i) => `
     <div class="card mb-2">
-      <h3>Point ${i + 1}: ${p.description}</h3>
-      ${p.drill_name ? `<p><strong>Drill:</strong> ${p.drill_name}</p>` : ''}
-      ${p.measurable_target ? `<p><strong>Target:</strong> ${p.measurable_target}</p>` : ''}
+      <h3>Point ${i + 1}: ${escapeHtml(p.description)}</h3>
+      ${p.drill_name ? `<p><strong>Drill:</strong> ${escapeHtml(p.drill_name)}</p>` : ''}
+      ${p.measurable_target ? `<p><strong>Target:</strong> ${escapeHtml(p.measurable_target)}</p>` : ''}
     </div>
   `).join('');
 }
@@ -394,11 +394,11 @@ function renderClips(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No clips tagged yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>Type</th><th>Time</th><th>Description</th><th>Coach Cue</th><th>Source</th></tr></thead><tbody>' +
     list.map(c => `<tr>
-      <td>${c.clip_type}</td>
+      <td>${escapeHtml(c.clip_type)}</td>
       <td>${c.game_time || '-'}</td>
-      <td>${c.description}</td>
-      <td>${c.coach_cue || '-'}</td>
-      <td>${c.source}</td>
+      <td>${escapeHtml(c.description)}</td>
+      <td>${escapeHtml(c.coach_cue) || '-'}</td>
+      <td>${escapeHtml(c.source)}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 

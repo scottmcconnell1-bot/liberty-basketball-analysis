@@ -23,6 +23,7 @@ This blueprint covers all API routes related to:
 All route logic is extracted verbatim from app.py.
 """
 
+import json
 import sqlite3
 
 from flask import (
@@ -44,28 +45,62 @@ def save_event():
     data = request.get_json(force=True)
     if not data or "timestamp_ms" not in data:
         return jsonify({"status": "error", "message": "timestamp_ms required"}), 400
+
+    # Validate required fields
+    event_type = (data.get("event_type") or "").strip()
+    if not event_type:
+        return jsonify({"status": "error", "message": "event_type required"}), 400
+
+    # Validate timestamp_ms is numeric
+    try:
+        timestamp_ms = int(data["timestamp_ms"])
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "timestamp_ms must be an integer"}), 400
+
+    # Validate details_json is valid JSON if provided
+    details_json = data.get("details_json")
+    if details_json is not None:
+        if isinstance(details_json, str):
+            try:
+                json.loads(details_json)
+            except (json.JSONDecodeError, TypeError):
+                return jsonify({"status": "error", "message": "details_json must be valid JSON"}), 400
+        elif not isinstance(details_json, (dict, list)):
+            return jsonify({"status": "error", "message": "details_json must be a JSON object or array"}), 400
+
+    # Sanitize string inputs to prevent XSS
+    game_id = str(data.get("game_id", "default_game"))[:128]
+    player = str(data.get("player", ""))[:128] if data.get("player") else None
+    shot_result = str(data.get("shot_result", ""))[:32] if data.get("shot_result") else None
+    source_video = str(data.get("source_video", ""))[:256] if data.get("source_video") else None
+
     db = get_db()
-    cur = db.execute(
-        """INSERT INTO events
-           (game_id, player, event_type, shot_result, timestamp_ms, details_json,
-            source_video, source_frame, human_verified, confidence)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-        (
-            data.get("game_id", "default_game"),
-            data.get("player"),
-            data.get("event_type"),
-            data.get("shot_result"),
-            data["timestamp_ms"],
-            data.get("details_json"),
-            data.get("source_video"),
-            data.get("source_frame"),
-            int(bool(data.get("human_verified", True))),
-            data.get("confidence"),
-        ),
-    )
-    db.commit()
-    refresh_game_stats(db, data.get("game_id", "default_game"))
-    return jsonify({"status": "success", "id": cur.lastrowid})
+    try:
+        cur = db.execute(
+            """INSERT INTO events
+               (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+                source_video, source_frame, human_verified, confidence)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (
+                game_id,
+                player,
+                event_type,
+                shot_result,
+                timestamp_ms,
+                details_json if isinstance(details_json, str) else json.dumps(details_json) if details_json else None,
+                source_video,
+                data.get("source_frame"),
+                int(bool(data.get("human_verified", True))),
+                data.get("confidence"),
+            ),
+        )
+        db.commit()
+        refresh_game_stats(db, game_id)
+        return jsonify({"status": "success", "id": cur.lastrowid})
+    except sqlite3.Error as e:
+        db.rollback()
+        current_app.logger.error(f"save_event DB error: {e}")
+        return jsonify({"status": "error", "message": "Database error"}), 500
 
 
 @clips_bp.route("/api/events/<game_id>", methods=["GET"])

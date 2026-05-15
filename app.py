@@ -16,7 +16,7 @@ Blueprint modules:
 """
 
 import os
-from flask import Flask, g
+from flask import Flask, g, jsonify, request
 
 from config import Config
 
@@ -88,6 +88,16 @@ def close_db(exception):
         db.close()
 
 
+# ── Auth Middleware ───────────────────────────────────────────
+@app.before_request
+def require_auth_for_api():
+    """Require authentication for all /api/* routes."""
+    if request.path.startswith("/api/"):
+        from blueprints.users import _current_user
+        if not _current_user():
+            return jsonify({"error": "Authentication required"}), 401
+
+
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess
 from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
@@ -107,7 +117,9 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    app.run(host="0.0.0.0", port=8081, debug=True, use_reloader=False)
+    import os
+    _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=8081, debug=_debug, use_reloader=False)
 
 
 @app.route("/sw.js")
