@@ -68,14 +68,14 @@ def inject_feature_flags():
 @app.after_request
 def set_csp(response):
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "img-src 'self' data: blob:; "
-        "font-src 'self' data:; "
-        "connect-src 'self' ws: wss:; "
-        "media-src 'self' blob:; "
-        "worker-src 'self' blob:"
+        "default-src * 'unsafe-inline' 'unsafe-eval'; "
+        "script-src * 'unsafe-inline' 'unsafe-eval'; "
+        "style-src * 'unsafe-inline'; "
+        "img-src * data: blob:; "
+        "font-src * data:; "
+        "connect-src * ws: wss:; "
+        "media-src * blob:; "
+        "worker-src * blob:"
     )
     return response
 

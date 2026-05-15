@@ -371,6 +371,15 @@
               <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
               <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting…</div>
             </div>
+            <!-- Analysis Progress (shown after upload during AI analysis) -->
+            <div class="upload-progress-shell" id="analysisProgressShell" style="display:none;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="font-size:.85rem;font-weight:600;">🤖 AI Analysis</span>
+                <span class="tiny" id="analysisProgressPct">0%</span>
+              </div>
+              <div class="upload-progress-bar"><span id="analysisProgressBar" style="width:0%"></span></div>
+              <div class="tiny" id="analysisProgressText" style="margin-top:.4rem;">Starting…</div>
+            </div>
           </form>
         </div>
         {% endif %}

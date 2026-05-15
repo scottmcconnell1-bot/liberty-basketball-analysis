@@ -3,7 +3,6 @@
 {% block title %}Analysis Results — {{ game_id }}{% endblock %}
 
 {% block head %}
-<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0f1117;
@@ -18,7 +17,7 @@
     --radius: 8px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Satoshi', sans-serif; padding: 20px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; }
   .container { max-width: 1200px; margin: 0 auto; }
   h1 { font-size: 1.5rem; margin-bottom: 4px; }
   .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
@@ -36,17 +35,26 @@
   .badge-2pt { background: #1e3a5f; color: #60a5fa; }
   .badge-3pt { background: #3b1f6e; color: #a78bfa; }
   .badge-ft { background: #1f4a3a; color: #4ade80; }
-  .badge-make { background: #14532d; color: #86efac; }
-  .badge-miss { background: #450a0a; color: #fca5a5; }
-  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .nav { margin-bottom: 20px; }
+  .nav a { color: var(--accent); text-decoration: none; font-size: 0.85rem; margin-right: 16px; }
+  .nav a:hover { text-decoration: underline; }
+
+  /* Progress bar */
+  .progress-wrap { margin: 40px auto; max-width: 400px; text-align: center; }
+  .progress-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 16px 0; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #8b5cf6); border-radius: 3px; transition: width 0.3s ease; }
+  .progress-text { color: var(--muted); font-size: 0.85rem; }
+  .progress-steps { text-align: left; margin-top: 20px; }
+  .progress-step { display: flex; align-items: center; gap: 10px; padding: 8px 0; color: var(--muted); font-size: 0.85rem; }
+  .progress-step.done { color: var(--green); }
+  .progress-step.active { color: var(--accent); }
+  .step-icon { width: 20px; text-align: center; }
+
   .error { background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; padding: 16px; border-radius: var(--radius); }
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .stat-box { text-align: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 6px; }
   .stat-box .val { font-size: 1.5rem; font-weight: 700; }
   .stat-box .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
-  .nav { margin-bottom: 20px; }
-  .nav a { color: var(--accent); text-decoration: none; font-size: 0.85rem; margin-right: 16px; }
-  .nav a:hover { text-decoration: underline; }
   .play-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .play-bar .label { width: 100px; font-size: 0.8rem; color: var(--muted); }
   .play-bar .bar { flex: 1; height: 20px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
@@ -76,11 +84,23 @@
   <h1>📊 Analysis Results</h1>
   <p class="subtitle">{{ game_id }}</p>
 
-  <div id="loading" class="loading">Loading analysis data…</div>
-  <div id="error" class="error" style="display:none"></div>
-  <div id="results" style="display:none">
+  <!-- Loading state with progress -->
+  <div id="loading" class="progress-wrap">
+    <div class="progress-bar"><div id="progress-fill" class="progress-fill" style="width:10%"></div></div>
+    <div id="progress-text" class="progress-text">Loading analysis data…</div>
+    <div class="progress-steps">
+      <div class="progress-step" id="step-fetch"><span class="step-icon">⏳</span> Fetching data from server</div>
+      <div class="progress-step" id="step-events"><span class="step-icon">○</span> Processing events</div>
+      <div class="progress-step" id="step-boxscore"><span class="step-icon">○</span> Building box score</div>
+      <div class="progress-step" id="step-shots"><span class="step-icon">○</span> Analyzing shots</div>
+      <div class="progress-step" id="step-effect"><span class="step-icon">○</span> Calculating player impact</div>
+      <div class="progress-step" id="step-render"><span class="step-icon">○</span> Rendering results</div>
+    </div>
+  </div>
 
-    <!-- Summary Stats -->
+  <div id="error" class="error" style="display:none"></div>
+
+  <div id="results" style="display:none">
     <div class="grid">
       <div class="card">
         <h2>📈 Event Summary</h2>
@@ -92,76 +112,37 @@
       </div>
     </div>
 
-    <!-- Box Score -->
     <div class="card" style="margin-bottom:24px">
       <h2>📋 Box Score</h2>
       <div style="overflow-x:auto">
         <table id="box-score">
-          <thead>
-            <tr>
-              <th>Player</th>
-              <th class="num">MIN</th>
-              <th class="num">PTS</th>
-              <th class="num">FGM/A</th>
-              <th class="num">3PM/A</th>
-              <th class="num">FTM/A</th>
-              <th class="num">REB</th>
-              <th class="num">AST</th>
-              <th class="num">STL</th>
-              <th class="num">BLK</th>
-              <th class="num">TO</th>
-              <th class="num">PF</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Player</th><th class="num">MIN</th><th class="num">PTS</th><th class="num">FGM/A</th><th class="num">3PM/A</th><th class="num">FTM/A</th><th class="num">REB</th><th class="num">AST</th><th class="num">STL</th><th class="num">BLK</th><th class="num">TO</th><th class="num">PF</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Shot Breakdown -->
     <div class="grid">
       <div class="card">
         <h2>🎯 Shot Breakdown by Player</h2>
         <div style="overflow-x:auto">
           <table id="shot-breakdown">
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th class="num">2PT</th>
-                <th class="num">3PT</th>
-                <th class="num">FT</th>
-                <th class="num">Total</th>
-                <th class="num">FG%</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Player</th><th class="num">2PT</th><th class="num">3PT</th><th class="num">FT</th><th class="num">Total</th><th class="num">FG%</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
-
-      <!-- Player Effect -->
       <div class="card">
         <h2>⚡ Player Effect (+/-)</h2>
         <div style="overflow-x:auto">
           <table id="player-effect">
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th class="num">+/-</th>
-                <th class="num">ORTG</th>
-                <th class="num">DRTG</th>
-                <th class="num">NET</th>
-                <th class="num">PF</th>
-                <th class="num">PA</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Player</th><th class="num">+/-</th><th class="num">ORTG</th><th class="num">DRTG</th><th class="num">NET</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Recent Events -->
     <div class="card" style="margin-top:16px">
       <h2>📝 Recent Events</h2>
       <div id="recent-events" style="max-height:300px;overflow-y:auto"></div>
@@ -172,55 +153,100 @@
 <script>
 const GAME_ID = {{ game_id|tojson }};
 
+function setStep(id, status) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'progress-step ' + status;
+  const icon = el.querySelector('.step-icon');
+  if (icon) icon.textContent = status === 'done' ? '✓' : status === 'active' ? '⏳' : '○';
+}
+
+function setProgress(pct, text) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  if (text) document.getElementById('progress-text').textContent = text;
+}
+
 async function loadResults() {
   try {
-    const resp = await fetch(`/api/analysis/${GAME_ID}`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    setProgress(20, 'Fetching analysis data…');
+    setStep('step-fetch', 'active');
+
+    const resp = await fetch('/api/analysis/' + GAME_ID);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+
+    setStep('step-fetch', 'done');
+    setProgress(40, 'Processing events…');
+    setStep('step-events', 'active');
+
+    await sleep(100);
+    renderEventSummary(data.events_summary || []);
+    renderPlaysSummary((data.enhanced && data.enhanced.plays_summary) || []);
+
+    setStep('step-events', 'done');
+    setProgress(55, 'Building box score…');
+    setStep('step-boxscore', 'active');
+
+    await sleep(100);
+    renderBoxScore(data.basic_stats || [], data.enhanced || {});
+
+    setStep('step-boxscore', 'done');
+    setProgress(70, 'Analyzing shots…');
+    setStep('step-shots', 'active');
+
+    await sleep(100);
+    renderShotBreakdown((data.enhanced && data.enhanced.shot_breakdown) || []);
+
+    setStep('step-shots', 'done');
+    setProgress(85, 'Calculating player impact…');
+    setStep('step-effect', 'active');
+
+    await sleep(100);
+    renderPlayerEffect((data.enhanced && data.enhanced.player_effect) || []);
+
+    setStep('step-effect', 'done');
+    setProgress(95, 'Rendering results…');
+    setStep('step-render', 'active');
+
+    await sleep(100);
+    renderRecentEvents(data.recent_events || []);
+
+    setStep('step-render', 'done');
+    setProgress(100, 'Done!');
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('results').style.display = 'block';
-
-    renderEventSummary(data.events_summary);
-    renderPlaysSummary(data.enhanced?.plays_summary || []);
-    renderBoxScore(data.basic_stats, data.enhanced);
-    renderShotBreakdown(data.enhanced?.shot_breakdown || []);
-    renderPlayerEffect(data.enhanced?.player_effect || []);
-    renderRecentEvents(data.recent_events);
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
     el.style.display = 'block';
-    el.textContent = `Error loading analysis: ${err.message}`;
+    el.textContent = 'Error loading analysis: ' + err.message;
   }
 }
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 function renderEventSummary(events) {
   const el = document.getElementById('event-summary');
-  if (!events || events.length === 0) { el.innerHTML = '<p style="color:var(--muted)">No events</p>'; return; }
+  if (!events.length) { el.innerHTML = '<p style="color:var(--muted)">No events</p>'; return; }
   const total = events.reduce((s, e) => s + e.cnt, 0);
-  let html = `<div class="stat-grid" style="margin-bottom:12px">`;
+  let html = '<div class="stat-grid">';
   for (const e of events.slice(0, 6)) {
-    html += `<div class="stat-box"><div class="val">${e.cnt.toLocaleString()}</div><div class="lbl">${e.event_type}</div></div>`;
+    html += '<div class="stat-box"><div class="val">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + e.event_type + '</div></div>';
   }
-  html += '</div>';
-  html += `<p style="color:var(--muted);font-size:0.8rem">Total: ${total.toLocaleString()} events</p>`;
+  html += '</div><p style="color:var(--muted);font-size:0.8rem">Total: ' + total.toLocaleString() + ' events</p>';
   el.innerHTML = html;
 }
 
 function renderPlaysSummary(plays) {
   const el = document.getElementById('plays-summary');
-  if (!plays || plays.length === 0) { el.innerHTML = '<p style="color:var(--muted)">No plays recognized</p>'; return; }
-  const max = Math.max(...plays.map(p => p.cnt));
-  let html = '';
+  if (!plays.length) { el.innerHTML = '<p style="color:var(--muted)">No plays recognized</p>'; return; }
+  const max = Math.max.apply(null, plays.map(p => p.cnt));
   const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#22c55e', '#06b6d4'];
-  plays.forEach((p, i) => {
+  let html = '';
+  plays.forEach(function(p, i) {
     const pct = max > 0 ? (p.cnt / max * 100) : 0;
-    const color = colors[i % colors.length];
-    html += `<div class="play-bar">
-      <span class="label">${p.play_type}</span>
-      <div class="bar"><div class="fill" style="width:${pct}%;background:${color}">${p.cnt}</div></div>
-    </div>`;
+    html += '<div class="play-bar"><span class="label">' + p.play_type + '</span><div class="bar"><div class="fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + '">' + p.cnt + '</div></div></div>';
   });
   el.innerHTML = html;
 }
@@ -228,128 +254,121 @@ function renderPlaysSummary(plays) {
 function renderBoxScore(basic, enhanced) {
   const tbody = document.querySelector('#box-score tbody');
   const minutes = {};
-  (enhanced?.minutes || []).forEach(m => { minutes[m.tracker_id] = m.minutes_played?.toFixed(1) || '0'; });
+  (enhanced.minutes || []).forEach(function(m) { minutes[m.tracker_id] = (m.minutes_played || 0).toFixed(1); });
   const shots = {};
-  (enhanced?.shot_breakdown || []).forEach(s => {
+  (enhanced.shot_breakdown || []).forEach(function(s) {
     if (!shots[s.tracker_id]) shots[s.tracker_id] = {};
-    const key = s.shot_type + '_' + s.shot_result;
-    shots[s.tracker_id][key] = s.cnt;
+    shots[s.tracker_id][s.shot_type + '_' + s.shot_result] = s.cnt;
   });
 
-  if (!basic || basic.length === 0) {
+  if (!basic.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No box score data</td></tr>';
     return;
   }
 
   let html = '';
-  for (const row of basic) {
-    const pid = row.player || row.tracker_id;
-    const name = row.name || `Player ${pid}`;
-    const min = minutes[pid] || '0';
-    const s = shots[pid] || {};
-    const fgm = (s['2pt_make'] || 0) + (s['3pt_make'] || 0);
-    const fga = fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0);
-    const tpm = s['3pt_make'] || 0;
-    const tpa = tpm + (s['3pt_miss'] || 0);
-    const ftm = s['ft_make'] || 0;
-    const fta = ftm + (s['ft_miss'] || 0);
-    const pts = (s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0);
+  for (var i = 0; i < basic.length; i++) {
+    var row = basic[i];
+    var pid = row.player || row.tracker_id;
+    var name = row.name || ('Player ' + pid);
+    var min = minutes[pid] || '0';
+    var s = shots[pid] || {};
+    var fgm = (s['2pt_make'] || 0) + (s['3pt_make'] || 0);
+    var fga = fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0);
+    var tpm = s['3pt_make'] || 0;
+    var tpa = tpm + (s['3pt_miss'] || 0);
+    var ftm = s['ft_make'] || 0;
+    var fta = ftm + (s['ft_miss'] || 0);
+    var pts = (s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0);
 
-    html += `<tr>
-      <td><strong>${name}</strong></td>
-      <td class="num">${min}</td>
-      <td class="num"><strong>${pts}</strong></td>
-      <td class="num">${fgm}/${fga}</td>
-      <td class="num">${tpm}/${tpa}</td>
-      <td class="num">${ftm}/${fta}</td>
-      <td class="num">${row.rebounds || 0}</td>
-      <td class="num">${row.assists || 0}</td>
-      <td class="num">${row.steals || 0}</td>
-      <td class="num">${row.blocks || 0}</td>
-      <td class="num">${row.turnovers || 0}</td>
-      <td class="num">${row.fouls || 0}</td>
-    </tr>`;
+    html += '<tr><td><strong>' + name + '</strong></td>';
+    html += '<td class="num">' + min + '</td>';
+    html += '<td class="num"><strong>' + pts + '</strong></td>';
+    html += '<td class="num">' + fgm + '/' + fga + '</td>';
+    html += '<td class="num">' + tpm + '/' + tpa + '</td>';
+    html += '<td class="num">' + ftm + '/' + fta + '</td>';
+    html += '<td class="num">' + (row.rebounds || 0) + '</td>';
+    html += '<td class="num">' + (row.assists || 0) + '</td>';
+    html += '<td class="num">' + (row.steals || 0) + '</td>';
+    html += '<td class="num">' + (row.blocks || 0) + '</td>';
+    html += '<td class="num">' + (row.turnovers || 0) + '</td>';
+    html += '<td class="num">' + (row.fouls || 0) + '</td></tr>';
   }
   tbody.innerHTML = html;
 }
 
 function renderShotBreakdown(shots) {
   const tbody = document.querySelector('#shot-breakdown tbody');
-  if (!shots || shots.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No shot data</td></tr>'; return; }
+  if (!shots.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No shot data</td></tr>'; return; }
 
-  // Group by tracker_id
   const players = {};
-  for (const s of shots) {
+  shots.forEach(function(s) {
     if (!players[s.tracker_id]) players[s.tracker_id] = { '2pt': { make: 0, miss: 0 }, '3pt': { make: 0, miss: 0 }, 'ft': { make: 0, miss: 0 } };
-    if (players[s.tracker_id][s.shot_type]) {
-      players[s.tracker_id][s.shot_type][s.shot_result] = s.cnt;
-    }
-  }
+    if (players[s.tracker_id][s.shot_type]) players[s.tracker_id][s.shot_type][s.shot_result] = s.cnt;
+  });
+
+  const pids = Object.keys(players).sort(function(a, b) {
+    const totalA = Object.values(players[a]).reduce(function(s, v) { return s + v.make + v.miss; }, 0);
+    const totalB = Object.values(players[b]).reduce(function(s, v) { return s + v.make + v.miss; }, 0);
+    return totalB - totalA;
+  });
 
   let html = '';
-  for (const [pid, data] of Object.entries(players).sort((a, b) => {
-    const totalA = Object.values(a[1]).reduce((s, v) => s + v.make + v.miss, 0);
-    const totalB = Object.values(b[1]).reduce((s, v) => s + v.make + v.miss, 0);
-    return totalB - totalA;
-  })) {
-    const t2 = data['2pt'].make + data['2pt'].miss;
-    const t3 = data['3pt'].make + data['3pt'].miss;
-    const tft = data['ft'].make + data['ft'].miss;
-    const total = t2 + t3 + tft;
-    const fgm = data['2pt'].make + data['3pt'].make;
-    const fga = t2 + t3;
-    const pct = fga > 0 ? ((fgm / fga) * 100).toFixed(1) : '0.0';
-    html += `<tr>
-      <td>Player ${pid}</td>
-      <td class="num"><span class="badge badge-2pt">${data['2pt'].make}/${t2}</span></td>
-      <td class="num"><span class="badge badge-3pt">${data['3pt'].make}/${t3}</span></td>
-      <td class="num"><span class="badge badge-ft">${data['ft'].make}/${tft}</span></td>
-      <td class="num">${total}</td>
-      <td class="num">${pct}%</td>
-    </tr>`;
-  }
+  pids.forEach(function(pid) {
+    var data = players[pid];
+    var t2 = data['2pt'].make + data['2pt'].miss;
+    var t3 = data['3pt'].make + data['3pt'].miss;
+    var tft = data['ft'].make + data['ft'].miss;
+    var total = t2 + t3 + tft;
+    var fgm = data['2pt'].make + data['3pt'].make;
+    var fga = t2 + t3;
+    var pct = fga > 0 ? ((fgm / fga) * 100).toFixed(1) : '0.0';
+    html += '<tr><td>Player ' + pid + '</td>';
+    html += '<td class="num"><span class="badge badge-2pt">' + data['2pt'].make + '/' + t2 + '</span></td>';
+    html += '<td class="num"><span class="badge badge-3pt">' + data['3pt'].make + '/' + t3 + '</span></td>';
+    html += '<td class="num"><span class="badge badge-ft">' + data['ft'].make + '/' + tft + '</span></td>';
+    html += '<td class="num">' + total + '</td><td class="num">' + pct + '%</td></tr>';
+  });
   tbody.innerHTML = html;
 }
 
 function renderPlayerEffect(effects) {
   const tbody = document.querySelector('#player-effect tbody');
-  if (!effects || effects.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No player effect data</td></tr>'; return; }
+  if (!effects.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No player effect data</td></tr>'; return; }
 
   let html = '';
-  for (const e of effects) {
-    const pmClass = e.plus_minus > 0 ? 'pos' : e.plus_minus < 0 ? 'neg' : '';
-    const netClass = e.net_rating > 0 ? 'pos' : e.net_rating < 0 ? 'neg' : '';
-    html += `<tr>
-      <td>${e.name || `Player ${e.tracker_id}`}</td>
-      <td class="num ${pmClass}">${e.plus_minus > 0 ? '+' : ''}${e.plus_minus}</td>
-      <td class="num">${e.ortg?.toFixed(1) || '-'}</td>
-      <td class="num">${e.drtg?.toFixed(1) || '-'}</td>
-      <td class="num ${netClass}">${e.net_rating > 0 ? '+' : ''}${e.net_rating?.toFixed(1) || '-'}</td>
-      <td class="num">${e.points_for || 0}</td>
-      <td class="num">${e.points_against || 0}</td>
-    </tr>`;
-  }
+  effects.forEach(function(e) {
+    var pmClass = e.plus_minus > 0 ? 'pos' : e.plus_minus < 0 ? 'neg' : '';
+    var netClass = e.net_rating > 0 ? 'pos' : e.net_rating < 0 ? 'neg' : '';
+    html += '<tr><td>' + (e.name || ('Player ' + e.tracker_id)) + '</td>';
+    html += '<td class="num ' + pmClass + '">' + (e.plus_minus > 0 ? '+' : '') + e.plus_minus + '</td>';
+    html += '<td class="num">' + (e.ortg ? e.ortg.toFixed(1) : '-') + '</td>';
+    html += '<td class="num">' + (e.drtg ? e.drtg.toFixed(1) : '-') + '</td>';
+    html += '<td class="num ' + netClass + '">' + (e.net_rating > 0 ? '+' : '') + (e.net_rating ? e.net_rating.toFixed(1) : '-') + '</td>';
+    html += '<td class="num">' + (e.points_for || 0) + '</td>';
+    html += '<td class="num">' + (e.points_against || 0) + '</td></tr>';
+  });
   tbody.innerHTML = html;
 }
 
 function renderRecentEvents(events) {
   const el = document.getElementById('recent-events');
-  if (!events || events.length === 0) { el.innerHTML = '<p style="color:var(--muted)">No events</p>'; return; }
+  if (!events.length) { el.innerHTML = '<p style="color:var(--muted)">No events</p>'; return; }
   let html = '';
-  for (const e of events) {
-    const cls = 'event-' + e.event_type;
-    const time = e.timestamp_ms ? formatTime(e.timestamp_ms) : '-';
-    html += `<span class="event-pill ${cls}">${e.event_type}${e.shot_result ? ' ' + e.shot_result : ''}</span>
-     <span style="color:var(--muted);font-size:0.75rem">${e.player || ''} @ ${time}</span><br>`;
-  }
+  events.forEach(function(e) {
+    var cls = 'event-' + e.event_type;
+    var time = e.timestamp_ms ? formatTime(e.timestamp_ms) : '-';
+    html += '<span class="event-pill ' + cls + '">' + e.event_type + (e.shot_result ? ' ' + e.shot_result : '') + '</span>';
+    html += ' <span style="color:var(--muted);font-size:0.75rem">' + (e.player || '') + ' @ ' + time + '</span><br>';
+  });
   el.innerHTML = html;
 }
 
 function formatTime(ms) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2, '0')}`;
+  var s = Math.floor(ms / 1000);
+  var m = Math.floor(s / 60);
+  var sec = s % 60;
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
 loadResults();
