@@ -54,3 +54,38 @@ Started: 2026-04-27
 ### How to run
 - cd /home/smcconnell/projects/liberty-basketball-analysis && source .venv/bin/activate && python app.py
 - Schedule page: http://localhost:8080/schedule
+
+---
+
+## Rex Turn 2 — 2026-05-15
+
+### Fixes applied
+- **app.py**: Replaced deprecated `before_first_request` with `g`-based connection management + `teardown_appcontext`
+- **app.py**: Added WAL mode (`PRAGMA journal_mode=WAL`) and busy timeout (`PRAGMA busy_timeout=10000`) to all DB connections
+- **app.py**: Added fully permissive CSP headers via `after_request` (required for browser extensions)
+- **app.py**: Fixed `save_event` to serialize `details_json` dicts via `json.dumps`
+- **app.py**: Auto-init DB on first run if file doesn't exist
+- **app.py**: Added `/games` page route, `/api/games` CRUD endpoints, `/api/sources` CRUD endpoints
+- **app.py**: Removed debug `print(app.url_map)` line (OpenClaw also caught this)
+- **ai_analyzer.py**: Removed duplicate `frame_number = 0` assignment
+- **ai_analyzer.py**: Added WAL mode and busy timeout to DB connection
+- **ai_analyzer.py**: Changed progress logging from every 100 frames to every 500 frames
+- **event_generator.py**: Added WAL mode and busy_timeout to `get_db_connection`
+- **season_management.py**: Removed thread-unsafe `row_factory` toggling on connection; use cursor directly
+- **scheduled_games.py**: Same row_factory fix
+
+### New features (Phase 3)
+- **templates/games.html**: New page — create game form, game list table, delete action
+- **config.py**: Enabled `ENABLE_GAMES = True`
+
+### Testing
+- All Python modules pass syntax check
+- WAL mode and timeout applied consistently across all DB connections
+- CSP headers set to fully permissive for extension compatibility
+
+### Next (for OpenClaw)
+- Phase 2.5: Manual Tagging & Bookmarks MVP (feature-flagged)
+- Phase 4: NFHS Matching — manual candidate add/confirm/reject flow
+- Phase 6: Add `/practices` route + `templates/practices.html`
+- Wire film tool HTML to the new API endpoints
+- Add navigation links between pages (film tool ↔ schedule ↔ games)
