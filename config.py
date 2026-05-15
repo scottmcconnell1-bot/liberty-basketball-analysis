@@ -12,7 +12,7 @@ class Features:
     ENABLE_WEEKLY_PACKET = False
     ENABLE_SEASON_REVIEW = False
     ENABLE_SCHEDULE = True
-    ENABLE_GAMES = False
+    ENABLE_GAMES = True
     ENABLE_NFHS_MATCHING = False
     ENABLE_PRACTICES = False
 
