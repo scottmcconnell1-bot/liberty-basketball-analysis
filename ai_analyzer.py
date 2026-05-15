@@ -191,11 +191,23 @@ def run_ai_analysis(db_path, video_path, game_id):
                 db.commit()
 
             frame_number += 1
-            if frame_number % 2000 == 0:
+            if frame_number % 500 == 0:
                 elapsed = frame_number / fps
                 pct = frame_number / total_frames * 100 if total_frames > 0 else 0
+                step = f"Detecting objects: frame {frame_number}/{total_frames}"
                 print(f"[AI] Frame {frame_number}/{total_frames} ({pct:.0f}%) "
                       f"@ {elapsed:.0f}s, {len(tracks)} active, {next_tracker_id-1} total IDs")
+                # Write progress to DB
+                try:
+                    _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
+                    _pconn.execute(
+                        "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                        (int(pct), step, game_id)
+                    )
+                    _pconn.commit()
+                    _pconn.close()
+                except Exception:
+                    pass
 
     except Exception as e:
         print(f"[AI] An error occurred during analysis: {e}")
@@ -207,7 +219,32 @@ def run_ai_analysis(db_path, video_path, game_id):
         if db is not None:
             db.close()
         print(f"[AI] Finished detection for {game_id}. Processed {frame_number} frames.")
+        # Update progress: detection done
+        try:
+            _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
+            _pconn.execute(
+                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                (50, "Generating events…", game_id)
+            )
+            _pconn.commit()
+            _pconn.close()
+        except Exception:
+            pass
+
         generate_events(game_id, db_path)
+
+        # Update progress: events done
+        try:
+            _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
+            _pconn.execute(
+                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                (75, "Running enhanced analysis…", game_id)
+            )
+            _pconn.commit()
+            _pconn.close()
+        except Exception:
+            pass
+
         try:
             from film_analysis import run_enhanced_analysis
             cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)

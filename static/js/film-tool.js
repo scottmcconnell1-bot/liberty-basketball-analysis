@@ -1249,31 +1249,52 @@ function undoLastRow() {
 
 // ── Analysis Status Polling ─────────────────────────────────
 function initAnalysisStatus() {
-    const gameId = uploadedVideoName ? '' : ''; // placeholder, actual game_id set inline
+    const gameId = window.FILM_TOOL_GAME_ID || '';
     const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
-    const statusTextEl = document.getElementById('ai-status-text');
-    const statusDetailEl = document.getElementById('ai-status-detail');
+    const analysisShell = document.getElementById('analysisProgressShell');
+    const analysisBar = document.getElementById('analysisProgressBar');
+    const analysisPct = document.getElementById('analysisProgressPct');
+    const analysisText = document.getElementById('analysisProgressText');
 
-    function updateStatusText(status) { if (statusTextEl) statusTextEl.textContent = status; }
-    function updateStatusDetail(detail) { if (statusDetailEl) statusDetailEl.textContent = detail; }
+    function showAnalysisProgress(pct, step) {
+        if (analysisShell) analysisShell.style.display = 'block';
+        if (analysisBar) analysisBar.style.width = pct + '%';
+        if (analysisPct) analysisPct.textContent = pct + '%';
+        if (analysisText) analysisText.textContent = step || '';
+    }
 
-    async function fetchAnalysisStatus() {
-        if (!gameId) { updateStatusText('no game selected'); updateStatusDetail('Upload a video or open a film link with a game_id.'); return; }
+    async function fetchAnalysisProgress() {
+        if (!gameId) return;
         try {
-            const response = await fetch(`/api/analysis_status/${encodeURIComponent(gameId)}`);
-            if (!response.ok) { updateStatusText('unknown'); updateStatusDetail('Could not load analysis details.'); return; }
+            const response = await fetch('/api/analysis_progress/' + encodeURIComponent(gameId));
+            if (!response.ok) return;
             const data = await response.json();
-            updateStatusText(data.status || 'unknown');
-            updateStatusDetail(`${data.detection_count ?? 0} detections · ${data.event_count ?? 0} events · ${data.event_generation_summary || ''}`);
-            if (data.status === 'running' || data.status === 'pending') setTimeout(fetchAnalysisStatus, 5000);
-            else if (data.status === 'completed') fetchAndRenderAIEvents(gameId);
-        } catch (err) { console.error('Error fetching analysis status:', err); updateStatusText('error'); updateStatusDetail('Analysis polling failed.'); }
+            if (data.status === 'running') {
+                showAnalysisProgress(data.progress_pct || 0, data.progress_step || 'Analyzing…');
+                setTimeout(fetchAnalysisProgress, 3000);
+            } else if (data.status === 'completed') {
+                showAnalysisProgress(100, 'Analysis complete!');
+                setTimeout(() => { if (analysisShell) analysisShell.style.display = 'none'; }, 3000);
+                fetchAndRenderAIEvents(gameId);
+            } else if (data.status === 'failed') {
+                showAnalysisProgress(0, 'Analysis failed');
+            } else {
+                // pending or not_started — keep polling
+                if (data.status === 'pending') showAnalysisProgress(0, 'Waiting to start…');
+                setTimeout(fetchAnalysisProgress, 5000);
+            }
+        } catch (err) {
+            console.error('Error fetching analysis progress:', err);
+            setTimeout(fetchAnalysisProgress, 10000);
+        }
     }
 
     window.addEventListener('load', () => {
         if (!autoStatsEnabled) return;
-        if (gameId) { updateStatusText('checking...'); updateStatusDetail('Loading detections and event counts…'); fetchAnalysisStatus(); }
-        else { updateStatusText('no game selected'); updateStatusDetail('Upload a video or open a film link with a game_id.'); }
+        if (gameId) {
+            showAnalysisProgress(0, 'Checking analysis status…');
+            fetchAnalysisProgress();
+        }
     });
 }
 

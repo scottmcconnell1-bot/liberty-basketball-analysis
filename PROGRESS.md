@@ -265,3 +265,43 @@ Working tree: clean — no uncommitted changes.
 - 2752ead6 — Fix shot classification and player effect errors
 Branch: jason-5-may-updates (up to date with origin)
 Uncommitted changes: modified — PROGRESS.md, WORKLOG.md, app.py, blueprints/ai.py, film_analysis.py, templates/videos.html; untracked — templates/analysis_results.html
+
+[2026-05-14 11:24 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 4c7db914 — Add analysis results page and API endpoint
+- 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+- 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+- b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+- a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+Branch: jason-5-may-updates (up to date with origin)
+Uncommitted changes: modified — app.py
+
+[2026-05-14 13:27 MDT] Status check:
+- Branch: jason-5-may-updates (up to date with origin)
+- No new commits since last check (4c7db914 still latest)
+- 5 latest commits:
+  - 4c7db914 — Add analysis results page and API endpoint
+  - 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+  - 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+  - b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+  - a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+- Uncommitted changes: modified — app.py, PROGRESS.md, WORKLOG.md, templates/analysis_results.html
+
+[2026-05-14 15:29 MDT] Status check:
+- Branch: jason-5-may-updates (up to date with origin)
+- No new commits since last check (4c7db914 still latest)
+- 5 latest commits:
+  - 4c7db914 — Add analysis results page and API endpoint
+  - 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+  - 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+  - b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+  - a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+- Uncommitted changes: modified — ai_analyzer.py, app.py, blueprints/ai.py, PROGRESS.md, static/js/film-tool.js, templates/analysis_results.html, templates/film_tool.html, WORKLOG.md
+
+[2026-05-14 17:33 MDT] Latest commits (5 latest on jason-5-may-updates):
+- 4c7db914 — Add analysis results page and API endpoint
+- 65aaaedc — Fix film_analysis shot classification + player effect; add track merger; update .gitignore
+- 3846f838 — Rewrite ai_analyzer: YOLO every frame + track-pool matching (200px/120 frames)
+- b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
+- a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
+Branch: jason-5-may-updates (up to date with origin)
+Uncommitted changes (staged): PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, blueprints/ai.py, static/js/film-tool.js, templates/analysis_results.html, templates/film_tool.html

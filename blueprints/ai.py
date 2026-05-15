@@ -90,6 +90,33 @@ def get_stats(game_id):
     })
 
 
+# ── API: Analysis Progress ──────────────────────────────────
+
+@ai_bp.route("/api/analysis_progress/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_progress(game_id):
+    """Return current analysis progress for a game."""
+    db = get_db()
+    row = db.execute(
+        """SELECT status, progress_pct, progress_step, started_at, completed_at,
+                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.game_id) AS detection_count,
+                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.game_id) AS event_count
+           FROM analysis_runs WHERE game_id=? ORDER BY id DESC LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if row is None:
+        return jsonify({"status": "not_started", "progress_pct": 0, "progress_step": ""})
+    return jsonify({
+        "status": row["status"],
+        "progress_pct": row["progress_pct"] or 0,
+        "progress_step": row["progress_step"] or "",
+        "started_at": row["started_at"],
+        "completed_at": row["completed_at"],
+        "detection_count": row["detection_count"],
+        "event_count": row["event_count"],
+    })
+
+
 # ── API: Full Analysis Results ──────────────────────────────
 
 @ai_bp.route("/api/analysis/<game_id>")
