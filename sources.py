@@ -11,7 +11,7 @@ import sqlite3
 
 
 def create_source(conn, game_id, source_type, source_path):
-    """Insert a new source record. Returns the new row id."""
+    """Insert a new video source for a game. Returns the new row id."""
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO sources (game_id, source_type, source_path)
@@ -29,23 +29,19 @@ def list_sources(conn, game_id=None):
     if game_id is not None:
         query += " AND game_id = ?"
         params.append(game_id)
-    query += " ORDER BY id ASC"
+    query += " ORDER BY created_at DESC"
 
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(query, params)
     rows = cur.fetchall()
-    conn.row_factory = None
     return [dict(r) for r in rows]
 
 
 def get_source(conn, source_id):
     """Return a single source by id, or None."""
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM sources WHERE id = ?", (source_id,))
     row = cur.fetchone()
-    conn.row_factory = None
     return dict(row) if row else None
 
 
