@@ -39,8 +39,10 @@ THREEPT_ZONE_DIST = 0.35  # normalized distance threshold for 3pt
 
 def get_db(db_path):
     """Get database connection with row factory."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout = 10000")
     return conn
 
 

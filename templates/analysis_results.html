@@ -232,7 +232,7 @@ function renderEventSummary(events) {
   const total = events.reduce((s, e) => s + e.cnt, 0);
   let html = '<div class="stat-grid">';
   for (const e of events.slice(0, 6)) {
-    html += '<div class="stat-box"><div class="val">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + e.event_type + '</div></div>';
+    html += '<div class="stat-box"><div class="val">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + escapeHtml(e.event_type) + '</div></div>';
   }
   html += '</div><p style="color:var(--muted);font-size:0.8rem">Total: ' + total.toLocaleString() + ' events</p>';
   el.innerHTML = html;
@@ -246,7 +246,7 @@ function renderPlaysSummary(plays) {
   let html = '';
   plays.forEach(function(p, i) {
     const pct = max > 0 ? (p.cnt / max * 100) : 0;
-    html += '<div class="play-bar"><span class="label">' + p.play_type + '</span><div class="bar"><div class="fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + '">' + p.cnt + '</div></div></div>';
+    html += '<div class="play-bar"><span class="label">' + escapeHtml(p.play_type) + '</span><div class="bar"><div class="fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + '">' + p.cnt + '</div></div></div>';
   });
   el.innerHTML = html;
 }

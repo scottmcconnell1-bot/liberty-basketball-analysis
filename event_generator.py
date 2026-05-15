@@ -10,8 +10,10 @@ from settings_store import AI_DEFAULTS, load_all_settings
 
 def get_db_connection(db_path):
     """Establishes a connection to the SQLite database."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout = 10000")
     return conn
 
 
