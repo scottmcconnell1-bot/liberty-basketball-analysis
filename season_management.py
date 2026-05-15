@@ -24,21 +24,17 @@ def create_season(conn, name, start_date, end_date):
 
 def list_seasons(conn):
     """Return all seasons ordered by start_date DESC."""
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM seasons ORDER BY start_date DESC")
     rows = cur.fetchall()
-    conn.row_factory = None
     return [dict(r) for r in rows]
 
 
 def get_season(conn, season_id):
     """Return a single season by id, or None."""
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM seasons WHERE id = ?", (season_id,))
     row = cur.fetchone()
-    conn.row_factory = None
     return dict(row) if row else None
 
 
