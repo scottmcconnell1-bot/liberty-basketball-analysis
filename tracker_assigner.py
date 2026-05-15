@@ -95,6 +95,8 @@ def write_tracker_ids(conn, det_to_track):
 
 def main(db_path, game_id, max_distance, max_frame_gap):
     conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=10000")
     try:
         detections_df = load_detections(conn, game_id)
         if detections_df.empty:

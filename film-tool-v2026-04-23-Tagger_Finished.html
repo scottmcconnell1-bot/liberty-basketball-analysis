@@ -732,6 +732,12 @@
 </head>
 
 <body>
+    <div id="app-nav" style="background:#0f3460;padding:8px 16px;display:flex;gap:16px;align-items:center;font-family:sans-serif;">
+      <span style="color:#e94560;font-weight:700;margin-right:8px;">🏀 Liberty Basketball</span>
+      <a href="/" style="color:#4ecca3;text-decoration:none;font-size:0.9rem;font-weight:600;">Film Tool</a>
+      <a href="/schedule" style="color:#4ecca3;text-decoration:none;font-size:0.9rem;font-weight:600;">Schedule</a>
+      <a href="/games" style="color:#4ecca3;text-decoration:none;font-size:0.9rem;font-weight:600;">Games</a>
+    </div>
     <div id="ai-status-container" style="margin: 10px 0; font-family: sans-serif; padding: 4px 8px;">
       <span><strong>AI Status:</strong> </span>
       <span id="ai-status-text">not started</span>
@@ -3161,7 +3167,7 @@ function exitFocusMode() {
         }
 
         document.addEventListener('DOMContentLoaded', init);
-    <script>
+    </script>
 
     <script>
       const gameId = "{{ game_id or '' }}";

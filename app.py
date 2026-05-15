@@ -1,8 +1,7 @@
 import os
 import sqlite3
-import sys
-import subprocess
 import json
+import threading
 
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, abort, g
 from werkzeug.utils import secure_filename
@@ -70,11 +69,100 @@ def add_csp_headers(response):
     return response
 
 
+ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "m4v", "webm"}
+
+
+def allowed_video(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+
+
 # --- Routes ---
 @app.route("/")
 @app.route("/video/<filename>")
 def index(filename=None):
-    return render_template("film-tool-v2026-04-23-Tagger_Finished.html", filename=filename)
+    game_id = request.args.get("game_id", "")
+    return render_template("film-tool-v2026-04-23-Tagger_Finished.html", filename=filename, game_id=game_id)
+
+
+@app.route("/uploads/<filename>")
+def serve_upload(filename):
+    """Serve uploaded video files."""
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+
+@app.route("/upload", methods=["POST"])
+def upload_video():
+    """Accept a video upload and start AI analysis in a background thread."""
+    if "video" not in request.files:
+        return jsonify({"status": "error", "message": "No video file provided"}), 400
+
+    video_file = request.files["video"]
+    if video_file.filename == "":
+        return jsonify({"status": "error", "message": "No file selected"}), 400
+
+    if not allowed_video(video_file.filename):
+        return jsonify({"status": "error", "message": "Invalid file type"}), 400
+
+    opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+    filename = secure_filename(video_file.filename)
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    video_file.save(save_path)
+
+    # Derive a game_id from the filename (strip extension)
+    game_id = os.path.splitext(filename)[0]
+
+    # Record an analysis_run row
+    db = get_db()
+    db.execute(
+        "INSERT INTO analysis_runs (game_id, video_path, status) VALUES (?, ?, 'pending')",
+        (game_id, save_path),
+    )
+    db.commit()
+
+    # Launch analysis in a background thread so we can return immediately
+    def _run():
+        conn = sqlite3.connect(DATABASE)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=10000")
+        try:
+            conn.execute(
+                "UPDATE analysis_runs SET status = 'running', started_at = CURRENT_TIMESTAMP "
+                "WHERE game_id = ? AND status = 'pending'",
+                (game_id,),
+            )
+            conn.commit()
+            conn.close()
+            from ai_analyzer import run_ai_analysis
+            run_ai_analysis(DATABASE, save_path, game_id)
+            conn2 = sqlite3.connect(DATABASE)
+            conn2.execute("PRAGMA journal_mode=WAL")
+            conn2.execute("PRAGMA busy_timeout=10000")
+            conn2.execute(
+                "UPDATE analysis_runs SET status = 'completed', completed_at = CURRENT_TIMESTAMP "
+                "WHERE game_id = ? AND status = 'running'",
+                (game_id,),
+            )
+            conn2.commit()
+            conn2.close()
+        except Exception as exc:
+            try:
+                conn3 = sqlite3.connect(DATABASE)
+                conn3.execute("PRAGMA journal_mode=WAL")
+                conn3.execute("PRAGMA busy_timeout=10000")
+                conn3.execute(
+                    "UPDATE analysis_runs SET status = 'failed', completed_at = CURRENT_TIMESTAMP, "
+                    "error_message = ? WHERE game_id = ? AND status IN ('pending', 'running')",
+                    (str(exc), game_id),
+                )
+                conn3.commit()
+                conn3.close()
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    return redirect(url_for("index", filename=filename, game_id=game_id))
 
 
 # --- Schedule Page (Phase 2) ---

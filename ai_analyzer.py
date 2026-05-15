@@ -63,15 +63,6 @@ def run_ai_analysis(db_path, video_path, game_id):
             frame_number += 1
             if frame_number % 500 == 0:
                 print(f"[AI] Processed frame {frame_number} for {game_id}")
-                # Write progress to analysis_runs
-                try:
-                    db.execute(
-                        "UPDATE analysis_runs SET completed_at = CURRENT_TIMESTAMP WHERE game_id = ? AND status = 'running'",
-                        (game_id,)
-                    )
-                    db.commit()
-                except:
-                    pass
 
     except Exception as e:
         print(f"[AI] An error occurred during analysis: {e}")
