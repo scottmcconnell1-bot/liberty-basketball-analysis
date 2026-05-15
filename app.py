@@ -379,8 +379,6 @@ def api_delete_source(source_id):
     return jsonify({"status": "success"})
 
 
-print(app.url_map)
-
 if __name__ == "__main__":
     # Auto-init DB on first run
     if not os.path.exists(DATABASE):

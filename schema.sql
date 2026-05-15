@@ -149,13 +149,20 @@ CREATE TABLE IF NOT EXISTS stats (
 CREATE TABLE IF NOT EXISTS practices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   season_id INTEGER NOT NULL REFERENCES seasons(id),
+  level TEXT NOT NULL DEFAULT 'varsity'
+    CHECK(level IN ('varsity', 'jv', 'jr_high')),
   practice_date DATE NOT NULL,
   start_time TIME,
-  end_time TEXT,
+  end_time TIME,
   location TEXT,
-  focus TEXT,
+  status TEXT NOT NULL DEFAULT 'planned'
+    CHECK(status IN ('planned', 'completed', 'cancelled')),
+  plan_source TEXT NOT NULL DEFAULT 'manual'
+    CHECK(plan_source IN ('auto', 'manual', 'uploaded')),
+  plan_text TEXT,
   coach_notes TEXT,
   ai_notes TEXT,
+  combined_summary TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
