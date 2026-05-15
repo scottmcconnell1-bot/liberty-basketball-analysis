@@ -45,21 +45,17 @@ def list_scheduled_games(conn, season_id=None, level=None, gender=None):
         params.append(gender)
     query += " ORDER BY game_date ASC, game_time ASC"
 
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(query, params)
     rows = cur.fetchall()
-    conn.row_factory = None
     return [dict(r) for r in rows]
 
 
 def get_scheduled_game(conn, game_id):
     """Return a single scheduled game by id, or None."""
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM scheduled_games WHERE id = ?", (game_id,))
     row = cur.fetchone()
-    conn.row_factory = None
     return dict(row) if row else None
 
 
