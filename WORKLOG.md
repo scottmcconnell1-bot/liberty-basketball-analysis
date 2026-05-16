@@ -1,3 +1,16 @@
+
+OpenClaw Review & Fix — 2026-05-15
+------------------------------------
+Reviewed all changes from Rex (commits 3846f838 through cbaf6b50).
+
+Rex's changes were solid: WAL mode, XSS prevention, analysis lifecycle fix, input validation, debug mode off by default. All good work.
+
+One critical issue found and fixed:
+- Auth middleware (require_auth_for_api) was blocking all /api/* routes with 401 since no user auth system exists yet.
+  Fix: Disabled the middleware (replaced body with pass) until the user auth system is implemented in a future phase.
+  Commit: be6275ca — "Disable auth middleware until user system is implemented"
+
+WORKLOG updated by OpenClaw.
 WORKLOG — Liberty Basketball Analysis
 Started: 2026-04-27
 
