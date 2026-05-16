@@ -635,7 +635,7 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
 def start_analysis_subprocess(game_id, video_path):
     import sys
 
-    log_path = f"/tmp/liberty-basketball-ai-{game_id}.log"
+    log_path = f"/home/monk-admin/liberty-basketball-ai-{game_id}.log"
     log_file = open(log_path, "w")
     try:
         proc = subprocess.Popen(

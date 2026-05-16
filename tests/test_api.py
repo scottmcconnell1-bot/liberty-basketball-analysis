@@ -849,7 +849,10 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
 def test_stats_empty_game(client):
     r = client.get("/api/stats/no_such_game")
     assert r.status_code == 200
-    assert r.get_json() == []
+    data = r.get_json()
+    assert "basic" in data
+    assert "enhanced" in data
+    assert data["basic"] == []
 
 
 def test_stats_aggregation(client):
@@ -863,7 +866,8 @@ def test_stats_aggregation(client):
         "event_type": "assist", "timestamp_ms": 2000
     })
     r = client.get("/api/stats/sg1")
-    stats = r.get_json()
+    data = r.get_json()
+    stats = data["basic"]
     alice = next(s for s in stats if s["player"] == "Alice")
     assert alice["pts"] == 6
     assert alice["fgm"] == 3
