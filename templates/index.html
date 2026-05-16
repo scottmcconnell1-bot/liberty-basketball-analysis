@@ -124,7 +124,7 @@
       photosGrid.innerHTML = html;
     }
 
-    async function loadPhotos() {
+    window.loadPhotos = async function loadPhotos() {
       try {
         const pr = await fetch('/api/teams/photos');
         allPhotos = await pr.json();
