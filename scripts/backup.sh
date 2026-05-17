@@ -3,7 +3,8 @@
 #
 # Clones the existing backups branch, rsyncs in the current project state,
 # commits, and pushes. Preserves full history for rollback capability.
-# Includes uploads/ and model files (excludes .git, .venv, __pycache__).
+# Includes uploads/ (excludes .git, .venv, __pycache__, model files).
+# Model files (*.pt, *.pth, etc.) are auto-downloaded by ultralytics if missing.
 #
 # Safe to run while the main project is actively being worked on — we never
 # touch the main project's .git or working directory.
@@ -34,7 +35,7 @@ rm -rf "$BACKUP_DIR"
 
 # 2. Clone the existing backups branch (or init fresh if it doesn't exist)
 log "Cloning existing backups branch..."
-if git clone --branch "$BACKUP_BRANCH" --single-branch "$REMOTE" "$BACKUP_DIR" 2>/dev/null; then
+if git clone --depth=1 --branch "$BACKUP_BRANCH" --single-branch "$REMOTE" "$BACKUP_DIR" 2>/dev/null; then
     log "Cloned existing backups branch."
 else
     log "No existing backups branch — initializing fresh repo."
@@ -61,6 +62,11 @@ rsync -a \
     --exclude='.DS_Store' \
     --exclude='*.db-shm' \
     --exclude='*.db-wal' \
+    --exclude='*.pt' \
+    --exclude='*.pth' \
+    --exclude='*.onnx' \
+    --exclude='*.bin' \
+    --exclude='*.weights' \
     "$PROJECT_DIR/" "$BACKUP_DIR/"
 
 # 4. Stage everything
