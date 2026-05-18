@@ -606,3 +606,39 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 35ad576... # backup: 2026-05-18-1148 —  11 files changed, 2360 insertions(+), 272 deletions(-)
 [2026-05-18 11:48:35] Pull failed — attempting rebase resolution...
 HEAD is now at 766ca4c backup: 2026-05-18-1047 —  3 files changed, 339 insertions(+), 10 deletions(-) (rebased)
+[backups a45016d] backup: 2026-05-18-1148 —  6 files changed, 1301 insertions(+), 244 deletions(-) (rebased)
+ 6 files changed, 1301 insertions(+), 244 deletions(-)
+ create mode 100644 scripts/scrape_maxpreps_rankings.py
+[2026-05-18 11:48:35] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   766ca4c..a45016d  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-1148 -> backup/2026-05-18-1148
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 11:48:40] === Backup complete: backup/2026-05-18-1148 ===
+[2026-05-18 12:49:35] === Starting backup: backup/2026-05-18-1249 ===
+[2026-05-18 12:49:35] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 12:49:36] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  98% (149/151)Updating files:  99% (150/151)Updating files: 100% (151/151)Updating files: 100% (151/151), done.
+[2026-05-18 12:49:58] Syncing current project state...
+[2026-05-18 12:50:02] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..a45016d  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply f4ce883... backup: 2026-05-18-1249 —  13 files changed, 4950 insertions(+), 272 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply f4ce883... # backup: 2026-05-18-1249 —  13 files changed, 4950 insertions(+), 272 deletions(-)
+[2026-05-18 12:50:03] Pull failed — attempting rebase resolution...
+HEAD is now at a45016d backup: 2026-05-18-1148 —  6 files changed, 1301 insertions(+), 244 deletions(-) (rebased)
