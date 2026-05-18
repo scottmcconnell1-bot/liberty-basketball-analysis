@@ -9,9 +9,11 @@ then runs JavaScript to detect:
   4. Table cells wider than their container (table column breakage)
   5. Zero-width or zero-height elements that should be visible
   6. Elements positioned off-screen (negative coords or beyond viewport)
-  7. Font loading failures (fallback fonts indicating missing web fonts)
+  7. Overlapping card/section elements
+  8. Page wider than viewport (horizontal scrollbar)
 
-Full documentation: docs/UI_OVERFLOW_AUDIT.md
+Routes are auto-discovered from the Flask URL map at runtime. Pages that
+require authentication or database state are automatically skipped.
 
 Usage:
   1. Start the Flask dev server first:
@@ -32,7 +34,7 @@ Requirements:
 
 import os
 import sys
-import time
+import subprocess
 
 # ── Configuration ──────────────────────────────────────────────────
 BASE_URL = os.environ.get("LIBERTY_BASE_URL", "http://localhost:8081")
@@ -42,82 +44,127 @@ VIEWPORT_HEIGHT = int(os.environ.get("AUDIT_VIEWPORT_HEIGHT", "900"))
 PAGE_TIMEOUT_MS = 15000  # 15s per page
 WAIT_AFTER_LOAD_MS = 2000  # wait for JS rendering (data-frames, etc.)
 
-# Pages to audit — (route, label)
-# Static pages only — no dynamic IDs (e.g. /playbook/play/1) since those need
-# real database entries. Add a comment noting the dynamic prefix if applicable.
-PAGES = [
-    ("/", "Dashboard / Index"),
-    ("/dashboard", "Dashboard (alt)"),
-    ("/schedule", "Schedule"),
-    ("/games", "Games"),
-    ("/nfhs-matches", "NFHS Matches"),
-    ("/videos", "Videos"),
-    ("/film", "Film Tool"),
-    ("/playbook", "Playbook"),
-    # ("/playbook/create", "Playbook Create"),       # needs DB state
-    # ("/playbook/play/1", "Playbook Play Detail"),  # needs play_id
-    ("/player-development", "Player Development"),
-    ("/practice-playlists", "Practice Playlists"),
-    ("/practices", "Practices"),
-    # ("/practices/1/report", "Practice Report"),    # needs practice_id
-    ("/practice-summary", "Practice Summary"),
-    ("/scouting", "Scouting"),
-    # ("/scouting/reports/1", "Scouting Report Detail"),  # needs report_id
-    # ("/analysis/1", "AI Analysis"),                 # needs game_id
-    ("/settings", "Settings"),
-    ("/settings/custom-weights", "Custom Weights Guide"),
-    # ("/settings/notifications", "Notification Settings"),  # auth required
-    ("/users", "Users"),
-    # ("/profile", "User Profile"),                   # auth required
-    ("/status", "Status"),
-    ("/debug", "Debug / Issues"),
-    ("/messages", "Messages"),
-]
+# CSS selectors that are allowed to overflow (intentional horizontal scroll).
+# Add new selectors here as the app grows — no need to touch the JS.
+ALLOWED_OVERFLOW_SELECTORS = [".table-responsive"]
+
+# Routes matching any of these prefixes are always skipped.
+SKIP_PREFIXES = ("/api/", "/uploads/", "/sw.js")
+
+# Routes matching any of these substrings are skipped (downloads, exports).
+SKIP_SUBSTRINGS = ("/export/", "/download/")
+
+# Routes with these suffixes are skipped (static assets, service workers).
+SKIP_SUFFIXES = (".js", ".css", ".ico", ".png", ".jpg", ".svg", ".woff", ".woff2", ".ttf")
+
+
+def discover_pages():
+    """Auto-discover page routes from the Flask URL map.
+
+    Returns a list of (route, label) tuples for GET-accessible pages
+    that don't require URL parameters (no <int:...> or <path:...>).
+
+    Skips:
+    - API routes (everything under /api/)
+    - POST-only routes
+    - Routes with dynamic URL parameters (need DB state)
+    - Routes that redirect to login (detected at runtime)
+    - Static asset routes
+    """
+    # Import the Flask app directly — works because this script runs
+    # from the project directory where app.py lives.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from app import app
+
+    pages = []
+    seen = set()
+
+    for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
+        route = rule.rule
+
+        # Skip static files
+        if rule.endpoint == "static":
+            continue
+
+        # Skip by prefix
+        if any(route.startswith(p) for p in SKIP_PREFIXES):
+            continue
+
+        # Skip by substring (downloads, exports)
+        if any(sub in route for sub in SKIP_SUBSTRINGS):
+            continue
+
+        # Skip by suffix (static assets)
+        if any(route.endswith(s) for s in SKIP_SUFFIXES):
+            continue
+
+        # Skip non-GET routes
+        methods = rule.methods - {"HEAD", "OPTIONS"}
+        if "GET" not in methods:
+            continue
+
+        # Skip routes with URL parameters (need real DB IDs)
+        if "<" in route and ">" in route:
+            continue
+
+        # Skip duplicates (some routes have multiple methods registered)
+        if route in seen:
+            continue
+        seen.add(route)
+
+        # Build a human-readable label from the route
+        label = route.strip("/").replace("/", " > ").replace("-", " ").title()
+        if not label:
+            label = "Dashboard"
+
+        pages.append((route, label))
+
+    return pages
+
 
 # ── JavaScript audit code run in the browser ──────────────────────
-# This is injected into each page to detect layout issues
-AUDIT_JS = """() => {
+# This is injected into each page to detect layout issues.
+# ALLOWED_OVERFLOW_SELECTORS is interpolated in from Python config.
+ALLOWED_OVERFLOW_JS = ", ".join(f'"{s}"' for s in ALLOWED_OVERFLOW_SELECTORS)
+
+AUDIT_JS = f"""() => {{
   const issues = [];
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  const allowedOverflowSelectors = [{ALLOWED_OVERFLOW_JS}];
+
+  // Build a set of elements inside allowed-overflow containers
+  const scrollableContainers = new Set();
+  allowedOverflowSelectors.forEach(sel => {{
+    document.querySelectorAll(sel).forEach(el => {{
+      scrollableContainers.add(el);
+      if (el.parentElement) scrollableContainers.add(el.parentElement);
+      el.querySelectorAll('*').forEach(child => scrollableContainers.add(child));
+    }});
+  }});
 
   // ── 1. Text overflow detection ──────────────────────────────
-  // Check all text-containing elements for horizontal overflow
   const textTags = ['P', 'SPAN', 'TD', 'TH', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
                     'LABEL', 'A', 'BUTTON', 'LI', 'DIV', 'STRONG', 'EM', 'B', 'I'];
   const checked = new Set();
-  // Collect elements inside .table-responsive wrappers to skip
-  const scrollableContainers = new Set();
-  document.querySelectorAll('.table-responsive *').forEach(el => scrollableContainers.add(el));
-  // Also skip the .table-responsive wrapper itself and its parent (usually a .card)
-  document.querySelectorAll('.table-responsive').forEach(el => {
-    scrollableContainers.add(el);
-    if (el.parentElement) scrollableContainers.add(el.parentElement);
-  });
 
-  textTags.forEach(tag => {
-    document.querySelectorAll(tag).forEach(el => {
-      // Skip elements inside .table-responsive wrappers (intentional horizontal scroll)
+  textTags.forEach(tag => {{
+    document.querySelectorAll(tag).forEach(el => {{
       if (scrollableContainers.has(el)) return;
 
-      // Skip invisible elements
       const style = window.getComputedStyle(el);
       if (style.display === 'none' || style.visibility === 'hidden') return;
       if (el.offsetParent === null && style.position !== 'fixed') return;
-
-      // Skip very small elements (icons, etc.)
       if (el.clientWidth < 10 || el.clientHeight < 5) return;
 
-      // Use a key to avoid duplicate reports for nested elements
       const key = el.tagName + '|' + el.className.substring(0, 50) + '|' + el.textContent.substring(0, 30);
       if (checked.has(key)) return;
       checked.add(key);
 
-      // Check horizontal overflow (text getting cut off sideways)
-      if (el.scrollWidth > el.clientWidth + 2) {  // +2px tolerance
+      if (el.scrollWidth > el.clientWidth + 2) {{
         const text = el.textContent.trim().substring(0, 60);
-        if (text.length > 3) {  // skip empty/near-empty
-          issues.push({
+        if (text.length > 3) {{
+          issues.push({{
             type: 'TEXT_OVERFLOW_X',
             severity: 'HIGH',
             tag: el.tagName,
@@ -126,21 +173,19 @@ AUDIT_JS = """() => {
             scrollWidth: el.scrollWidth,
             clientWidth: el.clientWidth,
             overflowPx: el.scrollWidth - el.clientWidth,
-            message: `Text overflowing horizontally by ${el.scrollWidth - el.clientWidth}px (${el.clientWidth}px container, ${el.scrollWidth}px content)`
-          });
-        }
-      }
+            message: `Text overflowing horizontally by ${{el.scrollWidth - el.clientWidth}}px (${{el.clientWidth}}px container, ${{el.scrollWidth}}px content)`
+          }});
+        }}
+      }}
 
-      // Check vertical overflow (text getting cut off vertically)
-      if (el.scrollHeight > el.clientHeight + 2 && el.clientHeight > 0) {
-        // Only flag if it looks like intentional truncation (overflow:hidden or max-height)
+      if (el.scrollHeight > el.clientHeight + 2 && el.clientHeight > 0) {{
         const overflowY = style.overflowY;
         const overflowX = style.overflowX;
         const hasMaxHeight = style.maxHeight !== 'none' && style.maxHeight !== '';
-        if (overflowY === 'hidden' || overflowX === 'hidden' || hasMaxHeight) {
+        if (overflowY === 'hidden' || overflowX === 'hidden' || hasMaxHeight) {{
           const text = el.textContent.trim().substring(0, 60);
-          if (text.length > 3) {
-            issues.push({
+          if (text.length > 3) {{
+            issues.push({{
               type: 'TEXT_OVERFLOW_Y',
               severity: 'MEDIUM',
               tag: el.tagName,
@@ -149,63 +194,59 @@ AUDIT_JS = """() => {
               scrollHeight: el.scrollHeight,
               clientHeight: el.clientHeight,
               overflowPx: el.scrollHeight - el.clientHeight,
-              message: `Text truncated vertically by ${el.scrollHeight - el.clientHeight}px (max-height/overflow:hidden)`
-            });
-          }
-        }
-      }
-    });
-  });
+              message: `Text truncated vertically by ${{el.scrollHeight - el.clientHeight}}px (max-height/overflow:hidden)`
+            }});
+          }}
+        }}
+      }}
+    }});
+  }});
 
   // ── 2. Ellipsis truncation detection ────────────────────────
-  document.querySelectorAll('*').forEach(el => {
+  document.querySelectorAll('*').forEach(el => {{
     const style = window.getComputedStyle(el);
-    if (style.textOverflow === 'ellipsis' && style.overflow === 'hidden') {
-      if (el.scrollWidth > el.clientWidth) {
+    if (style.textOverflow === 'ellipsis' && style.overflow === 'hidden') {{
+      if (el.scrollWidth > el.clientWidth) {{
         const text = el.textContent.trim().substring(0, 60);
-        if (text.length > 10) {
-          issues.push({
+        if (text.length > 10) {{
+          issues.push({{
             type: 'ELLIPSIS_TRUNCATED',
             severity: 'LOW',
             tag: el.tagName,
             class: el.className.substring(0, 80),
             text: text,
-            message: `Text truncated with ellipsis: "${text}..."`
-          });
-        }
-      }
-    }
-  });
+            message: `Text truncated with ellipsis: "${{text}}..."`
+          }});
+        }}
+      }}
+    }}
+  }});
 
   // ── 3. Table column breakage ────────────────────────────────
-  document.querySelectorAll('table').forEach(table => {
+  document.querySelectorAll('table').forEach(table => {{
     const tableRect = table.getBoundingClientRect();
     const tableParent = table.parentElement;
     const parentRect = tableParent ? tableParent.getBoundingClientRect() : null;
 
-    // Skip tables inside .table-responsive wrappers (intentional horizontal scroll)
-    const closestScrollable = table.closest('.table-responsive');
+    const closestScrollable = table.closest(allowedOverflowSelectors.join(','));
     if (closestScrollable) return;
 
-    // Table wider than its container
-    if (parentRect && tableRect.width > parentRect.width + 5) {
-      issues.push({
+    if (parentRect && tableRect.width > parentRect.width + 5) {{
+      issues.push({{
         type: 'TABLE_OVERFLOW',
         severity: 'HIGH',
         tag: 'TABLE',
         class: table.className.substring(0, 80),
-        text: `Table width: ${Math.round(tableRect.width)}px, container: ${Math.round(parentRect.width)}px`,
-        message: `Table overflows container by ${Math.round(tableRect.width - parentRect.width)}px`
-      });
-    }
+        text: `Table width: ${{Math.round(tableRect.width)}}px, container: ${{Math.round(parentRect.width)}}px`,
+        message: `Table overflows container by ${{Math.round(tableRect.width - parentRect.width)}}px`
+      }});
+    }}
 
-    // Check individual cells for content overflow
-    table.querySelectorAll('td, th').forEach(cell => {
-      const cellStyle = window.getComputedStyle(cell);
-      if (cell.scrollWidth > cell.clientWidth + 2 && cell.clientWidth > 20) {
+    table.querySelectorAll('td, th').forEach(cell => {{
+      if (cell.scrollWidth > cell.clientWidth + 2 && cell.clientWidth > 20) {{
         const text = cell.textContent.trim().substring(0, 40);
-        if (text.length > 3) {
-          issues.push({
+        if (text.length > 3) {{
+          issues.push({{
             type: 'CELL_OVERFLOW',
             severity: 'MEDIUM',
             tag: cell.tagName,
@@ -213,126 +254,116 @@ AUDIT_JS = """() => {
             text: text,
             scrollWidth: cell.scrollWidth,
             clientWidth: cell.clientWidth,
-            message: `Table cell content overflowing by ${cell.scrollWidth - cell.clientWidth}px: "${text}"`
-          });
-        }
-      }
-    });
-  });
+            message: `Table cell content overflowing by ${{cell.scrollWidth - cell.clientWidth}}px: "${{text}}"`
+          }});
+        }}
+      }}
+    }});
+  }});
 
   // ── 4. Zero-size visible elements ───────────────────────────
-  document.querySelectorAll('img, svg, canvas, iframe, video').forEach(el => {
+  document.querySelectorAll('img, svg, canvas, iframe, video').forEach(el => {{
     const style = window.getComputedStyle(el);
     if (style.display === 'none') return;
-    if (el.offsetWidth === 0 || el.offsetHeight === 0) {
+    if (el.offsetWidth === 0 || el.offsetHeight === 0) {{
       const src = el.getAttribute('src') || el.getAttribute('data-src') || '';
-      issues.push({
+      issues.push({{
         type: 'ZERO_SIZE_ELEMENT',
         severity: 'MEDIUM',
         tag: el.tagName,
         class: el.className.substring(0, 80),
         text: src.substring(0, 80),
-        message: `${el.tagName} has zero dimensions (0x0) — possibly failed to load`
-      });
-    }
-  });
+        message: `${{el.tagName}} has zero dimensions (0x0) — possibly failed to load`
+      }});
+    }}
+  }});
 
   // ── 5. Off-screen elements ──────────────────────────────────
-  document.querySelectorAll('*').forEach(el => {
+  document.querySelectorAll('*').forEach(el => {{
     if (['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'HTML', 'BODY'].includes(el.tagName)) return;
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return;
     if (style.position !== 'absolute' && style.position !== 'fixed') return;
 
     const rect = el.getBoundingClientRect();
-    // Element positioned way off screen
-    if (rect.right < -100 || rect.bottom < -100 || rect.left > vw + 500 || rect.top > vh + 500) {
-      if (el.textContent.trim().length > 0) {
-        issues.push({
+    if (rect.right < -100 || rect.bottom < -100 || rect.left > vw + 500 || rect.top > vh + 500) {{
+      if (el.textContent.trim().length > 0) {{
+        issues.push({{
           type: 'OFF_SCREEN',
           severity: 'LOW',
           tag: el.tagName,
           class: el.className.substring(0, 80),
           text: el.textContent.trim().substring(0, 40),
-          message: `Element positioned off-screen at (${Math.round(rect.left)}, ${Math.round(rect.top)})`
-        });
-      }
-    }
-  });
+          message: `Element positioned off-screen at (${{Math.round(rect.left)}}, ${{Math.round(rect.top)}})`
+        }});
+      }}
+    }}
+  }});
 
-  // ── 6. Overlapping elements (basic z-index check) ───────────
-  // Check for elements that might be overlapping due to layout issues
-  // Only check sibling-level cards, not nested ones (card > card-top is normal)
+  // ── 6. Overlapping elements ─────────────────────────────────
   const cards = document.querySelectorAll('.card, [class*="card"]');
   const cardRects = [];
-  cards.forEach(card => {
+  cards.forEach(card => {{
     const rect = card.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      cardRects.push({ rect, class: card.className.substring(0, 60), el: card });
-    }
-  });
-  for (let i = 0; i < cardRects.length; i++) {
-    for (let j = i + 1; j < cardRects.length; j++) {
+    if (rect.width > 0 && rect.height > 0) {{
+      cardRects.push({{ rect, class: card.className.substring(0, 60), el: card }});
+    }}
+  }});
+  for (let i = 0; i < cardRects.length; i++) {{
+    for (let j = i + 1; j < cardRects.length; j++) {{
       const a = cardRects[i];
       const b = cardRects[j];
-      // Skip if one is a descendant of the other (normal nesting)
       if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
-      // Check overlap
       const ra = a.rect, rb = b.rect;
-      if (ra.left < rb.right && ra.right > rb.left && ra.top < rb.bottom && ra.bottom > rb.top) {
+      if (ra.left < rb.right && ra.right > rb.left && ra.top < rb.bottom && ra.bottom > rb.top) {{
         const overlapW = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
         const overlapH = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-        if (overlapW > 10 && overlapH > 10) {
-          issues.push({
+        if (overlapW > 10 && overlapH > 10) {{
+          issues.push({{
             type: 'OVERLAPPING',
             severity: 'HIGH',
             tag: 'DIV',
             class: a.class + ' <> ' + b.class,
-            text: `Overlap: ${Math.round(overlapW)}x${Math.round(overlapH)}px`,
-            message: `Cards/sections overlapping by ${Math.round(overlapW)}x${Math.round(overlapH)}px`
-          });
-        }
-      }
-    }
-  }
+            text: `Overlap: ${{Math.round(overlapW)}}x${{Math.round(overlapH)}}px`,
+            message: `Cards/sections overlapping by ${{Math.round(overlapW)}}x${{Math.round(overlapH)}}px`
+          }});
+        }}
+      }}
+    }}
+  }}
 
   // ── 7. Viewport overflow (page wider than screen) ───────────
   const bodyScrollWidth = document.body.scrollWidth;
   const docScrollWidth = document.documentElement.scrollWidth;
   const maxScrollWidth = Math.max(bodyScrollWidth, docScrollWidth);
-  // Check if the overflow is caused by a table-responsive wrapper (expected)
-  const scrollable = document.querySelector('.table-responsive');
+
   let scrollableOverflow = 0;
-  if (scrollable) {
-    const srRect = scrollable.getBoundingClientRect();
-    const srScrollWidth = scrollable.scrollWidth;
-    scrollableOverflow = Math.max(0, srScrollWidth - srRect.width);
-    // Also account for the parent card's overflow
-    const srParent = scrollable.parentElement;
-    if (srParent) {
-      const parentRect = srParent.getBoundingClientRect();
-      const parentScrollWidth = srParent.scrollWidth;
-      scrollableOverflow = Math.max(scrollableOverflow, parentScrollWidth - parentRect.width);
-    }
-  }
-  // Only flag if the page overflow exceeds what table-responsive accounts for
+  allowedOverflowSelectors.forEach(sel => {{
+    const el = document.querySelector(sel);
+    if (el) {{
+      const srRect = el.getBoundingClientRect();
+      scrollableOverflow = Math.max(scrollableOverflow, el.scrollWidth - srRect.width);
+      if (el.parentElement) {{
+        const parentRect = el.parentElement.getBoundingClientRect();
+        scrollableOverflow = Math.max(scrollableOverflow, el.parentElement.scrollWidth - parentRect.width);
+      }}
+    }}
+  }});
+
   const excessOverflow = maxScrollWidth - vw - scrollableOverflow;
-  if (excessOverflow > 10) {
-    issues.push({
+  if (excessOverflow > 10) {{
+    issues.push({{
       type: 'PAGE_OVERFLOW',
       severity: 'HIGH',
       tag: 'BODY',
       class: '',
-      text: `Page scroll width: ${maxScrollWidth}px, viewport: ${vw}px`,
-      message: `Page content wider than viewport by ${maxScrollWidth - vw}px — horizontal scrollbar will appear`
-    });
-  }
-
-  // ── 8. Console errors ───────────────────────────────────────
-  // (captured separately via console event listener)
+      text: `Page scroll width: ${{maxScrollWidth}}px, viewport: ${{vw}}px`,
+      message: `Page content wider than viewport by ${{maxScrollWidth - vw}}px — horizontal scrollbar will appear`
+    }});
+  }}
 
   return issues;
-}"""
+}}"""
 
 
 # ── Main audit runner ──────────────────────────────────────────────
@@ -340,15 +371,20 @@ AUDIT_JS = """() => {
 def run_audit():
     from playwright.sync_api import sync_playwright
 
+    # Discover pages at runtime — no hardcoded list
+    pages = discover_pages()
+
     all_results = {}
     total_issues = 0
     pages_ok = 0
     pages_failed = 0
+    pages_skipped = 0
 
     print("=" * 80)
     print("  LIBERTY BASKETBALL — UI OVERFLOW & LAYOUT AUDIT")
     print(f"  Target: {BASE_URL}")
     print(f"  Viewport: {VIEWPORT_WIDTH}x{VIEWPORT_HEIGHT}")
+    print(f"  Pages discovered: {len(pages)}")
     print("=" * 80)
 
     with sync_playwright() as p:
@@ -368,10 +404,7 @@ def run_audit():
             user_agent="LibertyBot-UI-Audit/1.0"
         )
 
-        # Collect console errors across all pages
-        console_errors = {}
-
-        for route, label in PAGES:
+        for route, label in pages:
             url = BASE_URL + route
             page = context.new_page()
             page_console_errors = []
@@ -388,6 +421,14 @@ def run_audit():
                 response = page.goto(url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
                 status = response.status if response else 0
 
+                # Auto-detect auth redirects (302 → login page)
+                if status == 302:
+                    print(f"⏭️  {label} ({route}) — Skipped (redirect, auth required)")
+                    pages_skipped += 1
+                    all_results[route] = {"status": 302, "issues": [], "console": [], "skipped": True}
+                    page.close()
+                    continue
+
                 if status != 200:
                     print(f"\n❌ {label} ({route}) — HTTP {status}")
                     pages_failed += 1
@@ -396,13 +437,12 @@ def run_audit():
                     continue
 
                 # Wait for JS-rendered content (data-frames, API calls, etc.)
-                # Then wait for the polling interval to settle so layout stabilizes.
                 page.wait_for_timeout(WAIT_AFTER_LOAD_MS)
 
                 # Run the audit JavaScript
                 issues = page.evaluate(AUDIT_JS)
 
-                # Deduplicate overlapping reports (keep highest severity)
+                # Deduplicate overlapping reports
                 seen = set()
                 deduped = []
                 for issue in issues:
@@ -412,7 +452,6 @@ def run_audit():
                         deduped.append(issue)
                 issues = deduped
 
-                console_errors[route] = page_console_errors
                 all_results[route] = {"status": 200, "issues": issues, "console": page_console_errors}
 
                 if issues:
@@ -423,7 +462,6 @@ def run_audit():
                           f"({len(high)} high, {len(med)} med, {len(low)} low)")
                     total_issues += len(issues)
 
-                    # Print HIGH severity issues in detail
                     for issue in high:
                         print(f"   🔴 [{issue['type']}] {issue['message']}")
                         if issue.get('class'):
@@ -436,18 +474,24 @@ def run_audit():
                     print(f"\n✅ {label} ({route}) — No layout issues")
                     pages_ok += 1
 
-                # Print console errors
                 if page_console_errors:
                     print(f"   📋 Console: {len(page_console_errors)} error(s)/warning(s)")
-                    for err in page_console_errors[:3]:  # show first 3
+                    for err in page_console_errors[:3]:
                         print(f"      {err}")
                     if len(page_console_errors) > 3:
                         print(f"      ... and {len(page_console_errors) - 3} more")
 
             except Exception as e:
-                print(f"\n❌ {label} ({route}) — ERROR: {e}")
-                pages_failed += 1
-                all_results[route] = {"status": "ERROR", "error": str(e), "issues": [], "console": []}
+                error_str = str(e)
+                # Download endpoints trigger a browser download which Playwright treats as an error
+                if "Download is starting" in error_str:
+                    print(f"⏭️  {label} ({route}) — Skipped (download endpoint)")
+                    pages_skipped += 1
+                    all_results[route] = {"status": "DOWNLOAD", "issues": [], "console": [], "skipped": True}
+                else:
+                    print(f"\n❌ {label} ({route}) — ERROR: {e}")
+                    pages_failed += 1
+                    all_results[route] = {"status": "ERROR", "error": str(e), "issues": [], "console": []}
 
             finally:
                 page.close()
@@ -458,14 +502,15 @@ def run_audit():
     print("\n" + "=" * 80)
     print("  AUDIT SUMMARY")
     print("=" * 80)
-    print(f"  Pages audited:    {len(PAGES)}")
-    print(f"  Pages OK:         {pages_ok}")
-    print(f"  Pages with issues:{len(PAGES) - pages_ok - pages_failed}")
-    print(f"  Pages failed:     {pages_failed}")
-    print(f"  Total issues:     {total_issues}")
+    print(f"  Pages discovered:  {len(pages)}")
+    print(f"  Pages audited:     {len(pages) - pages_skipped}")
+    print(f"  Pages skipped:     {pages_skipped} (auth/redirect)")
+    print(f"  Pages OK:          {pages_ok}")
+    print(f"  Pages with issues: {len(pages) - pages_ok - pages_failed - pages_skipped}")
+    print(f"  Pages failed:      {pages_failed}")
+    print(f"  Total issues:      {total_issues}")
 
     if total_issues > 0:
-        # Count by type
         type_counts = {}
         severity_counts = {}
         for route, data in all_results.items():
