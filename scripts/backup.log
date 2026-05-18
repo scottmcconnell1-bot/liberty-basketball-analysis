@@ -750,3 +750,40 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 6b0fe90... # backup: 2026-05-18-1553 —  15 files changed, 12898 insertions(+), 286 deletions(-)
 [2026-05-18 15:53:59] Pull failed — attempting rebase resolution...
 HEAD is now at 1174f5e backup: 2026-05-18-1451 —  3 files changed, 3001 insertions(+), 21 deletions(-) (rebased)
+[backups 39a9816] backup: 2026-05-18-1553 —  4 files changed, 1852 insertions(+), 14 deletions(-) (rebased)
+ 4 files changed, 1852 insertions(+), 14 deletions(-)
+[2026-05-18 15:53:59] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   1174f5e..39a9816  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-1553 -> backup/2026-05-18-1553
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 15:54:04] === Backup complete: backup/2026-05-18-1553 ===
+[2026-05-18 16:54:25] === Starting backup: backup/2026-05-18-1654 ===
+[2026-05-18 16:54:25] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 16:54:26] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  99% (150/151)Updating files: 100% (151/151)Updating files: 100% (151/151), done.
+[2026-05-18 16:54:47] Syncing current project state...
+[2026-05-18 16:55:14] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..39a9816  backups    -> origin/backups
+Rebasing (1/1)Auto-merging ai_analyzer.py
+CONFLICT (content): Merge conflict in ai_analyzer.py
+Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 706d7b7... backup: 2026-05-18-1654 —  15 files changed, 14379 insertions(+), 286 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 706d7b7... # backup: 2026-05-18-1654 —  15 files changed, 14379 insertions(+), 286 deletions(-)
+[2026-05-18 16:55:16] Pull failed — attempting rebase resolution...
+HEAD is now at 39a9816 backup: 2026-05-18-1553 —  4 files changed, 1852 insertions(+), 14 deletions(-) (rebased)
