@@ -63,7 +63,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        detect_stride = int(ai_settings.get("detect_stride", 1))
+        detect_stride = int(ai_settings.get("detection_stride", 1))
         if detect_stride < 1:
             detect_stride = 1
         infer_size = 320
