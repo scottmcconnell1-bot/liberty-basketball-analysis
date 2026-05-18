@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# backup.sh — Full project backup to the `backups` branch on GitHub.
+# backup.sh — Incremental project backup to the `backups` branch on GitHub.
 #
-# Clones the existing backups branch, rsyncs in the current project state,
-# commits, and pushes. Preserves full history for rollback capability.
+# Uses a local bare mirror of the backups branch to avoid re-cloning the full
+# repo every run. Each backup fetches only incremental changes, rsyncs the
+# current project state, commits, and pushes.
+#
 # Includes uploads/ (excludes .git, .venv, __pycache__, model files).
-# Model files (*.pt, *.pth, etc.) are auto-downloaded by ultralytics if missing.
-#
-# Safe to run while the main project is actively being worked on — we never
-# touch the main project's .git or working directory.
+# Model files (*.pt, *.pth, etc.) are auto-downownloaded by ultralytics if missing.
 
 set -euo pipefail
 
 PROJECT_DIR="/home/monk-admin/PROJECTS/liberty-basketball-analysis"
 BACKUP_DIR="/home/monk-admin/liberty-backup-tmp"
+MIRROR_DIR="/home/monk-admin/liberty-backup-mirror"
 BACKUP_BRANCH="backups"
 REMOTE="git@github.com:scottmcconnell1-bot/liberty-basketball-analysis.git"
 TIMESTAMP=$(date +"%Y-%m-%d-%H%M")
@@ -30,24 +30,29 @@ trap cleanup EXIT
 
 log "=== Starting backup: $TAG ==="
 
-# 1. Clean up any leftover temp directory
-rm -rf "$BACKUP_DIR"
-
-# 2. Clone the existing backups branch (or init fresh if it doesn't exist)
-log "Cloning existing backups branch..."
-if git clone --depth=1 --branch "$BACKUP_BRANCH" --single-branch "$REMOTE" "$BACKUP_DIR" 2>/dev/null; then
-    log "Cloned existing backups branch."
-else
-    log "No existing backups branch — initializing fresh repo."
-    mkdir -p "$BACKUP_DIR"
-    cd "$BACKUP_DIR"
-    git init
-    git config user.email "backup@liberty.local"
-    git config user.name "Liberty Backup"
-    git remote add origin "$REMOTE"
+# 0. Ensure local bare mirror exists (one-time setup)
+if [ ! -d "$MIRROR_DIR" ]; then
+    log "Creating local bare mirror of $BACKUP_BRANCH..."
+    git clone --bare --branch "$BACKUP_BRANCH" --single-branch "$REMOTE" "$MIRROR_DIR" 2>&1 | tee -a "$LOG_FILE"
+    log "Bare mirror created."
 fi
 
-# 3. Rsync current project into the clone (exclude .git, .venv, etc.)
+# 1. Fetch latest from remote into the local mirror (incremental — fast)
+log "Fetching latest into local mirror..."
+git -C "$MIRROR_DIR" fetch origin "$BACKUP_BRANCH" --prune 2>&1 | tee -a "$LOG_FILE"
+
+# 2. Clean up any leftover temp directory
+rm -rf "$BACKUP_DIR"
+
+# 3. Clone from the LOCAL mirror (instant — no network)
+log "Cloning from local mirror..."
+git clone --branch "$BACKUP_BRANCH" --single-branch "file://$MIRROR_DIR" "$BACKUP_DIR" 2>&1 | tee -a "$LOG_FILE"
+
+# 4. Add the real remote so we can push
+cd "$BACKUP_DIR"
+git remote set-url origin "$REMOTE"
+
+# 5. Rsync current project into the clone (exclude .git, .venv, etc.)
 log "Syncing current project state..."
 rsync -a \
     --exclude='.git' \
@@ -69,27 +74,29 @@ rsync -a \
     --exclude='*.weights' \
     "$PROJECT_DIR/" "$BACKUP_DIR/"
 
-# 4. Stage everything
-cd "$BACKUP_DIR"
+# 6. Stage everything
 git add -A
 
-# 5. Check if there's anything to commit
+# 7. Check if there's anything to commit
 if git diff --cached --quiet; then
     log "No changes since last backup. Skipping."
     log "=== Backup complete (no changes) ==="
     exit 0
 fi
 
-# 6. Commit
+# 8. Commit
 CHANGES=$(git diff --cached --stat | tail -1)
 git commit -m "backup: $TIMESTAMP — $CHANGES" --no-verify
 
-# 7. Tag
+# 9. Tag
 git tag "$TAG"
 
-# 8. Push (normal push — no force, preserves history)
+# 10. Push branch and tag
 log "Pushing to origin/$BACKUP_BRANCH ..."
 git push origin "$BACKUP_BRANCH" --no-verify 2>&1 | tee -a "$LOG_FILE"
 git push origin "$TAG" --no-verify 2>&1 | tee -a "$LOG_FILE"
+
+# 11. Update the local mirror with the new push
+git -C "$MIRROR_DIR" fetch origin "$BACKUP_BRANCH" --prune 2>&1 | tee -a "$LOG_FILE" || true
 
 log "=== Backup complete: $TAG ==="
