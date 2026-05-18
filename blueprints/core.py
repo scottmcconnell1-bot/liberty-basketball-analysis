@@ -1649,8 +1649,15 @@ def _scrape_maxpreps_ranking(state, gender):
                     if num_match:
                         return int(num_match.group(1)), url
 
+        # Debug: log when liberty not found or no rank parsed
+        import sys
+        print(f"[MaxPreps scrape] No rank found. Nav rc={nav_result.returncode}, Snap rc={snap_result.returncode}, Snapshot len={len(snapshot)}", file=sys.stderr)
+        if "liberty" not in snapshot.lower():
+            print(f"[MaxPreps scrape] 'liberty' not in snapshot at all", file=sys.stderr)
         return None, url
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"[MaxPreps scrape] Exception: {e}", file=sys.stderr)
         return None, url
 
 
