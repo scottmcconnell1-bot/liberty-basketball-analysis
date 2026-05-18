@@ -1547,6 +1547,13 @@ function initAiUpload() {
         formData.append('video', fileOrBlob, filename || fileOrBlob.name || 'video.mp4');
         formData.append('opponent', opponent);
 
+        // Use chunked upload for files > 50MB to stay under Cloudflare's ~100MB proxy limit
+        const CHUNK_SIZE = 80 * 1024 * 1024; // 80MB chunks
+        if (fileOrBlob.size > 50 * 1024 * 1024) {
+            doChunkedUpload(fileOrBlob, url, filename || fileOrBlob.name || 'video.mp4', opponent, CHUNK_SIZE);
+            return;
+        }
+
         const xhr = new XMLHttpRequest();
         xhr.open('POST', url);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
@@ -1576,6 +1583,77 @@ function initAiUpload() {
         xhr.addEventListener('error', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload failed. Check your connection and try again.'; });
         xhr.addEventListener('timeout', () => { if (uploadProgressText) uploadProgressText.textContent = 'Upload timed out. Try a shorter clip or check your network.'; });
         xhr.send(formData);
+    }
+
+    function doChunkedUpload(file, url, filename, opponent, chunkSize) {
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        const uploadId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        let uploadedChunks = 0;
+        let failed = false;
+
+        if (uploadProgressText) uploadProgressText.textContent = `Uploading in ${totalChunks} chunks…`;
+
+        function uploadNextChunk(chunkIndex) {
+            if (failed) return;
+            if (chunkIndex >= totalChunks) return;
+
+            const start = chunkIndex * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('file', chunk);
+            formData.append('upload_id', uploadId);
+            formData.append('chunk_index', chunkIndex);
+            formData.append('total_chunks', totalChunks);
+            formData.append('filename', filename);
+            formData.append('opponent', opponent);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload_chunk');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.timeout = 300000; // 5 min per chunk
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (!e.lengthComputable) return;
+                const chunkPercent = Math.round((e.loaded / e.total) * 100);
+                const overallPercent = Math.round(((uploadedChunks + chunkPercent / 100) / totalChunks) * 100);
+                if (uploadProgressBar) uploadProgressBar.style.width = `${overallPercent}%`;
+                if (uploadProgressText) uploadProgressText.textContent = `Uploading chunk ${chunkIndex + 1}/${totalChunks} (${overallPercent}%)`;
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status < 200 || xhr.status >= 300) {
+                    failed = true;
+                    if (uploadProgressText) uploadProgressText.textContent = `Upload failed on chunk ${chunkIndex + 1} (HTTP ${xhr.status}). Please try again.`;
+                    return;
+                }
+                const payload = JSON.parse(xhr.responseText);
+                uploadedChunks++;
+
+                if (payload.status === 'complete') {
+                    if (uploadProgressBar) uploadProgressBar.style.width = '100%';
+                    if (uploadProgressText) uploadProgressText.textContent = 'Upload complete. Redirecting…';
+                    window.location.href = payload.redirect_url;
+                } else {
+                    uploadNextChunk(chunkIndex + 1);
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                failed = true;
+                if (uploadProgressText) uploadProgressText.textContent = `Upload failed on chunk ${chunkIndex + 1}. Check your connection and try again.`;
+            });
+
+            xhr.addEventListener('timeout', () => {
+                failed = true;
+                if (uploadProgressText) uploadProgressText.textContent = `Upload timed out on chunk ${chunkIndex + 1}. Please try again.`;
+            });
+
+            xhr.send(formData);
+        }
+
+        uploadNextChunk(0);
     }
 
     // Button handlers
