@@ -255,3 +255,114 @@ ValueError: not enough values to unpack (expected 2, got 1)
  * Running on http://192.168.1.42:8081
 [33mPress CTRL+C to quit[0m
 127.0.0.1 - - [18/May/2026 08:45:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:22:28] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/players HTTP/1.1" 200 -
+[2026-05-18 09:24:05,537] ERROR in app: Exception on /api/players [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/clips.py", line 186, in api_players_create
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [18/May/2026 09:24:05] "[35m[1mPOST /api/players HTTP/1.1[0m" 500 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/players HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/players HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/clips HTTP/1.1" 200 -
+[2026-05-18 09:24:05,548] ERROR in app: Exception on /api/clips [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/clips.py", line 236, in api_clips_create
+    clip = pd_helpers.create_clip(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/player_development.py", line 50, in create_clip
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [18/May/2026 09:24:05] "[35m[1mPOST /api/clips HTTP/1.1[0m" 500 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/clips HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/playlists HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "[35m[1mPOST /api/playlists HTTP/1.1[0m" 201 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/playlists HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "DELETE /api/playlists/55 HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/sources HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "[31m[1mPOST /api/sources HTTP/1.1[0m" 400 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/sources HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "[33mGET /api/nfhs/matches HTTP/1.1[0m" 404 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/scouting/reports HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/teams/schedule HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /api/teams/rankings HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "[32mGET /api/users HTTP/1.1[0m" 302 -
+127.0.0.1 - - [18/May/2026 09:24:05] "GET /login?next=http://localhost:8081/api/users HTTP/1.1" 200 -
+127.0.0.1 - - [18/May/2026 09:24:05] "[33mGET /api/resource/status HTTP/1.1[0m" 404 -
+[2026-05-18 09:24:35,277] ERROR in app: Exception on /api/players [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/clips.py", line 186, in api_players_create
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [18/May/2026 09:24:35] "[35m[1mPOST /api/players HTTP/1.1[0m" 500 -
+[2026-05-18 09:24:36,570] ERROR in app: Exception on /api/clips [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/clips.py", line 236, in api_clips_create
+    clip = pd_helpers.create_clip(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/player_development.py", line 50, in create_clip
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [18/May/2026 09:24:36] "[35m[1mPOST /api/clips HTTP/1.1[0m" 500 -
+127.0.0.1 - - [18/May/2026 09:24:37] "[31m[1mPOST /api/sources HTTP/1.1[0m" 400 -
+127.0.0.1 - - [18/May/2026 09:26:07] "[33mGET /api/resource/status HTTP/1.1[0m" 404 -
