@@ -568,3 +568,41 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 214e0ce... # backup: 2026-05-18-1047 —  9 files changed, 1079 insertions(+), 42 deletions(-)
 [2026-05-18 10:47:49] Pull failed — attempting rebase resolution...
 HEAD is now at dcbfcaa backup: 2026-05-18-0946 —  2 files changed, 145 insertions(+) (rebased)
+[backups 766ca4c] backup: 2026-05-18-1047 —  3 files changed, 339 insertions(+), 10 deletions(-) (rebased)
+ 3 files changed, 339 insertions(+), 10 deletions(-)
+[2026-05-18 10:47:49] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   dcbfcaa..766ca4c  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-1047 -> backup/2026-05-18-1047
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 10:47:53] === Backup complete: backup/2026-05-18-1047 ===
+[2026-05-18 11:48:19] === Starting backup: backup/2026-05-18-1148 ===
+[2026-05-18 11:48:19] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 11:48:20] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 11:48:30] Syncing current project state...
+[2026-05-18 11:48:34] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..766ca4c  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging logs/flask.log
+CONFLICT (add/add): Merge conflict in logs/flask.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+Auto-merging tests/test_ui_overflow.py
+CONFLICT (content): Merge conflict in tests/test_ui_overflow.py
+error: could not apply 35ad576... backup: 2026-05-18-1148 —  11 files changed, 2360 insertions(+), 272 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 35ad576... # backup: 2026-05-18-1148 —  11 files changed, 2360 insertions(+), 272 deletions(-)
+[2026-05-18 11:48:35] Pull failed — attempting rebase resolution...
+HEAD is now at 766ca4c backup: 2026-05-18-1047 —  3 files changed, 339 insertions(+), 10 deletions(-) (rebased)
