@@ -231,3 +231,219 @@ To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
 [2026-05-17 20:20:28] Cloning existing backups branch...
 [2026-05-17 20:20:54] Cloned existing backups branch.
 [2026-05-17 20:20:54] Syncing current project state...
+[2026-05-17 20:20:56] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   931ae21..5ad362a  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-17-2020 -> backup/2026-05-17-2020
+[2026-05-17 20:20:59] === Backup complete: backup/2026-05-17-2020 ===
+[2026-05-17 20:46:56] === Starting backup: backup/2026-05-17-2046 ===
+[2026-05-17 20:46:56] Creating local bare mirror of backups...
+Cloning into bare repository '/home/monk-admin/liberty-backup-mirror'...
+[2026-05-17 20:47:26] Bare mirror created.
+[2026-05-17 20:47:26] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-17 20:47:28] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-17 20:47:35] Syncing current project state...
+[2026-05-17 20:47:38] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   5ad362a..0a40ee7  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-17-2046 -> backup/2026-05-17-2046
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-17 20:47:42] === Backup complete: backup/2026-05-17-2046 ===
+[2026-05-17 21:22:05] === Starting backup: backup/2026-05-17-2122 ===
+[2026-05-17 21:22:05] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-17 21:22:06] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-17 21:22:13] Syncing current project state...
+[2026-05-17 21:22:15] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-17 22:25:16] === Starting backup: backup/2026-05-17-2225 ===
+[2026-05-17 22:25:16] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-17 22:25:17] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-17 22:25:24] Syncing current project state...
+[2026-05-17 22:25:26] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-17 23:26:37] === Starting backup: backup/2026-05-17-2326 ===
+[2026-05-17 23:26:37] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-17 23:26:38] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-17 23:26:46] Syncing current project state...
+[2026-05-17 23:26:48] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 00:27:55] === Starting backup: backup/2026-05-18-0027 ===
+[2026-05-18 00:27:55] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 00:27:56] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 00:28:03] Syncing current project state...
+[2026-05-18 00:28:04] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 01:29:06] === Starting backup: backup/2026-05-18-0129 ===
+[2026-05-18 01:29:06] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 01:29:07] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 01:29:14] Syncing current project state...
+[2026-05-18 01:29:15] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   0a40ee7..4e070ee  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-0133 -> backup/2026-05-18-0133
+[2026-05-18 01:33:15] === Backup complete: backup/2026-05-18-0133 ===
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 02:33:49] === Starting backup: backup/2026-05-18-0233 ===
+[2026-05-18 02:33:49] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 02:33:50] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 02:33:57] Syncing current project state...
+[2026-05-18 02:33:59] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 03:34:54] === Starting backup: backup/2026-05-18-0334 ===
+[2026-05-18 03:34:54] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 03:34:56] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 03:35:03] Syncing current project state...
+[2026-05-18 03:35:04] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 04:36:21] === Starting backup: backup/2026-05-18-0436 ===
+[2026-05-18 04:36:21] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 04:36:22] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 04:36:29] Syncing current project state...
+[2026-05-18 04:36:31] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 06:41:07] === Starting backup: backup/2026-05-18-0641 ===
+[2026-05-18 06:41:07] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 06:41:08] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 06:41:15] Syncing current project state...
+[2026-05-18 06:41:16] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ ! [rejected]        backups -> backups (fetch first)
+error: failed to push some refs to 'github.com:scottmcconnell1-bot/liberty-basketball-analysis.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-18 06:42:56] === Starting backup: backup/2026-05-18-0642 ===
+[2026-05-18 06:42:56] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 06:42:57] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 06:43:04] Syncing current project state...
+[2026-05-18 06:43:06] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..4e070ee  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+Auto-merging scripts/backup.sh
+CONFLICT (content): Merge conflict in scripts/backup.sh
+error: could not apply 01fb24d... backup: 2026-05-18-0642 —  3 files changed, 249 insertions(+), 29 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 01fb24d... # backup: 2026-05-18-0642 —  3 files changed, 249 insertions(+), 29 deletions(-)
+[2026-05-18 06:43:07] Pull failed — attempting rebase resolution...
+HEAD is now at 4e070ee backup: 2026-05-18-0133 —  2 files changed, 89 insertions(+), 1 deletion(-)
+[backups a589d79] backup: 2026-05-18-0642 —  2 files changed, 128 insertions(+), 2 deletions(-) (rebased)
+ 2 files changed, 128 insertions(+), 2 deletions(-)
+[2026-05-18 06:43:07] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   4e070ee..a589d79  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-0642 -> backup/2026-05-18-0642
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 06:43:12] === Backup complete: backup/2026-05-18-0642 ===
+[2026-05-18 07:44:13] === Starting backup: backup/2026-05-18-0744 ===
+[2026-05-18 07:44:13] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 07:44:14] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 07:44:21] Syncing current project state...
