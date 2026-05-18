@@ -91,12 +91,43 @@ git commit -m "backup: $TIMESTAMP — $CHANGES" --no-verify
 # 9. Tag
 git tag "$TAG"
 
-# 10. Push branch and tag
+# 10. Pull-merge-push to handle concurrent backups from multiple sources
+log "Pulling latest from origin/$BACKUP_BRANCH before push..."
+git pull origin "$BACKUP_BRANCH" --no-verify --rebase 2>&1 | tee -a "$LOG_FILE" || {
+    log "Pull failed — attempting rebase resolution..."
+    git rebase --abort 2>/dev/null || true
+    git reset --hard "origin/$BACKUP_BRANCH" 2>&1 | tee -a "$LOG_FILE"
+    # Re-apply our changes on top
+    rsync -a \
+        --exclude='.git' \
+        --exclude='.venv' \
+        --exclude='venv' \
+        --exclude='env' \
+        --exclude='__pycache__' \
+        --exclude='.pytest_cache' \
+        --exclude='*.pyc' \
+        --exclude='*.pyo' \
+        --exclude='*.so' \
+        --exclude='.DS_Store' \
+        --exclude='*.db-shm' \
+        --exclude='*.db-wal' \
+        --exclude='*.pt' \
+        --exclude='*.pth' \
+        --exclude='*.onnx' \
+        --exclude='*.bin' \
+        --exclude='*.weights' \
+        "$PROJECT_DIR/" "$BACKUP_DIR/"
+    git add -A
+    CHANGES=$(git diff --cached --stat | tail -1)
+    git commit -m "backup: $TIMESTAMP — $CHANGES (rebased)" --no-verify 2>&1 | tee -a "$LOG_FILE" || true
+}
+
+# 11. Push branch and tag
 log "Pushing to origin/$BACKUP_BRANCH ..."
 git push origin "$BACKUP_BRANCH" --no-verify 2>&1 | tee -a "$LOG_FILE"
 git push origin "$TAG" --no-verify 2>&1 | tee -a "$LOG_FILE"
 
-# 11. Update the local mirror with the new push
+# 12. Update the local mirror with the new push
 git -C "$MIRROR_DIR" fetch origin "$BACKUP_BRANCH" --prune 2>&1 | tee -a "$LOG_FILE" || true
 
 log "=== Backup complete: $TAG ==="
