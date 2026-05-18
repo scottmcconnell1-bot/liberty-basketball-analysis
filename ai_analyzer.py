@@ -74,7 +74,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         next_tracker_id = 1
         ball_positions_all = []
         MAX_MATCH_DIST = 200  # Max pixel distance to match a detection to a track
-        MAX_TRACK_GAP = 120   # Retire tracks not seen in this many frames
+        MAX_TRACK_GAP = max(30, 120 // detect_stride)  # Retire tracks not seen in this many detection cycles
 
         while cap.isOpened():
             ret, frame = cap.read()
