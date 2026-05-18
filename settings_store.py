@@ -7,7 +7,7 @@ AI_DEFAULTS = {
     "event_generator_mode": "expanded",
     "inference_device": "auto",
     "frame_stride": 3,
-    "detection_stride": 15,
+    "detection_stride": 10,
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
     "llm_provider": "ollama",
