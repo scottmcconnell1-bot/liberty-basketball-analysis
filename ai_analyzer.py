@@ -61,7 +61,10 @@ def run_ai_analysis(db_path, video_path, game_id):
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, YOLO every frame")
+        detect_stride = int(ai_settings.get("detect_stride", 1))
+        if detect_stride < 1:
+            detect_stride = 1
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, YOLO every {detect_stride} frame(s)")
 
         frame_number = 0
         db = get_db()
@@ -80,17 +83,18 @@ def run_ai_analysis(db_path, video_path, game_id):
 
             timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
 
-            # --- Run YOLO person detection ---
-            results = model(frame, classes=[0], conf=0.25, verbose=False)
+            # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
-            for result in results:
-                for box in result.boxes:
-                    class_id = int(box.cls[0])
-                    if model.names[class_id] == 'person':
-                        confidence = float(box.conf[0])
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                        new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
+            if frame_number % detect_stride == 0:
+                results = model(frame, classes=[0], conf=0.25, verbose=False)
+                for result in results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        if model.names[class_id] == 'person':
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
             # --- Match detections to active tracks (greedy nearest-neighbor) ---
             person_rows = []
