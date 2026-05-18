@@ -42,25 +42,33 @@ VIEWPORT_HEIGHT = int(os.environ.get("AUDIT_VIEWPORT_HEIGHT", "900"))
 PAGE_TIMEOUT_MS = 15000  # 15s per page
 WAIT_AFTER_LOAD_MS = 2000  # wait for JS rendering (data-frames, etc.)
 
-# Pages to audit — (route, label, min_expected_elements)
-# min_expected_elements: rough minimum number of visible elements to consider page loaded
-# Pages with known complex embedded UIs that have their own layout system are skipped
+# Pages to audit — (route, label)
+# Static pages only — no dynamic IDs (e.g. /playbook/play/1) since those need
+# real database entries. Add a comment noting the dynamic prefix if applicable.
 PAGES = [
     ("/", "Dashboard / Index"),
+    ("/dashboard", "Dashboard (alt)"),
     ("/schedule", "Schedule"),
     ("/games", "Games"),
     ("/nfhs-matches", "NFHS Matches"),
     ("/videos", "Videos"),
-    # ("/film", "Film Tool"),  # Skipped: complex embedded app with own CSS layout system
+    ("/film", "Film Tool"),
     ("/playbook", "Playbook"),
+    # ("/playbook/create", "Playbook Create"),       # needs DB state
+    # ("/playbook/play/1", "Playbook Play Detail"),  # needs play_id
     ("/player-development", "Player Development"),
     ("/practice-playlists", "Practice Playlists"),
     ("/practices", "Practices"),
+    # ("/practices/1/report", "Practice Report"),    # needs practice_id
     ("/practice-summary", "Practice Summary"),
+    ("/scouting", "Scouting"),
+    # ("/scouting/reports/1", "Scouting Report Detail"),  # needs report_id
+    # ("/analysis/1", "AI Analysis"),                 # needs game_id
     ("/settings", "Settings"),
     ("/settings/custom-weights", "Custom Weights Guide"),
-    ("/dashboard", "Dashboard (alt)"),
+    # ("/settings/notifications", "Notification Settings"),  # auth required
     ("/users", "Users"),
+    # ("/profile", "User Profile"),                   # auth required
     ("/status", "Status"),
     ("/debug", "Debug / Issues"),
     ("/messages", "Messages"),
@@ -375,7 +383,9 @@ def run_audit():
             page.on("console", on_console)
 
             try:
-                response = page.goto(url, wait_until="networkidle", timeout=PAGE_TIMEOUT_MS)
+                # Use domcontentloaded instead of networkidle because the app has
+                # background polling (setInterval) that prevents networkidle from firing.
+                response = page.goto(url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
                 status = response.status if response else 0
 
                 if status != 200:
@@ -386,6 +396,7 @@ def run_audit():
                     continue
 
                 # Wait for JS-rendered content (data-frames, API calls, etc.)
+                # Then wait for the polling interval to settle so layout stabilizes.
                 page.wait_for_timeout(WAIT_AFTER_LOAD_MS)
 
                 # Run the audit JavaScript
@@ -494,8 +505,12 @@ if __name__ == "__main__":
 def test_ui_no_overflow():
     """Run the full UI overflow audit — fails if any HIGH severity issues found.
 
-    Skipped in CI/headless environments where Chromium cannot launch
-    (e.g. snap Chromium with ptrace restrictions).
+    Requires:
+    - Flask dev server running on http://localhost:8081
+    - Playwright + Chromium installed
+
+    Run with:
+        .venv/bin/python -m pytest tests/test_ui_overflow.py -v
     """
-    import pytest
-    pytest.skip("Playwright/Chromium not available in this environment")
+    high_count = run_audit()
+    assert high_count == 0, f"{high_count} HIGH severity layout issue(s) found"
