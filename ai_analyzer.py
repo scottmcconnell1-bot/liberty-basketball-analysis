@@ -61,10 +61,15 @@ def run_ai_analysis(db_path, video_path, game_id):
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         detect_stride = int(ai_settings.get("detect_stride", 1))
         if detect_stride < 1:
             detect_stride = 1
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, YOLO every {detect_stride} frame(s)")
+        infer_size = 320
+        scale_x = orig_w / infer_size
+        scale_y = orig_h / infer_size
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px")
 
         frame_number = 0
         db = get_db()
@@ -86,13 +91,18 @@ def run_ai_analysis(db_path, video_path, game_id):
             # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
             if frame_number % detect_stride == 0:
-                results = model(frame, classes=[0], conf=0.25, verbose=False)
+                results = model(frame, classes=[0], conf=0.25, verbose=False, imgsz=320)
                 for result in results:
                     for box in result.boxes:
                         class_id = int(box.cls[0])
                         if model.names[class_id] == 'person':
                             confidence = float(box.conf[0])
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            # Scale coordinates from inference size back to original frame size
+                            x1 = int(x1 * scale_x)
+                            y1 = int(y1 * scale_y)
+                            x2 = int(x2 * scale_x)
+                            y2 = int(y2 * scale_y)
                             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                             new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
@@ -144,7 +154,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             if frame_number % 5 == 0:
                 ball_positions = []
                 try:
-                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False)
+                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False, imgsz=320)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
@@ -152,6 +162,11 @@ def run_ai_analysis(db_path, video_path, game_id):
                             if raw_class_name in ['sports ball', 'sports_ball']:
                                 confidence = float(box.conf[0])
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
+                                # Scale coordinates from inference size back to original frame size
+                                x1 = int(x1 * scale_x)
+                                y1 = int(y1 * scale_y)
+                                x2 = int(x2 * scale_x)
+                                y2 = int(y2 * scale_y)
                                 w_box, h_box = x2 - x1, y2 - y1
                                 if 8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0:
                                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
