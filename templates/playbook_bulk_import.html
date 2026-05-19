@@ -3,10 +3,22 @@
 {% block content %}
 <div class="page-header">
   <h2>📥 Bulk Playbook Import</h2>
-  <p class="text-muted">Upload a PDF playbook. Each page will be extracted and categorized by its header label.</p>
+  <p class="text-muted">Upload a PDF playbook. Choose auto-detect or manual review mode.</p>
 </div>
 
-<!-- Step 1: Upload -->
+<!-- Mode selector -->
+<div class="card">
+  <h3 style="margin-bottom:12px;">Import Mode</h3>
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="btn btn-primary" id="mode-auto" onclick="setMode('auto')">⚡ Auto-Detect</button>
+    <button class="btn btn-secondary" id="mode-split" onclick="setMode('split')">✂️ Split & Review</button>
+  </div>
+  <p class="text-muted" id="mode-desc" style="font-size:0.85rem;">
+    Auto-detect reads page headers to categorize plays automatically.
+  </p>
+</div>
+
+<!-- Upload -->
 <div class="card" id="upload-card">
   <h3 style="margin-bottom:12px;">1. Upload Playbook PDF</h3>
   <div id="bulk-dropzone"
@@ -20,13 +32,12 @@
   <div id="bulk-status" style="margin-top:8px;font-size:0.85rem;"></div>
 </div>
 
-<!-- Step 2: Review & Categorize (hidden until parsed) -->
+<!-- Review section (hidden until parsed) -->
 <div id="review-section" style="display:none;">
   <div class="card">
     <h3 style="margin-bottom:8px;">2. Review Extracted Plays</h3>
-    <p class="text-muted" style="font-size:0.85rem;margin-bottom:12px;">
+    <p class="text-muted" style="font-size:0.85rem;margin-bottom:12px;" id="review-desc">
       Each play was auto-categorized from its page header. Uncheck any plays you don't want to import.
-      You can change categories and assign a playbook.
     </p>
 
     <!-- Summary stats -->
@@ -43,17 +54,17 @@
       </select>
     </div>
 
-    <!-- Section tabs -->
+    <!-- Section filter -->
     <div id="section-tabs" style="margin-bottom:12px;"></div>
 
-    <!-- Plays list -->
+    <!-- Plays grid -->
     <div id="plays-list"></div>
   </div>
 
-  <!-- Step 3: Save -->
+  <!-- Save -->
   <div class="card">
     <h3 style="margin-bottom:12px;">3. Import Plays</h3>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <button class="btn btn-primary" id="btn-save-bulk" onclick="saveBulkPlays()">
         💾 Import <span id="selected-count">0</span> Plays
       </button>
@@ -69,7 +80,25 @@
 
 {% block scripts %}
 <script>
-let bulkData = null;  // parsed PDF data
+let bulkData = null;
+let currentMode = 'auto';
+let currentSection = '';
+
+function setMode(mode) {
+  currentMode = mode;
+  const autoBtn = document.getElementById('mode-auto');
+  const splitBtn = document.getElementById('mode-split');
+  const desc = document.getElementById('mode-desc');
+  if (mode === 'auto') {
+    autoBtn.className = 'btn btn-primary';
+    splitBtn.className = 'btn btn-secondary';
+    desc.textContent = 'Auto-detect reads page headers to categorize plays automatically. Best for well-formatted PDFs.';
+  } else {
+    autoBtn.className = 'btn btn-secondary';
+    splitBtn.className = 'btn btn-primary';
+    desc.textContent = 'Split & Review extracts each play as a separate PDF. You review, rename, and categorize each one before importing.';
+  }
+}
 
 function handleBulkUpload(input) {
   const file = input.files[0];
@@ -81,10 +110,9 @@ function handleBulkUpload(input) {
   const formData = new FormData();
   formData.append('file', file);
 
-  fetch('/api/playbook/bulk/parse', {
-    method: 'POST',
-    body: formData,
-  })
+  const endpoint = currentMode === 'split' ? '/api/playbook/bulk/split' : '/api/playbook/bulk/parse';
+
+  fetch(endpoint, { method: 'POST', body: formData })
   .then(r => r.json())
   .then(data => {
     if (data.error) {
@@ -92,7 +120,8 @@ function handleBulkUpload(input) {
       return;
     }
     bulkData = data;
-    status.innerHTML = '<span style="color:#16a34a;">✅ Parsed ' + data.total_pages + ' pages → ' + data.total_plays + ' plays found</span>';
+    const modeLabel = currentMode === 'split' ? 'Split' : 'Parsed';
+    status.innerHTML = '<span style="color:#16a34a;">✅ ' + modeLabel + ' ' + data.total_pages + ' pages → ' + data.total_plays + ' plays found</span>';
     renderReview();
   })
   .catch(err => {
@@ -125,11 +154,12 @@ function renderReview() {
 
   // Render first section
   showSection(sectionNames[0]);
-
   updateSelectedCount();
 }
 
 function showSection(section) {
+  currentSection = section;
+
   // Update tab styles
   document.querySelectorAll('.section-tab').forEach(tab => {
     if (tab.dataset.section === section) {
@@ -154,13 +184,28 @@ function showSection(section) {
 
     html += '<div class="play-card" style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e5e7eb;border-radius:8px;" data-idx="' + globalIdx + '">';
     html += '<input type="checkbox" class="play-checkbox" checked onchange="updateSelectedCount()" style="width:18px;height:18px;flex-shrink:0;">';
+
     if (thumb) {
-      html += '<img src="' + thumb + '" style="width:60px;height:60px;object-fit:contain;border-radius:4px;border:1px solid #d1d5db;flex-shrink:0;">';
+      html += '<img src="' + thumb + '" style="width:60px;height:60px;object-fit:contain;border-radius:4px;border:1px solid #d1d5db;flex-shrink:0;cursor:pointer;" onclick="previewPlay(' + globalIdx + ')">';
     }
+
     html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-weight:600;font-size:0.9rem;">' + escapeHtml(play.play_name) + '</div>';
-    html += '<div style="font-size:0.75rem;color:#6b7280;">' + pageRange + ' • ' + play.page_count + ' page' + (play.page_count > 1 ? 's' : '') + '</div>';
+
+    // Editable play name
+    const playName = escapeHtml(play.play_name || 'Untitled');
+    html += '<div style="font-weight:600;font-size:0.9rem;">';
+    html += '<input type="text" class="play-name-input" value="' + playName + '" data-idx="' + globalIdx + '" ';
+    html += 'style="font-weight:600;font-size:0.9rem;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;width:100%;max-width:300px;" ';
+    html += 'onfocus="this.style.borderColor=\'#93c5fd\'" onblur="this.style.borderColor=\'transparent\'" ';
+    html += 'onchange="updatePlayName(' + globalIdx + ', this.value)">';
     html += '</div>';
+
+    html += '<div style="font-size:0.75rem;color:#6b7280;">' + pageRange + ' • ' + play.page_count + ' page' + (play.page_count > 1 ? 's' : '');
+    if (play.subsection) html += ' • ' + escapeHtml(play.subsection);
+    html += '</div>';
+    html += '</div>';
+
+    // Category selector
     html += '<select class="form-control play-category" data-idx="' + globalIdx + '" style="width:auto;font-size:0.8rem;padding:4px 8px;">';
     html += '<option value="offense"' + (play.section.toLowerCase().includes('offense') ? ' selected' : '') + '>Offense</option>';
     html += '<option value="defense"' + (play.section.toLowerCase().includes('defense') ? ' selected' : '') + '>Defense</option>';
@@ -169,11 +214,53 @@ function showSection(section) {
     html += '<option value="transition"' + (play.section.toLowerCase().includes('transition') ? ' selected' : '') + '>Transition</option>';
     html += '<option value="special"' + (play.section.toLowerCase().includes('drill') ? ' selected' : '') + '>Drill</option>';
     html += '</select>';
+
+    // PDF download button (split mode)
+    if (play.pdf_url) {
+      html += '<a href="' + play.pdf_url + '" class="btn btn-sm btn-secondary" title="Download PDF" target="_blank">📥</a>';
+    }
+
+    // Delete button
+    html += '<button class="btn btn-sm btn-secondary" style="color:#dc2626;" onclick="deletePlay(' + globalIdx + ')" title="Remove">✕</button>';
+
     html += '</div>';
   });
 
   html += '</div>';
   document.getElementById('plays-list').innerHTML = html;
+}
+
+function previewPlay(idx) {
+  const play = bulkData.plays[idx];
+  if (!play || !play.pages || !play.pages.length) return;
+
+  // Simple lightbox: show all page images
+  let html = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;overflow:auto;padding:20px;" onclick="this.remove()">';
+  html += '<div style="color:#fff;font-weight:600;margin-bottom:8px;">' + escapeHtml(play.play_name) + ' — ' + play.page_count + ' pages</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:90%;">';
+  play.pages.forEach(p => {
+    html += '<img src="' + p.image_url + '" style="max-height:80vh;max-width:100%;object-fit:contain;border-radius:4px;">';
+  });
+  html += '</div>';
+  html += '<div style="color:#fff;font-size:0.8rem;cursor:pointer;">Click anywhere to close</div>';
+  html += '</div>';
+
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+function updatePlayName(idx, newName) {
+  if (bulkData && bulkData.plays[idx]) {
+    bulkData.plays[idx].play_name = newName;
+  }
+}
+
+function deletePlay(idx) {
+  if (!bulkData) return;
+  bulkData.plays.splice(idx, 1);
+  // Re-render current section
+  renderReview();
 }
 
 function selectAll(checked) {
@@ -198,9 +285,12 @@ function saveBulkPlays() {
     if (!checkbox.checked) return;
     const idx = parseInt(card.dataset.idx);
     const play = bulkData.plays[idx];
+    if (!play) return;
     const category = card.querySelector('.play-category').value;
+    const nameInput = card.querySelector('.play-name-input');
+    const name = nameInput ? nameInput.value.trim() : play.play_name;
     plays.push({
-      play_name: play.play_name,
+      play_name: name,
       section: play.section,
       category: category,
       playbook_id: defaultPlaybook,
