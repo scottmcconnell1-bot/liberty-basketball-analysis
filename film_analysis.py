@@ -90,32 +90,59 @@ def calculate_player_minutes(conn, game_id, fps=30.0):
 def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0):
     """
     Classify a shot as 2pt, 3pt, or ft based on normalized court position.
+
+    NOTE: Coordinates are normalized to 0-1 based on video frame. The basket
+    position is approximate. For junior high games, most shots are 2pt since
+    the 3pt line is closer to the basket.
     """
+    # Clamp to valid range
+    court_x = max(0, min(court_x, 1.0))
+    court_y = max(0, min(court_y, 1.0))
+
     dist = math.sqrt((court_x - basket_x) ** 2 + (court_y - basket_y) ** 2)
 
-    if abs(court_y - FT_ZONE_Y) < 0.05 and abs(court_x - basket_x) < 0.1:
+    # Free throw: near the free throw line, close to center
+    if abs(court_y - FT_ZONE_Y) < 0.08 and abs(court_x - basket_x) < 0.15:
         return "ft", 0.85
 
-    if dist > THREEPT_ZONE_DIST:
-        return "3pt", 0.75
+    # Three point: far from basket (threshold accounts for noisy coordinates)
+    if dist > 0.50:
+        return "3pt", 0.70
 
+    # Two point: close to basket
     return "2pt", 0.80
 
 
 def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     """
     Classify all shot events for a game.
-    Matches events to detections by timestamp proximity (not tracker_id).
+    Uses a single batch query to find nearest person detection per shot event.
     """
     print(f"[Shots] Classifying shots for game {game_id}")
 
+    # Single query: get all shot events with nearest person detection
     shot_events = conn.execute("""
         SELECT e.id as event_id, e.player, e.event_type,
-               e.timestamp_ms, e.details_json
+               e.timestamp_ms, e.details_json,
+               d.x_center, d.y_center
         FROM events e
+        LEFT JOIN (
+            SELECT d2.game_id, d2.timestamp_ms as det_ts,
+                   d2.x_center, d2.y_center,
+                   e2.id as eid,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY e2.id ORDER BY ABS(d2.timestamp_ms - e2.timestamp_ms)
+                   ) as rn
+            FROM events e2
+            JOIN detections d2 ON d2.game_id = e2.game_id
+                AND d2.object_class = 'person'
+                AND ABS(d2.timestamp_ms - e2.timestamp_ms) < 2000
+            WHERE e2.game_id = ?
+              AND e2.event_type IN ('shot', 'make', 'miss')
+        ) d ON d.eid = e.id AND d.rn = 1
         WHERE e.game_id = ?
           AND e.event_type IN ('shot', 'make', 'miss')
-    """, (game_id,)).fetchall()
+    """, (game_id, game_id)).fetchall()
 
     if not shot_events:
         print("[Shots] No shot events found")
@@ -125,22 +152,14 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     for event in shot_events:
         shot_result = "make" if event["event_type"] == "make" else "miss"
 
-        # Find closest person detection by timestamp
-        det = conn.execute("""
-            SELECT x_center, y_center
-            FROM detections
-            WHERE game_id = ? AND object_class = 'person'
-              AND ABS(timestamp_ms - ?) < 2000
-            ORDER BY ABS(timestamp_ms - ?) ASC
-            LIMIT 1
-        """, (game_id, event["timestamp_ms"], event["timestamp_ms"])).fetchone()
-
         court_x = None
         court_y = None
-        if det and det["x_center"] is not None:
-            court_x = det["x_center"] / float(video_width)
-            court_y = det["y_center"] / float(video_height)
-            shot_type, confidence = classify_shot_type(court_x, court_y)
+        if event["x_center"] is not None:
+            cx = max(0, min(event["x_center"], video_width)) / float(video_width)
+            cy = max(0, min(event["y_center"], video_height)) / float(video_height)
+            court_x = cx
+            court_y = cy
+            shot_type, confidence = classify_shot_type(cx, cy)
         else:
             details = {}
             if event["details_json"]:
@@ -163,7 +182,6 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
             "timestamp_ms": event["timestamp_ms"],
         })
 
-    # Batch insert
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO shot_classifications
@@ -244,7 +262,13 @@ def _detect_pick_and_roll(conn, game_id):
         ORDER BY timestamp_ms
     """, (game_id,)).fetchall()
 
+    last_detected_ts = -99999  # cooldown tracker
+
     for event in events:
+        # Cooldown: don't detect PnR within 30 seconds of last detection
+        if event["timestamp_ms"] - last_detected_ts < 30000:
+            continue
+
         frame = event["source_frame"] or 0
         if frame == 0:
             ts = event["timestamp_ms"] or 0
@@ -281,9 +305,9 @@ def _detect_pick_and_roll(conn, game_id):
                 "confidence": 0.45,
                 "details": {"trigger_frame": frame, "method": "heuristic_pnr"},
             })
+            last_detected_ts = event["timestamp_ms"]
 
     return plays
-
 
 def _detect_transitions(conn, game_id):
     """Detect transition/fast break plays using SQL."""
@@ -306,16 +330,17 @@ def _detect_transitions(conn, game_id):
         prev = ball_rows[i - 1]
         curr = ball_rows[i]
         frame_diff = curr["frame_number"] - prev["frame_number"]
-        if frame_diff <= 0 or frame_diff > 3:
+        if frame_diff <= 0 or frame_diff > 30:
             if current_start is not None and curr["frame_number"] - current_start >= 15:
                 segments.append((current_start, curr["frame_number"], current_start_ts, curr["timestamp_ms"]))
             current_start = None
             continue
 
         dy = abs(curr["y_center"] - prev["y_center"]) if curr["y_center"] and prev["y_center"] else 0
-        velocity = dy / frame_diff
+        velocity = dy / frame_diff  # pixels per frame
 
-        if velocity > 5.0:
+        # Fast break: ball moving very rapidly downcourt (>15 pixels/frame sustained)
+        if velocity > 15.0:
             if current_start is None:
                 current_start = prev["frame_number"]
                 current_start_ts = prev["timestamp_ms"]
@@ -376,12 +401,22 @@ def _detect_isolation(conn, game_id):
         if len(x_vals) < 4 or len(y_vals) < 4:
             continue
 
-        x_mean = sum(x_vals) / len(x_vals)
-        y_mean = sum(y_vals) / len(y_vals)
-        x_std = (sum((x - x_mean) ** 2 for x in x_vals) / len(x_vals)) ** 0.5
-        y_std = (sum((y - y_mean) ** 2 for y in y_vals) / len(y_vals)) ** 0.5
+        # Normalize to 0-1 range for std dev calculation
+        x_min, x_max = min(x_vals), max(x_vals)
+        y_min, y_max = min(y_vals), max(y_vals)
+        x_range = x_max - x_min if x_max > x_min else 1
+        y_range = y_max - y_min if y_max > y_min else 1
+        x_norm = [(x - x_min) / x_range for x in x_vals]
+        y_norm = [(y - y_min) / y_range for y in y_vals]
 
-        if x_std > 200 and y_std > 150:
+        x_mean = sum(x_norm) / len(x_norm)
+        y_mean = sum(y_norm) / len(y_norm)
+        x_std = (sum((x - x_mean) ** 2 for x in x_norm) / len(x_norm)) ** 0.5
+        y_std = (sum((y - y_mean) ** 2 for y in y_norm) / len(y_norm)) ** 0.5
+
+        # Isolation: players spread out in both directions (high spread = isolation setup)
+        # Using high thresholds since normalized std dev is typically 0.1-0.3 for normal play
+        if x_std > 0.45 and y_std > 0.35:
             ball = conn.execute("""
                 SELECT x_center, y_center, timestamp_ms
                 FROM detections
