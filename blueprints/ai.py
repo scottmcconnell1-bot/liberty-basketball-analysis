@@ -176,6 +176,89 @@ def upload_video():
     return jsonify({"status": "uploaded", "filename": filename})
 
 
+# ── Chunked Upload ──────────────────────────────────────────
+# Supports large file uploads by splitting into chunks that fit
+# within Cloudflare's ~100MB proxy limit per request.
+
+import tempfile, uuid, json as _json
+
+CHUNK_SIZE = 80 * 1024 * 1024  # 80 MB per chunk (under Cloudflare limit)
+
+
+@ai_bp.route("/api/upload_chunk", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def upload_chunk():
+    """Receive a single chunk of a file upload."""
+    upload_id = request.form.get("upload_id")
+    chunk_index = request.form.get("chunk_index", type=int)
+    total_chunks = request.form.get("total_chunks", type=int)
+    filename = request.form.get("filename", "video.mp4")
+    opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+
+    if not upload_id:
+        return jsonify({"error": "Missing upload_id"}), 400
+    if chunk_index is None or total_chunks is None:
+        return jsonify({"error": "Missing chunk_index or total_chunks"}), 400
+    if "file" not in request.files:
+        return jsonify({"error": "No file chunk provided"}), 400
+
+    chunk_dir = os.path.join(tempfile.gettempdir(), "liberty_uploads", upload_id)
+    os.makedirs(chunk_dir, exist_ok=True)
+
+    # Save chunk
+    chunk_file = request.files["file"]
+    chunk_path = os.path.join(chunk_dir, f"chunk_{chunk_index:04d}")
+    chunk_file.save(chunk_path)
+
+    # Check if all chunks received
+    received = len([f for f in os.listdir(chunk_dir) if f.startswith("chunk_")])
+
+    if received == total_chunks:
+        # All chunks received — reassemble
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = secure_filename(filename)
+        stem, ext = os.path.splitext(safe_name)
+        stored_filename = f"{stem}_{ts}{ext}"
+        dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
+
+        with open(dest, "wb") as outfile:
+            for i in range(total_chunks):
+                chunk_path = os.path.join(chunk_dir, f"chunk_{i:04d}")
+                with open(chunk_path, "rb") as infile:
+                    outfile.write(infile.read())
+                os.remove(chunk_path)
+
+        os.rmdir(chunk_dir)
+
+        file_size = os.path.getsize(dest)
+
+        # Save to DB
+        db = get_db()
+        game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
+        prior = db.execute(
+            "SELECT id, stored_filename, upload_timestamp FROM videos WHERE original_filename=? ORDER BY id DESC LIMIT 1",
+            (safe_name,),
+        ).fetchone()
+        is_dup = prior is not None
+        dup_of_id = prior["id"] if prior else None
+
+        db.execute(
+            """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
+                                   opponent, game_id, is_duplicate, duplicate_of_id)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (safe_name, stored_filename, dest, file_size, opponent, game_id, int(is_dup), dup_of_id),
+        )
+        db.commit()
+
+        return jsonify({
+            "status": "complete",
+            "filename": stored_filename,
+            "redirect_url": url_for("ai.upload_and_analyze") + f"?video={stored_filename}",
+        })
+
+    return jsonify({"status": "chunk_received", "received": received, "total": total_chunks})
+
+
 @ai_bp.route("/api/videos")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_videos():
