@@ -1418,3 +1418,43 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 92dcd61... # backup: 2026-05-19-1116 —  33 files changed, 37075 insertions(+), 739 deletions(-)
 [2026-05-19 11:16:39] Pull failed — attempting rebase resolution...
 HEAD is now at 6258cff backup: 2026-05-19-1015 —  6 files changed, 3354 insertions(+), 9 deletions(-) (rebased)
+[backups 17031c5] backup: 2026-05-19-1116 —  7 files changed, 2210 insertions(+) (rebased)
+ 7 files changed, 2210 insertions(+)
+ create mode 100644 blueprints/bulk_import.py
+ create mode 100644 templates/playbook_bulk_import.html
+[2026-05-19 11:16:39] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   6258cff..17031c5  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-19-1116 -> backup/2026-05-19-1116
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 11:16:44] === Backup complete: backup/2026-05-19-1116 ===
+[2026-05-19 12:18:01] === Starting backup: backup/2026-05-19-1218 ===
+[2026-05-19 12:18:01] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 12:18:03] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-19 12:18:10] Syncing current project state...
+[2026-05-19 12:18:13] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..17031c5  backups    -> origin/backups
+Rebasing (1/1)Auto-merging blueprints/bulk_import.py
+CONFLICT (add/add): Merge conflict in blueprints/bulk_import.py
+Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+Auto-merging templates/playbook_bulk_import.html
+CONFLICT (add/add): Merge conflict in templates/playbook_bulk_import.html
+error: could not apply 4dcede1... backup: 2026-05-19-1218 —  33 files changed, 38228 insertions(+), 739 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 4dcede1... # backup: 2026-05-19-1218 —  33 files changed, 38228 insertions(+), 739 deletions(-)
+[2026-05-19 12:18:14] Pull failed — attempting rebase resolution...
+HEAD is now at 17031c5 backup: 2026-05-19-1116 —  7 files changed, 2210 insertions(+) (rebased)

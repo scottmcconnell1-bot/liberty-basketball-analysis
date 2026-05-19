@@ -5,34 +5,115 @@ Bulk Playbook Import Blueprint
 Handles uploading a large PDF playbook and extracting individual plays
 with automatic categorization based on page headers.
 
+Two modes:
+1. AUTO — Parse PDF headers, auto-detect sections/plays, bulk save
+2. SPLIT — Extract pages, present review grid, user renames/categorizes each play
+
 Routes:
-- /playbook/bulk_import     — Upload page
-- /api/playbook/bulk/parse   — Parse PDF, extract pages with categories
-- /api/playbook/bulk/save    — Save selected plays to playbook
+- /playbook/bulk_import          — Upload page (both modes)
+- /api/playbook/bulk/parse        — Parse PDF, extract pages with categories (AUTO)
+- /api/playbook/bulk/split        — Split PDF into individual play PDFs (SPLIT)
+- /api/playbook/bulk/save         — Save selected plays to playbook
 """
 
 import json
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 
 from helpers import get_db, require_feature
 
 bulk_import_bp = Blueprint("bulk_import", __name__)
 
 
+def _detect_section(lines):
+    """Detect the main section from page header lines.
+
+    Format: "21-22 - Liberty Charter Patriots - {Section} - [{Subsection}]"
+    Returns the {Section} part (e.g. "BLOB", "Defense", "Offense", "Drills")
+    """
+    for line in lines:
+        if "Liberty Charter Patriots" in line and " - " in line:
+            parts = line.split("Liberty Charter Patriots - ")
+            if len(parts) >= 2:
+                remainder = parts[1].strip()
+                if " - " in remainder:
+                    section = remainder.split(" - ")[0].strip()
+                else:
+                    section = remainder
+                section = section.rstrip(" -").strip()
+                if section:
+                    return section
+    return ""
+
+
+def _detect_subsection(lines, section):
+    """Detect subsection from line 1 (for Drills section).
+
+    In Drills, line 1 is the sub-category like "Defense", "Offense - Man", etc.
+    Returns empty string for non-subsection pages.
+    """
+    if len(lines) < 2:
+        return ""
+    line1 = lines[1].strip()
+    # Skip if it's just the section name repeated
+    if line1 == section:
+        return ""
+    # Skip "Plays", "Building Blocks", "Blocks" etc
+    if line1 in ("Plays", "Building Blocks", "Blocks"):
+        return ""
+    return line1
+
+
+def _detect_play_name(lines, section, subsection):
+    """Detect the play name from page lines.
+
+    Skips: header (line 0), section/sub-section (line 1), player positions,
+    page numbers, description text.
+    """
+    skip_values = {"1", "2", "3", "4", "5", "x1", "x2", "x3", "x4", "x5",
+                   "Plays", "Building Blocks"}
+
+    for candidate in lines[2:]:
+        c = candidate.strip()
+        if not c:
+            continue
+        if c == section:
+            continue
+        if c == subsection:
+            continue
+        if c in skip_values:
+            continue
+        # Skip pure single-digit numbers (player positions)
+        if c.isdigit() and len(c) <= 1:
+            continue
+        # Skip very short single chars
+        if len(c) <= 1:
+            continue
+        # Skip description text (long sentences)
+        if len(c) > 60:
+            continue
+        # Skip section+sub patterns like "Offense - Man" (but NOT "BLOB - Hand Up")
+        if " - " in c and any(c.startswith(s + " -") for s in
+            ("Offense", "Defense", "Press Break", "Transition")):
+            continue
+        return c
+    return ""
+
+
 def _extract_pages_with_categories(pdf_path):
     """Extract all pages from a PDF with category detection from headers.
 
-    Returns a list of dicts:
+    Returns a list of play dicts, each with:
     {
-        "page_number": int,
         "section": str,       # e.g. "BLOB", "Defense", "Offense"
+        "subsection": str,    # e.g. "Offense - Man" (for Drills)
         "play_name": str,     # e.g. "Box 1", "Cross"
-        "image_url": str,
-        "image_path": str,
-        "page_count": int     # pages in this play (for multi-page plays)
+        "start_page": int,
+        "end_page": int,
+        "page_count": int,
+        "pages": [{"page_number": int, "image_url": str, "image_path": str}, ...]
     }
     """
     import fitz
@@ -41,72 +122,34 @@ def _extract_pages_with_categories(pdf_path):
     upload_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), "bulk_imports")
     os.makedirs(upload_dir, exist_ok=True)
 
-    pages = []
+    # First pass: extract all page data
+    page_data = []
     current_section = ""
-    current_play = ""
-    play_start = 0
+    current_subsection = ""
 
     for i, page in enumerate(doc):
         page_num = i + 1
         text = page.get_text().strip()
         lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-        # Detect section from header line
-        # Format: "21-22 - Liberty Charter Patriots - {Section} - [{Subsection}]"
-        # We want just the {Section} part (e.g. "BLOB", "Defense", "Offense")
-        for line in lines:
-            if "Liberty Charter Patriots" in line and " - " in line:
-                # Split on "Liberty Charter Patriots - " to get everything after
-                parts = line.split("Liberty Charter Patriots - ")
-                if len(parts) >= 2:
-                    remainder = parts[1].strip()
-                    # The section is the first token before the next " - "
-                    if " - " in remainder:
-                        new_section = remainder.split(" - ")[0].strip()
-                    else:
-                        new_section = remainder
-                    # Strip trailing dashes/spaces
-                    new_section = new_section.rstrip(" -").strip()
-                    if new_section:
-                        current_section = new_section
-                break
+        # Detect section from header
+        detected_section = _detect_section(lines)
+        if detected_section:
+            if detected_section != current_section:
+                current_subsection = ""  # reset subsection on section change
+            current_section = detected_section
 
-        # Detect play name — skip header/section lines, find the actual play title
-        # Line 0 = header, Line 1 = section name, Line 2+ = play name or sub-header
-        detected_play = ""
-        for candidate in lines[2:]:
-            # Skip if it's just the section name repeated
-            if candidate == current_section:
-                continue
-            # Skip if it's a section+sub like "Offense - Man", "Press Break"
-            if " - " in candidate and any(candidate.startswith(s) for s in
-                ("Offense", "Defense", "BLOB", "SLOB", "Press", "Transition", "Drill")):
-                continue
-            # Skip pure player positions
-            if candidate in ("1", "2", "3", "4", "5", "x1", "x2", "x3", "x4", "x5"):
-                continue
-            # Skip pure numbers
-            if candidate.isdigit():
-                continue
-            # Skip very short single chars
-            if len(candidate) <= 1:
-                continue
-            # Skip description text (long sentences with periods)
-            if len(candidate) > 60:
-                continue
-            detected_play = candidate
-            break
+        # Detect subsection (especially for Drills)
+        detected_subsection = _detect_subsection(lines, current_section)
+        if detected_subsection:
+            current_subsection = detected_subsection
 
-        # If play name changed, record the previous play's page range
-        if detected_play and detected_play != current_play:
-            if current_play and pages:
-                # Update page count for the previous play group
-                for p in pages[play_start:]:
-                    p["page_count"] = len([pp for pp in pages[play_start:]
-                                          if pp["play_name"] == current_play
-                                          and pp["section"] == current_section])
-            current_play = detected_play
-            play_start = len(pages)
+        # Detect play name
+        play_name = _detect_play_name(lines, current_section, current_subsection)
+
+        # Skip pages with no detectable play name (divider/blank pages)
+        if not play_name:
+            play_name = ""
 
         # Render page to image
         pix = page.get_pixmap(dpi=150)
@@ -114,44 +157,77 @@ def _extract_pages_with_categories(pdf_path):
         img_path = os.path.join(upload_dir, img_name)
         pix.save(img_path)
 
-        pages.append({
+        page_data.append({
             "page_number": page_num,
             "section": current_section or "Unknown",
-            "play_name": current_play or f"Page {page_num}",
+            "subsection": current_subsection,
+            "play_name": play_name,
             "image_url": f"/uploads/bulk_imports/{img_name}",
             "image_path": img_path,
-            "page_count": 1,
         })
 
     doc.close()
 
-    # Group consecutive pages with same section+play into plays
+    # Second pass: group consecutive pages
+    # For Drills section: group by subsection (e.g. all "Defense" drill pages together)
+    # For other sections: group by play name
     plays = []
-    if pages:
-        current = {
-            "section": pages[0]["section"],
-            "play_name": pages[0]["play_name"],
-            "start_page": pages[0]["page_number"],
-            "end_page": pages[0]["page_number"],
-            "page_count": 1,
-            "pages": [pages[0]],
-        }
-        for p in pages[1:]:
-            if p["section"] == current["section"] and p["play_name"] == current["play_name"]:
-                current["end_page"] = p["page_number"]
-                current["page_count"] += 1
-                current["pages"].append(p)
-            else:
-                plays.append(current)
-                current = {
-                    "section": p["section"],
-                    "play_name": p["play_name"],
-                    "start_page": p["page_number"],
-                    "end_page": p["page_number"],
-                    "page_count": 1,
-                    "pages": [p],
-                }
-        plays.append(current)
+    if not page_data:
+        return plays
+
+    current = {
+        "section": page_data[0]["section"],
+        "subsection": page_data[0]["subsection"],
+        "play_name": page_data[0]["play_name"],
+        "start_page": page_data[0]["page_number"],
+        "end_page": page_data[0]["page_number"],
+        "page_count": 1,
+        "pages": [page_data[0]],
+    }
+
+    for p in page_data[1:]:
+        is_drills = p["section"] == "Drills"
+
+        if is_drills:
+            # In Drills: group by subsection + play name
+            same_group = (
+                p["section"] == current["section"]
+                and p["subsection"] == current["subsection"]
+                and p["play_name"]
+                and p["play_name"] == current["play_name"]
+            )
+        else:
+            # In other sections: group by play name
+            same_group = (
+                p["section"] == current["section"]
+                and p["play_name"]
+                and p["play_name"] == current["play_name"]
+            )
+
+        if same_group:
+            current["end_page"] = p["page_number"]
+            current["page_count"] += 1
+            current["pages"].append(p)
+        else:
+            plays.append(current)
+            current = {
+                "section": p["section"],
+                "subsection": p["subsection"],
+                "play_name": p["play_name"],
+                "start_page": p["page_number"],
+                "end_page": p["page_number"],
+                "page_count": 1,
+                "pages": [p],
+            }
+    plays.append(current)
+
+    # Filter out unnamed divider pages (Building Blocks, etc.)
+    plays = [p for p in plays if p["play_name"]]
+
+    # For Drills: rename plays that have no name to use subsection
+    for play in plays:
+        if play["section"] == "Drills" and not play["play_name"] and play["subsection"]:
+            play["play_name"] = f"Drill — {play['subsection']}"
 
     return plays
 
@@ -171,7 +247,7 @@ def bulk_import_page():
 @bulk_import_bp.route("/api/playbook/bulk/parse", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def bulk_import_parse():
-    """Parse uploaded PDF and return extracted plays with categories."""
+    """Parse uploaded PDF and return extracted plays with categories (AUTO mode)."""
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -213,6 +289,77 @@ def bulk_import_parse():
     })
 
 
+@bulk_import_bp.route("/api/playbook/bulk/split", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def bulk_import_split():
+    """Split uploaded PDF into individual play PDFs for review (SPLIT mode).
+
+    Returns a list of play groups, each with its page images and a downloadable PDF.
+    The user reviews each group, renames it, and saves.
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    uploaded = request.files["file"]
+    if not uploaded.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    filename = uploaded.filename.lower()
+    if not filename.endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported"}), 400
+
+    # Save PDF temporarily
+    upload_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), "bulk_imports")
+    os.makedirs(upload_dir, exist_ok=True)
+    session_id = uuid.uuid4().hex
+    pdf_path = os.path.join(upload_dir, f"{session_id}.pdf")
+    uploaded.save(pdf_path)
+
+    try:
+        plays = _extract_pages_with_categories(pdf_path)
+    except Exception as e:
+        return jsonify({"error": f"Failed to parse PDF: {str(e)}"}), 400
+
+    # For each play, create a mini-PDF from its pages
+    import fitz
+    source_doc = fitz.open(pdf_path)
+
+    for play in plays:
+        # Create a new PDF with just this play's pages
+        new_doc = fitz.open()
+        for page_info in play["pages"]:
+            page_idx = page_info["page_number"] - 1
+            new_doc.insert_pdf(source_doc, from_page=page_idx, to_page=page_idx)
+
+        play_pdf_name = f"{session_id}_play_{play['start_page']:04d}.pdf"
+        play_pdf_path = os.path.join(upload_dir, play_pdf_name)
+        new_doc.save(play_pdf_path)
+        new_doc.close()
+
+        play["pdf_url"] = f"/uploads/bulk_imports/{play_pdf_name}"
+        play["pdf_path"] = play_pdf_path
+
+    source_doc.close()
+
+    # Build summary
+    sections = {}
+    for play in plays:
+        sec = play["section"]
+        if sec not in sections:
+            sections[sec] = {"count": 0, "pages": 0}
+        sections[sec]["count"] += 1
+        sections[sec]["pages"] += play["page_count"]
+
+    return jsonify({
+        "session_id": session_id,
+        "filename": uploaded.filename,
+        "total_pages": sum(p["page_count"] for p in plays),
+        "total_plays": len(plays),
+        "sections": sections,
+        "plays": plays,
+    })
+
+
 @bulk_import_bp.route("/api/playbook/bulk/save", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def bulk_import_save():
@@ -232,7 +379,7 @@ def bulk_import_save():
         name = (play_data.get("play_name") or "").strip()
         section = (play_data.get("section") or "").strip()
         playbook_id = (play_data.get("playbook_id") or default_playbook_id).strip()
-        category = _section_to_category(section)
+        category = play_data.get("category") or _section_to_category(section)
         tags = play_data.get("tags", "")
         pages = play_data.get("pages", [])
 
