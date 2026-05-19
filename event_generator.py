@@ -58,38 +58,46 @@ def find_ball_possession(detections_df, possession_threshold=None):
 
     # Auto-calculate threshold from video resolution if not provided
     if possession_threshold is None:
-        x_max = detections_df['x_center'].max() * 1.5  # estimate frame width
-        y_max = detections_df['y_center'].max() * 1.5  # estimate frame height
+        # Cap coordinates to reasonable frame bounds (YOLO boxes can overflow)
+        x_max = min(detections_df['x_center'].quantile(0.99), 3840)  # cap at 4K width
+        y_max = min(detections_df['y_center'].quantile(0.99), 2160)  # cap at 4K height
         diagonal = math.sqrt(x_max**2 + y_max**2)
         possession_threshold = diagonal * 0.10  # 10% of frame diagonal
-        print(f"INFO: Auto possession threshold: {possession_threshold:.0f}px (diagonal={diagonal:.0f}px)")
+        print(f"INFO: Auto possession threshold: {possession_threshold:.0f}px (diagonal={diagonal:.0f}px, x_max={x_max:.0f}, y_max={y_max:.0f})")
 
-    for frame, frame_df in detections_df.groupby('frame_number'):
-        ball_detection = frame_df[frame_df['class_name'] == 'ball']
-        player_detections = frame_df[frame_df['class_name'] == 'person']
+    # Vectorized possession detection — much faster than groupby loop
+    # Build per-frame ball positions (use first ball detection per frame)
+    ball_df = detections_df[detections_df['class_name'] == 'ball'][['frame_number', 'x_center', 'y_center']].copy()
+    ball_df = ball_df.rename(columns={'x_center': 'ball_x', 'y_center': 'ball_y'})
+    ball_df = ball_df.groupby('frame_number').first()  # one ball pos per frame
 
-        if ball_detection.empty or player_detections.empty:
-            continue
+    player_mask = detections_df['class_name'] == 'person'
+    if ball_df.empty or player_mask.sum() == 0:
+        print("INFO: No ball or player detections — skipping possession analysis.")
+        return detections_df
 
-        ball_coords = (ball_detection.iloc[0]['x_center'], ball_detection.iloc[0]['y_center'])
+    # Get player rows with original index preserved
+    player_df = detections_df.loc[player_mask, ['frame_number', 'x_center', 'y_center']]
 
-        player_indices = player_detections.index
-        player_coords = list(zip(player_detections['x_center'], player_detections['y_center']))
+    # Merge ball positions onto player detections by frame
+    merged = player_df.merge(ball_df, left_on='frame_number', right_index=True, how='left')
 
-        if not player_coords:
-            continue
+    # Calculate distances vectorized
+    import numpy as np
+    dx = merged['x_center'].values - merged['ball_x'].values
+    dy = merged['y_center'].values - merged['ball_y'].values
+    dists = np.sqrt(dx**2 + dy**2)
 
-        distances = distance.cdist([ball_coords], player_coords, 'euclidean')[0]
+    # Set ball_distance for all player detections using original indices
+    detections_df.loc[merged.index, 'ball_distance'] = dists
 
-        min_dist_index = distances.argmin()
-        min_dist = distances[min_dist_index]
+    # Find closest player per frame
+    merged['_dist'] = dists
+    closest_per_frame = merged.loc[merged.groupby('frame_number')['_dist'].idxmin()]
+    closest_per_frame = closest_per_frame[closest_per_frame['_dist'] <= possession_threshold]
 
-        if min_dist <= possession_threshold:
-            closest_player_original_index = player_indices[min_dist_index]
-            detections_df.loc[closest_player_original_index, 'has_ball'] = True
-
-        for i, player_index in enumerate(player_indices):
-            detections_df.loc[player_index, 'ball_distance'] = distances[i]
+    # Set has_ball for closest players within threshold
+    detections_df.loc[closest_per_frame.index, 'has_ball'] = True
 
     possession_events = detections_df[detections_df['has_ball'] == True]
     print(f"INFO: Identified {len(possession_events)} instances of player possession.")
@@ -125,14 +133,14 @@ def build_ball_track(detections_df):
     return ball_df.groupby("frame_number", as_index=False).first()
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=1):
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
     """
     Build possession segments from detections with ball possession data.
 
     Args:
         max_ball_distance: max distance for ball possession (auto-calculated if None)
         max_gap_frames: max gap between frames in a single possession segment
-        min_segment_frames: minimum frames for a valid segment (lowered to 1 for sparse ball data)
+        min_segment_frames: minimum frames for a valid segment (default 3, ~0.12s at stride=10)
     """
     players = detections_with_possession_df[detections_with_possession_df["class_name"] == "person"].copy()
     if players.empty:
@@ -262,6 +270,13 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         if index > 0:
             previous = segments[index - 1]
             if previous["player"] != segment["player"]:
+                # Only generate possession change events for segments with meaningful duration
+                # Skip noise segments (less than 0.5 seconds = ~12 frames at stride=10)
+                prev_duration = previous.get("duration_frames", 1)
+                curr_duration = segment.get("duration_frames", 1)
+                gap_frames = segment["start_frame"] - previous["end_frame"]
+
+                # Always record possession change
                 append_unique_event(
                     events,
                     seen_keys,
@@ -274,12 +289,17 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                         details={
                             "from_player": previous["player"],
                             "to_player": segment["player"],
-                            "gap_frames": segment["start_frame"] - previous["end_frame"],
+                            "gap_frames": gap_frames,
                         },
                     ),
                 )
 
-                if (index - 1) not in shot_segments:
+                # Only generate turnover+steal for ABRUPT possession changes:
+                # - Previous segment was very short (< 1 second) OR gap is tiny (< 3 frames)
+                # - AND previous segment was NOT a shot
+                # This avoids marking every pass or play development as a turnover
+                is_abrupt = (prev_duration < 12 or gap_frames < 3)
+                if is_abrupt and (index - 1) not in shot_segments:
                     append_unique_event(
                         events,
                         seen_keys,
