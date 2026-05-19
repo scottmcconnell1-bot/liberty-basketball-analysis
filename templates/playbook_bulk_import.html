@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import Playbook — Liberty Basketball{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>📥 Bulk Playbook Import</h2>
+  <p class="text-muted">Upload a PDF playbook. Each page will be extracted and categorized by its header label.</p>
+</div>
+
+<!-- Step 1: Upload -->
+<div class="card" id="upload-card">
+  <h3 style="margin-bottom:12px;">1. Upload Playbook PDF</h3>
+  <div id="bulk-dropzone"
+       style="border:2px dashed #d1d5db;border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:border-color 0.2s;"
+       onclick="document.getElementById('bulk-file').click()">
+    <div style="font-size:2rem;margin-bottom:8px;">📄</div>
+    <div style="font-weight:600;margin-bottom:4px;">Drop PDF here or click to browse</div>
+    <div class="text-muted" style="font-size:0.85rem;">Large files supported — each page becomes a play step</div>
+    <input type="file" id="bulk-file" accept=".pdf" style="display:none;" onchange="handleBulkUpload(this)">
+  </div>
+  <div id="bulk-status" style="margin-top:8px;font-size:0.85rem;"></div>
+</div>
+
+<!-- Step 2: Review & Categorize (hidden until parsed) -->
+<div id="review-section" style="display:none;">
+  <div class="card">
+    <h3 style="margin-bottom:8px;">2. Review Extracted Plays</h3>
+    <p class="text-muted" style="font-size:0.85rem;margin-bottom:12px;">
+      Each play was auto-categorized from its page header. Uncheck any plays you don't want to import.
+      You can change categories and assign a playbook.
+    </p>
+
+    <!-- Summary stats -->
+    <div id="bulk-summary" style="margin-bottom:16px;"></div>
+
+    <!-- Default playbook selector -->
+    <div style="margin-bottom:16px;padding:12px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;">
+      <label style="font-weight:600;font-size:0.85rem;">Default Playbook for all plays:</label>
+      <select class="form-control" id="bulk-default-playbook" style="margin-top:4px;width:auto;">
+        <option value="">— None (import without playbook) —</option>
+        {% for pb in playbooks %}
+        <option value="{{ pb.id }}">{{ pb.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Section tabs -->
+    <div id="section-tabs" style="margin-bottom:12px;"></div>
+
+    <!-- Plays list -->
+    <div id="plays-list"></div>
+  </div>
+
+  <!-- Step 3: Save -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">3. Import Plays</h3>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-primary" id="btn-save-bulk" onclick="saveBulkPlays()">
+        💾 Import <span id="selected-count">0</span> Plays
+      </button>
+      <button class="btn btn-secondary" onclick="selectAll(true)">Select All</button>
+      <button class="btn btn-secondary" onclick="selectAll(false)">Deselect All</button>
+      <a class="btn btn-secondary" href="{{ url_for('playbook.playbook_list') }}">Cancel</a>
+    </div>
+    <div id="bulk-save-status" style="margin-top:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let bulkData = null;  // parsed PDF data
+
+function handleBulkUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('bulk-status');
+  status.innerHTML = '<span style="color:#2563eb;">⏳ Uploading and parsing PDF…</span>';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/api/playbook/bulk/parse', {
+    method: 'POST',
+    body: formData,
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      status.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error + '</span>';
+      return;
+    }
+    bulkData = data;
+    status.innerHTML = '<span style="color:#16a34a;">✅ Parsed ' + data.total_pages + ' pages → ' + data.total_plays + ' plays found</span>';
+    renderReview();
+  })
+  .catch(err => {
+    status.innerHTML = '<span style="color:#dc2626;">❌ Upload failed: ' + err.message + '</span>';
+  });
+}
+
+function renderReview() {
+  document.getElementById('review-section').style.display = 'block';
+
+  // Summary
+  const sections = bulkData.sections;
+  let summaryHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;">';
+  for (const [sec, info] of Object.entries(sections)) {
+    summaryHtml += '<span style="background:#e0e7ff;color:#3730a3;padding:4px 12px;border-radius:999px;font-size:0.8rem;font-weight:600;">';
+    summaryHtml += sec + ': ' + info.count + ' plays (' + info.pages + ' pages)</span>';
+  }
+  summaryHtml += '</div>';
+  document.getElementById('bulk-summary').innerHTML = summaryHtml;
+
+  // Section tabs
+  const sectionNames = Object.keys(sections);
+  let tabsHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">';
+  sectionNames.forEach((sec, i) => {
+    const active = i === 0 ? 'background:#01696f;color:#fff;' : 'background:#f3f4f6;color:#374151;';
+    tabsHtml += '<button class="btn btn-sm section-tab" data-section="' + sec + '" style="' + active + '" onclick="showSection(\'' + sec + '\')">' + sec + ' (' + sections[sec].count + ')</button>';
+  });
+  tabsHtml += '</div>';
+  document.getElementById('section-tabs').innerHTML = tabsHtml;
+
+  // Render first section
+  showSection(sectionNames[0]);
+
+  updateSelectedCount();
+}
+
+function showSection(section) {
+  // Update tab styles
+  document.querySelectorAll('.section-tab').forEach(tab => {
+    if (tab.dataset.section === section) {
+      tab.style.background = '#01696f';
+      tab.style.color = '#fff';
+    } else {
+      tab.style.background = '#f3f4f6';
+      tab.style.color = '#374151';
+    }
+  });
+
+  // Render plays for this section
+  const plays = bulkData.plays.filter(p => p.section === section);
+  let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+
+  plays.forEach((play, i) => {
+    const globalIdx = bulkData.plays.indexOf(play);
+    const thumb = play.pages[0] ? play.pages[0].image_url : '';
+    const pageRange = play.page_count > 1
+      ? 'Pages ' + play.start_page + '–' + play.end_page
+      : 'Page ' + play.start_page;
+
+    html += '<div class="play-card" style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e5e7eb;border-radius:8px;" data-idx="' + globalIdx + '">';
+    html += '<input type="checkbox" class="play-checkbox" checked onchange="updateSelectedCount()" style="width:18px;height:18px;flex-shrink:0;">';
+    if (thumb) {
+      html += '<img src="' + thumb + '" style="width:60px;height:60px;object-fit:contain;border-radius:4px;border:1px solid #d1d5db;flex-shrink:0;">';
+    }
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-weight:600;font-size:0.9rem;">' + escapeHtml(play.play_name) + '</div>';
+    html += '<div style="font-size:0.75rem;color:#6b7280;">' + pageRange + ' • ' + play.page_count + ' page' + (play.page_count > 1 ? 's' : '') + '</div>';
+    html += '</div>';
+    html += '<select class="form-control play-category" data-idx="' + globalIdx + '" style="width:auto;font-size:0.8rem;padding:4px 8px;">';
+    html += '<option value="offense"' + (play.section.toLowerCase().includes('offense') ? ' selected' : '') + '>Offense</option>';
+    html += '<option value="defense"' + (play.section.toLowerCase().includes('defense') ? ' selected' : '') + '>Defense</option>';
+    html += '<option value="out_of_bounds"' + (play.section.toLowerCase().includes('blob') || play.section.toLowerCase().includes('slob') ? ' selected' : '') + '>Out of Bounds</option>';
+    html += '<option value="press"' + (play.section.toLowerCase().includes('press') ? ' selected' : '') + '>Press</option>';
+    html += '<option value="transition"' + (play.section.toLowerCase().includes('transition') ? ' selected' : '') + '>Transition</option>';
+    html += '<option value="special"' + (play.section.toLowerCase().includes('drill') ? ' selected' : '') + '>Drill</option>';
+    html += '</select>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+  document.getElementById('plays-list').innerHTML = html;
+}
+
+function selectAll(checked) {
+  document.querySelectorAll('.play-checkbox').forEach(cb => cb.checked = checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const count = document.querySelectorAll('.play-checkbox:checked').length;
+  document.getElementById('selected-count').textContent = count;
+}
+
+function saveBulkPlays() {
+  const btn = document.getElementById('btn-save-bulk');
+  const status = document.getElementById('bulk-save-status');
+  const defaultPlaybook = document.getElementById('bulk-default-playbook').value;
+
+  // Gather selected plays
+  const plays = [];
+  document.querySelectorAll('.play-card').forEach(card => {
+    const checkbox = card.querySelector('.play-checkbox');
+    if (!checkbox.checked) return;
+    const idx = parseInt(card.dataset.idx);
+    const play = bulkData.plays[idx];
+    const category = card.querySelector('.play-category').value;
+    plays.push({
+      play_name: play.play_name,
+      section: play.section,
+      category: category,
+      playbook_id: defaultPlaybook,
+      pages: play.pages,
+    });
+  });
+
+  if (plays.length === 0) {
+    status.innerHTML = '<span style="color:#dc2626;">❌ No plays selected</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  status.innerHTML = '<span style="color:#2563eb;">⏳ Saving ' + plays.length + ' plays…</span>';
+
+  fetch('/api/playbook/bulk/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({plays: plays, playbook_id: defaultPlaybook}),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.errors && data.errors.length > 0) {
+      status.innerHTML = '<span style="color:#dc2626;">⚠️ Saved ' + data.saved_count + ' plays. Errors: ' + data.errors.join('; ') + '</span>';
+    } else {
+      status.innerHTML = '<span style="color:#16a34a;">✅ Successfully imported ' + data.saved_count + ' plays!</span>';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '💾 Import <span id="selected-count">' + plays.length + '</span> Plays';
+  })
+  .catch(err => {
+    status.innerHTML = '<span style="color:#dc2626;">❌ Save failed: ' + err.message + '</span>';
+    btn.disabled = false;
+    btn.innerHTML = '💾 Import <span id="selected-count">0</span> Plays';
+  });
+}
+
+// Drag-and-drop
+const dropzone = document.getElementById('bulk-dropzone');
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#2563eb'; });
+dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = '#d1d5db'; });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.style.borderColor = '#d1d5db';
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    const input = document.getElementById('bulk-file');
+    input.files = files;
+    handleBulkUpload(input);
+  }
+});
+</script>
+{% endblock %}
