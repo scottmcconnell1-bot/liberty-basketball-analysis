@@ -52,6 +52,7 @@ def _detect_subsection(lines, section):
     """Detect subsection from line 1 (for Drills section).
 
     In Drills, line 1 is the sub-category like "Defense", "Offense - Man", etc.
+    Returns empty string for non-subsection pages.
     """
     if len(lines) < 2:
         return ""
@@ -59,8 +60,8 @@ def _detect_subsection(lines, section):
     # Skip if it's just the section name repeated
     if line1 == section:
         return ""
-    # Skip "Plays", "Building Blocks" etc
-    if line1 in ("Plays", "Building Blocks"):
+    # Skip "Plays", "Building Blocks", "Blocks" etc
+    if line1 in ("Plays", "Building Blocks", "Blocks"):
         return ""
     return line1
 
@@ -134,6 +135,8 @@ def _extract_pages_with_categories(pdf_path):
         # Detect section from header
         detected_section = _detect_section(lines)
         if detected_section:
+            if detected_section != current_section:
+                current_subsection = ""  # reset subsection on section change
             current_section = detected_section
 
         # Detect subsection (especially for Drills)
