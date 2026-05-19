@@ -68,6 +68,9 @@
 #film-tool-root .btn-ghost {
     background: transparent;
     box-shadow: none;
+    padding: .25rem .4rem;
+    min-height: 28px;
+    font-size: .75rem;
 }
 
 #film-tool-root .btn-danger {
@@ -288,7 +291,7 @@
 }
 #film-tool-root .film-review-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(320px, .95fr);
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, .95fr);
     gap: var(--space-4);
     align-items: start;
     margin-top: .75rem;

@@ -192,18 +192,6 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
 
     detections_df['cluster_id'] = detections_df['cluster_id'].fillna(-1).astype(int)
     return detections_df
-    person_coords = detections_df.loc[person_mask, ['x_center', 'y_center']].values
-    # Handle NaN coords
-    valid_coords = ~np.isnan(person_coords).any(axis=1)
-    clusters = np.full(len(person_coords), -1)
-    if valid_coords.any():
-        clusters[valid_coords] = kmeans.predict(person_coords[valid_coords])
-    detections_df.loc[person_mask, 'cluster_id'] = clusters
-
-    # Non-person detections get cluster_id = -1
-    detections_df['cluster_id'] = detections_df['cluster_id'].fillna(-1).astype(int)
-
-    return detections_df
 
 
 def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=30):
