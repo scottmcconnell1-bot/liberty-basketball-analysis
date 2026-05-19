@@ -890,3 +890,42 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply f9c915d... # backup: 2026-05-18-1957 —  17 files changed, 17556 insertions(+), 312 deletions(-)
 [2026-05-18 19:58:22] Pull failed — attempting rebase resolution...
 HEAD is now at c0cbd57 backup: 2026-05-18-1856 —  2 files changed, 934 insertions(+) (rebased)
+[backups 165f802] backup: 2026-05-18-1957 —  4 files changed, 813 insertions(+), 26 deletions(-) (rebased)
+ 4 files changed, 813 insertions(+), 26 deletions(-)
+ create mode 100644 scripts/regenerate_events.py
+[2026-05-18 19:58:22] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   c0cbd57..165f802  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-18-1957 -> backup/2026-05-18-1957
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 19:58:26] === Backup complete: backup/2026-05-18-1957 ===
+[2026-05-18 20:59:42] === Starting backup: backup/2026-05-18-2059 ===
+[2026-05-18 20:59:42] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-18 20:59:43] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-18 20:59:51] Syncing current project state...
+[2026-05-18 21:00:08] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..165f802  backups    -> origin/backups
+Rebasing (1/1)Auto-merging event_generator.py
+CONFLICT (content): Merge conflict in event_generator.py
+Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+Auto-merging scripts/regenerate_events.py
+CONFLICT (add/add): Merge conflict in scripts/regenerate_events.py
+error: could not apply cb2e92c... backup: 2026-05-18-2059 —  18 files changed, 19036 insertions(+), 644 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply cb2e92c... # backup: 2026-05-18-2059 —  18 files changed, 19036 insertions(+), 644 deletions(-)
+[2026-05-18 21:00:10] Pull failed — attempting rebase resolution...
+HEAD is now at 165f802 backup: 2026-05-18-1957 —  4 files changed, 813 insertions(+), 26 deletions(-) (rebased)

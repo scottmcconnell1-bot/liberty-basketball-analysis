@@ -82,22 +82,23 @@ def find_ball_possession(detections_df, possession_threshold=None):
     # Merge ball positions onto player detections by frame
     merged = player_df.merge(ball_df, left_on='frame_number', right_index=True, how='left')
 
-    # Calculate distances vectorized
+    # Calculate distances vectorized (NaN ball pos = inf distance)
     import numpy as np
     dx = merged['x_center'].values - merged['ball_x'].values
     dy = merged['y_center'].values - merged['ball_y'].values
     dists = np.sqrt(dx**2 + dy**2)
+    dists = np.where(np.isnan(dists), np.inf, dists)
 
     # Set ball_distance for all player detections using original indices
     detections_df.loc[merged.index, 'ball_distance'] = dists
 
-    # Find closest player per frame
+    # Find closest player per frame (only frames with valid ball data)
     merged['_dist'] = dists
-    closest_per_frame = merged.loc[merged.groupby('frame_number')['_dist'].idxmin()]
-    closest_per_frame = closest_per_frame[closest_per_frame['_dist'] <= possession_threshold]
-
-    # Set has_ball for closest players within threshold
-    detections_df.loc[closest_per_frame.index, 'has_ball'] = True
+    valid = merged[merged['_dist'] < np.inf].copy()
+    if not valid.empty:
+        closest_per_frame = valid.loc[valid.groupby('frame_number')['_dist'].idxmin()]
+        closest_per_frame = closest_per_frame[closest_per_frame['_dist'] <= possession_threshold]
+        detections_df.loc[closest_per_frame.index, 'has_ball'] = True
 
     possession_events = detections_df[detections_df['has_ball'] == True]
     print(f"INFO: Identified {len(possession_events)} instances of player possession.")
@@ -133,9 +134,57 @@ def build_ball_track(detections_df):
     return ball_df.groupby("frame_number", as_index=False).first()
 
 
+def _cluster_players_spatially(detections_df, n_clusters=10):
+    """
+    Cluster person detections into stable player slots by spatial position.
+
+    YOLO tracker_ids are unstable (median 2-frame lifespan), so we can't use
+    them to identify players across frames. Instead, we cluster all person
+    detections by (x_center, y_center) into n_clusters groups, then assign
+    each detection to its nearest cluster center. This gives us stable
+    "player slots" that persist across frames.
+
+    Returns: DataFrame with added 'cluster_id' column.
+    """
+    import numpy as np
+    from sklearn.cluster import KMeans
+
+    persons = detections_df[detections_df['class_name'] == 'person'].copy()
+    if persons.empty:
+        detections_df['cluster_id'] = -1
+        return detections_df
+
+    # Sample detections for clustering (use all if manageable)
+    sample = persons[['x_center', 'y_center']].dropna()
+    if len(sample) > 50000:
+        sample = sample.sample(50000, random_state=42)
+
+    # KMeans clustering on spatial positions
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    kmeans.fit(sample.values)
+
+    # Assign ALL person detections to nearest cluster
+    person_mask = detections_df['class_name'] == 'person'
+    person_coords = detections_df.loc[person_mask, ['x_center', 'y_center']].values
+    # Handle NaN coords
+    valid_coords = ~np.isnan(person_coords).any(axis=1)
+    clusters = np.full(len(person_coords), -1)
+    if valid_coords.any():
+        clusters[valid_coords] = kmeans.predict(person_coords[valid_coords])
+    detections_df.loc[person_mask, 'cluster_id'] = clusters
+
+    # Non-person detections get cluster_id = -1
+    detections_df['cluster_id'] = detections_df['cluster_id'].fillna(-1).astype(int)
+
+    return detections_df
+
+
 def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
     """
     Build possession segments from detections with ball possession data.
+
+    Uses spatial clustering (cluster_id) instead of tracker_id for player identity,
+    since YOLO tracker_ids are unstable at imgsz=320.
 
     Args:
         max_ball_distance: max distance for ball possession (auto-calculated if None)
@@ -146,9 +195,12 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     if players.empty:
         return []
 
-    if "tracker_id" in players.columns and players["tracker_id"].notna().any():
-        players["owner_key"] = players["tracker_id"].fillna(-1).astype(int).astype(str)
+    # Use cluster_id as owner_key (stable spatial identity)
+    # Fall back to spatial grid if cluster_id not available
+    if "cluster_id" in players.columns and (players["cluster_id"] >= 0).any():
+        players["owner_key"] = players["cluster_id"].astype(str)
     else:
+        # Fallback: spatial grid bucketing (60x60 pixel cells)
         players["owner_key"] = (
             (players["x_center"] // 60).astype(int).astype(str) + "_" +
             (players["y_center"] // 60).astype(int).astype(str)
@@ -481,7 +533,14 @@ def main(game_id, db_path):
         ball_count_after = len(detections_df[detections_df['class_name'] == 'ball'])
         print(f"INFO: Ball detections: {ball_count_before} → {ball_count_after} (after interpolation)")
 
-        # Step 2: Determine who has the ball in each frame
+        # Step 2: Cluster players spatially (tracker_ids are unstable at imgsz=320)
+        # This must happen BEFORE possession analysis so we have stable player identities
+        print("INFO: Clustering players spatially...")
+        detections_df = _cluster_players_spatially(detections_df, n_clusters=10)
+        n_clusters_found = detections_df.loc[detections_df['class_name'] == 'person', 'cluster_id'].nunique()
+        print(f"INFO: Found {n_clusters_found} player clusters")
+
+        # Step 3: Determine who has the ball in each frame
         detections_with_possession_df = find_ball_possession(detections_df)
 
         generator_mode = ai_settings.get("event_generator_mode", "legacy")
@@ -512,12 +571,7 @@ def main(game_id, db_path):
 
 def _interpolate_ball(detections_df):
     """
-    Interpolate ball positions between anchor frames.
-
-    Ball detection only runs on anchor frames (every N frames), so we only
-    see the ball a few times per possession. This function estimates ball
-    positions on frames between anchor detections using linear interpolation,
-    giving us ball positions on every frame that has person detections.
+    Interpolate ball positions between anchor frames using vectorized numpy.
     """
     ball_df = detections_df[detections_df['class_name'] == 'ball'].sort_values('frame_number')
     person_df = detections_df[detections_df['class_name'] == 'person'].sort_values('frame_number')
@@ -525,57 +579,62 @@ def _interpolate_ball(detections_df):
     if len(ball_df) < 2 or person_df.empty:
         return detections_df
 
-    person_frames = set(person_df['frame_number'].values)
-    ball_frames = set(ball_df['frame_number'].values)
+    # Build sorted anchor arrays
+    import numpy as np
+    anchor_frames = ball_df['frame_number'].values.astype(float)
+    anchor_x = ball_df['x_center'].values.astype(float)
+    anchor_y = ball_df['y_center'].values.astype(float)
 
-    # Build anchor positions
-    anchor_frames = sorted(ball_df['frame_number'].values)
-    anchor_positions = {}
-    for _, row in ball_df.iterrows():
-        anchor_positions[row['frame_number']] = (row['x_center'], row['y_center'])
+    # Person frames that need interpolation (not already ball frames)
+    ball_frame_set = set(anchor_frames.astype(int))
+    person_only = person_df[~person_df['frame_number'].isin(ball_frame_set)].copy()
+    if person_only.empty:
+        return detections_df
 
-    # Interpolate for person-only frames
-    new_rows = []
-    for frame in person_frames:
-        if frame in ball_frames:
-            continue
+    person_frames = person_only['frame_number'].values.astype(float)
 
-        # Find nearest anchor frames
-        before = None
-        after = None
-        for af in anchor_frames:
-            if af <= frame:
-                before = af
-            if af >= frame and after is None:
-                after = af
+    # Use searchsorted to find surrounding anchors for ALL person frames at once
+    idx = np.searchsorted(anchor_frames, person_frames, side='right')
+    idx = np.clip(idx, 1, len(anchor_frames) - 1)
+    before_idx = idx - 1
+    after_idx = idx
 
-        if before is not None and after is not None and before != after:
-            t = (frame - before) / (after - before)
-            bx, by = anchor_positions[before]
-            ax, ay = anchor_positions[after]
-            ix = bx + t * (ax - bx)
-            iy = by + t * (ay - by)
+    before_frames = anchor_frames[before_idx]
+    after_frames = anchor_frames[after_idx]
 
-            # Get timestamp from person detection
-            person_row = person_df[person_df['frame_number'] == frame]
-            ts = person_row['timestamp_ms'].values[0] if len(person_row) > 0 and 'timestamp_ms' in person_row.columns else 0
+    # Only interpolate where before != after (valid range)
+    valid = before_frames != after_frames
+    if not valid.any():
+        return detections_df
 
-            new_rows.append({
-                'frame_number': frame,
-                'x_center': ix,
-                'y_center': iy,
-                'class_name': 'ball',
-                'confidence': 0.3,
-                'object_class': 'ball',
-                'timestamp_ms': ts,
-                'width': ball_df['width'].mean() if 'width' in ball_df.columns else 20,
-                'height': ball_df['height'].mean() if 'height' in ball_df.columns else 20,
-                'tracker_id': None,
-            })
+    t = np.zeros(len(person_frames))
+    t[valid] = (person_frames[valid] - before_frames[valid]) / (after_frames[valid] - before_frames[valid])
 
-    if new_rows:
-        interp_df = pd.DataFrame(new_rows)
-        detections_df = pd.concat([detections_df, interp_df], ignore_index=True)
-        detections_df = detections_df.sort_values(['frame_number', 'class_name']).reset_index(drop=True)
+    ix = anchor_x[before_idx] + t * (anchor_x[after_idx] - anchor_x[before_idx])
+    iy = anchor_y[before_idx] + t * (anchor_y[after_idx] - anchor_y[before_idx])
 
-    return detections_df
+    # Build new rows for interpolated ball positions
+    mean_w = ball_df['width'].mean() if 'width' in ball_df.columns else 20
+    mean_h = ball_df['height'].mean() if 'height' in ball_df.columns else 20
+
+    new_data = {
+        'frame_number': person_only['frame_number'].values,
+        'x_center': ix.astype(int),
+        'y_center': iy.astype(int),
+        'class_name': 'ball',
+        'confidence': 0.3,
+        'object_class': 'ball',
+        'timestamp_ms': person_only['timestamp_ms'].values,
+        'width': int(mean_w),
+        'height': int(mean_h),
+        'tracker_id': -1,
+        'ball_distance': 0.0,
+        'has_ball': False,
+    }
+    new_rows = pd.DataFrame(new_data)
+
+    # Only keep valid interpolations
+    new_rows = new_rows[valid]
+
+    result = pd.concat([detections_df, new_rows], ignore_index=True)
+    return result

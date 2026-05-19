@@ -3,6 +3,7 @@
 import sqlite3
 import cv2
 import sys
+import time
 
 game_id = 'adrian_20260228_semifinal'
 db_path = 'film_analysis.db'
@@ -15,8 +16,10 @@ conn.close()
 
 # Step 1: Regenerate events with fixed logic
 print('=== Event Generation (fixed) ===', flush=True)
+t0 = time.time()
 from event_generator import main as generate_events
 generate_events(game_id, db_path)
+print(f'Event generation took {time.time()-t0:.1f}s', flush=True)
 
 # Step 2: Run enhanced analysis
 print('=== Enhanced Analysis ===', flush=True)
