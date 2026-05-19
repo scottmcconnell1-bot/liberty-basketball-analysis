@@ -134,15 +134,17 @@ def build_ball_track(detections_df):
     return ball_df.groupby("frame_number", as_index=False).first()
 
 
-def _cluster_players_spatially(detections_df, n_clusters=10):
+def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=None):
     """
     Cluster person detections into stable player slots by spatial position.
 
     YOLO tracker_ids are unstable (median 2-frame lifespan), so we can't use
     them to identify players across frames. Instead, we cluster all person
     detections by (x_center, y_center) into n_clusters groups, then assign
-    each detection to its nearest cluster center. This gives us stable
-    "player slots" that persist across frames.
+    each detection to its nearest cluster center.
+
+    If conn and game_id are provided, writes cluster assignments back to the
+    detections table so enhanced analysis can use them.
 
     Returns: DataFrame with added 'cluster_id' column.
     """
@@ -154,7 +156,7 @@ def _cluster_players_spatially(detections_df, n_clusters=10):
         detections_df['cluster_id'] = -1
         return detections_df
 
-    # Sample detections for clustering (use all if manageable)
+    # Sample detections for clustering
     sample = persons[['x_center', 'y_center']].dropna()
     if len(sample) > 50000:
         sample = sample.sample(50000, random_state=42)
@@ -165,6 +167,31 @@ def _cluster_players_spatially(detections_df, n_clusters=10):
 
     # Assign ALL person detections to nearest cluster
     person_mask = detections_df['class_name'] == 'person'
+    person_coords = detections_df.loc[person_mask, ['x_center', 'y_center']].values
+    valid_coords = ~np.isnan(person_coords).any(axis=1)
+    clusters = np.full(len(person_coords), -1)
+    if valid_coords.any():
+        clusters[valid_coords] = kmeans.predict(person_coords[valid_coords])
+    detections_df.loc[person_mask, 'cluster_id'] = clusters
+
+    # Write cluster assignments to DB for enhanced analysis
+    if conn is not None and game_id is not None:
+        person_df = detections_df[person_mask & (detections_df['cluster_id'] >= 0)]
+        if 'id' in person_df.columns and not person_df.empty:
+            # Batch update using executemany
+            update_data = [
+                (int(row['cluster_id']), int(row['id']))
+                for _, row in person_df.iterrows()
+            ]
+            conn.executemany(
+                "UPDATE detections SET player_cluster = ? WHERE id = ?",
+                update_data
+            )
+            conn.commit()
+            print(f"INFO: Wrote cluster assignments for {len(update_data)} detections to DB")
+
+    detections_df['cluster_id'] = detections_df['cluster_id'].fillna(-1).astype(int)
+    return detections_df
     person_coords = detections_df.loc[person_mask, ['x_center', 'y_center']].values
     # Handle NaN coords
     valid_coords = ~np.isnan(person_coords).any(axis=1)
@@ -179,7 +206,7 @@ def _cluster_players_spatially(detections_df, n_clusters=10):
     return detections_df
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=30):
     """
     Build possession segments from detections with ball possession data.
 
@@ -189,7 +216,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     Args:
         max_ball_distance: max distance for ball possession (auto-calculated if None)
         max_gap_frames: max gap between frames in a single possession segment
-        min_segment_frames: minimum frames for a valid segment (default 3, ~0.12s at stride=10)
+        min_segment_frames: minimum frames for a valid segment (default 30, ~1.2s at stride=10)
     """
     players = detections_with_possession_df[detections_with_possession_df["class_name"] == "person"].copy()
     if players.empty:
@@ -535,8 +562,9 @@ def main(game_id, db_path):
 
         # Step 2: Cluster players spatially (tracker_ids are unstable at imgsz=320)
         # This must happen BEFORE possession analysis so we have stable player identities
+        # Also writes cluster assignments to DB for enhanced analysis
         print("INFO: Clustering players spatially...")
-        detections_df = _cluster_players_spatially(detections_df, n_clusters=10)
+        detections_df = _cluster_players_spatially(detections_df, n_clusters=10, conn=conn, game_id=game_id)
         n_clusters_found = detections_df.loc[detections_df['class_name'] == 'person', 'cluster_id'].nunique()
         print(f"INFO: Found {n_clusters_found} player clusters")
 
