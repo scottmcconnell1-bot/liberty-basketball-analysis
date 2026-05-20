@@ -98,16 +98,15 @@ def _enhance_stats_from_analysis(db, game_id):
         minutes = mrow["minutes_played"]
         # Find the player_id for this tracker_id in this game's detections
         player = db.execute(
-            "SELECT DISTINCT d.player_id FROM detections d "
-            "JOIN players p ON p.id = d.player_id "
-            "WHERE d.game_id=? AND d.tracker_id=? AND d.object_class='person' "
+            "SELECT DISTINCT tracker_id FROM detections "
+            "WHERE game_id=? AND tracker_id=? AND object_class='person' "
             "LIMIT 1",
             (game_id, tracker_id)
         ).fetchone()
         if player:
             db.execute(
-                "UPDATE stats SET minutes=? WHERE game_id=? AND player_id=?",
-                (minutes, game_id, player["player_id"])
+                "UPDATE stats SET minutes=? WHERE game_id=? AND tracker_id=?",
+                (minutes, game_id, tracker_id)
             )
 
     # Add shot type breakdowns from shot_classifications table
