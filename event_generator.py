@@ -194,7 +194,7 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     return detections_df
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=30):
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
     """
     Build possession segments from detections with ball possession data.
 
@@ -204,7 +204,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     Args:
         max_ball_distance: max distance for ball possession (auto-calculated if None)
         max_gap_frames: max gap between frames in a single possession segment
-        min_segment_frames: minimum frames for a valid segment (default 30, ~1.2s at stride=10)
+        min_segment_frames: minimum frames for a valid segment (default 3, ~0.8s at stride=10)
     """
     players = detections_with_possession_df[detections_with_possession_df["class_name"] == "person"].copy()
     if players.empty:
@@ -294,28 +294,25 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
     if ball_track.empty:
         return None
 
-    anchor_window = ball_track[
-        (ball_track["frame_number"] >= max(segment["start_frame"], segment["end_frame"] - 2))
-        & (ball_track["frame_number"] <= segment["end_frame"] + 6)
+    # Widen the search window — at stride=10, narrow windows miss the ball peak
+    # Look from segment start to well after segment end for the ball's highest point
+    search_window = ball_track[
+        (ball_track["frame_number"] >= segment["start_frame"])
+        & (ball_track["frame_number"] <= segment["end_frame"] + 60)
     ].copy()
-    if len(anchor_window) < 3:
+    if len(search_window) < 3:
         return None
 
-    release_window = ball_track[
-        (ball_track["frame_number"] >= max(segment["start_frame"], segment["end_frame"] - 4))
-        & (ball_track["frame_number"] <= segment["end_frame"] + 20)
-    ].copy()
-    if len(release_window) < 4:
-        return None
-
-    min_ball_row = release_window.loc[release_window["y_center"].idxmin()]
+    # Find the ball's highest point (minimum y_center) in the window
+    min_ball_row = search_window.loc[search_window["y_center"].idxmin()]
     ball_rise = float(segment["player_y_median"] - float(min_ball_row["y_center"]))
     lateral_travel = abs(float(min_ball_row["x_center"]) - float(segment["player_x_end"]))
+
     if ball_rise < min_ball_rise or lateral_travel < 10:
         return None
 
     return {
-        "timestamp_ms": segment["end_timestamp_ms"],
+        "timestamp_ms": int(min_ball_row["timestamp_ms"]),
         "peak_frame": int(min_ball_row["frame_number"]),
         "ball_rise": ball_rise,
         "lateral_travel": lateral_travel,
