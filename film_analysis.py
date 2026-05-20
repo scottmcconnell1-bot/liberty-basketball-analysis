@@ -180,7 +180,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
 
         if peak_frame is not None and player_cluster is not None:
             # 1) Try to find the nearest detection for this cluster near the peak frame
-            #    Use a wide window (±30 frames) to handle detection stride and interpolation offsets
+            #    Use a wide window (±100 frames) to handle detection stride and interpolation offsets
             det = conn.execute("""
                 SELECT x_center, y_center
                 FROM detections
@@ -189,22 +189,20 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
                   AND frame_number BETWEEN ? AND ?
                 ORDER BY ABS(frame_number - ?)
                 LIMIT 1
-            """, (game_id, player_cluster, peak_frame - 30, peak_frame + 30, peak_frame)).fetchone()
+            """, (game_id, player_cluster, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
 
             if det and det[0] is not None:
-                # Skip detections with out-of-bounds or edge coordinates (bad detections)
-                # Edge margin: detections within 10px of frame boundary are likely bad
-                EDGE_MARGIN = 10
-                if (det[0] < video_width - EDGE_MARGIN and
-                    det[1] < video_height - EDGE_MARGIN and
-                    det[0] >= 0 and det[1] >= 0):
+                # Accept detections within valid frame bounds [0, video_dimension].
+                # Coordinates at the exact boundary (e.g. x=1919 on 1920-wide) are
+                # valid — clamp them instead of rejecting with an arbitrary margin.
+                if 0 <= det[0] <= video_width and 0 <= det[1] <= video_height:
                     cx = max(0, min(det[0], video_width - 1)) / float(video_width)
                     cy = max(0, min(det[1], video_height - 1)) / float(video_height)
                     court_x = cx
                     court_y = cy
                     shot_type, confidence = classify_shot_type(cx, cy)
                 else:
-                    det = None  # Bad coords, treat as not found
+                    det = None  # Truly out of bounds, treat as not found
 
             if court_x is None:
                 # 2) Fallback: use the ball position at/near peak_frame as proxy
@@ -215,24 +213,43 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
                       AND frame_number BETWEEN ? AND ?
                     ORDER BY ABS(frame_number - ?)
                     LIMIT 1
-                """, (game_id, peak_frame - 30, peak_frame + 30, peak_frame)).fetchone()
+                """, (game_id, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
 
                 if ball and ball[0] is not None:
-                    # Also skip ball detections at the frame edge
-                    if (ball[0] < video_width - EDGE_MARGIN and
-                        ball[1] < video_height - EDGE_MARGIN and
-                        ball[0] >= 0 and ball[1] >= 0):
-                        cx = max(0, min(ball[0], video_width)) / float(video_width)
-                        cy = max(0, min(ball[1], video_height)) / float(video_height)
+                    if 0 <= ball[0] <= video_width and 0 <= ball[1] <= video_height:
+                        cx = max(0, min(ball[0], video_width - 1)) / float(video_width)
+                        cy = max(0, min(ball[1], video_height - 1)) / float(video_height)
                         court_x = cx
                         court_y = cy
                         shot_type, confidence = classify_shot_type(cx, cy)
                         confidence = min(confidence, 0.4)  # lower confidence for ball proxy
                     else:
-                        ball = None  # Bad ball coords too
-                if court_x is None:
-                    shot_type = "2pt"
-                    confidence = 0.3
+                        ball = None  # Truly out of bounds
+
+            if court_x is None:
+                # 3) Final fallback: use nearest player detection for ANY cluster
+                #    within ±100 frames of peak_frame (best-effort court position)
+                any_det = conn.execute("""
+                    SELECT x_center, y_center
+                    FROM detections
+                    WHERE game_id = ? AND object_class = 'person'
+                      AND frame_number BETWEEN ? AND ?
+                    ORDER BY ABS(frame_number - ?)
+                    LIMIT 1
+                """, (game_id, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
+
+                if any_det and any_det[0] is not None:
+                    if 0 <= any_det[0] <= video_width and 0 <= any_det[1] <= video_height:
+                        cx = max(0, min(any_det[0], video_width - 1)) / float(video_width)
+                        cy = max(0, min(any_det[1], video_height - 1)) / float(video_height)
+                        court_x = cx
+                        court_y = cy
+                        shot_type, confidence = classify_shot_type(cx, cy)
+                        confidence = min(confidence, 0.35)  # lower confidence for any-player proxy
+
+            if court_x is None:
+                shot_type = "2pt"
+                confidence = 0.3
         else:
             shot_type = "2pt"
             confidence = 0.3
@@ -248,6 +265,9 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
             "court_y": court_y,
             "timestamp_ms": event[3],
         })
+
+    # Clear existing classifications for this game to prevent duplicates
+    conn.execute("DELETE FROM shot_classifications WHERE game_id = ?", (game_id,))
 
     for r in results:
         conn.execute("""
@@ -697,14 +717,14 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
         """, (
             r["game_id"],
             r["tracker_id"],
-            0,                          # plus_minus — no longer computed
-            r["possessions"],
-            0,                          # possessions_off — not applicable
-            r["points_scored"],
-            0,                          # points_against — no longer computed
-            r["ortg"],                  # NULL if insufficient data
-            0,                          # drtg — no longer computed
-            0,                          # net_rating — no longer computed
+            r["points_scored"],         # plus_minus — best available proxy (points scored)
+            r["possessions"],           # possessions_on — ball-holder possession count
+            0,                          # possessions_off — not applicable (no team ID)
+            r["points_scored"],         # points_for — points scored by this position
+            0,                          # points_against — cannot compute without team ID
+            r["ortg"],                  # ortg — offensive rating (NULL if insufficient data)
+            None,                       # drtg — cannot compute without team ID
+            r["ortg"],                  # net_rating — best available proxy (ortg)
         ))
     conn.commit()
 

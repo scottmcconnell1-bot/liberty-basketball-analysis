@@ -290,7 +290,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=40, next_segment_start=None):
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=25, next_segment_start=None):
     """
     Detect if a shot was taken at the end of a possession segment.
 
@@ -312,7 +312,7 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=40, next_segment
     # Look slightly before segment end (ball may be released just before possession ends)
     # and forward for the ball's peak. Cap to avoid overlapping with next segment.
     window_start = max(segment["end_frame"] - 3, segment["start_frame"])
-    window_end = segment["end_frame"] + 12
+    window_end = segment["end_frame"] + 20
     if next_segment_start is not None:
         window_end = min(window_end, next_segment_start - 1)
 
@@ -336,16 +336,8 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=40, next_segment
 
     # Ball must travel laterally (not just go straight up and down)
     lateral_travel = abs(peak_x - float(segment["player_x_end"]))
-    if lateral_travel < 10:
+    if lateral_travel < 5:
         return None
-
-    # Verify arc shape: ball should be rising from the player toward the peak
-    before_peak = search_window[search_window["frame_number"] < peak_row["frame_number"]]
-    if len(before_peak) >= 1:
-        first_ball_y = before_peak.iloc[0]["y_center"]
-        if first_ball_y < peak_y:
-            # Ball starts above peak — not a shot arc
-            return None
 
     return {
         "timestamp_ms": int(peak_row["timestamp_ms"]),
@@ -396,10 +388,13 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 )
 
                 # Only generate turnover+steal for ABRUPT possession changes:
-                # - Previous segment was very short (< 1 second) OR gap is tiny (< 3 frames)
+                # - Previous segment was very short (< 6 frames) AND gap is tiny (< 2 frames)
                 # - AND previous segment was NOT a shot
+                # - AND previous segment's mean_ball_distance > 100 (ball was far from player,
+                #   suggesting a deflection/interception rather than normal play)
                 # This avoids marking every pass or play development as a turnover
-                is_abrupt = (prev_duration < 12 or gap_frames < 3)
+                prev_mean_dist = previous.get("mean_ball_distance", 0.0)
+                is_abrupt = (prev_duration < 6 and gap_frames < 2 and prev_mean_dist > 100)
                 if is_abrupt and (index - 1) not in shot_segments:
                     append_unique_event(
                         events,
