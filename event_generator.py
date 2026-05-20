@@ -510,31 +510,38 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
 
-        # Determine make/miss using ball trajectory relative to basket.
-        # After a made shot, the ball should end up near the basket (top of frame).
-        # After a missed shot, the ball rebounds away from the basket.
-        # Heuristic: look at ball position in the 30 frames after the shot peak.
-        # If the ball's minimum y (closest to basket) is below a threshold, it's a make.
+        # Determine make/miss using gap-based heuristic.
+        # At stride=10, possession segments are closely spaced. A gap of > 15 frames
+        # (~4 seconds at effective fps) after a shot suggests the other team is
+        # inbounding (make). A quick follow-up suggests a rebound (miss).
+        # Also check if the ball continues toward the basket after the peak.
         shot_result = "miss"
         if shot_info.get("peak_frame"):
             peak_frame = shot_info["peak_frame"]
-            # Look at ball positions after the shot peak (up to 30 frames)
+            # Check ball trajectory after peak
             post_peak_ball = ball_track[
                 (ball_track["frame_number"] > peak_frame) &
                 (ball_track["frame_number"] <= peak_frame + 30)
             ]
+            ball_moving_to_basket = False
             if not post_peak_ball.empty:
-                # Ball near top of frame (y < 200px on 720p) = near basket = make
                 min_y = post_peak_ball["y_center"].min()
-                if min_y < 200:
-                    shot_result = "make"
-            else:
-                # No ball data after the peak — fall back to gap-based heuristic
-                if next_segment is None or (next_gap is not None and next_gap > 60):
-                    shot_result = "make"
+                # Ball reaching top 1/3 of frame (y < 240 on 720p) = near basket
+                if min_y < 240:
+                    ball_moving_to_basket = True
+
+            # Gap to next possession segment
+            if next_segment is None:
+                # No follow-up = ball went in
+                shot_result = "make"
+            elif next_gap is not None and next_gap > 15:
+                # Longer gap = other team inbounding after make
+                shot_result = "make"
+            elif ball_moving_to_basket:
+                # Ball reached basket area
+                shot_result = "make"
         else:
-            # No peak_frame available — fall back to gap-based heuristic
-            if next_segment is None or (next_gap is not None and next_gap > 60):
+            if next_segment is None or (next_gap is not None and next_gap > 15):
                 shot_result = "make"
 
         if shot_result == "miss":
