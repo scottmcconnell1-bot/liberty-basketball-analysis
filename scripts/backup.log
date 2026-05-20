@@ -1969,3 +1969,35 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 77dc06c... # backup: 2026-05-20-0543 —  36 files changed, 40058 insertions(+), 836 deletions(-)
 [2026-05-20 05:43:34] Pull failed — attempting rebase resolution...
 HEAD is now at eda8095 backup: 2026-05-20-0441 —  4 files changed, 71 insertions(+), 43 deletions(-) (rebased)
+[backups 38c5641] backup: 2026-05-20-0543 —  1 file changed, 32 insertions(+) (rebased)
+ 1 file changed, 32 insertions(+)
+[2026-05-20 05:43:34] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   eda8095..38c5641  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-20-0543 -> backup/2026-05-20-0543
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 05:43:40] === Backup complete: backup/2026-05-20-0543 ===
+[2026-05-20 06:44:58] === Starting backup: backup/2026-05-20-0644 ===
+[2026-05-20 06:44:58] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 06:44:59] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-20 06:45:06] Syncing current project state...
+[2026-05-20 06:45:09] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..38c5641  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 2de4c71... backup: 2026-05-20-0644 —  36 files changed, 40090 insertions(+), 836 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 2de4c71... # backup: 2026-05-20-0644 —  36 files changed, 40090 insertions(+), 836 deletions(-)
+[2026-05-20 06:45:11] Pull failed — attempting rebase resolution...
+HEAD is now at 38c5641 backup: 2026-05-20-0543 —  1 file changed, 32 insertions(+) (rebased)
