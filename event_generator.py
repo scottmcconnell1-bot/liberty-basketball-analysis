@@ -294,13 +294,14 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
     if ball_track.empty:
         return None
 
-    # Widen the search window — at stride=10, narrow windows miss the ball peak
-    # Look from segment start to well after segment end for the ball's highest point
+    # Search window: ball release happens at end of possession segment
+    # Look 1-15 frames after segment end for the ball's peak (up to ~4 seconds at stride=10)
+    # Don't look before segment end (ball should be released, not caught)
     search_window = ball_track[
-        (ball_track["frame_number"] >= segment["start_frame"])
-        & (ball_track["frame_number"] <= segment["end_frame"] + 60)
+        (ball_track["frame_number"] >= segment["end_frame"] + 1)
+        & (ball_track["frame_number"] <= segment["end_frame"] + 15)
     ].copy()
-    if len(search_window) < 3:
+    if len(search_window) < 2:
         return None
 
     # Find the ball's highest point (minimum y_center) in the window
