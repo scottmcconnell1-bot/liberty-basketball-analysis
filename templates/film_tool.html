@@ -601,8 +601,8 @@
 
             <!-- Shot Summary -->
             {% if shot_summary %}
-            <div class="report-card" style="flex:1;min-width:220px;">
-              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🎯 Shot Summary</div>
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">🎯 Shot Summary</div>
               <div class="table-wrap">
                 <table>
                   <thead>
@@ -619,22 +619,35 @@
                     <tr>
                       <td>
                         {% if row.shot_type == '2pt' %}
-                          <span class="badge badge-2pt">2PT</span>
+                          <span class="ft-badge ft-badge-2pt">2PT</span>
                         {% elif row.shot_type == '3pt' %}
-                          <span class="badge badge-3pt">3PT</span>
+                          <span class="ft-badge ft-badge-3pt">3PT</span>
                         {% elif row.shot_type == 'ft' %}
-                          <span class="badge badge-ft">FT</span>
+                          <span class="ft-badge ft-badge-ft">FT</span>
                         {% else %}
-                          {{ row.shot_type }}
+                          <span class="ft-badge">{{ row.shot_type }}</span>
                         {% endif %}
                       </td>
-                      <td style="text-align:right;font-weight:600;color:var(--color-success,#22c55e);">{{ row.makes }}</td>
-                      <td style="text-align:right;color:var(--color-danger,#ef4444);">{{ row.misses }}</td>
+                      <td style="text-align:right;font-weight:600;color:#22c55e;">{{ row.makes }}</td>
+                      <td style="text-align:right;color:#ef4444;">{{ row.misses }}</td>
                       <td style="text-align:right;">{{ row.total }}</td>
                       <td style="text-align:right;font-weight:600;">{{ row.pct }}%</td>
                     </tr>
                     {% endfor %}
                   </tbody>
+                  {% set total_makes = shot_summary|sum(attribute='makes') %}
+                  {% set total_misses = shot_summary|sum(attribute='misses') %}
+                  {% set total_shots = shot_summary|sum(attribute='total') %}
+                  {% set total_pct = (total_makes / total_shots * 100) if total_shots > 0 else 0 %}
+                  <tfoot>
+                    <tr style="background:var(--color-surface-offset);font-weight:700;border-top:2px solid var(--color-divider);">
+                      <td>Total</td>
+                      <td style="text-align:right;color:#22c55e;">{{ total_makes }}</td>
+                      <td style="text-align:right;color:#ef4444;">{{ total_misses }}</td>
+                      <td style="text-align:right;">{{ total_shots }}</td>
+                      <td style="text-align:right;">{{ "%.1f"|format(total_pct) }}%</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -642,8 +655,8 @@
 
             <!-- Player Effect -->
             {% if player_effect_data %}
-            <div class="report-card" style="flex:1;min-width:220px;">
-              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">⚡ Player Effect</div>
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">⚡ Player Effect</div>
               <div class="table-wrap">
                 <table>
                   <thead>
@@ -662,11 +675,11 @@
                       <td style="text-align:right;">{{ row.points_for }}</td>
                       <td style="text-align:right;">
                         {% if row.ortg is not none %}
-                          <span style="color:{% if row.ortg > 100 %}var(--color-success,#22c55e){% elif row.ortg < 80 %}var(--color-danger,#ef4444){% else %}inherit{% endif %};">
+                          <span style="font-weight:600;color:{% if row.ortg > 100 %}#22c55e{% elif row.ortg < 80 %}#ef4444{% else %}var(--color-text){% endif %};">
                             {{ "%.1f"|format(row.ortg) }}
                           </span>
                         {% else %}
-                          N/A
+                          <span style="color:var(--color-text-muted);">N/A</span>
                         {% endif %}
                       </td>
                     </tr>
@@ -679,8 +692,8 @@
 
             <!-- Player Minutes -->
             {% if player_minutes_data %}
-            <div class="report-card" style="flex:1;min-width:180px;">
-              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">⏱ Player Minutes</div>
+            <div class="ft-report-card" style="flex:1;min-width:180px;">
+              <div class="ft-report-card-title">⏱ Player Minutes</div>
               <div class="table-wrap">
                 <table>
                   <thead>
