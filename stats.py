@@ -152,7 +152,7 @@ def get_enhanced_stats(db, game_id):
     - basic_stats: standard box score stats
     - minutes: minutes played per player
     - shot_breakdown: 2pt/3pt/FT per player
-    - player_effect: +/- per player
+    - player_effect: possessions, points scored, and offensive rating per position
     - plays: recognized plays summary
     """
     basic = aggregate_stats(db, game_id)
@@ -177,12 +177,13 @@ def get_enhanced_stats(db, game_id):
 
     # Player effect
     effects = db.execute("""
-        SELECT pe.tracker_id, pe.plus_minus, pe.possessions_on, pe.points_for,
-               pe.points_against, pe.ortg, pe.drtg, pe.net_rating, p.name
+        SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+               pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
         FROM player_effect pe
+        LEFT JOIN player_minutes pm ON pm.game_id = pe.game_id AND pm.tracker_id = pe.tracker_id
         LEFT JOIN players p ON p.tracker_id = pe.tracker_id
         WHERE pe.game_id = ?
-        ORDER BY pe.net_rating DESC
+        ORDER BY pe.ortg DESC
     """, (game_id,)).fetchall()
 
     # Plays summary
