@@ -94,30 +94,47 @@ def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
 
 # ── 2. Shot Type Classification ─────────────────────────────
 
-def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0):
+def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0, three_pt_threshold=0.50):
     """
     Classify a shot as 2pt, 3pt, or ft based on normalized court position.
-
-    NOTE: Coordinates are normalized to 0-1 based on video frame. The basket
-    position is approximate. For junior high games, most shots are 2pt since
-    the 3pt line is closer to the basket.
     """
-    # Clamp to valid range
     court_x = max(0, min(court_x, 1.0))
     court_y = max(0, min(court_y, 1.0))
-
     dist = math.sqrt((court_x - basket_x) ** 2 + (court_y - basket_y) ** 2)
 
-    # Free throw: near the free throw line, close to center
     if abs(court_y - FT_ZONE_Y) < 0.08 and abs(court_x - basket_x) < 0.15:
         return "ft", 0.85
-
-    # Three point: far from basket (threshold accounts for noisy coordinates)
-    if dist > 0.50:
+    if dist > three_pt_threshold:
         return "3pt", 0.70
-
-    # Two point: close to basket
     return "2pt", 0.80
+
+
+def _estimate_basket_position(conn, game_id):
+    """
+    Estimate basket position from 2pt make shot locations.
+    Returns (basket_x, basket_y, three_pt_threshold) in normalized coords.
+    Falls back to (0.5, 1.0, 0.50) if insufficient data.
+    """
+    rows = conn.execute("""
+        SELECT court_x, court_y
+        FROM shot_classifications
+        WHERE game_id = ? AND shot_type = '2pt' AND shot_result = 'make'
+          AND court_x IS NOT NULL AND court_y IS NOT NULL
+          AND court_x < 0.99 AND court_y < 0.99
+    """, (game_id,)).fetchall()
+    if len(rows) < 3:
+        return 0.5, 1.0, 0.50
+    xs = [r[0] for r in rows]
+    ys = [r[1] for r in rows]
+    basket_x = sum(xs) / len(xs)
+    basket_y = sum(ys) / len(ys)
+    # 2pt radius: mean distance of 2pt makes from basket
+    dists = [math.sqrt((x - basket_x)**2 + (y - basket_y)**2) for x, y in zip(xs, ys)]
+    mean_2pt_radius = sum(dists) / len(dists)
+    three_pt_threshold = mean_2pt_radius * 1.8
+    print(f"[Shots] Estimated basket at ({basket_x:.3f}, {basket_y:.3f}), "
+          f"2pt radius={mean_2pt_radius:.3f}, 3pt threshold={three_pt_threshold:.3f}")
+    return basket_x, basket_y, three_pt_threshold
 
 
 def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
@@ -140,6 +157,9 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     if not shot_events:
         print("[Shots] No shot events found")
         return []
+
+    # Estimate basket position from existing 2pt makes (or use defaults)
+    basket_x, basket_y, three_pt_threshold = _estimate_basket_position(conn, game_id)
 
     # Build a lookup of peak_frame by (timestamp_ms, player) for make/miss events
     # that don't have peak_frame in their own details. The parent shot event
@@ -200,7 +220,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
                     cy = max(0, min(det[1], video_height - 1)) / float(video_height)
                     court_x = cx
                     court_y = cy
-                    shot_type, confidence = classify_shot_type(cx, cy)
+                    shot_type, confidence = classify_shot_type(cx, cy, basket_x, basket_y, three_pt_threshold)
                 else:
                     det = None  # Truly out of bounds, treat as not found
 
@@ -221,7 +241,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
                         cy = max(0, min(ball[1], video_height - 1)) / float(video_height)
                         court_x = cx
                         court_y = cy
-                        shot_type, confidence = classify_shot_type(cx, cy)
+                        shot_type, confidence = classify_shot_type(cx, cy, basket_x, basket_y, three_pt_threshold)
                         confidence = min(confidence, 0.4)  # lower confidence for ball proxy
                     else:
                         ball = None  # Truly out of bounds
@@ -244,7 +264,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
                         cy = max(0, min(any_det[1], video_height - 1)) / float(video_height)
                         court_x = cx
                         court_y = cy
-                        shot_type, confidence = classify_shot_type(cx, cy)
+                        shot_type, confidence = classify_shot_type(cx, cy, basket_x, basket_y, three_pt_threshold)
                         confidence = min(confidence, 0.35)  # lower confidence for any-player proxy
 
             if court_x is None:

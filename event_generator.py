@@ -290,7 +290,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=25, next_segment_start=None):
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment_start=None):
     """
     Detect if a shot was taken at the end of a possession segment.
 
@@ -299,20 +299,20 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=25, next_segment
     2. Ball rises to a peak (minimum y_center in image coords = highest point)
     3. Ball falls back down
 
-    We look for this pattern in a window after the segment ends.
+    We look for this pattern in a window around the segment end.
     The window is constrained to not overlap with the next segment.
     
     min_ball_rise: minimum pixel rise from player height to ball peak.
-        Default 40px (~3-4 feet in a 1080p court view).
+        Default 15px (~1-2 feet in a 1080p court view).
     """
     if ball_track.empty:
         return None
 
-    # Search window: ball release happens at end of possession segment
-    # Look slightly before segment end (ball may be released just before possession ends)
+    # Search window: ball release happens around end of possession segment
+    # Look before segment end (ball may be released during possession)
     # and forward for the ball's peak. Cap to avoid overlapping with next segment.
-    window_start = max(segment["end_frame"] - 3, segment["start_frame"])
-    window_end = segment["end_frame"] + 20
+    window_start = max(segment["end_frame"] - 10, segment["start_frame"])
+    window_end = segment["end_frame"] + 25
     if next_segment_start is not None:
         window_end = min(window_end, next_segment_start - 1)
 
@@ -338,6 +338,14 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=25, next_segment
     lateral_travel = abs(peak_x - float(segment["player_x_end"]))
     if lateral_travel < 5:
         return None
+
+    # Verify arc shape: ball should be descending after the peak
+    after_peak = search_window[search_window["frame_number"] > peak_row["frame_number"]]
+    if len(after_peak) >= 1:
+        min_y_after = after_peak["y_center"].min()
+        # If ball continues rising after "peak", it's not a real arc
+        if min_y_after < peak_y - 5:
+            return None
 
     return {
         "timestamp_ms": int(peak_row["timestamp_ms"]),
@@ -388,13 +396,15 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 )
 
                 # Only generate turnover+steal for ABRUPT possession changes:
-                # - Previous segment was very short (< 6 frames) AND gap is tiny (< 2 frames)
+                # - Previous segment was very short (< 5 frames)
+                # - AND gap is small (< 20 frames)
                 # - AND previous segment was NOT a shot
-                # - AND previous segment's mean_ball_distance > 100 (ball was far from player,
-                #   suggesting a deflection/interception rather than normal play)
-                # This avoids marking every pass or play development as a turnover
-                prev_mean_dist = previous.get("mean_ball_distance", 0.0)
-                is_abrupt = (prev_duration < 6 and gap_frames < 2 and prev_mean_dist > 100)
+                # - AND ball was far from the previous player (suggesting deflection)
+                is_abrupt = (
+                    prev_duration <= 5
+                    and gap_frames < 20
+                    and previous.get("mean_ball_distance", 0) > 25
+                )
                 if is_abrupt and (index - 1) not in shot_segments:
                     append_unique_event(
                         events,

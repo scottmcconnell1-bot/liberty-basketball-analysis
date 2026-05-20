@@ -1911,31 +1911,29 @@ To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
 From github.com:scottmcconnell1-bot/liberty-basketball-analysis
  * branch            backups    -> FETCH_HEAD
 [2026-05-20 02:34:23] === Backup complete: backup/2026-05-20-0234 ===
-[2026-05-20 03:34:51] === Starting backup: backup/2026-05-20-0334 ===
-[2026-05-20 03:34:51] Fetching latest into local mirror...
+[2026-05-20 04:41:35] === Starting backup: backup/2026-05-20-0441 ===
+[2026-05-20 04:41:35] Fetching latest into local mirror...
 From github.com:scottmcconnell1-bot/liberty-basketball-analysis
  * branch            backups    -> FETCH_HEAD
-[2026-05-20 03:34:52] Cloning from local mirror...
+[2026-05-20 04:41:36] Cloning from local mirror...
 Cloning into '/home/monk-admin/liberty-backup-tmp'...
-[2026-05-20 03:35:02] Syncing current project state...
-[2026-05-20 03:35:05] Pulling latest from origin/backups before push...
+[2026-05-20 04:41:43] Syncing current project state...
+[2026-05-20 04:41:46] Pulling latest from origin/backups before push...
 From github.com:scottmcconnell1-bot/liberty-basketball-analysis
  * branch            backups    -> FETCH_HEAD
-   5ad362a..e2ee997  backups    -> origin/backups
-Rebasing (1/1)Auto-merging blueprints/core.py
-Auto-merging event_generator.py
+   5ad362a..ed27447  backups    -> origin/backups
+Rebasing (1/1)Auto-merging event_generator.py
 CONFLICT (content): Merge conflict in event_generator.py
 Auto-merging film_analysis.py
 CONFLICT (content): Merge conflict in film_analysis.py
 Auto-merging scripts/backup.log
 CONFLICT (content): Merge conflict in scripts/backup.log
-Auto-merging templates/film_tool.html
-error: could not apply ce35668... backup: 2026-05-20-0334 —  36 files changed, 39985 insertions(+), 829 deletions(-)
+error: could not apply 5b6d412... backup: 2026-05-20-0441 —  36 files changed, 40022 insertions(+), 836 deletions(-)
 hint: Resolve all conflicts manually, mark them as resolved with
 hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
 hint: You can instead skip this commit: run "git rebase --skip".
 hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
 hint: Disable this message with "git config set advice.mergeConflict false"
-Could not apply ce35668... # backup: 2026-05-20-0334 —  36 files changed, 39985 insertions(+), 829 deletions(-)
-[2026-05-20 03:35:07] Pull failed — attempting rebase resolution...
-HEAD is now at e2ee997 backup: 2026-05-20-0234 —  4 files changed, 212 insertions(+), 136 deletions(-) (rebased)
+Could not apply 5b6d412... # backup: 2026-05-20-0441 —  36 files changed, 40022 insertions(+), 836 deletions(-)
+[2026-05-20 04:41:47] Pull failed — attempting rebase resolution...
+HEAD is now at ed27447 backup: 2026-05-20-0334 —  6 files changed, 274 insertions(+), 41 deletions(-) (rebased)
