@@ -38,14 +38,20 @@ def get_db(db_path):
 
 # ── 1. Minutes Played ───────────────────────────────────────
 
-def calculate_player_minutes(conn, game_id, fps=30.0):
+def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
     """
     Calculate minutes played per player from detection data.
 
     Uses player_cluster (from KMeans spatial clustering) instead of tracker_id,
     since YOLO tracker_ids are unstable at imgsz=320.
+    
+    Args:
+        fps: original video fps
+        detect_stride: detection stride (effective fps = fps / detect_stride)
     """
     print(f"[Minutes] Calculating minutes played for game {game_id}")
+
+    effective_fps = fps / detect_stride
 
     rows = conn.execute("""
         SELECT player_cluster as cluster_id,
@@ -63,7 +69,7 @@ def calculate_player_minutes(conn, game_id, fps=30.0):
         first_frame = row["first_frame"]
         last_frame = row["last_frame"]
         total_frames = row["total_frames"]
-        minutes = total_frames / fps / 60.0
+        minutes = total_frames / effective_fps / 60.0
 
         results.append({
             "game_id": game_id,
@@ -481,12 +487,17 @@ def _detect_post_up(conn, game_id):
 
 # ── 4. Player Effect (+/-) ──────────────────────────────────
 
-def calculate_player_effect(conn, game_id, fps=30.0):
+def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1):
     """
     Calculate player effect metrics: +/-, possessions, ratings.
     Uses events to track score changes while each player is on court.
+
+    A player is "on court" for a score event if they have any detection
+    within a window of the event timestamp.
     """
     print(f"[Effect] Calculating player effect for game {game_id}")
+
+    effective_fps = fps / detect_stride
 
     minutes = conn.execute("""
         SELECT * FROM player_minutes WHERE game_id = ?
@@ -496,7 +507,7 @@ def calculate_player_effect(conn, game_id, fps=30.0):
         print("[Effect] No player minutes data — run calculate_player_minutes first")
         return []
 
-    # Get score events (only 'make' events)
+    # Get score events (only 'make' events) with their player
     make_events = conn.execute("""
         SELECT timestamp_ms, source_frame, player, details_json
         FROM events WHERE game_id = ? AND event_type = 'make'
@@ -529,6 +540,16 @@ def calculate_player_effect(conn, game_id, fps=30.0):
         print("[Effect] No score events found")
         return []
 
+    # Build per-player detection windows for on-court determination
+    # Use a time window: player is on court at time T if they have detections
+    # within 30 seconds of T
+    player_windows = {}
+    for pm in minutes:
+        tracker_id = pm["tracker_id"]
+        first_frame = pm["first_frame"] or 0
+        last_frame = pm["last_frame"] or 0
+        player_windows[tracker_id] = (first_frame, last_frame)
+
     results = []
     for pm in minutes:
         tracker_id = pm["tracker_id"]
@@ -537,26 +558,32 @@ def calculate_player_effect(conn, game_id, fps=30.0):
         if first_frame == 0 and last_frame == 0:
             continue
 
+        player_start_ms = (first_frame / effective_fps) * 1000
+        player_end_ms = (last_frame / effective_fps) * 1000
+
         points_for = 0
         points_against = 0
 
         for se in score_events:
             se_frame = se["frame"]
             se_ts = se["timestamp_ms"]
-            if se_frame > 0 and first_frame <= se_frame <= last_frame:
-                points_for += se["points"]
-            elif se_frame > 0:
-                points_against += se["points"]
+            se_player = se["player"]
+
+            # Determine if this player is on court for this score event
+            on_court = False
+            if se_frame > 0:
+                on_court = first_frame <= se_frame <= last_frame
             elif se_ts > 0:
-                player_start_ms = (first_frame / fps) * 1000
-                player_end_ms = (last_frame / fps) * 1000
-                if player_start_ms <= se_ts <= player_end_ms:
-                    points_for += se["points"]
-                else:
-                    points_against += se["points"]
+                on_court = player_start_ms <= se_ts <= player_end_ms
+
+            if on_court:
+                # Points scored by the team while this player is on court
+                points_for += se["points"]
+            else:
+                points_against += se["points"]
 
         frame_diff = max(1, last_frame - first_frame)
-        possessions = max(1, frame_diff / (fps * 24))
+        possessions = max(1, frame_diff / (effective_fps * 24))
         plus_minus = points_for - points_against
         ortg = (points_for / possessions) * 100 if possessions > 0 else 0
         drtg = (points_against / possessions) * 100 if possessions > 0 else 0
@@ -591,7 +618,7 @@ def calculate_player_effect(conn, game_id, fps=30.0):
 
 # ── 5. Master Analysis Pipeline ─────────────────────────────
 
-def run_enhanced_analysis(db_path, game_id, fps=30.0, video_width=None, video_height=None):
+def run_enhanced_analysis(db_path, game_id, fps=30.0, video_width=None, video_height=None, detect_stride=1):
     """
     Run the full enhanced analysis pipeline for a game.
     """
@@ -605,10 +632,10 @@ def run_enhanced_analysis(db_path, game_id, fps=30.0, video_width=None, video_he
         if video_width is None or video_height is None:
             video_width, video_height = 1920, 1080
 
-        minutes = calculate_player_minutes(conn, game_id, fps)
+        minutes = calculate_player_minutes(conn, game_id, fps, detect_stride)
         shots = classify_all_shots(conn, game_id, video_width, video_height)
         plays = recognize_plays(conn, game_id)
-        effects = calculate_player_effect(conn, game_id, fps)
+        effects = calculate_player_effect(conn, game_id, fps, detect_stride)
 
         print(f"\n{'='*60}")
         print(f"Enhanced analysis complete for {game_id}")

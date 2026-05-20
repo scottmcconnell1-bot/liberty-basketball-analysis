@@ -103,6 +103,11 @@ def run_ai_analysis(db_path, video_path, game_id):
                             y1 = int(y1 * scale_y)
                             x2 = int(x2 * scale_x)
                             y2 = int(y2 * scale_y)
+                            # Clamp to frame bounds (YOLO boxes can overflow at edges)
+                            x1 = max(0, min(x1, orig_w - 1))
+                            y1 = max(0, min(y1, orig_h - 1))
+                            x2 = max(0, min(x2, orig_w - 1))
+                            y2 = max(0, min(y2, orig_h - 1))
                             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                             new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
@@ -167,6 +172,11 @@ def run_ai_analysis(db_path, video_path, game_id):
                                 y1 = int(y1 * scale_y)
                                 x2 = int(x2 * scale_x)
                                 y2 = int(y2 * scale_y)
+                                # Clamp to frame bounds (YOLO boxes can overflow at edges)
+                                x1 = max(0, min(x1, orig_w - 1))
+                                y1 = max(0, min(y1, orig_h - 1))
+                                x2 = max(0, min(x2, orig_w - 1))
+                                y2 = max(0, min(y2, orig_h - 1))
                                 w_box, h_box = x2 - x1, y2 - y1
                                 if 8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0:
                                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -279,7 +289,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
             fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
             cap.release()
-            run_enhanced_analysis(db_path, game_id, fps)
+            run_enhanced_analysis(db_path, game_id, fps, detect_stride=detect_stride)
         except Exception as e:
             print(f"[AI] Enhanced analysis failed: {e}")
     finally:

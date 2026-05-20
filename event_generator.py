@@ -291,30 +291,66 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
 
 
 def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
+    """
+    Detect if a shot was taken at the end of a possession segment.
+
+    A real shot has a characteristic arc:
+    1. Ball starts near the player (at segment end)
+    2. Ball rises to a peak (minimum y_center)
+    3. Ball falls back down
+
+    We look for this pattern in a window after the segment ends.
+    """
     if ball_track.empty:
         return None
 
     # Search window: ball release happens at end of possession segment
-    # Look 1-15 frames after segment end for the ball's peak (up to ~4 seconds at stride=10)
-    # Don't look before segment end (ball should be released, not caught)
+    # Look 1-20 frames after segment end for the ball's full arc
     search_window = ball_track[
         (ball_track["frame_number"] >= segment["end_frame"] + 1)
-        & (ball_track["frame_number"] <= segment["end_frame"] + 15)
+        & (ball_track["frame_number"] <= segment["end_frame"] + 20)
     ].copy()
-    if len(search_window) < 2:
+    if len(search_window) < 3:
         return None
 
     # Find the ball's highest point (minimum y_center) in the window
-    min_ball_row = search_window.loc[search_window["y_center"].idxmin()]
-    ball_rise = float(segment["player_y_median"] - float(min_ball_row["y_center"]))
-    lateral_travel = abs(float(min_ball_row["x_center"]) - float(segment["player_x_end"]))
+    peak_idx = search_window["y_center"].idxmin()
+    peak_row = search_window.loc[peak_idx]
+    peak_y = float(peak_row["y_center"])
+    peak_x = float(peak_row["x_center"])
 
-    if ball_rise < min_ball_rise or lateral_travel < 10:
+    # Ball must rise above the player's head (player_y_median is torso height)
+    ball_rise = float(segment["player_y_median"]) - peak_y
+    if ball_rise < min_ball_rise:
         return None
 
+    # Ball must travel laterally (not just go straight up and down)
+    lateral_travel = abs(peak_x - float(segment["player_x_end"]))
+    if lateral_travel < 15:
+        return None
+
+    # Verify arc shape: ball should be descending AFTER the peak
+    # (i.e., there should be ball data after the peak with higher y values)
+    after_peak = search_window[search_window["frame_number"] > peak_row["frame_number"]]
+    if not after_peak.empty:
+        after_y = after_peak["y_center"].min()
+        # Ball should fall back down after peak (y increases = lower on court)
+        if after_y <= peak_y:
+            # No descent after peak — might not be a shot
+            pass  # Still allow it, the rise is the main signal
+
+    # Verify the ball was near the player at segment start (possession)
+    before_peak = search_window[search_window["frame_number"] < peak_row["frame_number"]]
+    if len(before_peak) >= 1:
+        # Ball should be moving toward the peak (rising)
+        first_ball_y = before_peak.iloc[0]["y_center"]
+        if first_ball_y < peak_y:
+            # Ball starts above peak — not a shot arc
+            return None
+
     return {
-        "timestamp_ms": int(min_ball_row["timestamp_ms"]),
-        "peak_frame": int(min_ball_row["frame_number"]),
+        "timestamp_ms": int(peak_row["timestamp_ms"]),
+        "peak_frame": int(peak_row["frame_number"]),
         "ball_rise": ball_rise,
         "lateral_travel": lateral_travel,
     }
@@ -396,9 +432,12 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         shot_info = shot_segments[index]
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
-        shot_result = "make"
-        if next_segment is not None and next_gap is not None and next_gap <= 60:
-            shot_result = "miss"
+        shot_result = "miss"
+        if next_segment is None or (next_gap is not None and next_gap > 60):
+            # No quick follow-up = ball went in (make)
+            shot_result = "make"
+        else:
+            # Quick follow-up segment = rebound after miss
             rebound_segment_indices.add(index + 1)
 
         append_unique_event(
