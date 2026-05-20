@@ -194,7 +194,7 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     return detections_df
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=30):
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
     """
     Build possession segments from detections with ball possession data.
 
@@ -204,7 +204,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     Args:
         max_ball_distance: max distance for ball possession (auto-calculated if None)
         max_gap_frames: max gap between frames in a single possession segment
-        min_segment_frames: minimum frames for a valid segment (default 30, ~1.2s at stride=10)
+        min_segment_frames: minimum frames for a valid segment (default 3, ~0.8s at stride=10)
     """
     players = detections_with_possession_df[detections_with_possession_df["class_name"] == "person"].copy()
     if players.empty:
