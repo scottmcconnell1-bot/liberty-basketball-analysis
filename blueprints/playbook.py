@@ -377,13 +377,12 @@ def playbook_import_save():
 
     db = get_db()
     cur = db.execute(
-        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json, created_by)
-           VALUES (?,?,?,?,?,?,?)""",
+        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
+           VALUES (?,?,?,?,?,?)""",
         (
             name, description, category, tags,
             int(playbook_id) if playbook_id else None,
             diagram_json,
-            "import",
         ),
     )
     play_db_id = cur.lastrowid

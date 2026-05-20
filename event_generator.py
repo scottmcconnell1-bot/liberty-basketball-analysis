@@ -513,7 +513,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         # Determine make/miss using ball trajectory relative to basket.
         # After a made shot, the ball should end up near the basket (top of frame).
         # After a missed shot, the ball rebounds away from the basket.
-        # Heuristic: look at ball position in the 20 frames after the shot peak.
+        # Heuristic: look at ball position in the 30 frames after the shot peak.
         # If the ball's minimum y (closest to basket) is below a threshold, it's a make.
         shot_result = "miss"
         if shot_info.get("peak_frame"):
@@ -528,11 +528,14 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 min_y = post_peak_ball["y_center"].min()
                 if min_y < 200:
                     shot_result = "make"
-            elif next_segment is None or (next_gap is not None and next_gap > 60):
-                # No ball data after shot AND long gap = likely make
+            else:
+                # No ball data after the peak — fall back to gap-based heuristic
+                if next_segment is None or (next_gap is not None and next_gap > 60):
+                    shot_result = "make"
+        else:
+            # No peak_frame available — fall back to gap-based heuristic
+            if next_segment is None or (next_gap is not None and next_gap > 60):
                 shot_result = "make"
-        elif next_segment is None or (next_gap is not None and next_gap > 60):
-            shot_result = "make"
 
         if shot_result == "miss":
             rebound_segment_indices.add(index + 1)
