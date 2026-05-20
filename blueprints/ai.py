@@ -242,18 +242,30 @@ def upload_chunk():
         is_dup = prior is not None
         dup_of_id = prior["id"] if prior else None
 
-        db.execute(
+        video_cur = db.execute(
             """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
                                    opponent, game_id, is_duplicate, duplicate_of_id)
                VALUES (?,?,?,?,?,?,?,?)""",
             (safe_name, stored_filename, dest, file_size, opponent, game_id, int(is_dup), dup_of_id),
         )
+        video_row = db.execute(
+            "SELECT * FROM videos WHERE id=?", (video_cur.lastrowid,),
+        ).fetchone()
+        runtime_settings = get_runtime_settings()
+        run_payload = queue_analysis_run(
+            db, video_row, runtime_settings,
+            run_kind="primary", run_label="Original upload",
+        )
+        if ai_runtime_available():
+            start_analysis_subprocess(game_id, dest)
         db.commit()
 
+        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
         return jsonify({
             "status": "complete",
             "filename": stored_filename,
-            "redirect_url": url_for("ai.upload_and_analyze") + f"?video={stored_filename}",
+            "game_id": game_id,
+            "redirect_url": film_url,
         })
 
     return jsonify({"status": "chunk_received", "received": received, "total": total_chunks})
