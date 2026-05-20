@@ -248,6 +248,16 @@ def upload_chunk():
                VALUES (?,?,?,?,?,?,?,?)""",
             (safe_name, stored_filename, dest, file_size, opponent, game_id, int(is_dup), dup_of_id),
         )
+        video_row = db.execute(
+            "SELECT * FROM videos WHERE id=?", (db.lastrowid,),
+        ).fetchone()
+        runtime_settings = get_runtime_settings()
+        run_payload = queue_analysis_run(
+            db, video_row, runtime_settings,
+            run_kind="primary", run_label="Original upload",
+        )
+        if ai_runtime_available():
+            start_analysis_subprocess(game_id, dest)
         db.commit()
 
         film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
