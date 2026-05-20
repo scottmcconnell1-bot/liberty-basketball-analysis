@@ -290,7 +290,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=70, next_segment_start=None):
     """
     Detect if a shot was taken at the end of a possession segment.
 
@@ -300,17 +300,24 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
     3. Ball falls back down
 
     We look for this pattern in a window after the segment ends.
+    The window is constrained to not overlap with the next segment.
     """
     if ball_track.empty:
         return None
 
     # Search window: ball release happens at end of possession segment
-    # Look 1-20 frames after segment end for the ball's full arc
+    # Look slightly before segment end (ball may be released just before possession ends)
+    # and forward for the ball's peak. Cap to avoid overlapping with next segment.
+    window_start = max(segment["end_frame"] - 5, segment["start_frame"])
+    window_end = segment["end_frame"] + 15
+    if next_segment_start is not None:
+        window_end = min(window_end, next_segment_start - 1)
+
     search_window = ball_track[
-        (ball_track["frame_number"] >= segment["end_frame"] + 1)
-        & (ball_track["frame_number"] <= segment["end_frame"] + 20)
+        (ball_track["frame_number"] >= window_start)
+        & (ball_track["frame_number"] <= window_end)
     ].copy()
-    if len(search_window) < 3:
+    if len(search_window) < 2:
         return None
 
     # Find the ball's highest point (minimum y_center) in the window
@@ -329,20 +336,9 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70):
     if lateral_travel < 15:
         return None
 
-    # Verify arc shape: ball should be descending AFTER the peak
-    # (i.e., there should be ball data after the peak with higher y values)
-    after_peak = search_window[search_window["frame_number"] > peak_row["frame_number"]]
-    if not after_peak.empty:
-        after_y = after_peak["y_center"].min()
-        # Ball should fall back down after peak (y increases = lower on court)
-        if after_y <= peak_y:
-            # No descent after peak — might not be a shot
-            pass  # Still allow it, the rise is the main signal
-
-    # Verify the ball was near the player at segment start (possession)
+    # Verify arc shape: ball should be rising from the player toward the peak
     before_peak = search_window[search_window["frame_number"] < peak_row["frame_number"]]
     if len(before_peak) >= 1:
-        # Ball should be moving toward the peak (rising)
         first_ball_y = before_peak.iloc[0]["y_center"]
         if first_ball_y < peak_y:
             # Ball starts above peak — not a shot arc
@@ -362,7 +358,8 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     shot_segments = {}
 
     for index, segment in enumerate(segments):
-        shot_info = detect_shot_from_segment(segment, ball_track)
+        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
+        shot_info = detect_shot_from_segment(segment, ball_track, next_segment_start=next_start)
         if shot_info:
             shot_segments[index] = shot_info
 
