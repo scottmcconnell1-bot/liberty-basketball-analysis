@@ -9,9 +9,15 @@
   /* ── Tagger View Redesign ────────────────────────────────── */
   .ft-layout {
     display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+    gap: .75rem;
     align-items: start;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .ft-layout > * {
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   /* Scoreboard */
@@ -95,10 +101,14 @@
   }
   .ft-vid-controls::-webkit-scrollbar { display: none; }
   .ft-vid-controls .btn {
-    padding: .4rem .65rem;
-    min-height: 34px;
-    font-size: .8rem;
-    flex-shrink: 0;
+    padding: .3rem .5rem;
+    min-height: 30px;
+    font-size: .75rem;
+    flex-shrink: 1;
+    white-space: nowrap;
+  }
+  .ft-vid-controls .btn.btn-primary {
+    padding: .3rem .65rem;
   }
 
   /* Game Info Collapsible */
@@ -299,7 +309,7 @@
 {% endblock %}
 
 {% block content %}
-<div id="film-tool-root">
+<div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
        TOP BAR
