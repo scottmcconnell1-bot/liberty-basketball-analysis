@@ -96,15 +96,18 @@ def _enhance_stats_from_analysis(db, game_id):
     for mrow in minutes_rows:
         tracker_id = mrow["tracker_id"]
         minutes = mrow["minutes_played"]
-        # Find matching stats row by tracker_id → player_id mapping
+        # Find the player_id for this tracker_id in this game's detections
         player = db.execute(
-            "SELECT id, name FROM players WHERE tracker_id=? AND (SELECT game_id FROM stats WHERE player_id=? LIMIT 1)=?",
-            (tracker_id, tracker_id, game_id)
+            "SELECT DISTINCT d.player_id FROM detections d "
+            "JOIN players p ON p.id = d.player_id "
+            "WHERE d.game_id=? AND d.tracker_id=? AND d.object_class='person' "
+            "LIMIT 1",
+            (game_id, tracker_id)
         ).fetchone()
         if player:
             db.execute(
                 "UPDATE stats SET minutes=? WHERE game_id=? AND player_id=?",
-                (minutes, game_id, player["id"])
+                (minutes, game_id, player["player_id"])
             )
 
     # Add shot type breakdowns from shot_classifications table
@@ -149,7 +152,7 @@ def get_enhanced_stats(db, game_id):
     - basic_stats: standard box score stats
     - minutes: minutes played per player
     - shot_breakdown: 2pt/3pt/FT per player
-    - player_effect: +/- per player
+    - player_effect: possessions, points scored, and offensive rating per position
     - plays: recognized plays summary
     """
     basic = aggregate_stats(db, game_id)
@@ -174,12 +177,13 @@ def get_enhanced_stats(db, game_id):
 
     # Player effect
     effects = db.execute("""
-        SELECT pe.tracker_id, pe.plus_minus, pe.possessions_on, pe.points_for,
-               pe.points_against, pe.ortg, pe.drtg, pe.net_rating, p.name
+        SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+               pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
         FROM player_effect pe
+        LEFT JOIN player_minutes pm ON pm.game_id = pe.game_id AND pm.tracker_id = pe.tracker_id
         LEFT JOIN players p ON p.tracker_id = pe.tracker_id
         WHERE pe.game_id = ?
-        ORDER BY pe.net_rating DESC
+        ORDER BY pe.ortg DESC
     """, (game_id,)).fetchall()
 
     # Plays summary
