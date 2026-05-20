@@ -289,6 +289,7 @@ CREATE TABLE IF NOT EXISTS play_steps (
     positions_json  TEXT NOT NULL DEFAULT '{}',
     movements_json  TEXT NOT NULL DEFAULT '[]',
     notes           TEXT,
+    source_image    TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
