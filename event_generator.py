@@ -290,7 +290,8 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment_start=None):
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment_start=None,
+                              secondary_pass=False, ball_y_threshold=400):
     """
     Detect if a shot was taken at the end of a possession segment.
 
@@ -301,13 +302,63 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment
 
     We look for this pattern in a window around the segment end.
     The window is constrained to not overlap with the next segment.
-    
+
     min_ball_rise: minimum pixel rise from player height to ball peak.
         Default 15px (~1-2 feet in a 1080p court view).
+
+    secondary_pass: if True, use relaxed criteria for sparse ball detections.
+        Uses a wider window and checks if ball y_center drops below ball_y_threshold
+        (ball near top of frame = near basket) instead of requiring a clear arc.
+    ball_y_threshold: y_center threshold for secondary pass (default 400px).
+        A ball above this y-coordinate (lower y value = higher in frame) is
+        considered to be near the basket area.
     """
     if ball_track.empty:
         return None
 
+    if secondary_pass:
+        # Secondary pass: wide window looking for ball near basket (low y_center)
+        window_start = segment["start_frame"]
+        window_end = segment["end_frame"] + 30
+        if next_segment_start is not None:
+            window_end = min(window_end, next_segment_start - 1)
+
+        search_window = ball_track[
+            (ball_track["frame_number"] >= window_start)
+            & (ball_track["frame_number"] <= window_end)
+        ].copy()
+        if len(search_window) < 1:
+            return None
+
+        # Find the ball's highest point (minimum y_center) in the wide window
+        peak_idx = search_window["y_center"].idxmin()
+        peak_row = search_window.loc[peak_idx]
+        peak_y = float(peak_row["y_center"])
+        peak_x = float(peak_row["x_center"])
+
+        # Ball must be near the top of the frame (near basket area)
+        if peak_y > ball_y_threshold:
+            return None
+
+        # Ball must rise above the player's head (relaxed threshold)
+        ball_rise = float(segment["player_y_median"]) - peak_y
+        if ball_rise < min_ball_rise:
+            return None
+
+        # Relaxed lateral travel check
+        lateral_travel = abs(peak_x - float(segment["player_x_end"]))
+        if lateral_travel < 3:
+            return None
+
+        return {
+            "timestamp_ms": int(peak_row["timestamp_ms"]),
+            "peak_frame": int(peak_row["frame_number"]),
+            "ball_rise": ball_rise,
+            "lateral_travel": lateral_travel,
+            "secondary_pass": True,
+        }
+
+    # Primary pass: standard arc detection
     # Search window: ball release happens around end of possession segment
     # Look before segment end (ball may be released during possession)
     # and forward for the ball's peak. Cap to avoid overlapping with next segment.
@@ -363,6 +414,27 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     for index, segment in enumerate(segments):
         next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
         shot_info = detect_shot_from_segment(segment, ball_track, next_segment_start=next_start)
+        if shot_info:
+            shot_segments[index] = shot_info
+
+    # Secondary pass: look for shots missed by the primary detector.
+    # The primary detector requires a clear arc pattern, but with sparse ball
+    # detections the arc is often incomplete. This pass uses a wider window
+    # and checks if the ball y_center drops below ball_y_threshold (near the
+    # top of the frame = near the basket) with a lower min_ball_rise.
+    SECONDARY_BALL_Y_THRESHOLD = 550
+    SECONDARY_MIN_BALL_RISE = 10
+    for index, segment in enumerate(segments):
+        if index in shot_segments:
+            continue  # already detected by primary pass
+        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
+        shot_info = detect_shot_from_segment(
+            segment, ball_track,
+            min_ball_rise=SECONDARY_MIN_BALL_RISE,
+            next_segment_start=next_start,
+            secondary_pass=True,
+            ball_y_threshold=SECONDARY_BALL_Y_THRESHOLD,
+        )
         if shot_info:
             shot_segments[index] = shot_info
 

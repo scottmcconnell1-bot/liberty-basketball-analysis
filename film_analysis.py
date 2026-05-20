@@ -590,7 +590,7 @@ def _detect_post_up(conn, game_id):
 
 def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_possessions=10):
     """
-    Calculate POSITION-BASED effect metrics: possessions + points scored.
+    Calculate POSITION-BASED effect metrics: possessions + points scored + shot stats.
 
     The KMeans clusters represent COURT POSITIONS (left wing, top of key, etc.),
     not individual players. Each cluster_id is a spatial region on the court.
@@ -602,12 +602,23 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
         cluster matches this cluster (events.player on make events)
       - points_per_possession: raw points_scored / possessions (not per 100)
       - minutes_played: from player_minutes
+      - shot_attempts: number of shot events (shot + make + miss) where this
+        cluster was the shooter
+      - shot_makes: number of make events where this cluster was the shooter
+      - fg_pct: shot_makes / shot_attempts (if attempts > 0)
+      - three_pt_attempts: number of 3pt shot attempts from this cluster
+      - three_pt_makes: number of 3pt makes from this cluster
 
     NOTE: points_allowed / DRTG / Net rating are NOT computed because we cannot
     accurately determine which team scored from position-based clusters. The
     previous approach (crediting every position with every basket scored while
     any player was in that zone) produced extreme, meaningless values (DRTG
     400-1200) for positions with very few possessions.
+
+    DB column mapping for repurposed fields:
+      - possessions_off → shot_attempts
+      - drtg → fg_pct
+      - points_for → shot_makes (raw count, not points)
 
     Positions with fewer than min_possessions are marked as "insufficient data"
     with NULL ratings.
@@ -631,7 +642,18 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
     cluster_ids = [row["tracker_id"] for row in minutes_rows]
     minutes_map = {row["tracker_id"]: row["minutes_played"] for row in minutes_rows}
 
-    # ── Get score events (make events) with shot type from shot_classifications ──
+    # ── Get ALL shot events (shot + make + miss) with shot type from shot_classifications ──
+    all_shot_events = conn.execute("""
+        SELECT e.id AS event_id, e.player AS shooter_cluster, e.event_type,
+               sc.shot_type, sc.shot_result
+        FROM events e
+        LEFT JOIN shot_classifications sc ON sc.event_id = e.id
+        WHERE e.game_id = ?
+          AND e.event_type IN ('shot', 'make', 'miss')
+        ORDER BY e.timestamp_ms
+    """, (game_id,)).fetchall()
+
+    # ── Get make events with shot type for scoring ──
     make_events = conn.execute("""
         SELECT e.timestamp_ms, e.player AS scorer_cluster, sc.shot_type
         FROM events e
@@ -660,7 +682,8 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
         print("[Effect] No score events found")
         return []
 
-    print(f"[Effect] Processing {len(score_events)} score events across {len(cluster_ids)} position clusters")
+    print(f"[Effect] Processing {len(score_events)} score events and "
+          f"{len(all_shot_events)} total shot events across {len(cluster_ids)} position clusters")
 
     # ── Get possession segments: each possession_change event's player is the ball-holder cluster ──
     possession_events = conn.execute("""
@@ -696,6 +719,27 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
             if scorer is not None and int(scorer) == cid:
                 points_scored += se["points"]
 
+        # Shot stats: count attempts, makes, 3pt attempts, 3pt makes
+        shot_attempts = 0
+        shot_makes = 0
+        three_pt_attempts = 0
+        three_pt_makes = 0
+        for se in all_shot_events:
+            shooter = se["shooter_cluster"]
+            if shooter is None or int(shooter) != cid:
+                continue
+            shot_attempts += 1
+            if se["event_type"] == "make":
+                shot_makes += 1
+            # 3pt stats from shot_classifications
+            if se["shot_type"] == "3pt":
+                three_pt_attempts += 1
+                if se["event_type"] == "make":
+                    three_pt_makes += 1
+
+        # FG%
+        fg_pct = round(shot_makes / shot_attempts, 3) if shot_attempts > 0 else None
+
         minutes_played = minutes_map.get(cid, 0)
 
         if possessions < MIN_POSSESSIONS:
@@ -719,6 +763,11 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
             "points_per_possession": points_per_poss,
             "ortg": ortg,
             "minutes_played": minutes_played,
+            "shot_attempts": shot_attempts,
+            "shot_makes": shot_makes,
+            "fg_pct": fg_pct,
+            "three_pt_attempts": three_pt_attempts,
+            "three_pt_makes": three_pt_makes,
         })
 
     # ── Print warnings for insufficient data ──
@@ -737,25 +786,29 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
         """, (
             r["game_id"],
             r["tracker_id"],
-            r["points_scored"],         # plus_minus — best available proxy (points scored)
-            r["possessions"],           # possessions_on — ball-holder possession count
-            0,                          # possessions_off — not applicable (no team ID)
-            r["points_scored"],         # points_for — points scored by this position
-            0,                          # points_against — cannot compute without team ID
-            r["ortg"],                  # ortg — offensive rating (NULL if insufficient data)
-            None,                       # drtg — cannot compute without team ID
-            r["ortg"],                  # net_rating — best available proxy (ortg)
+            r["points_scored"],          # plus_minus — best available proxy (points scored)
+            r["possessions"],            # possessions_on — ball-holder possession count
+            r["shot_attempts"],          # possessions_off → repurposed for shot_attempts
+            r["shot_makes"],             # points_for → repurposed for shot_makes (count)
+            0,                           # points_against — cannot compute without team ID
+            r["ortg"],                   # ortg — offensive rating (NULL if insufficient data)
+            r["fg_pct"],                 # drtg → repurposed for fg_pct
+            r["ortg"],                   # net_rating — best available proxy (ortg)
         ))
     conn.commit()
 
     # ── Print summary ──
     print(f"[Effect] Position-based effect for {len(results)} court positions:")
-    print(f"  {'Pos':>4}  {'Poss':>5}  {'Pts':>5}  {'PPoss':>6}  {'ORTG':>6}  {'Min':>5}")
-    print(f"  {'─'*4}  {'─'*5}  {'─'*5}  {'─'*6}  {'─'*6}  {'─'*5}")
+    print(f"  {'Pos':>4}  {'Poss':>5}  {'ShAtt':>5}  {'Makes':>5}  {'FG%':>6}  "
+          f"{'3ptA':>5}  {'3ptM':>5}  {'ORTG':>6}")
+    print(f"  {'─'*4}  {'─'*5}  {'─'*5}  {'─'*5}  {'─'*6}  "
+          f"{'─'*5}  {'─'*5}  {'─'*6}")
     for r in results:
-        pp = f"{r['points_per_possession']:.2f}" if r['points_per_possession'] is not None else "  N/A"
+        fg = f"{r['fg_pct']:.3f}" if r['fg_pct'] is not None else "  N/A"
         o = f"{r['ortg']:.1f}" if r['ortg'] is not None else "  N/A"
-        print(f"  {r['tracker_id']:>4}  {r['possessions']:>5}  {r['points_scored']:>5}  {pp:>6}  {o:>6}  {r['minutes_played']:>5.1f}")
+        print(f"  {r['tracker_id']:>4}  {r['possessions']:>5}  {r['shot_attempts']:>5}  "
+              f"{r['shot_makes']:>5}  {fg:>6}  {r['three_pt_attempts']:>5}  "
+              f"{r['three_pt_makes']:>5}  {o:>6}")
 
     return results
 
