@@ -110,7 +110,7 @@
       border-radius: 0 0 var(--radius) var(--radius);
       min-width: 180px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-      z-index: 200;
+      z-index: 400;
       padding: 4px 0;
     }
 
@@ -135,12 +135,14 @@
     }
 
     .nav-dropdown:hover .dropdown-menu,
-    .nav-dropdown:focus-within .dropdown-menu {
+    .nav-dropdown:focus-within .dropdown-menu,
+    .nav-dropdown.open .dropdown-menu {
       display: block;
     }
 
     .nav-dropdown:hover > a,
-    .nav-dropdown:focus-within > a {
+    .nav-dropdown:focus-within > a,
+    .nav-dropdown.open > a {
       background: rgba(255,255,255,0.15);
       color: #fff;
     }
@@ -627,7 +629,7 @@
     <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
     <div class="nav-dropdown">
-      <a href="/schedule">Teams</a>
+      <a href="javascript:void(0)" role="button" tabindex="0">Teams</a>
       <div class="dropdown-menu">
         {% if features.ENABLE_SEASONS_SCHEDULE %}
         <a href="/schedule" {% if request.endpoint == 'schedule' %}class="active"{% endif %}>Schedule</a>
@@ -650,7 +652,7 @@
     {% endif %}
     {% if features.ENABLE_AUTO_STATS_M1 or features.ENABLE_MANUAL_TAG_MVP %}
     <div class="nav-dropdown">
-      <a href="/film">Film & Stats</a>
+      <a href="javascript:void(0)" role="button" tabindex="0">Film & Stats</a>
       <div class="dropdown-menu">
         {% if features.ENABLE_MANUAL_TAG_MVP %}
         <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
@@ -667,7 +669,7 @@
     <a href="/messages" {% if request.endpoint.startswith('messaging.') %}class="active"{% endif %}>💬 Messages</a>
     {% endif %}
     <div class="nav-dropdown">
-      <a href="/settings">More</a>
+      <a href="javascript:void(0)" role="button" tabindex="0">More</a>
       <div class="dropdown-menu">
         {% if features.ENABLE_NFHS_MATCHING %}
         <a href="/nfhs-matches" {% if request.endpoint == 'nfhs_matches_page' %}class="active"{% endif %}>NFHS Matches</a>
@@ -981,10 +983,9 @@
           }
         });
       });
-      // Toggle dropdown on mobile (click instead of hover)
+      // Toggle dropdown on click (works on both desktop and mobile)
       navLinks.querySelectorAll('.nav-dropdown > a').forEach(function(toggle) {
         toggle.addEventListener('click', function(e) {
-          if (window.innerWidth > 768) return; // desktop uses hover
           e.preventDefault();
           var dd = toggle.parentElement;
           // Close other open dropdowns
