@@ -40,6 +40,7 @@ from blueprints.playbook import playbook_bp
 from blueprints.messaging import messaging_bp
 from blueprints.users import users_bp, _current_user
 from blueprints.scouting import scouting_bp
+from blueprints.bulk_import import bulk_import_bp
 
 app.register_blueprint(messaging_bp)
 app.register_blueprint(users_bp)
@@ -52,6 +53,7 @@ app.register_blueprint(player_dev)
 app.register_blueprint(ai_bp)
 app.register_blueprint(playbook_bp)
 app.register_blueprint(scouting_bp)
+app.register_blueprint(bulk_import_bp)
 
 # ── Template Context Processors ──────────────────────────────
 from helpers import get_runtime_settings
