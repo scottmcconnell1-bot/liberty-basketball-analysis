@@ -14,6 +14,7 @@ instead of tracker_id for player identity. Players are identified by spatial
 grid cells (120x120px), producing ~10-15 stable "player slots".
 """
 
+import bisect
 import json
 import sqlite3
 import math
@@ -122,11 +123,12 @@ def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0):
 def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     """
     Classify all shot events for a game.
-    Uses a single batch query to find nearest person detection per shot event.
+    Uses the shooter's cluster detection at the event timestamp for court position.
     """
     print(f"[Shots] Classifying shots for game {game_id}")
 
-    # Single query: get all shot events with nearest person detection
+    # Get shot events with the shooter's detection coordinates
+    # Join to detections using the event's player (cluster_id) and timestamp
     shot_events = conn.execute("""
         SELECT e.id as event_id, e.player, e.event_type,
                e.timestamp_ms, e.details_json,
@@ -142,6 +144,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
             FROM events e2
             JOIN detections d2 ON d2.game_id = e2.game_id
                 AND d2.object_class = 'person'
+                AND d2.player_cluster = CAST(e2.player AS INTEGER)
                 AND ABS(d2.timestamp_ms - e2.timestamp_ms) < 2000
             WHERE e2.game_id = ?
               AND e2.event_type IN ('shot', 'make', 'miss')
@@ -489,118 +492,172 @@ def _detect_post_up(conn, game_id):
 
 def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1):
     """
-    Calculate player effect metrics: +/-, possessions, ratings.
-    Uses events to track score changes while each player is on court.
+    Calculate POSITION-BASED effect metrics: +/-, possessions, ratings.
 
-    A player is "on court" for a score event if they have any detection
-    within a window of the event timestamp.
+    The KMeans clusters represent COURT POSITIONS (left wing, top of key, etc.),
+    not individual players. Each cluster_id is a spatial region on the court.
+
+    For each position cluster we compute:
+      - possessions: number of possession segments where the ball-holder was
+        in this cluster (from events.player on possession_change events)
+      - points_scored: sum of points from make events where the shooter's
+        cluster matches this cluster (events.player on make events)
+      - points_allowed: sum of points from make events where this cluster had
+        any detection within 30 seconds of the score timestamp
+      - plus_minus: points_scored - points_allowed
+      - ortg: offensive rating (points per 100 possessions)
+      - drtg: defensive rating (points allowed per 100 possessions)
     """
-    print(f"[Effect] Calculating player effect for game {game_id}")
+    print(f"[Effect] Calculating POSITION-BASED effect for game {game_id}")
 
     effective_fps = fps / detect_stride
 
+    # ── Get all cluster IDs from player_minutes ──
     minutes = conn.execute("""
-        SELECT * FROM player_minutes WHERE game_id = ?
+        SELECT tracker_id, first_frame, last_frame, total_frames
+        FROM player_minutes
+        WHERE game_id = ?
+        ORDER BY tracker_id
     """, (game_id,)).fetchall()
 
     if not minutes:
         print("[Effect] No player minutes data — run calculate_player_minutes first")
         return []
 
-    # Get score events (only 'make' events) with their player
+    cluster_ids = [row["tracker_id"] for row in minutes]
+
+    # ── Build per-cluster detection timestamps for on-court determination ──
+    # A cluster is "on court" at time T if it has any detection within 30s of T.
+    # We store sorted timestamp lists per cluster for efficient range queries.
+    print("[Effect] Loading detection timestamps per cluster...")
+    cluster_timestamps = {}
+    for cid in cluster_ids:
+        rows = conn.execute("""
+            SELECT timestamp_ms
+            FROM detections
+            WHERE game_id = ? AND object_class = 'person' AND player_cluster = ?
+            ORDER BY timestamp_ms
+        """, (game_id, cid)).fetchall()
+        cluster_timestamps[cid] = sorted([r["timestamp_ms"] for r in rows])
+
+    # ── Get score events (make events) with shot type from shot_classifications ──
     make_events = conn.execute("""
-        SELECT timestamp_ms, source_frame, player, details_json
-        FROM events WHERE game_id = ? AND event_type = 'make'
-        ORDER BY timestamp_ms
+        SELECT e.timestamp_ms, e.player AS scorer_cluster, sc.shot_type
+        FROM events e
+        LEFT JOIN shot_classifications sc ON sc.event_id = e.id
+        WHERE e.game_id = ? AND e.event_type = 'make'
+        ORDER BY e.timestamp_ms
     """, (game_id,)).fetchall()
 
     score_events = []
     for event in make_events:
-        points = 2
-        details = {}
-        if event["details_json"]:
-            try:
-                details = json.loads(event["details_json"])
-            except (json.JSONDecodeError, TypeError):
-                pass
-        shot_type = details.get("shot_type", "2pt")
+        shot_type = event["shot_type"] or "2pt"
         if shot_type == "3pt":
             points = 3
         elif shot_type == "ft":
             points = 1
+        else:
+            points = 2
 
         score_events.append({
             "timestamp_ms": event["timestamp_ms"],
-            "frame": event["source_frame"] or 0,
+            "scorer_cluster": event["scorer_cluster"],  # cluster that scored
             "points": points,
-            "player": event["player"],
         })
 
     if not score_events:
         print("[Effect] No score events found")
         return []
 
-    # Build per-player detection windows for on-court determination
-    # Use a time window: player is on court at time T if they have detections
-    # within 30 seconds of T
-    player_windows = {}
-    for pm in minutes:
-        tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"] or 0
-        last_frame = pm["last_frame"] or 0
-        player_windows[tracker_id] = (first_frame, last_frame)
+    print(f"[Effect] Processing {len(score_events)} score events across {len(cluster_ids)} position clusters")
+
+    # ── Get possession segments: each possession_change event's player is the ball-holder cluster ──
+    possession_events = conn.execute("""
+        SELECT timestamp_ms, player AS ball_holder_cluster
+        FROM events
+        WHERE game_id = ? AND event_type = 'possession_change'
+        ORDER BY timestamp_ms
+    """, (game_id,)).fetchall()
+
+    # Count possessions per cluster (ball-holder cluster)
+    possessions_per_cluster = defaultdict(int)
+    for pe in possession_events:
+        bh = pe["ball_holder_cluster"]
+        if bh is not None:
+            try:
+                bh_int = int(bh)
+                possessions_per_cluster[bh_int] += 1
+            except (ValueError, TypeError):
+                pass
+
+    # ── Helper: check if cluster has any detection within window_ms of timestamp ──
+    ON_COURT_WINDOW_MS = 5000  # 5 seconds — possession-based, not 30s
+
+    def is_cluster_on_court(cluster_id, timestamp_ms):
+        """Return True if cluster has any detection within 5s of timestamp_ms."""
+        ts_list = cluster_timestamps.get(cluster_id)
+        if not ts_list:
+            return False
+        lo = timestamp_ms - ON_COURT_WINDOW_MS
+        hi = timestamp_ms + ON_COURT_WINDOW_MS
+        # Binary search for any timestamp in [lo, hi]
+        import bisect
+        left = bisect.bisect_left(ts_list, lo)
+        return left < len(ts_list) and ts_list[left] <= hi
+
+    # ── Calculate per-position stats ──
+    # With position-based clusters (not individual players), we compute:
+    # - possessions: how often this position had the ball
+    # - points_scored: points when this position's player shot
+    # - points_allowed: team points allowed while this position was in the game
+    # 
+    # For points_allowed, we use a possession-based model:
+    # A position is "in the game" during a possession if it has any detection
+    # within 5 seconds of the possession's start (stricter than 30s window).
+    # This avoids counting bench time.
 
     results = []
     for pm in minutes:
-        tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"] or 0
-        last_frame = pm["last_frame"] or 0
-        if first_frame == 0 and last_frame == 0:
-            continue
+        cid = pm["tracker_id"]
 
-        player_start_ms = (first_frame / effective_fps) * 1000
-        player_end_ms = (last_frame / effective_fps) * 1000
-
-        points_for = 0
-        points_against = 0
-
+        # Points scored: sum of points from make events where this cluster was the shooter
+        points_scored = 0
         for se in score_events:
-            se_frame = se["frame"]
-            se_ts = se["timestamp_ms"]
-            se_player = se["player"]
+            scorer = se["scorer_cluster"]
+            if scorer is not None and int(scorer) == cid:
+                points_scored += se["points"]
 
-            # Determine if this player is on court for this score event
-            on_court = False
-            if se_frame > 0:
-                on_court = first_frame <= se_frame <= last_frame
-            elif se_ts > 0:
-                on_court = player_start_ms <= se_ts <= player_end_ms
+        # Points allowed: only count if this position was likely on court
+        # Use possession-based detection: position must have a detection
+        # near the score event time (within 5 seconds, not 30)
+        points_allowed = 0
+        for se in score_events:
+            if is_cluster_on_court(cid, se["timestamp_ms"]):
+                points_allowed += se["points"]
 
-            if on_court:
-                # Points scored by the team while this player is on court
-                points_for += se["points"]
-            else:
-                points_against += se["points"]
+        # Possessions: segments where this cluster was the ball holder
+        possessions = possessions_per_cluster.get(cid, 0)
+        if possessions == 0:
+            possessions = 1  # avoid division by zero
 
-        frame_diff = max(1, last_frame - first_frame)
-        possessions = max(1, frame_diff / (effective_fps * 24))
-        plus_minus = points_for - points_against
-        ortg = (points_for / possessions) * 100 if possessions > 0 else 0
-        drtg = (points_against / possessions) * 100 if possessions > 0 else 0
+        plus_minus = points_scored - points_allowed
+        ortg = (points_scored / possessions) * 100
+        drtg = (points_allowed / possessions) * 100
 
         results.append({
             "game_id": game_id,
-            "tracker_id": tracker_id,
+            "tracker_id": cid,
             "plus_minus": plus_minus,
-            "possessions_on": int(possessions),
+            "possessions_on": possessions,
             "possessions_off": 0,
-            "points_for": points_for,
-            "points_against": points_against,
+            "points_for": points_scored,
+            "points_against": points_allowed,
             "ortg": round(ortg, 1),
             "drtg": round(drtg, 1),
             "net_rating": round(ortg - drtg, 1),
         })
 
+    # ── Write results to DB ──
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO player_effect
@@ -612,7 +669,13 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1):
               r["ortg"], r["drtg"], r["net_rating"]))
     conn.commit()
 
-    print(f"[Effect] Calculated effect for {len(results)} players")
+    # ── Print summary ──
+    print(f"[Effect] Position-based effect for {len(results)} court positions:")
+    print(f"  {'Pos':>4}  {'Poss':>5}  {'PtsFor':>7}  {'PtsAg':>7}  {'+/-':>5}  {'ORTG':>6}  {'DRTG':>6}  {'Net':>6}")
+    print(f"  {'─'*4}  {'─'*5}  {'─'*7}  {'─'*7}  {'─'*5}  {'─'*6}  {'─'*6}  {'─'*6}")
+    for r in results:
+        print(f"  {r['tracker_id']:>4}  {r['possessions_on']:>5}  {r['points_for']:>7}  {r['points_against']:>7}  {r['plus_minus']:>5}  {r['ortg']:>6.1f}  {r['drtg']:>6.1f}  {r['net_rating']:>6.1f}")
+
     return results
 
 
