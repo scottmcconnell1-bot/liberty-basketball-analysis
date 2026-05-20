@@ -1697,3 +1697,143 @@ To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
 From github.com:scottmcconnell1-bot/liberty-basketball-analysis
  * branch            backups    -> FETCH_HEAD
 [2026-05-19 20:30:02] === Backup complete: backup/2026-05-19-2029 ===
+[2026-05-19 21:30:25] === Starting backup: backup/2026-05-19-2130 ===
+[2026-05-19 21:30:25] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 21:30:26] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-19 21:30:33] Syncing current project state...
+[2026-05-19 21:30:35] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..00a3fd9  backups    -> origin/backups
+Rebasing (1/1)Auto-merging event_generator.py
+CONFLICT (content): Merge conflict in event_generator.py
+Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply fbc42fb... backup: 2026-05-19-2130 —  33 files changed, 39173 insertions(+), 752 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply fbc42fb... # backup: 2026-05-19-2130 —  33 files changed, 39173 insertions(+), 752 deletions(-)
+[2026-05-19 21:30:37] Pull failed — attempting rebase resolution...
+HEAD is now at 00a3fd9 backup: 2026-05-19-2029 —  3 files changed, 366 insertions(+), 13 deletions(-) (rebased)
+[backups 6e15584] backup: 2026-05-19-2130 —  3 files changed, 388 insertions(+), 5 deletions(-) (rebased)
+ 3 files changed, 388 insertions(+), 5 deletions(-)
+[2026-05-19 21:30:37] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   00a3fd9..6e15584  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-19-2130 -> backup/2026-05-19-2130
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 21:30:42] === Backup complete: backup/2026-05-19-2130 ===
+[2026-05-19 22:31:02] === Starting backup: backup/2026-05-19-2231 ===
+[2026-05-19 22:31:02] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 22:31:03] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-19 22:31:10] Syncing current project state...
+[2026-05-19 22:31:12] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..6e15584  backups    -> origin/backups
+Rebasing (1/1)Auto-merging ai_analyzer.py
+CONFLICT (content): Merge conflict in ai_analyzer.py
+Auto-merging event_generator.py
+CONFLICT (content): Merge conflict in event_generator.py
+Auto-merging film_analysis.py
+CONFLICT (content): Merge conflict in film_analysis.py
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 4779254... backup: 2026-05-19-2231 —  33 files changed, 39302 insertions(+), 769 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 4779254... # backup: 2026-05-19-2231 —  33 files changed, 39302 insertions(+), 769 deletions(-)
+[2026-05-19 22:31:14] Pull failed — attempting rebase resolution...
+HEAD is now at 6e15584 backup: 2026-05-19-2130 —  3 files changed, 388 insertions(+), 5 deletions(-) (rebased)
+[backups 9fcdba2] backup: 2026-05-19-2231 —  4 files changed, 145 insertions(+), 31 deletions(-) (rebased)
+ 4 files changed, 145 insertions(+), 31 deletions(-)
+[2026-05-19 22:31:14] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   6e15584..9fcdba2  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-19-2231 -> backup/2026-05-19-2231
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 22:31:19] === Backup complete: backup/2026-05-19-2231 ===
+[2026-05-19 23:31:41] === Starting backup: backup/2026-05-19-2331 ===
+[2026-05-19 23:31:41] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 23:31:43] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-19 23:31:50] Syncing current project state...
+[2026-05-19 23:31:52] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..9fcdba2  backups    -> origin/backups
+Rebasing (1/1)Auto-merging event_generator.py
+CONFLICT (content): Merge conflict in event_generator.py
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 415be09... backup: 2026-05-19-2331 —  33 files changed, 39339 insertions(+), 771 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 415be09... # backup: 2026-05-19-2331 —  33 files changed, 39339 insertions(+), 771 deletions(-)
+[2026-05-19 23:31:54] Pull failed — attempting rebase resolution...
+HEAD is now at 9fcdba2 backup: 2026-05-19-2231 —  4 files changed, 145 insertions(+), 31 deletions(-) (rebased)
+[backups e0ad2a8] backup: 2026-05-19-2331 —  2 files changed, 49 insertions(+), 18 deletions(-) (rebased)
+ 2 files changed, 49 insertions(+), 18 deletions(-)
+[2026-05-19 23:31:54] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   9fcdba2..e0ad2a8  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-19-2331 -> backup/2026-05-19-2331
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-19 23:31:59] === Backup complete: backup/2026-05-19-2331 ===
+[2026-05-20 00:32:23] === Starting backup: backup/2026-05-20-0032 ===
+[2026-05-20 00:32:23] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 00:32:24] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-20 00:32:31] Syncing current project state...
+[2026-05-20 00:32:33] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..e0ad2a8  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply fd4e154... backup: 2026-05-20-0032 —  33 files changed, 39373 insertions(+), 771 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply fd4e154... # backup: 2026-05-20-0032 —  33 files changed, 39373 insertions(+), 771 deletions(-)
+[2026-05-20 00:32:35] Pull failed — attempting rebase resolution...
+HEAD is now at e0ad2a8 backup: 2026-05-19-2331 —  2 files changed, 49 insertions(+), 18 deletions(-) (rebased)
+[backups f3e6098] backup: 2026-05-20-0032 —  1 file changed, 32 insertions(+) (rebased)
+ 1 file changed, 32 insertions(+)
+[2026-05-20 00:32:35] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   e0ad2a8..f3e6098  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-20-0032 -> backup/2026-05-20-0032
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 00:32:40] === Backup complete: backup/2026-05-20-0032 ===
