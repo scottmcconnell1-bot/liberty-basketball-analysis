@@ -250,10 +250,12 @@ def upload_chunk():
         )
         db.commit()
 
+        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
         return jsonify({
             "status": "complete",
             "filename": stored_filename,
-            "redirect_url": url_for("ai.upload_and_analyze") + f"?video={stored_filename}",
+            "game_id": game_id,
+            "redirect_url": film_url,
         })
 
     return jsonify({"status": "chunk_received", "received": received, "total": total_chunks})
