@@ -6,7 +6,7 @@ Extends the basic event generator with:
 1. Minutes played calculation (from per-frame player detections)
 2. Shot type classification (2pt/3pt/FT based on court position)
 3. Play recognition (pattern matching on player movement sequences)
-4. Player effect (+/- while on court)
+4. Player effect (possessions + points scored per position)
 
 NOTE: YOLO tracker_ids are unstable at imgsz=320 (median 2-frame lifespan,
 67K unique IDs for ~10 real players). All functions use spatial grid clustering
@@ -14,6 +14,7 @@ instead of tracker_id for player identity. Players are identified by spatial
 grid cells (120x120px), producing ~10-15 stable "player slots".
 """
 
+import bisect
 import json
 import sqlite3
 import math
@@ -122,70 +123,130 @@ def classify_shot_type(court_x, court_y, basket_x=0.5, basket_y=1.0):
 def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     """
     Classify all shot events for a game.
-    Uses a single batch query to find nearest person detection per shot event.
+    Uses the shooter's cluster detection near the shot's peak_frame for court position.
+    Falls back to ball position at peak_frame if no player detection is found.
     """
     print(f"[Shots] Classifying shots for game {game_id}")
 
-    # Single query: get all shot events with nearest person detection
+    # Get all shot/make/miss events
     shot_events = conn.execute("""
         SELECT e.id as event_id, e.player, e.event_type,
-               e.timestamp_ms, e.details_json,
-               d.x_center, d.y_center
+               e.timestamp_ms, e.details_json
         FROM events e
-        LEFT JOIN (
-            SELECT d2.game_id, d2.timestamp_ms as det_ts,
-                   d2.x_center, d2.y_center,
-                   e2.id as eid,
-                   ROW_NUMBER() OVER (
-                       PARTITION BY e2.id ORDER BY ABS(d2.timestamp_ms - e2.timestamp_ms)
-                   ) as rn
-            FROM events e2
-            JOIN detections d2 ON d2.game_id = e2.game_id
-                AND d2.object_class = 'person'
-                AND ABS(d2.timestamp_ms - e2.timestamp_ms) < 2000
-            WHERE e2.game_id = ?
-              AND e2.event_type IN ('shot', 'make', 'miss')
-        ) d ON d.eid = e.id AND d.rn = 1
         WHERE e.game_id = ?
           AND e.event_type IN ('shot', 'make', 'miss')
-    """, (game_id, game_id)).fetchall()
+    """, (game_id,)).fetchall()
 
     if not shot_events:
         print("[Shots] No shot events found")
         return []
 
+    # Build a lookup of peak_frame by (timestamp_ms, player) for make/miss events
+    # that don't have peak_frame in their own details. The parent shot event
+    # shares the same timestamp_ms and player.
+    # Columns: 0=event_id, 1=player, 2=event_type, 3=timestamp_ms, 4=details_json
+    peak_frame_lookup = {}
+    for event in shot_events:
+        details = {}
+        if event[4]:
+            try:
+                details = json.loads(event[4])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        pf = details.get("peak_frame")
+        if pf is not None:
+            key = (event[3], event[1])
+            peak_frame_lookup[key] = pf
+
     results = []
     for event in shot_events:
-        shot_result = "make" if event["event_type"] == "make" else "miss"
+        shot_result = "make" if event[2] == "make" else "miss"
+        player_cluster = event[1]
+        details = {}
+        if event[4]:
+            try:
+                details = json.loads(event[4])
+            except (json.JSONDecodeError, TypeError):
+                pass
 
         court_x = None
         court_y = None
-        if event["x_center"] is not None:
-            cx = max(0, min(event["x_center"], video_width)) / float(video_width)
-            cy = max(0, min(event["y_center"], video_height)) / float(video_height)
-            court_x = cx
-            court_y = cy
-            shot_type, confidence = classify_shot_type(cx, cy)
+        peak_frame = details.get("peak_frame")
+
+        # For make/miss events without peak_frame, look up from parent shot
+        if peak_frame is None:
+            key = (event[3], player_cluster)
+            peak_frame = peak_frame_lookup.get(key)
+
+        if peak_frame is not None and player_cluster is not None:
+            # 1) Try to find the nearest detection for this cluster near the peak frame
+            #    Use a wide window (±30 frames) to handle detection stride and interpolation offsets
+            det = conn.execute("""
+                SELECT x_center, y_center
+                FROM detections
+                WHERE game_id = ? AND object_class = 'person'
+                  AND player_cluster = CAST(? AS INTEGER)
+                  AND frame_number BETWEEN ? AND ?
+                ORDER BY ABS(frame_number - ?)
+                LIMIT 1
+            """, (game_id, player_cluster, peak_frame - 30, peak_frame + 30, peak_frame)).fetchone()
+
+            if det and det[0] is not None:
+                # Skip detections with out-of-bounds or edge coordinates (bad detections)
+                # Edge margin: detections within 10px of frame boundary are likely bad
+                EDGE_MARGIN = 10
+                if (det[0] < video_width - EDGE_MARGIN and
+                    det[1] < video_height - EDGE_MARGIN and
+                    det[0] >= 0 and det[1] >= 0):
+                    cx = max(0, min(det[0], video_width - 1)) / float(video_width)
+                    cy = max(0, min(det[1], video_height - 1)) / float(video_height)
+                    court_x = cx
+                    court_y = cy
+                    shot_type, confidence = classify_shot_type(cx, cy)
+                else:
+                    det = None  # Bad coords, treat as not found
+
+            if court_x is None:
+                # 2) Fallback: use the ball position at/near peak_frame as proxy
+                ball = conn.execute("""
+                    SELECT x_center, y_center
+                    FROM detections
+                    WHERE game_id = ? AND object_class = 'ball'
+                      AND frame_number BETWEEN ? AND ?
+                    ORDER BY ABS(frame_number - ?)
+                    LIMIT 1
+                """, (game_id, peak_frame - 30, peak_frame + 30, peak_frame)).fetchone()
+
+                if ball and ball[0] is not None:
+                    # Also skip ball detections at the frame edge
+                    if (ball[0] < video_width - EDGE_MARGIN and
+                        ball[1] < video_height - EDGE_MARGIN and
+                        ball[0] >= 0 and ball[1] >= 0):
+                        cx = max(0, min(ball[0], video_width)) / float(video_width)
+                        cy = max(0, min(ball[1], video_height)) / float(video_height)
+                        court_x = cx
+                        court_y = cy
+                        shot_type, confidence = classify_shot_type(cx, cy)
+                        confidence = min(confidence, 0.4)  # lower confidence for ball proxy
+                    else:
+                        ball = None  # Bad ball coords too
+                if court_x is None:
+                    shot_type = "2pt"
+                    confidence = 0.3
         else:
-            details = {}
-            if event["details_json"]:
-                try:
-                    details = json.loads(event["details_json"])
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            shot_type = details.get("shot_type", "2pt")
+            shot_type = "2pt"
             confidence = 0.3
 
         results.append({
-            "event_id": event["event_id"],
+            "event_id": event[0],
             "game_id": game_id,
-            "tracker_id": event["player"],
+            "tracker_id": player_cluster,
             "shot_type": shot_type,
             "shot_result": shot_result,
             "confidence": confidence,
             "court_x": court_x,
             "court_y": court_y,
-            "timestamp_ms": event["timestamp_ms"],
+            "timestamp_ms": event[3],
         })
 
     for r in results:
@@ -485,134 +546,177 @@ def _detect_post_up(conn, game_id):
     return plays
 
 
-# ── 4. Player Effect (+/-) ──────────────────────────────────
+# ── 4. Player Effect (Possessions & Scoring) ─────────────────
 
-def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1):
+def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_possessions=10):
     """
-    Calculate player effect metrics: +/-, possessions, ratings.
-    Uses events to track score changes while each player is on court.
+    Calculate POSITION-BASED effect metrics: possessions + points scored.
 
-    A player is "on court" for a score event if they have any detection
-    within a window of the event timestamp.
+    The KMeans clusters represent COURT POSITIONS (left wing, top of key, etc.),
+    not individual players. Each cluster_id is a spatial region on the court.
+
+    For each position cluster we compute:
+      - possessions: number of possession segments where the ball-holder was
+        in this cluster (from events.player on possession_change events)
+      - points_scored: sum of points from make events where the shooter's
+        cluster matches this cluster (events.player on make events)
+      - points_per_possession: raw points_scored / possessions (not per 100)
+      - minutes_played: from player_minutes
+
+    NOTE: points_allowed / DRTG / Net rating are NOT computed because we cannot
+    accurately determine which team scored from position-based clusters. The
+    previous approach (crediting every position with every basket scored while
+    any player was in that zone) produced extreme, meaningless values (DRTG
+    400-1200) for positions with very few possessions.
+
+    Positions with fewer than min_possessions are marked as "insufficient data"
+    with NULL ratings.
     """
-    print(f"[Effect] Calculating player effect for game {game_id}")
+    print(f"[Effect] Calculating POSITION-BASED effect for game {game_id}")
 
     effective_fps = fps / detect_stride
 
-    minutes = conn.execute("""
-        SELECT * FROM player_minutes WHERE game_id = ?
+    # ── Get all cluster IDs from player_minutes ──
+    minutes_rows = conn.execute("""
+        SELECT tracker_id, first_frame, last_frame, total_frames, minutes_played
+        FROM player_minutes
+        WHERE game_id = ?
+        ORDER BY tracker_id
     """, (game_id,)).fetchall()
 
-    if not minutes:
+    if not minutes_rows:
         print("[Effect] No player minutes data — run calculate_player_minutes first")
         return []
 
-    # Get score events (only 'make' events) with their player
+    cluster_ids = [row["tracker_id"] for row in minutes_rows]
+    minutes_map = {row["tracker_id"]: row["minutes_played"] for row in minutes_rows}
+
+    # ── Get score events (make events) with shot type from shot_classifications ──
     make_events = conn.execute("""
-        SELECT timestamp_ms, source_frame, player, details_json
-        FROM events WHERE game_id = ? AND event_type = 'make'
-        ORDER BY timestamp_ms
+        SELECT e.timestamp_ms, e.player AS scorer_cluster, sc.shot_type
+        FROM events e
+        LEFT JOIN shot_classifications sc ON sc.event_id = e.id
+        WHERE e.game_id = ? AND e.event_type = 'make'
+        ORDER BY e.timestamp_ms
     """, (game_id,)).fetchall()
 
     score_events = []
     for event in make_events:
-        points = 2
-        details = {}
-        if event["details_json"]:
-            try:
-                details = json.loads(event["details_json"])
-            except (json.JSONDecodeError, TypeError):
-                pass
-        shot_type = details.get("shot_type", "2pt")
+        shot_type = event["shot_type"] or "2pt"
         if shot_type == "3pt":
             points = 3
         elif shot_type == "ft":
             points = 1
+        else:
+            points = 2
 
         score_events.append({
             "timestamp_ms": event["timestamp_ms"],
-            "frame": event["source_frame"] or 0,
+            "scorer_cluster": event["scorer_cluster"],
             "points": points,
-            "player": event["player"],
         })
 
     if not score_events:
         print("[Effect] No score events found")
         return []
 
-    # Build per-player detection windows for on-court determination
-    # Use a time window: player is on court at time T if they have detections
-    # within 30 seconds of T
-    player_windows = {}
-    for pm in minutes:
-        tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"] or 0
-        last_frame = pm["last_frame"] or 0
-        player_windows[tracker_id] = (first_frame, last_frame)
+    print(f"[Effect] Processing {len(score_events)} score events across {len(cluster_ids)} position clusters")
+
+    # ── Get possession segments: each possession_change event's player is the ball-holder cluster ──
+    possession_events = conn.execute("""
+        SELECT timestamp_ms, player AS ball_holder_cluster
+        FROM events
+        WHERE game_id = ? AND event_type = 'possession_change'
+        ORDER BY timestamp_ms
+    """, (game_id,)).fetchall()
+
+    # Count possessions per cluster (ball-holder cluster)
+    possessions_per_cluster = defaultdict(int)
+    for pe in possession_events:
+        bh = pe["ball_holder_cluster"]
+        if bh is not None:
+            try:
+                bh_int = int(bh)
+                possessions_per_cluster[bh_int] += 1
+            except (ValueError, TypeError):
+                pass
+
+    # ── Calculate per-position stats ──
+    MIN_POSSESSIONS = min_possessions  # threshold for "insufficient data"
 
     results = []
-    for pm in minutes:
-        tracker_id = pm["tracker_id"]
-        first_frame = pm["first_frame"] or 0
-        last_frame = pm["last_frame"] or 0
-        if first_frame == 0 and last_frame == 0:
-            continue
+    insufficient_warnings = []
+    for cid in cluster_ids:
+        possessions = possessions_per_cluster.get(cid, 0)
 
-        player_start_ms = (first_frame / effective_fps) * 1000
-        player_end_ms = (last_frame / effective_fps) * 1000
-
-        points_for = 0
-        points_against = 0
-
+        # Points scored: sum of points from make events where this cluster was the shooter
+        points_scored = 0
         for se in score_events:
-            se_frame = se["frame"]
-            se_ts = se["timestamp_ms"]
-            se_player = se["player"]
+            scorer = se["scorer_cluster"]
+            if scorer is not None and int(scorer) == cid:
+                points_scored += se["points"]
 
-            # Determine if this player is on court for this score event
-            on_court = False
-            if se_frame > 0:
-                on_court = first_frame <= se_frame <= last_frame
-            elif se_ts > 0:
-                on_court = player_start_ms <= se_ts <= player_end_ms
+        minutes_played = minutes_map.get(cid, 0)
 
-            if on_court:
-                # Points scored by the team while this player is on court
-                points_for += se["points"]
-            else:
-                points_against += se["points"]
-
-        frame_diff = max(1, last_frame - first_frame)
-        possessions = max(1, frame_diff / (effective_fps * 24))
-        plus_minus = points_for - points_against
-        ortg = (points_for / possessions) * 100 if possessions > 0 else 0
-        drtg = (points_against / possessions) * 100 if possessions > 0 else 0
+        if possessions < MIN_POSSESSIONS:
+            # Insufficient data: set ratings to NULL
+            points_per_poss = None
+            ortg = None
+            insufficient_warnings.append(
+                f"  ⚠ Position {cid}: only {possessions} possessions "
+                f"(<{MIN_POSSESSIONS}) — ratings set to NULL"
+            )
+        else:
+            points_per_poss = round(points_scored / possessions, 2)
+            ortg = round((points_scored / possessions) * 100, 1)
 
         results.append({
             "game_id": game_id,
-            "tracker_id": tracker_id,
-            "plus_minus": plus_minus,
-            "possessions_on": int(possessions),
-            "possessions_off": 0,
-            "points_for": points_for,
-            "points_against": points_against,
-            "ortg": round(ortg, 1),
-            "drtg": round(drtg, 1),
-            "net_rating": round(ortg - drtg, 1),
+            "tracker_id": cid,
+            "possessions": possessions,
+            "points_scored": points_scored,
+            "total_points": points_scored,  # raw points (same as points_scored)
+            "points_per_possession": points_per_poss,
+            "ortg": ortg,
+            "minutes_played": minutes_played,
         })
 
+    # ── Print warnings for insufficient data ──
+    if insufficient_warnings:
+        print(f"[Effect] {len(insufficient_warnings)} position(s) with insufficient data:")
+        for w in insufficient_warnings:
+            print(w)
+
+    # ── Write results to DB ──
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO player_effect
                 (game_id, tracker_id, plus_minus, possessions_on, possessions_off,
                  points_for, points_against, ortg, drtg, net_rating)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (r["game_id"], r["tracker_id"], r["plus_minus"], r["possessions_on"],
-              r["possessions_off"], r["points_for"], r["points_against"],
-              r["ortg"], r["drtg"], r["net_rating"]))
+        """, (
+            r["game_id"],
+            r["tracker_id"],
+            0,                          # plus_minus — no longer computed
+            r["possessions"],
+            0,                          # possessions_off — not applicable
+            r["points_scored"],
+            0,                          # points_against — no longer computed
+            r["ortg"],                  # NULL if insufficient data
+            0,                          # drtg — no longer computed
+            0,                          # net_rating — no longer computed
+        ))
     conn.commit()
 
-    print(f"[Effect] Calculated effect for {len(results)} players")
+    # ── Print summary ──
+    print(f"[Effect] Position-based effect for {len(results)} court positions:")
+    print(f"  {'Pos':>4}  {'Poss':>5}  {'Pts':>5}  {'PPoss':>6}  {'ORTG':>6}  {'Min':>5}")
+    print(f"  {'─'*4}  {'─'*5}  {'─'*5}  {'─'*6}  {'─'*6}  {'─'*5}")
+    for r in results:
+        pp = f"{r['points_per_possession']:.2f}" if r['points_per_possession'] is not None else "  N/A"
+        o = f"{r['ortg']:.1f}" if r['ortg'] is not None else "  N/A"
+        print(f"  {r['tracker_id']:>4}  {r['possessions']:>5}  {r['points_scored']:>5}  {pp:>6}  {o:>6}  {r['minutes_played']:>5.1f}")
+
     return results
 
 

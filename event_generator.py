@@ -290,17 +290,20 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=70, next_segment_start=None):
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=40, next_segment_start=None):
     """
     Detect if a shot was taken at the end of a possession segment.
 
     A real shot has a characteristic arc:
     1. Ball starts near the player (at segment end)
-    2. Ball rises to a peak (minimum y_center)
+    2. Ball rises to a peak (minimum y_center in image coords = highest point)
     3. Ball falls back down
 
     We look for this pattern in a window after the segment ends.
     The window is constrained to not overlap with the next segment.
+    
+    min_ball_rise: minimum pixel rise from player height to ball peak.
+        Default 40px (~3-4 feet in a 1080p court view).
     """
     if ball_track.empty:
         return None
@@ -308,8 +311,8 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70, next_segment
     # Search window: ball release happens at end of possession segment
     # Look slightly before segment end (ball may be released just before possession ends)
     # and forward for the ball's peak. Cap to avoid overlapping with next segment.
-    window_start = max(segment["end_frame"] - 5, segment["start_frame"])
-    window_end = segment["end_frame"] + 15
+    window_start = max(segment["end_frame"] - 3, segment["start_frame"])
+    window_end = segment["end_frame"] + 12
     if next_segment_start is not None:
         window_end = min(window_end, next_segment_start - 1)
 
@@ -333,7 +336,7 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=70, next_segment
 
     # Ball must travel laterally (not just go straight up and down)
     lateral_travel = abs(peak_x - float(segment["player_x_end"]))
-    if lateral_travel < 15:
+    if lateral_travel < 10:
         return None
 
     # Verify arc shape: ball should be rising from the player toward the peak
@@ -450,6 +453,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 details={
                     "ball_rise": round(shot_info["ball_rise"], 1),
                     "lateral_travel": round(shot_info["lateral_travel"], 1),
+                    "peak_frame": shot_info["peak_frame"],
                 },
             ),
         )
