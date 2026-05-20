@@ -396,10 +396,15 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 )
 
                 # Only generate turnover+steal for ABRUPT possession changes:
-                # - Previous segment was very short (< 1 second) OR gap is tiny (< 3 frames)
+                # - Previous segment was very short (< 5 frames)
+                # - AND gap is small (< 20 frames)
                 # - AND previous segment was NOT a shot
-                # This avoids marking every pass or play development as a turnover
-                is_abrupt = (prev_duration < 12 or gap_frames < 3)
+                # - AND ball was far from the previous player (suggesting deflection)
+                is_abrupt = (
+                    prev_duration <= 5
+                    and gap_frames < 20
+                    and previous.get("mean_ball_distance", 0) > 25
+                )
                 if is_abrupt and (index - 1) not in shot_segments:
                     append_unique_event(
                         events,

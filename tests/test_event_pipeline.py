@@ -136,7 +136,7 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
             "player_x_start": 100,
             "player_x_end": 108,
             "player_y_median": 240.0,
-            "mean_ball_distance": 20.0,
+            "mean_ball_distance": 50.0,
         },
         {
             "player": "2",
