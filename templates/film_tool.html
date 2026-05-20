@@ -582,6 +582,131 @@
       </div>
 
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         ANALYSIS RESULTS
+         ═══════════════════════════════════════════════════════ -->
+    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data) %}
+    <section class="ft-analysis-results" style="margin-top:1.5rem;">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>📊 Analysis Results</h2>
+            <p>Shot classifications, player effect, and minutes from AI analysis.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+
+          <div class="split" style="gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+
+            <!-- Shot Summary -->
+            {% if shot_summary %}
+            <div class="report-card" style="flex:1;min-width:220px;">
+              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🎯 Shot Summary</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th style="text-align:right;">Makes</th>
+                      <th style="text-align:right;">Misses</th>
+                      <th style="text-align:right;">Total</th>
+                      <th style="text-align:right;">FG%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in shot_summary %}
+                    <tr>
+                      <td>
+                        {% if row.shot_type == '2pt' %}
+                          <span class="badge badge-2pt">2PT</span>
+                        {% elif row.shot_type == '3pt' %}
+                          <span class="badge badge-3pt">3PT</span>
+                        {% elif row.shot_type == 'ft' %}
+                          <span class="badge badge-ft">FT</span>
+                        {% else %}
+                          {{ row.shot_type }}
+                        {% endif %}
+                      </td>
+                      <td style="text-align:right;font-weight:600;color:var(--color-success,#22c55e);">{{ row.makes }}</td>
+                      <td style="text-align:right;color:var(--color-danger,#ef4444);">{{ row.misses }}</td>
+                      <td style="text-align:right;">{{ row.total }}</td>
+                      <td style="text-align:right;font-weight:600;">{{ row.pct }}%</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Player Effect -->
+            {% if player_effect_data %}
+            <div class="report-card" style="flex:1;min-width:220px;">
+              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">⚡ Player Effect</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pos</th>
+                      <th style="text-align:right;">Poss</th>
+                      <th style="text-align:right;">Pts</th>
+                      <th style="text-align:right;">ORTG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in player_effect_data %}
+                    <tr>
+                      <td><strong>{{ row.tracker_id }}</strong></td>
+                      <td style="text-align:right;">{{ row.possessions_on }}</td>
+                      <td style="text-align:right;">{{ row.points_for }}</td>
+                      <td style="text-align:right;">
+                        {% if row.ortg is not none %}
+                          <span style="color:{% if row.ortg > 100 %}var(--color-success,#22c55e){% elif row.ortg < 80 %}var(--color-danger,#ef4444){% else %}inherit{% endif %};">
+                            {{ "%.1f"|format(row.ortg) }}
+                          </span>
+                        {% else %}
+                          N/A
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Player Minutes -->
+            {% if player_minutes_data %}
+            <div class="report-card" style="flex:1;min-width:180px;">
+              <div class="tiny" style="font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">⏱ Player Minutes</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pos</th>
+                      <th style="text-align:right;">Min</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in player_minutes_data %}
+                    <tr>
+                      <td><strong>{{ row.tracker_id }}</strong></td>
+                      <td style="text-align:right;font-weight:600;">{{ "%.1f"|format(row.minutes_played) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+          </div><!-- /split -->
+        </div><!-- /panel-body -->
+      </div><!-- /panel -->
+    </section>
+    {% endif %}
   </section>
 
   <!-- ═══════════════════════════════════════════════════════

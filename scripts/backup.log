@@ -1876,3 +1876,38 @@ To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
 From github.com:scottmcconnell1-bot/liberty-basketball-analysis
  * branch            backups    -> FETCH_HEAD
 [2026-05-20 01:33:42] === Backup complete: backup/2026-05-20-0133 ===
+[2026-05-20 02:34:05] === Starting backup: backup/2026-05-20-0234 ===
+[2026-05-20 02:34:05] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 02:34:06] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-20 02:34:14] Syncing current project state...
+[2026-05-20 02:34:16] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..1a82731  backups    -> origin/backups
+Rebasing (1/1)Auto-merging film_analysis.py
+CONFLICT (content): Merge conflict in film_analysis.py
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+Auto-merging stats.py
+error: could not apply 565ae77... backup: 2026-05-20-0234 —  35 files changed, 39755 insertions(+), 829 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 565ae77... # backup: 2026-05-20-0234 —  35 files changed, 39755 insertions(+), 829 deletions(-)
+[2026-05-20 02:34:18] Pull failed — attempting rebase resolution...
+HEAD is now at 1a82731 backup: 2026-05-20-0133 —  5 files changed, 325 insertions(+), 74 deletions(-) (rebased)
+[backups e2ee997] backup: 2026-05-20-0234 —  4 files changed, 212 insertions(+), 136 deletions(-) (rebased)
+ 4 files changed, 212 insertions(+), 136 deletions(-)
+[2026-05-20 02:34:18] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   1a82731..e2ee997  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-20-0234 -> backup/2026-05-20-0234
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-20 02:34:23] === Backup complete: backup/2026-05-20-0234 ===

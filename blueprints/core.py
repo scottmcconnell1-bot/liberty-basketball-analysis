@@ -1151,6 +1151,9 @@ def videos_page():
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def film(filename=None):
     game_id = (request.args.get("game_id") or "").strip() or None
+    shot_summary = []
+    player_effect_data = []
+    player_minutes_data = []
     if filename and not game_id:
         db = get_db()
         # Find the most recent analysis run for this video file
@@ -1160,11 +1163,63 @@ def film(filename=None):
         ).fetchone()
         if row:
             game_id = row["game_id"]
+    if game_id:
+        db = get_db()
+        # Shot summary: aggregate makes and misses by shot type
+        shot_rows = db.execute(
+            """SELECT shot_type, shot_result, COUNT(*) as cnt
+               FROM shot_classifications
+               WHERE game_id = ?
+               GROUP BY shot_type, shot_result
+               ORDER BY shot_type, shot_result""",
+            (game_id,),
+        ).fetchall()
+        # Pivot: build {shot_type: {make: n, miss: n}}
+        shot_pivot = {}
+        for r in shot_rows:
+            st = r["shot_type"]
+            if st not in shot_pivot:
+                shot_pivot[st] = {"make": 0, "miss": 0}
+            shot_pivot[st][r["shot_result"]] = r["cnt"]
+        for st, counts in shot_pivot.items():
+            total = counts["make"] + counts["miss"]
+            pct = (counts["make"] / total * 100) if total > 0 else 0
+            shot_summary.append({
+                "shot_type": st,
+                "makes": counts["make"],
+                "misses": counts["miss"],
+                "total": total,
+                "pct": round(pct, 1),
+            })
+
+        # Player effect: possessions, points, ORTG by tracker
+        effect_rows = db.execute(
+            """SELECT tracker_id, possessions_on, points_for, ortg
+               FROM player_effect
+               WHERE game_id = ?
+               ORDER BY tracker_id""",
+            (game_id,),
+        ).fetchall()
+        player_effect_data = [dict(r) for r in effect_rows]
+
+        # Player minutes
+        minutes_rows = db.execute(
+            """SELECT tracker_id, minutes_played
+               FROM player_minutes
+               WHERE game_id = ?
+               ORDER BY tracker_id""",
+            (game_id,),
+        ).fetchall()
+        player_minutes_data = [dict(r) for r in minutes_rows]
+
     return render_template(
         "film_tool.html",
         filename=filename,
         game_id=game_id,
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
+        shot_summary=shot_summary,
+        player_effect_data=player_effect_data,
+        player_minutes_data=player_minutes_data,
     )
 
 
