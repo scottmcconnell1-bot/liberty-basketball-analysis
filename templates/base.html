@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#01696f" />
   <title>{% block title %}Liberty Basketball{% endblock %}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -414,6 +416,77 @@
     .card, .modal, .stat-box, .form-group, table, .table-responsive {
       position: relative;
     }
+
+    /* ── Mobile Responsive ─────────────────── */
+    @media (max-width: 768px) {
+      /* Nav: hamburger */
+      nav { padding: 0 10px; height: 52px; }
+      nav .brand { font-size: 0.85rem; }
+      nav .brand-logo { height: 22px; }
+      .nav-hamburger { display: flex !important; }
+      .nav-links { display: none; position: absolute; top: 52px; left: 0; right: 0; background: var(--color-primary); flex-direction: column; padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 299; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 10px 16px; font-size: 0.85rem; white-space: normal; }
+      .nav-links .nav-dropdown { flex-direction: column; align-items: stretch; }
+      .nav-links .nav-dropdown > a { padding: 10px 16px; }
+      .nav-links .nav-dropdown .dropdown-menu { position: static; display: none; box-shadow: none; background: rgba(0,0,0,0.15); border-radius: 0; min-width: 0; }
+      .nav-links .nav-dropdown.open .dropdown-menu { display: block; }
+      .nav-links .nav-dropdown .dropdown-menu a { padding: 8px 24px; font-size: 0.8rem; }
+      .nav-links .spacer { display: none; }
+      .nav-links .report-link { margin: 4px 16px; text-align: center; }
+
+      /* Main */
+      main { margin: 16px auto; padding: 0 12px; }
+
+      /* Cards */
+      .card { padding: 14px 16px; margin-bottom: 12px; }
+
+      /* Buttons */
+      .btn { padding: 10px 14px; font-size: 0.85rem; min-height: 44px; }
+      .btn-sm { padding: 8px 12px; font-size: 0.8rem; min-height: 36px; }
+
+      /* Tables → card layout */
+      .table-responsive table { min-width: 0; }
+      .table-responsive thead { display: none; }
+      .table-responsive tbody tr { display: block; margin-bottom: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; background: var(--color-surface); }
+      .table-responsive tbody td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border: none; text-align: right; font-size: 0.82rem; }
+      .table-responsive tbody td::before { content: attr(data-label); font-weight: 600; color: var(--color-muted); font-size: 0.72rem; text-transform: uppercase; text-align: left; margin-right: 12px; flex-shrink: 0; }
+      .table-responsive tbody td:last-child { border-bottom: none; }
+      .table-responsive tbody td:last-child::before { display: none; }
+
+      /* Stat grid */
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-box { padding: 12px 14px; }
+      .stat-box .value { font-size: 1.5rem; }
+
+      /* Team grid */
+      .team-grid { grid-template-columns: 1fr; }
+
+      /* Page header */
+      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-header h2 { font-size: 1.1rem; }
+
+      /* Forms */
+      .form-control { font-size: 16px; padding: 10px 12px; }
+
+      /* Modals */
+      .modal { padding: 20px; margin: 10px; width: calc(100% - 20px); }
+
+      /* Schedule rows */
+      .sched-row { grid-template-columns: 100px 1fr 24px; gap: 8px; }
+      .sched-date { font-size: 0.72rem; }
+
+      /* Report drawer */
+      .report-drawer { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      nav .brand span { display: none; }
+    }
+
+    /* ── Hamburger button (hidden on desktop) ── */
+    .nav-hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; margin-left: auto; align-items: center; justify-content: center; }
   </style>
   {% block head %}{% endblock %}
   {% block styles %}{% endblock %}
@@ -548,7 +621,9 @@
 </head>
 <body data-report-source-default="{% if compose_source is defined and compose_source %}{{ compose_source }}{% else %}{{ request.full_path if request.query_string else request.path }}{% endif %}">
   <nav>
-    <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> Liberty Basketball</a>
+    <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> <span>Liberty Basketball</span></a>
+    <button class="nav-hamburger" type="button" aria-label="Toggle navigation" onclick="document.getElementById('nav-links').classList.toggle('open')">☰</button>
+    <div class="nav-links" id="nav-links">
     <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
     <div class="nav-dropdown">
@@ -613,6 +688,7 @@
     <a href="{{ url_for('users.register') }}">Register</a>
     {% endif %}
     <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+    </div>
   </nav>
   <main>
     {% block content %}{% endblock %}
@@ -864,7 +940,70 @@
     }
     pollNotifications();
     setInterval(pollNotifications, 30000);
-  })();
+    })();
+  </script>
+  <script>
+    // ── Mobile table card layout ─────────────
+    (function() {
+      function initMobileTables() {
+        document.querySelectorAll('.table-responsive').forEach(function(wrapper) {
+          var headers = wrapper.querySelectorAll('thead th');
+          if (!headers.length) return;
+          var labels = Array.from(headers).map(function(th) { return th.textContent.trim(); });
+          wrapper.querySelectorAll('tbody tr').forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            cells.forEach(function(td, i) {
+              if (i < labels.length && labels[i]) {
+                td.setAttribute('data-label', labels[i]);
+              }
+            });
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMobileTables);
+      } else {
+        initMobileTables();
+      }
+    })();
+  </script>
+  <script>
+    // ── Mobile nav dropdown toggle ───────────
+    (function() {
+      var navLinks = document.getElementById('nav-links');
+      if (!navLinks) return;
+      // Close hamburger when clicking a top-level link
+      navLinks.querySelectorAll('a[href]').forEach(function(a) {
+        a.addEventListener('click', function() {
+          // Only close if it's a direct link (not a dropdown toggle)
+          if (!a.parentElement.classList.contains('nav-dropdown')) {
+            navLinks.classList.remove('open');
+          }
+        });
+      });
+      // Toggle dropdown on mobile (click instead of hover)
+      navLinks.querySelectorAll('.nav-dropdown > a').forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+          if (window.innerWidth > 768) return; // desktop uses hover
+          e.preventDefault();
+          var dd = toggle.parentElement;
+          // Close other open dropdowns
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(other) {
+            if (other !== dd) other.classList.remove('open');
+          });
+          dd.classList.toggle('open');
+        });
+      });
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!navLinks.contains(e.target)) {
+          navLinks.classList.remove('open');
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(dd) {
+            dd.classList.remove('open');
+          });
+        }
+      });
+    })();
   </script>
 </body>
 </html>
