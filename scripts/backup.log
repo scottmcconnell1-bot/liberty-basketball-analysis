@@ -2636,3 +2636,39 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 3048706... # backup: 2026-05-21-0427 —  36 files changed, 46331 insertions(+), 850 deletions(-)
 [2026-05-21 04:27:55] Pull failed — attempting rebase resolution...
 HEAD is now at 7519615 backup: 2026-05-21-0326 —  2 files changed, 150 insertions(+) (rebased)
+[backups e1735d4] backup: 2026-05-21-0427 —  1 file changed, 32 insertions(+) (rebased)
+ 1 file changed, 32 insertions(+)
+[2026-05-21 04:27:55] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   7519615..e1735d4  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-21-0427 -> backup/2026-05-21-0427
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-21 04:28:00] === Backup complete: backup/2026-05-21-0427 ===
+[2026-05-21 09:49:31] === Starting backup: backup/2026-05-21-0949 ===
+[2026-05-21 09:49:31] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-21 09:49:32] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-21 09:49:39] Syncing current project state...
+[2026-05-21 09:49:45] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..e1735d4  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging logs/flask.log
+CONFLICT (add/add): Merge conflict in logs/flask.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply eb99bc8... backup: 2026-05-21-0949 —  36 files changed, 46406 insertions(+), 850 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply eb99bc8... # backup: 2026-05-21-0949 —  36 files changed, 46406 insertions(+), 850 deletions(-)
+[2026-05-21 09:49:47] Pull failed — attempting rebase resolution...
+HEAD is now at e1735d4 backup: 2026-05-21-0427 —  1 file changed, 32 insertions(+) (rebased)
