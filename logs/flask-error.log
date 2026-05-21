@@ -39124,3 +39124,523 @@ Notification error: no such column: name
 127.0.0.1 - - [20/May/2026 15:13:30] "GET /api/videos HTTP/1.1" 200 -
 127.0.0.1 - - [20/May/2026 15:14:30] "GET /api/videos HTTP/1.1" 200 -
 127.0.0.1 - - [20/May/2026 15:15:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:16:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:17:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:18:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:19:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:20:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:21:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:22:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:23:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:24:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:25:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:26:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:27:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:28:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:29:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:30:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:31:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:32:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:33:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:34:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:35:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:36:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:37:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:38:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:39:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:40:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:41:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:42:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:43:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:44:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:45:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:46:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:47:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:48:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:49:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:50:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:51:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:52:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:53:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:54:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:55:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:56:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:57:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:58:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 15:59:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:00:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:01:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:02:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:03:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:04:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:05:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:06:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:07:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:08:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:09:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:10:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:11:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:12:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:13:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:14:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:15:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:16:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:17:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:18:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:19:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:20:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:21:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:22:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:23:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:24:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:25:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:26:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:27:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:28:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:29:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:30:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:31:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:32:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:33:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:34:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:35:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:36:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:37:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:38:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:39:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:40:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:41:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:42:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:43:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:44:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:45:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:46:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:47:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:48:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:49:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:50:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:51:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:52:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:53:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:54:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:55:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:56:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:57:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:58:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 16:59:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:00:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:01:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:02:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:03:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:04:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:05:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:06:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:07:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:08:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:09:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:10:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:11:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:12:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:13:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:14:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:15:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:16:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:17:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:18:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:19:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:20:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:21:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:22:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:23:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:24:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:25:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:26:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:27:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:28:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:29:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:30:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:31:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:32:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:33:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:34:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:35:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:36:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:37:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:38:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:39:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:40:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:41:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:42:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:43:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:44:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:45:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:46:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:47:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:48:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:49:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:50:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:51:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:52:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:53:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:54:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:55:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:56:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:57:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:58:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 17:59:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:00:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:01:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:02:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:03:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:04:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:05:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:06:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:07:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:08:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:09:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:10:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:11:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:12:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:13:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:14:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:15:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:16:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:17:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:18:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:19:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:20:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:21:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:22:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:23:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:24:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:25:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /film HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /playbook HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /player-development HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /practice-playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /practice-summary HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /settings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /settings/custom-weights HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /users HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /nfhs-matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /debug HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "[32mGET /api/users HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /login?next=http://localhost:8081/api/users HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/seasons HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/clips HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /api/nfhs_matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:56] "GET /static/img/patriot-logo.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /nfhs-matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practice-summary HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /player-development HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practice-playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /settings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /settings/custom-weights HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /debug HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /users HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[32mPOST /schedule/seasons/save HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /schedule?message=Season+created. HTTP/1.1" 200 -
+[2026-05-20 18:26:58,583] ERROR in app: Exception on /schedule/games/save [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/core.py", line 204, in schedule_save_game
+    db.execute(
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /schedule/games/save HTTP/1.1[0m" 500 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/seasons HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/scheduled_games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[32mPOST /games/save HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /games?message=Game+created. HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/games HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/games/282 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "PUT /api/games/282 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "DELETE /api/games/282 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /nfhs-matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /nfhs-matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/nfhs_matches HTTP/1.1" 200 -
+[2026-05-20 18:26:58,672] ERROR in app: Exception on /api/nfhs_matches [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/games.py", line 310, in api_nfhs_matches_create
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/nfhs_matches HTTP/1.1[0m" 500 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practices HTTP/1.1" 200 -
+[2026-05-20 18:26:58,699] ERROR in app: Exception on /practices/save [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/practice.py", line 90, in practices_save
+    db.execute(
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /practices/save HTTP/1.1[0m" 500 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[33mGET /practices/1/report HTTP/1.1[0m" 404 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practice-summary HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[33mPOST /practices/1/generate HTTP/1.1[0m" 404 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /player-development HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/clips HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/clips HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /practice-playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/playlists HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/playlists/97 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "PUT /api/playlists/97 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "DELETE /api/playlists/97 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /settings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /settings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /settings/custom-weights HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /debug HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /debug HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[32mPOST /debug/issues HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/seasons HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/seasons/217 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "PUT /api/seasons/217 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "DELETE /api/seasons/217 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[33mGET /api/seasons/217 HTTP/1.1[0m" 404 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/players HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/players HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/events/test_game HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "POST /api/save_event HTTP/1.1" 200 -
+[2026-05-20 18:26:58,867] ERROR in app: Exception on /practices/save [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/practice.py", line 90, in practices_save
+    db.execute(
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /practices/save HTTP/1.1[0m" 500 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/practices/1/plan-items HTTP/1.1" 200 -
+[2026-05-20 18:26:58,873] ERROR in app: Exception on /api/practices/1/plan-items [POST]
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/helpers.py", line 51, in wrapped
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/blueprints/practice.py", line 220, in api_plan_items_create
+    item = pd_helpers.create_plan_item(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/player_development.py", line 234, in create_plan_item
+    cur = db.execute(
+          ^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/practices/1/plan-items HTTP/1.1[0m" 500 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/sources HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/games HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[35m[1mPOST /api/sources HTTP/1.1[0m" 201 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/analysis_status/test_game HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/stats/test_game HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/check_duplicate HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/resource-status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/create HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/import HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "[32mPOST /playbook/save HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/play/252 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/playbook/play/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/play/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/play/1/edit HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /playbook/export/1 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /messages HTTP/1.1" 200 -
+Notification error: no such column: name
+127.0.0.1 - - [20/May/2026 18:26:58] "POST /api/messages/send HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/messages/poll?conversation_id=1&since_id=0 HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "GET /api/messages/conversations HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:58] "POST /api/messages/read HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:26:59] "[31m[1mPOST /schedule/seasons/save HTTP/1.1[0m" 400 -
+127.0.0.1 - - [20/May/2026 18:26:59] "[31m[1mPOST /schedule/seasons/save HTTP/1.1[0m" 400 -
+127.0.0.1 - - [20/May/2026 18:26:59] "[31m[1mPOST /practices/save HTTP/1.1[0m" 400 -
+127.0.0.1 - - [20/May/2026 18:26:59] "[31m[1mPOST /api/seasons HTTP/1.1[0m" 400 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET /static/img/patriot-logo.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET /api/teams/photos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET /api/teams/schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET /api/teams/rankings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:01] "GET /uploads/team_photos/varsity_boys_1778435024.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:02] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+127.0.0.1 - - [20/May/2026 18:27:03] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:03] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:04] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:04] "GET /api/messages/conversations HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:06] "GET /debug HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:06] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:06] "GET /api/resource-status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:08] "GET /api/resource-status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:08] "GET /film HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:08] "GET /static/css/film-tool.css HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:08] "GET /static/js/film-tool.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:08] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:09] "GET /api/resource-status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:11] "GET /api/resource-status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:11] "GET /games HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:11] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:13] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:13] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:15] "[32mGET /logout HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:27:15] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:15] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:17] "GET /messages HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:17] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:20] "GET /nfhs-matches HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:20] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:22] "GET /playbook HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:22] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:24] "GET /playbook/bulk_import HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:24] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:26] "GET /playbook/create HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:26] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:28] "GET /playbook/import HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:28] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:31] "GET /player-development HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:31] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:33] "GET /practice-playlists HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:33] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:35] "GET /practice-summary HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:35] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:37] "GET /practices HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:37] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:39] "[32mGET /profile HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:27:39] "GET /login?next=http://localhost:8081/profile HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:39] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:41] "GET /register HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:41] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:43] "GET /schedule HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:43] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:46] "GET /scouting HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:46] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:46] "GET /api/scouting/reports HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:46] "GET /api/scouting/nfhs/credentials HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:48] "GET /settings HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:48] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:50] "GET /settings/custom-weights HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:50] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:52] "[32mGET /settings/notifications HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:27:52] "GET /login?next=http://localhost:8081/settings/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:52] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:54] "GET /status HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:54] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:56] "GET /users HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:56] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:56] "[32mGET /api/users HTTP/1.1[0m" 302 -
+127.0.0.1 - - [20/May/2026 18:27:56] "GET /login?next=http://localhost:8081/api/users HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:58] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:27:58] "[36mGET /static/img/patriot-logo.jpg HTTP/1.1[0m" 304 -
+127.0.0.1 - - [20/May/2026 18:27:59] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:28:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:29:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:30:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:31:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:32:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:33:30] "GET /api/videos HTTP/1.1" 200 -
+127.0.0.1 - - [20/May/2026 18:34:30] "GET /api/videos HTTP/1.1" 200 -

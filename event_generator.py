@@ -290,7 +290,7 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
-def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment_start=None,
+def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment_start=None,
                               secondary_pass=False, ball_y_threshold=400):
     """
     Detect if a shot was taken at the end of a possession segment.
@@ -359,17 +359,16 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment
         }
 
     # Primary pass: standard arc detection
-    # Search window: ball release happens around end of possession segment
-    # Look before segment end (ball may be released during possession)
-    # and forward for the ball's peak. Cap to avoid overlapping with next segment.
-    window_start = max(segment["end_frame"] - 10, segment["start_frame"])
-    window_end = segment["end_frame"] + 25
+    # Search window: look for ball arc starting from segment start through
+    # segment end + buffer. Wider window to handle sparse ball detections.
+    window_start = segment["start_frame"]
+    window_end = segment["end_frame"] + 40
     if next_segment_start is not None:
         window_end = min(window_end, next_segment_start - 1)
 
     search_window = ball_track[
-        (ball_track["frame_number"] >= window_start)
-        & (ball_track["frame_number"] <= window_end)
+        (ball_track["frame_number"] >= window_start) &
+        (ball_track["frame_number"] <= window_end)
     ].copy()
     if len(search_window) < 2:
         return None
@@ -381,21 +380,22 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=15, next_segment
     peak_x = float(peak_row["x_center"])
 
     # Ball must rise above the player's head (player_y_median is torso height)
+    # Use a lower threshold since ball detections are sparse
     ball_rise = float(segment["player_y_median"]) - peak_y
     if ball_rise < min_ball_rise:
         return None
 
-    # Ball must travel laterally (not just go straight up and down)
+    # Ball must travel laterally (relaxed for sparse detections)
     lateral_travel = abs(peak_x - float(segment["player_x_end"]))
-    if lateral_travel < 5:
+    if lateral_travel < 3:
         return None
 
-    # Verify arc shape: ball should be descending after the peak
+    # Relaxed arc shape check: ball should not continue rising significantly after peak
     after_peak = search_window[search_window["frame_number"] > peak_row["frame_number"]]
-    if len(after_peak) >= 1:
+    if len(after_peak) >= 2:
         min_y_after = after_peak["y_center"].min()
         # If ball continues rising after "peak", it's not a real arc
-        if min_y_after < peak_y - 5:
+        if min_y_after < peak_y - 10:
             return None
 
     return {
