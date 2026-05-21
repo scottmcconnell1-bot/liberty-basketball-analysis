@@ -91,7 +91,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
             if frame_number % detect_stride == 0:
-                results = model(frame, classes=[0], conf=0.5, verbose=False, imgsz=640)
+                results = model(frame, classes=[0], conf=0.25, verbose=False, imgsz=640)
                 for result in results:
                     for box in result.boxes:
                         class_id = int(box.cls[0])
@@ -159,7 +159,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             if frame_number % 5 == 0:
                 ball_positions = []
                 try:
-                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False, imgsz=640)
+                    ball_results = model(frame, classes=[32], conf=0.05, verbose=False, imgsz=640)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
