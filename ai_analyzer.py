@@ -61,7 +61,15 @@ def run_ai_analysis(db_path, video_path, game_id):
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, YOLO every frame")
+        orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        detect_stride = int(ai_settings.get("detection_stride", 1))
+        if detect_stride < 1:
+            detect_stride = 1
+        infer_size = 640
+        scale_x = orig_w / infer_size
+        scale_y = orig_h / infer_size
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px")
 
         frame_number = 0
         db = get_db()
@@ -71,7 +79,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         next_tracker_id = 1
         ball_positions_all = []
         MAX_MATCH_DIST = 200  # Max pixel distance to match a detection to a track
-        MAX_TRACK_GAP = 120   # Retire tracks not seen in this many frames
+        MAX_TRACK_GAP = max(30, 120 // detect_stride)  # Retire tracks not seen in this many detection cycles
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -80,17 +88,28 @@ def run_ai_analysis(db_path, video_path, game_id):
 
             timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
 
-            # --- Run YOLO person detection ---
-            results = model(frame, classes=[0], conf=0.25, verbose=False)
+            # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
-            for result in results:
-                for box in result.boxes:
-                    class_id = int(box.cls[0])
-                    if model.names[class_id] == 'person':
-                        confidence = float(box.conf[0])
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                        new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
+            if frame_number % detect_stride == 0:
+                results = model(frame, classes=[0], conf=0.25, verbose=False, imgsz=640)
+                for result in results:
+                    for box in result.boxes:
+                        class_id = int(box.cls[0])
+                        if model.names[class_id] == 'person':
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            # Scale coordinates from inference size back to original frame size
+                            x1 = int(x1 * scale_x)
+                            y1 = int(y1 * scale_y)
+                            x2 = int(x2 * scale_x)
+                            y2 = int(y2 * scale_y)
+                            # Clamp to frame bounds (YOLO boxes can overflow at edges)
+                            x1 = max(0, min(x1, orig_w - 1))
+                            y1 = max(0, min(y1, orig_h - 1))
+                            x2 = max(0, min(x2, orig_w - 1))
+                            y2 = max(0, min(y2, orig_h - 1))
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
             # --- Match detections to active tracks (greedy nearest-neighbor) ---
             person_rows = []
@@ -140,7 +159,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             if frame_number % 5 == 0:
                 ball_positions = []
                 try:
-                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False)
+                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False, imgsz=640)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
@@ -148,6 +167,16 @@ def run_ai_analysis(db_path, video_path, game_id):
                             if raw_class_name in ['sports ball', 'sports_ball']:
                                 confidence = float(box.conf[0])
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
+                                # Scale coordinates from inference size back to original frame size
+                                x1 = int(x1 * scale_x)
+                                y1 = int(y1 * scale_y)
+                                x2 = int(x2 * scale_x)
+                                y2 = int(y2 * scale_y)
+                                # Clamp to frame bounds (YOLO boxes can overflow at edges)
+                                x1 = max(0, min(x1, orig_w - 1))
+                                y1 = max(0, min(y1, orig_h - 1))
+                                x2 = max(0, min(x2, orig_w - 1))
+                                y2 = max(0, min(y2, orig_h - 1))
                                 w_box, h_box = x2 - x1, y2 - y1
                                 if 8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0:
                                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -260,7 +289,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
             fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
             cap.release()
-            run_enhanced_analysis(db_path, game_id, fps)
+            run_enhanced_analysis(db_path, game_id, fps, detect_stride=detect_stride)
         except Exception as e:
             print(f"[AI] Enhanced analysis failed: {e}")
     finally:
