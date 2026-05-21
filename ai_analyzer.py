@@ -66,7 +66,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         detect_stride = int(ai_settings.get("detection_stride", 1))
         if detect_stride < 1:
             detect_stride = 1
-        infer_size = 320
+        infer_size = 640
         scale_x = orig_w / infer_size
         scale_y = orig_h / infer_size
         print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px")
