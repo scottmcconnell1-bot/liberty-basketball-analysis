@@ -520,6 +520,66 @@ def test_api_analysis():
         api_get(endpoint, name=endpoint)
 
 
+def test_playbook_pages():
+    print("\n📖 Playbook")
+    page_ok("/playbook", "Playbook list page")
+    page_ok("/playbook/create", "Playbook create page")
+    page_ok("/playbook/import", "Playbook import page")
+
+    # Create a play via form
+    r = form_submit("/playbook/save", {
+        "name": "UI Test Play",
+        "category": "offense",
+        "description": "A test play",
+        "tags": "test",
+        "diagram_json": "{}",
+        "steps_json": "[]",
+    }, "Create play via form")
+    if r and r.status_code == 200:
+        pass_("Play created via form")
+
+    # API: get play
+    r = api_get("/api/playbook/play/1", name="Get play via API")
+
+    # View and edit pages
+    page_ok("/playbook/play/1", "View play page")
+    page_ok("/playbook/play/1/edit", "Edit play page")
+
+    # Export
+    page_ok("/playbook/export/1", "Export play")
+
+
+def test_messages_pages():
+    print("\n💬 Messages")
+    page_ok("/messages", "Messages page")
+
+    # Send a message
+    r = api_post("/api/messages/send", json_data={
+        "conversation_id": 1,
+        "body": "UI test message",
+        "sender_id": "coach",
+    }, name="Send message")
+    if r:
+        try:
+            data = r.json()
+            if "id" in data:
+                pass_("Message sent via API")
+        except:
+            pass_("Message API responded")
+
+    # Poll messages
+    api_get("/api/messages/poll?conversation_id=1&since_id=0", name="Poll messages")
+
+    # List conversations
+    api_get("/api/messages/conversations", name="List conversations")
+
+    # Mark as read
+    api_post("/api/messages/read", json_data={
+        "message_ids": [1],
+        "user_id": "coach",
+    }, name="Mark messages read")
+
+
 def test_form_validation():
     print("\n📝 Form Validation")
     # Empty season should fail
@@ -574,6 +634,8 @@ if __name__ == "__main__":
     test_api_plan_items()
     test_api_sources()
     test_api_analysis()
+    test_playbook_pages()
+    test_messages_pages()
     test_form_validation()
 
     print("\n" + "=" * 60)
