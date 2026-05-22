@@ -826,3 +826,47 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 4a0cd02... # backup: 2026-05-22-1152 —  84 files changed, 16091 insertions(+), 1087 deletions(-)
 [2026-05-22 11:52:37] Pull failed — attempting rebase resolution...
 HEAD is now at 451deb7 backup: 2026-05-22-1048 —  9 files changed, 2775 insertions(+) (rebased)
+[backups a6ac4a6] backup: 2026-05-22-1152 —  13 files changed, 1049 insertions(+) (rebased)
+ 13 files changed, 1049 insertions(+)
+ create mode 100644 ball_2min_conf0005_stride2.csv
+ create mode 100644 ball_30sec_conf0001_stride1.csv
+ create mode 100644 ball_30sec_conf0005.csv
+ create mode 100644 ball_q1_conf0005_stride8.csv
+ create mode 100644 ball_q1_conf001_stride8.csv
+ create mode 100644 detect.log
+ create mode 100644 detect_ball_full.py
+ create mode 100644 final_events_db_persons.csv
+ create mode 100644 final_events_improved.csv
+ create mode 100644 final_events_v2.csv
+ create mode 100644 process_shot_attempts.py
+ create mode 100644 process_shot_attempts_v2.py
+[2026-05-22 11:52:37] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   451deb7..a6ac4a6  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-22-1152 -> backup/2026-05-22-1152
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-22 11:53:01] === Backup complete: backup/2026-05-22-1152 ===
+[2026-05-22 12:55:40] === Starting backup: backup/2026-05-22-1255 ===
+[2026-05-22 12:55:40] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-22 12:55:42] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-22 12:55:48] Syncing current project state...
+[2026-05-22 12:55:53] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..a6ac4a6  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply ba04a8a... backup: 2026-05-22-1255 —  93 files changed, 18301 insertions(+), 1087 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply ba04a8a... # backup: 2026-05-22-1255 —  93 files changed, 18301 insertions(+), 1087 deletions(-)
+[2026-05-22 12:55:59] Pull failed — attempting rebase resolution...
+HEAD is now at a6ac4a6 backup: 2026-05-22-1152 —  13 files changed, 1049 insertions(+) (rebased)
