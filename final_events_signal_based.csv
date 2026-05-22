@@ -1,0 +1,4 @@
+frame,timestamp_ms,ball_x_px,ball_y_px,ball_x_smooth,ball_y_smooth,shot_type,made,signal_used
+238,,734.8,149.2,734.8,149.2,2PT,False,0
+1992,,399.2,192.4,399.2,192.4,2PT,False,0
+2630,698718.0,1275.76,183.04,1275.76,183.04,2PT,False,0

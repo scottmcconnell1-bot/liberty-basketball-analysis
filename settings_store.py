@@ -6,12 +6,12 @@ AI_DEFAULTS = {
     "custom_detector_model": "",
     "event_generator_mode": "expanded",
     "inference_device": "auto",
-    "frame_stride": 3,
-    "detection_stride": 10,
+    "frame_stride": 1,
+    "detection_stride": 1,
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
     "llm_provider": "ollama",
-    "llm_model": "",
+    "llm_model": ""
 }
 
 
