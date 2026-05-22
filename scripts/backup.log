@@ -740,3 +740,49 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 385d3f7... # backup: 2026-05-22-0827 —  64 files changed, 12267 insertions(+), 1087 deletions(-)
 [2026-05-22 08:27:47] Pull failed — attempting rebase resolution...
 HEAD is now at ef83163 backup: 2026-05-22-0721 —  2 files changed, 103 insertions(+) (rebased)
+[backups d50d267] backup: 2026-05-22-0827 —  7 files changed, 1719 insertions(+) (rebased)
+ 7 files changed, 1719 insertions(+)
+ create mode 100644 ball_detection_smooth_stride2.py
+ create mode 100644 detect_ball_smooth_stride2.py
+ create mode 100644 hoop_shot_attempt_detection.py
+ create mode 100644 pose_keypoints.csv
+ create mode 100644 pose_keypoints_full.csv
+ create mode 100644 q1_2min_start.webm
+[2026-05-22 08:27:47] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   ef83163..d50d267  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-22-0827 -> backup/2026-05-22-0827
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-22 08:28:14] === Backup complete: backup/2026-05-22-0827 ===
+[2026-05-22 09:31:06] === Starting backup: backup/2026-05-22-0931 ===
+[2026-05-22 09:31:06] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-22 09:31:07] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-22 09:31:14] Syncing current project state...
+[2026-05-22 09:31:17] Pulling latest from origin/backups before push...
+[2026-05-22 10:48:29] === Starting backup: backup/2026-05-22-1048 ===
+[2026-05-22 10:48:29] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-22 10:48:30] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-22 10:48:37] Syncing current project state...
+[2026-05-22 10:48:40] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..d50d267  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply f4d6df7... backup: 2026-05-22-1048 —  72 files changed, 15042 insertions(+), 1087 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply f4d6df7... # backup: 2026-05-22-1048 —  72 files changed, 15042 insertions(+), 1087 deletions(-)
+[2026-05-22 10:48:47] Pull failed — attempting rebase resolution...
+HEAD is now at d50d267 backup: 2026-05-22-0827 —  7 files changed, 1719 insertions(+) (rebased)
