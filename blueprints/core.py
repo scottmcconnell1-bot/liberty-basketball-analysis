@@ -1151,6 +1151,9 @@ def videos_page():
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def film(filename=None):
     game_id = (request.args.get("game_id") or "").strip() or None
+    shot_summary = []
+    player_effect_data = []
+    player_minutes_data = []
     if filename and not game_id:
         db = get_db()
         # Find the most recent analysis run for this video file
@@ -1160,11 +1163,63 @@ def film(filename=None):
         ).fetchone()
         if row:
             game_id = row["game_id"]
+    if game_id:
+        db = get_db()
+        # Shot summary: aggregate makes and misses by shot type
+        shot_rows = db.execute(
+            """SELECT shot_type, shot_result, COUNT(*) as cnt
+               FROM shot_classifications
+               WHERE game_id = ?
+               GROUP BY shot_type, shot_result
+               ORDER BY shot_type, shot_result""",
+            (game_id,),
+        ).fetchall()
+        # Pivot: build {shot_type: {make: n, miss: n}}
+        shot_pivot = {}
+        for r in shot_rows:
+            st = r["shot_type"]
+            if st not in shot_pivot:
+                shot_pivot[st] = {"make": 0, "miss": 0}
+            shot_pivot[st][r["shot_result"]] = r["cnt"]
+        for st, counts in shot_pivot.items():
+            total = counts["make"] + counts["miss"]
+            pct = (counts["make"] / total * 100) if total > 0 else 0
+            shot_summary.append({
+                "shot_type": st,
+                "makes": counts["make"],
+                "misses": counts["miss"],
+                "total": total,
+                "pct": round(pct, 1),
+            })
+
+        # Player effect: possessions, points, ORTG by tracker
+        effect_rows = db.execute(
+            """SELECT tracker_id, possessions_on, points_for, ortg
+               FROM player_effect
+               WHERE game_id = ?
+               ORDER BY tracker_id""",
+            (game_id,),
+        ).fetchall()
+        player_effect_data = [dict(r) for r in effect_rows]
+
+        # Player minutes
+        minutes_rows = db.execute(
+            """SELECT tracker_id, minutes_played
+               FROM player_minutes
+               WHERE game_id = ?
+               ORDER BY tracker_id""",
+            (game_id,),
+        ).fetchall()
+        player_minutes_data = [dict(r) for r in minutes_rows]
+
     return render_template(
         "film_tool.html",
         filename=filename,
         game_id=game_id,
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
+        shot_summary=shot_summary,
+        player_effect_data=player_effect_data,
+        player_minutes_data=player_minutes_data,
     )
 
 
@@ -1580,78 +1635,79 @@ def api_teams_schedule():
 def _scrape_maxpreps_ranking(state, gender):
     """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
     Returns (ranking_int, url_str) or (None, None) if not found.
-    Uses agent-browser to render the JS-heavy MaxPreps site.
+    Uses Playwright for an isolated browser session (no agent-browser conflicts).
     """
-    import subprocess, re, time
+    from playwright.sync_api import sync_playwright
 
     state_slug = state.lower().replace(" ", "-")
+    state_slug_overrides = {"idaho": "id"}
+    state_slug = state_slug_overrides.get(state_slug, state_slug)
     gender_slug = "boys" if gender == "boys" else "girls"
 
-    # MaxPreps state slugs don't always match the full state name
-    # Map known exceptions
-    state_slug_overrides = {
-        "idaho": "id",
-    }
-    state_slug = state_slug_overrides.get(state_slug, state_slug)
-
-    # MaxPreps uses a specific URL pattern with class division IDs
-    # Try the direct class-2A URL pattern first (Idaho 2A is Liberty's division)
-    # The statedivisionid UUID is specific to Idaho 2A boys/girls
-    # We navigate through the site to find the right page
-    base_url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/"
-    rankings_url = f"{base_url}class/class-2a/rankings/1/"
-
-    # Known statedivisionid values for Idaho 2A
-    # Boys 2A: b006084a-35a3-4277-b62e-8782f19ac85a
-    # Girls 2A: 17ff4bb2-1a40-4f38-a3e1-637f78af15f2
     division_ids = {
         ("id", "boys"): "b006084a-35a3-4277-b62e-8782f19ac85a",
         ("id", "girls"): "17ff4bb2-1a40-4f38-a3e1-637f78af15f2",
     }
 
     div_id = division_ids.get((state_slug, gender_slug))
-
     if div_id:
-        # Girls URL uses basketball/genders/ path, boys uses basketball/
         if gender_slug == "girls":
             url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
         else:
             url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
     else:
-        # Fall back: navigate the site to find the rankings page
-        url = rankings_url
+        url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
+
+    ranking = None
+    chromium_path = "/snap/bin/chromium"
 
     try:
-        # Navigate to the rankings page
-        nav_result = subprocess.run(
-            ["agent-browser", "navigate", url],
-            capture_output=True, text=True, timeout=30
-        )
-        time.sleep(4)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                executable_path=chromium_path,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 900},
+            )
+            page = context.new_page()
+            page.set_default_timeout(30000)
 
-        # Get the accessibility tree snapshot (works with agent-browser)
-        snap_result = subprocess.run(
-            ["agent-browser", "snapshot"],
-            capture_output=True, text=True, timeout=30
-        )
-        snapshot = snap_result.stdout
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                import time
+                time.sleep(5)
+                page.wait_for_selector("table", timeout=15000)
+            except Exception:
+                pass  # Continue even if table doesn't appear in time
 
-        # Parse the snapshot to find Liberty's ranking
-        # The snapshot format shows cells in rows: rank number, team name, record, etc.
-        # Look for "Liberty" in a cell, then find the rank number in the same row
-        lines = snapshot.split("\n")
-        for i, line in enumerate(lines):
-            if "liberty" in line.lower():
-                # Look backward in the same row for a rank number
-                # Rows in snapshot are grouped; look at previous lines for a bare number
-                for j in range(max(0, i - 5), i):
-                    num_match = re.match(r'\s+- cell "(\d+)"', lines[j])
-                    if num_match:
-                        return int(num_match.group(1)), url
+            result = page.evaluate("""() => {
+                const rows = document.querySelectorAll('tr');
+                for (const row of rows) {
+                    const rowText = row.textContent || '';
+                    if (rowText.toLowerCase().includes('liberty')) {
+                        const cells = row.querySelectorAll('td, th');
+                        for (const cell of cells) {
+                            const text = cell.textContent.trim();
+                            const num = parseInt(text, 10);
+                            if (!isNaN(num) && num >= 1 && num <= 50 && text === String(num)) {
+                                return num;
+                            }
+                        }
+                    }
+                }
+                return null;
+            }""")
+            if result:
+                ranking = result
 
-        return None, url
+            browser.close()
     except Exception:
-        return None, url
+        pass
+
+    return ranking, url
 
 
 @core.route("/api/teams/rankings", methods=["GET", "POST"])

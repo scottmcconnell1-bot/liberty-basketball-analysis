@@ -1,0 +1,4 @@
+frame,timestamp_ms,ball_x_px,ball_y_px,ball_x_smooth,ball_y_smooth,person_x_px,person_y_px,person_width_px,person_height_px,foot_x_px,foot_y_px,shot_type,made,signal_used,foot_x_ft,foot_y_ft,shooter_distance_ft,shot_type_final,made_final
+238,,734.8,149.2,734.8,149.2,729.0,136.0,58.0,98.0,729.0,185.0,2PT,False,0,0.20513435700575816,-0.8637236084452975,0.8877491628888937,2PT,False
+1992,,399.2,192.4,399.2,192.4,304.0,196.0,148.0,137.0,304.0,264.5,2PT,False,0,-2.0891314779270633,-0.4345609404990403,2.133849465888615,2PT,False
+2630,698718.0,1275.76,183.04,1275.76,183.04,1279.0,120.0,0.0,114.0,1279.0,177.0,2PT,False,0,3.1741842610364683,-0.9069097888675623,3.3012014613100242,2PT,False
