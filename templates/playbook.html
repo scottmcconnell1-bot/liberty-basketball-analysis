@@ -7,6 +7,7 @@
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">📥 Bulk Import</a>
     <select class="form-control" style="width:auto" onchange="filterByCategory(this)">
       <option value="">All Categories</option>
       {% for value, label in categories %}
@@ -116,6 +117,12 @@
         <!-- Layer for players (SVG groups: circle + text) -->
         <g id="playerLayer"></g>
       </svg>
+    </div>
+
+    <!-- Step Images (for imported plays with source images) -->
+    <div id="stepImages" style="margin-top:12px;display:none;">
+      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:#6b7280;">Play Diagram</h4>
+      <div id="stepImagesList" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
     <!-- Step notes -->
@@ -400,6 +407,40 @@ function renderStep() {
     `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
   document.getElementById('stepNotes').value = step.notes || '';
   document.getElementById('stepCount').textContent = `(${steps.length})`;
+
+  // Show/hide step images
+  renderStepImages();
+}
+
+// ── Step Image Rendering (for imported plays) ─────────────
+function renderStepImages() {
+  const container = document.getElementById('stepImages');
+  const list = document.getElementById('stepImagesList');
+  if (!container || !list) return;
+
+  // Collect all steps that have source images
+  const stepsWithImages = steps.filter(s => s.source_image);
+  if (stepsWithImages.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = '';
+  stepsWithImages.forEach((step, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;';
+    const img = document.createElement('img');
+    img.src = step.source_image;
+    img.style.cssText = 'width:100%;height:auto;display:block;';
+    img.alt = step.label || `Step ${idx + 1}`;
+    const caption = document.createElement('div');
+    caption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9fafb;';
+    caption.textContent = step.label || `Step ${idx + 1}`;
+    div.appendChild(img);
+    div.appendChild(caption);
+    list.appendChild(div);
+  });
 }
 
 function defaultOffensePos(i) {
@@ -764,7 +805,7 @@ function updateStepList() {
 
     div.appendChild(num);
     div.appendChild(labelInput);
-    list.appendChild(div;
+    list.appendChild(div);
   });
 }
 
@@ -848,6 +889,7 @@ function initSteps() {
       movements: JSON.parse(s.movements_json || '[]'),
       label: s.label || '',
       notes: s.notes || '',
+      source_image: s.source_image || '',
     }));
   } else {
     // Default: single step with 5 offensive + 5 defensive players
@@ -856,10 +898,11 @@ function initSteps() {
     [{ x: 250, y: 420 }, { x: 120, y: 350 }, { x: 380, y: 350 }, { x: 140, y: 250 }, { x: 360, y: 250 }].forEach((p, i) => { positions['o' + (i + 1)] = p; });
     // Defense
     [{ x: 250, y: 380 }, { x: 150, y: 310 }, { x: 350, y: 310 }, { x: 170, y: 220 }, { x: 330, y: 220 }].forEach((p, i) => { positions['d' + (i + 1)] = p; });
-    steps = [{ positions, movements: [], label: 'Initial', notes: '' }];
+    steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '' }];
   }
   renderCourt();
   renderStep();
+  renderStepImages();
   updateStepList();
 }
 
