@@ -241,10 +241,11 @@ def playbook_save():
             movements = json.dumps(step.get("movements", []))
             label = step.get("label", "")
             notes = step.get("notes", "")
+            source_image = step.get("source_image", "")
             db.execute(
-                """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes)
-                   VALUES (?,?,?,?,?,?)""",
-                (play_db_id, i, label, positions, movements, notes),
+                """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes, source_image)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (play_db_id, i, label, positions, movements, notes, source_image),
             )
     except (json.JSONDecodeError, KeyError):
         pass
@@ -376,13 +377,12 @@ def playbook_import_save():
 
     db = get_db()
     cur = db.execute(
-        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json, created_by)
-           VALUES (?,?,?,?,?,?,?)""",
+        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
+           VALUES (?,?,?,?,?,?)""",
         (
             name, description, category, tags,
             int(playbook_id) if playbook_id else None,
             diagram_json,
-            "import",
         ),
     )
     play_db_id = cur.lastrowid
@@ -395,10 +395,11 @@ def playbook_import_save():
             movements = json.dumps(step.get("movements", []))
             label = step.get("label", "")
             notes = step.get("notes", "")
+            source_image = step.get("source_image", "") or source_image
             db.execute(
-                """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes)
-                   VALUES (?,?,?,?,?,?)""",
-                (play_db_id, i, label, positions, movements, notes),
+                """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes, source_image)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (play_db_id, i, label, positions, movements, notes, source_image),
             )
     except (json.JSONDecodeError, KeyError, TypeError):
         pass
