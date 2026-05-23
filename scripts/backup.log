@@ -1683,3 +1683,73 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 9a1e696... # backup: 2026-05-23-1244 —  187 files changed, 27533 insertions(+), 1087 deletions(-)
 [2026-05-23 12:44:33] Pull failed — attempting rebase resolution...
 HEAD is now at fc7d42c backup: 2026-05-23-1142 —  6 files changed, 36 insertions(+) (rebased)
+[backups ba17221] backup: 2026-05-23-1244 —  39 files changed, 355 insertions(+) (rebased)
+ 39 files changed, 355 insertions(+)
+ create mode 100644 ball_dataset/data.yaml
+ create mode 100644 ball_dataset/images/frame_001.jpg
+ create mode 100644 ball_dataset/images/frame_002.jpg
+ create mode 100644 ball_dataset/images/frame_003.jpg
+ create mode 100644 ball_dataset/images/frame_004.jpg
+ create mode 100644 ball_dataset/images/frame_005.jpg
+ create mode 100644 ball_dataset/labels.cache
+ create mode 100644 ball_dataset/labels/frame_001.txt
+ create mode 100644 ball_dataset/labels/frame_002.txt
+ create mode 100644 ball_dataset/labels/frame_003.txt
+ create mode 100644 ball_dataset/labels/frame_004.txt
+ create mode 100644 ball_dataset/labels/frame_005.txt
+ create mode 100644 runs/detect/train-2/args.yaml
+ create mode 100644 runs/detect/train-2/labels.jpg
+ create mode 100644 runs/detect/train-2/results.csv
+ create mode 100644 runs/detect/train-2/train_batch0.jpg
+ create mode 100644 runs/detect/train-2/train_batch1.jpg
+ create mode 100644 runs/detect/train-2/train_batch2.jpg
+ create mode 100644 runs/detect/train/args.yaml
+ create mode 100644 runs/detect/train/labels.jpg
+ create mode 100644 runs/detect/train/results.csv
+ create mode 100644 runs/detect/train/train_batch0.jpg
+ create mode 100644 runs/detect/train/train_batch1.jpg
+ create mode 100644 runs/detect/train/train_batch2.jpg
+ create mode 100644 sample_frames/frame_001_det.jpg
+ create mode 100644 sample_frames/frame_001_det_orange.jpg
+ create mode 100644 sample_frames/frame_001_orange.jpg
+ create mode 100644 sample_frames/frame_002_det.jpg
+ create mode 100644 sample_frames/frame_002_det_orange.jpg
+ create mode 100644 sample_frames/frame_002_orange.jpg
+ create mode 100644 sample_frames/frame_003_det.jpg
+ create mode 100644 sample_frames/frame_003_det_orange.jpg
+ create mode 100644 sample_frames/frame_003_orange.jpg
+ create mode 100644 sample_frames/frame_004_det.jpg
+ create mode 100644 sample_frames/frame_004_det_orange.jpg
+ create mode 100644 sample_frames/frame_004_orange.jpg
+ create mode 100644 sample_frames/frame_005_orange.jpg
+ create mode 100644 train.log
+[2026-05-23 12:44:33] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   fc7d42c..ba17221  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-23-1244 -> backup/2026-05-23-1244
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-23 12:44:58] === Backup complete: backup/2026-05-23-1244 ===
+[2026-05-23 13:45:26] === Starting backup: backup/2026-05-23-1345 ===
+[2026-05-23 13:45:26] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-23 13:45:27] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-23 13:45:34] Syncing current project state...
+[2026-05-23 13:45:36] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..ba17221  backups    -> origin/backups
+Rebasing (1/1)Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 6f5a576... backup: 2026-05-23-1345 —  194 files changed, 28601 insertions(+), 1087 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 6f5a576... # backup: 2026-05-23-1345 —  194 files changed, 28601 insertions(+), 1087 deletions(-)
+[2026-05-23 13:45:42] Pull failed — attempting rebase resolution...
+HEAD is now at ba17221 backup: 2026-05-23-1244 —  39 files changed, 355 insertions(+) (rebased)
