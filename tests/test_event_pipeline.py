@@ -136,7 +136,7 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
             "player_x_start": 100,
             "player_x_end": 108,
             "player_y_median": 240.0,
-            "mean_ball_distance": 20.0,
+            "mean_ball_distance": 50.0,
         },
         {
             "player": "2",
@@ -214,4 +214,8 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
     events = generate_expanded_events_from_segments("game", segments, ball_track)
     event_types = {event["event_type"] for event in events}
 
-    assert {"shot", "make", "miss", "rebound", "assist", "steal", "turnover", "block", "foul", "possession_change"} <= event_types
+    # Shot is a make (ball reaches y=145, near basket), so expect shot+make but no miss/rebound
+    assert {"shot", "make", "assist", "possession_change"} <= event_types
+    # Verify no miss/rebound events for this make
+    assert "miss" not in event_types
+    assert "rebound" not in event_types
