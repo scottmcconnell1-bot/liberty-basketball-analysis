@@ -75,6 +75,7 @@
     <div class="card">
       <h3 style="margin-bottom:12px;">4. Side-by-Side Editor</h3>
       <p class="text-muted" style="font-size:0.85rem;margin-bottom:12px;">After importing, you can fine-tune player positions on the interactive canvas.</p>
+      <div id="step-editor-area" style="margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" id="btn-save-import" onclick="saveImport()" disabled>💾 Save Play</button>
         <a class="btn btn-secondary" href="{{ url_for('playbook.playbook_list') }}">Cancel</a>
@@ -120,19 +121,37 @@ function handleImportFile(input) {
     // Show extracted images if any
     const extractedArea = document.getElementById('extracted-images-area');
     if (data.extracted_images && data.extracted_images.length > 0) {
-      let html = '<div style="font-weight:600;margin-bottom:8px;font-size:0.85rem;">Extracted diagrams:</div>';
+      let html = '<div style="font-weight:600;margin-bottom:8px;font-size:0.85rem;">Extracted diagrams (' + data.extracted_images.length + ' pages):</div>';
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
       data.extracted_images.forEach((img, i) => {
-        html += '<img src="' + img.url + '" style="max-width:120px;max-height:120px;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;" onclick="selectExtractedImage(\'' + img.url + '\')" title="Page ' + img.page + '">';
+        html += '<div style="text-align:center;">';
+        html += '<img src="' + img.url + '" style="max-width:120px;max-height:120px;border-radius:6px;border:2px solid #2563eb;cursor:pointer;" onclick="selectExtractedImage(\'' + img.url + '\', ' + i + ')" title="Page ' + img.page + '">';
+        html += '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">Step ' + (i+1) + '</div>';
+        html += '</div>';
       });
       html += '</div>';
       extractedArea.innerHTML = html;
+
+      // Auto-create steps from extracted pages
+      const steps = data.extracted_images.map((img, i) => ({
+        positions: {},
+        movements: [],
+        label: 'Step ' + (i + 1),
+        notes: 'Page ' + img.page,
+        source_image: img.url,
+      }));
+      document.getElementById('import-steps-json').value = JSON.stringify(steps);
+      document.getElementById('import-diagram-json').value = JSON.stringify({ pages: data.extracted_images.length });
     } else {
       extractedArea.innerHTML = '';
+      document.getElementById('import-steps-json').value = '[]';
     }
 
     // Enable save
     document.getElementById('btn-save-import').disabled = false;
+
+    // Render step editor
+    renderStepEditor(data.extracted_images);
 
     // Auto-fill name from filename
     const nameInput = document.getElementById('import-name');
@@ -145,9 +164,46 @@ function handleImportFile(input) {
   });
 }
 
-function selectExtractedImage(url) {
+function selectExtractedImage(url, stepIdx) {
   document.getElementById('preview-image').src = url;
   document.getElementById('import-source-image').value = url;
+  // Highlight the selected step
+  const imgs = document.querySelectorAll('#extracted-images-area img');
+  imgs.forEach((img, i) => {
+    img.style.borderColor = (i === stepIdx) ? '#2563eb' : '#e5e7eb';
+  });
+}
+
+function renderStepEditor(extractedImages) {
+  const area = document.getElementById('step-editor-area');
+  if (!extractedImages || extractedImages.length === 0) {
+    area.innerHTML = '';
+    return;
+  }
+  let html = '<div style="font-weight:600;margin-bottom:8px;font-size:0.85rem;">Steps from PDF pages:</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+  extractedImages.forEach((img, i) => {
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;">';
+    html += '<img src="' + img.url + '" style="width:80px;height:80px;object-fit:contain;border-radius:4px;border:1px solid #d1d5db;flex-shrink:0;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-weight:600;font-size:0.85rem;">Step ' + (i+1) + ' <span style="font-weight:400;color:#6b7280;">(Page ' + img.page + ')</span></div>';
+    html += '<input type="text" class="form-control step-label-input" data-step="' + i + '" placeholder="Step label (e.g. Initial, Screen, Cut)" style="margin-top:4px;font-size:0.8rem;">';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  area.innerHTML = html;
+
+  // Wire up label inputs to update steps JSON
+  area.querySelectorAll('.step-label-input').forEach(input => {
+    input.addEventListener('input', function() {
+      const stepIdx = parseInt(this.dataset.step);
+      let steps = [];
+      try { steps = JSON.parse(document.getElementById('import-steps-json').value); } catch(e) {}
+      if (steps[stepIdx]) steps[stepIdx].label = this.value;
+      document.getElementById('import-steps-json').value = JSON.stringify(steps);
+    });
+  });
 }
 
 function saveImport() {
