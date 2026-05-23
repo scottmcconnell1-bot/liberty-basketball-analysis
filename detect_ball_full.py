@@ -7,7 +7,7 @@ import os
 from ultralytics import YOLO
 
 def main(video_path, output_csv, conf_thresh=0.02, stride=2):
-    model = YOLO('yolov8n.pt')
+    model = YOLO('yolov8s.pt')
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError(f'Cannot open video {video_path}')
