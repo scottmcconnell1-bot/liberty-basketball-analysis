@@ -2458,3 +2458,93 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply f35202c... # backup: 2026-05-24-0722 —  362 files changed, 127710 insertions(+), 1090 deletions(-)
 [2026-05-24 07:22:51] Pull failed — attempting rebase resolution...
 HEAD is now at ddc81f2 backup: 2026-05-24-0620 —  3 files changed, 2752 insertions(+) (rebased)
+[backups ff5b5b4] backup: 2026-05-24-0722 —  57 files changed, 79896 insertions(+) (rebased)
+ 57 files changed, 79896 insertions(+)
+ create mode 100644 ball_motion_q1.csv
+ create mode 100644 detect_motion.py
+ create mode 100644 detect_motion_q1.py
+ create mode 100644 motion_vis/f00000.jpg
+ create mode 100644 motion_vis/f00002.jpg
+ create mode 100644 motion_vis/f00004.jpg
+ create mode 100644 motion_vis/f00006.jpg
+ create mode 100644 motion_vis/f00008.jpg
+ create mode 100644 motion_vis/f00010.jpg
+ create mode 100644 motion_vis/f00012.jpg
+ create mode 100644 motion_vis/f00014.jpg
+ create mode 100644 motion_vis/f00016.jpg
+ create mode 100644 motion_vis/f00018.jpg
+ create mode 100644 motion_vis/f00020.jpg
+ create mode 100644 motion_vis/f00022.jpg
+ create mode 100644 motion_vis/f00024.jpg
+ create mode 100644 motion_vis/f00026.jpg
+ create mode 100644 motion_vis/f00028.jpg
+ create mode 100644 motion_vis/f00030.jpg
+ create mode 100644 motion_vis/f00032.jpg
+ create mode 100644 motion_vis/f00034.jpg
+ create mode 100644 motion_vis/f00036.jpg
+ create mode 100644 motion_vis/f00038.jpg
+ create mode 100644 motion_vis_mid/f00200.jpg
+ create mode 100644 motion_vis_mid/f00202.jpg
+ create mode 100644 motion_vis_mid/f00204.jpg
+ create mode 100644 motion_vis_mid/f00206.jpg
+ create mode 100644 motion_vis_mid/f00208.jpg
+ create mode 100644 motion_vis_mid/f00210.jpg
+ create mode 100644 motion_vis_mid/f00212.jpg
+ create mode 100644 motion_vis_mid/f00214.jpg
+ create mode 100644 motion_vis_mid/f00216.jpg
+ create mode 100644 motion_vis_mid/f00218.jpg
+ create mode 100644 motion_vis_mid/f00220.jpg
+ create mode 100644 motion_vis_mid/f00222.jpg
+ create mode 100644 motion_vis_mid/f00224.jpg
+ create mode 100644 motion_vis_mid/f00226.jpg
+ create mode 100644 motion_vis_mid/f00228.jpg
+ create mode 100644 motion_vis_mid/f00230.jpg
+ create mode 100644 motion_vis_mid/f00232.jpg
+ create mode 100644 motion_vis_mid/f00234.jpg
+ create mode 100644 motion_vis_mid/f00236.jpg
+ create mode 100644 motion_vis_mid/f00238.jpg
+ create mode 100644 motion_vis_mid/f00240.jpg
+ create mode 100644 motion_vis_mid/f00242.jpg
+ create mode 100644 motion_vis_mid/f00244.jpg
+ create mode 100644 motion_vis_mid/f00246.jpg
+ create mode 100644 motion_vis_mid/f00248.jpg
+ create mode 100644 motion_vis_mid/f00250.jpg
+ create mode 100644 motion_vis_mid/f00252.jpg
+ create mode 100644 motion_vis_mid/f00254.jpg
+ create mode 100644 motion_vis_mid/f00256.jpg
+ create mode 100644 motion_vis_mid/f00258.jpg
+ create mode 100644 save_motion_mid.py
+[2026-05-24 07:22:51] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   ddc81f2..ff5b5b4  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-24-0722 -> backup/2026-05-24-0722
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 07:23:45] === Backup complete: backup/2026-05-24-0722 ===
+[2026-05-24 08:25:34] === Starting backup: backup/2026-05-24-0825 ===
+[2026-05-24 08:25:34] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 08:25:35] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-24 08:25:42] Syncing current project state...
+[2026-05-24 08:25:50] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..ff5b5b4  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging logs/flask.log
+CONFLICT (add/add): Merge conflict in logs/flask.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 22ff8c8... backup: 2026-05-24-0825 —  414 files changed, 160871 insertions(+), 1090 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 22ff8c8... # backup: 2026-05-24-0825 —  414 files changed, 160871 insertions(+), 1090 deletions(-)
+[2026-05-24 08:26:03] Pull failed — attempting rebase resolution...
+HEAD is now at ff5b5b4 backup: 2026-05-24-0722 —  57 files changed, 79896 insertions(+) (rebased)
