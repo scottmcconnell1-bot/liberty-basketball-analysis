@@ -1,0 +1,16 @@
+attempt_id,frame,time_s,peak_frame,peak_y_px,shooter_ft_x,shooter_ft_y,shot_type_initial,made_initial,signal_override,shot_type_final,made_final
+0,106,28.267,106,144.92,,,unknown,False,0,unknown,False
+1,297,79.2,297,105.96,,,unknown,False,0,unknown,False
+2,529,141.067,529,136.25,,,unknown,False,0,unknown,False
+3,958,255.467,958,140.51,,,unknown,False,0,unknown,False
+4,1047,279.2,1047,149.63,,,unknown,True,0,unknown,True
+5,1387,369.867,1387,128.39,,,unknown,False,0,unknown,False
+6,1462,389.867,1462,96.23,0.005,0.004,2PT,False,0,2PT,False
+7,1792,477.867,1792,58.48,,,unknown,False,0,unknown,False
+8,2010,536.0,2010,33.74,,,unknown,False,0,unknown,False
+9,2068,551.467,2068,147.43,0.003,0.003,2PT,False,0,2PT,False
+10,2072,552.533,2072,147.46,0.003,0.003,2PT,False,0,2PT,False
+11,2076,553.6,2076,147.41,0.003,0.003,2PT,False,0,2PT,False
+12,2095,558.667,2095,146.35,,,unknown,False,0,unknown,False
+13,2112,563.2,2112,147.47,0.004,0.004,2PT,False,0,2PT,False
+14,2584,689.067,2584,98.66,,,unknown,True,0,unknown,True

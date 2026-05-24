@@ -193,7 +193,7 @@ def _get_stored_credentials():
 def api_scouting_reports_list():
     db = get_db()
     reports = db.execute("""
-        SELECT sr.*, g.opponent_name as game_opponent
+        SELECT sr.*, g.nfhs_game_id as game_nfhs_id
         FROM scouting_reports sr
         LEFT JOIN games g ON sr.game_id = g.id
         ORDER BY sr.scout_date DESC
