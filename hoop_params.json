@@ -1,0 +1,10 @@
+{
+  "hoop_center_px": [
+    700,
+    326
+  ],
+  "hoop_radius_px": 136.8,
+  "scale_ft_per_px": 0.005482456140350877,
+  "scale_in_per_px": 0.06578947368421053,
+  "num_detections": 57
+}
