@@ -133,10 +133,10 @@
         </div>
       </div>
       <div class="card">
-        <h2>⚡ Player Effect (+/-)</h2>
+        <h2>⚡ Player Effect (Possessions & Scoring)</h2>
         <div style="overflow-x:auto">
           <table id="player-effect">
-            <thead><tr><th>Player</th><th class="num">+/-</th><th class="num">ORTG</th><th class="num">DRTG</th><th class="num">NET</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
+            <thead><tr><th>Player</th><th class="num">Poss</th><th class="num">Pts</th><th class="num">P/Poss</th><th class="num">ORTG</th><th class="num">Min</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -334,19 +334,17 @@ function renderShotBreakdown(shots) {
 
 function renderPlayerEffect(effects) {
   const tbody = document.querySelector('#player-effect tbody');
-  if (!effects.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No player effect data</td></tr>'; return; }
+  if (!effects.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No player effect data</td></tr>'; return; }
 
   let html = '';
   effects.forEach(function(e) {
-    var pmClass = e.plus_minus > 0 ? 'pos' : e.plus_minus < 0 ? 'neg' : '';
-    var netClass = e.net_rating > 0 ? 'pos' : e.net_rating < 0 ? 'neg' : '';
+    var ortgClass = e.ortg && e.ortg > 100 ? 'pos' : e.ortg && e.ortg < 80 ? 'neg' : '';
     html += '<tr><td>' + (e.name || ('Player ' + e.tracker_id)) + '</td>';
-    html += '<td class="num ' + pmClass + '">' + (e.plus_minus > 0 ? '+' : '') + e.plus_minus + '</td>';
-    html += '<td class="num">' + (e.ortg ? e.ortg.toFixed(1) : '-') + '</td>';
-    html += '<td class="num">' + (e.drtg ? e.drtg.toFixed(1) : '-') + '</td>';
-    html += '<td class="num ' + netClass + '">' + (e.net_rating > 0 ? '+' : '') + (e.net_rating ? e.net_rating.toFixed(1) : '-') + '</td>';
-    html += '<td class="num">' + (e.points_for || 0) + '</td>';
-    html += '<td class="num">' + (e.points_against || 0) + '</td></tr>';
+    html += '<td class="num">' + (e.possessions || 0) + '</td>';
+    html += '<td class="num">' + (e.points_scored || 0) + '</td>';
+    html += '<td class="num">' + (e.ortg != null && e.possessions >= 10 ? (e.points_scored / e.possessions).toFixed(2) : '-') + '</td>';
+    html += '<td class="num ' + ortgClass + '">' + (e.ortg != null ? e.ortg.toFixed(1) : 'N/A') + '</td>';
+    html += '<td class="num">' + (e.minutes_played != null ? e.minutes_played.toFixed(1) : '-') + '</td></tr>';
   });
   tbody.innerHTML = html;
 }
