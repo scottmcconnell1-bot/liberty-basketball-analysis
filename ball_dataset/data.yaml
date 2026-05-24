@@ -1,0 +1,5 @@
+train: /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_dataset/images
+val: /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_dataset/images
+
+nc: 1
+names: ['ball']
