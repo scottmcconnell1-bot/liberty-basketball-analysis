@@ -203,6 +203,15 @@ def api_players_create():
     return jsonify(dict(row)), 201
 
 
+@clips_bp.route("/api/players/<int:player_id>", methods=["DELETE"])
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_players_delete(player_id):
+    db = get_db()
+    db.execute("DELETE FROM players WHERE id=?", (player_id,))
+    db.commit()
+    return jsonify({"status": "deleted"}), 200
+
+
 # ── API: Clips ────────────────────────────────────────────
 
 @clips_bp.route("/api/clips")
