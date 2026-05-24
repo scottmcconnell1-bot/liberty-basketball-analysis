@@ -1,0 +1,67 @@
+Ball detections: 1312 frames
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+W0000 00:00:1779633733.588243   12607 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1779633733.653914   12607 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1779633734.669505   12607 landmark_projection_calculator.cc:78] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
+F0: 1 poses, ball=no, shots=0
+F400: 0 poses, ball=yes, shots=69
+F800: 3 poses, ball=yes, shots=159
+F1200: 1 poses, ball=no, shots=212
+F1600: 2 poses, ball=yes, shots=247
+F2000: 0 poses, ball=yes, shots=342
+F2400: 0 poses, ball=yes, shots=443
+
+Raw shot events: 499
+Ball detected in 1312 frames
+
+Merged shots: 48
+  F  32 score=0.75 right angle=153° speed=0.084 ball_near=N away=Y
+  F  68 score=0.75 right angle=147° speed=0.058 ball_near=N away=Y
+  F 246 score=0.75 right angle=152° speed=0.053 ball_near=N away=Y
+  F 270 score=0.75 left  angle=171° speed=0.208 ball_near=N away=Y
+  F 418 score=0.75 left  angle=176° speed=0.463 ball_near=N away=Y
+  F 484 score=0.75 right angle=176° speed=0.101 ball_near=N away=Y
+  F 532 score=0.75 right angle=144° speed=0.207 ball_near=N away=Y
+  F 608 score=0.50 right angle=147° speed=0.192 ball_near=N away=Y
+  F 650 score=0.50 left  angle=177° speed=0.297 ball_near=N away=Y
+  F 688 score=0.55 left  angle= 20° speed=0.101 ball_near=N away=Y
+  F 708 score=0.75 right angle=168° speed=0.048 ball_near=N away=Y
+  F 752 score=0.75 right angle=158° speed=0.323 ball_near=N away=Y
+  F 852 score=0.55 left  angle= 14° speed=0.152 ball_near=N away=Y
+  F 900 score=0.55 left  angle= 80° speed=0.128 ball_near=N away=Y
+  F 946 score=0.75 left  angle=145° speed=0.133 ball_near=N away=Y
+  F 992 score=0.75 left  angle=167° speed=0.176 ball_near=N away=Y
+  F1056 score=0.50 left  angle=167° speed=0.098 ball_near=N away=Y
+  F1090 score=0.75 left  angle=179° speed=0.174 ball_near=N away=Y
+  F1138 score=0.75 right angle=169° speed=0.023 ball_near=Y away=Y
+  F1168 score=0.50 right angle=163° speed=0.019 ball_near=N away=Y
+  F1208 score=0.50 left  angle= 80° speed=0.040 ball_near=Y away=N
+  F1264 score=0.50 right angle=160° speed=0.050 ball_near=N away=Y
+  F1296 score=0.75 right angle=159° speed=0.060 ball_near=N away=Y
+  F1336 score=0.75 right angle=142° speed=0.059 ball_near=N away=Y
+  F1394 score=0.75 left  angle=152° speed=0.074 ball_near=N away=Y
+  F1466 score=0.75 right angle=171° speed=0.171 ball_near=N away=Y
+  F1538 score=0.75 left  angle=173° speed=0.075 ball_near=N away=Y
+  F1610 score=0.75 left  angle=171° speed=0.030 ball_near=N away=Y
+  F1658 score=0.75 left  angle=169° speed=0.066 ball_near=N away=Y
+  F1716 score=0.75 left  angle=158° speed=0.077 ball_near=N away=Y
+  F1782 score=0.75 left  angle=166° speed=0.033 ball_near=N away=Y
+  F1826 score=0.75 right angle=163° speed=0.117 ball_near=N away=Y
+  F1866 score=0.75 right angle=177° speed=0.034 ball_near=N away=Y
+  F1920 score=0.55 left  angle=122° speed=0.048 ball_near=N away=Y
+  F1948 score=0.50 right angle=161° speed=0.020 ball_near=N away=Y
+  F1986 score=0.75 left  angle=169° speed=0.128 ball_near=N away=Y
+  F2028 score=0.75 right angle=167° speed=0.058 ball_near=N away=Y
+  F2126 score=0.75 left  angle=177° speed=0.113 ball_near=N away=Y
+  F2210 score=0.75 left  angle=179° speed=0.157 ball_near=N away=Y
+  F2330 score=0.50 right angle=174° speed=0.057 ball_near=N away=Y
+  F2350 score=0.70 right angle=156° speed=0.059 ball_near=Y away=N
+  F2392 score=0.75 left  angle=172° speed=0.079 ball_near=N away=Y
+  F2456 score=0.50 left  angle=171° speed=0.001 ball_near=N away=Y
+  F2502 score=0.75 left  angle=145° speed=0.039 ball_near=N away=Y
+  F2522 score=0.55 left  angle=110° speed=0.052 ball_near=N away=Y
+  F2596 score=0.75 left  angle=166° speed=0.179 ball_near=N away=Y
+  F2642 score=0.75 left  angle=142° speed=0.052 ball_near=N away=Y
+  F2684 score=0.75 left  angle=142° speed=0.141 ball_near=N away=Y
+Saved to shots_v6.csv
