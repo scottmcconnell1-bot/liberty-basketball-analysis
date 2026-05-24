@@ -1,0 +1,8 @@
+Video: 2701 frames
+Traceback (most recent call last):
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/detect_v8.py", line 309, in <module>
+    main()
+  File "/home/monk-admin/PROJECTS/liberty-basketball-analysis/detect_v8.py", line 260, in main
+    if ball:
+       ^^^^
+UnboundLocalError: cannot access local variable 'ball' where it is not associated with a value

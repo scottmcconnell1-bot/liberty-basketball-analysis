@@ -1,0 +1,4 @@
+frame,timestamp_ms,ball_x_ft,ball_y_ft,shot_type,made,shooter_distance_ft,signal_used
+239,,728.5,150.14,2PT,False,,0
+1993,,411.3,192.6,2PT,False,,0
+2631,,1276.1200000000001,183.38,2PT,False,,0
