@@ -1,0 +1,35 @@
+Video: 2701 frames
+F0: lines=36 hoops=1 balls=0 shots=0
+F600: lines=43 hoops=301 balls=37 shots=7
+F1200: lines=6 hoops=601 balls=52 shots=21
+F1800: lines=50 hoops=901 balls=55 shots=23
+F2400: lines=28 hoops=1201 balls=73 shots=29
+
+=== Results ===
+Hoop positions computed: 1356
+Ball detections near hoop: 78
+Shot candidates: 34
+
+Merged shots: 20
+  F  42: ball=0.52 net=0.431 in_hoop=N dist=23px
+  F  76: ball=0.74 net=0.467 in_hoop=Y dist=8px
+  F 158: ball=0.22 net=0.303 in_hoop=N dist=64px
+  F 314: ball=0.22 net=0.436 in_hoop=N dist=61px
+  F 648: ball=0.34 net=0.754 in_hoop=N dist=50px
+  F 690: ball=0.45 net=0.024 in_hoop=N dist=30px
+  F 736: ball=0.52 net=0.190 in_hoop=Y dist=10px
+  F 926: ball=0.34 net=0.068 in_hoop=N dist=68px
+  F 976: ball=0.22 net=0.456 in_hoop=N dist=54px
+  F1018: ball=0.33 net=0.569 in_hoop=N dist=52px
+  F1086: ball=0.37 net=0.672 in_hoop=N dist=58px
+  F1126: ball=0.35 net=0.054 in_hoop=N dist=66px
+  F1324: ball=0.26 net=0.560 in_hoop=N dist=55px
+  F1918: ball=0.23 net=0.453 in_hoop=N dist=37px
+  F2088: ball=0.16 net=0.126 in_hoop=N dist=56px
+  F2266: ball=0.28 net=0.379 in_hoop=N dist=30px
+  F2346: ball=0.38 net=0.703 in_hoop=N dist=29px
+  F2562: ball=0.47 net=0.475 in_hoop=N dist=20px
+  F2598: ball=0.25 net=0.249 in_hoop=N dist=37px
+  F2650: ball=0.33 net=0.422 in_hoop=N dist=51px
+
+Hoop positions saved to hoop_from_court.csv

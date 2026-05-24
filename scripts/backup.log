@@ -2636,3 +2636,44 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 349828c... # backup: 2026-05-24-0929 —  419 files changed, 164333 insertions(+), 1090 deletions(-)
 [2026-05-24 09:29:41] Pull failed — attempting rebase resolution...
 HEAD is now at 227eecb backup: 2026-05-24-0825 —  55 files changed, 33169 insertions(+) (rebased)
+[backups c9a34ce] backup: 2026-05-24-0929 —  8 files changed, 3470 insertions(+) (rebased)
+ 8 files changed, 3470 insertions(+)
+ create mode 100644 detect_gesture.py
+ create mode 100644 detect_v6.py
+ create mode 100644 shots_gesture.csv
+ create mode 100644 shots_v6.csv
+ create mode 100644 v6.log
+[2026-05-24 09:29:41] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   227eecb..c9a34ce  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-24-0929 -> backup/2026-05-24-0929
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 09:31:11] === Backup complete: backup/2026-05-24-0929 ===
+[2026-05-24 10:31:35] === Starting backup: backup/2026-05-24-1031 ===
+[2026-05-24 10:31:35] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 10:31:37] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-24 10:31:44] Syncing current project state...
+[2026-05-24 10:31:52] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..c9a34ce  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging logs/flask.log
+CONFLICT (add/add): Merge conflict in logs/flask.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply 2c98206... backup: 2026-05-24-1031 —  450 files changed, 170843 insertions(+), 1090 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 2c98206... # backup: 2026-05-24-1031 —  450 files changed, 170843 insertions(+), 1090 deletions(-)
+[2026-05-24 10:32:13] Pull failed — attempting rebase resolution...
+HEAD is now at c9a34ce backup: 2026-05-24-0929 —  8 files changed, 3470 insertions(+) (rebased)
