@@ -1,0 +1,77 @@
+New https://pypi.org/project/ultralytics/8.4.53 available 😃 Update with 'pip install -U ultralytics'
+Ultralytics 8.4.41 🚀 Python-3.11.15 torch-2.11.0+cpu CPU (Intel Core i7-9700F 3.00GHz)
+[34m[1mengine/trainer: [0magnostic_nms=False, amp=True, angle=1.0, augment=False, auto_augment=randaugment, batch=16, bgr=0.0, box=7.5, cache=False, cfg=None, classes=None, close_mosaic=10, cls=0.5, cls_pw=0.0, compile=False, conf=None, copy_paste=0.0, copy_paste_mode=flip, cos_lr=False, cutmix=0.0, data=ball_dataset/data.yaml, degrees=0.0, deterministic=True, device=cpu, dfl=1.5, dnn=False, dropout=0.0, dynamic=False, embed=None, end2end=None, epochs=5, erasing=0.4, exist_ok=False, fliplr=0.5, flipud=0.0, format=torchscript, fraction=1.0, freeze=None, half=False, hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, imgsz=640, int8=False, iou=0.7, keras=False, kobj=1.0, line_width=None, lr0=0.01, lrf=0.01, mask_ratio=4, max_det=300, mixup=0.0, mode=train, model=yolov8s.pt, momentum=0.937, mosaic=1.0, multi_scale=0.0, name=train-2, nbs=64, nms=False, opset=None, optimize=False, optimizer=auto, overlap_mask=True, patience=100, perspective=0.0, plots=True, pose=12.0, pretrained=True, profile=False, project=None, rect=False, resume=False, retina_masks=False, rle=1.0, save=True, save_conf=False, save_crop=False, save_dir=/home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2, save_frames=False, save_json=False, save_period=-1, save_txt=False, scale=0.5, seed=0, shear=0.0, show=False, show_boxes=True, show_conf=True, show_labels=True, simplify=True, single_cls=False, source=None, split=val, stream_buffer=False, task=detect, time=None, tracker=botsort.yaml, translate=0.1, val=True, verbose=True, vid_stride=1, visualize=False, warmup_bias_lr=0.1, warmup_epochs=3.0, warmup_momentum=0.8, weight_decay=0.0005, workers=8, workspace=None
+Overriding model.yaml nc=80 with nc=1
+
+                   from  n    params  module                                       arguments                     
+  0                  -1  1       928  ultralytics.nn.modules.conv.Conv             [3, 32, 3, 2]                 
+  1                  -1  1     18560  ultralytics.nn.modules.conv.Conv             [32, 64, 3, 2]                
+  2                  -1  1     29056  ultralytics.nn.modules.block.C2f             [64, 64, 1, True]             
+  3                  -1  1     73984  ultralytics.nn.modules.conv.Conv             [64, 128, 3, 2]               
+  4                  -1  2    197632  ultralytics.nn.modules.block.C2f             [128, 128, 2, True]           
+  5                  -1  1    295424  ultralytics.nn.modules.conv.Conv             [128, 256, 3, 2]              
+  6                  -1  2    788480  ultralytics.nn.modules.block.C2f             [256, 256, 2, True]           
+  7                  -1  1   1180672  ultralytics.nn.modules.conv.Conv             [256, 512, 3, 2]              
+  8                  -1  1   1838080  ultralytics.nn.modules.block.C2f             [512, 512, 1, True]           
+  9                  -1  1    656896  ultralytics.nn.modules.block.SPPF            [512, 512, 5]                 
+ 10                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+ 11             [-1, 6]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 12                  -1  1    591360  ultralytics.nn.modules.block.C2f             [768, 256, 1]                 
+ 13                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+ 14             [-1, 4]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 15                  -1  1    148224  ultralytics.nn.modules.block.C2f             [384, 128, 1]                 
+ 16                  -1  1    147712  ultralytics.nn.modules.conv.Conv             [128, 128, 3, 2]              
+ 17            [-1, 12]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 18                  -1  1    493056  ultralytics.nn.modules.block.C2f             [384, 256, 1]                 
+ 19                  -1  1    590336  ultralytics.nn.modules.conv.Conv             [256, 256, 3, 2]              
+ 20             [-1, 9]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 21                  -1  1   1969152  ultralytics.nn.modules.block.C2f             [768, 512, 1]                 
+ 22        [15, 18, 21]  1   2116435  ultralytics.nn.modules.head.Detect           [1, 16, None, [128, 256, 512]]
+Model summary: 130 layers, 11,135,987 parameters, 11,135,971 gradients, 28.6 GFLOPs
+
+Transferred 349/355 items from pretrained weights
+Freezing layer 'model.22.dfl.conv.weight'
+[34m[1mtrain: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 643.5±1110.3 MB/s, size: 92.7 KB)
+[K[34m[1mtrain: [0mScanning /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_dataset/labels.cache... 5 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 5/5 1.3Mit/s 0.0s
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 4108.4±1006.6 MB/s, size: 92.7 KB)
+[K[34m[1mval: [0mScanning /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_dataset/labels.cache... 5 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 5/5 1.9Mit/s 0.0s
+[34m[1moptimizer:[0m 'optimizer=auto' found, ignoring 'lr0=0.01' and 'momentum=0.937' and determining best 'optimizer', 'lr0' and 'momentum' automatically... 
+[34m[1moptimizer:[0m AdamW(lr=0.002, momentum=0.9) with parameter groups 57 weight(decay=0.0), 64 weight(decay=0.0005), 63 bias(decay=0.0)
+Plotting labels to /home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2/labels.jpg... 
+Image sizes 640 train, 640 val
+Using 0 dataloader workers
+Logging results to [1m/home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2[0m
+Starting training for 5 epochs...
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        1/5         0G       2.22      13.84       2.32         10        640: 0% ──────────── 0/1  6.8s[K        1/5         0G       2.22      13.84       2.32         10        640: 100% ━━━━━━━━━━━━ 1/1 6.8s/it 6.8s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 1/1 1.6s/it 1.6s
+                   all          5          5     0.0032        0.2    0.00132   0.000532
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        2/5         0G      2.517      12.96      2.359         13        640: 0% ──────────── 0/1  9.8s[K        2/5         0G      2.517      12.96      2.359         13        640: 100% ━━━━━━━━━━━━ 1/1 9.8s/it 9.8s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 1/1 1.8s/it 1.8s
+                   all          5          5    0.00396        0.2    0.00211   0.000886
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        3/5         0G      2.153      13.29      2.313          7        640: 0% ──────────── 0/1  8.7s[K        3/5         0G      2.153      13.29      2.313          7        640: 100% ━━━━━━━━━━━━ 1/1 8.7s/it 8.7s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 1/1 1.7s/it 1.7s
+                   all          5          5    0.00464        0.2    0.00229    0.00111
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        4/5         0G      2.484      7.353      2.421         12        640: 0% ──────────── 0/1  8.1s[K        4/5         0G      2.484      7.353      2.421         12        640: 100% ━━━━━━━━━━━━ 1/1 8.1s/it 8.1s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 1/1 1.6s/it 1.6s
+                   all          5          5    0.00623        0.2    0.00465    0.00171
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        5/5         0G      2.409      7.232      2.108         10        640: 0% ──────────── 0/1  8.0s[K        5/5         0G      2.409      7.232      2.108         10        640: 100% ━━━━━━━━━━━━ 1/1 8.0s/it 8.0s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 1/1 1.6s/it 1.6s
+                   all          5          5    0.00861        0.2    0.00593    0.00204
+
+5 epochs completed in 0.014 hours.
+Optimizer stripped from /home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2/weights/last.pt, 22.5MB
+Optimizer stripped from /home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2/weights/best.pt, 22.5MB
+
+Validating /home/monk-admin/PROJECTS/liberty-basketball-analysis/runs/detect/train-2/weights/best.pt...
+Ultralytics 8.4.41 🚀 Python-3.11.15 torch-2.11.0+cpu CPU (Intel Core i7-9700F 3.00GHz)
+Model summary (fused): 73 layers, 11,125,971 parameters, 0 gradients, 28.4 GFLOPs
