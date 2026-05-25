@@ -3470,3 +3470,14 @@ To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
 [2026-05-25 09:26:32] Cloning backups branch...
 Cloning into '/home/monk-admin/liberty-backup-tmp'...
 [2026-05-25 09:27:30] Syncing current project state...
+[2026-05-25 09:27:33] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   f21c13a..497bc6e  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-25-0926 -> backup/2026-05-25-0926
+[2026-05-25 09:27:36] === Backup complete: backup/2026-05-25-0926 ===
+[2026-05-25 10:29:05] === Starting backup: backup/2026-05-25-1029 ===
+[2026-05-25 10:29:05] Cloning backups branch...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  77% (462/600)Updating files:  78% (468/600)Updating files:  79% (474/600)Updating files:  80% (480/600)Updating files:  81% (486/600)Updating files:  82% (492/600)Updating files:  83% (498/600)Updating files:  84% (504/600)Updating files:  85% (510/600)Updating files:  86% (516/600)Updating files:  87% (522/600)Updating files:  88% (528/600)Updating files:  89% (534/600)Updating files:  90% (540/600)Updating files:  91% (546/600)Updating files:  92% (552/600)Updating files:  93% (558/600)Updating files:  94% (564/600)Updating files:  95% (570/600)Updating files:  96% (576/600)Updating files:  97% (582/600)Updating files:  98% (588/600)Updating files:  99% (594/600)Updating files: 100% (600/600)Updating files: 100% (600/600), done.
+[2026-05-25 10:30:13] Syncing current project state...
