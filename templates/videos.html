@@ -92,8 +92,10 @@ function formatBytes(b) {
 
 function formatDate(ts) {
   if (!ts) return '—';
-  const d = new Date(ts.replace(' ', 'T') + 'Z');
-  return d.toLocaleString();
+  // Handle both ISO-like strings ('2026-05-13 04:03:54') and RFC 2822 ('Wed, 13 May 2026 16:51:51 GMT')
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return ts; // fallback to raw string if unparseable
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function escHtml(str) {
