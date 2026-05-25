@@ -1,0 +1,25 @@
+Hoop data: 170 frames
+F0: rim=1 ball_near=1 candidates=0
+F600: rim=301 ball_near=267 candidates=233
+F1200: rim=601 ball_near=533 candidates=467
+F1800: rim=901 ball_near=810 candidates=684
+F2400: rim=1201 ball_near=1099 candidates=899
+
+=== Results ===
+Rim detections: 1356
+Ball near rim: 1240
+Shot candidates (net motion): 1009
+
+Shot candidates:
+Merged: 9 shots
+  F 260: net_motion=0.498 rim=(274,450) no_ball
+  F 596: net_motion=0.417 rim=(832,412) ball=(840,152)
+  F1184: net_motion=0.159 rim=(570,280) ball=(950,222)
+  F1368: net_motion=0.387 rim=(484,138) ball=(486,526)
+  F1600: net_motion=0.280 rim=(802,50) no_ball
+  F1756: net_motion=0.262 rim=(466,488) ball=(938,206)
+  F2162: net_motion=0.219 rim=(494,194) ball=(892,312)
+  F2594: net_motion=0.277 rim=(650,220) ball=(614,248)
+  F2680: net_motion=0.232 rim=(890,94) ball=(855,198)
+
+Saved ball-near-rim data to shots_v7.csv
