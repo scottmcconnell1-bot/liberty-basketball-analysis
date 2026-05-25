@@ -2980,3 +2980,41 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply 81f01a9... # backup: 2026-05-24-1751 —  472 files changed, 191722 insertions(+), 1090 deletions(-)
 [2026-05-24 17:52:41] Pull failed — attempting rebase resolution...
 HEAD is now at f01b06e backup: 2026-05-24-1648 —  5 files changed, 3253 insertions(+) (rebased)
+[backups 5df875f] backup: 2026-05-24-1751 —  5 files changed, 3576 insertions(+) (rebased)
+ 5 files changed, 3576 insertions(+)
+ create mode 100644 pipeline_output/ball_detections.csv
+ create mode 100644 pipeline_output/shot_events.csv
+[2026-05-24 17:52:41] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   f01b06e..5df875f  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-24-1751 -> backup/2026-05-24-1751
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 17:54:15] === Backup complete: backup/2026-05-24-1751 ===
+[2026-05-24 18:54:37] === Starting backup: backup/2026-05-24-1854 ===
+[2026-05-24 18:54:37] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 18:54:39] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-24 18:54:46] Syncing current project state...
+[2026-05-24 18:54:53] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..5df875f  backups    -> origin/backups
+Rebasing (1/1)Auto-merging logs/flask-error.log
+CONFLICT (add/add): Merge conflict in logs/flask-error.log
+Auto-merging logs/flask.log
+CONFLICT (add/add): Merge conflict in logs/flask.log
+Auto-merging scripts/backup.log
+CONFLICT (content): Merge conflict in scripts/backup.log
+error: could not apply dd1e734... backup: 2026-05-24-1854 —  472 files changed, 194496 insertions(+), 1090 deletions(-)
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply dd1e734... # backup: 2026-05-24-1854 —  472 files changed, 194496 insertions(+), 1090 deletions(-)
+[2026-05-24 18:55:19] Pull failed — attempting rebase resolution...
+HEAD is now at 5df875f backup: 2026-05-24-1751 —  5 files changed, 3576 insertions(+) (rebased)
