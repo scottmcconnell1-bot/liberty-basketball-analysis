@@ -159,7 +159,7 @@ def run_ai_analysis(db_path, video_path, game_id):
             if frame_number % 5 == 0:
                 ball_positions = []
                 try:
-                    ball_results = model(frame, classes=[32], conf=0.01, verbose=False, imgsz=640)
+                    ball_results = model(frame, classes=[32], conf=0.15, verbose=False, imgsz=640)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
@@ -178,9 +178,27 @@ def run_ai_analysis(db_path, video_path, game_id):
                                 x2 = max(0, min(x2, orig_w - 1))
                                 y2 = max(0, min(y2, orig_h - 1))
                                 w_box, h_box = x2 - x1, y2 - y1
-                                if 8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0:
-                                    cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                                    ball_positions.append((cx, cy, confidence, x1, y1, x2, y2))
+                                if not (8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0):
+                                    continue
+
+                                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+
+                                # Filter 1: Reject detections in top 15% of frame (exit signs, ceiling fixtures)
+                                if cy < orig_h * 0.15:
+                                    continue
+
+                                # Filter 2: Color check — basketball is orange/brown
+                                # Exit signs are white/red, reflections are gray/white
+                                roi = frame[max(0,y1):min(orig_h,y2), max(0,x1):min(orig_w,x2)]
+                                if roi.size > 0:
+                                    roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                                    mask_orange = cv2.inRange(roi_hsv, np.array([10, 150, 150]), np.array([30, 255, 255]))
+                                    mask_brown = cv2.inRange(roi_hsv, np.array([0, 80, 80]), np.array([20, 150, 150]))
+                                    colour_ratio = np.count_nonzero(cv2.bitwise_or(mask_orange, mask_brown)) / roi.size
+                                    if colour_ratio < 0.15:
+                                        continue
+
+                                ball_positions.append((cx, cy, confidence, x1, y1, x2, y2))
                 except Exception:
                     pass
 
