@@ -1,0 +1,6 @@
+path: /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_finetune
+train: images/train
+val: images/val
+
+names:
+  0: Ball
