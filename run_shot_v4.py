@@ -28,7 +28,7 @@ start = time.time()
 
 while True:
     ret, frame = cap.read()
-    if not ret:
+    if not ret or fn >= total:
         break
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
