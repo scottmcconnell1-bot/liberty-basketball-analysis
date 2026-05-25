@@ -115,7 +115,6 @@ def track_balls(detections_by_frame):
     tracks = []
     active_tracks = []
 
-    max(max(detections_by_frame.keys()) + 1 if detections_by_frame else 0)
     all_frames = sorted(detections_by_frame.keys())
 
     for fn in all_frames:
