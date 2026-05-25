@@ -54,22 +54,23 @@ while True:
     ret, frame = cap.read()
     if not ret: break
 
-    r = ball_m.predict(frame, conf=BALL_CONF, verbose=False)[0]
-    if r.boxes is not None:
-        best_ball, best_hoop = None, None
-        for box in r.boxes:
-            cls = ball_m.names[int(box.cls[0])]
-            cf = float(box.conf[0])
-            x1,y1,x2,y2 = box.xyxy[0].tolist()
-            cx, cy = (x1+x2)/2, (y1+y2)/2
-            if cls == 'Ball' and cf > BALL_CONF and (best_ball is None or cf > best_ball[2]):
-                best_ball = (fn, cx, cy, cf)
-            elif cls == 'Hoop' and cf > 0.1 and (best_hoop is None or cf > best_hoop[2]):
-                best_hoop = (fn, cx, cy, cf)
-            elif cls == 'Player' and cf > 0.25:
-                player_dict[fn].append((cx, y2, cf))
-        if best_ball: ball_list.append(best_ball)
-        if best_hoop: hoop_list.append(best_hoop)
+    if fn % 5 == 0:
+        r = ball_m.predict(frame, conf=BALL_CONF, verbose=False)[0]
+        if r.boxes is not None:
+            best_ball, best_hoop = None, None
+            for box in r.boxes:
+                cls = ball_m.names[int(box.cls[0])]
+                cf = float(box.conf[0])
+                x1,y1,x2,y2 = box.xyxy[0].tolist()
+                cx, cy = (x1+x2)/2, (y1+y2)/2
+                if cls == 'Ball' and cf > BALL_CONF and (best_ball is None or cf > best_ball[2]):
+                    best_ball = (fn, cx, cy, cf)
+                elif cls == 'Hoop' and cf > 0.1 and (best_hoop is None or cf > best_hoop[2]):
+                    best_hoop = (fn, cx, cy, cf)
+                elif cls == 'Player' and cf > 0.25:
+                    player_dict[fn].append((cx, y2, cf))
+            if best_ball: ball_list.append(best_ball)
+            if best_hoop: hoop_list.append(best_hoop)
 
     if fn % 10 == 0:
         court_imgs.append(frame); court_fns.append(fn)
@@ -78,7 +79,7 @@ while True:
             court_imgs, court_fns = [], []
 
     fn += 1
-    if fn % 500 == 0:
+    if fn % 1000 == 0:
         log(f"  {fn}/{total}")
 
 if court_imgs:
