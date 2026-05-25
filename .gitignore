@@ -13,33 +13,26 @@ build/
 .venv/
 venv/
 env/
-
 # Environment variables
 .env
-
-
-
 # Uploaded files
 uploads/
-
 # IDE
 .vscode/
 .idea/
-
 # OS
 .DS_Store
 *.db-shm
 *.db-wal
 film_analysis.db
-film_analysis.db
 riverstone*.log
-
 # Model files (downloaded separately)
 models/*.pt
 models/*.pkl
 *.pkl
-
 # Large data files
 *.npy
 pipeline_output/*.pkl
 runs/
+yolov8m.pt
+yolov8*.pt
