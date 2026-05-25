@@ -1,3 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-ImportError: cannot import name 'create_app' from 'app' (/home/monk-admin/PROJECTS/liberty-basketball-analysis/app.py)

@@ -3142,3 +3142,311 @@ hint: Disable this message with "git config set advice.mergeConflict false"
 Could not apply ffa80fb... # backup: 2026-05-24-2204 —  481 files changed, 204299 insertions(+), 1097 deletions(-)
 [2026-05-24 22:04:57] Pull failed — attempting rebase resolution...
 HEAD is now at 1f08973 backup: 2026-05-24-2101 —  4 files changed, 2758 insertions(+), 17 deletions(-) (rebased)
+[backups 25260cb] backup: 2026-05-24-2204 —  24 files changed, 4012 insertions(+), 238 deletions(-) (rebased)
+ 24 files changed, 4012 insertions(+), 238 deletions(-)
+ create mode 100644 .gitattributes
+ create mode 100644 pipeline_output/shots_v9c.csv
+ create mode 100644 pipeline_output/shots_v9d.csv
+ create mode 100644 pipeline_output/v9c_balls.csv
+ create mode 100644 pipeline_output/v9c_hoops.csv
+ create mode 100644 run_v9c.py
+ create mode 100644 run_v9d.py
+ create mode 100644 run_v9e.py
+[2026-05-24 22:04:57] Pushing to origin/backups ...
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+   1f08973..25260cb  backups -> backups
+To github.com:scottmcconnell1-bot/liberty-basketball-analysis.git
+ * [new tag]         backup/2026-05-24-2204 -> backup/2026-05-24-2204
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 22:06:32] === Backup complete: backup/2026-05-24-2204 ===
+[2026-05-24 23:07:03] === Starting backup: backup/2026-05-24-2307 ===
+[2026-05-24 23:07:03] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-24 23:07:04] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files: 100% (151/151)Updating files: 100% (151/151), done.
+[2026-05-24 23:07:18] Syncing current project state...
+[2026-05-24 23:07:33] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260524T230808.60483077.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-24 23:08:08] Pull failed — attempting rebase resolution...
+Updating files:  36% (7/19)Updating files:  42% (8/19)Updating files:  47% (9/19)Updating files:  52% (10/19)Updating files:  57% (11/19)Updating files:  63% (12/19)Updating files:  68% (13/19)Updating files:  73% (14/19)Updating files:  78% (15/19)Updating files:  84% (16/19)Updating files:  89% (17/19)Updating files:  94% (18/19)Updating files: 100% (19/19)Updating files: 100% (19/19), done.
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260524T230811.256469626.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 00:08:58] === Starting backup: backup/2026-05-25-0008 ===
+[2026-05-25 00:08:58] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 00:09:00] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 00:09:07] Syncing current project state...
+[2026-05-25 00:09:15] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T000944.882483475.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 00:09:44] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T000947.275805058.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 01:10:51] === Starting backup: backup/2026-05-25-0110 ===
+[2026-05-25 01:10:51] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 01:10:52] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 01:10:59] Syncing current project state...
+[2026-05-25 01:11:06] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T011134.126940011.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 01:11:34] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T011136.513799287.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 02:12:17] === Starting backup: backup/2026-05-25-0212 ===
+[2026-05-25 02:12:17] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 02:12:18] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 02:12:25] Syncing current project state...
+[2026-05-25 02:12:32] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T021300.120857089.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 02:13:00] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T021302.625040985.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 03:14:25] === Starting backup: backup/2026-05-25-0314 ===
+[2026-05-25 03:14:25] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 03:14:26] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 03:14:33] Syncing current project state...
+[2026-05-25 03:14:40] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T031527.250486829.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 03:15:27] Pull failed — attempting rebase resolution...
+Updating files:  58% (17/29)Updating files:  62% (18/29)Updating files:  65% (19/29)Updating files:  68% (20/29)Updating files:  72% (21/29)Updating files:  75% (22/29)Updating files:  79% (23/29)Updating files:  82% (24/29)Updating files:  86% (25/29)Updating files:  89% (26/29)Updating files:  93% (27/29)Updating files:  96% (28/29)Updating files: 100% (29/29)Updating files: 100% (29/29), done.
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T031529.689722358.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 04:16:31] === Starting backup: backup/2026-05-25-0416 ===
+[2026-05-25 04:16:31] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 04:16:33] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 04:16:40] Syncing current project state...
+[2026-05-25 04:16:46] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T041713.560112367.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 04:17:13] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T041715.895328112.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 05:18:24] === Starting backup: backup/2026-05-25-0518 ===
+[2026-05-25 05:18:24] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 05:18:25] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 05:18:32] Syncing current project state...
+[2026-05-25 05:18:40] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T051913.763660663.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 05:19:13] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T051915.990245276.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 06:20:36] === Starting backup: backup/2026-05-25-0620 ===
+[2026-05-25 06:20:36] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 06:20:37] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 06:20:44] Syncing current project state...
+[2026-05-25 06:20:51] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T062119.036875674.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 06:21:19] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T062121.345993852.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 07:22:08] === Starting backup: backup/2026-05-25-0722 ===
+[2026-05-25 07:22:08] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch              backups    -> FETCH_HEAD
+[2026-05-25 07:22:09] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+[2026-05-25 07:22:16] Syncing current project state...
+[2026-05-25 07:22:24] Pulling latest from origin/backups before push...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+   5ad362a..25260cb  backups    -> origin/backups
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T072254.475403958.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 07:22:54] Pull failed — attempting rebase resolution...
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T072256.903499386.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+[2026-05-25 07:58:03] === Starting backup: backup/2026-05-25-0758 ===
+[2026-05-25 07:58:03] Fetching latest into local mirror...
+From github.com:scottmcconnell1-bot/liberty-basketball-analysis
+ * branch            backups    -> FETCH_HEAD
+[2026-05-25 07:58:05] Cloning from local mirror...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  99% (618/619)Updating files: 100% (619/619)Updating files: 100% (619/619), done.
+Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): error transferring "82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971": [0] remote missing object 82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T075813.772285817.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+warning: Clone succeeded, but checkout failed.
+You can inspect what was checked out with 'git status'
+and retry with 'git restore --source=HEAD :/'
+
+[2026-05-25 08:00:19] === Starting backup: backup/2026-05-25-0800 ===
+[2026-05-25 08:00:19] Cloning backups branch...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  48% (302/619)Updating files:  49% (304/619)Updating files:  50% (310/619)Updating files:  51% (316/619)Updating files:  52% (322/619)Updating files:  53% (329/619)Updating files:  54% (335/619)Updating files:  55% (341/619)Updating files:  56% (347/619)Updating files:  57% (353/619)Updating files:  58% (360/619)Updating files:  59% (366/619)Updating files:  60% (372/619)Updating files:  61% (378/619)Updating files:  62% (384/619)Updating files:  63% (390/619)Updating files:  64% (397/619)Updating files:  65% (403/619)Updating files:  66% (409/619)Updating files:  67% (415/619)Updating files:  68% (421/619)Updating files:  69% (428/619)Updating files:  70% (434/619)Updating files:  71% (440/619)Updating files:  72% (446/619)Updating files:  73% (452/619)Updating files:  74% (459/619)Updating files:  75% (465/619)Updating files:  76% (471/619)Updating files:  77% (477/619)Updating files:  78% (483/619)Updating files:  79% (490/619)Updating files:  80% (496/619)Updating files:  81% (502/619)Updating files:  82% (508/619)Updating files:  83% (514/619)Updating files:  84% (520/619)Updating files:  85% (527/619)Updating files:  86% (533/619)Updating files:  87% (539/619)Updating files:  88% (545/619)Updating files:  89% (551/619)Updating files:  90% (558/619)Updating files:  91% (564/619)Updating files:  92% (570/619)Updating files:  93% (576/619)Updating files:  94% (582/619)Updating files:  95% (589/619)Updating files:  96% (595/619)Updating files:  97% (601/619)Updating files:  98% (607/619)Updating files:  99% (613/619)Updating files:  99% (617/619)Updating files: 100% (619/619)Updating files: 100% (619/619), done.
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T080117.463814721.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+warning: Clone succeeded, but checkout failed.
+You can inspect what was checked out with 'git status'
+and retry with 'git restore --source=HEAD :/'
+
+[2026-05-25 08:01:17] Clone failed — creating new backups branch from scratch...
+[2026-05-25 08:03:12] === Starting backup: backup/2026-05-25-0803 ===
+[2026-05-25 08:03:12] Cloning backups branch...
+Cloning into '/home/monk-admin/liberty-backup-tmp'...
+Updating files:  48% (302/619)Updating files:  49% (304/619)Updating files:  50% (310/619)Updating files:  51% (316/619)Updating files:  52% (322/619)Updating files:  53% (329/619)Updating files:  54% (335/619)Updating files:  55% (341/619)Updating files:  56% (347/619)Updating files:  57% (353/619)Updating files:  58% (360/619)Updating files:  59% (366/619)Updating files:  60% (372/619)Updating files:  61% (378/619)Updating files:  62% (384/619)Updating files:  63% (390/619)Updating files:  64% (397/619)Updating files:  65% (403/619)Updating files:  66% (409/619)Updating files:  67% (415/619)Updating files:  68% (421/619)Updating files:  69% (428/619)Updating files:  70% (434/619)Updating files:  71% (440/619)Updating files:  72% (446/619)Updating files:  73% (452/619)Updating files:  74% (459/619)Updating files:  75% (465/619)Updating files:  76% (471/619)Updating files:  77% (477/619)Updating files:  78% (483/619)Updating files:  79% (490/619)Updating files:  80% (496/619)Updating files:  81% (502/619)Updating files:  82% (508/619)Updating files:  83% (514/619)Updating files:  84% (520/619)Updating files:  85% (527/619)Updating files:  86% (533/619)Updating files:  87% (539/619)Updating files:  88% (545/619)Updating files:  89% (551/619)Updating files:  90% (558/619)Updating files:  91% (564/619)Updating files:  92% (570/619)Updating files:  93% (576/619)Updating files:  94% (582/619)Updating files:  95% (589/619)Updating files:  96% (595/619)Updating files:  97% (601/619)Updating files:  98% (607/619)Updating files:  99% (613/619)Updating files:  99% (618/619)Updating files: 100% (619/619)Updating files: 100% (619/619), done.
+Filtering content:   8% (1/12)Downloading runs/detect/train-2/args.yaml (1.6 KB)
+Error downloading object: runs/detect/train-2/args.yaml (82675e1): Smudge error: Error downloading runs/detect/train-2/args.yaml (82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971): [82675e105f9c6bb5fe4c9dd58a389f600a25d9b3b60394e1125601b36adda971] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to '/home/monk-admin/liberty-backup-tmp/.git/lfs/logs/20260525T080413.158167327.log'.
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: runs/detect/train-2/args.yaml: smudge filter lfs failed
+warning: Clone succeeded, but checkout failed.
+You can inspect what was checked out with 'git status'
+and retry with 'git restore --source=HEAD :/'
+
+[2026-05-25 08:04:13] Clone had issues — cleaning up LFS state...
+Updating files:  99% (618/619)Updating files: 100% (619/619)Updating files: 100% (619/619), done.
+HEAD is now at 25260cb backup: 2026-05-24-2204 —  24 files changed, 4012 insertions(+), 238 deletions(-) (rebased)
+[2026-05-25 08:04:14] Syncing current project state...
