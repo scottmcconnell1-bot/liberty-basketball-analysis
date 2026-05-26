@@ -1,6 +1,5 @@
 """
-Shot detection v7: Uses fine-tuned ball detector.
-Same logic as v6 but with the fine-tuned model from our footage.
+Shot detection v8: Fine‑tuned model at very low threshold + color + proximity + temporal filtering.
 """
 import cv2, numpy as np, pickle, time
 import pandas as pd
@@ -37,7 +36,7 @@ while True:
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Ball detection with fine-tuned model at low conf
+    # Ball detection with fine‑tuned model at very low conf
     r = ball_m.predict(frame, conf=0.001, verbose=False)[0]
     if r.boxes is not None:
         best_conf = 0
@@ -184,13 +183,13 @@ results = {
     'basket_right': (basket_right_x, basket_right_y),
     'kp_arr': kp_arr,
 }
-with open(OUT + '/shot_v7.pkl', 'wb') as f:
+with open(OUT + '/shot_v8.pkl', 'wb') as f:
     pickle.dump(results, f)
 
 pd.DataFrame([{
     'frame': fn,
     'dist': round(float(dist_to_basket[fn]), 1) if not np.isnan(dist_to_basket[fn]) else None,
     'conf': round(float(ball_conf[fn]), 3),
-} for fn in deduped]).to_csv(OUT + '/shot_candidates_v7.csv', index=False)
+} for fn in deduped]).to_csv(OUT + '/shot_candidates_v8.csv', index=False)
 
 print("\nDONE")
