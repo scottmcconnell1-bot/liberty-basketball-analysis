@@ -37,8 +37,8 @@ while True:
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Ball detection with fine-tuned model at low conf
-    r = ball_m.predict(frame, conf=0.0005, verbose=False)[0]
+    # Ball detection with fine-tuned model at very low conf
+    r = ball_m.predict(frame, conf=0.0002, verbose=False)[0]
     if r.boxes is not None:
         best_conf = 0
         best_box = None
