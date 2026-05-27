@@ -6,3 +6,42 @@
 [362s]   500/2701, 51 balls, 5 hoop-frames, 1.4 fps
 [767s]   1000/2701, 131 balls, 13 hoop-frames, 1.3 fps
 [1105s]   1500/2701, 175 balls, 20 hoop-frames, 1.4 fps
+[1518s]   2000/2701, 229 balls, 26 hoop-frames, 1.3 fps
+[1858s]   2500/2701, 338 balls, 38 hoop-frames, 1.3 fps
+[2035s] Phase 2 done: 361 balls, 43 hoop-frames, 84 courts
+[2035s] Interpolating hoop positions...
+[2035s] Hoop position available for 2494 frames
+[2035s] Phase 3: Ball tracking...
+[2035s] Kept 5, removed 356
+[2036s] Phase 5: Shot detection...
+[2036s]   Proximity: 0
+[2036s]   Peaks: 0
+[2036s]   Gaps: 0
+[2036s] Phase 6: Deduplicating...
+[2036s] 0 -> 0 shots
+[0s] Loading models...
+[2s] Ball model: {0: 'Ball'}
+[2s] Hoop model: {0: 'Ball', 1: 'Clock', 2: 'Hoop', 3: 'Overlay', 4: 'Player', 5: 'Ref', 6: 'Scoreboard'}
+[2s] Video: 2701 frames @ 3.8fps
+[2s] Phase 2: Detection pass...
+[0s] Loading models...
+[1s] Ball model: {0: 'Ball'}
+[1s] Hoop model: {0: 'Ball', 1: 'Clock', 2: 'Hoop', 3: 'Overlay', 4: 'Player', 5: 'Ref', 6: 'Scoreboard'}
+[1s] Video: 2701 frames @ 3.8fps
+[1s] Phase 2: Detection pass...
+[357s]   500/2701, 51 balls, 5 hoop-frames, 1.4 fps
+[758s]   1000/2701, 131 balls, 13 hoop-frames, 1.3 fps
+[1096s]   1500/2701, 175 balls, 20 hoop-frames, 1.4 fps
+[1492s]   2000/2701, 229 balls, 26 hoop-frames, 1.3 fps
+[1833s]   2500/2701, 338 balls, 38 hoop-frames, 1.4 fps
+[2009s] Phase 2 done: 361 balls, 43 hoop-frames, 84 courts
+[2009s] Interpolating hoop positions...
+[2009s] Hoop position available for 2494 frames
+[2009s] Phase 3: Ball tracking...
+[2009s] Kept 5, removed 356
+[2009s] Phase 5: Shot detection...
+[2009s]   Proximity: 0
+[2009s]   Peaks: 0
+[2009s]   Gaps: 0
+[2009s] Phase 6: Deduplicating...
+[2009s] 0 -> 0 shots
