@@ -2,3 +2,34 @@
 [2s] Models loaded. Ball classes: {0: 'Ball'}
 [2s] Phase 2: Per-frame detection...
 [2s] Video: 2701 frames @ 3.8fps
+[0s] Loading models...
+[1s] Models loaded. Ball classes: {0: 'Ball'}
+[1s] Phase 2: Per-frame detection...
+[1s] Video: 2701 frames @ 3.8fps
+[143s]   200/2701, 15 balls, 1.4 fps
+[281s]   400/2701, 23 balls, 1.4 fps
+[421s]   600/2701, 104 balls, 1.4 fps
+[561s]   800/2701, 120 balls, 1.4 fps
+[698s]   1000/2701, 131 balls, 1.4 fps
+[833s]   1200/2701, 135 balls, 1.4 fps
+[968s]   1400/2701, 158 balls, 1.4 fps
+[1104s]   1600/2701, 188 balls, 1.4 fps
+[1239s]   1800/2701, 227 balls, 1.5 fps
+[1374s]   2000/2701, 229 balls, 1.5 fps
+[1508s]   2200/2701, 289 balls, 1.5 fps
+[1645s]   2400/2701, 317 balls, 1.5 fps
+[1781s]   2600/2701, 355 balls, 1.5 fps
+[1849s] Phase 2 done: 361 color-ok balls, 0 hoop-frames, 84 courts
+[1849s] Phase 3: Ball tracking filter...
+[1849s] After filter: 1 balls (removed 360)
+[1849s] Phase 4: Interpolating ball positions...
+[1849s] Interpolated 2700 frames
+[1849s] Phase 5: Interpolating court keypoints...
+[1849s] Phase 6: Shot detection...
+[1849s]   Proximity: 0 candidates
+[1849s]   Peaks: 0 candidates
+[1849s]   Gaps: 0 candidates
+[1849s] Phase 7: Deduplicating...
+[1849s] Deduped: 0 -> 0 shots
+[1849s] Phase 8: Classifying shots...
+[1849s] Phase 9: Writing output...
