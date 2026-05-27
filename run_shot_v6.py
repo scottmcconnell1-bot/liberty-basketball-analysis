@@ -1,6 +1,9 @@
 """
-Shot detection v7: Uses fine-tuned ball detector.
-Same logic as v6 but with the fine-tuned model from our footage.
+Shot detection v6: Ultra-low conf ball detection + strict color + basket proximity.
+Key insight: detect ball at very low conf (0.05), then filter by:
+  1. Basketball color (H 3-28, S>20)
+  2. Within 150px of basket
+  3. Temporal consistency (at least 2 detections within 3 frames near basket)
 """
 import cv2, numpy as np, pickle, time
 import pandas as pd
@@ -9,12 +12,11 @@ from scipy.signal import find_peaks
 
 VIDEO = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/uploads/Liberty_Vs_Riverstone_Q1.webm'
 OUT = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output'
-MODELS = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_finetune/runs/finetune2/weights/best.pt'
-COURT_MODEL = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+MODELS = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models'
 
 print("Loading models...")
-ball_m = YOLO(MODELS)
-court_m = YOLO(COURT_MODEL)
+ball_m = YOLO(MODELS + '/ball_detector.pt')
+court_m = YOLO(MODELS + '/court_keypoint_detector.pt')
 
 cap = cv2.VideoCapture(VIDEO)
 total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -37,8 +39,8 @@ while True:
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Ball detection with fine-tuned model at very low conf
-    r = ball_m.predict(frame, conf=0.0002, verbose=False)[0]
+    # Ball detection at VERY low conf
+    r = ball_m.predict(frame, conf=0.05, verbose=False)[0]
     if r.boxes is not None:
         best_conf = 0
         best_box = None
@@ -184,13 +186,13 @@ results = {
     'basket_right': (basket_right_x, basket_right_y),
     'kp_arr': kp_arr,
 }
-with open(OUT + '/shot_v7.pkl', 'wb') as f:
+with open(OUT + '/shot_v6.pkl', 'wb') as f:
     pickle.dump(results, f)
 
 pd.DataFrame([{
     'frame': fn,
     'dist': round(float(dist_to_basket[fn]), 1) if not np.isnan(dist_to_basket[fn]) else None,
     'conf': round(float(ball_conf[fn]), 3),
-} for fn in deduped]).to_csv(OUT + '/shot_candidates_v7.csv', index=False)
+} for fn in deduped]).to_csv(OUT + '/shot_candidates_v6.csv', index=False)
 
 print("\nDONE")
