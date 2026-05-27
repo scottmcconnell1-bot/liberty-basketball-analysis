@@ -1,0 +1,26 @@
+[0s] Loading basket positions from v8...
+[0s] Basket left:  mean=(179, 525)
+[0s] Basket right: mean=(1009, 466)
+[0s] Total frames: 2701
+[0s] Phase 1: Ball detection (color)...
+[4s]   500/2701, 500 balls found
+[9s]   1000/2701, 1000 balls found
+[13s]   1500/2701, 1500 balls found
+[17s]   2000/2701, 2000 balls found
+[22s]   2500/2701, 2500 balls found
+[24s] Phase 1 done: 2711/2701 frames with ball detected
+[24s] Phase 2: Ball tracking...
+[24s] Kept 160, removed 2551
+[24s] Phase 3: Interpolating...
+[0s] Loading v8 basket positions...
+[0s] Left basket: (179, 525)
+[0s] Right basket: (1009, 466)
+[0s] Phase 1: Ball detection (fine-tuned NN)...
+[4s] Video: 2701 frames
+[201s]   500/2701, 69 balls, 1 court-filtered, 2.5 fps
+[400s]   1000/2701, 173 balls, 1 court-filtered, 2.5 fps
+[597s]   1500/2701, 223 balls, 1 court-filtered, 2.5 fps
+[792s]   2000/2701, 286 balls, 2 court-filtered, 2.5 fps
+[990s]   2500/2701, 460 balls, 2 court-filtered, 2.5 fps
+[1073s] Phase 1 done: 488 balls in court (2 filtered out)
+[1073s] Phase 2: Ball-to-basket distance...
