@@ -34,5 +34,15 @@ models/*.pkl
 *.npy
 pipeline_output/*.pkl
 runs/
+!ball_finetune/runs/finetune2/weights/*.pt
+!models/*.pt
 yolov8m.pt
 yolov8*.pt
+
+# Allow specific pipeline outputs for reference
+!pipeline_output/shot_candidates_v*.csv
+!pipeline_output/shot_results_v*.csv
+!pipeline_output/shot_v*.pkl
+!pipeline_output/shot_candidate_*.jpg
+!pipeline_output/vis_cand*.jpg
+!pipeline_output/*.csv
