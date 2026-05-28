@@ -1,44 +1,32 @@
 #!/usr/bin/env python3
-"""
-Shot detection v35: Derived second-order features + diagnostic table
-====================================================================
-Builds on v34's local backward emergence and adds:
+"""v35: Extract richer trajectory features + visual audit.
 
-DERIVED FEATURES:
-  - distance_growth_rate: how fast the ball moves away from basket in backward track
-    (short compact = layup, long gradual = 3PT)
-  - angle_variance: consistency of backward motion direction
-    (clean = set shot, noisy = traffic/contested)
-  - corridor_width: max lateral deviation from straight line to anchor
-    (narrow = set shot, wide = off-balance)
-  - origin_to_anchor_ratio: how far back we got vs total visible flight
-    (low = early NN detection, high = late detection = long shot)
-  - mean_backward_speed: average px/frame in backward track
-    (fast = live ball, slow = set shot)
-  - lateral_velocity: lateral displacement per frame
-    (fast = wing shot, slow = center)
-  - corridor_curvature: total angular change in backward path
-  - appearance_decay_rate: how quickly template correlation drops backward
+For each shot event, computes from the bidirectional track:
+  - growth: how much the ball moves away from basket (px/frame forward)
+  - width: lateral spread of the corridor (std dev of lateral displacements)
+  - turn: direction change consistency (angular variance proxy)
+  - angle_var: variance of displacement angles along track
+  - decay: how quickly forward tracking loses lock (fraction of successful frames)
 
-Also outputs a proper diagnostic CSV with all features for each shot event,
-sorted by ground truth labels (once provided) for distribution analysis.
+Then saves frame thumbnail + corridor overlay per event.
 """
-import os, time, pickle, cv2
+import os, pickle, cv2
 import numpy as np
 import pandas as pd
 
 VIDEO = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/uploads/Liberty_Vs_Riverstone_Q1.webm'
-OUT   = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output'
+PKL_V14 = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/shot_v14.pkl'
+PKL_V8  = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/shot_v8.pkl'
+CSV_V34 = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/shot_features_v34.csv'
+CSV_OUT = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/shot_features_v35.csv'
+OUT_DIR = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit_v35'
 
 BLX, BLY = 179.0, 525.0
 BRX, BRY = 1009.0, 466.0
+
 FWD_WIN, BWD_WIN = 20, 15
-MIN_PTS, MAX_JUMP = 10, 80
-MAKE_R = 55
-
-
-def log(msg):
-    print(msg, flush=True)
+MAX_JUMP = 80
+MIN_PTS = 10
 
 
 def check_color(hsv, x, y):
@@ -81,6 +69,7 @@ def match_template(img_gray, x, y, template, radius=8):
 
 
 def track_bidir(cap, fnum, cx, cy, total):
+    """Bidirectional template-locked OF track from anchor."""
     cap.set(cv2.CAP_PROP_POS_FRAMES, fnum)
     ret, img0 = cap.read()
     if not ret:
@@ -90,7 +79,10 @@ def track_bidir(cap, fnum, cx, cy, total):
     if not check_color(hsv0, cx, cy):
         return []
     template = extract_template(gray0, cx, cy, radius=8)
+    if template is None:
+        return []
 
+    # Backward
     pts = np.array([[[float(cx), float(cy)]]], dtype=np.float32)
     gray_prev = gray0
     backward = []
@@ -113,6 +105,7 @@ def track_bidir(cap, fnum, cx, cy, total):
                     continue
         gray_prev = gf
 
+    # Forward
     pts = np.array([[[float(cx), float(cy)]]], dtype=np.float32)
     gray_prev = gray0
     forward = []
@@ -138,415 +131,243 @@ def track_bidir(cap, fnum, cx, cy, total):
     return backward[::-1] + [(fnum, float(cx), float(cy))] + forward
 
 
-def estimate_local_backward_emergence(anchor_f, anchor_x, anchor_y, cap, total, max_back=20):
-    """Local backward emergence with strict appearance lock.
-
-    Returns emergence data + per-frame backward measurements
-    for derived feature computation.
-    """
-    cap.set(cv2.CAP_PROP_POS_FRAMES, anchor_f)
-    ret, img0 = cap.read()
-    if not ret:
-        return None
-    gray0 = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
-    template = extract_template(gray0, anchor_x, anchor_y, radius=8)
-    if template is None:
+def compute_track_features(track, bx, by):
+    """Compute richer features from a bidirectional track relative to basket (bx, by)."""
+    if len(track) < 5:
         return None
 
-    backward_pts = []
-    backward_corrs = []
-    pts = np.array([[[float(anchor_x), float(anchor_y)]]], dtype=np.float32)
-    gray_prev = gray0
+    xs = np.array([x for _, x, y in track])
+    ys = np.array([y for _, x, y in track])
 
-    for df in range(1, min(max_back, anchor_f + 1)):
-        fi = anchor_f - df
-        cap.set(cv2.CAP_PROP_POS_FRAMES, fi)
-        ret, img = cap.read()
-        if not ret:
-            break
-        gf = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Find anchor index (where distance to basket is minimized)
+    dists = np.sqrt((xs - bx)**2 + (ys - by)**2)
+    anchor_idx = int(np.argmin(dists))
 
-        np2, st, _ = cv2.calcOpticalFlowPyrLK(gray_prev, gf, pts, None,
-            winSize=(15, 15), maxLevel=2,
-            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-
-        if st[0, 0] == 1:
-            nx, ny = float(np2[0, 0, 0]), float(np2[0, 0, 1])
-            hf = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-            color_ok = check_color(hf, nx, ny)
-
-            # Compute template correlation
-            h_patch = gf.shape[0]
-            w_patch = gf.shape[1]
-            x1p = max(0, int(nx) - 8)
-            x2p = min(w_patch, int(nx) + 8)
-            y1p = max(0, int(ny) - 8)
-            y2p = min(h_patch, int(ny) + 8)
-            patch = gf[y1p:y2p, x1p:x2p]
-            if patch.size >= 9:
-                hist = cv2.calcHist([patch], [0], None, [32], [0, 256]).flatten()
-                hist = hist / (hist.sum() + 1e-8)
-                corr = cv2.compareHist(template['hist'].astype(np.float32),
-                                       hist.astype(np.float32), cv2.HISTCMP_CORREL)
+    # === growth: rate of distance increase in forward direction ===
+    if anchor_idx < len(track) - 2:
+        fwd_dists = dists[anchor_idx:]
+        fwd_frames = np.array([f for f, _, _ in track[anchor_idx:]])
+        if len(fwd_dists) >= 3:
+            # Linear fit: dist = a*frame + b
+            if fwd_frames[-1] > fwd_frames[0]:
+                growth = float(np.polyfit(fwd_frames, fwd_dists, 1)[0])
             else:
-                corr = 0
-
-            jump = np.sqrt((nx - float(pts[0, 0, 0]))**2 + (ny - float(pts[0, 0, 1]))**2)
-            jump_ok = jump < MAX_JUMP
-
-            if color_ok and corr > 0.5 and jump_ok:
-                backward_pts.append((fi, nx, ny))
-                backward_corrs.append(corr)
-                pts = np2.reshape(1, 1, 2)
-                gray_prev = gf
-                continue
-            elif len(backward_pts) > 3:
-                break
-            break
+                growth = 0.0
         else:
-            break
-
-    if len(backward_pts) < 3:
-        return None
-
-    origin_f, origin_x, origin_y = backward_pts[-1]
-    anchor_dist = np.sqrt((anchor_x - origin_x)**2 + (anchor_y - origin_y)**2)
-    emergence_angle = np.degrees(np.arctan2(anchor_y - origin_y, anchor_x - origin_x))
-
-    return {
-        'origin_x': origin_x, 'origin_y': origin_y, 'origin_f': origin_f,
-        'anchor_dist': anchor_dist, 'emergence_angle': emergence_angle,
-        'n_points': len(backward_pts),
-        'forward_pts': backward_pts,
-        'forward_corrs': backward_corrs,
-    }
-
-
-def compute_derived_features(emergence, anchor_x, anchor_y, anchor_f, bl_x, bl_y, br_x, br_y):
-    """Compute second-order derived features from emergence data."""
-    if emergence is None or emergence['n_points'] < 3:
-        return None
-
-    pts = emergence['forward_pts']  # (frame, x, y) sorted backward from anchor
-    n = len(pts)
-
-    # --- Basic geometry ---
-    ox, oy = emergence['origin_x'], emergence['origin_y']
-    dist_px = emergence['anchor_dist']
-
-    # Nearest basket
-    d_l = np.sqrt((ox - BLX)**2 + (oy - BLY)**2)
-    d_r = np.sqrt((ox - BRX)**2 + (oy - BRY)**2)
-    nearest = 'left' if d_l < d_r else 'right'
-    basket_x, basket_y = (BLX, BLY) if nearest == 'left' else (BRX, BRY)
-
-    # Scale
-    sf = anchor_f if anchor_f < len(bl_x) and not np.isnan(bl_x[anchor_f]) else pts[-1][0]
-    if sf < len(bl_x) and not np.isnan(bl_x[sf]):
-        bsep = np.sqrt((bl_x[sf] - br_x[sf])**2 + (bl_y[sf] - br_y[sf])**2)
-        scale = bsep / 47.0 if bsep > 200 else 17.7
+            growth = 0.0
     else:
-        scale = 17.7
+        growth = 0.0
 
-    dist_ft = dist_px / scale
-
-    # --- Lateral offset from center-attack line ---
-    center_x, center_y = 640, 360
-    attack_dx = center_x - basket_x
-    attack_dy = center_y - basket_y
-    attack_len = np.sqrt(attack_dx**2 + attack_dy**2)
-    if attack_len > 0:
-        to_origin_x = ox - basket_x
-        to_origin_y = oy - basket_y
-        cross = abs(to_origin_x * attack_dy - to_origin_y * attack_dx) / attack_len
-        lateral_ft = cross / scale
+    # === width: lateral spread perpendicular to main trajectory direction ===
+    if len(track) >= 3:
+        dx = xs[-1] - xs[0]
+        dy = ys[-1] - ys[0]
+        traj_len = np.sqrt(dx**2 + dy**2)
+        if traj_len > 1:
+            # Cross-track distance for each point
+            cross = np.abs((xs - xs[0]) * dy - (ys - ys[0]) * dx) / traj_len
+            width = float(np.std(cross))
+        else:
+            width = 0.0
     else:
-        lateral_ft = 0
+        width = 0.0
 
-    # --- distance_growth_rate: how fast distance increases backward ---
-    # Compute distance from basket at each backward point
-    dists = [np.sqrt((x - basket_x)**2 + (y - basket_y)**2) for _, x, y in pts]
-    if len(dists) >= 3:
-        # Rate of distance increase (px per frame moving backward)
-        total_growth = dists[-1] - dists[0]
-        total_frames = pts[0][0] - pts[-1][0] if pts[0][0] != pts[-1][0] else 1
-        dist_growth_rate = total_growth / total_frames  # px/frame
-        dist_growth_rate_ft = dist_growth_rate / scale  # ft/frame
-    else:
-        dist_growth_rate = 0
-        dist_growth_rate_ft = 0
-
-    # --- angle_variance: how much the backward direction changes ---
-    if len(pts) >= 3:
+    # === turn: how much the heading angle changes ===
+    if len(track) >= 4:
         angles = []
-        for i in range(1, len(pts)):
-            dx = pts[i][1] - pts[i-1][1]
-            dy = pts[i][2] - pts[i-1][2]
-            if abs(dx) > 0.1 or abs(dy) > 0.1:
-                angles.append(np.degrees(np.arctan2(dy, dx)))
-        if len(angles) >= 2:
-            angle_var = float(np.std(angles))
-        else:
-            angle_var = 0
+        for i in range(2, len(track)):
+            dx1 = xs[i-1] - xs[i-2]
+            dy1 = ys[i-1] - ys[i-2]
+            dx2 = xs[i] - xs[i-1]
+            dy2 = ys[i] - ys[i-1]
+            a1 = np.arctan2(dy1, dx1)
+            a2 = np.arctan2(dy2, dx2)
+            da = a2 - a1
+            # Normalize to [-pi, pi]
+            da = (da + np.pi) % (2 * np.pi) - np.pi
+            angles.append(abs(da))
+        turn = float(np.mean(angles))
     else:
-        angle_var = 0
+        turn = 0.0
 
-    # --- corridor_width: max deviation from straight line origin→anchor ---
-    if len(pts) >= 3:
-        # Line from origin to anchor
-        line_dx = anchor_x - ox
-        line_dy = anchor_y - oy
-        line_len = np.sqrt(line_dx**2 + line_dy**2)
-        if line_len > 0:
-            max_dev = 0
-            for _, px, py in pts:
-                # Distance from point to line
-                dev = abs((px - ox) * line_dy - (py - oy) * line_dx) / line_len
-                max_dev = max(max_dev, dev)
-            corridor_width_px = max_dev
-            corridor_width_ft = max_dev / scale
-        else:
-            corridor_width_px = 0
-            corridor_width_ft = 0
+    # === angle_var: variance of displacement angles across the whole track ===
+    if len(track) >= 3:
+        displacements = np.diff(np.column_stack([xs, ys]), axis=0)
+        angs = np.arctan2(displacements[:, 1], displacements[:, 0])
+        # Circular variance
+        R = np.sqrt(np.mean(np.cos(angs))**2 + np.mean(np.sin(angs))**2)
+        angle_var = float(1 - R)  # 0=all same direction, 1=uniform
     else:
-        corridor_width_px = 0
-        corridor_width_ft = 0
+        angle_var = 1.0
 
-    # --- origin_to_anchor_ratio: how far back we got vs visible flight ---
-    # Forward track extent (from bidir) would be ideal, but we use NN proximity
-    # as a proxy: closer to basket = earlier NN detection = shorter visible flight
-    nn_prox = min(np.sqrt((anchor_x - BLX)**2 + (anchor_y - BLY)**2),
-                  np.sqrt((anchor_x - BRX)**2 + (anchor_y - BRY)**2))
-    if nn_prox > 0:
-        oa_ratio = dist_px / nn_prox
+    # === decay: fraction of forward frames that lost tracking ===
+    max_fwd = min(FWD_WIN, int(track[-1][0]) - int(track[0][0]))
+    actual_fwd = len(track) - 1 - anchor_idx
+    if max_fwd > 0:
+        decay = 1.0 - (actual_fwd / max_fwd)
     else:
-        oa_ratio = 0
-
-    # --- mean_backward_speed ---
-    if len(pts) >= 2:
-        speeds = []
-        for i in range(1, len(pts)):
-            dx = pts[i][1] - pts[i-1][1]
-            dy = pts[i][2] - pts[i-1][2]
-            dt = abs(pts[i][0] - pts[i-1][0])
-            if dt > 0:
-                speeds.append(np.sqrt(dx**2 + dy**2) / dt)
-        mean_backward_speed = float(np.mean(speeds)) if speeds else 0
-    else:
-        mean_backward_speed = 0
-
-    # --- lateral_velocity: lateral displacement per frame ---
-    if len(pts) >= 2:
-        lateral_displacements = []
-        for i in range(1, len(pts)):
-            # Project displacement onto lateral axis (perpendicular to center-attack line)
-            if attack_len > 0:
-                lat_dx = -attack_dy / attack_len
-                lat_dy = attack_dx / attack_len
-                ddx = pts[i][1] - pts[i-1][1]
-                ddy = pts[i][2] - pts[i-1][2]
-                lat_disp = ddx * lat_dx + ddy * lat_dy
-                dt = abs(pts[i][0] - pts[i-1][0])
-                if dt > 0:
-                    lateral_displacements.append(lat_disp / dt)
-        lateral_velocity = float(np.mean(lateral_displacements)) / scale if lateral_displacements else 0
-    else:
-        lateral_velocity = 0
-
-    # --- corridor_curvature: total angular change in path ---
-    if len(pts) >= 3:
-        total_turn = 0
-        prev_angle = None
-        for i in range(1, len(pts)):
-            dx = pts[i][1] - pts[i-1][1]
-            dy = pts[i][2] - pts[i-1][2]
-            if abs(dx) > 0.1 or abs(dy) > 0.1:
-                angle = np.arctan2(dy, dx)
-                if prev_angle is not None:
-                    turn = abs(angle - prev_angle)
-                    if turn > np.pi:
-                        turn = 2 * np.pi - turn
-                    total_turn += turn
-                prev_angle = angle
-        corridor_curvature = total_turn
-    else:
-        corridor_curvature = 0
-
-    # --- appearance_decay_rate: how fast template correlation drops ---
-    corrs = emergence.get('forward_corrs', [])
-    if len(corrs) >= 3:
-        # Linear fit to correlation vs frame index
-        x = np.arange(len(corrs))
-        if len(x) > 1:
-            slope = np.polyfit(x, corrs, 1)[0]
-            appearance_decay_rate = slope
-        else:
-            appearance_decay_rate = 0
-    else:
-        appearance_decay_rate = 0
-
-    # --- corridor_stability (from v34) ---
-    if len(pts) >= 3:
-        unit_vecs = []
-        for i in range(1, len(pts)):
-            dx = pts[i][1] - pts[i-1][1]
-            dy = pts[i][2] - pts[i-1][2]
-            norm = np.sqrt(dx**2 + dy**2)
-            if norm > 1e-8:
-                unit_vecs.append((dx/norm, dy/norm))
-        if unit_vecs:
-            mean_dir = np.mean(unit_vecs, axis=0)
-            stability = float(np.linalg.norm(mean_dir))
-        else:
-            stability = 0.5
-    else:
-        stability = 0.5
+        decay = 1.0
 
     return {
-        # First-order (v34)
-        'origin_distance_ft': round(dist_ft, 1),
-        'origin_lateral_ft': round(lateral_ft, 1),
-        'emergence_angle': round(emergence['emergence_angle'], 1),
-        'emergence_n_points': emergence['n_points'],
-        'corridor_stability': round(stability, 2),
-        'nearest_basket': nearest,
-
-        # Derived second-order
-        'distance_growth_rate_ft': round(dist_growth_rate_ft, 2),
-        'angle_variance': round(angle_var, 1),
-        'corridor_width_ft': round(corridor_width_ft, 1),
-        'origin_to_anchor_ratio': round(oa_ratio, 2),
-        'mean_backward_speed': round(mean_backward_speed, 1),
-        'lateral_velocity_fps': round(lateral_velocity, 2),
-        'corridor_curvature': round(corridor_curvature, 2),
-        'appearance_decay_rate': round(appearance_decay_rate, 3),
-
-        # Meta
-        'scale': round(scale, 1),
-        'origin': (round(ox), round(oy)),
+        'growth': round(float(growth), 3),
+        'width': round(float(width), 2),
+        'turn': round(float(turn), 3),
+        'angle_var': round(float(angle_var), 3),
+        'decay': round(float(decay), 3),
+        'track_len': len(track),
+        'anchor_idx': anchor_idx,
     }
 
 
-# ---- Main ----
+def draw_overlay(img, track):
+    """Draw full bidirectional track overlay."""
+    vis = img.copy()
+    h, w = vis.shape[:2]
 
-if __name__ == '__main__':
-    log("Loading...")
-    with open(f'{OUT}/shot_v14.pkl', 'rb') as f:
+    # Draw baskets
+    cv2.circle(vis, (int(BLX), int(BLY)), 10, (0, 0, 255), 2)
+    cv2.circle(vis, (int(BRX), int(BRY)), 10, (0, 0, 255), 2)
+
+    if not track:
+        return vis
+
+    xs = [x for _, x, y in track]
+    ys = [y for _, x, y in track]
+    n = len(track)
+
+    # Draw track line with gradient
+    dists = np.sqrt((np.array(xs) - BLX)**2 + (np.array(ys) - BLY)**2)
+    dists_r = np.sqrt((np.array(xs) - BRX)**2 + (np.array(ys) - BRY)**2)
+    anchor_idx = int(np.argmin(np.minimum(dists, dists_r)))
+
+    for i in range(1, n):
+        # Color: blue->green for backward, green->red for forward
+        if i <= anchor_idx:
+            t = i / max(anchor_idx, 1)
+            color = (255 * (1 - t), 255 * t, 0)
+        else:
+            t = (i - anchor_idx) / max(n - anchor_idx, 1)
+            color = (0, 255 * (1 - t), 255 * t)
+        p1 = (int(xs[i-1]), int(ys[i-1]))
+        p2 = (int(xs[i]), int(ys[i]))
+        cv2.line(vis, p1, p2, color, 2)
+
+    # Draw points
+    for fx, fy in zip(xs, ys):
+        cv2.circle(vis, (int(fx), int(fy)), 3, (0, 255, 255), -1)
+
+    # Highlight anchor (closest to basket)
+    ax, ay = xs[anchor_idx], ys[anchor_idx]
+    cv2.circle(vis, (int(ax), int(ay)), 8, (0, 0, 255), 2)
+
+    return vis
+
+
+def main():
+    print("Loading v34 features...")
+    df34 = pd.read_csv(CSV_V34)
+
+    # Load v14 tracks for ball positions
+    with open(PKL_V14, 'rb') as f:
         v14 = pickle.load(f)
-    rx, ry = v14['ball_x'], v14['ball_y']
-    total = len(rx)
+    ball_x, ball_y = v14['ball_x'], v14['ball_y']
+    total = len(ball_x)
 
-    with open(f'{OUT}/shot_v8.pkl', 'rb') as f:
+    with open(PKL_V8, 'rb') as f:
         v8 = pickle.load(f)
-    bl_x, bl_y = v8['basket_left']
-    br_x, br_y = v8['basket_right']
+    bl_x_arr, bl_y_arr = v8['basket_left']
+    br_x_arr, br_y_arr = v8['basket_right']
 
-    cands = [(i, rx[i], ry[i]) for i in range(total) if not np.isnan(rx[i])
-             and min(np.sqrt((rx[i]-BLX)**2 + (ry[i]-BLY)**2),
-                     np.sqrt((rx[i]-BRX)**2 + (ry[i]-BRY)**2)) < 180]
-    log(f"Candidates: {len(cands)}")
+    # Filter to rows with valid emergence data
+    mask = df34['emergence_n_points'].notna() & (df34['emergence_n_points'] > 0)
+    df_valid = df34[mask].copy()
+    print(f"Valid events: {len(df_valid)}")
 
     cap = cv2.VideoCapture(VIDEO)
+    os.makedirs(OUT_DIR, exist_ok=True)
+
     results = []
 
-    for ci, (f, cx, cy) in enumerate(cands):
-        track = track_bidir(cap, f, cx, cy, total)
-        if len(track) < MIN_PTS:
+    for _, row in df_valid.iterrows():
+        f = int(row['frame'])
+
+        # Get ball position from v14 track
+        if f < total and not np.isnan(ball_x[f]):
+            cx, cy = float(ball_x[f]), float(ball_y[f])
+        else:
+            print(f"  F{f}: no v14 ball position, skipping")
             continue
 
-        # Make/miss
-        xs = np.array([x for _, x, y in track])
-        ys = np.array([y for _, x, y in track])
-        dists = np.minimum(np.sqrt((xs-BLX)**2 + (ys-BLY)**2),
-                           np.sqrt((xs-BRX)**2 + (ys-BRY)**2))
-        min_dist = float(np.min(dists))
-        is_make = min_dist < MAKE_R
+        # Which basket is closest?
+        d_l = np.sqrt((cx - BLX)**2 + (cy - BLY)**2)
+        d_r = np.sqrt((cx - BRX)**2 + (cy - BRY)**2)
+        bx, by = (BLX, BLY) if d_l < d_r else (BRX, BRY)
 
-        # Local backward emergence
-        emergence = estimate_local_backward_emergence(f, cx, cy, cap, total, max_back=20)
+        # Bidirectional track
+        track = track_bidir(cap, f, cx, cy, total)
+        if len(track) < MIN_PTS:
+            print(f"  F{f}: short track ({len(track)} pts)")
+            continue
 
-        if emergence and emergence['n_points'] >= 3:
-            features = compute_derived_features(
-                emergence, cx, cy, f, bl_x, bl_y, br_x, br_y)
+        feats = compute_track_features(track, bx, by)
+        if feats is None:
+            print(f"  F{f}: feature computation failed")
+            continue
 
-            if features:
-                result = {
-                    'anchor_frame': f,
-                    'make_miss': 'MAKE' if is_make else 'MISS',
-                    'closest_px': round(min_dist, 1),
-                    **features,
-                }
-                results.append(result)
+        # Scale to feet
+        fi = int(f)
+        if fi < len(bl_x_arr) and not np.isnan(bl_x_arr[fi]):
+            bsep = np.sqrt((bl_x_arr[fi] - br_x_arr[fi])**2 + (bl_y_arr[fi] - br_y_arr[fi])**2)
+            scale = bsep / 47.0 if bsep > 200 else 17.7
+        else:
+            scale = 17.7
 
-                log(f"  [{ci+1:2d}] F{f:4d} {'MAKE' if is_make else 'MISS'} "
-                    f"d={features['origin_distance_ft']:5.1f}ft "
-                    f"lat={features['origin_lateral_ft']:5.1f}ft "
-                    f"growth={features['distance_growth_rate_ft']:5.2f} "
-                    f"w={features['corridor_width_ft']:4.1f}ft "
-                    f"stab={features['corridor_stability']:.2f} "
-                    f"turn={features['corridor_curvature']:.2f} "
-                    f"dec={features['appearance_decay_rate']:+.3f} "
-                    f"pts={features['emergence_n_points']}")
-                continue
+        # Get anchor image
+        cap.set(cv2.CAP_PROP_POS_FRAMES, f)
+        ret, img = cap.read()
+        if not ret:
+            continue
 
-        log(f"  [{ci+1:2d}] F{f:4d} {'MAKE' if is_make else 'MISS'} NO_EMERGENCE")
+        # Save overlay
+        vis = draw_overlay(img, track)
+        overlay_path = os.path.join(OUT_DIR, f'F{f:04d}_corridor.jpg')
+        cv2.imwrite(overlay_path, vis)
+
+        # Save thumbnail (crop around track)
+        xs = [x for _, x, y in track]
+        ys = [y for _, x, y in track]
+        margin = 60
+        cx2 = int(np.mean(xs))
+        cy2 = int(np.mean(ys))
+        x1 = max(0, int(min(xs)) - margin)
+        y1 = max(0, int(min(ys)) - margin)
+        x2 = min(img.shape[1], int(max(xs)) + margin)
+        y2 = min(img.shape[0], int(max(ys)) + margin)
+        thumb = img[y1:y2, x1:x2]
+        thumb_path = os.path.join(OUT_DIR, f'F{f:04d}_thumb.jpg')
+        cv2.imwrite(thumb_path, thumb)
+
+        # Merge with v34 features
+        result = dict(row)
+        result.update(feats)
+        result['scale'] = round(scale, 1)
+        result['overlay_path'] = overlay_path
+        result['thumb_path'] = thumb_path
+        results.append(result)
+
+        print(f"  F{f}: track={feats['track_len']} growth={feats['growth']} "
+              f"width={feats['width']} turn={feats['turn']} "
+              f"angle_var={feats['angle_var']} decay={feats['decay']}")
 
     cap.release()
 
-    # Dedup
-    results.sort(key=lambda r: r['anchor_frame'])
-    deduped = []
-    for r in results:
-        if deduped and r['anchor_frame'] - deduped[-1]['anchor_frame'] < 30:
-            if r['emergence_n_points'] > deduped[-1]['emergence_n_points']:
-                deduped[-1] = r
-        else:
-            deduped.append(r)
-    results = deduped
+    if results:
+        df_out = pd.DataFrame(results)
+        df_out.to_csv(CSV_OUT, index=False)
+        print(f"\nSaved {len(results)} enriched features to {CSV_OUT}")
+    else:
+        print("No results!")
 
-    # --- Output diagnostic table ---
-    log(f"\n{'='*100}")
-    log(f"FEATURE DIAGNOSTIC TABLE — {len(results)} shot events")
-    hdr = (f"{'Frame':>6} {'MM':>4} {'Dist':>6} {'Lat':>6} {'Growth':>7} "
-           f"{'Width':>6} {'Stab':>5} {'Turn':>5} {'Decay':>6} {'AngVar':>6} "
-           f"{'LatVel':>6} {'Ratio':>6} {'OAR':>4} {'Basket':>6}")
-    log(hdr)
-    log("-" * len(hdr))
-    for r in results:
-        log(f"  F{r['anchor_frame']:4d} {r['make_miss']:>4} "
-            f"{r.get('origin_distance_ft',0):>6} {r.get('origin_lateral_ft',0):>6} "
-            f"{r.get('distance_growth_rate_ft',0):>7} {r.get('corridor_width_ft',0):>6} "
-            f"{r.get('corridor_stability',0):>5} {r.get('corridor_curvature',0):>5} "
-            f"{r.get('appearance_decay_rate',0):>+6} {r.get('angle_variance',0):>6} "
-            f"{r.get('lateral_velocity_fps',0):>6} {r.get('origin_to_anchor_ratio',0):>6} "
-            f"{r.get('emergence_n_points',0):>4} {r.get('nearest_basket','?'):>6}")
 
-    # --- Feature distributions ---
-    log("\n=== Feature Distributions ===")
-    for feat in ['origin_distance_ft', 'origin_lateral_ft', 'distance_growth_rate_ft',
-                 'corridor_width_ft', 'corridor_stability', 'corridor_curvature',
-                 'appearance_decay_rate', 'angle_variance', 'lateral_velocity_fps',
-                 'origin_to_anchor_ratio']:
-        vals = [r[feat] for r in results if feat in r and r[feat] is not None]
-        if vals:
-            log(f"  {feat:30s}: mean={np.mean(vals):.2f} std={np.std(vals):.2f} "
-                f"min={np.min(vals):.2f} max={np.max(vals):.2f} n={len(vals)}")
-
-    # --- Make vs Miss comparison ---
-    log("\n=== Make vs Miss ===")
-    makes = [r for r in results if r['make_miss'] == 'MAKE']
-    misses = [r for r in results if r['make_miss'] == 'MISS']
-    log(f"  MAKES ({len(makes)}):")
-    for feat in ['origin_distance_ft', 'corridor_stability', 'corridor_width_ft']:
-        vals = [r[feat] for r in makes if feat in r and r[feat] is not None]
-        if vals:
-            log(f"    {feat:30s}: mean={np.mean(vals):.2f}")
-    log(f"  MISSES ({len(misses)}):")
-    for feat in ['origin_distance_ft', 'corridor_stability', 'corridor_width_ft']:
-        vals = [r[feat] for r in misses if feat in r and r[feat] is not None]
-        if vals:
-            log(f"    {feat:30s}: mean={np.mean(vals):.2f}")
-
-    pd.DataFrame(results).to_csv(f'{OUT}/shot_features_v35.csv', index=False)
-    log("DONE")
+if __name__ == '__main__':
+    main()
