@@ -1,0 +1,11 @@
+frame,make_miss,sector,dist_ft,lat_ft,stab,n_back,thumb,overlay
+115,MISS,paint,6.1,5.8,0.31,10,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0115_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0115_corridor.jpg
+236,MISS,midrange,8.0,2.7,0.94,14,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0236_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0236_corridor.jpg
+467,MISS,midrange,7.6,2.7,1.0,0,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0467_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0467_corridor.jpg
+990,MAKE,midrange,7.3,6.1,0.55,14,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0990_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F0990_corridor.jpg
+1283,MISS,midrange,9.7,2.5,0.8,14,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1283_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1283_corridor.jpg
+1413,MISS,midrange,9.1,4.0,1.0,0,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1413_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1413_corridor.jpg
+1468,MISS,midrange,7.1,3.6,0.19,14,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1468_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1468_corridor.jpg
+1650,MISS,ft_range,13.9,13.6,0.88,0,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1650_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1650_corridor.jpg
+1780,MISS,midrange,9.2,9.1,0.44,0,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1780_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F1780_corridor.jpg
+2320,MISS,midrange,7.7,2.7,0.13,0,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F2320_thumb.jpg,/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output/audit/F2320_corridor.jpg
