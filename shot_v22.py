@@ -154,7 +154,7 @@ if __name__ == '__main__':
     shots = []
     for ci, (f, cx, cy) in enumerate(cands):
         track = track_bidir(cap, f, cx, cy, total)
-        debug = f in (1609, 2051, 236, 237, 1290, 1614, 120)
+        debug = int(f) in (1609, 2051, 236, 237, 1290, 1614, 120)
         if debug:
             print(f'[SETUP] F{f}: anchor=({cx:.0f},{cy:.0f}) track={len(track)}', file=sys.stderr)
         cls = classify(track, rx, ry, total, cx, cy, debug=debug)
