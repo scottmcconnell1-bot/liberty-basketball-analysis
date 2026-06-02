@@ -27,3 +27,19 @@ Annotations:
 
 Label Integrity:
 No empty labels observed.
+
+Verified
+
+- Liberty basketball project contains multiple model files.
+- finetune2/weights/best.pt exists.
+- finetune2/weights/last.pt exists.
+- Several prior training-run models exist.
+- YOLO base models exist in the repository.
+
+Unverified
+
+- Which model is currently designated as active.
+- Whether any model has been evaluated on Liberty data.
+- Which model performs best.
+
+- 
