@@ -43,3 +43,15 @@ Unverified
 - Which model performs best.
 
 - 
+Verified
+
+- finetune2 used:
+  - epochs = 15
+  - imgsz = 320
+  - dataset = ball_finetune/data.yaml
+
+- args.yaml records:
+  - classes = null
+  - names = null
+
+- finetune2 produced zero precision, recall, and mAP metrics throughout the recorded epochs.
