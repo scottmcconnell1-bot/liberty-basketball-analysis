@@ -1,5 +1,8 @@
-# Non-essential files (planning docs, old standalone HTML, dev scripts)
-EXTRA/
+# ── Liberty Basketball Analysis – .dockerignore ────────────────────────
+# Keeps the Docker image lean: only production code enters the image.
+
+# Experiment / research scripts (not needed at runtime)
+experiments/
 
 # Python cache
 __pycache__/
@@ -34,11 +37,32 @@ uploads/*.mkv
 # SQLite DB (mounted as a volume at runtime)
 film_analysis.db
 
-# YOLO model weights (downloaded into image at build time)
-# yolov8n.pt  ← intentionally NOT excluded so the COPY bakes it in
+# Generated output directories (never needed in image)
+pipeline_output/
+hoop_vis/
+motion_vis/
+motion_vis_mid/
+pretrained_test_output/
+sample_frames*/
+ball_dataset*/
+ball_finetune/
+weights_ameer/
+*__vis/
+logs/
+
+# Generated media
+*.mp4
+
+# Docs / planning (not needed at runtime)
+docs/
+
+# Tests (not needed in production image)
+tests/
 
 # Playwright / test artifacts
-tests/__pycache__/
 *.log
 transfer-bundles/
 *.tar.gz
+
+# Extra/non-essential
+EXTRA/
