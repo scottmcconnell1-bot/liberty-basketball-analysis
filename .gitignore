@@ -99,3 +99,7 @@ yolo*.pt
 
 # Backup files
 *.bak
+
+# Experiments (non-essential, can be regenerated)
+experiments/
+ball_dataset_v2/
