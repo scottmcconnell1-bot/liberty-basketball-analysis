@@ -13,36 +13,65 @@ build/
 .venv/
 venv/
 env/
+
 # Environment variables
 .env
+
 # Uploaded files
 uploads/
+
 # IDE
 .vscode/
 .idea/
+
 # OS
 .DS_Store
 *.db-shm
 *.db-wal
 film_analysis.db
 riverstone*.log
+
 # Model files (downloaded separately)
 models/*.pt
 models/*.pkl
 *.pkl
+*.pt
+
 # Large data files
 *.npy
-pipeline_output/*.pkl
 runs/
-!ball_finetune/runs/finetune2/weights/*.pt
-!models/*.pt
-yolov8m.pt
-yolov8*.pt
+weights_ameer/
 
-# Allow specific pipeline outputs for reference
-!pipeline_output/shot_candidates_v*.csv
-!pipeline_output/shot_results_v*.csv
-!pipeline_output/shot_v*.pkl
-!pipeline_output/shot_candidate_*.jpg
-!pipeline_output/vis_cand*.jpg
-!pipeline_output/*.csv
+# Generated output directories (regenerable from pipeline)
+pipeline_output/
+sample_frames/
+sample_frames_blob/
+sample_frames_blob_vis/
+sample_frames_colour_size/
+sample_frames_det/
+sample_frames_filtered/
+sample_frames_yolov8s_hoop_filtered/
+sample_frames_hough/
+motion_vis/
+motion_vis_mid/
+hoop_vis/
+pretrained_test_output/
+v3_vis/
+v5_vis/
+v7_vis/
+v8_vis/
+ball_finetune/
+logs/
+
+# Generated files
+shot_highlights.mp4
+shot_highlights.webm
+
+# Video files
+*.mp4
+*.webm
+
+# Keep these dataset dirs
+!ball_dataset/
+!ball_dataset_fixed/
+!ball_dataset_v2/
