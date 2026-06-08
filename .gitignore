@@ -69,3 +69,33 @@ shot_highlights.mp4
 
 # YOLO training runs
 runs/
+
+# Generated detection CSVs (root level)
+ball_*.csv
+final_events*.csv
+shots_*.csv
+shot_attempts*.csv
+signal_*.csv
+referee_signal*.csv
+sample_frames_*_detections.csv
+test_ball_*.csv
+pose_keypoints*.csv
+hoop_*.csv
+hoop_*.npy
+hoop_params.json
+shot_f*.jpg
+shot_highlights.webm
+q1_*.webm
+q1_*.jpg
+
+# Logs
+detect.log
+detect_*.log
+train.log
+v*.log
+
+# Model weights in root
+yolo*.pt
+
+# Backup files
+*.bak
