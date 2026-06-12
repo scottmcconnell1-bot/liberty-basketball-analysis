@@ -1,0 +1,21 @@
+Error Set 001
+
+Source:
+F0223_s8.5.mp4
+
+Frames:
+17-25 (frame 26 does not exist in source video — 26 total frames, 0-indexed)
+
+Detections:
+141
+
+Human Review Result:
+No confirmed basketball detections.
+
+Dominant false positives:
+- player heads
+- spectators
+- referees
+
+Disposition:
+Entire batch classified as not_ball.

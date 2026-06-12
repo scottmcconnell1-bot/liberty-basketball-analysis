@@ -1,0 +1,9 @@
+Label human_label column using:
+ball
+not_ball
+uncertain
+
+Do not modify any other columns.
+
+Save the completed CSV as:
+crop_review_sheet_01_labeled.csv
