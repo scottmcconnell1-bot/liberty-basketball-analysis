@@ -23,6 +23,8 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - blueprints/clips.py rejects missing manual event game_id instead of defaulting to "default_game".
 - PR #7 merged into jason-5-may-updates on 2026-06-14 with merge commit 33c9935.
 - OWL/Hermes verified PR #7 on Linux and reported 203 passing tests with 3 failures that also exist on the base jason-5-may-updates branch.
+- Commit 46d2132 fixed the 3 pre-existing test failures tracked as issues #10, #11, and #12.
+- OWL/Hermes verified commit 46d2132 on Linux and reported 185 passing tests with 0 failures.
 - OWL/Hermes audited `/home/monk-admin/PROJECTS/liberty-basketball-analysis/film_analysis.db` on 2026-06-14.
 - The audited database has 1 row in games and 0 rows in events, stats, analysis_runs, detections, videos, player_minutes, shot_classifications, play_recognitions, player_effect, and human_corrections.
 - The audited database has no `default_game` values and no downstream text game_id values to migrate.
@@ -62,4 +64,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Track the 3 pre-existing test failures as technical debt, then proceed to the ball detection audit.
+Do not start new feature work yet. Proceed to the ball detection audit with the Linux test suite currently reported green.

@@ -790,3 +790,4 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Marked tests/test_ui_comprehensive.py as an opt-in live-server smoke script for pytest collection unless LIBERTY_RUN_LIVE_UI_TESTS=1.
 - Local verification: py_compile passed for tests/test_api.py and tests/test_ui_comprehensive.py; git diff --check passed.
 - Full pytest remains blocked in this Windows workspace because the project Python environment is unavailable here.
+- OWL/Hermes verification on Linux reported 185 passing tests and 0 failures for commit 46d2132.
