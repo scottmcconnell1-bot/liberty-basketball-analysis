@@ -42,22 +42,24 @@ Completed:
 - analysis_runs.analysis_key is now the required TEXT AI/video run identity.
 - Manual event saves now reject missing or unknown relational game_id.
 - OWL/Hermes verified 203 passing tests and 3 pre-existing failures on Linux.
+- Commit 46d2132 fixed the 3 pre-existing failures.
+- OWL/Hermes reported 185 passing tests and 0 failures on Linux after commit 46d2132.
 
 Remaining:
 - Preserve downstream TEXT analysis-key columns until each feature is migrated deliberately.
-- Track and resolve the 3 pre-existing test failures separately.
 
 ### 4. Ball Detection Audit
 
-Status: Required before detector rebuild
+Status: Initial audit imported; decision pending
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
 - docs/VERIFIED_PROJECT_FACTS.md reports finetune2 produced zero precision, recall, and mAP across recorded epochs.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports the production path uses base YOLOv8 COCO class 32 rather than the fine-tuned ball detector.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports no completed formal precision/recall benchmark because precision_recall.csv was empty.
 
 Next step:
-- Inventory active detector architecture, datasets, labels, validation method, and model artifacts.
-- Establish a benchmark before rebuilding.
+- Scott decision: build benchmark first, rebuild detector, improve data governance, or prioritize manual coach film workflows while detection is repaired.
 
 ### 5. Data Governance
 

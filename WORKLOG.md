@@ -791,3 +791,11 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Local verification: py_compile passed for tests/test_api.py and tests/test_ui_comprehensive.py; git diff --check passed.
 - Full pytest remains blocked in this Windows workspace because the project Python environment is unavailable here.
 - OWL/Hermes verification on Linux reported 185 passing tests and 0 failures for commit 46d2132.
+
+---
+
+[2026-06-14] Ball detection audit import
+- OWL/Hermes completed a ball detection audit on origin/dataset-v2 at commit 321b262.
+- Codex imported only docs/BALL_DETECTION_AUDIT_2026-06-14.md into jason-5-may-updates.
+- The dataset-v2 branch was not merged because it contains broad unrelated dataset/artifact changes and deletes current governance docs.
+- Updated PROJECT_STATUS.md and ROADMAP.md to reference the audit and mark detector decision-making as the next step.

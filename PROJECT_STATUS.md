@@ -31,12 +31,16 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 produced 0 basketball detections in the top 20 inspected detections.
 - docs/VERIFIED_PROJECT_FACTS.md reports finetune2 had zero precision, recall, and mAP across recorded epochs.
 - docs/DATASET_INVENTORY.md documents ball_dataset at /home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_dataset with 5 images and 5 labels.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md was imported from origin/dataset-v2 commit 321b262 into jason-5-may-updates without merging the dataset-v2 branch.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports the production detector path uses base YOLOv8 COCO sports-ball class 32, not the fine-tuned ball detector.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports audit_detector.py did not complete formal precision/recall validation because precision_recall.csv was empty.
 
 ## Inferred
 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
 - The current AI and event pipeline may produce downstream basketball-analysis outputs from weak or unreliable ball-detection inputs.
+- The next detector step should likely be a labeled benchmark before retraining, because formal precision/recall validation is not complete.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -64,4 +68,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Proceed to the ball detection audit with the Linux test suite currently reported green.
+Do not start new feature work yet. Review docs/BALL_DETECTION_AUDIT_2026-06-14.md, then decide whether to build the detector benchmark first, rebuild the detector, or shift near-term effort toward manual coach film workflows.
