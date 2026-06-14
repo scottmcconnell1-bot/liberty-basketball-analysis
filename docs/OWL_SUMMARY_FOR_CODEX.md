@@ -81,7 +81,7 @@ Once OWL identified the mistake (by comparing with Codex's Windows audit, which 
 ## Known Issues (From Audit)
 
 1. **Ball detection is non-functional** — 0/20 precision on v14 detector. Needs full rebuild.
-2. **No `.gitignore`** — `film_analysis.db`, `uploads/`, `__pycache__/` could be committed
+2. **`.gitignore` already exists** on jason-5-may-updates — ignores film_analysis.db, uploads/, __pycache__/, .venv/, model weights, generated outputs, and experiments/. This audit item is resolved.
 3. **Auth middleware disabled** — fine for local dev, must enable before network exposure
 4. **Hardcoded secrets** in config.py — needs env var migration
 5. **Dataset provenance gaps** — paths reference Linux machine, not portable
