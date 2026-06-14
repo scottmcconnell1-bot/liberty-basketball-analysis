@@ -1,0 +1,8 @@
+model,conf_thresh,tp,fp,fn,precision,recall,f1
+base_yolov8n_class32,0.01,0,87,108,0.0,0.0,0
+base_yolov8n_class32,0.05,0,28,108,0.0,0.0,0
+base_yolov8n_class32,0.1,0,14,108,0.0,0.0,0
+base_yolov8n_class32,0.15,0,11,108,0.0,0.0,0
+base_yolov8n_class32,0.2,0,9,108,0.0,0.0,0
+base_yolov8n_class32,0.3,0,3,108,0.0,0.0,0
+base_yolov8n_class32,0.5,0,2,108,0.0,0.0,0
