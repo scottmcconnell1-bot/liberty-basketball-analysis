@@ -569,8 +569,10 @@ def default_run_label(run_kind, snapshot):
 
 def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
     existing = db.execute(
-        "SELECT id, run_label FROM analysis_runs WHERE (source_video_id=? OR game_id=? OR video_path=?) ORDER BY id ASC",
-        (video_row["id"], video_row["game_id"], video_row["file_path"]),
+        """SELECT id, run_label FROM analysis_runs
+           WHERE (source_video_id=? OR analysis_key=? OR base_analysis_key=? OR video_path=?)
+           ORDER BY id ASC""",
+        (video_row["id"], video_row["game_id"], video_row["game_id"], video_row["file_path"]),
     ).fetchall()
     if not existing:
         return
@@ -579,6 +581,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
         updates = {
             "source_video_id": video_row["id"],
             "base_game_id": video_row["game_id"],
+            "base_analysis_key": video_row["game_id"],
             "run_kind": "primary" if index == 0 else "rerun",
             "run_label": run["run_label"] or ("Original upload" if index == 0 else f"Rerun #{index}"),
         }
@@ -588,6 +591,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
             """UPDATE analysis_runs SET
                source_video_id=COALESCE(source_video_id, :source_video_id),
                base_game_id=COALESCE(base_game_id, :base_game_id),
+               base_analysis_key=COALESCE(base_analysis_key, :base_analysis_key),
                run_kind=COALESCE(run_kind, :run_kind),
                run_label=COALESCE(run_label, :run_label),
                settings_json=COALESCE(settings_json, :settings_json)
@@ -596,6 +600,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
                 "id": run["id"],
                 "source_video_id": updates["source_video_id"],
                 "base_game_id": updates["base_game_id"],
+                "base_analysis_key": updates["base_analysis_key"],
                 "run_kind": updates["run_kind"],
                 "run_label": updates["run_label"],
                 "settings_json": updates.get("settings_json"),
@@ -606,16 +611,18 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
 
 def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_label=None):
     settings_snapshot = build_analysis_settings_snapshot(runtime_settings)
-    game_id = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"])
+    analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"])
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(
         """INSERT INTO analysis_runs
-           (game_id, video_path, source_video_id, base_game_id, run_label, settings_json, run_kind, status)
-           VALUES (?,?,?,?,?,?,?,?)""",
+           (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
         (
-            game_id,
+            None,
+            analysis_key,
             video_row["file_path"],
             video_row["id"],
+            video_row["game_id"],
             video_row["game_id"],
             run_label,
             json.dumps(settings_snapshot),
@@ -626,7 +633,8 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     db.commit()
     return {
         "id": run_cur.lastrowid,
-        "game_id": game_id,
+        "game_id": analysis_key,
+        "analysis_key": analysis_key,
         "run_label": run_label,
         "settings_snapshot": settings_snapshot,
     }
@@ -673,6 +681,7 @@ def build_run_summary(run_row):
     payload["frame_stride"] = settings_snapshot.get("ai", {}).get("frame_stride")
     payload["llm_provider"] = settings_snapshot.get("ai", {}).get("llm_provider")
     payload["llm_model"] = settings_snapshot.get("ai", {}).get("llm_model")
+    payload["display_analysis_key"] = payload.get("analysis_key") or payload.get("game_id")
     return payload
 
 # ── Database helpers ──────────────────────────────────────
@@ -758,8 +767,83 @@ def ensure_db():
         _ensure_migration_columns(db)
 
 
+def _migrate_analysis_runs_identity(db):
+    """Split analysis_runs identity into relational game_id and text analysis_key."""
+    table_exists = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='analysis_runs'"
+    ).fetchone()
+    if not table_exists:
+        return
+
+    columns = db.execute("PRAGMA table_info(analysis_runs)").fetchall()
+    column_names = [row[1] for row in columns]
+    column_types = {row[1]: (row[2] or "").upper() for row in columns}
+    if column_types.get("game_id") == "INTEGER" and "analysis_key" in column_names:
+        return
+
+    def value_expr(column, fallback="NULL"):
+        return column if column in column_names else fallback
+
+    legacy_game_id_is_integer = column_types.get("game_id") == "INTEGER"
+    relational_game_expr = "game_id" if legacy_game_id_is_integer else "NULL"
+    legacy_key_expr = value_expr(
+        "analysis_key",
+        "'legacy_run_' || id" if legacy_game_id_is_integer else value_expr("game_id", "'legacy_run_' || id"),
+    )
+    legacy_base_expr = value_expr("base_analysis_key", value_expr("base_game_id"))
+
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        db.execute("ALTER TABLE analysis_runs RENAME TO analysis_runs_legacy")
+        db.execute(
+            """CREATE TABLE analysis_runs (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id      INTEGER REFERENCES games(id),
+                analysis_key TEXT NOT NULL,
+                video_path   TEXT NOT NULL,
+                source_video_id INTEGER REFERENCES videos(id),
+                base_game_id TEXT,
+                base_analysis_key TEXT,
+                run_label    TEXT,
+                settings_json TEXT,
+                run_kind     TEXT NOT NULL DEFAULT 'primary',
+                status       TEXT NOT NULL DEFAULT 'pending',
+                started_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                error_message TEXT
+            )"""
+        )
+        db.execute(
+            f"""INSERT INTO analysis_runs
+                   (id, game_id, analysis_key, video_path, source_video_id, base_game_id,
+                    base_analysis_key, run_label, settings_json, run_kind, status,
+                    started_at, completed_at, error_message)
+               SELECT id,
+                      {relational_game_expr},
+                      COALESCE({legacy_key_expr}, 'legacy_run_' || id),
+                      video_path,
+                      {value_expr('source_video_id')},
+                      {value_expr('base_game_id')},
+                      {legacy_base_expr},
+                      {value_expr('run_label')},
+                      {value_expr('settings_json')},
+                      COALESCE({value_expr('run_kind')}, 'primary'),
+                      COALESCE(status, 'pending'),
+                      started_at,
+                      completed_at,
+                      error_message
+               FROM analysis_runs_legacy"""
+        )
+        db.execute("DROP TABLE analysis_runs_legacy")
+        db.commit()
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
+    _migrate_analysis_runs_identity(db)
+
     # ── New tables (idempotent) ──────────────────────────────
     db.executescript("""
         CREATE TABLE IF NOT EXISTS videos (
@@ -902,6 +986,8 @@ def _ensure_migration_columns(db):
     col_migrations = [
         ("analysis_runs", "source_video_id", "ALTER TABLE analysis_runs ADD COLUMN source_video_id INTEGER REFERENCES videos(id)"),
         ("analysis_runs", "base_game_id", "ALTER TABLE analysis_runs ADD COLUMN base_game_id TEXT"),
+        ("analysis_runs", "analysis_key", "ALTER TABLE analysis_runs ADD COLUMN analysis_key TEXT"),
+        ("analysis_runs", "base_analysis_key", "ALTER TABLE analysis_runs ADD COLUMN base_analysis_key TEXT"),
         ("analysis_runs", "run_label", "ALTER TABLE analysis_runs ADD COLUMN run_label TEXT"),
         ("analysis_runs", "settings_json", "ALTER TABLE analysis_runs ADD COLUMN settings_json TEXT"),
         ("analysis_runs", "run_kind", "ALTER TABLE analysis_runs ADD COLUMN run_kind TEXT DEFAULT 'primary'"),

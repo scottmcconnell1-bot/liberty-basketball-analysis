@@ -2,8 +2,8 @@
 AI and Video Analysis Blueprint.
 
 Routes:
-  GET  /api/analysis_status/<game_id>  - Analysis status for a game
-  GET  /api/stats/<game_id>            - Stats for a game
+  GET  /api/analysis_status/<game_id>  - Analysis status for an analysis key
+  GET  /api/stats/<game_id>            - Stats for a game/analysis key
   POST /api/upload_video               - Upload a video file
   GET  /api/videos                     - List all videos
   GET  /videos/<int:vid_id>/compare    - Compare video analysis
@@ -40,9 +40,10 @@ def get_analysis_status(game_id):
     db = get_db()
     row = db.execute(
         """SELECT status, started_at, completed_at, error_message, settings_json,
-                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.game_id) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.game_id) AS event_count
-           FROM analysis_runs WHERE game_id=? ORDER BY id DESC LIMIT 1""",
+                  analysis_key,
+                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
+           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
     if row is None:
@@ -95,13 +96,14 @@ def get_stats(game_id):
 @ai_bp.route("/api/analysis_progress/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_progress(game_id):
-    """Return current analysis progress for a game."""
+    """Return current analysis progress for an analysis key."""
     db = get_db()
     row = db.execute(
         """SELECT status, progress_pct, progress_step, started_at, completed_at,
-                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.game_id) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.game_id) AS event_count
-           FROM analysis_runs WHERE game_id=? ORDER BY id DESC LIMIT 1""",
+                  analysis_key,
+                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
+           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
     if row is None:
@@ -257,7 +259,7 @@ def upload_chunk():
             run_kind="primary", run_label="Original upload",
         )
         if ai_runtime_available():
-            start_analysis_subprocess(game_id, dest)
+            start_analysis_subprocess(run_payload["analysis_key"], dest)
         db.commit()
 
         film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
@@ -280,10 +282,10 @@ def api_videos():
         SELECT v.*, ar.status as analysis_status, ar.error_message,
                (SELECT COUNT(*) FROM detections d WHERE d.game_id = v.game_id) as detection_count,
                (SELECT COUNT(*) FROM events e WHERE e.game_id = v.game_id) as event_count,
-               (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_game_id = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
+               (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.game_id = v.game_id
-                                   AND ar.id = (SELECT MAX(id) FROM analysis_runs WHERE game_id = v.game_id)
+        LEFT JOIN analysis_runs ar ON ar.analysis_key = v.game_id
+                                   AND ar.id = (SELECT MAX(id) FROM analysis_runs WHERE analysis_key = v.game_id)
         ORDER BY v.id DESC
     """).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -300,12 +302,12 @@ def compare_video_analysis(vid_id):
     ensure_primary_run_metadata(db, video)
     rows = db.execute(
         """SELECT ar.*,
-                  (SELECT COUNT(*) FROM detections d WHERE d.game_id = ar.game_id) AS detection_count,
-                  (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.game_id) AS event_count
+                  (SELECT COUNT(*) FROM detections d WHERE d.game_id = ar.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.analysis_key) AS event_count
            FROM analysis_runs ar
            WHERE ar.source_video_id = ?
-              OR ar.base_game_id = ?
-              OR ar.game_id = ?
+              OR ar.base_analysis_key = ?
+              OR ar.analysis_key = ?
               OR ar.video_path = ?
            ORDER BY ar.id DESC""",
         (vid_id, video["game_id"], video["game_id"], video["file_path"]),
@@ -349,7 +351,7 @@ def rerun_video_analysis(vid_id):
     )
 
     if ai_runtime_available():
-        start_analysis_subprocess(run_payload["game_id"], video["file_path"])
+        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
         message = f"Queued rerun '{run_payload['run_label']}'."
     else:
         db.execute(
@@ -394,10 +396,10 @@ def delete_video(vid_id):
     game_id = row["game_id"]
     file_path = row["file_path"]
     run_game_ids = [
-        run["game_id"]
+        run["analysis_key"]
         for run in db.execute(
-            "SELECT game_id FROM analysis_runs WHERE source_video_id=? OR base_game_id=? OR video_path=?",
-            (vid_id, game_id, file_path),
+            "SELECT analysis_key FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?",
+            (vid_id, game_id, game_id, file_path),
         ).fetchall()
     ] or [game_id]
 
@@ -416,7 +418,7 @@ def delete_video(vid_id):
         db.execute("DELETE FROM events WHERE game_id=?", (run_game_id,))
         db.execute("DELETE FROM detections WHERE game_id=?", (run_game_id,))
         db.execute("DELETE FROM stats WHERE game_id=?", (run_game_id,))
-    db.execute("DELETE FROM analysis_runs WHERE source_video_id=? OR base_game_id=? OR video_path=?", (vid_id, game_id, file_path))
+    db.execute("DELETE FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?", (vid_id, game_id, game_id, file_path))
     db.execute("DELETE FROM videos WHERE id=?", (vid_id,))
     db.commit()
 
@@ -488,7 +490,7 @@ def upload_and_analyze():
 
     # ── Launch AI subprocess ──────────────────────────────────
     if ai_runtime_available():
-        start_analysis_subprocess(game_id, dest)
+        start_analysis_subprocess(run_payload["analysis_key"], dest)
         ai_msg = "✅ AI analysis running in background — check <a href='/status'>Status page</a> for progress."
     else:
         db.execute(

@@ -453,9 +453,23 @@ def test_api_players():
 
 def test_api_events():
     print("\n🔧 API: Events")
-    api_get("/api/events/test_game", name="Get events for game")
+    game_id = None
+    game_response = api_post("/api/games", json_data={
+        "source_type": "manual",
+        "source_key": "ui-comprehensive-event-game",
+    }, name="Create event test game", expect_status=None)
+    try:
+        if game_response is not None and game_response.status_code in (200, 201):
+            game_id = game_response.json().get("id")
+    except Exception:
+        pass
+    if not game_id:
+        fail("Create event test game", "Could not create game for event API checks")
+        return
+
+    api_get(f"/api/events/{game_id}", name="Get events for game")
     api_post("/api/save_event", json_data={
-        "game_id": "test_game",
+        "game_id": game_id,
         "event_type": "shot",
         "player_id": 1,
         "timestamp_ms": 120500,

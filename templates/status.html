@@ -19,7 +19,7 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>Game ID</th>
+          <th>Analysis Key</th>
           <th>Video</th>
           <th>Status</th>
           <th>Started</th>
@@ -30,7 +30,7 @@
         {% for run in runs %}
         <tr>
           <td>{{ run.id }}</td>
-          <td><code>{{ run.game_id }}</code></td>
+          <td><code>{{ run.display_analysis_key }}</code></td>
           <td>{{ run.video_path }}</td>
           <td>
             {% set status_colors = {'pending': '#f59e0b', 'running': '#3b82f6', 'completed': '#059669', 'failed': '#dc2626'} %}

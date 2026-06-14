@@ -17,9 +17,10 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - The repo contains experiments and detector audit artifacts.
 - .gitignore exists on jason-5-may-updates and ignores film_analysis.db, uploads/, __pycache__/, .venv/, model weights, generated media, logs, and experiment outputs.
 - schema.sql defines games.id as INTEGER.
+- schema.sql defines analysis_runs.game_id as INTEGER and analysis_runs.analysis_key as TEXT.
 - schema.sql defines events.game_id as TEXT.
 - schema.sql defines stats.game_id as TEXT.
-- blueprints/clips.py defaults missing event game_id to the string "default_game".
+- blueprints/clips.py rejects missing manual event game_id instead of defaulting to "default_game".
 - OWL/Hermes audited `/home/monk-admin/PROJECTS/liberty-basketball-analysis/film_analysis.db` on 2026-06-14.
 - The audited database has 1 row in games and 0 rows in events, stats, analysis_runs, detections, videos, player_minutes, shot_classifications, play_recognitions, player_effect, and human_corrections.
 - The audited database has no `default_game` values and no downstream text game_id values to migrate.
@@ -32,8 +33,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
 - The current AI and event pipeline may produce downstream basketball-analysis outputs from weak or unreliable ball-detection inputs.
-- The game_id type mismatch is a real design problem but low migration risk right now because the live database is nearly empty.
-- The safest game_id path is likely to separate relational game identity from AI/video analysis identity.
+- The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
 
@@ -49,11 +49,12 @@ These need further evidence.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
+- Full pytest status for the game_id fix branch, because this Windows workspace has no PATH Python, no pytest in the bundled Python runtime, no Flask in the bundled Python runtime, and no requirements.txt file present.
 
 ## Current Risks
 
 1. Ball detection quality is the largest technical risk.
-2. game_id identity ambiguity is a data-model risk.
+2. Remaining game_id identity ambiguity in downstream tables is a data-model risk.
 3. Dataset provenance is incomplete.
 4. Documentation exists but needs hierarchy and currency discipline.
 5. Auth middleware is disabled, which is acceptable only for local/dev use.
@@ -61,4 +62,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Ask Scott to approve simplified Option C from docs/GAME_ID_SCHEMA_FIX_PROPOSAL.md, then implement a narrow schema/code/test branch that separates relational game identity from AI/video analysis identity.
+Do not start new feature work yet. Complete review of the game_id/analysis_key fix branch, verify in a project Python environment, then proceed to the ball detection audit.

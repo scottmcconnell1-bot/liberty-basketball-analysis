@@ -1158,11 +1158,11 @@ def film(filename=None):
         db = get_db()
         # Find the most recent analysis run for this video file
         row = db.execute(
-            "SELECT game_id FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
+            "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
             (f"%{filename}",),
         ).fetchone()
         if row:
-            game_id = row["game_id"]
+            game_id = row["analysis_key"]
     if game_id:
         db = get_db()
         # Shot summary: aggregate makes and misses by shot type
@@ -1753,9 +1753,14 @@ def api_resource_status():
 def status_page():
     """Live status page showing all analysis runs."""
     db = get_db()
-    runs = db.execute(
+    run_rows = db.execute(
         "SELECT * FROM analysis_runs ORDER BY id DESC"
     ).fetchall()
+    runs = []
+    for row in run_rows:
+        run = dict(row)
+        run["display_analysis_key"] = run.get("analysis_key") or run.get("game_id")
+        runs.append(run)
 
     # Count detections and events per game
     det_counts = {r[0]: r[1] for r in db.execute(
@@ -1767,7 +1772,7 @@ def status_page():
 
     return render_template(
         "status.html",
-        runs=[dict(row) for row in runs],
+        runs=runs,
         detection_rows=[
             {
                 "game_id": game_id,

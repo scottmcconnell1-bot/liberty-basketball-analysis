@@ -29,16 +29,16 @@ Goals:
 
 ### 3. Schema and Data-Model Risk Review
 
-Status: Needs Scott approval before schema changes
+Status: Approved and in implementation
 
-Verified issue:
+Verified issue before fix branch:
 - schema.sql defines games.id as INTEGER.
 - schema.sql defines events.game_id and stats.game_id as TEXT.
-- blueprints/clips.py defaults saved events to game_id = "default_game".
+- blueprints/clips.py previously defaulted saved events to game_id = "default_game".
 
 Next step:
-- Propose a narrow schema/app fix with migration considerations and tests.
-- Do not change schema.sql until Scott approves.
+- Review and verify the simplified Option C branch.
+- Preserve downstream TEXT analysis-key columns until each feature is migrated deliberately.
 
 ### 4. Ball Detection Audit
 

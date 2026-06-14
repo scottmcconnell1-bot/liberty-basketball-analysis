@@ -70,19 +70,34 @@ Evidence:
 - AUTHORITY.md.
 - docs/CODEX_BRIEFING.md.
 
+### Decision: Separate relational game ID from analysis key
+
+Decision maker: Scott
+
+Date: 2026-06-14
+
+Decision:
+- Adopt simplified Option C from docs/GAME_ID_SCHEMA_FIX_PROPOSAL.md.
+- Use analysis_runs.game_id as the optional INTEGER relation to games.id.
+- Add analysis_runs.analysis_key as the TEXT identity used by AI/video analysis runs.
+- Stop creating manual event rows under "default_game".
+- Migrate downstream TEXT game_id usage per feature as data accumulates.
+
+Evidence:
+- OWL/Hermes Stage 1 audit found the live database had 1 games row and 0 rows in events, stats, analysis_runs, detections, videos, player_minutes, shot_classifications, play_recognitions, player_effect, and human_corrections.
+- OWL/Hermes Stage 1 audit found no "default_game" values.
+- Scott approved the simplified Option C direction before implementation.
+
 ## Pending Decisions
 
-### Pending: game_id schema correction
+### Pending: downstream game_id migrations
 
 Current evidence:
-- games.id is INTEGER.
-- events.game_id and stats.game_id are TEXT.
-- manual event save defaults to "default_game".
+- events.game_id, detections.game_id, stats.game_id, and related analysis tables still use TEXT keys.
+- The current fix intentionally keeps those downstream keys as analysis keys in this stage.
 
 Decision needed:
-- Whether to change event/stat identity to integer game references, introduce migration handling, or preserve text IDs for AI run compatibility.
-
-Requires Scott approval because it changes schema.sql.
+- Which downstream feature should be migrated first, and whether standalone analysis runs must attach to a relational games row.
 
 ### Pending: ball detection rebuild path
 

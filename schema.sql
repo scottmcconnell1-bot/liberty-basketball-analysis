@@ -8,10 +8,12 @@
 
 CREATE TABLE IF NOT EXISTS analysis_runs (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    game_id      TEXT NOT NULL,
+    game_id      INTEGER REFERENCES games(id),
+    analysis_key TEXT NOT NULL,
     video_path   TEXT NOT NULL,
     source_video_id INTEGER REFERENCES videos(id),
     base_game_id TEXT,
+    base_analysis_key TEXT,
     run_label    TEXT,
     settings_json TEXT,
     run_kind     TEXT NOT NULL DEFAULT 'primary',
