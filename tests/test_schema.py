@@ -23,6 +23,9 @@ EXPECTED_TABLES = [
 ]
 
 EXPECTED_COLUMNS = {
+    "analysis_runs": ["id", "game_id", "analysis_key", "video_path", "source_video_id",
+                    "base_game_id", "base_analysis_key", "run_label", "settings_json",
+                    "run_kind", "status", "started_at", "completed_at", "error_message"],
     "events": ["id", "game_id", "player", "event_type", "shot_result",
                 "timestamp_ms", "details_json", "source_video", "source_frame",
                 "human_verified", "confidence", "created_at"],
@@ -49,10 +52,24 @@ def get_columns(db, table):
     return {r[1] for r in rows}
 
 
+def get_column_types(db, table):
+    rows = db.execute(f"PRAGMA table_info({table})").fetchall()
+    return {r[1]: (r[2] or "").upper() for r in rows}
+
+
 def test_all_tables_exist(db):
     tables = get_tables(db)
     for table in EXPECTED_TABLES:
         assert table in tables, f"Missing table: {table}"
+
+
+def test_analysis_runs_identity_columns(db):
+    cols = get_columns(db, "analysis_runs")
+    for col in EXPECTED_COLUMNS["analysis_runs"]:
+        assert col in cols, f"analysis_runs missing column: {col}"
+    types = get_column_types(db, "analysis_runs")
+    assert types["game_id"] == "INTEGER"
+    assert types["analysis_key"] == "TEXT"
 
 
 def test_events_columns(db):

@@ -250,7 +250,7 @@ def run_ai_analysis(db_path, video_path, game_id):
                 try:
                     _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
                     _pconn.execute(
-                        "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                        "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE analysis_key=? AND status='running'",
                         (int(pct), step, game_id)
                     )
                     _pconn.commit()
@@ -266,7 +266,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         try:
             _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
             _pconn.execute(
-                "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE game_id=? AND status='running'",
+                "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE analysis_key=? AND status='running'",
                 (str(e)[:500], game_id)
             )
             _pconn.commit()
@@ -280,7 +280,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         try:
             _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
             _pconn.execute(
-                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE analysis_key=? AND status='running'",
                 (50, "Generating events…", game_id)
             )
             _pconn.commit()
@@ -294,7 +294,7 @@ def run_ai_analysis(db_path, video_path, game_id):
         try:
             _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
             _pconn.execute(
-                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE game_id=? AND status='running'",
+                "UPDATE analysis_runs SET progress_pct=?, progress_step=? WHERE analysis_key=? AND status='running'",
                 (75, "Running enhanced analysis…", game_id)
             )
             _pconn.commit()
@@ -326,7 +326,7 @@ if __name__ == '__main__':
 
     _conn = sqlite3.connect(db_path)
     _conn.execute(
-        "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE game_id=? AND status='pending'",
+        "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE analysis_key=? AND status='pending'",
         (game_id,)
     )
     _conn.commit()
@@ -336,7 +336,7 @@ if __name__ == '__main__':
         run_ai_analysis(db_path, video_path, game_id)
         _conn = sqlite3.connect(db_path)
         _conn.execute(
-            "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE game_id=?",
+            "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
             (game_id,)
         )
         _conn.commit()
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     except Exception as e:
         _conn = sqlite3.connect(db_path)
         _conn.execute(
-            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE game_id=?",
+            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
             (str(e), game_id)
         )
         _conn.commit()

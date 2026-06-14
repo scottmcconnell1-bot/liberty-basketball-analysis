@@ -5,12 +5,15 @@ import cv2
 import sys
 import time
 
-game_id = 'adrian_20260228_semifinal'
+analysis_key = 'adrian_20260228_semifinal'
 db_path = 'film_analysis.db'
 
 # Update run status
 conn = sqlite3.connect(db_path)
-conn.execute("UPDATE analysis_runs SET status='running', progress_pct=50, progress_step='Regenerating events (fixed)...' WHERE game_id=?", (game_id,))
+conn.execute(
+    "UPDATE analysis_runs SET status='running', progress_pct=50, progress_step='Regenerating events (fixed)...' WHERE analysis_key=?",
+    (analysis_key,),
+)
 conn.commit()
 conn.close()
 
@@ -18,7 +21,7 @@ conn.close()
 print('=== Event Generation (fixed) ===', flush=True)
 t0 = time.time()
 from event_generator import main as generate_events
-generate_events(game_id, db_path)
+generate_events(analysis_key, db_path)
 print(f'Event generation took {time.time()-t0:.1f}s', flush=True)
 
 # Step 2: Run enhanced analysis
@@ -29,11 +32,14 @@ cap.release()
 print(f'FPS: {fps}', flush=True)
 
 from film_analysis import run_enhanced_analysis
-run_enhanced_analysis(db_path, game_id, fps)
+run_enhanced_analysis(db_path, analysis_key, fps)
 
 # Update run status
 conn = sqlite3.connect(db_path)
-conn.execute("UPDATE analysis_runs SET status='completed', progress_pct=100, progress_step='Done', completed_at=CURRENT_TIMESTAMP WHERE game_id=?", (game_id,))
+conn.execute(
+    "UPDATE analysis_runs SET status='completed', progress_pct=100, progress_step='Done', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
+    (analysis_key,),
+)
 conn.commit()
 conn.close()
 
@@ -42,7 +48,7 @@ conn = sqlite3.connect(db_path)
 for table in ['events', 'shot_classifications', 'play_recognitions', 'player_minutes', 'player_effect']:
     col = 'game_id' if table == 'events' else None
     if col:
-        row = conn.execute(f'SELECT COUNT(*) FROM {table} WHERE game_id=?', (game_id,)).fetchone()
+        row = conn.execute(f'SELECT COUNT(*) FROM {table} WHERE game_id=?', (analysis_key,)).fetchone()
     else:
         row = conn.execute(f'SELECT COUNT(*) FROM {table}').fetchone()
     print(f'{table}: {row[0]}', flush=True)

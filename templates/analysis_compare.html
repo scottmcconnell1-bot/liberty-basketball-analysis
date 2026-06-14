@@ -35,7 +35,7 @@
       </div>
       <button class="btn btn-primary" type="submit">Rerun AI with Current Settings</button>
     </div>
-    <p class="text-muted mt-2">Each rerun gets its own analysis `game_id`, so detections and events stay separate for side-by-side comparison.</p>
+    <p class="text-muted mt-2">Each rerun gets its own analysis key, so detections and events stay separate for side-by-side comparison.</p>
     <p class="text-muted">Detector and runtime settings affect the current video pipeline directly. Local LLM choices are captured in the snapshot so you can compare them as future AI-assisted steps are added.</p>
   </form>
 </div>
@@ -62,7 +62,7 @@
         <td>
           <strong>{{ run.run_label or ("Run " ~ run.id) }}</strong>
           <div class="text-muted">kind: {{ run.run_kind or "unknown" }}</div>
-          <div class="text-muted"><code>{{ run.game_id }}</code></div>
+          <div class="text-muted"><code>{{ run.display_analysis_key }}</code></div>
         </td>
         <td>
           {{ run.status }}
@@ -90,7 +90,7 @@
         </td>
         <td>{{ run.started_at or "—" }}</td>
         <td style="white-space:nowrap;">
-          <a class="btn btn-primary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=run.game_id) }}">Open in Film Tool</a>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=run.display_analysis_key) }}">Open in Film Tool</a>
         </td>
       </tr>
       {% endfor %}

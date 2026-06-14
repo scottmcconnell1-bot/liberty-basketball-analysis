@@ -115,6 +115,15 @@ def _create_season(client):
     return r.get_json()["id"]
 
 
+def _create_game(client, source_key="test-game"):
+    r = post_json(client, "/api/games", {
+        "source_type": "manual",
+        "source_key": source_key,
+    })
+    assert r.status_code == 201
+    return r.get_json()["id"]
+
+
 def test_scheduled_games_empty(client):
     r = client.get("/api/scheduled_games")
     assert r.status_code == 200
@@ -337,8 +346,9 @@ def test_reject_nfhs_match(client):
 # ── Events ────────────────────────────────────────────────────────────
 
 def test_save_event(client):
+    game_id = _create_game(client, "event-game")
     r = post_json(client, "/api/save_event", {
-        "game_id": "game1",
+        "game_id": game_id,
         "event_type": "shot",
         "timestamp_ms": 5000,
         "player": "Player1",
@@ -349,40 +359,56 @@ def test_save_event(client):
 
 
 def test_save_event_missing_timestamp(client):
-    r = post_json(client, "/api/save_event", {"game_id": "game1", "event_type": "shot"})
+    game_id = _create_game(client, "missing-timestamp-game")
+    r = post_json(client, "/api/save_event", {"game_id": game_id, "event_type": "shot"})
     assert r.status_code == 400
 
 
+def test_save_event_missing_game_id(client):
+    r = post_json(client, "/api/save_event", {"event_type": "shot", "timestamp_ms": 1000})
+    assert r.status_code == 400
+    assert r.get_json()["message"] == "game_id required"
+
+
+def test_save_event_rejects_unknown_game_id(client):
+    r = post_json(client, "/api/save_event", {"game_id": 9999, "event_type": "shot", "timestamp_ms": 1000})
+    assert r.status_code == 400
+    assert "existing game" in r.get_json()["message"]
+
+
 def test_get_events(client):
-    post_json(client, "/api/save_event", {"game_id": "gX", "event_type": "assist", "timestamp_ms": 1000})
-    post_json(client, "/api/save_event", {"game_id": "gX", "event_type": "rebound", "timestamp_ms": 2000})
-    r = client.get("/api/events/gX")
+    game_id = _create_game(client, "events-game")
+    post_json(client, "/api/save_event", {"game_id": game_id, "event_type": "assist", "timestamp_ms": 1000})
+    post_json(client, "/api/save_event", {"game_id": game_id, "event_type": "rebound", "timestamp_ms": 2000})
+    r = client.get(f"/api/events/{game_id}")
     events = r.get_json()
     assert len(events) == 2
     assert events[0]["timestamp_ms"] < events[1]["timestamp_ms"]
 
 
 def test_get_events_can_filter_by_event_type(client):
+    game_id = _create_game(client, "bookmark-game")
     post_json(client, "/api/save_event", {
-        "game_id": "bookmark_game",
+        "game_id": game_id,
         "event_type": "bookmark",
         "timestamp_ms": 1000,
         "player": "Clip A",
     })
     post_json(client, "/api/save_event", {
-        "game_id": "bookmark_game",
+        "game_id": game_id,
         "event_type": "assist",
         "timestamp_ms": 2000,
     })
-    r = client.get("/api/events/bookmark_game?event_type=bookmark")
+    r = client.get(f"/api/events/{game_id}?event_type=bookmark")
     events = r.get_json()
     assert len(events) == 1
     assert events[0]["event_type"] == "bookmark"
 
 
 def test_update_event(client):
+    game_id = _create_game(client, "update-event-game")
     r = post_json(client, "/api/save_event", {
-        "game_id": "g1", "event_type": "shot", "timestamp_ms": 1000
+        "game_id": game_id, "event_type": "shot", "timestamp_ms": 1000
     })
     eid = r.get_json()["id"]
     r2 = put_json(client, f"/api/events/{eid}", {"event_type": "block"})
@@ -391,13 +417,14 @@ def test_update_event(client):
 
 
 def test_delete_event(client):
+    game_id = _create_game(client, "delete-event-game")
     r = post_json(client, "/api/save_event", {
-        "game_id": "g1", "event_type": "steal", "timestamp_ms": 500
+        "game_id": game_id, "event_type": "steal", "timestamp_ms": 500
     })
     eid = r.get_json()["id"]
     r2 = client.delete(f"/api/events/{eid}")
     assert r2.status_code == 200
-    r3 = client.get("/api/events/g1")
+    r3 = client.get(f"/api/events/{game_id}")
     assert not any(e["id"] == eid for e in r3.get_json())
 
 
@@ -610,7 +637,7 @@ def test_upload_route_returns_json_for_xhr(client, monkeypatch):
 
 def test_analysis_status_includes_counts_and_summary(client, db):
     db.execute(
-        "INSERT INTO analysis_runs (game_id, video_path, status) VALUES (?, ?, ?)",
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
         ("analysis_game", "uploads/demo.mp4", "completed"),
     )
     db.execute(
@@ -790,13 +817,13 @@ def test_compare_video_analysis_page(client, db):
     )
     db.execute(
         """INSERT INTO analysis_runs
-           (game_id, video_path, source_video_id, base_game_id, run_label, run_kind, status)
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
            VALUES (?, ?, ?, ?, ?, ?, ?)""",
         ("base_game", "uploads/sample_1.mp4", 1, "base_game", "Original upload", "primary", "completed"),
     )
     db.execute(
         """INSERT INTO analysis_runs
-           (game_id, video_path, source_video_id, base_game_id, run_label, run_kind, status)
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
            VALUES (?, ?, ?, ?, ?, ?, ?)""",
         ("base_game__rerun_1", "uploads/sample_1.mp4", 1, "base_game", "Rerun A", "rerun", "completed"),
     )
@@ -819,7 +846,7 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
         ("sample.mp4", "sample_2.mp4", "uploads/sample_2.mp4", 123, "Test Opponent", "base_game"),
     )
     db.execute(
-        "INSERT INTO analysis_runs (game_id, video_path, status) VALUES (?, ?, ?)",
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
         ("base_game", "uploads/sample_2.mp4", "completed"),
     )
     db.commit()
@@ -833,12 +860,13 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
     assert b"YOLOv8s retry" in r.data
 
     rows = db.execute(
-        "SELECT game_id, base_game_id, run_label, run_kind, settings_json FROM analysis_runs ORDER BY id"
+        "SELECT game_id, analysis_key, base_analysis_key, run_label, run_kind, settings_json FROM analysis_runs ORDER BY id"
     ).fetchall()
     assert len(rows) == 2
-    assert rows[0]["game_id"] == "base_game"
-    assert rows[1]["game_id"] != "base_game"
-    assert rows[1]["base_game_id"] == "base_game"
+    assert rows[0]["analysis_key"] == "base_game"
+    assert rows[0]["game_id"] is None
+    assert rows[1]["analysis_key"] != "base_game"
+    assert rows[1]["base_analysis_key"] == "base_game"
     assert rows[1]["run_label"] == "YOLOv8s retry"
     assert rows[1]["run_kind"] == "rerun"
     assert "detector_model" in rows[1]["settings_json"]
@@ -856,16 +884,17 @@ def test_stats_empty_game(client):
 
 
 def test_stats_aggregation(client):
+    game_id = _create_game(client, "stats-game")
     for _ in range(3):
         post_json(client, "/api/save_event", {
-            "game_id": "sg1", "player": "Alice",
+            "game_id": game_id, "player": "Alice",
             "event_type": "two_attempt", "shot_result": "made", "timestamp_ms": 1000
         })
     post_json(client, "/api/save_event", {
-        "game_id": "sg1", "player": "Alice",
+        "game_id": game_id, "player": "Alice",
         "event_type": "assist", "timestamp_ms": 2000
     })
-    r = client.get("/api/stats/sg1")
+    r = client.get(f"/api/stats/{game_id}")
     data = r.get_json()
     stats = data["basic"]
     alice = next(s for s in stats if s["player"] == "Alice")
@@ -875,17 +904,18 @@ def test_stats_aggregation(client):
 
 
 def test_stats_are_persisted_to_table(client, db):
+    game_id = _create_game(client, "persisted-stats-game")
     post_json(client, "/api/save_event", {
-        "game_id": "persisted_stats_game",
+        "game_id": game_id,
         "player": "Taylor",
         "event_type": "three_attempt",
         "shot_result": "made",
         "timestamp_ms": 1000,
     })
-    client.get("/api/stats/persisted_stats_game")
+    client.get(f"/api/stats/{game_id}")
     row = db.execute(
         "SELECT player_name, pts, threes_made FROM stats WHERE game_id=?",
-        ("persisted_stats_game",),
+        (str(game_id),),
     ).fetchone()
     assert row is not None
     assert row["player_name"] == "Taylor"

@@ -762,3 +762,15 @@ Latest commits:
 - b2242856 — Fix tracker ID proliferation: only match recent trackers (60 frame window)
 - a589aa6d — Clamp detection_stride to min 5, tighten tracker matching thresholds
 Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, blueprints/ai.py, static/js/film-tool.js, templates/analysis_results.html, templates/film_tool.html
+
+---
+
+[2026-06-14] Codex game_id/analysis_key fix branch
+- Branch: fix/game-id-analysis-key
+- Scott approved simplified Option C: separate relational games.id from AI/video analysis keys.
+- Implemented analysis_runs.game_id as optional INTEGER relation and analysis_runs.analysis_key as the TEXT run identity.
+- Updated AI status/progress/rerun/delete flows to query analysis_runs by analysis_key.
+- Updated manual event saving to reject missing or unknown relational game_id instead of writing default_game.
+- Updated tests for schema identity columns and manual event validation.
+- Verification completed here: Python py_compile passed for changed Python files; schema.sql loads in SQLite and reports analysis_runs.game_id INTEGER and analysis_runs.analysis_key TEXT.
+- Verification blocked here: full pytest could not run because this Windows workspace has no PATH python/py, the bundled Python runtime lacks pytest and Flask, and requirements.txt is not present in this clone.

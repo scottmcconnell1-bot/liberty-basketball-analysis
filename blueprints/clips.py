@@ -68,13 +68,25 @@ def save_event():
         elif not isinstance(details_json, (dict, list)):
             return jsonify({"status": "error", "message": "details_json must be a JSON object or array"}), 400
 
+    raw_game_id = data.get("game_id")
+    if raw_game_id in (None, ""):
+        return jsonify({"status": "error", "message": "game_id required"}), 400
+    try:
+        game_id_int = int(raw_game_id)
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "game_id must be an existing game id"}), 400
+
+    db = get_db()
+    game = db.execute("SELECT id FROM games WHERE id=?", (game_id_int,)).fetchone()
+    if not game:
+        return jsonify({"status": "error", "message": "game_id must reference an existing game"}), 400
+
     # Sanitize string inputs to prevent XSS
-    game_id = str(data.get("game_id", "default_game"))[:128]
+    game_id = str(game_id_int)
     player = str(data.get("player", ""))[:128] if data.get("player") else None
     shot_result = str(data.get("shot_result", ""))[:32] if data.get("shot_result") else None
     source_video = str(data.get("source_video", ""))[:256] if data.get("source_video") else None
 
-    db = get_db()
     try:
         cur = db.execute(
             """INSERT INTO events
