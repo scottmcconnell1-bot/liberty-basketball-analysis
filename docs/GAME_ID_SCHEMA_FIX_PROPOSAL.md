@@ -15,7 +15,7 @@ Scott approval is required before implementation because the recommended fix cha
 The project currently uses `game_id` for two different concepts:
 
 1. A relational game record: `games.id`, an integer primary key.
-2. A video/analysis key: text identifiers such as generated upload IDs and AI run IDs.
+2. A video/analysis key: text identifiers such as NFHS IDs, generated upload IDs, and AI run IDs.
 
 Because both concepts are named `game_id`, downstream features such as stats, clips, scouting, and AI analysis can appear connected while actually using incompatible identifiers.
 
@@ -49,51 +49,56 @@ Verified from `stats.py`:
 
 - `aggregate_stats()`, `refresh_stats()`, and enhanced stats queries filter by `game_id` across `events`, `stats`, `detections`, `player_minutes`, `shot_classifications`, `play_recognitions`, and `player_effect`.
 
+Verified from OWL/Hermes Stage 1 data audit in `docs/GAME_ID_DATA_AUDIT.md`:
+
+- Active database audited: `/home/monk-admin/PROJECTS/liberty-basketball-analysis/film_analysis.db`.
+- Database has 1 row in `games`.
+- `events`, `stats`, `analysis_runs`, `detections`, `videos`, `player_minutes`, `shot_classifications`, `play_recognitions`, `player_effect`, and `human_corrections` have 0 rows.
+- There are no `default_game` rows.
+- There are no existing text-keyed downstream rows to migrate.
+- Migration risk from existing data is low.
+
 ## Inferred
 
-- The text `game_id` values are acting as analysis/run/video keys, not always as references to `games.id`.
+- The text `game_id` values are intended to act as analysis/run/video keys in parts of the AI pipeline.
 - A simple conversion of every `game_id` column to `INTEGER REFERENCES games(id)` would likely break the AI pipeline unless the analysis key concept is preserved.
 - The safest fix is to separate relational game identity from analysis identity instead of overloading one column name.
+- Because the database is nearly empty, the implementation can be cleaner than it would be after significant production data accumulation.
 
 ## Unknown
 
-- Whether existing production/local databases contain text game IDs that do not map to rows in `games`.
-- Whether any uploaded videos have corresponding `games` rows.
-- Whether any manual tags are currently saved under `default_game`.
-- Whether Scott wants AI analysis runs to be attached to scheduled/official games immediately or remain usable for standalone scouting/upload workflows.
+- The exact text key format AI analysis should use long term.
+- Whether uploaded video workflows should always create or attach to a `games` row before analysis.
+- Whether Scott wants standalone scouting/upload analysis to exist without a scheduled game.
 
 ## Options
 
-### Option A: Convert `events.game_id` and `stats.game_id` directly to integer references
+### Option A: Convert all game_id columns directly to integer references
 
-Change:
-- `events.game_id TEXT` to `events.game_id INTEGER REFERENCES games(id)`
-- `stats.game_id TEXT` to `stats.game_id INTEGER REFERENCES games(id)`
-- Update `save_event()` to require an integer game ID.
+Change every relevant `game_id` column from `TEXT` to `INTEGER REFERENCES games(id)`.
 
 Pros:
-- Simple relational model for manual events and box-score stats.
-- Prevents new `default_game` data.
+- Simple relational model.
+- Strong integrity if all workflows start from `games`.
 
 Cons:
-- Does not solve AI pipeline tables that still use text `game_id`.
-- May break existing text-keyed event/stat data.
-- Does not handle standalone video analysis well unless a `games` row always exists first.
+- Risks breaking AI/video flows that use text identifiers.
+- Does not preserve NFHS/upload/generated analysis keys cleanly.
+- Too broad for the current uncertainty.
 
 ### Option B: Keep text `game_id` everywhere and document it as an analysis key
 
 Change:
 - No schema change.
-- Rename documentation expectations only.
+- Documentation only.
 
 Pros:
 - Lowest immediate implementation risk.
-- Preserves current AI pipeline behavior.
 
 Cons:
 - Leaves relational ambiguity unresolved.
-- Weakens data integrity.
-- Makes game-linked coaching workflows harder to trust.
+- Allows future `default_game` orphan data.
+- Weakens game-linked coaching workflows.
 
 ### Option C: Separate relational game ID from analysis key
 
@@ -102,80 +107,62 @@ Change conceptually:
 - Add explicit integer game references where basketball/game workflows need them.
 - Stop using `default_game` for manual tagging.
 
-Possible schema direction:
-- Keep `analysis_runs.game_id`, `detections.game_id`, and related AI tables as text analysis keys for now.
-- Add or use explicit integer `game_db_id` / `source_game_id` columns where rows should link to `games(id)`.
-- For manual events and stats, introduce a clear relational link to `games(id)` while preserving an optional text analysis key if needed.
-- Rename future code variables so `analysis_game_id` and `game_id` are not confused.
-
 Pros:
 - Respects the existing AI pipeline.
 - Supports real relational game workflows.
-- Allows standalone analysis/scouting workflows.
-- Avoids pretending all text analysis keys are game row IDs.
+- Allows standalone analysis/scouting workflows if Scott wants them.
+- Avoids pretending all text analysis keys are `games.id` values.
 
 Cons:
-- Requires a careful migration plan.
-- Requires code updates across events, stats, videos, analysis, and UI entry points.
-- Requires tests to prevent future drift.
+- Requires careful naming and tests.
+- Requires staged code updates.
 
 ## Recommendation
 
-Recommended: Option C, implemented in stages.
+Recommended: simplified Option C.
+
+Specific direction:
+
+1. Add `analysis_key TEXT` to `analysis_runs` for AI/video identifiers such as NFHS IDs, upload-derived keys, and rerun keys.
+2. Add/standardize `analysis_runs.game_id INTEGER REFERENCES games(id)` as the optional relational game link.
+3. Keep existing text `game_id` columns in downstream AI tables for the moment, but treat them as analysis keys until each feature is migrated.
+4. Fix `save_event()` so manual tagging rejects missing/invalid game context instead of writing `default_game`.
+5. Migrate additional tables feature-by-feature with tests rather than doing a broad schema rewrite.
 
 Rationale:
-- The evidence shows the project has both official game records and generated analysis/video identifiers.
-- Those are different concepts and should not share one ambiguous name.
-- A direct TEXT-to-INTEGER conversion would be too risky without first mapping existing data and AI workflows.
+- The live database is clean enough to change direction safely.
+- The code clearly has two identity concepts.
+- A staged split lowers risk while moving the system toward reliable basketball/game workflows.
 
-## Proposed Implementation Plan
+## Proposed Stage 2: Exact Schema Design
 
-### Stage 1: Data audit, no schema change
+If Scott approves this direction, Codex should prepare an implementation branch with a narrow Stage 2 design and test plan before broad migration.
 
-- Inspect the active SQLite database on the Linux machine.
-- Count distinct values in all `game_id` columns.
-- Identify values that match `games.id` and values that are generated text keys.
-- Count events saved under `default_game`.
-- Produce a migration risk report.
+Initial target files are likely:
 
-OWL/Hermes is the best owner for this stage because it needs local machine/database access.
-
-### Stage 2: Schema design for Scott approval
-
-Based on Stage 1 results, choose exact column names and migration path.
-
-Likely direction:
-- Use integer game references for coaching/game workflows.
-- Use a separate text analysis key for AI pipeline workflows.
-- Avoid changing feature behavior until tests are added.
-
-### Stage 3: Code changes on a feature branch
-
-Potential files:
 - `schema.sql`
 - `blueprints/clips.py`
 - `blueprints/ai.py`
+- `helpers.py`
 - `stats.py`
-- `film_analysis.py`
-- `event_generator.py`
-- `ai_analyzer.py`
-- templates/static film-tool integration as needed
-- tests covering schema, events, stats, upload/analysis linkage
+- `tests/test_schema.py`
+- `tests/test_api.py` or a focused new test file
+- `PROJECT_STATUS.md`
+- `DECISION_LOG.md`
+- `WORKLOG.md`
 
-### Stage 4: Verification
+Minimum behavior goals:
 
-Minimum verification:
-- Schema tests assert expected column types and foreign-key intent.
-- Event save rejects missing game context instead of writing `default_game`.
-- Manual tag events link to the correct game record.
-- Stats refresh uses the intended game identity consistently.
-- Existing AI analysis flow still runs with text analysis keys.
-- Migration script/report handles existing database rows.
+- New manual events must not be saved under `default_game`.
+- Manual event save must require valid game context.
+- Analysis runs must distinguish relational game row from text analysis key.
+- Existing AI pipeline behavior must not be broken without an approved migration path.
+- Tests must prove the new identity expectations.
 
 ## Approval Request
 
-Scott approval is requested for the following direction, not for code yet:
+Scott approval is requested for this design direction:
 
-Approve Option C as the target design principle: separate relational game identity from analysis/video identity, preserve AI text keys where needed, and stop using ambiguous `game_id` values for both concepts.
+Approve simplified Option C: separate relational `games.id` from AI/video `analysis_key`, prevent new `default_game` rows, and migrate text `game_id` usage in stages as each feature is actively stabilized.
 
-If approved, the next action should be an `[OWL ACTION]` issue asking OWL/Hermes to inspect the live/local SQLite database and report actual `game_id` values before Codex changes `schema.sql`.
+No implementation should begin until Scott approves this direction.
