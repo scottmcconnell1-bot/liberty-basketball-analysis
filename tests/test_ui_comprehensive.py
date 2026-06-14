@@ -10,7 +10,11 @@ import tempfile
 import requests
 import time
 
-BASE_URL = "http://localhost:8081"
+# This file is a live-server smoke script. Keep it out of normal pytest runs
+# unless explicitly requested, because it depends on a Flask server at BASE_URL.
+__test__ = os.environ.get("LIBERTY_RUN_LIVE_UI_TESTS") == "1"
+
+BASE_URL = os.environ.get("LIBERTY_BASE_URL", "http://localhost:8081")
 SESSION = requests.Session()
 
 PASS_COUNT = 0

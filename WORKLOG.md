@@ -782,3 +782,11 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - PR #7 merged into jason-5-may-updates with merge commit 33c9935.
 - OWL/Hermes verification report: 203 tests passed, 3 tests failed, and all 3 failures also exist on base jason-5-may-updates.
 - Pre-existing failures to track separately: test_rerun_video_analysis_creates_separate_run, test_practices_page, and test_debug_page.
+
+---
+
+[2026-06-14] Pre-existing test failure cleanup
+- Fixed test_rerun_video_analysis_creates_separate_run by monkeypatching blueprints.ai, which is the module used by the rerun route.
+- Marked tests/test_ui_comprehensive.py as an opt-in live-server smoke script for pytest collection unless LIBERTY_RUN_LIVE_UI_TESTS=1.
+- Local verification: py_compile passed for tests/test_api.py and tests/test_ui_comprehensive.py; git diff --check passed.
+- Full pytest remains blocked in this Windows workspace because the project Python environment is unavailable here.

@@ -837,7 +837,7 @@ def test_compare_video_analysis_page(client, db):
 
 
 def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
-    import app as app_module
+    import blueprints.ai as ai_module
 
     db.execute(
         """INSERT INTO videos
@@ -851,8 +851,8 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
     )
     db.commit()
 
-    monkeypatch.setattr(app_module, "ai_runtime_available", lambda: True)
-    monkeypatch.setattr(app_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     r = client.post("/videos/1/rerun", data={"run_label": "YOLOv8s retry"}, follow_redirects=True)
     assert r.status_code == 200
