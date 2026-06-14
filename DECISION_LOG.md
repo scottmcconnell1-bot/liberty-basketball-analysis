@@ -108,4 +108,23 @@ Current evidence:
 - finetune2 recorded zero precision, recall, and mAP.
 
 Decision needed:
-- Whether to rebuild detector now, first create a benchmark, or prioritize manual/coaching workflows while detector data governance is repaired.
+- Whether to rebuild detector after the benchmark, improve data governance first, or prioritize manual/coaching workflows while detector data governance is repaired.
+
+### Decision: Build ball detection benchmark before detector rebuild
+
+Decision maker: Scott
+
+Date: 2026-06-14
+
+Decision:
+- Build a labeled ball detection benchmark before retraining or replacing the detector.
+- Use 30-50 representative frames with positive and negative examples.
+- Evaluate current production detector behavior and existing model artifacts before considering a rebuilt detector.
+
+Evidence:
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports the production path uses base YOLOv8 COCO sports-ball class 32 rather than the fine-tuned ball detector.
+- docs/BALL_DETECTION_AUDIT_2026-06-14.md reports no completed formal precision/recall benchmark because precision_recall.csv was empty.
+- Scott approved the benchmark-first path on 2026-06-14.
+
+Follow-up:
+- Execute docs/BALL_DETECTION_BENCHMARK_PLAN.md.

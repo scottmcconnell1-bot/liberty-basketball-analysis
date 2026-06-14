@@ -50,7 +50,7 @@ Remaining:
 
 ### 4. Ball Detection Audit
 
-Status: Initial audit imported; decision pending
+Status: Benchmark approved
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
@@ -59,7 +59,9 @@ Verified issue:
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md reports no completed formal precision/recall benchmark because precision_recall.csv was empty.
 
 Next step:
-- Scott decision: build benchmark first, rebuild detector, improve data governance, or prioritize manual coach film workflows while detection is repaired.
+- Execute docs/BALL_DETECTION_BENCHMARK_PLAN.md.
+- Hermes/OWL should select and label 30-50 representative frames on the Linux machine.
+- Codex should import benchmark results into jason-5-may-updates before any detector rebuild decision.
 
 ### 5. Data Governance
 

@@ -799,3 +799,10 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Codex imported only docs/BALL_DETECTION_AUDIT_2026-06-14.md into jason-5-may-updates.
 - The dataset-v2 branch was not merged because it contains broad unrelated dataset/artifact changes and deletes current governance docs.
 - Updated PROJECT_STATUS.md and ROADMAP.md to reference the audit and mark detector decision-making as the next step.
+
+---
+
+[2026-06-14] Ball detection benchmark approved
+- Scott approved building a formal ball detection benchmark before detector rebuild.
+- Added docs/BALL_DETECTION_BENCHMARK_PLAN.md with scope, label requirements, metrics, deliverables, acceptance criteria, and non-goals.
+- Updated PROJECT_STATUS.md, ROADMAP.md, and DECISION_LOG.md with the benchmark-first decision.

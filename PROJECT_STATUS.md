@@ -34,6 +34,8 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md was imported from origin/dataset-v2 commit 321b262 into jason-5-may-updates without merging the dataset-v2 branch.
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md reports the production detector path uses base YOLOv8 COCO sports-ball class 32, not the fine-tuned ball detector.
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md reports audit_detector.py did not complete formal precision/recall validation because precision_recall.csv was empty.
+- Scott approved building a ball detection benchmark first on 2026-06-14.
+- docs/BALL_DETECTION_BENCHMARK_PLAN.md defines the approved benchmark scope, acceptance criteria, and Hermes/OWL handoff.
 
 ## Inferred
 
@@ -68,4 +70,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Review docs/BALL_DETECTION_AUDIT_2026-06-14.md, then decide whether to build the detector benchmark first, rebuild the detector, or shift near-term effort toward manual coach film workflows.
+Do not start new feature work yet. Execute docs/BALL_DETECTION_BENCHMARK_PLAN.md before detector rebuild or production detector changes.
