@@ -31,9 +31,10 @@ Once OWL identified the mistake (by comparing with Codex's Windows audit, which 
    - `docs/AUDIT_2026-06-13.md` — updated audit findings against the real codebase
    - `docs/CODEX_BRIEFING.md` — comprehensive briefing with correct branch, correct architecture, correct state
    - `docs/CODEX_ONBOARDING.md` — onboarding guide
-4. **Pushed 2 new commits** to `jason-5-may-updates`:
+4. **Pushed 3 new commits** to `jason-5-may-updates`:
    - `cd01015` — Add governance docs and Codex onboarding
    - `57b7ce7` — Update OWL audit for jason-5-may-updates branch reality
+   - `80f4d81` — Add OWL summary for Codex explaining branch mistake and fix
 
 ### What This Means for Codex
 - **Ignore the `main` branch.** It has 6 commits from OWL that were written against stale code.
