@@ -29,16 +29,23 @@ Goals:
 
 ### 3. Schema and Data-Model Risk Review
 
-Status: Approved and in implementation
+Status: Merged
 
 Verified issue before fix branch:
 - schema.sql defines games.id as INTEGER.
 - schema.sql defines events.game_id and stats.game_id as TEXT.
 - blueprints/clips.py previously defaulted saved events to game_id = "default_game".
 
-Next step:
-- Review and verify the simplified Option C branch.
+Completed:
+- PR #7 merged into jason-5-may-updates at merge commit 33c9935.
+- analysis_runs.game_id is now the optional INTEGER relation to games.id.
+- analysis_runs.analysis_key is now the required TEXT AI/video run identity.
+- Manual event saves now reject missing or unknown relational game_id.
+- OWL/Hermes verified 203 passing tests and 3 pre-existing failures on Linux.
+
+Remaining:
 - Preserve downstream TEXT analysis-key columns until each feature is migrated deliberately.
+- Track and resolve the 3 pre-existing test failures separately.
 
 ### 4. Ball Detection Audit
 

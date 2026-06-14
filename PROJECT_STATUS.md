@@ -21,6 +21,8 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - schema.sql defines events.game_id as TEXT.
 - schema.sql defines stats.game_id as TEXT.
 - blueprints/clips.py rejects missing manual event game_id instead of defaulting to "default_game".
+- PR #7 merged into jason-5-may-updates on 2026-06-14 with merge commit 33c9935.
+- OWL/Hermes verified PR #7 on Linux and reported 203 passing tests with 3 failures that also exist on the base jason-5-may-updates branch.
 - OWL/Hermes audited `/home/monk-admin/PROJECTS/liberty-basketball-analysis/film_analysis.db` on 2026-06-14.
 - The audited database has 1 row in games and 0 rows in events, stats, analysis_runs, detections, videos, player_minutes, shot_classifications, play_recognitions, player_effect, and human_corrections.
 - The audited database has no `default_game` values and no downstream text game_id values to migrate.
@@ -41,7 +43,6 @@ These are reasonable conclusions based on verified evidence, but they should not
 
 These need further evidence.
 
-- Current test pass/fail status on the Linux machine.
 - Current test pass/fail status on the Windows snapshot.
 - Actual current precision and recall of the active detector.
 - Which detector model is currently active in production-like runs.
@@ -49,7 +50,6 @@ These need further evidence.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
-- Full pytest status for the game_id fix branch, because this Windows workspace has no PATH Python, no pytest in the bundled Python runtime, no Flask in the bundled Python runtime, and no requirements.txt file present.
 
 ## Current Risks
 
@@ -62,4 +62,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Complete review of the game_id/analysis_key fix branch, verify in a project Python environment, then proceed to the ball detection audit.
+Do not start new feature work yet. Track the 3 pre-existing test failures as technical debt, then proceed to the ball detection audit.

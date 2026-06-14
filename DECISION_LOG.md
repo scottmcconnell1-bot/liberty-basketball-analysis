@@ -87,6 +87,8 @@ Evidence:
 - OWL/Hermes Stage 1 audit found the live database had 1 games row and 0 rows in events, stats, analysis_runs, detections, videos, player_minutes, shot_classifications, play_recognitions, player_effect, and human_corrections.
 - OWL/Hermes Stage 1 audit found no "default_game" values.
 - Scott approved the simplified Option C direction before implementation.
+- PR #7 merged into jason-5-may-updates on 2026-06-14 with merge commit 33c9935.
+- OWL/Hermes verified 203 passing tests and 3 pre-existing failures that also reproduce on base.
 
 ## Pending Decisions
 

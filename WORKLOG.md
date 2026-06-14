@@ -774,3 +774,11 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Updated tests for schema identity columns and manual event validation.
 - Verification completed here: Python py_compile passed for changed Python files; schema.sql loads in SQLite and reports analysis_runs.game_id INTEGER and analysis_runs.analysis_key TEXT.
 - Verification blocked here: full pytest could not run because this Windows workspace has no PATH python/py, the bundled Python runtime lacks pytest and Flask, and requirements.txt is not present in this clone.
+
+---
+
+[2026-06-14] PR #7 post-merge closeout
+- Scott approved merge of PR #7.
+- PR #7 merged into jason-5-may-updates with merge commit 33c9935.
+- OWL/Hermes verification report: 203 tests passed, 3 tests failed, and all 3 failures also exist on base jason-5-may-updates.
+- Pre-existing failures to track separately: test_rerun_video_analysis_creates_separate_run, test_practices_page, and test_debug_page.
