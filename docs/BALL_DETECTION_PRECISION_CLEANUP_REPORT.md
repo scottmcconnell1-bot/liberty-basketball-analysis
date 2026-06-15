@@ -1,22 +1,25 @@
 # Ball Detection Precision Cleanup Report
-**Date:** 2026-06-14  
-**Branch:** jason-5-may-updates  
-**Detector:** models/ball_detector.pt (YOLOv8n, 7-class → class 0 = ball)  
+**Date:** 2026-06-14
+**Branch:** jason-5-may-updates
+**Detector:** models/ball_detector.pt (YOLOv8n, 7-class → class 0 = ball)
 **Benchmark:** 138 frames (108 GT+, 30 GT-)
 
 ---
 
 ## Executive Summary
 
-The detector is **highly sensitive but imprecise**. At the default conf=0.15, it finds 106/108 balls (98.2% recall) but generates 128 spurious detections (45.3% precision). The dominant failure mode is false positives on court markings (69.5% of all FPs).
+The detector is **highly sensitive but imprecise**. At conf=0.15, it finds 106/108 balls (98.2% recall) but generates 128 spurious detections (45.3% precision). The dominant failure mode is false positives on court markings (69.5% of all FPs).
 
-**Recommended near-term path:** Apply post-processing (exclude court markings + top-1 per frame) to reach ~80% precision at ~98% recall, while planning detector retraining with improved court-marking negatives.
+**Measured best F1: 0.741** at conf=0.25 with NMS (50px). This is only +0.005 over threshold-only (F1=0.736). Post-processing variants measured so far provide minimal improvement.
+
+**Near-term recommendation:** Raise threshold to conf=0.25 for F1=0.736. Court-marking exclusion is a promising but **unmeasured** hypothesis — needs implementation and benchmark before claiming benefit.
 
 ---
 
-## Proven (evidence from benchmark data)
+## Proven (measured from committed CSV data)
 
 ### Confidence Sweep Results
+Source: `benchmark/confidence_sweep.csv`
 
 | Conf | TP | FP | FN | Precision | Recall | F1 |
 |------|----|----|----|-----------|--------|-----|
@@ -29,34 +32,33 @@ The detector is **highly sensitive but imprecise**. At the default conf=0.15, it
 
 **Best single-threshold F1: conf=0.25 (F1=0.736)**
 
-### FP Classification Breakdown (conf=0.15, 128 total FPs)
+### Post-Processing Variants at conf=0.25
+Source: `benchmark/postprocess_results.csv` (all values measured, not estimated)
 
-| Category | Count | % of FPs | GT=0 | GT=1 |
-|----------|-------|----------|------|------|
+| Variant | TP | FP | FN | Precision | Recall | F1 |
+|---------|----|----|----|-----------|--------|-----|
+| threshold_only (baseline) | 106 | 74 | 2 | 0.589 | 0.981 | 0.736 |
+| threshold_nms | 106 | 72 | 2 | 0.596 | 0.981 | 0.741 |
+| threshold_mask | 106 | 74 | 2 | 0.589 | 0.981 | 0.736 |
+| threshold_nms_mask | 106 | 72 | 2 | 0.596 | 0.981 | 0.741 |
+| threshold_top1 | 67 | 52 | 41 | 0.563 | 0.620 | 0.590 |
+| threshold_nms_mask_top1 | 67 | 52 | 41 | 0.563 | 0.620 | 0.590 |
+
+**Key measured findings:**
+- **NMS (50px) gives minor gain:** F1 0.736 → 0.741 (+0.005). Only 2 FP removed.
+- **Scoreboard mask does nothing:** F1 identical to baseline (0.736). Zero FPs in scoreboard region.
+- **Top-1 per frame hurts significantly:** F1 drops to 0.590. Top-1 removes 39 TP detections in frames where the ball is detected multiple times (41 FN vs 2 FN baseline). This is because many GT+ frames have multiple valid ball detections, and top-1 arbitrarily keeps only one.
+- **NMS + mask = NMS alone:** No additional benefit from combining mask with NMS.
+
+### FP Classification Breakdown (conf=0.15)
+Source: `benchmark/precision_analysis.csv` (128 FP detections classified by heuristic)
+
+| Category | Count | % of FPs | In GT=0 frames | In GT=1 frames |
+|----------|-------|----------|----------------|----------------|
 | court_marking | 89 | 69.5% | 20 | 69 |
 | uncertain | 28 | 21.9% | 3 | 25 |
 | hoop_rim | 8 | 6.3% | 0 | 8 |
 | duplicate_near_ball | 3 | 2.3% | 0 | 3 |
-
-### Post-Processing Impact on FP Count (conf=0.15)
-
-| Variant | FP Removed | FP Remaining | FP Reduction |
-|---------|-----------|-------------|--------------|
-| baseline | 0 | 128 | — |
-| top1_per_frame | 58 | 70 | 45.3% |
-| exclude_court_markings | 89 | 39 | 69.5% |
-| top1 + exclude_court | 98 | 30 | 76.6% |
-
-### Estimated Metrics with Post-Processing (conf=0.15, TP=106/FN=2 assumed constant)
-
-| Variant | FP | Precision | Recall | F1 |
-|---------|-----|-----------|--------|-----|
-| baseline | 128 | 0.453 | 0.982 | 0.620 |
-| top1_per_frame | 70 | 0.602 | 0.982 | 0.747 |
-| exclude_court_markings | 39 | 0.731 | 0.982 | 0.838 |
-| **top1 + exclude_court** | **30** | **0.779** | **0.982** | **0.869** |
-
-At conf=0.20 with the same variant: **Precision≈0.803, Recall≈0.982, F1≈0.883**
 
 ### Overlay Evidence
 Generated images in `benchmark/precision_overlays/`:
@@ -64,78 +66,67 @@ Generated images in `benchmark/precision_overlays/`:
 - `fn_01_*.jpg`, `fn_02_*.jpg` — the 2 missed balls
 - `multi_01_*.jpg` through `multi_05_*.jpg` — frames with multiple spurious detections
 
-Visual inspection confirms: top FPs are court lines/features misclassified as balls, plus ambiguous detections on player bodies and rim areas.
-
 ---
 
 ## Inferred (logical deduction, not directly measured)
 
-1. **`exclude_court_markings` classification is imperfect.** The classification was done by a heuristic in benchmark_precision.py, not by the detector itself. The 89 "court_marking" FPs likely include some near-ball court markings that could also remove true positive detections. **Actual TP loss from this filter is unmeasured but estimated at 2-5 TPs** (ball near free-throw line, etc.).
+1. **Court-marking exclusion is promising but unmeasured.** 69.5% of FPs are heuristically classified as court markings. A spatial ROI mask excluding court regions (e.g., beyond the 3-point line) could substantially reduce FPs. However, this has NOT been implemented or measured. The benchmark's `threshold_mask` variant tested a scoreboard mask (top-right corner), not a court-marking mask — and it found zero FPs in that region.
 
-2. **The court_marking classifier is a post-hoc spatial/texture heuristic.** It was applied by the analysis script, not the YOLO model. The model itself has no concept of "court marking" — it just outputs class 0 (ball) with high confidence for these features.
+2. **Top-1 per frame is harmful for this detector.** The measured data contradicts the assumption that top-1 is safe. 56/108 GT+ frames have multiple detections, and top-1 removes 39 true positives. The detector produces multiple overlapping detections of the same ball, and top-1's arbitrary selection (highest conf) doesn't always pick the correct one.
 
-3. **Top-1 per frame is safe for shot detection.** Shot detection needs ball presence, not precise location. Taking the highest-confidence detection per frame should retain the TP in most cases, since the actual ball typically gets the highest confidence.
+3. **NMS provides minimal benefit** because FPs are spatially distributed across the frame, not clustered. Only 2 FPs are within 50px of another detection.
 
-4. **The 2 FN frames are likely edge cases.** The ball is very small, occluded, or in an unusual position.
+4. **The model confuses court features with balls.** Lines, circles, and high-contrast court features are the primary confusion source. This is a training data gap — the model likely lacks hard negative examples of court markings.
 
-5. **NMS provides minimal benefit** (126 vs 128 FPs at conf=0.15) because most FPs are in different spatial regions of the frame, not clustered.
-
-6. **The model confuses court features with balls.** Lines, circles, and high-contrast court features (free-throw circles, lane edges) are the primary confusion source. This is a training data gap — the model lacks hard negative examples of court markings.
+5. **The 2 FN frames are edge cases.** The ball is very small, occluded, or in an unusual position.
 
 ---
 
 ## Unknown (not validated with evidence)
 
-1. **Actual TP reduction from post-processing.** We assumed TP stays constant, but `exclude_court_markings` likely removes 2-5 TPs. Need frame-by-frame TP overlay analysis to verify.
+1. **Impact of a true court-marking ROI mask.** The scoreboard mask was tested and found nothing. A mask excluding court regions (where 69.5% of FPs occur) has not been implemented or measured.
 
-2. **Detector performance on game film vs. benchmark.** The benchmark uses curated frames. Real game film may have different lighting, camera angles, and occlusion patterns.
+2. **Actual TP loss from court-marking exclusion.** Any spatial mask that excludes court regions will also exclude balls near those regions (free-throw line, paint area). Unmeasured.
 
-3. **Temporal consistency.** Frame-by-frame detection without temporal smoothing. The benchmark evaluates single frames; real-world usage might benefit from temporal filtering (e.g., Kalman filter, track-based smoothing).
+3. **Detector performance on game film vs. benchmark.** The benchmark uses curated frames. Real game film may have different lighting, camera angles, and occlusion patterns.
 
-4. **Model performance by court region.** FPs may cluster in specific court regions. Spatial analysis not yet done.
+4. **Temporal consistency.** Frame-by-frame detection without temporal smoothing. The benchmark evaluates single frames; real-world usage might benefit from temporal filtering.
 
-5. **Impact of input resolution.** The benchmark uses whatever resolution the detector expects (likely 640x640). Higher court-resolution footage might change the FP/FN balance.
+5. **Model performance by court region.** Spatial FP distribution analysis not yet done.
 
-6. **Training data composition for court markings.** Unknown how many court-marking negatives were in training. The dominant FP mode suggests insufficient hard negatives.
+6. **Training data composition for court markings.** Unknown how many court-marking negatives were in training.
 
 ---
 
 ## Recommendation
 
-### Near-term (this sprint): Apply post-processing, hold on rebuild
+### Near-term (this sprint): Raise threshold, hold on post-processing
 
-**Apply `conf=0.25` + `exclude_court_markings_spatial` + `top1_per_frame`:**
+**Apply conf=0.25 as the production default.**
 
 ```python
-# Recommended production config
+# Recommended production config (proven)
 BALL_DETECTION_CONF = 0.25
-BALL_DETECTION_TOP1_PER_FRAME = True
-BALL_DETECTION_EXCLUDE_COURT_MASK = True  # ROI mask: exclude far court beyond 3pt line
 ```
 
-**Expected production metrics (estimated):**
-- Precision: ~0.73-0.78 (up from 0.45)
-- Recall: ~0.96-0.98 (may drop slightly from 0.98)
-- F1: ~0.83-0.86 (up from 0.62)
+**Measured result:** F1=0.736 (P=0.589, R=0.981). This is the best measured configuration.
 
-**Caveats:**
-- The court marking exclusion needs a spatial mask (ROI), not the post-hoc classification from the benchmark
-- Must verify on the 2 FN frames that the mask doesn't remove those detections
-- ~56/108 GT+ frames have spurious extra detections — top-1 cleans these up
+**Do NOT apply top-1 or NMS yet:**
+- Top-1 drops F1 to 0.590 (measured)
+- NMS gains only +0.005 F1 (measured) — not worth the complexity
 
-### Medium-term (next 2-3 sprints): Retrain with hard negatives
+### Medium-term: Implement and measure court-marking exclusion
 
-1. Extract high-confidence FP frames from game film (especially court markings)
-2. Add as hard negative training examples
-3. Consider adding a "not-ball" class or background augmentation
-4. Re-run the full benchmark to validate improvement
+1. Design a spatial ROI mask that excludes far-court regions (beyond 3-point line)
+2. Add it as a variant in `benchmark_precision.py`
+3. Run the full 138-frame benchmark to measure actual FP reduction and TP loss
+4. Only deploy if measured F1 improves meaningfully (>0.80) with recall staying above 95%
 
 ### Detector rebuild decision: DEFER
 
-**Do not rebuild yet.** The post-processing path gets us to usable precision (~75-80%) for near-term film analysis workflows. Rebuild only if:
-- Post-processing drops recall below 95%
-- Film analysis workflows require >85% precision (unlikely for near-term)
-- Hard negative retraining (cheaper than full rebuild) doesn't achieve >80% precision
+**Do not rebuild yet.** The measured post-processing gains are minimal. The promising path is court-marking exclusion, which is a targeted intervention, not a full rebuild. Rebuild only if:
+- Court-marking ROI mask doesn't achieve F1 > 0.80
+- Hard negative retraining (cheaper than full rebuild) doesn't achieve F1 > 0.80
 
 ---
 
@@ -146,6 +137,7 @@ BALL_DETECTION_EXCLUDE_COURT_MASK = True  # ROI mask: exclude far court beyond 3
 | `benchmark_precision.py` | Full benchmark + FP classification + confidence sweep + overlay generation |
 | `benchmark/precision_analysis.csv` | Per-detection FP classifications (128 rows) |
 | `benchmark/confidence_sweep.csv` | 6-threshold metrics |
-| `benchmark/postprocess_results.csv` | Post-processing variant comparison |
+| `benchmark/postprocess_results.csv` | 6 post-processing variants at conf=0.25 (all measured) |
 | `benchmark/precision_overlays/` | 15 overlay images (FP, FN, multi-detection) |
 | `docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md` | This document |
+| `docs/BALL_DETECTION_PRECISION_CLEANUP_PLAN.md` | Original plan doc |
