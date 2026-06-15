@@ -50,7 +50,7 @@ Remaining:
 
 ### 4. Ball Detection Audit
 
-Status: Production switch implemented; awaiting Hermes/OWL verification
+Status: Production switch verified; precision cleanup next
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
@@ -62,10 +62,13 @@ Verified issue:
 - Codex verified the committed benchmark CSVs and Git LFS model fetchability on 2026-06-14.
 - Scott approved docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md on 2026-06-14.
 - Codex implemented the production switch so ball detection uses ball_detector_model/class/confidence settings separately from person detection.
+- Hermes/OWL verified commit 2c31954 on Linux: 186/186 tests passed and production path loads models/ball_detector.pt class 0 at conf=0.15.
+- Hermes/OWL benchmark smoke found detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
 
 Next step:
-- Hermes/OWL should independently verify the implementation on Linux.
-- After verification, tune ball confidence and expand verified negatives to reduce false positives.
+- Execute docs/BALL_DETECTION_PRECISION_CLEANUP_PLAN.md.
+- Quantify whether false positives are duplicates, wrong-object detections, or negative-label uncertainty.
+- Tune confidence/post-processing only after measuring the full 138-frame production-path benchmark.
 
 ### 5. Data Governance
 

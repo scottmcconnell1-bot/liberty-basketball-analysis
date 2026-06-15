@@ -828,3 +828,14 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - The fine-tuned ball path uses Ultralytics box coordinates directly to match the committed benchmark evaluator; legacy class-32 keeps its prior coordinate scaling behavior.
 - Settings persistence and the Settings page now expose ball detector model, custom ball weights, ball class id, and ball confidence.
 - Added focused tests for settings persistence and ball detector setting resolution.
+
+---
+
+[2026-06-14] Hermes verified production ball detector switch
+- Hermes/OWL verified commit 2c31954 on jason-5-may-updates after fetching and fast-forwarding from origin.
+- Linux verification reported models/ball_detector.pt present after git lfs pull.
+- Linux pytest result: 186/186 passed in 7.78s.
+- Production-path benchmark smoke verified models/ball_detector.pt class 0 at conf=0.15.
+- Smoke positives: detections in 4 of 5 sampled positive frames.
+- Smoke likely negatives: false positives in 4 of 5 sampled negative frames.
+- Next detector work should focus on precision cleanup: full production-path benchmark, duplicate analysis, confidence tuning, and false-positive source classification.

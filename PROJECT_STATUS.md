@@ -46,13 +46,16 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Scott approved the production detector switch plan on 2026-06-14.
 - ai_analyzer.py now keeps the configured detector_model for person detection and uses the separate ball_detector_model setting for basketball detection.
 - settings_store.py now defaults ball_detector_model to models/ball_detector.pt, ball_class_id to 0, and ball_confidence to 0.15.
+- Hermes/OWL verified commit 2c31954 on Linux on 2026-06-14: branch jason-5-may-updates, HEAD 2c31954, models/ball_detector.pt present after git lfs pull, and 186/186 tests passed.
+- Hermes/OWL verified the production path loads models/ball_detector.pt class 0 at conf=0.15 on benchmark smoke frames.
+- Hermes/OWL benchmark smoke found fine-tuned model detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
 
 ## Inferred
 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
-- The current AI and event pipeline may produce downstream basketball-analysis outputs from weak or unreliable production ball-detection inputs.
-- The production detector switch should be independently verified by Hermes/OWL on Linux before treating the production film pipeline as improved.
+- The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector has false positives.
+- The next detector step should focus on precision cleanup and duplicate/false-positive analysis, not another model switch.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -64,7 +67,8 @@ These need further evidence.
 - Current test pass/fail status on the Windows snapshot.
 - Whether the 30 likely negative benchmark frames contain any visible balls.
 - Whether models/ball_detector.pt precision/recall generalizes to other games, gyms, camera angles, and lighting conditions.
-- Whether production should prioritize high recall immediately or tune confidence threshold first to reduce false positives.
+- Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
+- Whether threshold tuning can reduce false positives without materially damaging recall.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
@@ -80,4 +84,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Have Hermes/OWL verify the production detector switch on Linux with the full test suite and a benchmark smoke.
+Do not start new feature work yet. Execute docs/BALL_DETECTION_PRECISION_CLEANUP_PLAN.md before adding downstream film-analysis features that depend on ball location quality.

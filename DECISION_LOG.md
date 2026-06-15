@@ -167,4 +167,5 @@ Evidence:
 - benchmark/results_summary.csv reports models/ball_detector.pt class 0 at conf=0.15 had precision=0.453 and recall=0.9815.
 
 Follow-up:
-- Hermes/OWL should verify on Linux with the full test suite, Git LFS model availability, and a benchmark smoke.
+- Hermes/OWL verified commit 2c31954 on Linux on 2026-06-14: 186/186 tests passed, models/ball_detector.pt was present after git lfs pull, and the production path loaded models/ball_detector.pt class 0 at conf=0.15.
+- Precision cleanup is now the next detector decision input.
