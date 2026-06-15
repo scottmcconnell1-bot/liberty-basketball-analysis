@@ -1,9 +1,7 @@
-variant,threshold,fp,tp_assumed,fn_assumed,precision,recall,f1,note
-baseline,0.15,128,106,2,0.453,0.9815,0.6199,tp_assumed_unchanged
-top1_per_frame,0.15,70,106,2,0.6023,0.9815,0.7465,tp_assumed_unchanged
-exclude_court_markings,0.15,39,106,2,0.731,0.9815,0.8379,tp_assumed_unchanged
-top1 + exclude_court,0.15,30,106,2,0.7794,0.9815,0.8689,tp_assumed_unchanged
-baseline,0.2,97,106,2,0.5222,0.9815,0.6817,tp_assumed_unchanged
-top1_per_frame,0.2,59,106,2,0.6424,0.9815,0.7766,tp_assumed_unchanged
-exclude_court_markings,0.2,29,106,2,0.7852,0.9815,0.8724,tp_assumed_unchanged
-top1 + exclude_court,0.2,26,106,2,0.803,0.9815,0.8833,tp_assumed_unchanged
+variant,conf,tp,fp,fn,precision,recall,f1
+threshold_only,0.25,106,74,2,0.5889,0.9815,0.7361
+threshold_top1,0.25,67,52,41,0.563,0.6204,0.5903
+threshold_nms,0.25,106,72,2,0.5955,0.9815,0.7413
+threshold_mask,0.25,106,74,2,0.5889,0.9815,0.7361
+threshold_nms_mask,0.25,106,72,2,0.5955,0.9815,0.7413
+threshold_nms_mask_top1,0.25,67,52,41,0.563,0.6204,0.5903
