@@ -7,7 +7,7 @@ AI_DEFAULTS = {
     "ball_detector_model": "models/ball_detector.pt",
     "custom_ball_detector_model": "",
     "ball_class_id": 0,
-    "ball_confidence": 0.15,
+    "ball_confidence": 0.25,
     "event_generator_mode": "expanded",
     "inference_device": "auto",
     "frame_stride": 1,

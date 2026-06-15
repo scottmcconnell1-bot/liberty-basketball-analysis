@@ -169,3 +169,21 @@ Evidence:
 Follow-up:
 - Hermes/OWL verified commit 2c31954 on Linux on 2026-06-14: 186/186 tests passed, models/ball_detector.pt was present after git lfs pull, and the production path loaded models/ball_detector.pt class 0 at conf=0.15.
 - Precision cleanup is now the next detector decision input.
+
+### Decision: Raise production ball confidence default to 0.25
+
+Decision maker: Scott
+
+Date: 2026-06-15
+
+Decision:
+- Change the default ball detection confidence from 0.15 to 0.25.
+- Do not add top-1 filtering, NMS, or a court-marking mask in this decision.
+
+Evidence:
+- docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md reports the best measured single-threshold result at conf=0.25: TP=106, FP=74, FN=2, precision=0.5889, recall=0.9815, F1=0.7361.
+- docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md reports NMS adds only +0.005 F1 and top-1 reduces F1 to 0.5903.
+- Court-marking exclusion remains unmeasured.
+
+Follow-up:
+- Hermes/OWL should verify the 0.25 default on Linux after implementation.

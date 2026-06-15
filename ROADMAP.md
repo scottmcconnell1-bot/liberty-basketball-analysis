@@ -64,11 +64,11 @@ Verified issue:
 - Codex implemented the production switch so ball detection uses ball_detector_model/class/confidence settings separately from person detection.
 - Hermes/OWL verified commit 2c31954 on Linux: 186/186 tests passed and production path loads models/ball_detector.pt class 0 at conf=0.15.
 - Hermes/OWL benchmark smoke found detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
+- Scott approved raising the production ball confidence default to 0.25 on 2026-06-15.
 
 Next step:
-- Execute docs/BALL_DETECTION_PRECISION_CLEANUP_PLAN.md.
-- Quantify whether false positives are duplicates, wrong-object detections, or negative-label uncertainty.
-- Tune confidence/post-processing only after measuring the full 138-frame production-path benchmark.
+- Verify the 0.25 production default on Linux.
+- Implement and measure a true court-marking exclusion variant before any further production post-processing changes.
 
 ### 5. Data Governance
 

@@ -49,6 +49,8 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Hermes/OWL verified commit 2c31954 on Linux on 2026-06-14: branch jason-5-may-updates, HEAD 2c31954, models/ball_detector.pt present after git lfs pull, and 186/186 tests passed.
 - Hermes/OWL verified the production path loads models/ball_detector.pt class 0 at conf=0.15 on benchmark smoke frames.
 - Hermes/OWL benchmark smoke found fine-tuned model detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
+- Scott approved changing the production ball confidence default from 0.15 to 0.25 on 2026-06-15.
+- settings_store.py now defaults ball_confidence to 0.25, matching the best measured single-threshold F1 from docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md.
 
 ## Inferred
 
@@ -68,7 +70,7 @@ These need further evidence.
 - Whether the 30 likely negative benchmark frames contain any visible balls.
 - Whether models/ball_detector.pt precision/recall generalizes to other games, gyms, camera angles, and lighting conditions.
 - Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
-- Whether threshold tuning can reduce false positives without materially damaging recall.
+- Whether a future court-marking exclusion mask can reduce false positives without materially damaging recall.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.

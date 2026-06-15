@@ -131,7 +131,7 @@ def test_ball_detector_settings_default_and_custom(monkeypatch):
     sys.modules.pop("ai_analyzer", None)
     ai_analyzer = importlib.import_module("ai_analyzer")
 
-    assert ai_analyzer.ball_detector_settings({}) == ("models/ball_detector.pt", 0, 0.15)
+    assert ai_analyzer.ball_detector_settings({}) == ("models/ball_detector.pt", 0, 0.25)
     assert ai_analyzer.ball_detector_settings({
         "ball_detector_model": "custom",
         "custom_ball_detector_model": "models/candidate.pt",

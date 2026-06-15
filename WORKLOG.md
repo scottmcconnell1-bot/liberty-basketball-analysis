@@ -839,3 +839,10 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Smoke positives: detections in 4 of 5 sampled positive frames.
 - Smoke likely negatives: false positives in 4 of 5 sampled negative frames.
 - Next detector work should focus on precision cleanup: full production-path benchmark, duplicate analysis, confidence tuning, and false-positive source classification.
+
+---
+
+[2026-06-15] Production ball confidence threshold approved
+- Scott approved raising the production ball confidence default from 0.15 to 0.25.
+- Evidence: docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md reports conf=0.25 is the best measured single threshold: TP=106, FP=74, FN=2, precision=0.5889, recall=0.9815, F1=0.7361.
+- Scope: threshold-only change. No top-1, NMS, or court-marking mask added.
