@@ -31,7 +31,7 @@ from ultralytics import YOLO
 VIDEO = 'uploads/Liberty_Vs_Riverstone_20260519_103815.webm'
 V2_IMAGES = 'ball_dataset_v2/images'
 V2_LABELS = 'ball_dataset_v2/labels'
-FT_MODEL = 'ball_finetune/runs/finetune2/weights/best.pt'
+FT_MODEL = 'models/ball_detector.pt'
 OUT = 'benchmark'
 FRAMES_DIR = os.path.join(OUT, 'frames')
 LABELS_DIR = os.path.join(OUT, 'labels')
@@ -214,7 +214,7 @@ def run_detector(model, frame, imgsz=640, conf=0.15, classes=None):
                 cx = ((x1 + x2) / 2) / w_frame
                 cy = ((y1 + y2) / 2) / h_frame
                 w = (x2 - x1) / w_frame
-                h = (y2 - y1) / w_frame
+                h = (y2 - y1) / h_frame
                 detections.append((cx, cy, w, h, cf))
     return detections
 
@@ -268,7 +268,7 @@ frame_files = sorted([f for f in os.listdir(FRAMES_DIR) if f.endswith('.jpg')])
 
 model_configs = [('base_yolov8n_class32', model_base, [32])]
 if ft_loaded:
-    model_configs.append(('finetuned_ball_detector', model_ft, None))
+    model_configs.append(('finetuned_ball_detector', model_ft, [0]))  # class 0 = Ball
 
 all_results = []
 summary_results = []

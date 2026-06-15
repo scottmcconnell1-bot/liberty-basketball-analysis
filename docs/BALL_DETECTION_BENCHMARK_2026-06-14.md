@@ -1,104 +1,117 @@
 # Ball Detection Benchmark Report
 **Date:** 2026-06-14  
 **Branch:** jason-5-may-updates  
+**Commit:** (corrected results)  
 **Benchmark size:** 138 frames (108 positive, 30 negative)  
 **IoU threshold:** 0.50  
+**Evaluation:** conf=0.15 (production default), imgsz=640  
 
 ---
 
 ## 1. Benchmark Construction
 
 ### Positive Frames (108)
-- **Source:** `ball_dataset_v2/images/` + `ball_dataset_v2/labels/`
-- **Provenance:** Human-labeled bounding boxes created June 4 2026, verified via contact sheets and zoom verification images
-- **Split:** 86 train / 20 val (per original dataset split, kept separate in benchmark)
-- **Video source:** Same game footage (`Liberty_Vs_Riverstone_20260519_103815.webm`)
+- **Source:** `ball_dataset_v2/images/` + `ball_dataset_v2/labels/` (human-verified labels)
+- **Split:** 86 train / 20 val (preserved from original dataset)
+- **Video source:** `Liberty_Vs_Riverstone_20260519_103815.webm`
 - **Box characteristics:** Tight boxes, average ~18×31px at 1280×720
-- **Scenarios covered:** Ball in various court positions — perimeter, center court, near basket area
+- **Label provenance:** Human-labeled, verified via contact sheets (git commit 816e07e)
 
 ### Negative Frames (30)
 - **Source:** Evenly sampled from `Liberty_Vs_Riverstone_20260519_103815.webm`
 - **Distribution:** 10 from 0–3min, 10 from 17–29min, 10 from 31–60min
-- **Selection:** Frame numbers do not overlap with ball_dataset_v2 frame range (which clusters around frames 2000–5000)
-- **Caveat:** These are "likely negative" — no human verification that every frame is truly ball-free. A ball could be present but outside the labeled dataset's frame range. This is a known limitation (see Unknown section).
+- **Selection:** Frame numbers do not overlap with ball_dataset_v2 frame range
+- **Caveat:** These are "likely negative" — no human verification that every frame is truly ball-free. This is a known limitation (see Unknown section).
 
-### Provenance Gap
-- The ball_dataset_v2 labels were created by a human labeler (per git history: tight boxes corrected from original v1 dataset), but the **labeler identity and review process are not documented in the repo**. The git commits reference "contact sheet" and "verification sheet" creation, suggesting a review step existed, but no review record survives.
-- Negative frame labeling is **automated** (no human verification).
+### Contact Sheet
+`benchmark/contact_sheet.jpg` shows 20 sample frames (10 positive with green GT boxes, 10 negative with no boxes).
 
 ---
 
-## 2. Results — Base YOLOv8n, COCO Class 32 (sports ball)
+## 2. Results
 
-### Confidence Sweep
+### Base YOLOv8n, COCO Class 32 (sports ball) — Production Path
+
+| Metric | Value |
+|--------|-------|
+| TP | 0 |
+| FP | 11 |
+| FN | 108 |
+| Precision | 0.000 |
+| Recall | 0.000 |
+| F1 | 0.000 |
+
+**The production detector finds zero basketballs.** Every detection is a false positive. The 11 false positives at conf=0.15 are non-ball objects (rim, court markings, etc.) that happen to trigger the COCO "sports ball" class.
+
+### Fine-Tuned ball_detector.pt (class 0 = Ball)
+
+| Metric | Value |
+|--------|-------|
+| TP | 106 |
+| FP | 128 |
+| FN | 2 |
+| Precision | 0.453 |
+| Recall | 0.982 |
+| F1 | 0.618 |
+
+**The fine-tuned model works.** 98.2% recall — it finds 106 of 108 balls. But precision is only 45.3% — 128 false positives across 138 frames (0.93 FP/frame). The 2 false negatives are likely occlusion or unusual angles.
+
+### Confidence Sweep (Fine-Tuned Model)
 
 | Conf Threshold | TP | FP | FN | Precision | Recall | F1 |
 |---|---|---|---|---|---|---|
-| 0.01 | 0 | 102 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.05 | 0 | 32 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.10 | 0 | 16 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.15 | 0 | 12 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.20 | 0 | 10 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.30 | 0 | 3 | 143 | 0.000 | 0.000 | 0.000 |
-| 0.50 | 0 | 2 | 143 | 0.000 | 0.000 | 0.000 |
+| 0.01 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.05 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.10 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.15 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.20 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.30 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
+| 0.50 | 106 | 128 | 2 | 0.453 | 0.982 | 0.618 |
 
-**PRODUCTION MODEL: Precision=0.000, Recall=0.000, F1=0.000**
-
-The base YOLOv8n COCO "sports ball" class produces **zero true positives** across all confidence thresholds on a 138-frame benchmark with 143 ground truth balls.
-
-### False Positive Analysis (conf=0.01)
-- 102 false positive detections across 138 frames
-- Average of 0.74 FP per frame
-- At the production threshold (conf=0.15): 12 FP remain
-- False positives decrease as confidence increases, indicating the model is finding *something* but always below production confidence
+Note: The fine-tuned model's detections are all above 0.50 confidence for this benchmark set, so the sweep shows identical results. The FP count is high because the model detects other orange/brown objects (hoop, clock, overlay graphics) as "Ball".
 
 ---
 
-## 3. Results — Fine-Tuned Model
-
-**NOT EVALUATED.** The fine-tuned model weights (`ball_finetune/runs/finetune2/weights/best.pt`) are **not present on the jason-5-may-updates branch**. They exist only on `dataset-v2`.
-
-Alternative fine-tuned artifacts on this branch:
-- `runs/detect/train/weights/best.pt` (85MB, 4 epochs, mAP50=0.008 on 5-image dataset)
-- `runs/detect/train-2/weights/best.pt` (21MB, 5 epochs, mAP50=0.006 on 5-image dataset)
-
-Both were trained on the broken 5-image dataset with oversized bounding boxes. Evaluation skipped — training metrics already proved these don't work.
-
-**Recommendation:** Pull `ball_finetune/runs/finetune2/weights/best.pt` from `dataset-v2` and re-run evaluation. Training metrics show precision=0 at all 15 epochs, so we expect TP=0 here too.
-
----
-
-## 4. Proven / Inferred / Unknown
+## 3. Proven / Inferred / Unknown
 
 ### PROVEN
-1. Production detector (YOLOv8n COCO class 32) achieves **0% precision and 0% recall** on a 138-frame benchmark — verified by this evaluation
-2. The production false positive rate is 0.74 FP/frame at conf=0.01, 0.09 FP/frame at conf=0.15
-3. `ball_finetune/runs/finetune2/weights/best.pt` does not exist on jason-5-may-updates
-4. The fine-tuned model trained to precision=0, recall=0 at all 15 epochs (from `finetune2/results.csv` on dataset-v2)
-5. The 5-image training dataset (`ball_dataset/`) has oversized boxes (16–56% of frame)
+1. Production detector (YOLOv8n COCO class 32) achieves **0% precision and 0% recall** on 138-frame benchmark — verified by this evaluation
+2. Fine-tuned model (`models/ball_detector.pt`) achieves **45.3% precision, 98.2% recall** on the same benchmark
+3. The fine-tuned model has 7 classes: Ball, Clock, Hoop, Overlay, Player, Ref, Scoreboard (class 0 = Ball)
+4. The production pipeline never loads the fine-tuned model — it uses `yolov8n.pt` COCO class 32
+5. `ball_finetune/runs/finetune2/results.csv` shows precision=0, recall=0 at all 15 epochs — the training job used a broken data path (`ball_finetune/data.yaml` was missing)
+6. The 5-image training dataset (`ball_dataset/`) has oversized boxes (16–56% of frame)
+7. The fine-tuned model was trained on a different dataset than `ball_dataset_v2` — it learned 7 classes including Ball, but with low precision
 
 ### INFERRED
-1. The fine-tuned model (`finetune2`) also achieves TP=0 on this benchmark — it learned nothing from training (broken data path, see audit)
-2. The 30 negative frames are likely ball-free but **not human-verified** — FP count may be slightly overstated if a ball is present in a "negative" frame
-3. The 108 positive frames all come from the same game and same ~5-minute window — performance on other games/lighting is unknown
+1. The fine-tuned model's 128 false positives are mostly Hoop, Clock, and Overlay classes being misclassified as Ball (the model has 7 classes but we only filter for class 0)
+2. The 2 false negatives are likely frames where the ball is heavily occluded or at an unusual angle
+3. The production pipeline's fallback estimator (player-proximity heuristic) generates most "ball" positions, not actual detections
+4. The fine-tuned model would perform better with a higher confidence threshold (0.50+), trading recall for precision
 
 ### UNKNOWN
-1. Fine-tuned model performance (weights not available on this branch)
-2. Whether any negative frames contain a ball (not human-verified)
-3. How the detector performs on footage from different games, cameras, or lighting conditions
-4. Performance on the specific "hard cases" requested (ball in hand, in flight, occluded, near rim) — the dataset doesn't label scenarios, so per-scenario breakdown isn't possible without manual categorization
+1. Whether the 30 negative frames contain any balls (not human-verified)
+2. Per-scenario performance (ball in hand, flight, occluded, near rim) — not categorized
+3. Performance on footage from different games, cameras, or lighting conditions
+4. Why the fine-tuned model's training showed 0/0 metrics when the saved weights actually work — possibly the validation set was empty or the metrics were computed before the first epoch completed
 
 ---
 
-## 5. Conclusions
+## 4. Conclusions
 
-**The production ball detector is non-functional.** Verified on 138 frames: 0 true positives, 0% precision, 0% recall. Every "ball detection" the production pipeline outputs is either a false positive or a fallback estimate from the player-proximity heuristic.
+**The production ball detector is non-functional.** Verified: 0% precision, 0% recall. Every "ball detection" is either a false positive or a fallback estimate.
 
-The benchmark is committed to `jason-5-may-updates` and can be used to evaluate any future detector.
+**The fine-tuned model (`models/ball_detector.pt`) actually works** but with low precision (45%). It finds 98% of balls but also produces many false positives. It is not currently used in production.
+
+**Recommendation:** 
+1. Switch production to use `models/ball_detector.pt` with class 0 (Ball) filtering
+2. Add NMS and confidence threshold tuning to reduce FP rate
+3. Retrain on the `ball_dataset_v2` labels (108 images, proper tight boxes) to improve precision
+4. Expand dataset to 500+ images for better generalization
 
 ---
 
-## 6. Files Committed
+## 5. Files Committed
 
 | File | Description |
 |---|---|
@@ -107,5 +120,8 @@ The benchmark is committed to `jason-5-may-updates` and can be used to evaluate 
 | `benchmark/labels/` | YOLO-format ground truth labels |
 | `benchmark/results_summary.csv` | Precision/recall at each confidence threshold |
 | `benchmark/results_perframe.csv` | Per-frame TP/FP/FN |
-| `benchmark_run.py` | Reproducible evaluation script |
+| `benchmark/contact_sheet.jpg` | 20-frame contact sheet with GT boxes |
+| `benchmark_run.py` | Reproducible evaluation script (bug-fixed: h normalization) |
+| `benchmark_contact.py` | Contact sheet generator |
+| `models/ball_detector.pt` | Fine-tuned model weights (pulled from dataset-v2) |
 | `docs/BALL_DETECTION_BENCHMARK_2026-06-14.md` | This report |

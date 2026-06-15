@@ -43,8 +43,8 @@ pos_train_frame_054.jpg,train,standard,1,ball_dataset_v2_human_labeler,verified,
 pos_train_frame_055.jpg,train,standard,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
 pos_train_frame_056.jpg,train,center_court,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
 pos_train_frame_058.jpg,train,center_court,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
-pos_train_frame_059.jpg,train,"large_box,center_court",1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
-pos_train_frame_060.jpg,train,"large_box,center_court",1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
+pos_train_frame_059.jpg,train,"center_court,large_box",1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
+pos_train_frame_060.jpg,train,"center_court,large_box",1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
 pos_train_frame_061.jpg,train,standard,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
 pos_train_frame_062.jpg,train,standard,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
 pos_train_frame_063.jpg,train,center_court,1,ball_dataset_v2_human_labeler,verified,ball_dataset_v2
