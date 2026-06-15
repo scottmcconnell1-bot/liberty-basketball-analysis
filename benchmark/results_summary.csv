@@ -1,0 +1,5 @@
+model,conf_thresh,tp,fp,fn,precision,recall,f1
+base_yolov8n_class32,0.05,3,25,105,0.1071,0.0278,0.0441
+base_yolov8n_class32,0.15,0,11,108,0.0,0.0,0
+finetuned_ball_detector,0.05,106,249,2,0.2986,0.9815,0.4579
+finetuned_ball_detector,0.15,106,128,2,0.453,0.9815,0.6199
