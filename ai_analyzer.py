@@ -20,6 +20,28 @@ def resolve_detector_model(ai_settings):
     return selected_model
 
 
+def resolve_ball_detector_model(ai_settings):
+    selected_model = (ai_settings.get("ball_detector_model") or AI_DEFAULTS["ball_detector_model"]).strip()
+    if selected_model == "custom":
+        custom_model = (ai_settings.get("custom_ball_detector_model") or "").strip()
+        return custom_model or AI_DEFAULTS["ball_detector_model"]
+    return selected_model
+
+
+def ball_detector_settings(ai_settings):
+    try:
+        class_id = int(ai_settings.get("ball_class_id", AI_DEFAULTS["ball_class_id"]))
+    except (TypeError, ValueError):
+        class_id = AI_DEFAULTS["ball_class_id"]
+
+    try:
+        confidence = float(ai_settings.get("ball_confidence", AI_DEFAULTS["ball_confidence"]))
+    except (TypeError, ValueError):
+        confidence = AI_DEFAULTS["ball_confidence"]
+
+    return resolve_ball_detector_model(ai_settings), class_id, max(0.01, min(confidence, 0.99))
+
+
 def run_ai_analysis(db_path, video_path, game_id):
     """Run object detection + tracking on a video and save results to the database.
 
@@ -51,7 +73,10 @@ def run_ai_analysis(db_path, video_path, game_id):
             db_path=db_path,
         )
         ai_settings = runtime_settings["ai"]
-        model = YOLO(resolve_detector_model(ai_settings))
+        person_model_path = resolve_detector_model(ai_settings)
+        ball_model_path, ball_class_id, ball_confidence = ball_detector_settings(ai_settings)
+        model = YOLO(person_model_path)
+        ball_model = model if ball_model_path == person_model_path else YOLO(ball_model_path)
         inference_device = ai_settings["inference_device"]
 
         cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
@@ -159,38 +184,38 @@ def run_ai_analysis(db_path, video_path, game_id):
             if frame_number % 5 == 0:
                 ball_positions = []
                 try:
-                    ball_results = model(frame, classes=[32], conf=0.15, verbose=False, imgsz=640)
+                    ball_results = ball_model(frame, classes=[ball_class_id], conf=ball_confidence, verbose=False, imgsz=640)
                     for result in ball_results:
                         for box in result.boxes:
                             class_id = int(box.cls[0])
-                            raw_class_name = model.names[class_id]
-                            if raw_class_name in ['sports ball', 'sports_ball']:
+                            if class_id == ball_class_id:
                                 confidence = float(box.conf[0])
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                                # Scale coordinates from inference size back to original frame size
-                                x1 = int(x1 * scale_x)
-                                y1 = int(y1 * scale_y)
-                                x2 = int(x2 * scale_x)
-                                y2 = int(y2 * scale_y)
+                                if ball_model is model and ball_class_id == 32:
+                                    # Preserve the legacy COCO sports-ball coordinate handling.
+                                    x1 = int(x1 * scale_x)
+                                    y1 = int(y1 * scale_y)
+                                    x2 = int(x2 * scale_x)
+                                    y2 = int(y2 * scale_y)
                                 # Clamp to frame bounds (YOLO boxes can overflow at edges)
                                 x1 = max(0, min(x1, orig_w - 1))
                                 y1 = max(0, min(y1, orig_h - 1))
                                 x2 = max(0, min(x2, orig_w - 1))
                                 y2 = max(0, min(y2, orig_h - 1))
                                 w_box, h_box = x2 - x1, y2 - y1
-                                if not (8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0):
+                                if ball_model is model and ball_class_id == 32 and not (8 < w_box < 80 and 8 < h_box < 80 and 0.3 < w_box/max(h_box,1) < 3.0):
                                     continue
 
                                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
                                 # Filter 1: Reject detections in top 15% of frame (exit signs, ceiling fixtures)
-                                if cy < orig_h * 0.15:
+                                if ball_model is model and ball_class_id == 32 and cy < orig_h * 0.15:
                                     continue
 
                                 # Filter 2: Color check — basketball is orange/brown
                                 # Exit signs are white/red, reflections are gray/white
                                 roi = frame[max(0,y1):min(orig_h,y2), max(0,x1):min(orig_w,x2)]
-                                if roi.size > 0:
+                                if ball_model is model and ball_class_id == 32 and roi.size > 0:
                                     roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                                     mask_orange = cv2.inRange(roi_hsv, np.array([10, 150, 150]), np.array([30, 255, 255]))
                                     mask_brown = cv2.inRange(roi_hsv, np.array([0, 80, 80]), np.array([20, 150, 150]))

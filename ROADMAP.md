@@ -50,7 +50,7 @@ Remaining:
 
 ### 4. Ball Detection Audit
 
-Status: Benchmark complete; production switch plan pending approval
+Status: Production switch implemented; awaiting Hermes/OWL verification
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
@@ -60,11 +60,12 @@ Verified issue:
 - docs/BALL_DETECTION_BENCHMARK_2026-06-14.md reports production YOLOv8n COCO class 32 at conf=0.15 had TP=0, FP=11, FN=108, precision=0.0, recall=0.0.
 - docs/BALL_DETECTION_BENCHMARK_2026-06-14.md reports models/ball_detector.pt class 0 at conf=0.15 had TP=106, FP=128, FN=2, precision=0.453, recall=0.9815.
 - Codex verified the committed benchmark CSVs and Git LFS model fetchability on 2026-06-14.
+- Scott approved docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md on 2026-06-14.
+- Codex implemented the production switch so ball detection uses ball_detector_model/class/confidence settings separately from person detection.
 
 Next step:
-- Scott should review docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md.
-- If approved, Codex should implement a small production switch from YOLOv8n class 32 to models/ball_detector.pt class 0 for ball detection only.
-- Hermes/OWL should independently verify the implementation on Linux after Codex completes it.
+- Hermes/OWL should independently verify the implementation on Linux.
+- After verification, tune ball confidence and expand verified negatives to reduce false positives.
 
 ### 5. Data Governance
 

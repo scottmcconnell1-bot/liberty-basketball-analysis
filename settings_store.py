@@ -4,6 +4,10 @@ import sqlite3
 AI_DEFAULTS = {
     "detector_model": "yolov8n.pt",
     "custom_detector_model": "",
+    "ball_detector_model": "models/ball_detector.pt",
+    "custom_ball_detector_model": "",
+    "ball_class_id": 0,
+    "ball_confidence": 0.15,
     "event_generator_mode": "expanded",
     "inference_device": "auto",
     "frame_stride": 1,
@@ -20,6 +24,12 @@ INT_SETTING_KEYS = {
     "ai.detection_stride",
     "ai.tracker_max_distance",
     "ai.tracker_max_frame_gap",
+    "ai.ball_class_id",
+}
+
+
+FLOAT_SETTING_KEYS = {
+    "ai.ball_confidence",
 }
 
 
@@ -31,6 +41,11 @@ def _parse_value(key, value):
             return int(value)
         except (TypeError, ValueError):
             return 0
+    if key in FLOAT_SETTING_KEYS:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
     return value
 
 

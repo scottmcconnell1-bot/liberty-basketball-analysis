@@ -121,6 +121,25 @@ def test_event_generator_connection_uses_row_factory():
         os.unlink(db_path)
 
 
+def test_ball_detector_settings_default_and_custom(monkeypatch):
+    import importlib
+    import types
+
+    monkeypatch.setitem(sys.modules, "cv2", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=object))
+    monkeypatch.setitem(sys.modules, "event_generator", types.SimpleNamespace(main=lambda *args, **kwargs: None))
+    sys.modules.pop("ai_analyzer", None)
+    ai_analyzer = importlib.import_module("ai_analyzer")
+
+    assert ai_analyzer.ball_detector_settings({}) == ("models/ball_detector.pt", 0, 0.15)
+    assert ai_analyzer.ball_detector_settings({
+        "ball_detector_model": "custom",
+        "custom_ball_detector_model": "models/candidate.pt",
+        "ball_class_id": "3",
+        "ball_confidence": "0.42",
+    }) == ("models/candidate.pt", 3, 0.42)
+
+
 def test_generate_expanded_events_from_segments_emits_requested_event_types():
     from event_generator import generate_expanded_events_from_segments
 

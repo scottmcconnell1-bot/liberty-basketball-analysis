@@ -439,6 +439,25 @@ def build_settings_catalog():
     else:
         detector_options[0]["recommended"] = True
 
+    ball_detector_options = [
+        {
+            "value": "models/ball_detector.pt",
+            "label": "Fine-tuned basketball detector",
+            "note": "Benchmark default for ball detection: class 0 at 0.15 confidence.",
+            "recommended": True,
+        },
+        {
+            "value": "yolov8n.pt",
+            "label": "Legacy YOLOv8 sports-ball path",
+            "note": "Uses COCO class 32 with legacy filters; benchmarked at 0% precision and 0% recall at conf=0.15.",
+        },
+        {
+            "value": "custom",
+            "label": "Custom ball detector weights",
+            "note": "Use a local Ultralytics .pt file for future basketball detector candidates.",
+        },
+    ]
+
     device_options = [{"value": "auto", "label": "Auto-select (recommended)"}]
     if gpu_available:
         device_options.append({"value": "cuda", "label": f"GPU ({gpu['name']})"})
@@ -503,6 +522,7 @@ def build_settings_catalog():
             "torch": module_available("torch"),
         },
         "detector_options": detector_options,
+        "ball_detector_options": ball_detector_options,
         "device_options": device_options,
         "frame_stride_options": [
             {"value": 1, "label": "Every frame (highest detail)"},
@@ -539,11 +559,27 @@ def resolve_detector_model(ai_settings):
     return selected_model
 
 
+def resolve_ball_detector_model(ai_settings):
+    selected_model = (ai_settings.get("ball_detector_model") or AI_DEFAULTS["ball_detector_model"]).strip()
+    if selected_model == "custom":
+        custom_model = (ai_settings.get("custom_ball_detector_model") or "").strip()
+        return custom_model or AI_DEFAULTS["ball_detector_model"]
+    return selected_model
+
+
 def display_detector_model(ai_settings):
     selected_model = (ai_settings.get("detector_model") or AI_DEFAULTS["detector_model"]).strip()
     if selected_model == "custom":
         custom_model = (ai_settings.get("custom_detector_model") or "").strip()
         return custom_model or "Custom (not set)"
+    return selected_model
+
+
+def display_ball_detector_model(ai_settings):
+    selected_model = (ai_settings.get("ball_detector_model") or AI_DEFAULTS["ball_detector_model"]).strip()
+    if selected_model == "custom":
+        custom_model = (ai_settings.get("custom_ball_detector_model") or "").strip()
+        return custom_model or "Custom ball detector (not set)"
     return selected_model
 
 

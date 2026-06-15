@@ -1326,6 +1326,7 @@ def settings_page():
 
     if request.method == "POST":
         detector_values = {option["value"] for option in catalog["detector_options"]}
+        ball_detector_values = {option["value"] for option in catalog["ball_detector_options"]}
         device_values = {option["value"] for option in catalog["device_options"]}
         event_generator_mode_values = {option["value"] for option in catalog["event_generator_mode_options"]}
         llm_provider_values = {option["value"] for option in catalog["llm_provider_options"]}
@@ -1341,6 +1342,23 @@ def settings_page():
         updates["ai.detector_model"] = detector_model if detector_model in detector_values else AI_DEFAULTS["detector_model"]
         custom_detector_model = (request.form.get("ai_custom_detector_model") or "").strip()
         updates["ai.custom_detector_model"] = custom_detector_model
+
+        ball_detector_model = (request.form.get("ai_ball_detector_model") or AI_DEFAULTS["ball_detector_model"]).strip()
+        updates["ai.ball_detector_model"] = (
+            ball_detector_model if ball_detector_model in ball_detector_values else AI_DEFAULTS["ball_detector_model"]
+        )
+        custom_ball_detector_model = (request.form.get("ai_custom_ball_detector_model") or "").strip()
+        updates["ai.custom_ball_detector_model"] = custom_ball_detector_model
+        try:
+            ball_class_id = max(0, int(request.form.get("ai_ball_class_id", AI_DEFAULTS["ball_class_id"])))
+        except ValueError:
+            ball_class_id = AI_DEFAULTS["ball_class_id"]
+        updates["ai.ball_class_id"] = ball_class_id
+        try:
+            ball_confidence = float(request.form.get("ai_ball_confidence", AI_DEFAULTS["ball_confidence"]))
+        except ValueError:
+            ball_confidence = AI_DEFAULTS["ball_confidence"]
+        updates["ai.ball_confidence"] = min(0.99, max(0.01, ball_confidence))
 
         inference_device = (request.form.get("ai_inference_device") or AI_DEFAULTS["inference_device"]).strip()
         if inference_device not in device_values:

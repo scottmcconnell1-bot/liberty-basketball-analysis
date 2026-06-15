@@ -111,6 +111,36 @@
       </div>
 
       <div class="form-group">
+        <label for="ai_ball_detector_model">Ball Detector Model</label>
+        <select class="form-control" id="ai_ball_detector_model" name="ai_ball_detector_model">
+          {% for option in catalog.ball_detector_options %}
+          <option value="{{ option.value }}" {% if runtime_settings.ai.ball_detector_model == option.value %}selected{% endif %}>{{ option.label }}{% if option.recommended %} (Recommended){% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="text-muted mt-2">
+          {% for option in catalog.ball_detector_options %}
+          <div><strong>{{ option.value }}</strong>: {{ option.note }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group" id="custom-ball-detector-model-group">
+        <label for="ai_custom_ball_detector_model">Custom Ball Detector Weights</label>
+        <input class="form-control" id="ai_custom_ball_detector_model" name="ai_custom_ball_detector_model" value="{{ runtime_settings.ai.custom_ball_detector_model }}" placeholder="e.g. models/new_ball_detector.pt">
+        <div class="text-muted mt-2">Used only when Ball Detector Model is set to <code>custom</code>.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_ball_class_id">Ball Class ID</label>
+        <input class="form-control" id="ai_ball_class_id" name="ai_ball_class_id" type="number" min="0" value="{{ runtime_settings.ai.ball_class_id }}">
+      </div>
+
+      <div class="form-group">
+        <label for="ai_ball_confidence">Ball Confidence Threshold</label>
+        <input class="form-control" id="ai_ball_confidence" name="ai_ball_confidence" type="number" min="0.01" max="0.99" step="0.01" value="{{ runtime_settings.ai.ball_confidence }}">
+      </div>
+
+      <div class="form-group">
         <label for="ai_inference_device">Inference Device</label>
         <select class="form-control" id="ai_inference_device" name="ai_inference_device">
           {% for option in catalog.device_options %}
@@ -232,11 +262,24 @@
     group.style.display = select.value === 'custom' ? 'block' : 'none';
   }
 
+  function toggleCustomBallDetectorInput() {
+    const select = document.getElementById('ai_ball_detector_model');
+    const group = document.getElementById('custom-ball-detector-model-group');
+    if (!select || !group) return;
+    group.style.display = select.value === 'custom' ? 'block' : 'none';
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('ai_detector_model');
-    if (!select) return;
-    toggleCustomDetectorInput();
-    select.addEventListener('change', toggleCustomDetectorInput);
+    if (select) {
+      toggleCustomDetectorInput();
+      select.addEventListener('change', toggleCustomDetectorInput);
+    }
+    const ballSelect = document.getElementById('ai_ball_detector_model');
+    if (ballSelect) {
+      toggleCustomBallDetectorInput();
+      ballSelect.addEventListener('change', toggleCustomBallDetectorInput);
+    }
   });
 </script>
 {% endblock %}

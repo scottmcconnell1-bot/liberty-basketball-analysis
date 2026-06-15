@@ -43,13 +43,16 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - benchmark/results_perframe.csv contains 552 per-frame rows and aggregates to the same totals as benchmark/results_summary.csv.
 - benchmark/contact_sheet.jpg exists and models/*.pt are tracked with Git LFS.
 - Codex verified the benchmark CSV presence, row counts, aggregate totals, report consistency, fixed height normalization, and Git LFS fetchability for models/*.pt on 2026-06-14.
+- Scott approved the production detector switch plan on 2026-06-14.
+- ai_analyzer.py now keeps the configured detector_model for person detection and uses the separate ball_detector_model setting for basketball detection.
+- settings_store.py now defaults ball_detector_model to models/ball_detector.pt, ball_class_id to 0, and ball_confidence to 0.15.
 
 ## Inferred
 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
 - The current AI and event pipeline may produce downstream basketball-analysis outputs from weak or unreliable production ball-detection inputs.
-- The next detector step should likely be a controlled production switch from YOLOv8n class 32 to models/ball_detector.pt class 0, with tests and Hermes/OWL Linux verification.
+- The production detector switch should be independently verified by Hermes/OWL on Linux before treating the production film pipeline as improved.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -77,4 +80,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Review and approve docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md before changing production detector behavior.
+Do not start new feature work yet. Have Hermes/OWL verify the production detector switch on Linux with the full test suite and a benchmark smoke.

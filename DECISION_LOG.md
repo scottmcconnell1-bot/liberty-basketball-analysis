@@ -147,4 +147,24 @@ Evidence:
 - docs/BALL_DETECTION_BENCHMARK_2026-06-14.md documents the negative-frame review limitation as Unknown.
 
 Follow-up:
-- Scott should approve or reject docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md before Codex changes production detector behavior.
+- Scott approved docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md on 2026-06-14.
+- Codex implemented the switch and requested Hermes/OWL Linux verification.
+
+### Decision: Switch production ball detection to the fine-tuned model
+
+Decision maker: Scott
+
+Date: 2026-06-14
+
+Decision:
+- Keep the configured person detector model for player detection.
+- Use a separate ball detector setting for basketball detection.
+- Default ball detection to models/ball_detector.pt, class 0, confidence 0.15.
+
+Evidence:
+- ai_analyzer.py previously used the same YOLOv8n model for person detection and ball detection, with ball detection fixed to COCO class 32.
+- benchmark/results_summary.csv reports YOLOv8n COCO class 32 at conf=0.15 had precision=0.0 and recall=0.0.
+- benchmark/results_summary.csv reports models/ball_detector.pt class 0 at conf=0.15 had precision=0.453 and recall=0.9815.
+
+Follow-up:
+- Hermes/OWL should verify on Linux with the full test suite, Git LFS model availability, and a benchmark smoke.

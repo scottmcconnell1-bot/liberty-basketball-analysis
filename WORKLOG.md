@@ -817,3 +817,14 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Verified models/ball_detector.pt class 0 at conf=0.15: TP=106, FP=128, FN=2, precision=0.453, recall=0.9815.
 - Verified benchmark/contact_sheet.jpg exists and models/*.pt are tracked/fetchable through Git LFS.
 - Drafted docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md for Scott approval before production detector behavior changes.
+
+---
+
+[2026-06-14] Production ball detector switch implemented
+- Scott approved the production detector switch plan.
+- Codex updated ai_analyzer.py to keep person detection on the configured detector_model and use a separate ball_detector_model for basketball detection.
+- Default ball detection now resolves to models/ball_detector.pt, class 0, confidence 0.15.
+- Legacy COCO class-32 size/top-frame/color filters now only apply when the configured ball detector is the old class-32 path.
+- The fine-tuned ball path uses Ultralytics box coordinates directly to match the committed benchmark evaluator; legacy class-32 keeps its prior coordinate scaling behavior.
+- Settings persistence and the Settings page now expose ball detector model, custom ball weights, ball class id, and ball confidence.
+- Added focused tests for settings persistence and ball detector setting resolution.

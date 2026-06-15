@@ -756,6 +756,10 @@ def test_settings_page_persists_updates(client, db):
         "feature_ENABLE_PRACTICES": "on",
         "ai_detector_model": "custom",
         "ai_custom_detector_model": "yolo11s.pt",
+        "ai_ball_detector_model": "custom",
+        "ai_custom_ball_detector_model": "models/new_ball_detector.pt",
+        "ai_ball_class_id": "2",
+        "ai_ball_confidence": "0.32",
         "ai_inference_device": "cpu",
         "ai_event_generator_mode": "expanded",
         "ai_frame_stride": "2",
@@ -771,6 +775,10 @@ def test_settings_page_persists_updates(client, db):
     stored = {row["key"]: row["value"] for row in rows}
     assert stored["ai.detector_model"] == "custom"
     assert stored["ai.custom_detector_model"] == "yolo11s.pt"
+    assert stored["ai.ball_detector_model"] == "custom"
+    assert stored["ai.custom_ball_detector_model"] == "models/new_ball_detector.pt"
+    assert stored["ai.ball_class_id"] == "2"
+    assert stored["ai.ball_confidence"] == "0.32"
     assert stored["ai.inference_device"] == "cpu"
     assert stored["ai.event_generator_mode"] == "expanded"
     assert stored["ai.frame_stride"] == "2"
