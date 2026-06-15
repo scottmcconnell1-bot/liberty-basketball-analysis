@@ -50,18 +50,21 @@ Remaining:
 
 ### 4. Ball Detection Audit
 
-Status: Benchmark approved
+Status: Benchmark complete; production switch plan pending approval
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
 - docs/VERIFIED_PROJECT_FACTS.md reports finetune2 produced zero precision, recall, and mAP across recorded epochs.
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md reports the production path uses base YOLOv8 COCO class 32 rather than the fine-tuned ball detector.
 - docs/BALL_DETECTION_AUDIT_2026-06-14.md reports no completed formal precision/recall benchmark because precision_recall.csv was empty.
+- docs/BALL_DETECTION_BENCHMARK_2026-06-14.md reports production YOLOv8n COCO class 32 at conf=0.15 had TP=0, FP=11, FN=108, precision=0.0, recall=0.0.
+- docs/BALL_DETECTION_BENCHMARK_2026-06-14.md reports models/ball_detector.pt class 0 at conf=0.15 had TP=106, FP=128, FN=2, precision=0.453, recall=0.9815.
+- Codex verified the committed benchmark CSVs and Git LFS model fetchability on 2026-06-14.
 
 Next step:
-- Execute docs/BALL_DETECTION_BENCHMARK_PLAN.md.
-- Hermes/OWL should select and label 30-50 representative frames on the Linux machine.
-- Codex should import benchmark results into jason-5-may-updates before any detector rebuild decision.
+- Scott should review docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md.
+- If approved, Codex should implement a small production switch from YOLOv8n class 32 to models/ball_detector.pt class 0 for ball detection only.
+- Hermes/OWL should independently verify the implementation on Linux after Codex completes it.
 
 ### 5. Data Governance
 

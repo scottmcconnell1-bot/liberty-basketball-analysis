@@ -806,3 +806,14 @@ Staged but uncommitted: PROGRESS.md, WORKLOG.md, ai_analyzer.py, app.py, bluepri
 - Scott approved building a formal ball detection benchmark before detector rebuild.
 - Added docs/BALL_DETECTION_BENCHMARK_PLAN.md with scope, label requirements, metrics, deliverables, acceptance criteria, and non-goals.
 - Updated PROJECT_STATUS.md, ROADMAP.md, and DECISION_LOG.md with the benchmark-first decision.
+
+---
+
+[2026-06-14] Ball detection benchmark verified and production switch plan drafted
+- Hermes/OWL completed benchmark commits e667e26, c517043, and f9049e4 on jason-5-may-updates.
+- Codex verified benchmark/results_summary.csv exists with 4 result rows and benchmark/results_perframe.csv exists with 552 per-frame rows.
+- Codex verified per-frame totals aggregate to the summary totals.
+- Verified production YOLOv8n COCO class 32 at conf=0.15: TP=0, FP=11, FN=108, precision=0.0, recall=0.0.
+- Verified models/ball_detector.pt class 0 at conf=0.15: TP=106, FP=128, FN=2, precision=0.453, recall=0.9815.
+- Verified benchmark/contact_sheet.jpg exists and models/*.pt are tracked/fetchable through Git LFS.
+- Drafted docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md for Scott approval before production detector behavior changes.

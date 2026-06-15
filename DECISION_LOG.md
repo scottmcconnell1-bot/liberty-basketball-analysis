@@ -127,4 +127,24 @@ Evidence:
 - Scott approved the benchmark-first path on 2026-06-14.
 
 Follow-up:
-- Execute docs/BALL_DETECTION_BENCHMARK_PLAN.md.
+- Completed in commits e667e26, c517043, and f9049e4.
+- Codex verified committed CSVs, aggregate totals, report consistency, fixed height normalization, and Git LFS fetchability on 2026-06-14.
+
+### Decision: Ball detection benchmark is accepted as the next production decision input
+
+Decision maker: Codex verification, pending Scott acceptance
+
+Date: 2026-06-14
+
+Decision:
+- Treat docs/BALL_DETECTION_BENCHMARK_2026-06-14.md and benchmark/results_summary.csv as the current benchmark evidence for detector production planning.
+- Do not retrain before first correcting the production path, unless Scott decides otherwise.
+
+Evidence:
+- benchmark/results_summary.csv reports production YOLOv8n COCO class 32 at conf=0.15: TP=0, FP=11, FN=108, precision=0.0, recall=0.0.
+- benchmark/results_summary.csv reports models/ball_detector.pt class 0 at conf=0.15: TP=106, FP=128, FN=2, precision=0.453, recall=0.9815.
+- benchmark/results_perframe.csv contains 552 per-frame rows and aggregates to the same totals as benchmark/results_summary.csv.
+- docs/BALL_DETECTION_BENCHMARK_2026-06-14.md documents the negative-frame review limitation as Unknown.
+
+Follow-up:
+- Scott should approve or reject docs/BALL_DETECTION_PRODUCTION_SWITCH_PLAN.md before Codex changes production detector behavior.
