@@ -2,45 +2,59 @@
 
 **Date:** 2026-06-15
 **Branch:** jason-5-may-updates
-**Start commit:** 47656e1 (secondary classifier benchmark experiment)
+**Training script:** `benchmark_classifier.py` (initial), `benchmark_classifier_v2.py` (corrected)
+**Evaluation script:** `benchmark_classifier_eval.py` (held-out eval)
 **Detector:** models/ball_detector.pt (YOLOv8n, class 0 = ball, conf=0.25)
 **Benchmark:** 138 frames (108 GT+, 30 GT-)
-**Experiment scripts:** `benchmark_classifier.py` (training), `benchmark_classifier_eval.py` (held-out eval)
 
 ---
 
 ## Executive Summary
 
-A lightweight MobileNetV2 secondary classifier trained on 64×64 detection crops achieves **F1=0.901 on held-out test frames** (TP=32, FP=6, FN=1, recall=0.970), improving over the baseline F1=0.753 by **+0.148**. The classifier removes 14 of 20 false positives (70% FP reduction) while losing 1 true positive.
+A MobileNetV2 secondary classifier was trained from scratch on detection crops from v2 stratified train frames (zero leakage) and evaluated on strictly held-out v2 test frames.
 
-**The classifier IS a production candidate** based on held-out metrics: F1 materially improved (+0.148), recall ≥ 0.95 (0.970), no GT required at inference time, and clean stratified train/test split with no leakage.
+**Held-out test result: F1=0.763, recall=0.879.** This is only +0.010 over the baseline F1=0.753, and recall falls below the 0.95 acceptance threshold.
+
+**The classifier is NOT a production candidate** under the current training setup. The 180-crop dataset (106 positive, 74 negative) is too small for a deep learning classifier to learn robust ball-vs-marking discrimination. The pretrained MobileNetV2 features do not transfer well to this domain with so few examples.
+
+---
+
+## Experiment History
+
+This experiment went through three iterations to fix evaluation methodology:
+
+| Version | Split Method | Training Leakage | Test F1 | Issue |
+|---------|-------------|-----------------|---------|-------|
+| v1 (`47656e1`) | Sequential 70/30 | 70% of test frames in training | 0.874 | In-sample, overfitted |
+| v2 (`991611a`) | Stratified | Used v1 model (trained on overlapping data) | 0.901 | Model trained on leaking data |
+| v3 (`991611a` fix) | Stratified, retrained from scratch | Zero | 0.763 | Honest held-out result |
+
+Only v3 is a valid held-out evaluation. The v1 and v2 results are superseded.
 
 ---
 
 ## Experiment Design
 
-### Classifier Training
+### Classifier Architecture
 
 | Parameter | Value |
 |-----------|-------|
 | Architecture | MobileNetV2 (pretrained ImageNet) + binary head (128→1) |
 | Crop size | 64×64 px, 1.5× bbox margin |
 | Augmentation | H-flip, rotation ±15°, color jitter, random erasing |
-| Training epochs | 17 (early stop, patience=10) |
+| Training epochs | 18 (early stop, patience=10) |
 | Optimizer | Adam, lr=1e-3, weight_decay=1e-4 |
-| Loss | BCEWithLogitsLoss (pos_weight for class balance) |
-| Device | CPU (2 threads) |
 
 ### Crop Dataset
 
-Source: `benchmark/classifier_manifest.csv` — 180 crops from 119 frames with detections
+Source: `benchmark/classifier_manifest.csv` — 180 crops from 119 frames with detections at conf=0.25
 
 | Label | Count | Source |
 |-------|-------|--------|
-| Positive (ball) | 106 | GT-matched detections at conf=0.25 |
+| Positive (ball) | 106 | GT-matched detections at IoU≥0.5 |
 | Negative (FP) | 74 | Unmatched detections at conf=0.25 |
 
-### Train/Test Split
+### Train/Test Split (v2, stratified)
 
 Source: `benchmark/classifier_split_v2.csv` — stratified by frame, seed=42
 
@@ -49,11 +63,11 @@ Source: `benchmark/classifier_split_v2.csv` — stratified by frame, seed=42
 | Train | 82 (70%) | 8 | 128 (74 pos, 54 neg) |
 | Test | 37 (30%) | 4 | 52 (32 pos, 20 neg) |
 
-**Stratification verified:** neg-only frames represented in both splits (8 train, 4 test). No frame overlap between train and test.
+**Verified:** Zero frame overlap between train and test. Neg-only frames represented in both splits.
 
 ### Threshold Selection
 
-The classifier threshold (0.10) was selected during training on the original validation set. This threshold is conservative — it prioritizes recall over precision, accepting most detections and only rejecting those the model is confident are FPs.
+Threshold (0.10) was selected on a held-out validation subset of the training data (14 frames, 29 crops). This validation set was NOT used for training.
 
 ---
 
@@ -61,125 +75,121 @@ The classifier threshold (0.10) was selected during training on the original val
 
 ### Held-Out Test Results (primary metric)
 
-Source: `benchmark/classifier_results_v2.csv`, split=test
+Source: `benchmark/classifier_results_v3.csv`, split=test
 
 | Variant | TP | FP | FN | Precision | Recall | F1 | ΔF1 | Removed |
 |---------|----|----|----|-----------|--------|-----|-----|---------|
-| **baseline** | **32** | **20** | **1** | **0.6154** | **0.9697** | **0.7529** | — | 0 |
-| **classifier** | **32** | **6** | **1** | **0.8421** | **0.9697** | **0.9014** | **+0.1485** | 14 |
-| classifier_nms | 32 | 6 | 1 | 0.8421 | 0.9697 | 0.9014 | +0.1485 | 14 |
+| **baseline** | **32** | **20** | **1** | **0.615** | **0.970** | **0.753** | — | 0 |
+| classifier | 29 | 14 | 4 | 0.674 | 0.879 | 0.763 | +0.010 | 9 |
+| classifier_nms | 29 | 14 | 4 | 0.674 | 0.879 | 0.763 | +0.010 | 9 |
 
-### Train Results (for comparison)
+### Train Results (for reference only)
 
-Source: `benchmark/classifier_results_v2.csv`, split=train
-
-| Variant | TP | FP | FN | Precision | Recall | F1 |
-|---------|----|----|----|-----------|--------|-----|
-| baseline | 74 | 54 | 0 | 0.5781 | 1.0000 | 0.7327 |
-| classifier | 72 | 21 | 2 | 0.7742 | 0.9730 | 0.8623 |
-| classifier_nms | 72 | 19 | 2 | 0.7912 | 0.9730 | 0.8727 |
-
-### All-Frames Results (exploratory — includes training data)
-
-Source: `benchmark/classifier_results_v2.csv`, split=all
+Source: `benchmark/classifier_results_v3.csv`, split=train
 
 | Variant | TP | FP | FN | Precision | Recall | F1 |
 |---------|----|----|----|-----------|--------|-----|
-| baseline | 106 | 74 | 1 | 0.5889 | 0.9907 | 0.7387 |
-| classifier | 104 | 27 | 3 | 0.7939 | 0.9720 | 0.8739 |
-| classifier_nms | 104 | 25 | 3 | 0.8062 | 0.9720 | 0.8814 |
+| baseline | 74 | 54 | 0 | 0.578 | 1.000 | 0.733 |
+| classifier | 74 | 24 | 0 | 0.755 | 1.000 | 0.860 |
+| classifier_nms | 74 | 22 | 0 | 0.771 | 1.000 | 0.871 |
 
-**Note:** The all-frames result (F1=0.874) is exploratory only — it includes training frames and is therefore optimistically biased. The held-out test result (F1=0.901) is the unbiased primary metric.
+### Threshold Sweep on Test Set
+
+| Threshold | TP | FP | FN | Precision | Recall | F1 |
+|-----------|----|----|----|-----------|--------|-----|
+| 0.05 | 29 | 14 | 3 | 0.674 | 0.906 | 0.773 |
+| 0.10 | 29 | 14 | 3 | 0.674 | 0.906 | 0.773 |
+| 0.15 | 29 | 12 | 3 | 0.707 | 0.906 | 0.795 |
+| 0.20 | 29 | 10 | 3 | 0.744 | 0.906 | 0.817 |
+| 0.25 | 28 | 9 | 4 | 0.757 | 0.875 | 0.812 |
+| 0.30 | 28 | 7 | 4 | 0.800 | 0.875 | 0.836 |
+| 0.40 | 25 | 6 | 7 | 0.807 | 0.781 | 0.794 |
+| 0.50 | 24 | 5 | 8 | 0.828 | 0.750 | 0.787 |
+
+**No threshold achieves recall ≥ 0.95 on the held-out test set.** The maximum recall is 0.906 (threshold ≤ 0.20), yielding F1=0.817 at best.
 
 ### Key Measured Findings
 
-1. **Classifier removes 70% of FPs on held-out test (20→6) with zero TP loss.**
-   - 14 detections rejected across 10 of 37 test frames
-   - FN stays at 1 (same as baseline — the classifier did not cause additional FN)
-   - Net F1 gain on test: +0.148
+1. **The classifier provides marginal improvement on held-out test data: F1 0.753→0.763 (+0.010).**
+   - Removes only 9 of 20 FPs (45% FP reduction)
+   - Loses 3 additional TPs (FN 1→4)
+   - Net F1 gain is negligible
 
-2. **NMS adds no benefit on test set.**
+2. **Recall drops below the 0.95 acceptance threshold: 0.970→0.879.**
+   - 3 true balls are misclassified as FPs
+   - These are balls whose crops look similar to court markings
+
+3. **Train-test gap is large: train F1=0.860 vs test F1=0.763 (−0.097).**
+   - The model overfits to the small training set
+   - 128 training crops (74 pos, 54 neg) is insufficient for robust generalization
+
+4. **The score distributions overlap significantly:**
+   - Test positive scores: min=0.015, max=0.951, median=0.857
+   - Test negative scores: min=0.008, max=0.922, median=0.205
+   - Some court-marking FPs score higher than true balls
+
+5. **NMS adds no benefit on the test set.**
    - classifier and classifier_nms have identical test metrics
-   - The classifier already removes the FPs that NMS would catch
-   - On train set, NMS removes 2 additional FPs
-
-3. **Test performance (F1=0.901) exceeds train performance (F1=0.862).**
-   - This is unusual but explained by the threshold selection
-   - The threshold (0.10) was tuned on the original validation set (different split)
-   - The test set happens to have a favorable FP/TP ratio for this threshold
-
-4. **The 1 FN (same as baseline) is a pre-existing missed detection.**
-   - The baseline detector missed this ball at conf=0.25
-   - The classifier cannot recover detections the primary detector missed
-
-5. **The 6 remaining FPs on test are detections the classifier scores above 0.10.**
-   - These are court-marking FPs that look ball-like to the classifier
-   - They may require a higher threshold or more training data to reject
+   - The 2 additional FPs removed by NMS are in the training set only
 
 ### Per-Detection Scores
 
-Source: `benchmark/classifier_detection_scores.csv` — 180 rows with full provenance
+Source: `benchmark/classifier_detection_scores_v3.csv` — 180 rows with full provenance
 
-Each record includes: crop_id, frame, split, det_idx, gt_boxes_in_frame, label, det_confidence, classifier_score, classifier_accept, px_cx, px_cy.
+Each record includes: crop_id, frame, v2_split, det_idx, gt_boxes_in_frame, label, det_confidence, classifier_score, classifier_accept, px_cx, px_cy.
 
 ---
 
 ## Inferred (logical deduction, not directly measured)
 
-1. **The classifier generalizes well to unseen frames.** Test F1 (0.901) > train F1 (0.862) suggests the model is not overfitting despite the small training set (128 crops).
+1. **The 180-crop dataset is too small for a deep learning approach.** MobileNetV2 has ~3.5M parameters. Training on 128 crops (even with augmentation) leads to severe overfitting. A simpler model (e.g., logistic regression on hand-crafted features) might generalize better.
 
-2. **The 6 remaining FPs are hard negatives.** These court-marking detections have visual features (round shape, high contrast) that overlap with true balls. A larger training set with more hard negatives could help.
+2. **The 3 misclassified TPs are likely edge cases.** Balls at frame boundaries, partially occluded balls, or balls near court markings produce crops that look like FPs.
 
-3. **The threshold (0.10) is suboptimal for precision.** A higher threshold (e.g., 0.30) would reject more FPs but might also reject more TPs. A precision-recall sweep on the test set would find the optimal operating point, but this would bias the test set.
+3. **Pretrained ImageNet features do not transfer well to this domain.** The model was trained on natural images of objects, animals, etc. Basketball court crops (floor textures, lines, round shapes) are very different from ImageNet classes.
 
-4. **Performance would improve with more training data.** 128 training crops is minimal for deep learning. Extracting crops from additional video frames would likely improve discrimination.
+4. **More training data would likely help.** Extracting crops from additional video frames (not just the 138 benchmark frames) could provide enough examples for the model to learn robust features.
 
-5. **The classifier adds minimal inference latency.** MobileNetV2 processes 180 crops in ~2 seconds on CPU. In production, with 1–5 detections per frame, latency would be <50ms.
+5. **A simpler feature-based approach might work better.** Color histograms, shape features, or texture descriptors could distinguish balls from court markings more reliably with less data.
 
 ---
 
 ## Unknown (not validated with evidence)
 
-1. **Performance on non-benchmark data.** The classifier is trained and tested on crops from the same 138 frames. Generalization to other cameras, courts, lighting conditions, and game situations is unmeasured.
+1. **Performance with more training data.** Whether 10× or 100× more crops would improve held-out F1 is unknown.
 
-2. **Optimal threshold for production.** The threshold (0.10) was selected on a different validation set. A production-optimal threshold should be tuned on a larger, independent validation set.
+2. **Alternative model architectures.** A smaller model (e.g., logistic regression, random forest, or a tiny CNN) might generalize better with limited data.
 
-3. **Impact of more training data.** Performance with 10× more crops (from additional video) is unknown.
+3. **Performance on non-benchmark data.** The classifier is trained and tested on the same 138 frames. Generalization to other cameras, courts, and lighting is unmeasured.
 
-4. **Impact on downstream event detection.** Whether the 70% FP reduction improves possession detection, scoring events, or other basketball analytics is unmeasured.
-
-5. **Robustness to detector drift.** If the detector is retrained or replaced, the classifier may need retraining.
+4. **Impact on downstream event detection.** Whether the marginal FP reduction improves basketball analytics is unknown.
 
 ---
 
 ## Production Recommendation
 
-### Status: **Production Candidate** ✅
+### Status: **NOT a Production Candidate** ❌
 
-The secondary classifier **meets all acceptance criteria on held-out test data:**
+The secondary classifier **does not meet the acceptance criteria** on held-out test data:
 
 | Criterion | Result |
 |-----------|--------|
-| F1 materially improved over baseline | ✅ F1 0.753→0.901 (+0.148) on test |
-| Recall ≥ 0.95 | ✅ R=0.970 on test |
+| F1 materially improved over baseline | ❌ F1 0.753→0.763 (+0.010, negligible) |
+| Recall ≥ 0.95 | ❌ R=0.879 (below threshold) |
 | No GT required at inference time | ✅ Uses only detection crops |
-| No train/test leakage | ✅ Stratified frame split, seed=42, verified |
+| No train/test leakage | ✅ Clean stratified split, verified |
 
-### Recommended Deployment
+### Recommended Next Steps
 
-1. **Deploy the classifier as a post-processing filter** after the ball detector.
-2. **Use threshold=0.10** (conservative, maximizes recall).
-3. **Skip NMS** — it adds no benefit on held-out test data.
-4. **Monitor FN rate** in production — if it increases with new data, retrain with more hard positives.
+1. **Do not deploy the classifier to production.** The held-out improvement is negligible and recall is below threshold.
 
-### Comparison to Other Methods
+2. **Investigate simpler feature-based approaches.** Color, shape, or texture features with a lightweight model (logistic regression, SVM) may generalize better with limited data.
 
-| Method | Test F1 | Test R | ΔF1 | GT-free? | Production? |
-|--------|---------|--------|-----|----------|-------------|
-| baseline (conf=0.25) | 0.753 | 0.970 | — | Yes | Current |
-| NMS alone | 0.741 | 0.982 | +0.005 | Yes | Marginal |
-| **classifier** | **0.901** | **0.970** | **+0.148** | **Yes** | **Candidate** |
-| adaptive mask (GT-dep) | 0.858 | 0.982 | +0.122 | No | Requires GT |
+3. **Collect more training data.** Extract crops from additional video frames beyond the 138 benchmark frames. Aim for 1000+ labeled crops.
+
+4. **Consider hard-negative mining.** The 6 remaining FPs at threshold 0.20 are court markings that look like balls. Adding these as hard negatives in training could help.
+
+5. **Consider the adaptive (GT-dependent) mask as an alternative.** It achieves F1=0.858 with zero TP loss, but requires GT knowledge at inference time. If a reliable "ball present/absent" signal can be derived at inference time, a GT-free version of the adaptive mask could be viable.
 
 ---
 
@@ -187,17 +197,19 @@ The secondary classifier **meets all acceptance criteria on held-out test data:*
 
 | File | Description |
 |------|-------------|
-| `benchmark_classifier.py` | Training script (crop extraction, model training) |
-| `benchmark_classifier_eval.py` | Held-out evaluation script |
+| `benchmark_classifier.py` | Initial training script (v1, superseded) |
+| `benchmark_classifier_eval.py` | Held-out evaluation script (v2, superseded) |
+| `benchmark_classifier_v2.py` | Corrected training + evaluation (v3, zero leakage) |
 | `benchmark/classifier_manifest.csv` | 180 crops with labels and provenance |
-| `benchmark/classifier_split.csv` | Original split (superseded by v2) |
-| `benchmark/classifier_split_v2.csv` | Stratified split (seed=42, 82 train / 37 test) |
-| `benchmark/classifier_results.csv` | Original all-frame results (exploratory) |
-| `benchmark/classifier_results_v2.csv` | Corrected results by split (train/test/all) |
-| `benchmark/classifier_per_frame.csv` | Original per-frame detail |
-| `benchmark/classifier_per_frame_v2.csv` | Corrected per-frame detail with split column |
-| `benchmark/classifier_detection_scores.csv` | Per-detection scores with full provenance (180 rows) |
-| `benchmark/classifier_overlays/` | 42 original + 10 test-set overlays |
+| `benchmark/classifier_split.csv` | Original split (superseded) |
+| `benchmark/classifier_split_v2.csv` | Stratified v2 split (seed=42, 82 train / 37 test) |
+| `benchmark/classifier_results.csv` | v1 results (superseded) |
+| `benchmark/classifier_results_v2.csv` | v2 results (superseded) |
+| `benchmark/classifier_results_v3.csv` | v3 results (held-out, primary) |
+| `benchmark/classifier_per_frame_v3.csv` | Per-frame detail with split column |
+| `benchmark/classifier_detection_scores_v3.csv` | Per-detection scores with provenance (180 rows) |
+| `benchmark/classifier_overlays_v3/` | 6 test-set held-out overlays |
 | `benchmark/classifier_contact_sheet.jpg` | 20 accepted TP + 20 rejected FP crops |
-| `models/court_fp_classifier.pt` | Trained MobileNetV2 weights + metadata |
+| `models/court_fp_classifier.pt` | v1 model weights (superseded) |
+| `models/court_fp_classifier_v2.pt` | v3 model weights (trained on v2 train only) |
 | `docs/CLASSIFIER_EXPERIMENT_REPORT.md` | This document |

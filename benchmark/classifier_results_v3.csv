@@ -1,0 +1,10 @@
+variant,split,frames,tp,fp,fn,precision,recall,f1,total_removed,threshold
+baseline,train,82,74,54,0,0.5781,1.0,0.7327,0,N/A
+baseline,test,37,32,20,1,0.6154,0.9697,0.7529,0,N/A
+baseline,all,119,106,74,1,0.5889,0.9907,0.7387,0,N/A
+classifier,train,82,74,24,0,0.7551,1.0,0.8605,30,0.1
+classifier,test,37,29,14,4,0.6744,0.8788,0.7632,9,0.1
+classifier,all,119,103,38,4,0.7305,0.9626,0.8306,39,0.1
+classifier_nms,train,82,74,22,0,0.7708,1.0,0.8706,32,0.1
+classifier_nms,test,37,29,14,4,0.6744,0.8788,0.7632,9,0.1
+classifier_nms,all,119,103,36,4,0.741,0.9626,0.8374,41,0.1
