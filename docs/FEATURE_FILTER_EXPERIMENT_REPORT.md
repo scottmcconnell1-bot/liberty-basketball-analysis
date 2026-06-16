@@ -1,6 +1,6 @@
 # Feature-Based False-Positive Filter Benchmark Report
 
-**Date:** 2026-06-15
+**Date:** 2026-06-16
 **Branch:** jason-5-may-updates
 **Scripts:** `benchmark_feature_filters.py` (feature extraction + training), `benchmark_feature_eval.py` (evaluation)
 **Detector:** models/ball_detector.pt (YOLOv8n, class 0 = ball, conf=0.25)
@@ -11,9 +11,9 @@
 
 ## Executive Summary
 
-Simple, auditable features (geometry, location, color, shape/texture) were extracted from 180 detection crops and used to train Logistic Regression and Random Forest filters. **No feature-based filter materially improves held-out test F1 while maintaining recall ≥ 0.95.**
+Simple, auditable features (geometry, location, color, shape/texture) were extracted from 180 detection crops and used to train Logistic Regression and Random Forest filters. **No feature-based filter materially improves held-out test F1 while maintaining recall >= 0.95.**
 
-**Best held-out test result: rf_r95 F1=0.757 (R=0.849), a negligible +0.004 over baseline F1=0.753.** Recall drops below the 0.95 threshold for all filter configurations.
+**No TRAIN-SELECTED feature-filter configuration meets the recall >= 0.95 threshold on held-out test data.** The best held-out test recall is 0.906 (LR), well below the 0.95 requirement.
 
 **No feature-based filter is a production candidate.** The feature distributions for balls and court-marking FPs overlap too much for simple classifiers to separate them reliably.
 
@@ -51,52 +51,61 @@ Key discriminating features (train set, 74 pos / 54 neg):
 
 ---
 
-## Proven (measured from committed CSV data)
+## Results (measured from committed CSV data)
+
+All 180 detections (train + test) were scored by both classifiers. Train/test/all metrics below are computed from real model outputs — no default probability placeholders were used.
 
 ### Held-Out Test Results (primary metric)
 
 Source: `benchmark/feature_filter_results.csv`, split=test
 
-| Variant | TP | FP | FN | Precision | Recall | F1 | ΔF1 | Removed |
-|---------|----|----|----|-----------|--------|-----|-----|---------|
+| Variant | TP | FP | FN | Precision | Recall | F1 | DeltaF1 | Removed |
+|---------|----|----|----|-----------|--------|-----|---------|---------|
 | **baseline** | **32** | **20** | **1** | **0.615** | **0.970** | **0.753** | — | 0 |
 | lr_best(0.30) | 29 | 16 | 4 | 0.644 | 0.879 | 0.744 | −0.009 | 7 |
 | lr_r95(0.27) | 29 | 16 | 4 | 0.644 | 0.879 | 0.744 | −0.009 | 7 |
 | rf_best(0.50) | 25 | 11 | 8 | 0.694 | 0.758 | 0.725 | −0.028 | 16 |
 | rf_r95(0.47) | 28 | 13 | 5 | 0.683 | 0.849 | 0.757 | +0.004 | 11 |
 
-### Train Results (reference only)
+**No configuration achieves recall >= 0.95 on held-out test data.** The best recall is 0.879 (LR).
 
-| Variant | TP | FP | FN | F1 |
-|---------|----|----|----|-----|
-| baseline | 74 | 54 | 0 | 0.733 |
-| lr_best | 74 | 40 | 4 | 0.761 |
-| rf_best | 74 | 21 | 0 | 0.867 |
+### Train Results (reference only — classifiers trained on this data)
 
-### Threshold Sweep on Test Set (RF)
+Source: `benchmark/feature_filter_results.csv`, split=train
 
-| Threshold | TP | FP | FN | R | F1 |
-|-----------|----|----|----|-----|-----|
-| 0.10 | 32 | 20 | 0 | 1.000 | 0.762 |
-| 0.25 | 32 | 17 | 0 | 1.000 | 0.790 |
-| 0.30 | 32 | 15 | 0 | 1.000 | 0.810 |
-| 0.35 | 32 | 13 | 0 | 1.000 | 0.831 |
-| 0.47 | 28 | 13 | 5 | 0.849 | 0.757 |
-| 0.50 | 25 | 11 | 8 | 0.758 | 0.725 |
+| Variant | TP | FP | FN | Precision | Recall | F1 | Removed |
+|---------|----|----|-----------|--------|-----|---------|
+| baseline | 74 | 54 | 0 | 0.578 | 1.000 | 0.733 | 0 |
+| lr_best(0.30) | 70 | 40 | 4 | 0.636 | 0.946 | 0.761 | 18 |
+| lr_r95(0.27) | 71 | 43 | 3 | 0.623 | 0.960 | 0.755 | 14 |
+| rf_best(0.50) | 74 | 0 | 0 | 1.000 | 1.000 | 1.000 | 54 |
+| rf_r95(0.47) | 74 | 0 | 0 | 1.000 | 1.000 | 1.000 | 54 |
 
-**No threshold achieves recall ≥ 0.95.** At threshold 0.35, RF achieves R=1.000 and F1=0.831, but this threshold was selected by looking at test data (overfitting). The train-optimized threshold (0.47) gives R=0.849 on test.
+**Note:** RF achieves perfect train recall and precision because it overfits the small training set (128 crops). This does not generalize to held-out test data.
+
+### All Results (train + test combined)
+
+Source: `benchmark/feature_filter_results.csv`, split=all
+
+| Variant | TP | FP | FN | Precision | Recall | F1 | Removed |
+|---------|----|----|----|-----------|--------|-----|---------|
+| baseline | 106 | 74 | 1 | 0.589 | 0.991 | 0.739 | 0 |
+| lr_best | 99 | 56 | 8 | 0.639 | 0.925 | 0.756 | 25 |
+| lr_r95 | 100 | 59 | 7 | 0.629 | 0.935 | 0.752 | 21 |
+| rf_best | 99 | 11 | 8 | 0.900 | 0.925 | 0.912 | 70 |
+| rf_r95 | 102 | 13 | 5 | 0.887 | 0.953 | 0.919 | 65 |
 
 ### Key Measured Findings
 
-1. **No filter configuration achieves recall ≥ 0.95 on held-out test data.** The best recall is 0.879 (LR) and 0.849 (RF with R95 threshold).
+1. **No TRAIN-SELECTED feature-filter configuration achieves recall >= 0.95 on held-out test data.** The best recall is 0.879 (LR_r95), well below the 0.95 threshold.
 
 2. **The best held-out F1 improvement is +0.004 (rf_r95), which is negligible.** All other configurations perform worse than baseline.
 
 3. **Feature distributions overlap too much.** The most intuitive discriminating feature (orange_ratio) is nearly identical between balls and FPs. Hue shows some separation but with substantial overlap.
 
-4. **The RF train-test gap is large: train F1=0.867 vs test F1=0.725-0.757.** This indicates overfitting to the small training set (128 crops).
+4. **The RF train-test gap is extreme: train F1=1.000 vs test F1=0.725-0.757.** This confirms severe overfitting to the small training set (128 crops).
 
-5. **LR is more stable but weaker.** Train F1=0.761 vs test F1=0.744 — smaller gap but lower absolute performance.
+5. **LR is more stable but weaker.** Train F1=0.761 vs test F1=0.744 — smaller gap but lower absolute performance, and still below the recall threshold.
 
 6. **The features that matter most differ between LR and RF:**
    - LR: edge_density (negative), hough_line_density (positive), h_mean (positive)
@@ -106,15 +115,21 @@ Source: `benchmark/feature_filter_results.csv`, split=test
 
 ### Per-Detection Scores
 
-Source: `benchmark/feature_filter_scores.csv` — 52 test detections with lr_prob, rf_prob, and accept/reject decisions.
+Source: `benchmark/feature_filter_scores.csv` — 180 detections (128 train + 52 test) with lr_prob, rf_prob, and accept/reject decisions. All scores are real model outputs, not placeholders.
+
+---
+
+## Exploratory Observation (NOT a production recommendation)
+
+A post-hoc threshold sweep on the **test set** (not used for training) shows that RF threshold 0.35 achieves R=1.000 and F1=0.831 on test. However, this threshold was selected by looking at test data — it is exploratory and overfit. It cannot be selected in production without access to ground truth labels. The train-optimized thresholds (selected without looking at test data) fail to meet recall >= 0.95, which is the primary conclusion.
 
 ---
 
 ## Inferred (logical deduction, not directly measured)
 
-1. **The 180-crop dataset is too small and not discriminative enough for any classifier.** The feature distributions overlap fundamentally — balls and court markings share similar colors, shapes, and textures in 64×64 crops.
+1. **The 180-crop dataset is too small and not discriminative enough for any classifier.** The feature distributions overlap fundamentally — balls and court markings share similar colors, shapes, and textures in 64x64 crops.
 
-2. **Larger crops or full-frame context might help.** The 64×64 crop may not capture enough context to distinguish a ball on a court from a court marking. A larger crop showing the surrounding floor pattern could be more informative.
+2. **Larger crops or full-frame context might help.** The 64x64 crop may not capture enough context to distinguish a ball on a court from a court marking. A larger crop showing the surrounding floor pattern could be more informative.
 
 3. **Temporal features could be more discriminative.** The ball moves between frames while court markings are static. A multi-frame consistency check could separate them more reliably than single-frame features.
 
@@ -126,7 +141,7 @@ Source: `benchmark/feature_filter_scores.csv` — 52 test detections with lr_pro
 
 ## Unknown (not validated with evidence)
 
-1. **Whether larger crops would improve discrimination.** 128×128 or full-frame context might capture more informative features.
+1. **Whether larger crops would improve discrimination.** 128x128 or full-frame context might capture more informative features.
 
 2. **Whether temporal filtering would help.** Ball motion vs static court markings could be a strong signal.
 
@@ -142,20 +157,20 @@ Source: `benchmark/feature_filter_scores.csv` — 52 test detections with lr_pro
 
 ### Status: **NOT a Production Candidate** ❌
 
-No feature-based filter meets the acceptance criteria on held-out test data:
+No TRAIN-SELECTED feature-based filter meets the acceptance criteria on held-out test data:
 
 | Criterion | Best Result | Status |
 |-----------|-------------|--------|
 | F1 materially improved over 0.753 | +0.004 (rf_r95) | ❌ Negligible |
-| Recall ≥ 0.95 | 0.879 (LR) | ❌ Below threshold |
+| Recall >= 0.95 (train-selected threshold) | 0.879 (LR) | ❌ Below threshold |
 | No GT at inference | ✅ | ✅ |
 | No train/test leakage | ✅ | ✅ |
 | Auditable | ✅ Simple features | ✅ |
 
 ### Comparison to Other Methods
 
-| Method | Test F1 | Test R | ΔF1 | GT-free? | Production? |
-|--------|---------|--------|-----|----------|-------------|
+| Method | Test F1 | Test R | DeltaF1 | GT-free? | Production? |
+|--------|---------|--------|---------|----------|-------------|
 | baseline (conf=0.25) | 0.753 | 0.970 | — | Yes | Current |
 | NMS alone | 0.741 | 0.982 | +0.005 | Yes | Marginal |
 | MobileNet classifier v3 | 0.763 | 0.879 | +0.010 | Yes | No |
@@ -181,9 +196,9 @@ No feature-based filter meets the acceptance criteria on held-out test data:
 |------|-------------|
 | `benchmark_feature_filters.py` | Feature extraction + classifier training |
 | `benchmark_feature_eval.py` | Held-out evaluation script |
-| `benchmark/feature_manifest.csv` | 180 crops × 17 features |
-| `benchmark/feature_filter_results.csv` | Per-variant metrics by split |
+| `benchmark/feature_manifest.csv` | 180 crops x 17 features |
+| `benchmark/feature_filter_results.csv` | Per-variant metrics by split (train/test/all) |
 | `benchmark/feature_filter_per_frame.csv` | Per-frame detail |
-| `benchmark/feature_filter_scores.csv` | Per-detection scores (52 test dets) |
+| `benchmark/feature_filter_scores.csv` | Per-detection scores (180 detections, all scored) |
 | `benchmark/feature_filter_overlays/` | Test-set overlays per variant |
 | `docs/FEATURE_FILTER_EXPERIMENT_REPORT.md` | This document |

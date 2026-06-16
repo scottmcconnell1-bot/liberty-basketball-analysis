@@ -1,4 +1,4 @@
-#!/usr/bin/env3
+#!/usr/bin/env python3
 """
 Feature-Based FP Filter — Complete Evaluation
 ===============================================
@@ -88,12 +88,26 @@ print("\n=== Training classifiers ===")
 # Logistic Regression
 lr = LogisticRegression(C=1.0, class_weight='balanced', random_state=RANDOM_SEED, max_iter=1000)
 lr.fit(X_trn_sc, y_trn)
-lr_probs = lr.predict_proba(X_tst_sc)[:, 1]
 
 # Random Forest
 rf = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=RANDOM_SEED, max_depth=5)
 rf.fit(X_trn_sc, y_trn)
-rf_probs = rf.predict_proba(X_tst_sc)[:, 1]
+
+# ── Score ALL 180 detections (train + test) with both classifiers ──
+# This ensures train/test/all metrics are all based on real model outputs,
+# not default 0.5 placeholders.
+X_all = np.array([[r[k] for k in feat_keys] for r in feature_rows])
+X_all_sc = scaler.transform(X_all)
+lr_probs_all = lr.predict_proba(X_all_sc)[:, 1]
+rf_probs_all = rf.predict_proba(X_all_sc)[:, 1]
+
+# Also get train-only probs for threshold selection
+lr_probs_trn = lr.predict_proba(X_trn_sc)[:, 1]
+rf_probs_trn = rf.predict_proba(X_trn_sc)[:, 1]
+
+# Test probs (held-out)
+lr_probs_tst = lr.predict_proba(X_tst_sc)[:, 1]
+rf_probs_tst = rf.predict_proba(X_tst_sc)[:, 1]
 
 # ── Find optimal thresholds on TRAIN, apply to TEST ──
 print("\n=== Threshold optimization on TRAIN ===")
@@ -118,10 +132,8 @@ def sweep_threshold(probs, y_true, name):
             best_r = r
     return results, best_thresh, best_f1
 
-lr_train_results, lr_best_thresh, lr_best_f1 = sweep_threshold(
-    lr.predict_proba(X_trn_sc)[:, 1], y_trn, "LR")
-rf_train_results, rf_best_thresh, rf_best_f1 = sweep_threshold(
-    rf.predict_proba(X_trn_sc)[:, 1], y_trn, "RF")
+lr_train_results, lr_best_thresh, lr_best_f1 = sweep_threshold(lr_probs_trn, y_trn, "LR")
+rf_train_results, rf_best_thresh, rf_best_f1 = sweep_threshold(rf_probs_trn, y_trn, "RF")
 
 print(f"LR best train: thresh={lr_best_thresh:.2f}, F1={lr_best_f1:.4f}")
 print(f"RF best train: thresh={rf_best_thresh:.2f}, F1={rf_best_f1:.4f}")
@@ -142,8 +154,8 @@ def find_recall_threshold(probs, y_true, min_recall=0.95):
             best_f1, best_thresh = f, thresh
     return best_thresh, best_f1
 
-lr_r95_thresh, lr_r95_f1 = find_recall_threshold(lr.predict_proba(X_trn_sc)[:, 1], y_trn)
-rf_r95_thresh, rf_r95_f1 = find_recall_threshold(rf.predict_proba(X_trn_sc)[:, 1], y_trn)
+lr_r95_thresh, lr_r95_f1 = find_recall_threshold(lr_probs_trn, y_trn)
+rf_r95_thresh, rf_r95_f1 = find_recall_threshold(rf_probs_trn, y_trn)
 print(f"LR R>=0.95: thresh={lr_r95_thresh:.2f}, F1={lr_r95_f1:.4f}")
 print(f"RF R>=0.95: thresh={rf_r95_thresh:.2f}, F1={rf_r95_f1:.4f}")
 
@@ -167,40 +179,41 @@ def evaluate_filter(probs, y_true, thresh, name):
 baseline_test = evaluate_filter(np.ones(len(y_tst)), y_tst, 0.0, "baseline")
 
 # LR with best train threshold
-lr_test = evaluate_filter(lr_probs, y_tst, lr_best_thresh, f"LR_best({lr_best_thresh:.2f})")
+lr_test = evaluate_filter(lr_probs_tst, y_tst, lr_best_thresh, f"LR_best({lr_best_thresh:.2f})")
 
 # LR with R>=0.95 threshold
-lr_r95_test = evaluate_filter(lr_probs, y_tst, lr_r95_thresh, f"LR_R95({lr_r95_thresh:.2f})")
+lr_r95_test = evaluate_filter(lr_probs_tst, y_tst, lr_r95_thresh, f"LR_R95({lr_r95_thresh:.2f})")
 
 # RF with best train threshold
-rf_test = evaluate_filter(rf_probs, y_tst, rf_best_thresh, f"RF_best({rf_best_thresh:.2f})")
+rf_test = evaluate_filter(rf_probs_tst, y_tst, rf_best_thresh, f"RF_best({rf_best_thresh:.2f})")
 
 # RF with R>=0.95 threshold
-rf_r95_test = evaluate_filter(rf_probs, y_tst, rf_r95_thresh, f"RF_R95({rf_r95_thresh:.2f})")
+rf_r95_test = evaluate_filter(rf_probs_tst, y_tst, rf_r95_thresh, f"RF_R95({rf_r95_thresh:.2f})")
 
-# ── Save per-detection scores ──
+# ── Save per-detection scores (ALL 180 detections) ──
 print("\n=== Saving per-detection scores ===")
 score_rows = []
-for i, row in enumerate(tst_rows):
+for i, row in enumerate(feature_rows):
     score_rows.append({
         'crop_id': row['crop_id'],
         'frame': row['frame'],
+        'split': row['split'],
         'label': row['label'],
         'px_cx': row['px_cx'],
         'px_cy': row['px_cy'],
-        'lr_prob': round(float(lr_probs[i]), 6),
-        'rf_prob': round(float(rf_probs[i]), 6),
-        'lr_accept_best': int(lr_probs[i] >= lr_best_thresh),
-        'lr_accept_r95': int(lr_probs[i] >= lr_r95_thresh),
-        'rf_accept_best': int(rf_probs[i] >= rf_best_thresh),
-        'rf_accept_r95': int(rf_probs[i] >= rf_r95_thresh),
+        'lr_prob': round(float(lr_probs_all[i]), 6),
+        'rf_prob': round(float(rf_probs_all[i]), 6),
+        'lr_accept_best': int(lr_probs_all[i] >= lr_best_thresh),
+        'lr_accept_r95': int(lr_probs_all[i] >= lr_r95_thresh),
+        'rf_accept_best': int(rf_probs_all[i] >= rf_best_thresh),
+        'rf_accept_r95': int(rf_probs_all[i] >= rf_r95_thresh),
     })
 
 with open(os.path.join(OUT_DIR, 'feature_filter_scores.csv'), 'w', newline='') as f:
     writer = csv.DictWriter(f, fieldnames=score_rows[0].keys())
     writer.writeheader()
     writer.writerows(score_rows)
-print(f"Written: {OUT_DIR}/feature_filter_scores.csv")
+print(f"Written: {OUT_DIR}/feature_filter_scores.csv ({len(score_rows)} rows)")
 
 # ── Per-frame benchmark measurement ──
 print("\n=== Per-frame benchmark measurement ===")
@@ -238,23 +251,22 @@ def metrics(tp,fp,fn):
     f=2*p*r/(p+r) if p+r>0 else 0
     return round(p,4),round(r,4),round(f,4)
 
-# Build frame->dets map with scores
+# Build frame->dets map with real scores for ALL detections
+# score_rows now covers all 180 crops (train + test), so no default 0.5 needed
+score_by_crop_id = {r['crop_id']: r for r in score_rows}
 frame_dets = {}
 for crop in all_crops:
-    # Find matching feature row
-    feat = next((r for r in feature_rows if r['crop_id'] == crop['crop_id']), None)
-    if feat is None: continue
-    
-    # Find matching score row (test only)
-    score = next((r for r in score_rows if r['crop_id'] == crop['crop_id']), None)
-    
+    score = score_by_crop_id.get(crop['crop_id'])
+    if score is None:
+        continue  # skip crops that failed feature extraction
+
     d = {
         'cx': crop['det_cx'], 'cy': crop['det_cy'],
         'w': crop['det_w'], 'h': crop['det_h'],
         'px_cx': crop['px_cx'], 'px_cy': crop['px_cy'],
         'label': crop['label'], 'crop_id': crop['crop_id'],
-        'lr_prob': score['lr_prob'] if score else 0.5,
-        'rf_prob': score['rf_prob'] if score else 0.5,
+        'lr_prob': score['lr_prob'],
+        'rf_prob': score['rf_prob'],
     }
     frame_dets.setdefault(crop['frame'], []).append(d)
 
