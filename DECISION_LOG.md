@@ -1,6 +1,6 @@
 # Decision Log
 
-Updated: 2026-06-14
+Updated: 2026-06-15
 Branch: jason-5-may-updates
 
 This file records project decisions that should not live only in chat history. New entries must include the decision, rationale, decision maker, and evidence when available.
@@ -187,3 +187,30 @@ Evidence:
 
 Follow-up:
 - Hermes/OWL should verify the 0.25 default on Linux after implementation.
+
+### Decision: Do not deploy the current secondary classifier
+
+Decision maker: Scott approved recording the verified outcome; Codex verified repository evidence
+
+Date: 2026-06-15
+
+Decision:
+- Do not deploy the MobileNetV2 secondary classifier from the current 180-crop benchmark dataset.
+- Treat the earlier classifier results in commits 47656e1 and 991611a as superseded because they were contaminated by training/evaluation leakage.
+- Treat commit d014193 and benchmark/classifier_results_v3.csv as the current classifier decision evidence.
+
+Rationale:
+- The corrected v3 experiment retrained from scratch on the v2 stratified train split and evaluated on held-out v2 test frames.
+- The classifier provides only a negligible held-out F1 improvement and reduces recall below the project threshold.
+- Ball detection recall remains important for downstream basketball analysis, possession review, and coach workflow; a post-processing filter that drops too many true balls should not be promoted to production.
+
+Evidence:
+- benchmark_classifier_v2.py trains a new model from v2 train frames and saves models/court_fp_classifier_v2.pt.
+- benchmark/classifier_results_v3.csv reports held-out test baseline: TP=32, FP=20, FN=1, precision=0.6154, recall=0.9697, F1=0.7529.
+- benchmark/classifier_results_v3.csv reports held-out test classifier: TP=29, FP=14, FN=4, precision=0.6744, recall=0.8788, F1=0.7632.
+- benchmark/classifier_results_v3.csv reports held-out test classifier_nms matches classifier at F1=0.7632.
+- Codex verified on 2026-06-15 that the v2 train/test split has 82 train frames, 37 test frames, and 0 overlap, and that classifier_detection_scores_v3.csv contains 128 train crops and 52 test crops.
+
+Follow-up:
+- Keep production at the fine-tuned ball detector with ball_confidence=0.25.
+- Revisit secondary classification only with substantially more labeled hard-negative and hard-positive crop data or a simpler feature-based approach that can be validated on held-out frames.

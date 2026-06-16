@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-14
+Updated: 2026-06-15
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -50,7 +50,7 @@ Remaining:
 
 ### 4. Ball Detection Audit
 
-Status: Production switch verified; precision cleanup next
+Status: Production switch and threshold tuning verified; post-processing experiments measured
 
 Verified issue:
 - experiments/detector_audit_top20/AUDIT_RESULTS.md reports v14 detector had zero basketball detections in its top 20 detections.
@@ -65,10 +65,18 @@ Verified issue:
 - Hermes/OWL verified commit 2c31954 on Linux: 186/186 tests passed and production path loads models/ball_detector.pt class 0 at conf=0.15.
 - Hermes/OWL benchmark smoke found detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
 - Scott approved raising the production ball confidence default to 0.25 on 2026-06-15.
+- Hermes/OWL verified commit 6213a51 on Linux: threshold-only scope and 186/186 tests passed.
+- docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md reports the best measured single-threshold result at conf=0.25: TP=106, FP=74, FN=2, precision=0.5889, recall=0.9815, F1=0.7361.
+- The GT-dependent adaptive court-mask benchmark improved F1, but it uses ground-truth ball positions and is not deployable as production logic.
+- The GT-free grid/NMS court-marking variants did not materially improve over the conf=0.25 baseline.
+- The corrected secondary-classifier v3 benchmark retrained from scratch on v2 train frames and evaluated on held-out v2 test frames.
+- benchmark/classifier_results_v3.csv reports held-out test baseline F1=0.7529 and classifier F1=0.7632, while recall drops from 0.9697 to 0.8788.
+- docs/CLASSIFIER_EXPERIMENT_REPORT.md marks the secondary classifier as not a production candidate with the current 180-crop dataset.
 
 Next step:
-- Verify the 0.25 production default on Linux.
-- Implement and measure a true court-marking exclusion variant before any further production post-processing changes.
+- Do not deploy the current secondary classifier.
+- Choose the next detector-quality path: gather more labeled hard-negative/ball crops, test simpler feature-based filters, or broaden the benchmark across additional games and gyms.
+- Keep any new detector post-processing as benchmark-only until it materially improves F1 without dropping recall below the project threshold.
 
 ### 5. Data Governance
 

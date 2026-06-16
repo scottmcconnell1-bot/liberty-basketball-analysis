@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-14
+Updated: 2026-06-15
 Branch: jason-5-may-updates
 
 ## Proven
@@ -51,13 +51,21 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Hermes/OWL benchmark smoke found fine-tuned model detections in 4 of 5 positive frames and false positives in 4 of 5 likely negative frames.
 - Scott approved changing the production ball confidence default from 0.15 to 0.25 on 2026-06-15.
 - settings_store.py now defaults ball_confidence to 0.25, matching the best measured single-threshold F1 from docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md.
+- Hermes/OWL verified commit 6213a51 on Linux: branch jason-5-may-updates, HEAD 6213a51, threshold-only scope, and 186/186 tests passed.
+- docs/BALL_DETECTION_PRECISION_CLEANUP_REPORT.md reports the best measured single-threshold result at conf=0.25: TP=106, FP=74, FN=2, precision=0.5889, recall=0.9815, F1=0.7361.
+- benchmark/court_mask_results.csv reports the best GT-dependent adaptive court-mask variant at F1=0.8653 with adaptive mask plus NMS, but that experiment uses ground-truth ball positions and is not deployable as production logic.
+- benchmark/gtfree_results.csv reports the best GT-free grid/NMS variants at F1=0.7413, only +0.0052 over the conf=0.25 baseline.
+- Commit d014193 contains the corrected secondary-classifier v3 experiment: retrained from scratch on the v2 stratified train split and evaluated on held-out v2 test frames.
+- benchmark/classifier_results_v3.csv reports held-out test baseline F1=0.7529 and held-out test classifier F1=0.7632, with recall dropping from 0.9697 to 0.8788.
+- Codex verified on 2026-06-15 that benchmark_classifier_v2.py trains from scratch on v2 train frames, does not load the older leaking classifier model, and writes classifier_results_v3.csv, classifier_per_frame_v3.csv, and classifier_detection_scores_v3.csv.
+- docs/CLASSIFIER_EXPERIMENT_REPORT.md now marks the secondary classifier as not a production candidate under the current 180-crop dataset.
 
 ## Inferred
 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
-- The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector has false positives.
-- The next detector step should focus on precision cleanup and duplicate/false-positive analysis, not another model switch.
+- The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector still has false positives at the best measured threshold.
+- The next detector step should focus on more labeled data, simpler feature-based false-positive filters, or broader benchmark coverage rather than deploying the current secondary classifier.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -70,7 +78,8 @@ These need further evidence.
 - Whether the 30 likely negative benchmark frames contain any visible balls.
 - Whether models/ball_detector.pt precision/recall generalizes to other games, gyms, camera angles, and lighting conditions.
 - Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
-- Whether a future court-marking exclusion mask can reduce false positives without materially damaging recall.
+- Whether a production-usable court-marking exclusion method can reduce false positives without materially damaging recall.
+- Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
@@ -86,4 +95,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not start new feature work yet. Execute docs/BALL_DETECTION_PRECISION_CLEANUP_PLAN.md before adding downstream film-analysis features that depend on ball location quality.
+Do not deploy the current secondary classifier. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25, and require new evidence before adding detector post-processing to production.
