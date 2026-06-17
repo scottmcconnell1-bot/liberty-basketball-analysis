@@ -1,6 +1,6 @@
 # Decision Log
 
-Updated: 2026-06-15
+Updated: 2026-06-16
 Branch: jason-5-may-updates
 
 This file records project decisions that should not live only in chat history. New entries must include the decision, rationale, decision maker, and evidence when available.
@@ -214,3 +214,53 @@ Evidence:
 Follow-up:
 - Keep production at the fine-tuned ball detector with ball_confidence=0.25.
 - Revisit secondary classification only with substantially more labeled hard-negative and hard-positive crop data or a simpler feature-based approach that can be validated on held-out frames.
+
+### Decision: Do not deploy current feature-based false-positive filters
+
+Decision maker: Scott approved recording the verified outcome; Codex verified repository evidence
+
+Date: 2026-06-16
+
+Decision:
+- Do not deploy the current Logistic Regression or Random Forest feature-based false-positive filters.
+- Treat commit 6361ab1 and benchmark/feature_filter_results.csv as the current feature-filter decision evidence.
+- Keep any further detector post-processing work benchmark-only until held-out evidence supports production use.
+
+Rationale:
+- The corrected feature-filter evaluation scores all 180 detections and reports train/test/all metrics from real model outputs.
+- The best train-selected feature filter provides only negligible held-out F1 improvement and reduces recall below the project threshold.
+- Single-frame geometry, location, color, shape, texture, and detector-confidence features do not separate balls from court-marking false positives well enough in the current benchmark.
+
+Evidence:
+- benchmark/feature_filter_scores.csv contains 180 scored detections: 128 train crops and 52 held-out test crops.
+- benchmark/feature_filter_results.csv reports held-out test baseline: TP=32, FP=20, FN=1, precision=0.6154, recall=0.9697, F1=0.7529.
+- benchmark/feature_filter_results.csv reports held-out test rf_r95: TP=28, FP=13, FN=5, precision=0.6829, recall=0.8485, F1=0.7568.
+- Codex verified on 2026-06-16 that benchmark_feature_eval.py scores all detections, benchmark_feature_filters.py and benchmark_feature_eval.py compile, and docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature filters as not production candidates.
+
+Follow-up:
+- Run a benchmark-only temporal consistency experiment next.
+- Do not change production detector behavior without a separate Scott approval after benchmark evidence is reviewed.
+
+### Decision: Run benchmark-only temporal consistency experiment
+
+Decision maker: Scott
+
+Date: 2026-06-16
+
+Decision:
+- Use temporal consistency as the next detector-quality experiment.
+- Keep the experiment benchmark-only with no production code changes.
+- Evaluate whether frame-to-frame motion can reject static court-marking false positives while preserving ball recall.
+
+Rationale:
+- Previous single-frame post-processing attempts failed to meet the project recall/F1 bar.
+- Static court markings should behave differently from a basketball across nearby frames.
+- Temporal filtering may use information that single-frame crop classifiers and feature filters cannot see.
+
+Evidence:
+- docs/CLASSIFIER_EXPERIMENT_REPORT.md rejects the MobileNet secondary classifier under current evidence.
+- docs/FEATURE_FILTER_EXPERIMENT_REPORT.md rejects the current feature-based filters under current evidence.
+- Scott selected temporal consistency after feature-filter verification.
+
+Follow-up:
+- Hermes/OWL should implement and run the benchmark-only temporal consistency experiment and provide committed artifacts for Codex verification.

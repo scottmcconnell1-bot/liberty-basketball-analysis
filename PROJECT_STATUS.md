@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-15
+Updated: 2026-06-16
 Branch: jason-5-may-updates
 
 ## Proven
@@ -59,13 +59,19 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - benchmark/classifier_results_v3.csv reports held-out test baseline F1=0.7529 and held-out test classifier F1=0.7632, with recall dropping from 0.9697 to 0.8788.
 - Codex verified on 2026-06-15 that benchmark_classifier_v2.py trains from scratch on v2 train frames, does not load the older leaking classifier model, and writes classifier_results_v3.csv, classifier_per_frame_v3.csv, and classifier_detection_scores_v3.csv.
 - docs/CLASSIFIER_EXPERIMENT_REPORT.md now marks the secondary classifier as not a production candidate under the current 180-crop dataset.
+- Commit 6361ab1 contains the corrected feature-based false-positive filter experiment artifacts.
+- benchmark/feature_filter_scores.csv contains 180 scored detections with 128 train crops and 52 held-out test crops.
+- benchmark/feature_filter_results.csv reports held-out test baseline F1=0.7529 and recall=0.9697.
+- benchmark/feature_filter_results.csv reports the best train-selected feature-filter held-out test result, rf_r95, at F1=0.7568 and recall=0.8485.
+- Codex verified on 2026-06-16 that benchmark_feature_eval.py scores all 180 detections, benchmark_feature_filters.py and benchmark_feature_eval.py compile, and docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature filters as not production candidates.
+- Scott approved a benchmark-only temporal consistency experiment as the next detector-quality path on 2026-06-16.
 
 ## Inferred
 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
 - The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector still has false positives at the best measured threshold.
-- The next detector step should focus on more labeled data, simpler feature-based false-positive filters, or broader benchmark coverage rather than deploying the current secondary classifier.
+- The next detector step should focus on temporal consistency because single-frame classifiers and feature filters did not meet the recall/F1 bar.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -80,6 +86,7 @@ These need further evidence.
 - Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
 - Whether a production-usable court-marking exclusion method can reduce false positives without materially damaging recall.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
+- Whether temporal consistency can reduce static court-marking false positives while preserving ball recall.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
@@ -95,4 +102,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25, and require new evidence before adding detector post-processing to production.
+Do not deploy the current secondary classifier or feature-based filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Run the next temporal-consistency work as benchmark-only until it produces held-out evidence that materially improves F1 while preserving recall.

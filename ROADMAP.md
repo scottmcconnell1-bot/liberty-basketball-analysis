@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-15
+Updated: 2026-06-16
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -72,10 +72,14 @@ Verified issue:
 - The corrected secondary-classifier v3 benchmark retrained from scratch on v2 train frames and evaluated on held-out v2 test frames.
 - benchmark/classifier_results_v3.csv reports held-out test baseline F1=0.7529 and classifier F1=0.7632, while recall drops from 0.9697 to 0.8788.
 - docs/CLASSIFIER_EXPERIMENT_REPORT.md marks the secondary classifier as not a production candidate with the current 180-crop dataset.
+- The corrected feature-based filter experiment in commit 6361ab1 scored all 180 detections and reports held-out test baseline F1=0.7529 and rf_r95 F1=0.7568 with recall=0.8485.
+- docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature-based filters as not production candidates.
+- Scott approved a benchmark-only temporal consistency experiment on 2026-06-16.
 
 Next step:
 - Do not deploy the current secondary classifier.
-- Choose the next detector-quality path: gather more labeled hard-negative/ball crops, test simpler feature-based filters, or broaden the benchmark across additional games and gyms.
+- Do not deploy the current feature-based filters.
+- Run a benchmark-only temporal consistency experiment that tests whether frame-to-frame motion can reject static court-marking false positives while preserving recall.
 - Keep any new detector post-processing as benchmark-only until it materially improves F1 without dropping recall below the project threshold.
 
 ### 5. Data Governance
