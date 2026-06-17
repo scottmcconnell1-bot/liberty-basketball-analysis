@@ -65,6 +65,10 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - benchmark/feature_filter_results.csv reports the best train-selected feature-filter held-out test result, rf_r95, at F1=0.7568 and recall=0.8485.
 - Codex verified on 2026-06-16 that benchmark_feature_eval.py scores all 180 detections, benchmark_feature_filters.py and benchmark_feature_eval.py compile, and docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature filters as not production candidates.
 - Scott approved a benchmark-only temporal consistency experiment as the next detector-quality path on 2026-06-16.
+- Commit fedcab7 contains the temporal consistency benchmark artifacts and no production code changes.
+- benchmark/temporal_results.csv reports held-out v2 test baseline F1=0.7529 and recall=0.9697.
+- benchmark/temporal_results.csv reports temporal_len2 held-out v2 test F1=0.6316 and recall=0.5455, temporal_len3 F1=0.3721 and recall=0.2424, and temporal_mov2 F1=0.4000 and recall=0.2727.
+- Codex verified on 2026-06-17 that benchmark_temporal.py compiles, temporal_results.csv supports the not-production-candidate conclusion, the result rows cover 120 evaluated frames, and 17 tracks span train/test frame labels because tracks are built before split-level scoring.
 - Scott clarified on 2026-06-16 that the desired product is a modular basketball operations platform for future client packages, with an ultimate AI assistant coach that can answer coach questions and guide workflows from trusted data.
 - PRODUCT_BENCHMARKS.md documents product patterns to mimic conceptually: Hudl, Sportscode/Nacsport/Dartfish, Synergy, FastModel/FastScout, and advanced tracking systems.
 - MODULAR_PRODUCT_ROADMAP.md defines the base platform and add-on modules: stats, minutes/lineups, film room, scouting, playbook/play recognition, strategy, AI assist, and advanced tracking.
@@ -75,7 +79,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 These are reasonable conclusions based on verified evidence, but they should not be treated as final facts without more verification.
 
 - The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector still has false positives at the best measured threshold.
-- The next detector step should focus on temporal consistency because single-frame classifiers and feature filters did not meet the recall/F1 bar.
+- Current single-frame and simple temporal post-processing experiments have not produced a deployable detector-quality improvement over the conf=0.25 baseline.
 - The product roadmap should pivot from detector-first sequencing to trusted platform core first, with AI automation layered in stages.
 - Future client packaging should use module flags or permissions while keeping one shared event ledger.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
@@ -92,7 +96,7 @@ These need further evidence.
 - Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
 - Whether a production-usable court-marking exclusion method can reduce false positives without materially damaging recall.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
-- Whether temporal consistency can reduce static court-marking false positives while preserving ball recall.
+- Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
 - The implementation gap between the current repo schema and the modular platform data model is not yet audited.
 - The first module implementation sequence after documentation is not yet approved.

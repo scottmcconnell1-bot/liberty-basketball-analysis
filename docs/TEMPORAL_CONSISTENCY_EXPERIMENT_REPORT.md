@@ -4,8 +4,10 @@
 **Branch:** jason-5-may-updates
 **Commit:** benchmark_temporal.py + artifacts (see Deliverables)
 **Detector:** models/ball_detector.pt (YOLOv8n, class 0 = ball, conf=0.25)
-**Benchmark:** 138 frames (108 GT+, 30 GT-)
-**Split:** v2 stratified (82 train frames / 37 test frames, 0 overlap, seed=42)
+**Benchmark corpus:** 138 frames (108 GT+, 30 GT-)
+**Metric rows:** 120 evaluated frames for the `all` split because `benchmark_temporal.py` skips frames with neither ground truth nor detector output.
+**Split:** v2 stratified labels (82 train frames / 37 test frames, 0 frame overlap, seed=42)
+**Temporal context caveat:** Tracks are built across full video sequences before split-level scoring. Codex verified 17 tracks span train/test frame labels. No supervised model is trained, but held-out metrics use cross-split temporal context and should not be described as a leakage-free trained-model evaluation.
 
 ---
 
@@ -30,7 +32,7 @@ Temporal consistency filtering was tested as a court-marking FP rejection strate
    - `temporal_len2`: keep only detections in tracks of length >= 2
    - `temporal_len3`: keep only detections in tracks of length >= 3
    - `temporal_mov2`: keep only detections in tracks with >= 2 frames AND non-zero total motion
-4. **Primary metric**: held-out v2 test recall (must be >= 0.95), F1.
+4. **Primary metric**: v2 test recall (must be >= 0.95), F1. Test rows should be read with the temporal-context caveat above.
 
 ---
 
@@ -50,6 +52,21 @@ Source: `benchmark/temporal_detection_scores.csv` (180 detections), `benchmark/t
 | Tracks of length 2 | 27 (20%) |
 | Tracks of length >= 3 | 7 (5%) |
 | Max track length | 6 |
+
+### Evaluation Frame Accounting
+
+Source: Codex verification of `benchmark/frames`, `benchmark/labels`, `benchmark/temporal_detection_scores.csv`, and `benchmark_temporal.py`
+
+| Metric | Value |
+|--------|-------|
+| Benchmark image files | 138 |
+| GT-positive frames | 108 |
+| Frames with detector output | 119 |
+| Frames with GT or detector output | 120 |
+| Frames skipped from metric aggregation because they have neither GT nor detections | 18 |
+| Tracks spanning both train and test frame labels | 17 |
+
+The `temporal_results.csv` `all` rows therefore cover 120 evaluated frames, not all 138 benchmark image files.
 
 ### Track Length by Detection Source
 
@@ -136,8 +153,9 @@ No temporal consistency filter meets the acceptance criteria:
 |-----------|-------------|--------|
 | F1 materially improved over 0.753 | −0.009 (temporal_len2) | ❌ Worse |
 | Recall >= 0.95 | 0.545 (temporal_len2) | ❌ Far below threshold |
-| No GT at inference | ✅ | ✅ |
-| No train/test leakage | ✅ | ✅ |
+| No GT at inference | Yes | Pass |
+| No supervised train/test fitting | Yes | Pass |
+| Cross-split temporal context disclosed | 17 mixed tracks | Caveat |
 
 ### Comparison to Other Methods
 

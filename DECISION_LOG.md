@@ -265,6 +265,33 @@ Evidence:
 Follow-up:
 - Hermes/OWL should implement and run the benchmark-only temporal consistency experiment and provide committed artifacts for Codex verification.
 
+### Decision: Do not deploy current temporal consistency filters
+
+Decision maker: Scott
+
+Date: 2026-06-16
+
+Decision:
+- Do not deploy the current temporal consistency filters.
+- Treat commit fedcab7 and benchmark/temporal_results.csv as benchmark-only evidence.
+- Keep production ball detection at models/ball_detector.pt, class 0, conf=0.25 until stronger evidence supports another change.
+
+Rationale:
+- benchmark/temporal_results.csv reports held-out v2 test baseline F1=0.7529 and recall=0.9697.
+- The best temporal test recall is 0.5455 for temporal_len2, far below the project recall threshold of 0.95.
+- Temporal len2 improves precision from 0.6154 to 0.7500, but reduces F1 from 0.7529 to 0.6316.
+- Temporal len3 and temporal_mov2 reduce recall even further.
+
+Evidence:
+- benchmark/temporal_detection_scores.csv contains 180 detections from models/ball_detector.pt at conf=0.25.
+- benchmark/temporal_tracks.csv contains 133 tracks.
+- benchmark/temporal_results.csv reports temporal_len2 test: TP=18, FP=6, FN=15, precision=0.7500, recall=0.5455, F1=0.6316.
+- Codex verified on 2026-06-17 that benchmark_temporal.py compiles, the commit is benchmark-only, no production code changed, and docs/TEMPORAL_CONSISTENCY_EXPERIMENT_REPORT.md now discloses the 120 evaluated-frame count and cross-split temporal-context caveat.
+
+Follow-up:
+- Stop pursuing single-frame or simple temporal post-processing as the primary near-term path unless new labeled evidence changes the detector-quality picture.
+- Move the next planning step to the base platform gap audit against MODULAR_PRODUCT_ROADMAP.md.
+
 ### Decision: Adopt modular basketball operations platform direction
 
 Decision maker: Scott

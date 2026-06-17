@@ -91,12 +91,15 @@ Verified issue:
 - The corrected feature-based filter experiment in commit 6361ab1 scored all 180 detections and reports held-out test baseline F1=0.7529 and rf_r95 F1=0.7568 with recall=0.8485.
 - docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature-based filters as not production candidates.
 - Scott approved a benchmark-only temporal consistency experiment on 2026-06-16.
+- The temporal consistency benchmark in commit fedcab7 reports held-out v2 test temporal_len2 F1=0.6316 and recall=0.5455, worse than the baseline F1=0.7529 and recall=0.9697.
+- docs/TEMPORAL_CONSISTENCY_EXPERIMENT_REPORT.md marks temporal consistency filters as not production candidates and discloses the 120 evaluated-frame count plus cross-split temporal-context caveat.
 
 Next step:
 - Do not deploy the current secondary classifier.
 - Do not deploy the current feature-based filters.
-- Run a benchmark-only temporal consistency experiment that tests whether frame-to-frame motion can reject static court-marking false positives while preserving recall.
-- Keep any new detector post-processing as benchmark-only until it materially improves F1 without dropping recall below the project threshold.
+- Do not deploy the current temporal consistency filters.
+- Keep production ball detection at models/ball_detector.pt, class 0, conf=0.25.
+- Move next to the base platform gap audit against MODULAR_PRODUCT_ROADMAP.md before adding more detector post-processing experiments.
 
 ### 6. Product Module Roadmap
 
