@@ -65,6 +65,10 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - benchmark/feature_filter_results.csv reports the best train-selected feature-filter held-out test result, rf_r95, at F1=0.7568 and recall=0.8485.
 - Codex verified on 2026-06-16 that benchmark_feature_eval.py scores all 180 detections, benchmark_feature_filters.py and benchmark_feature_eval.py compile, and docs/FEATURE_FILTER_EXPERIMENT_REPORT.md marks feature filters as not production candidates.
 - Scott approved a benchmark-only temporal consistency experiment as the next detector-quality path on 2026-06-16.
+- Scott clarified on 2026-06-16 that the desired product is a modular basketball operations platform for future client packages, with an ultimate AI assistant coach that can answer coach questions and guide workflows from trusted data.
+- PRODUCT_BENCHMARKS.md documents product patterns to mimic conceptually: Hudl, Sportscode/Nacsport/Dartfish, Synergy, FastModel/FastScout, and advanced tracking systems.
+- MODULAR_PRODUCT_ROADMAP.md defines the base platform and add-on modules: stats, minutes/lineups, film room, scouting, playbook/play recognition, strategy, AI assist, and advanced tracking.
+- AI_ASSISTANT_VISION.md defines typed questions, guided workflows, evidence discipline, and maturity levels for the long-term assistant coach.
 
 ## Inferred
 
@@ -72,6 +76,8 @@ These are reasonable conclusions based on verified evidence, but they should not
 
 - The current AI and event pipeline may still produce downstream basketball-analysis noise because the verified fine-tuned ball detector still has false positives at the best measured threshold.
 - The next detector step should focus on temporal consistency because single-frame classifiers and feature filters did not meet the recall/F1 bar.
+- The product roadmap should pivot from detector-first sequencing to trusted platform core first, with AI automation layered in stages.
+- Future client packaging should use module flags or permissions while keeping one shared event ledger.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -87,6 +93,9 @@ These need further evidence.
 - Whether a production-usable court-marking exclusion method can reduce false positives without materially damaging recall.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether temporal consistency can reduce static court-marking false positives while preserving ball recall.
+- Exact paid-package boundaries and pricing are not yet decided.
+- The implementation gap between the current repo schema and the modular platform data model is not yet audited.
+- The first module implementation sequence after documentation is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
@@ -102,4 +111,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier or feature-based filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Run the next temporal-consistency work as benchmark-only until it produces held-out evidence that materially improves F1 while preserving recall.
+Do not deploy the current secondary classifier or feature-based filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Run detector experiments as benchmark-only while the product roadmap pivots toward a trusted modular basketball operations core and long-term AI assistant coach.

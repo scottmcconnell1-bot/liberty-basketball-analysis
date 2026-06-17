@@ -264,3 +264,29 @@ Evidence:
 
 Follow-up:
 - Hermes/OWL should implement and run the benchmark-only temporal consistency experiment and provide committed artifacts for Codex verification.
+
+### Decision: Adopt modular basketball operations platform direction
+
+Decision maker: Scott
+
+Date: 2026-06-16
+
+Decision:
+- Define Liberty as a modular basketball operations platform, not a detector-first project.
+- Support a base platform plus add-on modules that can become paid packages for clients.
+- Keep all modules tied to one shared event ledger, review workflow, and provenance model.
+- Treat the long-term AI goal as an assistant coach layered on top of trusted data.
+
+Rationale:
+- Perplexity research identified the full product requirements: game breakdown, player minutes, team and player stats, lineups, clips, scouting, play recognition, standout players, strategy notes, and reports.
+- Gemini's critique supported a manual-first, AI-assisted build sequence to avoid depending on imperfect computer vision for early product value.
+- Scott confirmed the desired client package model and ultimate AI assistant coach goal.
+
+Evidence:
+- PRODUCT_BENCHMARKS.md records external product patterns to mimic conceptually.
+- MODULAR_PRODUCT_ROADMAP.md defines the base platform and add-on modules.
+- AI_ASSISTANT_VISION.md defines the long-term assistant coach interaction model.
+
+Follow-up:
+- Audit the current repo schema/routes against the modular product roadmap.
+- Decide the first implementation module after documentation: base platform core, stats/minutes, film room, or another Scott-approved package.

@@ -5,11 +5,27 @@ Branch: jason-5-may-updates
 
 ## Current Operating Mode
 
-Codex is taking over as primary engineering lead. The immediate roadmap is evidence-first: verify the current system, document known risks, and avoid new feature work until the baseline is clear.
+Codex is taking over as primary engineering lead. The immediate roadmap is evidence-first, but the product direction is now modular and coach-first: build a trusted basketball operations core, add modules in stages, and layer AI assistant capabilities on top of reviewed data.
+
+Current product architecture docs:
+- PRODUCT_BENCHMARKS.md
+- MODULAR_PRODUCT_ROADMAP.md
+- AI_ASSISTANT_VISION.md
 
 ## Near-Term Priorities
 
-### 1. Source of Truth Stabilization
+### 1. Modular Product Architecture
+
+Status: In progress
+
+Goals:
+- Use PRODUCT_BENCHMARKS.md to mimic proven product patterns without copying proprietary work.
+- Use MODULAR_PRODUCT_ROADMAP.md to define base platform and paid add-on modules.
+- Use AI_ASSISTANT_VISION.md to keep the long-term AI assistant coach goal visible.
+- Keep the base platform useful without advanced computer vision.
+- Preserve one shared event ledger across all modules.
+
+### 2. Source of Truth Stabilization
 
 Status: In progress
 
@@ -18,7 +34,7 @@ Goals:
 - Keep AUTHORITY.md and docs/CODEX_BRIEFING.md aligned with current workflow.
 - Replace stale chat-history knowledge with repository documentation.
 
-### 2. Repository Baseline Audit
+### 3. Repository Baseline Audit
 
 Status: In progress
 
@@ -27,7 +43,7 @@ Goals:
 - Confirm entry points, blueprints, scripts, tests, deployment files, datasets, and model artifacts.
 - Record all findings as Proven, Inferred, or Unknown.
 
-### 3. Schema and Data-Model Risk Review
+### 4. Schema and Data-Model Risk Review
 
 Status: Merged
 
@@ -48,7 +64,7 @@ Completed:
 Remaining:
 - Preserve downstream TEXT analysis-key columns until each feature is migrated deliberately.
 
-### 4. Ball Detection Audit
+### 5. Ball Detection Audit
 
 Status: Production switch and threshold tuning verified; post-processing experiments measured
 
@@ -82,7 +98,33 @@ Next step:
 - Run a benchmark-only temporal consistency experiment that tests whether frame-to-frame motion can reject static court-marking false positives while preserving recall.
 - Keep any new detector post-processing as benchmark-only until it materially improves F1 without dropping recall below the project threshold.
 
-### 5. Data Governance
+### 6. Product Module Roadmap
+
+Status: Direction approved, implementation not started
+
+Base Platform:
+- Teams, players, rosters, seasons, games
+- Video assets
+- Manual tagging
+- Canonical event ledger
+- Clips
+- Review/correction workflow
+- Basic reports
+
+Modules:
+- Stats
+- Minutes and lineups
+- Film room
+- Scouting
+- Playbook and play recognition
+- Strategy
+- AI assist
+- Advanced tracking
+
+Implementation rule:
+- Modules may be packaged or priced separately later, but they must share one event ledger and provenance model.
+
+### 7. Data Governance
 
 Status: Needs improvement
 
