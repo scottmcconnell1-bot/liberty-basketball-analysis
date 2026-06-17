@@ -13,9 +13,15 @@ EXPECTED_TABLES = [
     "games",
     "nfhs_matches",
     "sources",
+    "teams",
     "players",
+    "roster_memberships",
     "stats",
     "practices",
+    "video_assets",
+    "event_types",
+    "provenance_records",
+    "module_entitlements",
     "player_development_clips",
     "practice_playlists",
     "practice_playlist_clips",
@@ -35,8 +41,26 @@ EXPECTED_COLUMNS = {
                         "tournament_name", "status", "notes", "created_at", "updated_at"],
     "players": ["id", "name", "jersey_number", "position", "grade",
                 "program_name", "gender", "level", "season_id", "tracker_id", "created_at"],
+    "teams": ["id", "organization_name", "team_name", "program_name", "gender",
+              "level", "season_default_id", "created_at", "updated_at"],
+    "roster_memberships": ["id", "player_id", "team_id", "season_id", "jersey_number",
+                           "position", "grade", "status", "start_date", "end_date",
+                           "created_at", "updated_at"],
     "stats": ["id", "game_id", "player_id", "player_name", "pts", "fgm", "fga",
               "threes_made", "threes_att", "ast", "reb", "tov", "stl", "blk"],
+    "video_assets": ["id", "game_id", "source_id", "original_filename", "stored_filename",
+                     "file_path", "source_type", "camera_label", "angle_label",
+                     "file_size_bytes", "duration_ms", "frame_rate", "width", "height",
+                     "checksum", "transcode_status", "sync_group_id", "primary_asset",
+                     "created_at", "updated_at"],
+    "event_types": ["id", "code", "label", "category", "counts_for_stats",
+                    "is_scoring_event", "is_possession_boundary", "created_at", "updated_at"],
+    "provenance_records": ["id", "entity_type", "entity_id", "source_type", "source_id",
+                           "source_path", "source_frame", "source_timestamp_ms",
+                           "model_name", "model_version", "confidence", "created_by_user_id",
+                           "created_at", "details_json"],
+    "module_entitlements": ["id", "team_id", "module_key", "enabled", "starts_at",
+                            "ends_at", "notes", "created_at", "updated_at"],
 }
 
 
@@ -94,6 +118,20 @@ def test_players_columns(db):
     cols = get_columns(db, "players")
     for col in EXPECTED_COLUMNS["players"]:
         assert col in cols, f"players missing column: {col}"
+
+
+def test_stage1_platform_core_tables(db):
+    for table in [
+        "teams",
+        "roster_memberships",
+        "video_assets",
+        "event_types",
+        "provenance_records",
+        "module_entitlements",
+    ]:
+        cols = get_columns(db, table)
+        for col in EXPECTED_COLUMNS[table]:
+            assert col in cols, f"{table} missing column: {col}"
 
 
 def test_stats_columns(db):

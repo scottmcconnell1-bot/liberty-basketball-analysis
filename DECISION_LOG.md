@@ -292,6 +292,34 @@ Follow-up:
 - Stop pursuing single-frame or simple temporal post-processing as the primary near-term path unless new labeled evidence changes the detector-quality picture.
 - Move the next planning step to the base platform gap audit against MODULAR_PRODUCT_ROADMAP.md.
 
+### Decision: Implement Platform Core Schema Stage 1
+
+Decision maker: Scott
+
+Date: 2026-06-17
+
+Decision:
+- Implement Stage 1 from docs/PLATFORM_CORE_SCHEMA_PLAN.md.
+- Keep the change additive only.
+- Do not implement possessions, canonical clips, review queues, event ledger rewrites, or downstream TEXT game_id cleanup in this stage.
+
+Scope:
+- Add teams.
+- Add roster_memberships.
+- Add video_assets.
+- Add event_types.
+- Add provenance_records.
+- Add module_entitlements.
+- Add schema tests for the new tables.
+
+Rationale:
+- The base platform needs shared identity, media, taxonomy, provenance, and module entitlement foundations before paid packages or AI assistant behavior are built.
+- Additive tables reduce risk and preserve current routes while establishing the next data model layer.
+
+Verification required:
+- Codex local SQLite verification for fresh schema and idempotent migration SQL.
+- Hermes/OWL Linux verification with the full pytest suite before treating the implementation as fully verified.
+
 ### Decision: Adopt modular basketball operations platform direction
 
 Decision maker: Scott

@@ -131,10 +131,14 @@ Current audit:
 - docs/BASE_PLATFORM_GAP_AUDIT.md verifies that many product surfaces already exist, but the platform core is still partial.
 - Missing or partial foundations include first-class teams, roster memberships, possessions, canonical clips, complete review/correction workflow, module entitlements, and remaining relational game_id cleanup.
 
+Current implementation:
+- Scott approved Stage 1 on 2026-06-17.
+- Stage 1 adds teams, roster_memberships, video_assets, event_types, provenance_records, and module_entitlements as additive schema foundations.
+- Possessions, canonical clips, review queues, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
+
 Next step:
-- Review docs/PLATFORM_CORE_SCHEMA_PLAN.md.
-- If Scott approves implementation, Stage 1 should be additive only: teams, roster_memberships, video_assets, event_types, provenance_records, and module_entitlements.
-- Do not implement possessions, canonical clips, review queues, or downstream TEXT game_id cleanup until later approved stages.
+- Hermes/OWL should run full Linux verification for the Stage 1 implementation.
+- After verification, Scott should decide whether to proceed to Stage 2 backfill planning or pause for review workflow planning.
 
 ### 7. Data Governance
 

@@ -882,6 +882,31 @@ def _ensure_migration_columns(db):
 
     # ── New tables (idempotent) ──────────────────────────────
     db.executescript("""
+        CREATE TABLE IF NOT EXISTS teams (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            organization_name TEXT,
+            team_name         TEXT NOT NULL,
+            program_name      TEXT,
+            gender            TEXT,
+            level             TEXT,
+            season_default_id INTEGER REFERENCES seasons(id),
+            created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS roster_memberships (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id       INTEGER NOT NULL REFERENCES players(id),
+            team_id         INTEGER NOT NULL REFERENCES teams(id),
+            season_id       INTEGER REFERENCES seasons(id),
+            jersey_number   INTEGER,
+            position        TEXT,
+            grade           INTEGER,
+            status          TEXT NOT NULL DEFAULT 'active',
+            start_date      DATE,
+            end_date        DATE,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS videos (
             id                INTEGER PRIMARY KEY AUTOINCREMENT,
             original_filename TEXT NOT NULL,
@@ -893,6 +918,28 @@ def _ensure_migration_columns(db):
             upload_timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             is_duplicate      INTEGER NOT NULL DEFAULT 0,
             duplicate_of_id   INTEGER REFERENCES videos(id)
+        );
+        CREATE TABLE IF NOT EXISTS video_assets (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id           INTEGER REFERENCES games(id),
+            source_id         INTEGER REFERENCES sources(id),
+            original_filename TEXT,
+            stored_filename   TEXT,
+            file_path         TEXT,
+            source_type       TEXT,
+            camera_label      TEXT,
+            angle_label       TEXT,
+            file_size_bytes   INTEGER,
+            duration_ms       INTEGER,
+            frame_rate        REAL,
+            width             INTEGER,
+            height            INTEGER,
+            checksum          TEXT,
+            transcode_status  TEXT,
+            sync_group_id     TEXT,
+            primary_asset     INTEGER NOT NULL DEFAULT 0,
+            created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS app_settings (
             key        TEXT PRIMARY KEY,
@@ -909,6 +956,45 @@ def _ensure_migration_columns(db):
             status       TEXT NOT NULL DEFAULT 'open',
             created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             completed_at TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS event_types (
+            id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+            code                   TEXT UNIQUE NOT NULL,
+            label                  TEXT NOT NULL,
+            category               TEXT,
+            counts_for_stats       INTEGER NOT NULL DEFAULT 1,
+            is_scoring_event       INTEGER NOT NULL DEFAULT 0,
+            is_possession_boundary INTEGER NOT NULL DEFAULT 0,
+            created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS provenance_records (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type         TEXT NOT NULL,
+            entity_id           INTEGER NOT NULL,
+            source_type         TEXT NOT NULL,
+            source_id           TEXT,
+            source_path         TEXT,
+            source_frame        INTEGER,
+            source_timestamp_ms INTEGER,
+            model_name          TEXT,
+            model_version       TEXT,
+            confidence          REAL,
+            created_by_user_id  INTEGER REFERENCES users(id),
+            created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            details_json        TEXT
+        );
+        CREATE TABLE IF NOT EXISTS module_entitlements (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_id    INTEGER REFERENCES teams(id),
+            module_key TEXT NOT NULL,
+            enabled    INTEGER NOT NULL DEFAULT 1,
+            starts_at  TIMESTAMP,
+            ends_at    TIMESTAMP,
+            notes      TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(team_id, module_key)
         );
         CREATE TABLE IF NOT EXISTS player_development_clips (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
