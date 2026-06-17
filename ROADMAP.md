@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, implementation not started
+Status: Direction approved, base platform gap audit complete
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -126,6 +126,14 @@ Modules:
 
 Implementation rule:
 - Modules may be packaged or priced separately later, but they must share one event ledger and provenance model.
+
+Current audit:
+- docs/BASE_PLATFORM_GAP_AUDIT.md verifies that many product surfaces already exist, but the platform core is still partial.
+- Missing or partial foundations include first-class teams, roster memberships, possessions, canonical clips, complete review/correction workflow, module entitlements, and remaining relational game_id cleanup.
+
+Next step:
+- Create docs/PLATFORM_CORE_SCHEMA_PLAN.md before implementing paid modules or new AI assistant behavior.
+- The schema plan should define teams, roster memberships, possessions, canonical clips, event taxonomy, provenance, and downstream TEXT game_id migration order.
 
 ### 7. Data Governance
 

@@ -73,6 +73,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - PRODUCT_BENCHMARKS.md documents product patterns to mimic conceptually: Hudl, Sportscode/Nacsport/Dartfish, Synergy, FastModel/FastScout, and advanced tracking systems.
 - MODULAR_PRODUCT_ROADMAP.md defines the base platform and add-on modules: stats, minutes/lineups, film room, scouting, playbook/play recognition, strategy, AI assist, and advanced tracking.
 - AI_ASSISTANT_VISION.md defines typed questions, guided workflows, evidence discipline, and maturity levels for the long-term assistant coach.
+- docs/BASE_PLATFORM_GAP_AUDIT.md compares the current repo to the modular product roadmap and identifies the next recommended priority as a Platform Core Data Model Plan.
 
 ## Inferred
 
@@ -82,6 +83,7 @@ These are reasonable conclusions based on verified evidence, but they should not
 - Current single-frame and simple temporal post-processing experiments have not produced a deployable detector-quality improvement over the conf=0.25 baseline.
 - The product roadmap should pivot from detector-first sequencing to trusted platform core first, with AI automation layered in stages.
 - Future client packaging should use module flags or permissions while keeping one shared event ledger.
+- The base platform should prioritize shared identity, possessions, canonical clips, review workflow, and provenance before paid add-on modules are implemented.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -98,7 +100,6 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- The implementation gap between the current repo schema and the modular platform data model is not yet audited.
 - The first module implementation sequence after documentation is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
