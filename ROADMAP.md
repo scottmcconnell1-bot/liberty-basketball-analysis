@@ -132,8 +132,9 @@ Current audit:
 - Missing or partial foundations include first-class teams, roster memberships, possessions, canonical clips, complete review/correction workflow, module entitlements, and remaining relational game_id cleanup.
 
 Next step:
-- Create docs/PLATFORM_CORE_SCHEMA_PLAN.md before implementing paid modules or new AI assistant behavior.
-- The schema plan should define teams, roster memberships, possessions, canonical clips, event taxonomy, provenance, and downstream TEXT game_id migration order.
+- Review docs/PLATFORM_CORE_SCHEMA_PLAN.md.
+- If Scott approves implementation, Stage 1 should be additive only: teams, roster_memberships, video_assets, event_types, provenance_records, and module_entitlements.
+- Do not implement possessions, canonical clips, review queues, or downstream TEXT game_id cleanup until later approved stages.
 
 ### 7. Data Governance
 

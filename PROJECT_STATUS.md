@@ -74,6 +74,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - MODULAR_PRODUCT_ROADMAP.md defines the base platform and add-on modules: stats, minutes/lineups, film room, scouting, playbook/play recognition, strategy, AI assist, and advanced tracking.
 - AI_ASSISTANT_VISION.md defines typed questions, guided workflows, evidence discipline, and maturity levels for the long-term assistant coach.
 - docs/BASE_PLATFORM_GAP_AUDIT.md compares the current repo to the modular product roadmap and identifies the next recommended priority as a Platform Core Data Model Plan.
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md defines the proposed core schema stages: teams, roster_memberships, video_assets, event_types, provenance_records, module_entitlements, possessions, canonical clips, review_items, event_participants, and staged downstream game_id cleanup.
 
 ## Inferred
 
@@ -84,6 +85,7 @@ These are reasonable conclusions based on verified evidence, but they should not
 - The product roadmap should pivot from detector-first sequencing to trusted platform core first, with AI automation layered in stages.
 - Future client packaging should use module flags or permissions while keeping one shared event ledger.
 - The base platform should prioritize shared identity, possessions, canonical clips, review workflow, and provenance before paid add-on modules are implemented.
+- Stage 1 of the platform core should be additive only so current routes can keep working while the foundation is introduced.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
@@ -100,6 +102,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
+- Whether Scott approves Stage 1 implementation of docs/PLATFORM_CORE_SCHEMA_PLAN.md.
 - The first module implementation sequence after documentation is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
