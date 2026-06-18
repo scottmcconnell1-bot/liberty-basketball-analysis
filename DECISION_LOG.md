@@ -345,3 +345,45 @@ Evidence:
 Follow-up:
 - Audit the current repo schema/routes against the modular product roadmap.
 - Decide the first implementation module after documentation: base platform core, stats/minutes, film room, or another Scott-approved package.
+
+### Decision: Plan Platform Core Schema Stage 2 Backfill
+
+Decision maker: Scott
+
+Date: 2026-06-17
+
+Decision:
+- Proceed with Platform Core Schema Stage 2 planning after Stage 1 schema foundations were implemented and locally verified.
+- Keep Stage 2 planning focused on deterministic, additive backfill only.
+- Do not implement Stage 2 code until Scott reviews and approves the plan.
+
+Scope:
+- Default Liberty team seed/backfill.
+- Roster memberships from existing player rows.
+- Video asset records from existing verifiable video or analysis inputs.
+- Canonical event type seed rows.
+- Initial module entitlement seed rows.
+- Provenance records for deterministic migration/backfill actions where useful.
+
+Non-scope:
+- Possession modeling.
+- Canonical clip generation.
+- Review queue implementation.
+- Event ledger rewrite.
+- Paid-package enforcement.
+- Ball detection or AI event-generation behavior changes.
+
+Rationale:
+- Stage 1 created the platform-core tables, but empty tables do not yet support coach workflows or future modules.
+- Stage 2 should make the foundation usable without changing current product behavior.
+- Deterministic backfill reduces manual setup while avoiding unsupported basketball facts.
+
+Evidence:
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md defines the staged platform-core approach.
+- Hermes/OWL reported on 2026-06-17 that Stage 2 backfill does not exist in committed repo state and that Stage 1 tables exist after schema initialization.
+- docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md records the proposed Stage 2 scope, non-goals, verification requirements, and risks.
+
+Follow-up:
+- Scott reviews the Stage 2 backfill plan.
+- If approved, Codex implements idempotent backfill helpers and focused tests.
+- Hermes/OWL verifies the implementation on Linux before it is treated as complete.

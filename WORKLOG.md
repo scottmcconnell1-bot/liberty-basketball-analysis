@@ -888,3 +888,35 @@ Changes:
 Verification:
 - .venv local suite: 186 passed, 1 skipped in 108.30s.
 - Skipped test is the live Playwright/Chromium UI overflow audit.
+
+Platform Core Schema Stage 2 Backfill Planning - 2026-06-17
+-----------------------------------------------------------
+Scott approved proceeding with Stage 2 planning after Stage 1 schema foundations were implemented and verified locally.
+
+Created:
+- docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md
+
+Updated:
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+
+Plan scope:
+- Default Liberty team seed/backfill.
+- Roster memberships from existing players.
+- Video asset records from existing verifiable video or analysis inputs.
+- Canonical event type seed rows.
+- Initial module entitlement seed rows.
+- Provenance records for deterministic backfill actions where useful.
+
+Non-scope:
+- No possession modeling.
+- No canonical clip generation.
+- No review queue implementation.
+- No event ledger rewrite.
+- No paid-package enforcement.
+- No ball detection or AI event behavior changes.
+
+Verification:
+- Planning document created only; no production code changed.
+- Implementation still requires Scott approval after review.

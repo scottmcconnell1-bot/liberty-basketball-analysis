@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-16
+Updated: 2026-06-17
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform gap audit complete
+Status: Direction approved, base platform Stage 1 implemented, Stage 2 backfill planned
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -134,11 +134,15 @@ Current audit:
 Current implementation:
 - Scott approved Stage 1 on 2026-06-17.
 - Stage 1 adds teams, roster_memberships, video_assets, event_types, provenance_records, and module_entitlements as additive schema foundations.
+- Hermes/OWL reported Linux verification for Stage 1 on 2026-06-17: remote HEAD 9066936, 186 passed, 1 skipped, and all six Stage 1 tables exist.
+- Scott approved proceeding with Stage 2 planning on 2026-06-17.
+- docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md defines the proposed deterministic backfill for default Liberty team, roster memberships, video_assets, event_types, module_entitlements, and provenance records.
 - Possessions, canonical clips, review queues, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 
 Next step:
-- Hermes/OWL should run full Linux verification for the Stage 1 implementation.
-- After verification, Scott should decide whether to proceed to Stage 2 backfill planning or pause for review workflow planning.
+- Scott should review docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md.
+- If approved, implement Stage 2 as additive, idempotent seed/backfill logic with focused schema tests.
+- After Stage 2 verification, decide whether Stage 3 should be review workflow planning or possession/canonical clip modeling.
 
 ### 7. Data Governance
 

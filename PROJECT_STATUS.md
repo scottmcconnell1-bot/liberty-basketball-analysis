@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-16
+Updated: 2026-06-17
 Branch: jason-5-may-updates
 
 ## Proven
@@ -80,6 +80,9 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - tests/test_schema.py now checks that the Stage 1 tables and key columns exist.
 - Codex verified locally on 2026-06-17 that schema.sql executes successfully in SQLite and that the helpers.py migration executescript creates all Stage 1 tables.
 - Codex created a lightweight Windows development environment in the Documents repo and verified the local test suite on 2026-06-17: 186 passed, 1 skipped. The skipped test is the opt-in Playwright/Chromium live UI overflow audit.
+- Hermes/OWL reported Linux verification on 2026-06-17 after correcting a stale local checkout: remote HEAD 9066936, AGENT_PROTOCOL.md present at FETCH_HEAD, 186 passed, 1 skipped, and all six Stage 1 tables exist.
+- Scott approved proceeding with Platform Core Schema Stage 2 planning on 2026-06-17.
+- docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md defines the Stage 2 planning scope: default Liberty team, roster memberships, video_assets, event_types, module_entitlements, provenance, idempotent backfill rules, verification requirements, and non-goals.
 
 ## Inferred
 
@@ -92,6 +95,7 @@ These are reasonable conclusions based on verified evidence, but they should not
 - The base platform should prioritize shared identity, possessions, canonical clips, review workflow, and provenance before paid add-on modules are implemented.
 - Stage 1 of the platform core is additive only so current routes can keep working while the foundation is introduced.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
+- Stage 2 backfill should be deterministic and additive so the new platform-core tables become usable without changing coach workflows.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
 
@@ -99,7 +103,6 @@ These are reasonable conclusions based on verified evidence, but they should not
 
 These need further evidence.
 
-- Current test pass/fail status on the Windows snapshot.
 - Whether the 30 likely negative benchmark frames contain any visible balls.
 - Whether models/ball_detector.pt precision/recall generalizes to other games, gyms, camera angles, and lighting conditions.
 - Whether multi-detection positive frames are duplicate detections of the same ball or multiple distinct false positives.
@@ -107,8 +110,9 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL Linux verification passes the full pytest suite after Platform Core Schema Stage 1.
-- The first module implementation sequence after documentation is not yet approved.
+- Whether Hermes/OWL should also run GitHub Actions or deployment-specific checks after the Stage 1 local Linux pytest result.
+- Whether Scott approves Platform Core Schema Stage 2 implementation after reviewing the backfill plan.
+- The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
@@ -124,4 +128,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier or feature-based filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Run detector experiments as benchmark-only while the product roadmap pivots toward a trusted modular basketball operations core and long-term AI assistant coach.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Scott review of docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md, then approved implementation of the deterministic Stage 2 backfill.
