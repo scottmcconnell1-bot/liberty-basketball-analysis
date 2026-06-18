@@ -79,6 +79,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Stage 1 implementation adds teams, roster_memberships, video_assets, event_types, provenance_records, and module_entitlements to schema.sql and the idempotent existing-database migration path in helpers.py.
 - tests/test_schema.py now checks that the Stage 1 tables and key columns exist.
 - Codex verified locally on 2026-06-17 that schema.sql executes successfully in SQLite and that the helpers.py migration executescript creates all Stage 1 tables.
+- Codex created a lightweight Windows development environment in the Documents repo and verified the local test suite on 2026-06-17: 186 passed, 1 skipped. The skipped test is the opt-in Playwright/Chromium live UI overflow audit.
 
 ## Inferred
 

@@ -34,6 +34,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import tempfile
 
 from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory
 
@@ -1423,7 +1424,7 @@ def pull_ollama_model():
         return redirect(url_for("core.settings_page", message="Invalid Ollama model name."))
 
     log_slug = re.sub(r"[^A-Za-z0-9._-]+", "-", model_name)
-    log_path = f"/tmp/liberty-basketball-ollama-pull-{log_slug}.log"
+    log_path = os.path.join(tempfile.gettempdir(), f"liberty-basketball-ollama-pull-{log_slug}.log")
     try:
         with open(log_path, "ab") as log_file:
             subprocess.Popen(

@@ -35,8 +35,14 @@ Requirements:
 import os
 import sys
 import subprocess
+import pytest
 
 # ── Configuration ──────────────────────────────────────────────────
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIBERTY_RUN_LIVE_UI_TESTS") != "1",
+    reason="Live UI overflow audit requires LIBERTY_RUN_LIVE_UI_TESTS=1, Playwright, Chromium, and a running Flask server.",
+)
+
 BASE_URL = os.environ.get("LIBERTY_BASE_URL", "http://localhost:8081")
 CHROMIUM_PATH = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH", "/snap/bin/chromium")
 VIEWPORT_WIDTH = int(os.environ.get("AUDIT_VIEWPORT_WIDTH", "1280"))

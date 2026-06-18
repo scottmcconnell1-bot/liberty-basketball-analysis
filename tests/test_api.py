@@ -663,7 +663,8 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
-def test_settings_page_renders(client):
+def test_settings_page_renders(client, monkeypatch):
+    monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.get("/settings")
     assert r.status_code == 200
     assert b"Settings" in r.data
@@ -746,7 +747,8 @@ def test_debug_page_filters_completed_reports(client, db):
     assert b"Open issue" not in r.data
 
 
-def test_settings_page_persists_updates(client, db):
+def test_settings_page_persists_updates(client, db, monkeypatch):
+    monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.post("/settings", data={
         "feature_ENABLE_MANUAL_TAG_MVP": "on",
         "feature_ENABLE_AUTO_STATS_M1": "on",
@@ -786,7 +788,7 @@ def test_settings_page_persists_updates(client, db):
 
 
 def test_pull_ollama_model_starts_background_pull(client, monkeypatch):
-    import app as app_module
+    import blueprints.core as core_module
 
     calls = []
 
@@ -799,7 +801,7 @@ def test_pull_ollama_model_starts_background_pull(client, monkeypatch):
                 "start_new_session": start_new_session,
             })
 
-    monkeypatch.setattr(app_module.subprocess, "Popen", DummyPopen)
+    monkeypatch.setattr(core_module.subprocess, "Popen", DummyPopen)
 
     r = client.post("/settings/ollama/pull", data={"model_name": "qwen2.5:7b"}, follow_redirects=False)
     assert r.status_code == 302

@@ -874,3 +874,17 @@ Verification completed by Codex on Windows:
 
 Verification still needed:
 - Hermes/OWL should run full Linux pytest verification on jason-5-may-updates.
+
+Codex Windows Test Harness Cleanup - 2026-06-17
+-----------------------------------------------
+Set up the Documents repo with a lightweight Windows development environment and cleaned up local test harness issues.
+
+Changes:
+- Added requirements-dev.txt for Flask/pytest-oriented local testing without heavy CV/ML dependencies.
+- Mocked Ollama model listing in settings page tests.
+- Patched the Ollama pull route to write logs through tempfile.gettempdir() instead of hardcoded /tmp.
+- Marked tests/test_ui_overflow.py as opt-in unless LIBERTY_RUN_LIVE_UI_TESTS=1.
+
+Verification:
+- .venv local suite: 186 passed, 1 skipped in 108.30s.
+- Skipped test is the live Playwright/Chromium UI overflow audit.
