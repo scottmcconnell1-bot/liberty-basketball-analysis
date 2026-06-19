@@ -1,8 +1,8 @@
 # Platform Core Schema Plan
 
-Date: 2026-06-17
+Date: 2026-06-18
 Branch: jason-5-may-updates
-Status: Planning only. No schema migration has been implemented by this document.
+Status: Stages 1 and 2 implemented. Stage 3A review workflow is planned in docs/REVIEW_WORKFLOW_PLAN.md.
 
 ## Purpose
 
@@ -524,7 +524,25 @@ Acceptance criteria:
 - No duplicate default teams or event types are created.
 - Existing manual tagging and stats tests still pass.
 
-### Stage 3: Possessions and Canonical Clips
+### Stage 3A: Review Workflow Foundation
+
+Tasks:
+- Add review_items.
+- Add event review state fields.
+- Backfill review state for existing events.
+- Wire human_corrections into event correction/rejection.
+- Add review APIs for event review.
+
+Acceptance criteria:
+- Coaches can list pending events.
+- Coaches can accept, correct, or reject an event.
+- Corrections are stored in human_corrections and provenance_records where useful.
+- Rejected events are preserved with review_status='rejected' rather than silently deleted.
+- Existing manual tagging and stats behavior remains usable.
+
+See docs/REVIEW_WORKFLOW_PLAN.md.
+
+### Stage 3B: Possessions and Canonical Clips
 
 Tasks:
 - Add possessions.

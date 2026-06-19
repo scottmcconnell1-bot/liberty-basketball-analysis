@@ -445,3 +445,31 @@ Evidence:
 Follow-up:
 - Hermes/OWL should verify the Stage 2 implementation on Linux after running AGENT_PROTOCOL.md preflight.
 - Scott should choose whether Stage 3 is review workflow planning or possession/canonical clip modeling after Linux verification.
+
+### Decision: Plan Review Workflow Before Possession Modeling
+
+Decision maker: Scott
+
+Date: 2026-06-18
+
+Decision:
+- Make Review Workflow Planning the next platform-core step after Stage 2 verification.
+- Plan the review workflow before possession modeling or canonical clip implementation.
+- Keep this step planning-only until Scott approves implementation.
+
+Rationale:
+- Coaches need a trusted way to accept, correct, reject, and annotate data before later modules depend on it.
+- The future AI assistant should answer from reviewed facts and clearly separate accepted, inferred, and unknown information.
+- Possessions, play recognition, stats, scouting, and strategy reports will be more reliable if built on a reviewed event layer.
+
+Evidence:
+- schema.sql already contains events.human_verified, events.confidence, human_corrections, player_development_clips, and provenance_records.
+- blueprints/clips.py already exposes event create/list/update/delete APIs.
+- player_development.py already exposes clip CRUD helpers for player development clips.
+- No review_items table or unified review queue exists yet.
+- docs/REVIEW_WORKFLOW_PLAN.md records the proposed Stage 3A review workflow.
+
+Follow-up:
+- Scott reviews docs/REVIEW_WORKFLOW_PLAN.md.
+- If approved, Codex implements Stage 3A as additive review workflow schema/API work with focused tests.
+- Hermes/OWL verifies the implementation on Linux before Stage 3A is treated as complete.

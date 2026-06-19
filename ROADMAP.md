@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform Stage 1 implemented, Stage 2 backfill implemented locally
+Status: Direction approved, base platform Stage 1 and Stage 2 verified, Stage 3A review workflow planned
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -140,11 +140,15 @@ Current implementation:
 - Scott approved Stage 2 implementation on 2026-06-18.
 - Stage 2 adds idempotent helpers.py backfill logic and tests/test_schema.py coverage for deterministic seeds, repeated initialization, and player/video/source backfill.
 - Codex local Windows verification reported 189 passed, 1 skipped on 2026-06-18.
-- Possessions, canonical clips, review queues, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
+- Hermes/OWL Linux verification reported 189 passed, 1 skipped and stable idempotency counts after init_db ran twice on 2026-06-18.
+- Scott selected Review Workflow Planning as the next platform-core step on 2026-06-18.
+- docs/REVIEW_WORKFLOW_PLAN.md defines Stage 3A: review_items, event review state, human_corrections wiring, review APIs, and accepted/corrected/rejected event states.
+- Possessions, canonical clips, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 
 Next step:
-- Hermes/OWL should run AGENT_PROTOCOL.md preflight and Linux verification for the Stage 2 implementation.
-- After Stage 2 verification, Scott should decide whether Stage 3 should be review workflow planning or possession/canonical clip modeling.
+- Scott should review docs/REVIEW_WORKFLOW_PLAN.md.
+- If approved, implement Stage 3A as additive review workflow schema/API work with focused tests.
+- After Stage 3A verification, decide whether Stage 3B should be possession modeling, canonical clips, or review UI.
 
 ### 7. Data Governance
 

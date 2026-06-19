@@ -974,3 +974,35 @@ Verification:
 
 Verification still needed:
 - Hermes/OWL Linux verification after AGENT_PROTOCOL.md preflight.
+
+Review Workflow Planning - 2026-06-18
+-------------------------------------
+Scott selected Review Workflow Planning as the next platform-core step after Hermes/OWL verified Stage 2.
+
+Created:
+- docs/REVIEW_WORKFLOW_PLAN.md
+
+Updated:
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Evidence gathered:
+- events has human_verified and confidence fields.
+- /api/save_event and event list/update/delete APIs exist in blueprints/clips.py.
+- human_corrections exists but is not wired into a review workflow.
+- provenance_records exists.
+- player_development_clips exists and has CRUD helpers/APIs.
+- review_items and canonical clips are planned but not implemented.
+
+Planned Stage 3A scope:
+- review_items table.
+- event review state fields.
+- pending/accepted/corrected/rejected review statuses.
+- review APIs for event accept/correct/reject.
+- human_corrections records for material coach corrections.
+
+Verification:
+- Planning/documentation only; no production code changed.

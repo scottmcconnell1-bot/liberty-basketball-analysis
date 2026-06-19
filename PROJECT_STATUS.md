@@ -89,6 +89,9 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - pytest.ini now limits default pytest discovery to tests/ so old experiments are not collected by the local app suite.
 - tests/conftest.py now gives each test app a temporary UPLOAD_FOLDER so upload/photo tests do not write into the repo uploads directory.
 - Codex verified locally on 2026-06-18: tests/test_schema.py reported 11 passed; the full local app suite reported 189 passed, 1 skipped.
+- Hermes/OWL verified Platform Core Schema Stage 2 on Linux on 2026-06-18: HEAD 12f73e3, clean working tree, 189 passed, 1 skipped, and idempotency counts remained stable after init_db ran twice.
+- Scott selected Review Workflow Planning as the next platform-core step on 2026-06-18.
+- docs/REVIEW_WORKFLOW_PLAN.md defines the planned trust layer for pending/accepted/corrected/rejected event review, human_corrections wiring, review_items, event review fields, and coach review APIs.
 
 ## Inferred
 
@@ -102,6 +105,7 @@ These are reasonable conclusions based on verified evidence, but they should not
 - Stage 1 of the platform core is additive only so current routes can keep working while the foundation is introduced.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
 - Stage 2 backfill is deterministic and additive so the new platform-core tables become usable without changing coach workflows.
+- Review workflow should come before possession modeling so coaches and the future AI assistant can distinguish accepted facts from unreviewed or rejected data.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
 
@@ -116,7 +120,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL Linux verification passes the full pytest suite after Platform Core Schema Stage 2.
+- Whether Scott approves Review Workflow Stage 3A implementation after reviewing docs/REVIEW_WORKFLOW_PLAN.md.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -133,4 +137,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Hermes/OWL Linux verification of Platform Core Schema Stage 2, then Scott should choose the next platform-core stage: review workflow planning or possession/canonical clip modeling.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Scott review of docs/REVIEW_WORKFLOW_PLAN.md, then approved Stage 3A implementation of the event review workflow.
