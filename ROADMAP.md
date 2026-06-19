@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform Stage 1 implemented, Stage 2 backfill planned
+Status: Direction approved, base platform Stage 1 implemented, Stage 2 backfill implemented locally
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -137,12 +137,14 @@ Current implementation:
 - Hermes/OWL reported Linux verification for Stage 1 on 2026-06-17: remote HEAD 9066936, 186 passed, 1 skipped, and all six Stage 1 tables exist.
 - Scott approved proceeding with Stage 2 planning on 2026-06-17.
 - docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md defines the proposed deterministic backfill for default Liberty team, roster memberships, video_assets, event_types, module_entitlements, and provenance records.
+- Scott approved Stage 2 implementation on 2026-06-18.
+- Stage 2 adds idempotent helpers.py backfill logic and tests/test_schema.py coverage for deterministic seeds, repeated initialization, and player/video/source backfill.
+- Codex local Windows verification reported 189 passed, 1 skipped on 2026-06-18.
 - Possessions, canonical clips, review queues, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 
 Next step:
-- Scott should review docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md.
-- If approved, implement Stage 2 as additive, idempotent seed/backfill logic with focused schema tests.
-- After Stage 2 verification, decide whether Stage 3 should be review workflow planning or possession/canonical clip modeling.
+- Hermes/OWL should run AGENT_PROTOCOL.md preflight and Linux verification for the Stage 2 implementation.
+- After Stage 2 verification, Scott should decide whether Stage 3 should be review workflow planning or possession/canonical clip modeling.
 
 ### 7. Data Governance
 

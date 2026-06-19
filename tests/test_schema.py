@@ -134,6 +134,139 @@ def test_stage1_platform_core_tables(db):
             assert col in cols, f"{table} missing column: {col}"
 
 
+def table_count(db, table):
+    return db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+
+def test_stage2_platform_core_seed_rows(db):
+    team = db.execute(
+        """SELECT * FROM teams
+           WHERE organization_name='Liberty'
+             AND team_name='Liberty'
+             AND program_name='Liberty'
+             AND gender='boys'
+             AND level='jr_high'"""
+    ).fetchone()
+    assert team is not None
+
+    event_codes = {
+        row["code"] for row in db.execute("SELECT code FROM event_types").fetchall()
+    }
+    assert {
+        "made_two",
+        "missed_two",
+        "made_three",
+        "missed_three",
+        "turnover",
+        "period_start",
+        "period_end",
+    }.issubset(event_codes)
+    assert len(event_codes) >= 19
+
+    entitlement = db.execute(
+        """SELECT * FROM module_entitlements
+           WHERE team_id=? AND module_key='base_platform'""",
+        (team["id"],),
+    ).fetchone()
+    assert entitlement is not None
+    assert entitlement["enabled"] == 1
+
+
+def test_stage2_backfill_is_idempotent(app, db):
+    before = {
+        table: table_count(db, table)
+        for table in [
+            "teams",
+            "event_types",
+            "module_entitlements",
+            "provenance_records",
+        ]
+    }
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    after = {
+        table: table_count(db, table)
+        for table in before
+    }
+    assert after == before
+
+
+def test_stage2_backfills_players_videos_and_sources(app, db):
+    db.execute(
+        """INSERT INTO players
+              (name, jersey_number, position, grade, program_name, gender, level)
+           VALUES ('Test Player', 12, 'G', 10, 'Liberty', 'boys', 'jr_high')"""
+    )
+    player_id = db.execute("SELECT id FROM players WHERE name='Test Player'").fetchone()[0]
+    db.execute(
+        """INSERT INTO videos
+              (original_filename, stored_filename, file_path, file_size_bytes, game_id)
+           VALUES ('original.mp4', 'stored.mp4', '/tmp/stored.mp4', 123, 'analysis-key')"""
+    )
+    db.execute(
+        """INSERT INTO games (source_type, source_key)
+           VALUES ('manual', 'stage2-test-game')"""
+    )
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage2-test-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO sources (game_id, source_type, source_path)
+           VALUES (?, 'nfhs', '/tmp/source.mp4')""",
+        (game_id,),
+    )
+    db.commit()
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    team_id = db.execute(
+        "SELECT id FROM teams WHERE team_name='Liberty' ORDER BY id LIMIT 1"
+    ).fetchone()[0]
+    membership = db.execute(
+        """SELECT * FROM roster_memberships
+           WHERE player_id=? AND team_id=?""",
+        (player_id, team_id),
+    ).fetchone()
+    assert membership is not None
+    assert membership["jersey_number"] == 12
+    assert membership["position"] == "G"
+
+    uploaded_asset = db.execute(
+        """SELECT * FROM video_assets
+           WHERE stored_filename='stored.mp4' AND source_type='uploaded_video'"""
+    ).fetchone()
+    assert uploaded_asset is not None
+    assert uploaded_asset["game_id"] is None
+    assert uploaded_asset["primary_asset"] == 1
+
+    source_asset = db.execute(
+        """SELECT * FROM video_assets
+           WHERE source_id IS NOT NULL AND source_type='nfhs'"""
+    ).fetchone()
+    assert source_asset is not None
+    assert source_asset["game_id"] == game_id
+
+    counts = {
+        table: table_count(db, table)
+        for table in ["roster_memberships", "video_assets", "provenance_records"]
+    }
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+    assert counts == {
+        table: table_count(db, table)
+        for table in counts
+    }
+
+
 def test_stats_columns(db):
     cols = get_columns(db, "stats")
     for col in EXPECTED_COLUMNS["stats"]:

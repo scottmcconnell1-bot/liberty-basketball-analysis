@@ -938,3 +938,39 @@ Rules added:
 
 Verification:
 - Protocol-only/documentation update; no production code changed.
+
+Platform Core Schema Stage 2 Backfill Implementation - 2026-06-18
+------------------------------------------------------------------
+Scott approved Stage 2 implementation from docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md.
+
+Implemented:
+- Default Liberty team seed/backfill.
+- Canonical event type seed rows.
+- base_platform module entitlement seed.
+- Roster membership backfill from existing players.
+- Video asset backfill from existing videos and sources.
+- Migration provenance records for deterministic backfill actions.
+
+Files changed:
+- helpers.py
+- tests/test_schema.py
+- tests/conftest.py
+- pytest.ini
+- docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Test harness cleanup:
+- pytest.ini now sets testpaths = tests so default pytest does not collect old experiment scripts.
+- tests/conftest.py now uses a temporary UPLOAD_FOLDER per app fixture so upload/photo tests do not write into repo uploads/.
+
+Verification:
+- tests/test_schema.py: 11 passed.
+- No-write syntax compile for helpers.py and tests/test_schema.py: syntax ok.
+- Full local app suite: 189 passed, 1 skipped in 110.66s.
+- Skipped test is the opt-in live UI overflow audit.
+
+Verification still needed:
+- Hermes/OWL Linux verification after AGENT_PROTOCOL.md preflight.

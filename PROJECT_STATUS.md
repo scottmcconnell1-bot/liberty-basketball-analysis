@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 Branch: jason-5-may-updates
 
 ## Proven
@@ -83,6 +83,12 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Hermes/OWL reported Linux verification on 2026-06-17 after correcting a stale local checkout: remote HEAD 9066936, AGENT_PROTOCOL.md present at FETCH_HEAD, 186 passed, 1 skipped, and all six Stage 1 tables exist.
 - Scott approved proceeding with Platform Core Schema Stage 2 planning on 2026-06-17.
 - docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md defines the Stage 2 planning scope: default Liberty team, roster memberships, video_assets, event_types, module_entitlements, provenance, idempotent backfill rules, verification requirements, and non-goals.
+- Scott approved Platform Core Schema Stage 2 implementation on 2026-06-18.
+- Stage 2 implementation adds deterministic, idempotent backfill in helpers.py for the default Liberty team, roster memberships from players, video_assets from videos/sources, canonical event_types, base_platform module entitlement, and migration provenance records.
+- tests/test_schema.py now verifies Stage 2 seed rows, idempotency, and player/video/source backfill behavior.
+- pytest.ini now limits default pytest discovery to tests/ so old experiments are not collected by the local app suite.
+- tests/conftest.py now gives each test app a temporary UPLOAD_FOLDER so upload/photo tests do not write into the repo uploads directory.
+- Codex verified locally on 2026-06-18: tests/test_schema.py reported 11 passed; the full local app suite reported 189 passed, 1 skipped.
 
 ## Inferred
 
@@ -95,7 +101,7 @@ These are reasonable conclusions based on verified evidence, but they should not
 - The base platform should prioritize shared identity, possessions, canonical clips, review workflow, and provenance before paid add-on modules are implemented.
 - Stage 1 of the platform core is additive only so current routes can keep working while the foundation is introduced.
 - The remaining TEXT game_id columns in downstream analysis tables should be migrated per feature, because they currently carry AI/video analysis keys rather than relational game IDs.
-- Stage 2 backfill should be deterministic and additive so the new platform-core tables become usable without changing coach workflows.
+- Stage 2 backfill is deterministic and additive so the new platform-core tables become usable without changing coach workflows.
 - Dataset provenance is incomplete for cross-machine work because documented dataset paths are Linux-specific and not present in the Windows snapshot.
 - IMPLEMENTATION_PLAN.md may overstate completion of later phases because it marks phases complete while the detector audit documents a critical subsystem failure.
 
@@ -110,8 +116,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL should also run GitHub Actions or deployment-specific checks after the Stage 1 local Linux pytest result.
-- Whether Scott approves Platform Core Schema Stage 2 implementation after reviewing the backfill plan.
+- Whether Hermes/OWL Linux verification passes the full pytest suite after Platform Core Schema Stage 2.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -128,4 +133,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Scott review of docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md, then approved implementation of the deterministic Stage 2 backfill.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Hermes/OWL Linux verification of Platform Core Schema Stage 2, then Scott should choose the next platform-core stage: review workflow planning or possession/canonical clip modeling.

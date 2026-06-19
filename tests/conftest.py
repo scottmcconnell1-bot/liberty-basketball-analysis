@@ -16,11 +16,14 @@ def app():
 
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
+    upload_dir = tempfile.TemporaryDirectory()
 
     app_module.app.config.update({
         "TESTING": True,
         "DATABASE": db_path,
+        "UPLOAD_FOLDER": upload_dir.name,
     })
+    os.makedirs(os.path.join(upload_dir.name, "team_photos"), exist_ok=True)
 
     with app_module.app.app_context():
         app_module.init_db()
@@ -28,6 +31,7 @@ def app():
     yield app_module.app
 
     os.unlink(db_path)
+    upload_dir.cleanup()
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 # Platform Core Schema Stage 2 Backfill Plan
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 Branch: jason-5-may-updates
-Status: Planning only; not implemented.
+Status: Implemented locally; awaiting Hermes/OWL Linux verification.
 
 ## Purpose
 

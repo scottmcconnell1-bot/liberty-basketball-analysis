@@ -31,6 +31,41 @@ except ImportError:  # pragma: no cover - optional at runtime
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 POWER_SAMPLE_CACHE = {}
 
+DEFAULT_TEAM_SEED = {
+    "organization_name": "Liberty",
+    "team_name": "Liberty",
+    "program_name": "Liberty",
+    "gender": "boys",
+    "level": "jr_high",
+}
+
+EVENT_TYPE_SEEDS = [
+    ("made_two", "Made 2PT", "shot", 1, 1, 0),
+    ("missed_two", "Missed 2PT", "shot", 1, 0, 0),
+    ("made_three", "Made 3PT", "shot", 1, 1, 0),
+    ("missed_three", "Missed 3PT", "shot", 1, 0, 0),
+    ("made_free_throw", "Made free throw", "free_throw", 1, 1, 0),
+    ("missed_free_throw", "Missed free throw", "free_throw", 1, 0, 0),
+    ("rebound_offensive", "Offensive rebound", "rebound", 1, 0, 0),
+    ("rebound_defensive", "Defensive rebound", "rebound", 1, 0, 0),
+    ("assist", "Assist", "assist", 1, 0, 0),
+    ("steal", "Steal", "defense", 1, 0, 1),
+    ("block", "Block", "defense", 1, 0, 0),
+    ("turnover", "Turnover", "turnover", 1, 0, 1),
+    ("foul_personal", "Personal foul", "foul", 1, 0, 0),
+    ("foul_shooting", "Shooting foul", "foul", 1, 0, 0),
+    ("substitution", "Substitution", "rotation", 0, 0, 0),
+    ("timeout", "Timeout", "game_management", 0, 0, 0),
+    ("jump_ball", "Jump ball", "game_management", 0, 0, 1),
+    ("period_start", "Period start", "clock", 0, 0, 1),
+    ("period_end", "Period end", "clock", 0, 0, 1),
+]
+
+BASE_MODULE_ENTITLEMENT = {
+    "module_key": "base_platform",
+    "notes": "Seeded by platform_core_stage_2_backfill; additional modules require Scott approval.",
+}
+
 # ── Configuration ─────────────────────────────────────────
 
 
@@ -876,6 +911,277 @@ def _migrate_analysis_runs_identity(db):
         db.execute("PRAGMA foreign_keys = ON")
 
 
+def _table_exists(db, table_name):
+    return db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (table_name,),
+    ).fetchone() is not None
+
+
+def _stage2_default_team_id(db):
+    """Create or return the deterministic default Liberty team."""
+    team = db.execute(
+        """SELECT id FROM teams
+           WHERE organization_name=?
+             AND team_name=?
+             AND program_name=?
+             AND gender=?
+             AND level=?
+           ORDER BY id LIMIT 1""",
+        (
+            DEFAULT_TEAM_SEED["organization_name"],
+            DEFAULT_TEAM_SEED["team_name"],
+            DEFAULT_TEAM_SEED["program_name"],
+            DEFAULT_TEAM_SEED["gender"],
+            DEFAULT_TEAM_SEED["level"],
+        ),
+    ).fetchone()
+    if team:
+        return team["id"]
+
+    cur = db.execute(
+        """INSERT INTO teams
+              (organization_name, team_name, program_name, gender, level)
+           VALUES (?, ?, ?, ?, ?)""",
+        (
+            DEFAULT_TEAM_SEED["organization_name"],
+            DEFAULT_TEAM_SEED["team_name"],
+            DEFAULT_TEAM_SEED["program_name"],
+            DEFAULT_TEAM_SEED["gender"],
+            DEFAULT_TEAM_SEED["level"],
+        ),
+    )
+    team_id = cur.lastrowid
+    _insert_backfill_provenance(
+        db,
+        "team",
+        team_id,
+        "default_team",
+        details={"seed": DEFAULT_TEAM_SEED},
+    )
+    return team_id
+
+
+def _insert_backfill_provenance(db, entity_type, entity_id, source_id, details=None):
+    if not _table_exists(db, "provenance_records") or entity_id is None:
+        return
+    provenance_source_id = f"platform_core_stage_2_backfill:{source_id}"
+    existing = db.execute(
+        """SELECT 1 FROM provenance_records
+           WHERE entity_type=?
+             AND entity_id=?
+             AND source_type='migration'
+             AND source_id=?
+           LIMIT 1""",
+        (entity_type, entity_id, provenance_source_id),
+    ).fetchone()
+    if existing:
+        return
+    db.execute(
+        """INSERT INTO provenance_records
+              (entity_type, entity_id, source_type, source_id, confidence, details_json)
+           VALUES (?, ?, 'migration', ?, 1.0, ?)""",
+        (
+            entity_type,
+            entity_id,
+            provenance_source_id,
+            json.dumps(details or {}, sort_keys=True),
+        ),
+    )
+
+
+def _seed_event_types(db):
+    for code, label, category, counts_for_stats, is_scoring, is_boundary in EVENT_TYPE_SEEDS:
+        db.execute(
+            """INSERT OR IGNORE INTO event_types
+                  (code, label, category, counts_for_stats,
+                   is_scoring_event, is_possession_boundary)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (code, label, category, counts_for_stats, is_scoring, is_boundary),
+        )
+
+    rows = db.execute(
+        "SELECT id, code FROM event_types WHERE code IN ({})".format(
+            ",".join("?" for _ in EVENT_TYPE_SEEDS)
+        ),
+        [seed[0] for seed in EVENT_TYPE_SEEDS],
+    ).fetchall()
+    for row in rows:
+        _insert_backfill_provenance(
+            db,
+            "event_type",
+            row["id"],
+            f"event_type:{row['code']}",
+            details={"code": row["code"]},
+        )
+
+
+def _seed_base_module_entitlement(db, team_id):
+    if team_id is None:
+        return
+    db.execute(
+        """INSERT OR IGNORE INTO module_entitlements
+              (team_id, module_key, enabled, notes)
+           VALUES (?, ?, 1, ?)""",
+        (team_id, BASE_MODULE_ENTITLEMENT["module_key"], BASE_MODULE_ENTITLEMENT["notes"]),
+    )
+    row = db.execute(
+        """SELECT id FROM module_entitlements
+           WHERE team_id=? AND module_key=?""",
+        (team_id, BASE_MODULE_ENTITLEMENT["module_key"]),
+    ).fetchone()
+    if row:
+        _insert_backfill_provenance(
+            db,
+            "module_entitlement",
+            row["id"],
+            f"module:{BASE_MODULE_ENTITLEMENT['module_key']}",
+            details={"module_key": BASE_MODULE_ENTITLEMENT["module_key"]},
+        )
+
+
+def _backfill_roster_memberships(db, team_id):
+    if team_id is None or not _table_exists(db, "players"):
+        return
+    db.execute(
+        """INSERT INTO roster_memberships
+              (player_id, team_id, season_id, jersey_number, position, grade, status)
+           SELECT p.id, ?, p.season_id, p.jersey_number, p.position, p.grade, 'active'
+             FROM players p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM roster_memberships rm
+                 WHERE rm.player_id = p.id
+                   AND rm.team_id = ?
+                   AND (
+                       rm.season_id = p.season_id
+                       OR (rm.season_id IS NULL AND p.season_id IS NULL)
+                   )
+            )""",
+        (team_id, team_id),
+    )
+    rows = db.execute(
+        """SELECT rm.id, rm.player_id
+             FROM roster_memberships rm
+            WHERE rm.team_id=?""",
+        (team_id,),
+    ).fetchall()
+    for row in rows:
+        _insert_backfill_provenance(
+            db,
+            "roster_membership",
+            row["id"],
+            f"player:{row['player_id']}",
+            details={"player_id": row["player_id"], "team_id": team_id},
+        )
+
+
+def _game_id_if_relational(db, raw_game_id):
+    if raw_game_id in (None, ""):
+        return None
+    try:
+        game_id = int(raw_game_id)
+    except (TypeError, ValueError):
+        return None
+    row = db.execute("SELECT id FROM games WHERE id=?", (game_id,)).fetchone()
+    return game_id if row else None
+
+
+def _backfill_video_assets_from_videos(db):
+    if not _table_exists(db, "videos"):
+        return
+    rows = db.execute(
+        """SELECT id, original_filename, stored_filename, file_path,
+                  file_size_bytes, game_id
+             FROM videos"""
+    ).fetchall()
+    for row in rows:
+        existing = db.execute(
+            "SELECT id FROM video_assets WHERE stored_filename=? OR file_path=? LIMIT 1",
+            (row["stored_filename"], row["file_path"]),
+        ).fetchone()
+        if existing:
+            continue
+        game_id = _game_id_if_relational(db, row["game_id"])
+        cur = db.execute(
+            """INSERT INTO video_assets
+                  (game_id, original_filename, stored_filename, file_path,
+                   source_type, file_size_bytes, primary_asset)
+               VALUES (?, ?, ?, ?, 'uploaded_video', ?, 1)""",
+            (
+                game_id,
+                row["original_filename"],
+                row["stored_filename"],
+                row["file_path"],
+                row["file_size_bytes"],
+            ),
+        )
+        _insert_backfill_provenance(
+            db,
+            "video_asset",
+            cur.lastrowid,
+            f"video:{row['id']}",
+            details={"video_id": row["id"], "source_table": "videos"},
+        )
+
+
+def _backfill_video_assets_from_sources(db):
+    if not _table_exists(db, "sources"):
+        return
+    rows = db.execute(
+        "SELECT id, game_id, source_type, source_path FROM sources"
+    ).fetchall()
+    for row in rows:
+        existing = db.execute(
+            "SELECT id FROM video_assets WHERE source_id=? OR file_path=? LIMIT 1",
+            (row["id"], row["source_path"]),
+        ).fetchone()
+        if existing:
+            continue
+        filename = os.path.basename(row["source_path"] or "")
+        cur = db.execute(
+            """INSERT INTO video_assets
+                  (game_id, source_id, original_filename, stored_filename,
+                   file_path, source_type, primary_asset)
+               VALUES (?, ?, ?, ?, ?, ?, 0)""",
+            (
+                row["game_id"],
+                row["id"],
+                filename or None,
+                filename or None,
+                row["source_path"],
+                row["source_type"],
+            ),
+        )
+        _insert_backfill_provenance(
+            db,
+            "video_asset",
+            cur.lastrowid,
+            f"source:{row['id']}",
+            details={"source_id": row["id"], "source_table": "sources"},
+        )
+
+
+def _backfill_platform_core_stage2(db):
+    """Seed deterministic platform-core data without changing route behavior."""
+    required = [
+        "teams",
+        "roster_memberships",
+        "video_assets",
+        "event_types",
+        "provenance_records",
+        "module_entitlements",
+    ]
+    if not all(_table_exists(db, table) for table in required):
+        return
+
+    team_id = _stage2_default_team_id(db)
+    _seed_event_types(db)
+    _seed_base_module_entitlement(db, team_id)
+    _backfill_roster_memberships(db, team_id)
+    _backfill_video_assets_from_videos(db)
+    _backfill_video_assets_from_sources(db)
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
@@ -1144,6 +1450,7 @@ def _ensure_migration_columns(db):
                 db.execute(sql)
         except Exception:
             pass
+    _backfill_platform_core_stage2(db)
     db.commit()
 
 

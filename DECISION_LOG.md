@@ -411,3 +411,37 @@ Evidence:
 Follow-up:
 - Hermes/OWL should read AGENT_PROTOCOL.md before the next verification task.
 - If local changes block verification, Hermes/OWL should use a clean clone/worktree only after Scott approves the approach.
+
+### Decision: Implement Platform Core Schema Stage 2 Backfill
+
+Decision maker: Scott
+
+Date: 2026-06-18
+
+Decision:
+- Implement Stage 2 from docs/PLATFORM_CORE_SCHEMA_STAGE_2_BACKFILL_PLAN.md.
+- Keep the implementation additive, deterministic, and idempotent.
+- Do not add possession modeling, review queues, paid-package enforcement, event ledger rewrites, or ball detection behavior changes in this stage.
+
+Scope implemented:
+- Default Liberty team seed/backfill.
+- Roster memberships from existing players.
+- Video asset records from existing videos and game sources.
+- Canonical event type seed rows.
+- Base platform module entitlement.
+- Migration provenance records for deterministic backfill actions.
+- Focused tests for seed rows, idempotency, and player/video/source backfill.
+
+Rationale:
+- Stage 1 created platform-core tables, but the empty tables needed deterministic seed/backfill data before later modules can depend on them.
+- Backfill is limited to verifiable repository/database facts and avoids unsupported basketball inferences.
+
+Evidence:
+- helpers.py contains the Stage 2 backfill helpers and calls them from _ensure_migration_columns after Stage 1 tables exist.
+- tests/test_schema.py verifies Stage 2 seeds, idempotency, roster membership backfill, and video asset backfill.
+- Codex local verification on 2026-06-18: tests/test_schema.py reported 11 passed.
+- Codex local verification on 2026-06-18: full local app suite reported 189 passed, 1 skipped.
+
+Follow-up:
+- Hermes/OWL should verify the Stage 2 implementation on Linux after running AGENT_PROTOCOL.md preflight.
+- Scott should choose whether Stage 3 is review workflow planning or possession/canonical clip modeling after Linux verification.
