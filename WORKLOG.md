@@ -920,3 +920,21 @@ Non-scope:
 Verification:
 - Planning document created only; no production code changed.
 - Implementation still requires Scott approval after review.
+
+Agent Protocol Tightening - 2026-06-18
+--------------------------------------
+Scott approved tightening AGENT_PROTOCOL.md after Hermes/OWL mixed unrelated trader_bot output into Liberty context and used force reset during verification.
+
+Updated:
+- AGENT_PROTOCOL.md
+- DECISION_LOG.md
+- WORKLOG.md
+
+Rules added:
+- Liberty project responses must not include unrelated project data, including trader_bot, Alpaca, market positions, or trading reports.
+- Agents must verify the Liberty working directory and remote URL before reporting.
+- Agents must not use stash, reset, clean, or destructive checkout during verification unless Scott explicitly approves the specific action.
+- If local changes block verification, agents must report Unknown and ask for approval to use a clean clone, worktree, stash, reset, or other cleanup.
+
+Verification:
+- Protocol-only/documentation update; no production code changed.

@@ -387,3 +387,27 @@ Follow-up:
 - Scott reviews the Stage 2 backfill plan.
 - If approved, Codex implements idempotent backfill helpers and focused tests.
 - Hermes/OWL verifies the implementation on Linux before it is treated as complete.
+
+### Decision: Tighten Agent Protocol for Project Isolation and Verification Safety
+
+Decision maker: Scott
+
+Date: 2026-06-18
+
+Decision:
+- Update AGENT_PROTOCOL.md with explicit no cross-project contamination rules.
+- Update AGENT_PROTOCOL.md with explicit no stash, reset, clean, or destructive checkout rules during verification unless Scott approves the specific action.
+
+Rationale:
+- Hermes/OWL included unrelated trader_bot/Alpaca information in Liberty project context.
+- Hermes/OWL also used force reset during verification after local checkout conflicts.
+- Liberty project truth must come from the Liberty repository and verified evidence, not private memory or unrelated project state.
+
+Evidence:
+- Scott approved the protocol update on 2026-06-18.
+- AGENT_PROTOCOL.md now requires agents to verify the Liberty repository path and remote before reporting.
+- AGENT_PROTOCOL.md now instructs agents to report local-change blockers as Unknown and ask for approval before using stash, reset, clean, or destructive checkout.
+
+Follow-up:
+- Hermes/OWL should read AGENT_PROTOCOL.md before the next verification task.
+- If local changes block verification, Hermes/OWL should use a clean clone/worktree only after Scott approves the approach.
