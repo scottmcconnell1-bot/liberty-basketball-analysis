@@ -1,8 +1,8 @@
 # Platform Core Schema Plan
 
-Date: 2026-06-18
+Date: 2026-06-23
 Branch: jason-5-may-updates
-Status: Stages 1 and 2 implemented. Stage 3A review workflow is planned in docs/REVIEW_WORKFLOW_PLAN.md.
+Status: Stages 1, 2, and 3A implemented locally. Stage 3A awaits Hermes/OWL Linux verification.
 
 ## Purpose
 

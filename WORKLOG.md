@@ -1006,3 +1006,42 @@ Planned Stage 3A scope:
 
 Verification:
 - Planning/documentation only; no production code changed.
+
+Review Workflow Stage 3A Implementation - 2026-06-23
+----------------------------------------------------
+Scott approved Stage 3A implementation from docs/REVIEW_WORKFLOW_PLAN.md.
+
+Implemented:
+- review_items table.
+- Event review state columns: review_status, source_type, reviewed_by_user_id, reviewed_at, review_notes.
+- Idempotent review backfill for existing events.
+- Pending review_items for pending events.
+- Manual save_event() now defaults manual events to accepted and creates review_items for unverified/pending events.
+- GET /api/review/events.
+- POST /api/review/events/<event_id>/accept.
+- POST /api/review/events/<event_id>/correct.
+- POST /api/review/events/<event_id>/reject.
+- human_corrections and provenance_records writes for review correction/rejection actions.
+
+Files changed:
+- schema.sql
+- helpers.py
+- blueprints/clips.py
+- tests/test_schema.py
+- tests/test_api.py
+- docs/REVIEW_WORKFLOW_PLAN.md
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification:
+- Focused Stage 3A tests: 18 passed.
+- No-write syntax compile for helpers.py, blueprints/clips.py, tests/test_schema.py, and tests/test_api.py: syntax ok.
+- diff --check: clean.
+- Full local app suite: 195 passed, 1 skipped in 129.59s.
+- Skipped test is the opt-in live UI overflow audit.
+
+Verification still needed:
+- Hermes/OWL Linux verification after AGENT_PROTOCOL.md preflight.

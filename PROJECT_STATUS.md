@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-18
+Updated: 2026-06-23
 Branch: jason-5-may-updates
 
 ## Proven
@@ -92,6 +92,12 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Hermes/OWL verified Platform Core Schema Stage 2 on Linux on 2026-06-18: HEAD 12f73e3, clean working tree, 189 passed, 1 skipped, and idempotency counts remained stable after init_db ran twice.
 - Scott selected Review Workflow Planning as the next platform-core step on 2026-06-18.
 - docs/REVIEW_WORKFLOW_PLAN.md defines the planned trust layer for pending/accepted/corrected/rejected event review, human_corrections wiring, review_items, event review fields, and coach review APIs.
+- Scott approved Review Workflow Stage 3A implementation on 2026-06-23.
+- Stage 3A implementation adds review_items, events.review_status, events.source_type, events.reviewed_by_user_id, events.reviewed_at, and events.review_notes to schema.sql and the idempotent migration path.
+- Stage 3A backfill maps existing human_verified events to accepted/pending review states and creates review_items for pending events.
+- blueprints/clips.py now provides event review APIs: GET /api/review/events, POST /api/review/events/<event_id>/accept, POST /api/review/events/<event_id>/correct, and POST /api/review/events/<event_id>/reject.
+- Review correction/rejection actions write human_corrections and review provenance records while preserving rejected events.
+- Codex verified locally on 2026-06-23: focused Stage 3A tests reported 18 passed; the full local app suite reported 195 passed, 1 skipped.
 
 ## Inferred
 
@@ -120,7 +126,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Scott approves Review Workflow Stage 3A implementation after reviewing docs/REVIEW_WORKFLOW_PLAN.md.
+- Whether Hermes/OWL Linux verification passes the full pytest suite after Review Workflow Stage 3A.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -137,4 +143,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Scott review of docs/REVIEW_WORKFLOW_PLAN.md, then approved Stage 3A implementation of the event review workflow.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Hermes/OWL Linux verification of Review Workflow Stage 3A, then Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.

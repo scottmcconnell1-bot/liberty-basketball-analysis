@@ -50,6 +50,11 @@ CREATE TABLE IF NOT EXISTS events (
     source_frame   INTEGER,
     human_verified INTEGER NOT NULL DEFAULT 0,
     confidence     REAL,
+    review_status  TEXT NOT NULL DEFAULT 'pending',
+    source_type    TEXT DEFAULT 'ai',
+    reviewed_by_user_id INTEGER REFERENCES users(id),
+    reviewed_at    TIMESTAMP,
+    review_notes   TEXT,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -289,6 +294,23 @@ CREATE TABLE IF NOT EXISTS provenance_records (
     created_by_user_id  INTEGER REFERENCES users(id),
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     details_json        TEXT
+);
+
+CREATE TABLE IF NOT EXISTS review_items (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type         TEXT NOT NULL,
+    entity_id           INTEGER NOT NULL,
+    game_id             TEXT,
+    review_status       TEXT NOT NULL DEFAULT 'pending',
+    priority            TEXT NOT NULL DEFAULT 'normal',
+    reason              TEXT,
+    assigned_to_user_id INTEGER REFERENCES users(id),
+    reviewed_by_user_id INTEGER REFERENCES users(id),
+    reviewed_at         TIMESTAMP,
+    notes               TEXT,
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(entity_type, entity_id)
 );
 
 CREATE TABLE IF NOT EXISTS module_entitlements (

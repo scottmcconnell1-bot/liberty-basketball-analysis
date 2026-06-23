@@ -86,13 +86,18 @@ def save_event():
     player = str(data.get("player", ""))[:128] if data.get("player") else None
     shot_result = str(data.get("shot_result", ""))[:32] if data.get("shot_result") else None
     source_video = str(data.get("source_video", ""))[:256] if data.get("source_video") else None
+    human_verified = int(bool(data.get("human_verified", True)))
+    review_status = "accepted" if human_verified else "pending"
+    source_type = str(data.get("source_type", "manual"))[:64] if data.get("source_type") else "manual"
 
     try:
         cur = db.execute(
             """INSERT INTO events
                (game_id, player, event_type, shot_result, timestamp_ms, details_json,
-                source_video, source_frame, human_verified, confidence)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                source_video, source_frame, human_verified, confidence,
+                review_status, source_type, reviewed_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,
+                       CASE WHEN ?='accepted' THEN CURRENT_TIMESTAMP ELSE NULL END)""",
             (
                 game_id,
                 player,
@@ -102,10 +107,20 @@ def save_event():
                 details_json if isinstance(details_json, str) else json.dumps(details_json) if details_json else None,
                 source_video,
                 data.get("source_frame"),
-                int(bool(data.get("human_verified", True))),
+                human_verified,
                 data.get("confidence"),
+                review_status,
+                source_type,
+                review_status,
             ),
         )
+        if review_status == "pending":
+            db.execute(
+                """INSERT OR IGNORE INTO review_items
+                      (entity_type, entity_id, game_id, review_status, reason)
+                   VALUES ('event', ?, ?, 'pending', 'Event needs coach review')""",
+                (cur.lastrowid, game_id),
+            )
         db.commit()
         refresh_game_stats(db, game_id)
         return jsonify({"status": "success", "id": cur.lastrowid})
@@ -171,6 +186,298 @@ def delete_event(event_id):
     if row:
         refresh_game_stats(db, row["game_id"])
     return jsonify({"deleted": True})
+
+
+def _current_review_user_id():
+    user = getattr(g, "user", None)
+    if isinstance(user, dict):
+        return user.get("id")
+    if user is not None and hasattr(user, "get"):
+        return user.get("id")
+    return None
+
+
+def _stringify_review_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, sort_keys=True)
+    return str(value)
+
+
+def _insert_review_provenance(db, event_id, action, user_id, details):
+    db.execute(
+        """INSERT INTO provenance_records
+              (entity_type, entity_id, source_type, source_id, confidence,
+               created_by_user_id, details_json)
+           VALUES ('event', ?, 'review', ?, 1.0, ?, ?)""",
+        (event_id, action, user_id, json.dumps(details or {}, sort_keys=True)),
+    )
+
+
+def _record_human_correction(db, row, correction_type, field_changed,
+                             original_value, corrected_value, notes=None):
+    db.execute(
+        """INSERT INTO human_corrections
+              (game_id, event_id, correction_type, original_value,
+               corrected_value, field_changed, timestamp_ms, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            row["game_id"],
+            row["id"],
+            correction_type,
+            _stringify_review_value(original_value),
+            _stringify_review_value(corrected_value),
+            field_changed,
+            row["timestamp_ms"],
+            notes,
+        ),
+    )
+
+
+def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
+    row = db.execute("SELECT id, game_id FROM events WHERE id=?", (event_id,)).fetchone()
+    if not row:
+        return
+    db.execute(
+        """INSERT OR IGNORE INTO review_items
+              (entity_type, entity_id, game_id, review_status, reason)
+           VALUES ('event', ?, ?, ?, 'Event needs coach review')""",
+        (event_id, row["game_id"], status),
+    )
+    db.execute(
+        """UPDATE review_items
+              SET review_status=?,
+                  reviewed_by_user_id=?,
+                  reviewed_at=CASE
+                      WHEN ? IN ('accepted', 'corrected', 'rejected') THEN CURRENT_TIMESTAMP
+                      ELSE reviewed_at
+                  END,
+                  notes=COALESCE(?, notes),
+                  updated_at=CURRENT_TIMESTAMP
+            WHERE entity_type='event' AND entity_id=?""",
+        (status, user_id, status, notes, event_id),
+    )
+
+
+@clips_bp.route("/api/review/events", methods=["GET"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def review_events():
+    db = get_db()
+    clauses = []
+    params = []
+
+    review_status = (request.args.get("review_status") or "pending").strip()
+    if review_status and review_status != "all":
+        clauses.append("e.review_status = ?")
+        params.append(review_status)
+
+    for key in ["game_id", "event_type", "source_type", "player"]:
+        value = (request.args.get(key) or "").strip()
+        if value:
+            clauses.append(f"e.{key} = ?")
+            params.append(value)
+
+    min_conf = request.args.get("min_confidence")
+    if min_conf not in (None, ""):
+        clauses.append("e.confidence >= ?")
+        params.append(float(min_conf))
+    max_conf = request.args.get("max_confidence")
+    if max_conf not in (None, ""):
+        clauses.append("e.confidence <= ?")
+        params.append(float(max_conf))
+
+    where = "WHERE " + " AND ".join(clauses) if clauses else ""
+    rows = db.execute(
+        f"""SELECT e.*,
+                  ri.id AS review_item_id,
+                  ri.priority AS review_priority,
+                  ri.reason AS review_reason,
+                  ri.notes AS queue_notes
+             FROM events e
+             LEFT JOIN review_items ri
+               ON ri.entity_type='event' AND ri.entity_id=e.id
+             {where}
+            ORDER BY e.game_id, e.timestamp_ms, e.id""",
+        params,
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@clips_bp.route("/api/review/events/<int:event_id>/accept", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def review_event_accept(event_id):
+    data = request.get_json(silent=True) or {}
+    notes = data.get("notes")
+    db = get_db()
+    row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+
+    user_id = _current_review_user_id()
+    db.execute(
+        """UPDATE events
+              SET review_status='accepted',
+                  human_verified=1,
+                  reviewed_by_user_id=?,
+                  reviewed_at=CURRENT_TIMESTAMP,
+                  review_notes=COALESCE(?, review_notes)
+            WHERE id=?""",
+        (user_id, notes, event_id),
+    )
+    _sync_event_review_item(db, event_id, "accepted", user_id, notes)
+    _insert_review_provenance(
+        db,
+        event_id,
+        "accept_event",
+        user_id,
+        {"previous_review_status": row["review_status"], "notes": notes},
+    )
+    db.commit()
+    refresh_game_stats(db, row["game_id"])
+    return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
+
+
+@clips_bp.route("/api/review/events/<int:event_id>/reject", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def review_event_reject(event_id):
+    data = request.get_json(silent=True) or {}
+    notes = data.get("notes")
+    db = get_db()
+    row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+
+    user_id = _current_review_user_id()
+    db.execute(
+        """UPDATE events
+              SET review_status='rejected',
+                  human_verified=0,
+                  reviewed_by_user_id=?,
+                  reviewed_at=CURRENT_TIMESTAMP,
+                  review_notes=COALESCE(?, review_notes)
+            WHERE id=?""",
+        (user_id, notes, event_id),
+    )
+    _record_human_correction(
+        db,
+        row,
+        "remove_event",
+        "review_status",
+        row["review_status"],
+        "rejected",
+        notes,
+    )
+    _sync_event_review_item(db, event_id, "rejected", user_id, notes)
+    _insert_review_provenance(
+        db,
+        event_id,
+        "reject_event",
+        user_id,
+        {"previous_review_status": row["review_status"], "notes": notes},
+    )
+    db.commit()
+    refresh_game_stats(db, row["game_id"])
+    return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
+
+
+@clips_bp.route("/api/review/events/<int:event_id>/correct", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def review_event_correct(event_id):
+    data = request.get_json(force=True) or {}
+    notes = data.get("notes")
+    allowed_fields = {
+        "player",
+        "event_type",
+        "shot_result",
+        "timestamp_ms",
+        "details_json",
+        "confidence",
+    }
+    updates = {field: data[field] for field in allowed_fields if field in data}
+    if not updates:
+        return jsonify({"error": "At least one correctable field is required"}), 400
+
+    if "timestamp_ms" in updates:
+        try:
+            updates["timestamp_ms"] = int(updates["timestamp_ms"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "timestamp_ms must be an integer"}), 400
+    if "event_type" in updates and not str(updates["event_type"]).strip():
+        return jsonify({"error": "event_type is required"}), 400
+    if "details_json" in updates and isinstance(updates["details_json"], (dict, list)):
+        updates["details_json"] = json.dumps(updates["details_json"])
+
+    db = get_db()
+    row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+
+    changed = {
+        field: value for field, value in updates.items()
+        if _stringify_review_value(row[field]) != _stringify_review_value(value)
+    }
+    if not changed:
+        return jsonify({"error": "No changed fields supplied"}), 400
+
+    for field, value in changed.items():
+        _record_human_correction(
+            db,
+            row,
+            "change_event",
+            field,
+            row[field],
+            value,
+            notes,
+        )
+
+    values = {
+        "player": row["player"],
+        "event_type": row["event_type"],
+        "shot_result": row["shot_result"],
+        "timestamp_ms": row["timestamp_ms"],
+        "details_json": row["details_json"],
+        "confidence": row["confidence"],
+    }
+    values.update(changed)
+    user_id = _current_review_user_id()
+    db.execute(
+        """UPDATE events
+              SET player=?,
+                  event_type=?,
+                  shot_result=?,
+                  timestamp_ms=?,
+                  details_json=?,
+                  confidence=?,
+                  review_status='corrected',
+                  human_verified=1,
+                  reviewed_by_user_id=?,
+                  reviewed_at=CURRENT_TIMESTAMP,
+                  review_notes=COALESCE(?, review_notes)
+            WHERE id=?""",
+        (
+            values["player"],
+            values["event_type"],
+            values["shot_result"],
+            values["timestamp_ms"],
+            values["details_json"],
+            values["confidence"],
+            user_id,
+            notes,
+            event_id,
+        ),
+    )
+    _sync_event_review_item(db, event_id, "corrected", user_id, notes)
+    _insert_review_provenance(
+        db,
+        event_id,
+        "correct_event",
+        user_id,
+        {"fields_changed": sorted(changed.keys()), "notes": notes},
+    )
+    db.commit()
+    refresh_game_stats(db, row["game_id"])
+    return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
 
 
 # ── API: Players ──────────────────────────────────────────

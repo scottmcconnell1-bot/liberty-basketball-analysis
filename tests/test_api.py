@@ -428,6 +428,111 @@ def test_delete_event(client):
     assert not any(e["id"] == eid for e in r3.get_json())
 
 
+def test_review_events_lists_pending_ai_events(client):
+    game_id = _create_game(client, "review-list-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "human_verified": False,
+        "source_type": "ai",
+        "confidence": 0.41,
+    })
+    eid = r.get_json()["id"]
+
+    review = client.get("/api/review/events")
+    assert review.status_code == 200
+    rows = review.get_json()
+    assert any(row["id"] == eid for row in rows)
+    row = next(row for row in rows if row["id"] == eid)
+    assert row["review_status"] == "pending"
+    assert row["source_type"] == "ai"
+    assert row["review_item_id"] is not None
+
+
+def test_review_event_accept_marks_event_verified(client):
+    game_id = _create_game(client, "review-accept-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "assist",
+        "timestamp_ms": 1500,
+        "human_verified": False,
+        "source_type": "ai",
+    })
+    eid = r.get_json()["id"]
+
+    accepted = post_json(client, f"/api/review/events/{eid}/accept", {"notes": "Looks right"})
+    assert accepted.status_code == 200
+    event = accepted.get_json()
+    assert event["review_status"] == "accepted"
+    assert event["human_verified"] == 1
+    assert event["reviewed_at"] is not None
+
+
+def test_review_event_correct_updates_event_and_records_correction(client, db):
+    game_id = _create_game(client, "review-correct-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 2000,
+        "player": "Wrong Player",
+        "human_verified": False,
+        "source_type": "ai",
+    })
+    eid = r.get_json()["id"]
+
+    corrected = post_json(client, f"/api/review/events/{eid}/correct", {
+        "player": "Right Player",
+        "event_type": "made_two",
+        "notes": "Coach corrected player and event type",
+    })
+    assert corrected.status_code == 200
+    event = corrected.get_json()
+    assert event["review_status"] == "corrected"
+    assert event["human_verified"] == 1
+    assert event["player"] == "Right Player"
+    assert event["event_type"] == "made_two"
+
+    corrections = db.execute(
+        "SELECT field_changed FROM human_corrections WHERE event_id=?",
+        (eid,),
+    ).fetchall()
+    fields = {row["field_changed"] for row in corrections}
+    assert {"player", "event_type"} <= fields
+
+
+def test_review_event_reject_preserves_event_and_records_correction(client, db):
+    game_id = _create_game(client, "review-reject-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "turnover",
+        "timestamp_ms": 2500,
+        "human_verified": False,
+        "source_type": "ai",
+    })
+    eid = r.get_json()["id"]
+
+    rejected = post_json(client, f"/api/review/events/{eid}/reject", {
+        "notes": "Bad AI event",
+    })
+    assert rejected.status_code == 200
+    event = rejected.get_json()
+    assert event["review_status"] == "rejected"
+    assert event["human_verified"] == 0
+
+    events = client.get(f"/api/events/{game_id}").get_json()
+    assert any(row["id"] == eid for row in events)
+
+    correction = db.execute(
+        """SELECT * FROM human_corrections
+           WHERE event_id=? AND correction_type='remove_event'""",
+        (eid,),
+    ).fetchone()
+    assert correction is not None
+    assert correction["field_changed"] == "review_status"
+    assert correction["corrected_value"] == "rejected"
+
+
 # ── Players ───────────────────────────────────────────────────────────
 
 def test_players_empty(client):

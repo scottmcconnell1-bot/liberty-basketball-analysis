@@ -473,3 +473,36 @@ Follow-up:
 - Scott reviews docs/REVIEW_WORKFLOW_PLAN.md.
 - If approved, Codex implements Stage 3A as additive review workflow schema/API work with focused tests.
 - Hermes/OWL verifies the implementation on Linux before Stage 3A is treated as complete.
+
+### Decision: Implement Review Workflow Stage 3A
+
+Decision maker: Scott
+
+Date: 2026-06-23
+
+Decision:
+- Implement Stage 3A from docs/REVIEW_WORKFLOW_PLAN.md.
+- Keep the implementation additive and API/test focused.
+- Do not implement possession modeling, canonical clips, paid-package enforcement, review UI, model training, or ball detection changes in this stage.
+
+Scope implemented:
+- review_items table.
+- events review state fields: review_status, source_type, reviewed_by_user_id, reviewed_at, and review_notes.
+- Idempotent backfill from human_verified to accepted/pending review states.
+- Review queue rows for pending events.
+- Event review APIs for listing, accepting, correcting, and rejecting events.
+- human_corrections records for correction and rejection actions.
+- provenance_records rows for review actions.
+- Tests for schema, idempotent backfill, and review API behavior.
+
+Rationale:
+- Coaches need a trust layer before possessions, strategy, scouting, and AI assistant answers depend on event data.
+- Review states let the project distinguish proven coach-reviewed facts from pending AI/manual/inferred data.
+
+Evidence:
+- Codex local verification on 2026-06-23: focused Stage 3A tests reported 18 passed.
+- Codex local verification on 2026-06-23: full local app suite reported 195 passed, 1 skipped.
+
+Follow-up:
+- Hermes/OWL should verify Stage 3A on Linux after running AGENT_PROTOCOL.md preflight.
+- Scott should choose whether the next slice is review UI, possession modeling, or canonical clips after Linux verification.

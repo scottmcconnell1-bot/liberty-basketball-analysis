@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-18
+Updated: 2026-06-23
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform Stage 1 and Stage 2 verified, Stage 3A review workflow planned
+Status: Direction approved, base platform Stage 1 and Stage 2 verified, Stage 3A review workflow implemented locally
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -143,12 +143,14 @@ Current implementation:
 - Hermes/OWL Linux verification reported 189 passed, 1 skipped and stable idempotency counts after init_db ran twice on 2026-06-18.
 - Scott selected Review Workflow Planning as the next platform-core step on 2026-06-18.
 - docs/REVIEW_WORKFLOW_PLAN.md defines Stage 3A: review_items, event review state, human_corrections wiring, review APIs, and accepted/corrected/rejected event states.
+- Scott approved Stage 3A implementation on 2026-06-23.
+- Stage 3A adds review_items, event review state columns, review-state backfill, event review APIs, human_corrections wiring, and focused tests.
+- Codex local Windows verification reported 195 passed, 1 skipped on 2026-06-23.
 - Possessions, canonical clips, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 
 Next step:
-- Scott should review docs/REVIEW_WORKFLOW_PLAN.md.
-- If approved, implement Stage 3A as additive review workflow schema/API work with focused tests.
-- After Stage 3A verification, decide whether Stage 3B should be possession modeling, canonical clips, or review UI.
+- Hermes/OWL should run AGENT_PROTOCOL.md preflight and Linux verification for the Stage 3A implementation.
+- After Stage 3A verification, Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.
 
 ### 7. Data Governance
 

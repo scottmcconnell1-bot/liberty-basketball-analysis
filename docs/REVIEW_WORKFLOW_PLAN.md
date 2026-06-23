@@ -1,8 +1,8 @@
 # Review Workflow Plan
 
-Updated: 2026-06-18
+Updated: 2026-06-23
 Branch: jason-5-may-updates
-Status: Planning only; not implemented.
+Status: Implemented locally; awaiting Hermes/OWL Linux verification.
 
 ## Purpose
 

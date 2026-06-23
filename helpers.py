@@ -1182,6 +1182,59 @@ def _backfill_platform_core_stage2(db):
     _backfill_video_assets_from_sources(db)
 
 
+def _backfill_review_workflow_stage3a(db):
+    """Backfill event review state and review queue rows without changing facts."""
+    if not _table_exists(db, "events") or not _table_exists(db, "review_items"):
+        return
+
+    db.execute(
+        """UPDATE events
+              SET review_status = CASE
+                    WHEN human_verified = 1 THEN 'accepted'
+                    ELSE 'pending'
+                  END
+            WHERE review_status IS NULL OR review_status = '' OR review_status = 'pending'"""
+    )
+    db.execute(
+        """UPDATE events
+              SET source_type = CASE
+                    WHEN human_verified = 1 THEN 'manual'
+                    ELSE 'ai'
+                  END
+            WHERE source_type IS NULL OR source_type = ''"""
+    )
+    db.execute(
+        """INSERT OR IGNORE INTO review_items
+              (entity_type, entity_id, game_id, review_status, priority, reason)
+           SELECT 'event',
+                  id,
+                  game_id,
+                  review_status,
+                  'normal',
+                  'Event needs coach review'
+             FROM events
+            WHERE review_status = 'pending'"""
+    )
+    db.execute(
+        """UPDATE review_items
+              SET review_status = (
+                      SELECT e.review_status FROM events e
+                       WHERE e.id = review_items.entity_id
+                         AND review_items.entity_type = 'event'
+                  ),
+                  game_id = (
+                      SELECT e.game_id FROM events e
+                       WHERE e.id = review_items.entity_id
+                         AND review_items.entity_type = 'event'
+                  ),
+                  updated_at = CURRENT_TIMESTAMP
+            WHERE entity_type = 'event'
+              AND EXISTS (
+                  SELECT 1 FROM events e WHERE e.id = review_items.entity_id
+              )"""
+    )
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
@@ -1289,6 +1342,22 @@ def _ensure_migration_columns(db):
             created_by_user_id  INTEGER REFERENCES users(id),
             created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             details_json        TEXT
+        );
+        CREATE TABLE IF NOT EXISTS review_items (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type         TEXT NOT NULL,
+            entity_id           INTEGER NOT NULL,
+            game_id             TEXT,
+            review_status       TEXT NOT NULL DEFAULT 'pending',
+            priority            TEXT NOT NULL DEFAULT 'normal',
+            reason              TEXT,
+            assigned_to_user_id INTEGER REFERENCES users(id),
+            reviewed_by_user_id INTEGER REFERENCES users(id),
+            reviewed_at         TIMESTAMP,
+            notes               TEXT,
+            created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(entity_type, entity_id)
         );
         CREATE TABLE IF NOT EXISTS module_entitlements (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1423,6 +1492,11 @@ def _ensure_migration_columns(db):
         ("events", "source_frame",   "ALTER TABLE events ADD COLUMN source_frame INTEGER"),
         ("events", "human_verified", "ALTER TABLE events ADD COLUMN human_verified INTEGER NOT NULL DEFAULT 0"),
         ("events", "confidence",     "ALTER TABLE events ADD COLUMN confidence REAL"),
+        ("events", "review_status",  "ALTER TABLE events ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'"),
+        ("events", "source_type",    "ALTER TABLE events ADD COLUMN source_type TEXT DEFAULT 'ai'"),
+        ("events", "reviewed_by_user_id", "ALTER TABLE events ADD COLUMN reviewed_by_user_id INTEGER REFERENCES users(id)"),
+        ("events", "reviewed_at",    "ALTER TABLE events ADD COLUMN reviewed_at TIMESTAMP"),
+        ("events", "review_notes",   "ALTER TABLE events ADD COLUMN review_notes TEXT"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
@@ -1451,6 +1525,7 @@ def _ensure_migration_columns(db):
         except Exception:
             pass
     _backfill_platform_core_stage2(db)
+    _backfill_review_workflow_stage3a(db)
     db.commit()
 
 

@@ -21,6 +21,7 @@ EXPECTED_TABLES = [
     "video_assets",
     "event_types",
     "provenance_records",
+    "review_items",
     "module_entitlements",
     "player_development_clips",
     "practice_playlists",
@@ -34,7 +35,8 @@ EXPECTED_COLUMNS = {
                     "run_kind", "status", "started_at", "completed_at", "error_message"],
     "events": ["id", "game_id", "player", "event_type", "shot_result",
                 "timestamp_ms", "details_json", "source_video", "source_frame",
-                "human_verified", "confidence", "created_at"],
+                "human_verified", "confidence", "review_status", "source_type",
+                "reviewed_by_user_id", "reviewed_at", "review_notes", "created_at"],
     "seasons": ["id", "name", "start_date", "end_date", "created_at"],
     "scheduled_games": ["id", "season_id", "program_name", "gender", "level",
                         "game_date", "game_time", "location_type", "opponent_name",
@@ -59,6 +61,9 @@ EXPECTED_COLUMNS = {
                            "source_path", "source_frame", "source_timestamp_ms",
                            "model_name", "model_version", "confidence", "created_by_user_id",
                            "created_at", "details_json"],
+    "review_items": ["id", "entity_type", "entity_id", "game_id", "review_status",
+                     "priority", "reason", "assigned_to_user_id", "reviewed_by_user_id",
+                     "reviewed_at", "notes", "created_at", "updated_at"],
     "module_entitlements": ["id", "team_id", "module_key", "enabled", "starts_at",
                             "ends_at", "notes", "created_at", "updated_at"],
 }
@@ -127,6 +132,7 @@ def test_stage1_platform_core_tables(db):
         "video_assets",
         "event_types",
         "provenance_records",
+        "review_items",
         "module_entitlements",
     ]:
         cols = get_columns(db, table)
@@ -256,6 +262,62 @@ def test_stage2_backfills_players_videos_and_sources(app, db):
     counts = {
         table: table_count(db, table)
         for table in ["roster_memberships", "video_assets", "provenance_records"]
+    }
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+    assert counts == {
+        table: table_count(db, table)
+        for table in counts
+    }
+
+
+def test_stage3a_review_workflow_tables(db):
+    cols = get_columns(db, "review_items")
+    for col in EXPECTED_COLUMNS["review_items"]:
+        assert col in cols, f"review_items missing column: {col}"
+
+
+def test_stage3a_review_backfill_is_idempotent(app, db):
+    db.execute(
+        """INSERT INTO games (source_type, source_key)
+           VALUES ('manual', 'stage3-review-game')"""
+    )
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage3-review-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO events
+              (game_id, event_type, timestamp_ms, human_verified, confidence)
+           VALUES (?, 'shot', 1000, 0, 0.42)""",
+        (str(game_id),),
+    )
+    db.commit()
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    event = db.execute(
+        "SELECT * FROM events WHERE game_id=? AND event_type='shot'",
+        (str(game_id),),
+    ).fetchone()
+    assert event["review_status"] == "pending"
+    assert event["source_type"] == "ai"
+
+    review_item = db.execute(
+        """SELECT * FROM review_items
+           WHERE entity_type='event' AND entity_id=?""",
+        (event["id"],),
+    ).fetchone()
+    assert review_item is not None
+    assert review_item["review_status"] == "pending"
+
+    counts = {
+        table: table_count(db, table)
+        for table in ["events", "review_items"]
     }
     with app.app_context():
         import app as app_module
