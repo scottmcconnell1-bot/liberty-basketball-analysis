@@ -148,9 +148,11 @@ Current implementation:
 - Codex local Windows verification reported 195 passed, 1 skipped on 2026-06-23.
 - Hermes/OWL Linux verification on GitHub issue #18 reported all 9 Stage 3A checks Proven, Linux pytest at 195 passed and 1 skipped, and idempotent review backfill.
 - Possessions, canonical clips, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
+- Scott selected Review UI as the next slice after Stage 3A verification.
+- docs/REVIEW_UI_PLAN.md defines the proposed Stage 3B coach review queue page.
 
 Next step:
-- Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.
+- Scott should approve or revise docs/REVIEW_UI_PLAN.md before Codex implements Stage 3B.
 
 ### 7. Data Governance
 

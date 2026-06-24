@@ -506,3 +506,27 @@ Evidence:
 
 Follow-up:
 - Scott should choose whether the next slice is review UI, possession modeling, or canonical clips.
+
+### Decision: Plan Review UI as Stage 3B
+
+Decision maker: Scott
+
+Date: 2026-06-23
+
+Decision:
+- Make Review UI the next platform-core slice after verified Review Workflow Stage 3A.
+- Plan Stage 3B before implementation.
+- Keep Stage 3B focused on a coach-facing review queue page backed by existing Stage 3A APIs.
+
+Rationale:
+- Stage 3A created review status, review_items, human_corrections wiring, provenance, and review APIs.
+- Coaches need a usable page to turn pending events into accepted/corrected/rejected data before possessions, canonical clips, stats trust, and AI assistant answers rely on those events.
+- A lightweight page can improve workflow without changing schema or detector behavior.
+
+Evidence:
+- GitHub issue #18 records Hermes/OWL Linux verification of Stage 3A: all 9 checks Proven and pytest at 195 passed, 1 skipped.
+- docs/REVIEW_UI_PLAN.md records the proposed Stage 3B scope and non-goals.
+
+Follow-up:
+- Scott reviews docs/REVIEW_UI_PLAN.md.
+- If approved, Codex implements Stage 3B with route/template/static tests and then requests Hermes/OWL verification.

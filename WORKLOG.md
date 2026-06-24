@@ -1064,3 +1064,28 @@ Hermes/OWL verification:
 - Hermes/OWL reported all 9 requested checks Proven.
 - Linux pytest result: 195 passed, 1 skipped.
 - init_db review backfill was verified idempotent.
+
+Review UI Stage 3B Planning - 2026-06-23
+----------------------------------------
+Scott selected Review UI as the next slice after Stage 3A verification.
+
+Created:
+- docs/REVIEW_UI_PLAN.md
+
+Updated:
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Planned Stage 3B scope:
+- Add GET /review page.
+- Add Review Queue navigation under Film & Stats.
+- Build a coach review queue page backed by Stage 3A APIs.
+- Include filters for review status, game_id, event_type, source_type, player, and confidence range.
+- Include event detail and accept/correct/reject controls.
+- Keep possession modeling, canonical clips, paid-package enforcement, model training, and ball detection changes out of scope.
+
+Verification:
+- Planning/documentation only; no production code changed.
+- Implementation still requires Scott approval after review.
