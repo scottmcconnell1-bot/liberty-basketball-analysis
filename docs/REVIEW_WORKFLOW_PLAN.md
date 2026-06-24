@@ -2,7 +2,7 @@
 
 Updated: 2026-06-23
 Branch: jason-5-may-updates
-Status: Implemented locally; awaiting Hermes/OWL Linux verification.
+Status: Implemented and Hermes/OWL verified.
 
 ## Purpose
 
@@ -225,6 +225,11 @@ Stage 3A is not complete until:
 - existing event APIs still pass
 - full local suite passes
 - Hermes/OWL Linux verification passes
+
+Verification status:
+
+- Codex local verification on 2026-06-23: focused Stage 3A tests reported 18 passed; full local app suite reported 195 passed, 1 skipped.
+- Hermes/OWL Linux verification on GitHub issue #18 reported all 9 requested checks Proven, including full pytest at 195 passed, 1 skipped and idempotent review backfill.
 
 ## Open Questions
 

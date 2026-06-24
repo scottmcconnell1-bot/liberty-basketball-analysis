@@ -103,7 +103,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform Stage 1 and Stage 2 verified, Stage 3A review workflow implemented locally
+Status: Direction approved, base platform Stage 1, Stage 2, and Stage 3A verified
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -146,11 +146,11 @@ Current implementation:
 - Scott approved Stage 3A implementation on 2026-06-23.
 - Stage 3A adds review_items, event review state columns, review-state backfill, event review APIs, human_corrections wiring, and focused tests.
 - Codex local Windows verification reported 195 passed, 1 skipped on 2026-06-23.
+- Hermes/OWL Linux verification on GitHub issue #18 reported all 9 Stage 3A checks Proven, Linux pytest at 195 passed and 1 skipped, and idempotent review backfill.
 - Possessions, canonical clips, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 
 Next step:
-- Hermes/OWL should run AGENT_PROTOCOL.md preflight and Linux verification for the Stage 3A implementation.
-- After Stage 3A verification, Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.
+- Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.
 
 ### 7. Data Governance
 

@@ -98,6 +98,7 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - blueprints/clips.py now provides event review APIs: GET /api/review/events, POST /api/review/events/<event_id>/accept, POST /api/review/events/<event_id>/correct, and POST /api/review/events/<event_id>/reject.
 - Review correction/rejection actions write human_corrections and review provenance records while preserving rejected events.
 - Codex verified locally on 2026-06-23: focused Stage 3A tests reported 18 passed; the full local app suite reported 195 passed, 1 skipped.
+- Hermes/OWL verified Review Workflow Stage 3A on GitHub issue #18 on 2026-06-23: HEAD matched origin/jason-5-may-updates at 62fb233, all 9 checklist items were Proven, Linux pytest reported 195 passed and 1 skipped, and init_db review backfill was idempotent.
 
 ## Inferred
 
@@ -126,7 +127,6 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL Linux verification passes the full pytest suite after Review Workflow Stage 3A.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -143,4 +143,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. The next recommended engineering step is Hermes/OWL Linux verification of Review Workflow Stage 3A, then Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is now implemented and independently verified; Scott should decide whether the next slice is review UI, possession modeling, or canonical clips.

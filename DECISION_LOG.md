@@ -502,7 +502,7 @@ Rationale:
 Evidence:
 - Codex local verification on 2026-06-23: focused Stage 3A tests reported 18 passed.
 - Codex local verification on 2026-06-23: full local app suite reported 195 passed, 1 skipped.
+- Hermes/OWL Linux verification on GitHub issue #18 reported all 9 Stage 3A checks Proven, Linux pytest at 195 passed and 1 skipped, and idempotent review backfill.
 
 Follow-up:
-- Hermes/OWL should verify Stage 3A on Linux after running AGENT_PROTOCOL.md preflight.
-- Scott should choose whether the next slice is review UI, possession modeling, or canonical clips after Linux verification.
+- Scott should choose whether the next slice is review UI, possession modeling, or canonical clips.

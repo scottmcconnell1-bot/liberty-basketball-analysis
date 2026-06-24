@@ -1058,5 +1058,9 @@ Verification:
 - Full local app suite: 195 passed, 1 skipped in 129.59s.
 - Skipped test is the opt-in live UI overflow audit.
 
-Verification still needed:
-- Hermes/OWL Linux verification after AGENT_PROTOCOL.md preflight.
+Hermes/OWL verification:
+- GitHub issue #18 received the Stage 3A verification report on 2026-06-23.
+- Hermes/OWL reported HEAD matched origin/jason-5-may-updates at 62fb233.
+- Hermes/OWL reported all 9 requested checks Proven.
+- Linux pytest result: 195 passed, 1 skipped.
+- init_db review backfill was verified idempotent.
