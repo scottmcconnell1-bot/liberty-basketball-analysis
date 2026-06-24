@@ -1,6 +1,6 @@
 # Agent Protocol
 
-Updated: 2026-06-18
+Updated: 2026-06-24
 Branch: jason-5-may-updates
 
 This file is the repository-level protocol for Codex, Hermes/OWL/Rex, and any other project agent. It exists so operating rules live in the repository instead of private agent memory.
@@ -125,6 +125,38 @@ Preferred return path:
 2. Runs Repository Truth Preflight.
 3. Verifies the issue checklist.
 4. Posts a Proven / Inferred / Unknown report as a comment on the same issue.
+5. Adds the `OWL DONE` label only after successful completion.
+
+## GitHub Handoff State Labels
+
+GitHub labels are the machine-readable coordination state between Codex and Hermes/OWL/Rex.
+
+- `OWL ACTION`: Hermes/OWL/Rex has work to perform or verify.
+- `OWL DONE`: Hermes/OWL/Rex completed the task successfully; Codex may review the evidence and continue.
+- `OWL NEEDS`: Hermes/OWL/Rex is blocked and needs Codex input before it can continue.
+
+Hermes/OWL/Rex must not use `OWL DONE` for partial work, failed verification, timeouts, unclear instructions, missing permissions, or missing runtime configuration.
+
+When Hermes/OWL/Rex needs Codex input:
+
+1. Comment on the issue with a short Proven / Inferred / Unknown report.
+2. Ask the specific question or state the exact blocker.
+3. Add label `OWL NEEDS`.
+4. Do not add `OWL DONE`.
+
+When Codex responds to `OWL NEEDS`:
+
+1. Comment on the same issue with `[OWL FOLLOWUP]`.
+2. Include `Required next action for Hermes/OWL:` followed by the specific next step.
+3. Keep the response small enough for the poller to process without timing out.
+
+When Hermes/OWL/Rex successfully resolves the blocker:
+
+1. Comment with the final Proven / Inferred / Unknown report.
+2. Remove `OWL NEEDS` if present.
+3. Add `OWL DONE`.
+
+For large tasks that time out, do not keep retrying the same oversized issue body. Split the work into smaller `[OWL ACTION]` issues or ask Codex for a smaller follow-up using `OWL NEEDS`.
 
 If Hermes/OWL/Rex does not have GitHub issue-comment permission, do not fight the token or repeatedly retry failed comment commands.
 
