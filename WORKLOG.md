@@ -975,6 +975,21 @@ Verification:
 Verification still needed:
 - Hermes/OWL Linux verification after AGENT_PROTOCOL.md preflight.
 
+Agent Handoff Fallback - 2026-06-23
+-----------------------------------
+Scott confirmed Hermes/OWL/Rex does not have GitHub issue-comment write permission.
+
+Updated:
+- AGENT_PROTOCOL.md
+- docs/agent_handoffs/README.md
+
+Protocol change:
+- GitHub issue comments remain the preferred return path for `[OWL ACTION]` verification.
+- If issue comments fail because of token permissions, Hermes/OWL/Rex should write the verification report to `docs/agent_handoffs/ISSUE_<number>_<short_task>.md`, commit it, push it to `jason-5-may-updates`, and report only the commit hash and path in chat.
+
+Purpose:
+- Keep Scott from having to copy/paste full verification reports between agents.
+
 Review Workflow Planning - 2026-06-18
 -------------------------------------
 Scott selected Review Workflow Planning as the next platform-core step after Hermes/OWL verified Stage 2.

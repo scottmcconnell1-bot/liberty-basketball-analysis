@@ -115,6 +115,28 @@ Before creating corrective commits, agents must:
 
 If the local clone was stale, pull and re-check before proposing or creating a duplicate commit.
 
+## GitHub Handoff Fallback
+
+Codex may create GitHub issues titled `[OWL ACTION]` to request Hermes/OWL/Rex verification.
+
+Preferred return path:
+
+1. Hermes/OWL/Rex reads the issue.
+2. Runs Repository Truth Preflight.
+3. Verifies the issue checklist.
+4. Posts a Proven / Inferred / Unknown report as a comment on the same issue.
+
+If Hermes/OWL/Rex does not have GitHub issue-comment permission, do not fight the token or repeatedly retry failed comment commands.
+
+Use the repository fallback instead:
+
+1. Create `docs/agent_handoffs/` if it does not exist.
+2. Write the verification report to `docs/agent_handoffs/ISSUE_<number>_<short_task>.md`.
+3. Commit and push that report to `jason-5-may-updates`.
+4. Report only the commit hash and report path in chat.
+
+This keeps Scott from being the messenger while preserving repository evidence.
+
 ## Reporting Standard
 
 Reports must separate:
