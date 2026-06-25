@@ -8,6 +8,7 @@ Branch: jason-5-may-updates
 Codex is taking over as primary engineering lead. The immediate roadmap is evidence-first, but the product direction is now modular and coach-first: build a trusted basketball operations core, add modules in stages, and layer AI assistant capabilities on top of reviewed data.
 
 Current product architecture docs:
+- docs/STAGE_INDEX.md locks stage numbering and must be checked before naming new platform-core stages.
 - PRODUCT_BENCHMARKS.md
 - MODULAR_PRODUCT_ROADMAP.md
 - AI_ASSISTANT_VISION.md

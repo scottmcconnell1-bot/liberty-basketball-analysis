@@ -38,6 +38,17 @@ If the current repository is not Liberty basketball, stop and report:
 
 Do not continue Liberty verification from another project directory.
 
+
+## Stage Numbering
+
+Agents must read `docs/STAGE_INDEX.md` before naming, renaming, verifying, or reporting platform stages.
+
+Do not reuse stage numbers. In particular:
+
+- Stage 3B means Review UI.
+- Stage 3C means Possessions and Canonical Clips Foundation.
+
+If a new slice is needed between existing stages, add a lettered stage instead of rewriting history.
 ## Repository Truth Preflight
 
 Before making any claim about commits, branches, files, docs, tests, or repository state, run and report:

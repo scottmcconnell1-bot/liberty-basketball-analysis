@@ -1162,3 +1162,27 @@ Pending:
 - Full local app suite.
 - Push to jason-5-may-updates.
 - Hermes/OWL Linux verification.
+
+Stage Numbering Lock - 2026-06-25
+---------------------------------
+Codex locked platform stage numbering to prevent the Stage 3B name collision from recurring.
+
+Created:
+- docs/STAGE_INDEX.md
+
+Updated:
+- AGENT_PROTOCOL.md
+- ROADMAP.md
+- DECISION_LOG.md
+- WORKLOG.md
+
+Locked numbering:
+- Stage 3A: Review Workflow Foundation
+- Stage 3B: Review UI
+- Stage 3C: Possessions and Canonical Clips Foundation
+- Stage 4: Event Ledger Upgrade
+- Stage 5: Downstream game_id Cleanup
+- Stage 6: Module Entitlement Wiring
+
+Rule:
+- Do not rename completed stages or reuse stage numbers. Add lettered stages when needed.

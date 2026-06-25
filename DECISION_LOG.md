@@ -592,3 +592,27 @@ Follow-up:
 - Run full local app suite.
 - Push Stage 3C after local verification.
 - Request Hermes/OWL Linux verification through GitHub.
+
+### Decision: Lock Stage Numbering
+
+Decision maker: Codex under Scott standing approval
+
+Date: 2026-06-25
+
+Decision:
+- Create docs/STAGE_INDEX.md as the source of truth for platform stage numbering.
+- Preserve completed stage names instead of rewriting history.
+- Lock Stage 3B as Review UI and Stage 3C as Possessions and Canonical Clips Foundation.
+
+Rationale:
+- Stage 3B was used for Review UI after Stage 3A, while the older platform plan also referenced possessions/clips as Stage 3B.
+- Renaming completed work would confuse GitHub issues, commits, and Hermes/OWL verification reports.
+- A locked index prevents future agents from reusing or renumbering stages.
+
+Evidence:
+- GitHub issue #31 verified Stage 3B Review UI.
+- Commit f1c3d09 implements Stage 3C Possessions and Canonical Clips Foundation.
+
+Follow-up:
+- Hermes/OWL should verify Stage 3C through issue #35.
+- Future reports should reference docs/STAGE_INDEX.md before naming stages.
