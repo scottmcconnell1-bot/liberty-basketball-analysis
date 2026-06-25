@@ -19,8 +19,9 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 2 | Default Liberty core backfill | Implemented and Hermes/OWL verified | default Liberty team, roster memberships, video_assets, event_types, module_entitlements, provenance |
 | Stage 3A | Review workflow foundation | Implemented and Hermes/OWL verified | review_items, event review state, review APIs, human_corrections/provenance wiring |
 | Stage 3B | Review UI | Implemented and Hermes/OWL verified | /review page, Review Queue nav, filters, detail panel, accept/correct/reject UI |
-| Stage 3C | Possessions and canonical clips foundation | Implemented locally; Hermes/OWL verification pending | possessions, clips, clip_tags, events.possession_id, player_development_clips.canonical_clip_id |
-| Stage 4 | Event ledger upgrade | Not started | relational_game_id, event_type_id, event_participants, richer event writes |
+| Stage 3C | Possessions and canonical clips foundation | Implemented and Hermes/OWL verified | possessions, clips, clip_tags, events.possession_id, player_development_clips.canonical_clip_id |
+| Stage 4 | Event ledger upgrade | In progress through lettered slices | relational_game_id, event_type_id, event_participants, richer event writes |
+| Stage 4A | Event participants foundation | Implemented locally; Hermes/OWL verification pending | event_participants, events relational links, primary player/team links, legacy player-name backfill |
 | Stage 5 | Downstream game_id cleanup | Not started | downstream relational_game_id migration while preserving analysis_key |
 | Stage 6 | Module entitlement wiring | Not started | module_key helpers and team/module permission checks |
 
@@ -28,6 +29,7 @@ Repository history, GitHub issues, and verification reports already reference th
 
 - Stage 3B always means Review UI.
 - Stage 3C always means Possessions and Canonical Clips Foundation.
+- Stage 4A always means Event Participants Foundation.
 - Do not use Stage 3B for possessions or clips in future reports.
 - Do not rewrite past issues, commits, or reports to rename completed stages.
 - Use Proven / Inferred / Unknown when reporting stage status.
@@ -35,4 +37,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 3C is pushed as commit `f1c3d09` and is awaiting Hermes/OWL verification on GitHub issue #35.
+Stage 4A Event Participants Foundation is implemented locally and needs Hermes/OWL Linux verification after Codex push.

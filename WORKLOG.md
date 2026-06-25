@@ -1186,3 +1186,35 @@ Locked numbering:
 
 Rule:
 - Do not rename completed stages or reuse stage numbers. Add lettered stages when needed.
+
+Event Participants Foundation Stage 4A - 2026-06-25
+---------------------------------------------------
+Scott gave standing approval to continue approved roadmap work without waiting for each next-task approval.
+
+Implemented locally:
+- event_participants table.
+- events.relational_game_id optional relational game link.
+- events.event_type_id optional canonical event type link.
+- events.team_id, primary_player_id, and primary_roster_membership_id optional identity links.
+- events.created_by_user_id and events.updated_at metadata columns.
+- Idempotent legacy events.player backfill into primary event_participants.
+
+Files changed so far:
+- schema.sql
+- helpers.py
+- tests/test_schema.py
+- docs/STAGE_INDEX.md
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification so far:
+- python -m py_compile helpers.py tests/test_schema.py: passed.
+- tests/test_schema.py: 19 passed.
+
+Pending:
+- Full local app suite.
+- Push to jason-5-may-updates.
+- Hermes/OWL Linux verification.

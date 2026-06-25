@@ -616,3 +616,35 @@ Evidence:
 Follow-up:
 - Hermes/OWL should verify Stage 3C through issue #35.
 - Future reports should reference docs/STAGE_INDEX.md before naming stages.
+
+### Decision: Implement Event Participants Foundation Stage 4A
+
+Decision maker: Codex under Scott standing approval
+
+Date: 2026-06-25
+
+Decision:
+- Continue the approved platform-core roadmap without waiting for another next-task approval.
+- Implement Stage 4A as an additive event-ledger participant foundation.
+- Do not change event-generation behavior, stats derivation, review UI, detector settings, possession inference, paid-package enforcement, or production deployment behavior in this stage.
+
+Scope implemented locally:
+- event_participants table.
+- events.relational_game_id optional relational game link.
+- events.event_type_id optional canonical event type link.
+- events.team_id, primary_player_id, and primary_roster_membership_id optional basketball identity links.
+- events.created_by_user_id and events.updated_at metadata columns.
+- Idempotent backfill from legacy events.player into primary event_participants when player identity can be resolved.
+- Schema tests for table/column existence, idempotent backfill, and multi-participant manual events.
+
+Rationale:
+- Player minutes, shooting stats, assists, defensive events, lineups, play recognition, scouting, and AI assistant answers need events to support multiple participants and stable player/team identity.
+- The first event-ledger slice should preserve old TEXT event fields while adding the relational foundation future modules can use.
+
+Evidence:
+- Codex local Windows verification on 2026-06-25: tests/test_schema.py reported 19 passed.
+
+Follow-up:
+- Run the full local app suite.
+- Push Stage 4A after local verification.
+- Request Hermes/OWL Linux verification through GitHub.

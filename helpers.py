@@ -824,7 +824,7 @@ def read_filtered_app_logs(query="", limit=200):
 
 def init_db():
     db = get_db()
-    with current_app.open_resource("schema.sql", mode="r") as f:
+    with current_app.open_resource("schema.sql", mode="r", encoding="utf-8-sig") as f:
         db.executescript(f.read())
     db.commit()
     _ensure_migration_columns(db)
@@ -1235,6 +1235,73 @@ def _backfill_review_workflow_stage3a(db):
     )
 
 
+
+
+def _backfill_event_participants_stage4a(db):
+    if not _table_exists(db, "events") or not _table_exists(db, "event_participants"):
+        return
+    if not _table_exists(db, "players"):
+        return
+    db.execute(
+        """INSERT INTO event_participants
+              (event_id, player_id, roster_membership_id, team_id, role,
+               tracker_id, confidence, source)
+           SELECT e.id,
+                  p.id,
+                  (SELECT rm.id FROM roster_memberships rm
+                    WHERE rm.player_id = p.id
+                    ORDER BY rm.id LIMIT 1),
+                  COALESCE(
+                      e.team_id,
+                      (SELECT rm.team_id FROM roster_memberships rm
+                        WHERE rm.player_id = p.id
+                        ORDER BY rm.id LIMIT 1)
+                  ),
+                  'primary',
+                  p.tracker_id,
+                  e.confidence,
+                  COALESCE(e.source_type, 'manual')
+             FROM events e
+             JOIN players p
+               ON lower(trim(p.name)) = lower(trim(e.player))
+            WHERE e.player IS NOT NULL
+              AND trim(e.player) <> ''
+              AND NOT EXISTS (
+                  SELECT 1 FROM event_participants ep
+                   WHERE ep.event_id = e.id
+                     AND ep.role = 'primary'
+                     AND ep.player_id = p.id
+              )"""
+    )
+    db.execute(
+        """UPDATE events
+              SET primary_player_id = (
+                      SELECT ep.player_id FROM event_participants ep
+                       WHERE ep.event_id = events.id
+                         AND ep.role = 'primary'
+                       ORDER BY ep.id LIMIT 1
+                  ),
+                  primary_roster_membership_id = (
+                      SELECT ep.roster_membership_id FROM event_participants ep
+                       WHERE ep.event_id = events.id
+                         AND ep.role = 'primary'
+                       ORDER BY ep.id LIMIT 1
+                  ),
+                  team_id = COALESCE(team_id, (
+                      SELECT ep.team_id FROM event_participants ep
+                       WHERE ep.event_id = events.id
+                         AND ep.role = 'primary'
+                       ORDER BY ep.id LIMIT 1
+                  ))
+            WHERE primary_player_id IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM event_participants ep
+                   WHERE ep.event_id = events.id
+                     AND ep.role = 'primary'
+              )"""
+    )
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
@@ -1345,6 +1412,18 @@ def _ensure_migration_columns(db):
             is_possession_boundary INTEGER NOT NULL DEFAULT 0,
             created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS event_participants (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id             INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+            player_id            INTEGER REFERENCES players(id),
+            roster_membership_id INTEGER REFERENCES roster_memberships(id),
+            team_id              INTEGER REFERENCES teams(id),
+            role                 TEXT NOT NULL,
+            tracker_id           INTEGER,
+            confidence           REAL,
+            source               TEXT NOT NULL DEFAULT 'manual',
+            created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS provenance_records (
             id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1541,9 +1620,16 @@ def _ensure_migration_columns(db):
         ("events", "review_status",  "ALTER TABLE events ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'"),
         ("events", "source_type",    "ALTER TABLE events ADD COLUMN source_type TEXT DEFAULT 'ai'"),
         ("events", "possession_id",  "ALTER TABLE events ADD COLUMN possession_id INTEGER REFERENCES possessions(id)"),
+        ("events", "relational_game_id", "ALTER TABLE events ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
+        ("events", "event_type_id", "ALTER TABLE events ADD COLUMN event_type_id INTEGER REFERENCES event_types(id)"),
+        ("events", "team_id", "ALTER TABLE events ADD COLUMN team_id INTEGER REFERENCES teams(id)"),
+        ("events", "primary_player_id", "ALTER TABLE events ADD COLUMN primary_player_id INTEGER REFERENCES players(id)"),
+        ("events", "primary_roster_membership_id", "ALTER TABLE events ADD COLUMN primary_roster_membership_id INTEGER REFERENCES roster_memberships(id)"),
         ("events", "reviewed_by_user_id", "ALTER TABLE events ADD COLUMN reviewed_by_user_id INTEGER REFERENCES users(id)"),
         ("events", "reviewed_at",    "ALTER TABLE events ADD COLUMN reviewed_at TIMESTAMP"),
         ("events", "review_notes",   "ALTER TABLE events ADD COLUMN review_notes TEXT"),
+        ("events", "created_by_user_id", "ALTER TABLE events ADD COLUMN created_by_user_id INTEGER REFERENCES users(id)"),
+        ("events", "updated_at", "ALTER TABLE events ADD COLUMN updated_at TIMESTAMP"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
@@ -1574,6 +1660,7 @@ def _ensure_migration_columns(db):
             pass
     _backfill_platform_core_stage2(db)
     _backfill_review_workflow_stage3a(db)
+    _backfill_event_participants_stage4a(db)
     db.commit()
 
 

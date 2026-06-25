@@ -52,10 +52,18 @@ CREATE TABLE IF NOT EXISTS events (
     confidence     REAL,
     review_status  TEXT NOT NULL DEFAULT 'pending',
     source_type    TEXT DEFAULT 'ai',
+    possession_id  INTEGER REFERENCES possessions(id),
+    relational_game_id INTEGER REFERENCES games(id),
+    event_type_id  INTEGER REFERENCES event_types(id),
+    team_id        INTEGER REFERENCES teams(id),
+    primary_player_id INTEGER REFERENCES players(id),
+    primary_roster_membership_id INTEGER REFERENCES roster_memberships(id),
     reviewed_by_user_id INTEGER REFERENCES users(id),
     reviewed_at    TIMESTAMP,
     review_notes   TEXT,
-    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_by_user_id INTEGER REFERENCES users(id),
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP
 );
 
 -- ── Season & schedule ─────────────────────────────────────
@@ -296,6 +304,19 @@ CREATE TABLE IF NOT EXISTS event_types (
     is_possession_boundary INTEGER NOT NULL DEFAULT 0,
     created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS event_participants (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id             INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    player_id            INTEGER REFERENCES players(id),
+    roster_membership_id INTEGER REFERENCES roster_memberships(id),
+    team_id              INTEGER REFERENCES teams(id),
+    role                 TEXT NOT NULL,
+    tracker_id           INTEGER,
+    confidence           REAL,
+    source               TEXT NOT NULL DEFAULT 'manual',
+    created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS provenance_records (

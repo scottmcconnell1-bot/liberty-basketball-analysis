@@ -21,6 +21,7 @@ EXPECTED_TABLES = [
     "video_assets",
     "possessions",
     "event_types",
+    "event_participants",
     "provenance_records",
     "review_items",
     "module_entitlements",
@@ -39,8 +40,10 @@ EXPECTED_COLUMNS = {
     "events": ["id", "game_id", "player", "event_type", "shot_result",
                 "timestamp_ms", "details_json", "source_video", "source_frame",
                 "human_verified", "confidence", "review_status", "source_type",
-                "possession_id", "reviewed_by_user_id", "reviewed_at",
-                "review_notes", "created_at"],
+                "possession_id", "relational_game_id", "event_type_id", "team_id",
+                "primary_player_id", "primary_roster_membership_id",
+                "reviewed_by_user_id", "reviewed_at", "review_notes",
+                "created_by_user_id", "created_at", "updated_at"],
     "seasons": ["id", "name", "start_date", "end_date", "created_at"],
     "scheduled_games": ["id", "season_id", "program_name", "gender", "level",
                         "game_date", "game_time", "location_type", "opponent_name",
@@ -66,6 +69,9 @@ EXPECTED_COLUMNS = {
                     "updated_at"],
     "event_types": ["id", "code", "label", "category", "counts_for_stats",
                     "is_scoring_event", "is_possession_boundary", "created_at", "updated_at"],
+    "event_participants": ["id", "event_id", "player_id", "roster_membership_id",
+                           "team_id", "role", "tracker_id", "confidence",
+                           "source", "created_at"],
     "provenance_records": ["id", "entity_type", "entity_id", "source_type", "source_id",
                            "source_path", "source_frame", "source_timestamp_ms",
                            "model_name", "model_version", "confidence", "created_by_user_id",
@@ -439,6 +445,138 @@ def test_stage3a_review_backfill_is_idempotent(app, db):
         table: table_count(db, table)
         for table in counts
     }
+
+
+def test_stage4a_event_ledger_participant_foundation_tables(db):
+    event_cols = get_columns(db, "events")
+    for col in [
+        "relational_game_id",
+        "event_type_id",
+        "team_id",
+        "primary_player_id",
+        "primary_roster_membership_id",
+        "created_by_user_id",
+        "updated_at",
+    ]:
+        assert col in event_cols, f"events missing Stage 4A column: {col}"
+
+    participant_cols = get_columns(db, "event_participants")
+    for col in EXPECTED_COLUMNS["event_participants"]:
+        assert col in participant_cols, f"event_participants missing column: {col}"
+
+
+def test_stage4a_event_participants_backfill_is_idempotent(app, db):
+    team_id = db.execute(
+        "SELECT id FROM teams WHERE team_name='Liberty' ORDER BY id LIMIT 1"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO players
+              (name, jersey_number, position, grade, tracker_id)
+           VALUES ('Stage Four Player', 4, 'G', 8, 44)"""
+    )
+    player_id = db.execute(
+        "SELECT id FROM players WHERE name='Stage Four Player'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO roster_memberships
+              (player_id, team_id, jersey_number, position, grade)
+           VALUES (?, ?, 4, 'G', 8)""",
+        (player_id, team_id),
+    )
+    membership_id = db.execute(
+        "SELECT id FROM roster_memberships WHERE player_id=? AND team_id=?",
+        (player_id, team_id),
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO events
+              (game_id, player, event_type, timestamp_ms, confidence, source_type)
+           VALUES ('stage4a-analysis-key', 'Stage Four Player', 'made_two',
+                   22000, 0.91, 'ai')"""
+    )
+    event_id = db.execute(
+        "SELECT id FROM events WHERE game_id='stage4a-analysis-key'"
+    ).fetchone()[0]
+    db.commit()
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    participant = db.execute(
+        """SELECT * FROM event_participants
+           WHERE event_id=? AND role='primary'""",
+        (event_id,),
+    ).fetchone()
+    assert participant is not None
+    assert participant["player_id"] == player_id
+    assert participant["roster_membership_id"] == membership_id
+    assert participant["team_id"] == team_id
+    assert participant["tracker_id"] == 44
+    assert participant["source"] == "ai"
+
+    event = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    assert event["primary_player_id"] == player_id
+    assert event["primary_roster_membership_id"] == membership_id
+    assert event["team_id"] == team_id
+
+    before = table_count(db, "event_participants")
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+    assert table_count(db, "event_participants") == before
+
+
+def test_stage4a_manual_event_can_store_multiple_participants(db):
+    team_id = db.execute(
+        "SELECT id FROM teams WHERE team_name='Liberty' ORDER BY id LIMIT 1"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO players (name, jersey_number, position)
+           VALUES ('Shooter', 10, 'G')"""
+    )
+    db.execute(
+        """INSERT INTO players (name, jersey_number, position)
+           VALUES ('Assister', 11, 'G')"""
+    )
+    shooter_id = db.execute(
+        "SELECT id FROM players WHERE name='Shooter'"
+    ).fetchone()[0]
+    assister_id = db.execute(
+        "SELECT id FROM players WHERE name='Assister'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO events
+              (game_id, event_type, timestamp_ms, review_status, source_type,
+               team_id, primary_player_id)
+           VALUES ('stage4a-manual-key', 'made_three', 33000, 'reviewed',
+                   'manual', ?, ?)""",
+        (team_id, shooter_id),
+    )
+    event_id = db.execute(
+        "SELECT id FROM events WHERE game_id='stage4a-manual-key'"
+    ).fetchone()[0]
+    db.executemany(
+        """INSERT INTO event_participants
+              (event_id, player_id, team_id, role, source)
+           VALUES (?, ?, ?, ?, 'manual')""",
+        [
+            (event_id, shooter_id, team_id, "shooter"),
+            (event_id, assister_id, team_id, "assister"),
+            (event_id, None, team_id, "defender"),
+        ],
+    )
+    db.commit()
+
+    roles = {
+        row["role"]
+        for row in db.execute(
+            "SELECT role FROM event_participants WHERE event_id=?",
+            (event_id,),
+        ).fetchall()
+    }
+    assert roles == {"shooter", "assister", "defender"}
 
 
 def test_stats_columns(db):

@@ -156,12 +156,16 @@ Current implementation:
 - Codex local Windows verification reported 198 passed, 1 skipped on 2026-06-25.
 - Hermes/OWL Linux verification on GitHub issue #31 reported all requested Stage 3B checks passed, Linux pytest at 198 passed and 1 skipped, and no forbidden behavior changes.
 - Scott gave standing approval on 2026-06-24 for Codex and Hermes/OWL to continue approved roadmap work without waiting for each next-task approval.
-- Stage 3C Possessions and Canonical Clips Foundation is the next platform-core slice.
+- Stage 3C Possessions and Canonical Clips Foundation is implemented and Hermes/OWL verified.
 - Stage 3C adds additive possessions, clips, and clip_tags schema plus event/clip link columns, without possession inference, clipping automation, UI changes, detector work, or paid-package enforcement.
 - Codex local Windows verification reported 201 passed, 1 skipped on 2026-06-25.
+- Hermes/OWL Linux verification on issue #35 confirmed commit f1c3d09 with 198 passed, 1 skipped.
+- Stage 4A Event Participants Foundation is the current platform-core slice.
+- Stage 4A adds event_participants and event relational identity/player/team link columns without changing event-generation behavior, stats derivation, UI, detector settings, or paid-package enforcement.
+- Codex local Windows verification reported tests/test_schema.py at 19 passed on 2026-06-25.
 
 Next step:
-- Request Hermes/OWL Linux verification for Stage 3C.
+- Run the full local app suite for Stage 4A, push, and request Hermes/OWL Linux verification.
 
 ### 7. Data Governance
 

@@ -2,7 +2,7 @@
 
 Date: 2026-06-23
 Branch: jason-5-may-updates
-Status: Stages 1, 2, 3A, and 3B are implemented and verified. Stage 3C Possessions and Canonical Clips Foundation is implemented locally and pending Hermes/OWL Linux verification.
+Status: Stages 1, 2, 3A, 3B, and 3C are implemented and verified. Stage 4A Event Participants Foundation is implemented locally and pending Hermes/OWL Linux verification.
 
 ## Purpose
 
@@ -558,11 +558,20 @@ Acceptance criteria:
 
 ### Stage 4: Event Ledger Upgrade
 
+Stage 4 is split into smaller lettered slices.
+
+#### Stage 4A: Event Participants Foundation
+
 Tasks:
 - Add relational_game_id and event_type_id to events.
 - Add event_participants.
-- Add review_status/source_type/created_by_user_id to events.
-- Update save_event() to write the new fields while preserving old behavior.
+- Add team_id, primary_player_id, primary_roster_membership_id, created_by_user_id, and updated_at to events.
+- Backfill primary event_participants from legacy events.player when player identity can be resolved.
+
+Deferred from 4A:
+- Update save_event() to write the new fields.
+- Rewrite stats derivation.
+- Add possession inference or play recognition.
 
 Acceptance criteria:
 - Manual tagging still works.

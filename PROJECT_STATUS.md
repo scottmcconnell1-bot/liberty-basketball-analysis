@@ -107,8 +107,11 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Codex verified locally on Windows on 2026-06-25: focused Review UI/API tests reported 7 passed; the full local app suite reported 198 passed, 1 skipped.
 - Hermes/OWL verified Review UI Stage 3B on GitHub issue #31 on 2026-06-25: origin/jason-5-may-updates was at 5e9c16c, all requested checks passed, Linux pytest reported 198 passed and 1 skipped, and no forbidden schema/model/detector behavior changed.
 - Scott gave standing approval on 2026-06-24 for Codex and Hermes/OWL to continue approved roadmap work without waiting for each next-task approval.
-- Stage 3C Possessions and Canonical Clips Foundation is implemented locally and pending Hermes/OWL Linux verification: additive possessions, clips, and clip_tags tables; events.possession_id; player_development_clips.canonical_clip_id; and schema tests.
-- Codex verified locally on Windows on 2026-06-25: tests/test_schema.py reported 16 passed; the full local app suite reported 201 passed, 1 skipped.
+- Stage 3C Possessions and Canonical Clips Foundation is implemented and Hermes/OWL verified: additive possessions, clips, and clip_tags tables; events.possession_id; player_development_clips.canonical_clip_id; and schema tests.
+- Codex verified Stage 3C locally on Windows on 2026-06-25: tests/test_schema.py reported 16 passed; the full local app suite reported 201 passed, 1 skipped.
+- Hermes/OWL verified Stage 3C on GitHub issue #35 on 2026-06-25: commit f1c3d09, Linux pytest reported 198 passed, 1 skipped, and Stage 3C scope was limited to the additive possession/clip foundation.
+- Stage 4A Event Participants Foundation is implemented locally: event_participants table; events.relational_game_id, event_type_id, team_id, primary_player_id, primary_roster_membership_id, created_by_user_id, and updated_at; and idempotent legacy player-name backfill into primary event participants.
+- Codex verified Stage 4A locally on Windows on 2026-06-25: tests/test_schema.py reported 19 passed.
 
 ## Inferred
 
@@ -137,7 +140,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL Linux verification confirms Stage 3C Possessions and Canonical Clips Foundation behavior on the Linux environment.
+- Whether Hermes/OWL Linux verification confirms Stage 4A Event Participants Foundation behavior on the Linux environment.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -154,4 +157,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Continue platform-core work with Stage 3C Possessions and Canonical Clips Foundation, keeping it additive and verified before workflow automation.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Continue platform-core work with Stage 4A Event Participants Foundation, keeping it additive and independently verified before richer event writes or downstream stats/minutes automation.
