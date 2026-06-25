@@ -1275,6 +1275,129 @@ def test_stats_are_persisted_to_table(client, db):
     assert row["threes_made"] == 1
 
 
+# ── Stage 4C: relational stats derivation ─────────────────────────────
+
+def _event_type_id(db, code):
+    row = db.execute("SELECT id FROM event_types WHERE code=?", (code,)).fetchone()
+    return row["id"] if row else None
+
+
+def test_stats_uses_event_types_taxonomy(client, db):
+    """Stage 4C: stats derivation must read event_types via event_type_id.
+
+    Saves a manual made_two event (which save_event resolves to the seeded
+    'made_two' event_type_id), then asserts the box score reflects the
+    taxonomy-derived aggregation.
+    """
+    game_id = _create_game(client, "taxonomy-stats-game")
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Dana",
+        "event_type": "made_two",
+        "shot_result": "made",
+        "timestamp_ms": 1000,
+        "human_verified": True,
+    })
+    r = client.get(f"/api/stats/{game_id}")
+    basic = r.get_json()["basic"]
+    dana = next(s for s in basic if s["player"] == "Dana")
+    assert dana["pts"] == 2
+    assert dana["fgm"] == 1
+    assert dana["fga"] == 1
+
+
+def test_stats_excludes_rejected_events(client, db):
+    """Stage 4C: rejected events must not contribute to stats."""
+    game_id = _create_game(client, "rejected-stats-game")
+    # Accepted manual made_two
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Evan",
+        "event_type": "made_two",
+        "shot_result": "made",
+        "timestamp_ms": 1000,
+        "human_verified": True,
+    })
+    # AI event that will be rejected
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Evan",
+        "event_type": "made_three",
+        "shot_result": "made",
+        "timestamp_ms": 2000,
+        "human_verified": False,
+        "source_type": "ai",
+    })
+    eid = r.get_json()["id"]
+    post_json(client, f"/api/review/events/{eid}/reject", {"notes": "bad"})
+
+    r = client.get(f"/api/stats/{game_id}")
+    basic = r.get_json()["basic"]
+    evan = next(s for s in basic if s["player"] == "Evan")
+    # Only the manual made_two counts; rejected made_three is excluded
+    assert evan["pts"] == 2
+    assert evan["threes_made"] == 0
+    assert evan["threes_att"] == 0
+
+
+def test_stats_includes_accepted_ai_events(client, db):
+    """Stage 4C: accepted AI events (human_verified=0, review_status='accepted')
+    must contribute to stats."""
+    game_id = _create_game(client, "accepted-ai-stats-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Frank",
+        "event_type": "made_three",
+        "shot_result": "made",
+        "timestamp_ms": 1000,
+        "human_verified": False,
+        "source_type": "ai",
+    })
+    eid = r.get_json()["id"]
+    post_json(client, f"/api/review/events/{eid}/accept", {"notes": "good"})
+
+    r = client.get(f"/api/stats/{game_id}")
+    basic = r.get_json()["basic"]
+    frank = next(s for s in basic if s["player"] == "Frank")
+    assert frank["pts"] == 3
+    assert frank["threes_made"] == 1
+    assert frank["threes_att"] == 1
+
+
+def test_stats_excludes_zero_counts_for_stats_events(client, db):
+    """Stage 4C: events whose event_types.counts_for_stats=0 (e.g. substitution,
+    timeout) must not contribute to the box score."""
+    game_id = _create_game(client, "nocount-stats-game")
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Gabe",
+        "event_type": "made_two",
+        "shot_result": "made",
+        "timestamp_ms": 1000,
+        "human_verified": True,
+    })
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Gabe",
+        "event_type": "substitution",
+        "timestamp_ms": 2000,
+        "human_verified": True,
+    })
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Gabe",
+        "event_type": "timeout",
+        "timestamp_ms": 3000,
+        "human_verified": True,
+    })
+
+    r = client.get(f"/api/stats/{game_id}")
+    basic = r.get_json()["basic"]
+    gabe = next(s for s in basic if s["player"] == "Gabe")
+    assert gabe["pts"] == 2
+    assert gabe["events"] == 1  # only made_two counts_for_stats=1
+
+
 def test_schedule_routes_hidden_when_feature_disabled(app, client):
     original = app.config["FEATURES"]["ENABLE_SEASONS_SCHEDULE"]
     app.config["FEATURES"]["ENABLE_SEASONS_SCHEDULE"] = False

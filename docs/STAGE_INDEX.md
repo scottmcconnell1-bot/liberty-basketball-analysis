@@ -20,9 +20,10 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 3A | Review workflow foundation | Implemented and Hermes/OWL verified | review_items, event review state, review APIs, human_corrections/provenance wiring |
 | Stage 3B | Review UI | Implemented and Hermes/OWL verified | /review page, Review Queue nav, filters, detail panel, accept/correct/reject UI |
 | Stage 3C | Possessions and canonical clips foundation | Implemented and Hermes/OWL verified | possessions, clips, clip_tags, events.possession_id, player_development_clips.canonical_clip_id |
-| Stage 4 | Event ledger upgrade | In progress through lettered slices | relational_game_id, event_type_id, event_participants, richer event writes |
+| Stage 4 | Event ledger upgrade | Implemented through lettered slices (4A, 4B, 4C) | relational_game_id, event_type_id, event_participants, richer event writes, relational stats derivation |
 | Stage 4A | Event participants foundation | Implemented and Hermes/OWL verified | event_participants, events relational links, primary player/team links, legacy player-name backfill |
 | Stage 4B | Manual event write upgrade | Implemented and Hermes/OWL verified | save_event wires relational_game_id, event_type_id, team_id, primary_player_id, event_participants |
+| Stage 4C | Relational stats derivation | Implemented and Hermes/OWL verified | stats.aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering; legacy event_type alias seeds added |
 | Stage 5 | Downstream game_id cleanup | Not started | downstream relational_game_id migration while preserving analysis_key |
 | Stage 6 | Module entitlement wiring | Not started | module_key helpers and team/module permission checks |
 

@@ -59,6 +59,14 @@ EVENT_TYPE_SEEDS = [
     ("jump_ball", "Jump ball", "game_management", 0, 0, 1),
     ("period_start", "Period start", "clock", 0, 0, 1),
     ("period_end", "Period end", "clock", 0, 0, 1),
+    # Legacy event_type aliases. These bridge pre-taxonomy events so the
+    # relational stats derivation (Stage 4C) still aggregates legacy rows.
+    ("two_attempt", "Legacy 2PT attempt", "shot", 1, 1, 0),
+    ("three_attempt", "Legacy 3PT attempt", "shot", 1, 1, 0),
+    ("shot", "Legacy shot", "shot", 1, 1, 0),
+    ("2pt", "Legacy 2PT", "shot", 1, 1, 0),
+    ("3pt", "Legacy 3PT", "shot", 1, 1, 0),
+    ("rebound", "Legacy rebound", "rebound", 1, 0, 0),
 ]
 
 BASE_MODULE_ENTITLEMENT = {

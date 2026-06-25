@@ -1,6 +1,27 @@
 """stats.py – Aggregate and persist per-game stats from the events table."""
 
 
+def _eligible_event_rows(db, game_id):
+    """Return only events eligible for stats derivation.
+
+    Eligible = events resolved to a known event_type_id AND not rejected.
+    Manual events (human_verified=1) and accepted AI events
+    (human_verified=0 AND review_status='accepted') are included;
+    everything else (pending/corrected/rejected) is filtered out here so
+    aggregation only sees canonical, approved events.
+    """
+    return db.execute(
+        """SELECT e.player, e.event_type, e.shot_result, et.code,
+                  et.counts_for_stats, et.is_scoring_event
+           FROM events e
+           JOIN event_types et ON et.id = e.event_type_id
+           WHERE e.game_id = ?
+             AND e.review_status != 'rejected'
+             AND et.counts_for_stats = 1""",
+        (game_id,),
+    ).fetchall()
+
+
 def _aggregate_rows(rows):
     players = {}
     for row in rows:
@@ -15,24 +36,36 @@ def _aggregate_rows(rows):
             }
         s = players[p]
         s["events"] += 1
-        et = (row["event_type"] or "").lower()
+        et = (row["code"] or "").lower()
         sr = (row["shot_result"] or "").lower()
 
-        if et in ("two_attempt", "2pt", "shot"):
+        if et in ("made_two", "two_attempt", "2pt", "shot"):
             s["fga"] += 1
             if sr == "made":
                 s["fgm"] += 1
                 s["pts"] += 2
-        elif et in ("three_attempt", "3pt"):
+        elif et in ("missed_two",):
+            s["fga"] += 1
+        elif et in ("made_three", "three_attempt", "3pt"):
             s["fga"] += 1
             s["threes_att"] += 1
             if sr == "made":
                 s["fgm"] += 1
                 s["threes_made"] += 1
                 s["pts"] += 3
+        elif et in ("missed_three",):
+            s["fga"] += 1
+            s["threes_att"] += 1
+        elif et == "made_free_throw":
+            s["fga"] += 1
+            if sr == "made":
+                s["fgm"] += 1
+                s["pts"] += 1
+        elif et == "missed_free_throw":
+            s["fga"] += 1
         elif et == "assist":
             s["ast"] += 1
-        elif et == "rebound":
+        elif et in ("rebound", "rebound_offensive", "rebound_defensive"):
             s["reb"] += 1
         elif et == "turnover":
             s["tov"] += 1
@@ -45,11 +78,16 @@ def _aggregate_rows(rows):
 
 
 def aggregate_stats(db, game_id):
-    """Return a list of per-player stat dicts for the given game_id."""
-    rows = db.execute(
-        "SELECT player, event_type, shot_result FROM events WHERE game_id=?",
-        (game_id,),
-    ).fetchall()
+    """Return a list of per-player stat dicts for the given game_id.
+
+    Implementation reads stats relationally from the event_types taxonomy:
+    - JOIN event_types by events.event_type_id
+    - filter where counts_for_stats = 1
+    - exclude events with review_status = 'rejected'
+    Branching uses the seeded event_types.code (made_two, made_three, ...)
+    while still recognizing legacy free-text event_type strings.
+    """
+    rows = _eligible_event_rows(db, game_id)
     return _aggregate_rows(rows)
 
 
