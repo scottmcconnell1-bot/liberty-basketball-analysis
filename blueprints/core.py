@@ -1147,6 +1147,12 @@ def videos_page():
     return render_template("videos.html")
 
 
+@core.route("/review")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def review_page():
+    return render_template("review_events.html")
+
+
 @core.route("/film")
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")

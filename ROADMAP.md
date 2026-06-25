@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-23
+Updated: 2026-06-25
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -150,9 +150,12 @@ Current implementation:
 - Possessions, canonical clips, event ledger rewrites, and downstream TEXT game_id cleanup remain deferred to later approved stages.
 - Scott selected Review UI as the next slice after Stage 3A verification.
 - docs/REVIEW_UI_PLAN.md defines the proposed Stage 3B coach review queue page.
+- Scott approved Stage 3B implementation on 2026-06-24.
+- Stage 3B adds a feature-gated Review Queue page, navigation, filters, event detail editing, and accept/correct/reject controls backed by the Stage 3A APIs.
+- Codex local Windows verification reported 198 passed, 1 skipped on 2026-06-25.
 
 Next step:
-- Scott should approve or revise docs/REVIEW_UI_PLAN.md before Codex implements Stage 3B.
+- Hermes/OWL should verify Stage 3B on Linux before Codex proposes the next platform-core slice.
 
 ### 7. Data Governance
 

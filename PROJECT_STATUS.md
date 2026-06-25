@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-23
+Updated: 2026-06-25
 Branch: jason-5-may-updates
 
 ## Proven
@@ -101,6 +101,11 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Hermes/OWL verified Review Workflow Stage 3A on GitHub issue #18 on 2026-06-23: HEAD matched origin/jason-5-may-updates at 62fb233, all 9 checklist items were Proven, Linux pytest reported 195 passed and 1 skipped, and init_db review backfill was idempotent.
 - Scott selected Review UI as the next slice after Stage 3A verification.
 - docs/REVIEW_UI_PLAN.md defines the proposed Stage 3B scope: a coach review queue page backed by the Stage 3A APIs, with filters, detail panel, accept/correct/reject controls, and no new schema.
+- Scott approved Review UI Stage 3B implementation on 2026-06-24.
+- Stage 3B implementation adds GET /review, Review Queue navigation under Film & Stats, templates/review_events.html, and route/template tests.
+- The Review UI uses the existing Stage 3A APIs for listing, accepting, correcting, and rejecting review events.
+- Codex verified locally on Windows on 2026-06-25: focused Review UI/API tests reported 7 passed; the full local app suite reported 198 passed, 1 skipped.
+- Hermes/OWL Linux verification for Stage 3B is pending.
 
 ## Inferred
 
@@ -129,7 +134,7 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Scott approves Stage 3B Review UI implementation from docs/REVIEW_UI_PLAN.md.
+- Whether Hermes/OWL Linux verification confirms Stage 3B Review UI behavior on the Linux environment.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -146,4 +151,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. The next recommended engineering step is Scott approval of docs/REVIEW_UI_PLAN.md, then Codex implementation of Stage 3B Review UI.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented locally and should receive Hermes/OWL Linux verification before the next platform-core slice is selected.

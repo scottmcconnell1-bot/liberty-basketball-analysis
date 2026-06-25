@@ -665,6 +665,7 @@
       <div class="dropdown-menu">
         {% if features.ENABLE_MANUAL_TAG_MVP %}
         <a href="/film" {% if request.endpoint == 'film' %}class="active"{% endif %}>Film Tool</a>
+        <a href="/review" {% if request.endpoint == 'core.review_page' %}class="active"{% endif %}>Review Queue</a>
         {% endif %}
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <a href="/videos" {% if request.endpoint == 'videos_page' %}class="active"{% endif %}>Videos</a>

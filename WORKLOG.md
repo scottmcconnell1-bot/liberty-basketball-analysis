@@ -1089,3 +1089,35 @@ Planned Stage 3B scope:
 Verification:
 - Planning/documentation only; no production code changed.
 - Implementation still requires Scott approval after review.
+
+Review UI Stage 3B Implementation - 2026-06-25
+----------------------------------------------
+Scott approved Stage 3B implementation from docs/REVIEW_UI_PLAN.md.
+
+Implemented:
+- GET /review route gated by ENABLE_MANUAL_TAG_MVP.
+- Review Queue navigation under Film & Stats.
+- templates/review_events.html coach review queue page.
+- Filters for review status, game_id, event_type, source_type, player, and confidence range.
+- Event detail panel with editable correction fields.
+- Accept, correct, and reject actions backed by the existing Stage 3A review APIs.
+- Route/template tests for Review UI rendering, navigation visibility, and feature gating.
+
+Files changed:
+- blueprints/core.py
+- templates/base.html
+- templates/review_events.html
+- tests/test_review_ui.py
+- docs/REVIEW_UI_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification:
+- Focused Review UI/API tests: 7 passed.
+- Full local app suite: 198 passed, 1 skipped in 136.41s.
+- Skipped test is the opt-in live UI overflow audit.
+
+Pending:
+- Hermes/OWL Linux verification.

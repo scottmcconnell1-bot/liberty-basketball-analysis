@@ -1,8 +1,8 @@
 # Review UI Plan
 
-Updated: 2026-06-23
+Updated: 2026-06-25
 Branch: jason-5-may-updates
-Status: Planning only. No review UI implementation has been added by this document.
+Status: Implemented by Codex on Windows; pending Hermes/OWL Linux verification.
 
 ## Purpose
 
@@ -24,6 +24,15 @@ Verified from repository files and GitHub issue #18:
 - Hermes/OWL verified Stage 3A on Linux: 195 passed, 1 skipped.
 - Existing UI is Flask/Jinja with `base.html`, route-level templates, and small page-specific JavaScript.
 
+Verified by Codex on Windows after Stage 3B implementation:
+
+- `GET /review` renders `templates/review_events.html`.
+- The route is gated by `ENABLE_MANUAL_TAG_MVP`.
+- `base.html` exposes `Review Queue` under Film & Stats when manual tagging is enabled.
+- The page calls the existing Stage 3A review APIs for list, accept, correct, and reject actions.
+- Focused Review UI/API tests reported 7 passed.
+- Full local app suite reported 198 passed, 1 skipped.
+
 ## Current Gaps
 
 - Coaches cannot see a unified pending review queue.
@@ -34,7 +43,7 @@ Verified from repository files and GitHub issue #18:
 
 ## Stage 3B Implementation Slice
 
-Recommended first code slice after Scott approval:
+Implemented first code slice:
 
 1. Add a page route:
    - `GET /review`
@@ -113,6 +122,11 @@ Stage 3B is not complete until:
 - reject still preserves events rather than deleting them
 - no possession/canonical clip/paid-package/model/ball-detection behavior is added
 - Hermes/OWL Linux verification passes after Codex implementation
+
+Current verification status:
+
+- Codex local Windows verification is complete.
+- Hermes/OWL Linux verification is pending.
 
 ## Open Questions
 

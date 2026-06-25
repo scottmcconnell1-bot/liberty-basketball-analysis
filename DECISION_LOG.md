@@ -530,3 +530,34 @@ Evidence:
 Follow-up:
 - Scott reviews docs/REVIEW_UI_PLAN.md.
 - If approved, Codex implements Stage 3B with route/template/static tests and then requests Hermes/OWL verification.
+
+### Decision: Implement Review UI Stage 3B
+
+Decision maker: Scott
+
+Date: 2026-06-24
+
+Decision:
+- Implement Stage 3B from docs/REVIEW_UI_PLAN.md.
+- Keep the implementation UI/API-client focused.
+- Do not add schema changes, possession modeling, canonical clips, paid-package enforcement, model training, or ball detection changes in this stage.
+
+Scope implemented:
+- GET /review route gated by ENABLE_MANUAL_TAG_MVP.
+- Review Queue navigation under Film & Stats.
+- templates/review_events.html coach review queue page.
+- Filters for review status, game_id, event_type, source_type, player, and confidence range.
+- Event detail panel with editable correction fields.
+- Accept, correct, and reject actions backed by the existing Stage 3A review APIs.
+- Route/template tests for Review UI rendering, navigation visibility, and feature gating.
+
+Rationale:
+- Stage 3A created the review data model and APIs, but coaches need a usable page to convert pending event data into accepted, corrected, or rejected facts.
+- The future AI assistant, possessions, stats, scouting, and strategy modules should depend on reviewed data rather than raw pending detections.
+
+Evidence:
+- Codex local Windows verification on 2026-06-25: focused Review UI/API tests reported 7 passed.
+- Codex local Windows verification on 2026-06-25: full local app suite reported 198 passed, 1 skipped.
+
+Follow-up:
+- Hermes/OWL should verify Stage 3B on Linux before the project treats it as independently verified.
