@@ -27,7 +27,7 @@ import json
 import sqlite3
 
 from flask import (
-    Blueprint, abort, current_app, g, jsonify, request,
+    Blueprint, abort, current_app, g, jsonify, request, session,
 )
 
 import player_development as pd_helpers
@@ -81,9 +81,44 @@ def save_event():
     if not game:
         return jsonify({"status": "error", "message": "game_id must reference an existing game"}), 400
 
-    # Sanitize string inputs to prevent XSS
+    # ── Stage 4B: resolve relational columns ───────────────
     game_id = str(game_id_int)
+    relational_game_id = game_id_int
+
+    # event_type_id: lookup by code (case-insensitive); leave NULL if unknown
+    event_type_id = None
+    et_row = db.execute(
+        "SELECT id FROM event_types WHERE code=?", (event_type.lower(),)
+    ).fetchone()
+    if et_row:
+        event_type_id = et_row["id"]
+
+    # primary_player_id + team_id: resolve player name → roster_membership
+    # Uses case-insensitive trimmed match following Stage 4A backfill pattern
     player = str(data.get("player", ""))[:128] if data.get("player") else None
+    primary_player_id = None
+    team_id = None
+    primary_roster_membership_id = None
+    if player:
+        rm_row = db.execute(
+            """SELECT rm.id AS rm_id, rm.player_id, rm.team_id
+                 FROM roster_memberships rm
+                 JOIN players p ON p.id = rm.player_id
+                WHERE lower(trim(p.name)) = lower(trim(?))
+                  AND rm.status = 'active'
+                ORDER BY rm.created_at DESC
+                LIMIT 1""",
+            (player,),
+        ).fetchone()
+        if rm_row:
+            primary_player_id = rm_row["player_id"]
+            team_id = rm_row["team_id"]
+            primary_roster_membership_id = rm_row["rm_id"]
+
+    # created_by_user_id: from session
+    created_by_user_id = _current_review_user_id()
+
+    # ── remaining fields ────────────────────────────────────
     shot_result = str(data.get("shot_result", ""))[:32] if data.get("shot_result") else None
     source_video = str(data.get("source_video", ""))[:256] if data.get("source_video") else None
     human_verified = int(bool(data.get("human_verified", True)))
@@ -95,9 +130,12 @@ def save_event():
             """INSERT INTO events
                (game_id, player, event_type, shot_result, timestamp_ms, details_json,
                 source_video, source_frame, human_verified, confidence,
-                review_status, source_type, reviewed_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,
-                       CASE WHEN ?='accepted' THEN CURRENT_TIMESTAMP ELSE NULL END)""",
+                review_status, source_type, reviewed_at,
+                relational_game_id, event_type_id, team_id,
+                primary_player_id, primary_roster_membership_id,
+                created_by_user_id, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,
+                      ?,?,?,?,?,?, ?,?, CURRENT_TIMESTAMP)""",
             (
                 game_id,
                 player,
@@ -112,6 +150,12 @@ def save_event():
                 review_status,
                 source_type,
                 review_status,
+                relational_game_id,
+                event_type_id,
+                team_id,
+                primary_player_id,
+                primary_roster_membership_id,
+                created_by_user_id,
             ),
         )
         if review_status == "pending":
@@ -121,6 +165,23 @@ def save_event():
                    VALUES ('event', ?, ?, 'pending', 'Event needs coach review')""",
                 (cur.lastrowid, game_id),
             )
+
+        # ── Stage 4B: write primary event_participants row ────
+        if primary_player_id is not None:
+            db.execute(
+                """INSERT INTO event_participants
+                      (event_id, player_id, roster_membership_id, team_id,
+                       role, source)
+                   VALUES (?, ?, ?, ?, 'primary', ?)""",
+                (
+                    cur.lastrowid,
+                    primary_player_id,
+                    primary_roster_membership_id,
+                    team_id,
+                    source_type,
+                ),
+            )
+
         db.commit()
         refresh_game_stats(db, game_id)
         return jsonify({"status": "success", "id": cur.lastrowid})
@@ -158,7 +219,8 @@ def update_event(event_id):
         return jsonify({"error": "Not found"}), 404
     db.execute(
         """UPDATE events SET player=?, event_type=?, shot_result=?,
-           timestamp_ms=?, details_json=?, human_verified=?, confidence=?
+           timestamp_ms=?, details_json=?, human_verified=?, confidence=?,
+           updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
             data.get("player", row["player"]),
@@ -189,12 +251,55 @@ def delete_event(event_id):
 
 
 def _current_review_user_id():
+    """Return the current user id from request context, or None.
+
+    Resolution order:
+      1. g.user (set by future auth middleware)
+      2. session["user_id"] (set by blueprints/users.py login flow)
+      3. session["current_user_id"] (alternate key)
+      4. session.get("user", {}).get("id") (session stores user object)
+
+    If a candidate id is found, it is validated against the users table
+    before being returned. Invalid or missing ids yield None (keeping
+    created_by_user_id NULL).
+    """
+    # 1. g.user (will work once auth middleware sets it)
     user = getattr(g, "user", None)
     if isinstance(user, dict):
-        return user.get("id")
+        uid = user.get("id")
+        if uid is not None:
+            return _validate_user_id(uid)
     if user is not None and hasattr(user, "get"):
-        return user.get("id")
+        uid = user.get("id")
+        if uid is not None:
+            return _validate_user_id(uid)
+
+    # 2–4. Session fallback — matches keys used by blueprints/users.py
+    for key in ("user_id", "current_user_id"):
+        uid = session.get(key)
+        if uid is not None:
+            return _validate_user_id(uid)
+
+    # session["user"]["id"] — if session stores a user dict
+    user_obj = session.get("user")
+    if isinstance(user_obj, dict):
+        uid = user_obj.get("id")
+        if uid is not None:
+            return _validate_user_id(uid)
+
     return None
+
+
+def _validate_user_id(uid):
+    """Return uid if it corresponds to an active user row, else None."""
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT id FROM users WHERE id = ? AND is_active = 1", (int(uid),)
+        ).fetchone()
+        return row["id"] if row else None
+    except (ValueError, TypeError):
+        return None
 
 
 def _stringify_review_value(value):

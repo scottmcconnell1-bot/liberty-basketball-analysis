@@ -533,6 +533,243 @@ def test_review_event_reject_preserves_event_and_records_correction(client, db):
     assert correction["corrected_value"] == "rejected"
 
 
+# ── Stage 4B: save_event relational wiring ────────────────────────────
+
+def test_save_event_writes_relational_game_id(client, db):
+    """save_event must write relational_game_id while preserving legacy game_id."""
+    game_id = _create_game(client, "relational-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "assist",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    row = db.execute("SELECT game_id, relational_game_id FROM events WHERE id=?", (eid,)).fetchone()
+    assert row["game_id"] == str(game_id)
+    assert row["relational_game_id"] == game_id
+
+
+def test_save_event_resolves_event_type_id_from_seeded_code(client, db):
+    """save_event resolves event_type_id by lookup against existing event_types.code."""
+    game_id = _create_game(client, "event-type-id-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "assist",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    row = db.execute("SELECT event_type_id FROM events WHERE id=?", (eid,)).fetchone()
+    et_row = db.execute("SELECT id FROM event_types WHERE code='assist'").fetchone()
+    assert row["event_type_id"] == et_row["id"]
+
+
+def test_save_event_does_not_seed_unknown_event_type(client, db):
+    """save_event must NOT create new event_types rows for unknown free text."""
+    game_id = _create_game(client, "no-seed-game")
+    before = db.execute("SELECT COUNT(*) AS cnt FROM event_types").fetchone()["cnt"]
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "completely_unknown_xyz",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    after = db.execute("SELECT COUNT(*) AS cnt FROM event_types").fetchone()["cnt"]
+    assert after == before, "save_event must not insert new event_types for unknown codes"
+    eid = r.get_json()["id"]
+    row = db.execute("SELECT event_type_id FROM events WHERE id=?", (eid,)).fetchone()
+    assert row["event_type_id"] is None
+
+
+def test_save_event_resolves_primary_player_by_name(client, db):
+    """save_event resolves primary_player_id via lower(trim()) roster_membership match."""
+    game_id = _create_game(client, "player-resolve-game")
+    # Create player and roster_membership
+    r = post_json(client, "/api/players", {"name": "Jordan Smith", "jersey_number": 23})
+    player_id = r.get_json()["id"]
+    # Create team via direct DB insert (no API for teams in this slice)
+    db.execute(
+        "INSERT INTO teams (team_name, program_name) VALUES (?, ?)",
+        ("Liberty Lions", "Liberty"),
+    )
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.execute(
+        "INSERT INTO roster_memberships (player_id, team_id, status) VALUES (?, ?, 'active')",
+        (player_id, team_id),
+    )
+    db.commit()
+
+    # Use different casing and whitespace to exercise lower(trim()) match
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "player": "  jordan smith  ",
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    row = db.execute(
+        "SELECT primary_player_id, primary_roster_membership_id, team_id FROM events WHERE id=?",
+        (eid,),
+    ).fetchone()
+    assert row["primary_player_id"] == player_id
+    assert row["primary_roster_membership_id"] is not None
+    assert row["team_id"] == team_id
+
+
+def test_save_event_writes_primary_event_participant(client, db):
+    """save_event inserts one event_participants row with role='primary'."""
+    game_id = _create_game(client, "participant-game")
+    r = post_json(client, "/api/players", {"name": "Alex Carter", "jersey_number": 11})
+    player_id = r.get_json()["id"]
+    db.execute(
+        "INSERT INTO teams (team_name, program_name) VALUES (?, ?)",
+        ("Liberty Lions", "Liberty"),
+    )
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.execute(
+        "INSERT INTO roster_memberships (player_id, team_id, status) VALUES (?, ?, 'active')",
+        (player_id, team_id),
+    )
+    db.commit()
+
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "player": "Alex Carter",
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    participants = db.execute(
+        "SELECT * FROM event_participants WHERE event_id=? AND role='primary'",
+        (eid,),
+    ).fetchall()
+    assert len(participants) == 1
+    p = participants[0]
+    assert p["player_id"] == player_id
+    assert p["team_id"] == team_id
+    assert p["roster_membership_id"] is not None
+
+
+def test_save_event_no_player_no_participant(client, db):
+    """save_event without a player must not create event_participants."""
+    game_id = _create_game(client, "no-player-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    participants = db.execute(
+        "SELECT * FROM event_participants WHERE event_id=?",
+        (eid,),
+    ).fetchall()
+    assert len(participants) == 0
+
+
+def test_update_event_touches_updated_at(client, db):
+    """update_event must set updated_at."""
+    game_id = _create_game(client, "update-ts-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    eid = r.get_json()["id"]
+    row_before = db.execute("SELECT updated_at FROM events WHERE id=?", (eid,)).fetchone()
+    # Ensure time advances (SQLite has 1-second resolution)
+    import time
+    time.sleep(1.1)
+    r2 = put_json(client, f"/api/events/{eid}", {"event_type": "block"})
+    assert r2.status_code == 200
+    row_after = db.execute("SELECT updated_at FROM events WHERE id=?", (eid,)).fetchone()
+    assert row_after["updated_at"] is not None
+    assert row_after["updated_at"] != row_before["updated_at"]
+
+# ── Stage 4B: created_by_user_id proof ─────────────────────────────
+
+def test_save_event_created_by_user_id_null_without_user(client, db):
+    """Without session user context, created_by_user_id is NULL."""
+    game_id = _create_game(client, "no-user-ctx-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    row = db.execute(
+        "SELECT created_by_user_id FROM events WHERE id=?", (eid,)
+    ).fetchone()
+    # No session user_id set → _current_review_user_id() returns None
+    assert row["created_by_user_id"] is None
+
+
+def test_save_event_populates_created_by_user_id_from_session(client, db):
+    """save_event must populate created_by_user_id from session["user_id"].
+
+    _current_review_user_id() now falls back to reading session["user_id"]
+    (the key used by blueprints/users.py login flow) and validates it
+    against the users table before writing. This test proves the full
+    wiring end-to-end using Flask session_transaction().
+    """
+    # 1. Create a real, active user in the DB
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role)"
+        " VALUES (?,?,?,?)",
+        ("coach@test.local", "x", "Auto Test Coach", "coach"),
+    )
+    db.commit()
+    user_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    # 2. Set session["user_id"] via session_transaction (same key users.py uses)
+    with client.session_transaction() as sess:
+        sess["user_id"] = user_id
+
+    # 3. Save event — session cookie will be sent automatically
+    game_id = _create_game(client, "user-ctx-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+
+    # 4. Prove created_by_user_id was populated
+    row = db.execute(
+        "SELECT created_by_user_id FROM events WHERE id=?", (eid,)
+    ).fetchone()
+    assert row["created_by_user_id"] == user_id, (
+        f"Expected created_by_user_id={user_id}, got {row['created_by_user_id']}"
+    )
+
+
+def test_save_event_ignores_invalid_session_user_id(client, db):
+    """If session holds a user_id that doesn't exist in users table,
+    _current_review_user_id() must return None (not crash or write bad FK)."""
+    with client.session_transaction() as sess:
+        sess["user_id"] = 99999  # non-existent user
+
+    game_id = _create_game(client, "invalid-user-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    row = db.execute(
+        "SELECT created_by_user_id FROM events WHERE id=?", (eid,)
+    ).fetchone()
+    assert row["created_by_user_id"] is None
+
+
+
+
 # ── Players ───────────────────────────────────────────────────────────
 
 def test_players_empty(client):
