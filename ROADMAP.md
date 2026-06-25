@@ -153,9 +153,14 @@ Current implementation:
 - Scott approved Stage 3B implementation on 2026-06-24.
 - Stage 3B adds a feature-gated Review Queue page, navigation, filters, event detail editing, and accept/correct/reject controls backed by the Stage 3A APIs.
 - Codex local Windows verification reported 198 passed, 1 skipped on 2026-06-25.
+- Hermes/OWL Linux verification on GitHub issue #31 reported all requested Stage 3B checks passed, Linux pytest at 198 passed and 1 skipped, and no forbidden behavior changes.
+- Scott gave standing approval on 2026-06-24 for Codex and Hermes/OWL to continue approved roadmap work without waiting for each next-task approval.
+- Stage 3C Possessions and Canonical Clips Foundation is the next platform-core slice.
+- Stage 3C adds additive possessions, clips, and clip_tags schema plus event/clip link columns, without possession inference, clipping automation, UI changes, detector work, or paid-package enforcement.
+- Codex local Windows verification reported 201 passed, 1 skipped on 2026-06-25.
 
 Next step:
-- Hermes/OWL should verify Stage 3B on Linux before Codex proposes the next platform-core slice.
+- Request Hermes/OWL Linux verification for Stage 3C.
 
 ### 7. Data Governance
 

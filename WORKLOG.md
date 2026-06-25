@@ -1121,3 +1121,44 @@ Verification:
 
 Pending:
 - Hermes/OWL Linux verification.
+
+Review UI Stage 3B Hermes Verification - 2026-06-25
+---------------------------------------------------
+Hermes/OWL verified Stage 3B on GitHub issue #31.
+
+Verification:
+- origin/jason-5-may-updates at 5e9c16c.
+- Stage 3B scope limited to Review UI route/template/nav/tests and docs.
+- Linux pytest result: 198 passed, 1 skipped.
+- No schema, possession, canonical clip, paid-package, ball-detection, model-training, or detector-threshold behavior changed.
+
+Possessions and Canonical Clips Foundation Stage 3C - 2026-06-25
+----------------------------------------------------------------
+Scott gave standing approval to continue approved roadmap work without waiting for each next-task approval.
+
+Implemented locally:
+- possessions table.
+- clips table.
+- clip_tags table.
+- events.possession_id optional link column.
+- player_development_clips.canonical_clip_id optional link column.
+- Schema tests for table existence, link columns, idempotency, and manual event-possession-clip linkage.
+
+Files changed:
+- schema.sql
+- helpers.py
+- tests/test_schema.py
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md
+- docs/REVIEW_UI_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification so far:
+- tests/test_schema.py: 16 passed.
+
+Pending:
+- Full local app suite.
+- Push to jason-5-may-updates.
+- Hermes/OWL Linux verification.

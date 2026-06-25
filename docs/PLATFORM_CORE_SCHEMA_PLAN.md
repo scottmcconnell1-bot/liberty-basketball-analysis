@@ -2,7 +2,7 @@
 
 Date: 2026-06-23
 Branch: jason-5-may-updates
-Status: Stages 1, 2, and 3A implemented locally. Stage 3A awaits Hermes/OWL Linux verification.
+Status: Stages 1, 2, 3A, and 3B are implemented and verified. Stage 3C Possessions and Canonical Clips Foundation is implemented locally and pending Hermes/OWL Linux verification.
 
 ## Purpose
 
@@ -542,7 +542,7 @@ Acceptance criteria:
 
 See docs/REVIEW_WORKFLOW_PLAN.md.
 
-### Stage 3B: Possessions and Canonical Clips
+### Stage 3C: Possessions and Canonical Clips Foundation
 
 Tasks:
 - Add possessions.

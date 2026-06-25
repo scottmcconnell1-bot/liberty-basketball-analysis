@@ -19,10 +19,13 @@ EXPECTED_TABLES = [
     "stats",
     "practices",
     "video_assets",
+    "possessions",
     "event_types",
     "provenance_records",
     "review_items",
     "module_entitlements",
+    "clips",
+    "clip_tags",
     "player_development_clips",
     "practice_playlists",
     "practice_playlist_clips",
@@ -36,7 +39,8 @@ EXPECTED_COLUMNS = {
     "events": ["id", "game_id", "player", "event_type", "shot_result",
                 "timestamp_ms", "details_json", "source_video", "source_frame",
                 "human_verified", "confidence", "review_status", "source_type",
-                "reviewed_by_user_id", "reviewed_at", "review_notes", "created_at"],
+                "possession_id", "reviewed_by_user_id", "reviewed_at",
+                "review_notes", "created_at"],
     "seasons": ["id", "name", "start_date", "end_date", "created_at"],
     "scheduled_games": ["id", "season_id", "program_name", "gender", "level",
                         "game_date", "game_time", "location_type", "opponent_name",
@@ -55,6 +59,11 @@ EXPECTED_COLUMNS = {
                      "file_size_bytes", "duration_ms", "frame_rate", "width", "height",
                      "checksum", "transcode_status", "sync_group_id", "primary_asset",
                      "created_at", "updated_at"],
+    "possessions": ["id", "game_id", "team_id", "opponent_team_id", "period",
+                    "start_timestamp_ms", "end_timestamp_ms", "start_event_id",
+                    "end_event_id", "outcome", "points_for", "source",
+                    "review_status", "confidence", "notes", "created_at",
+                    "updated_at"],
     "event_types": ["id", "code", "label", "category", "counts_for_stats",
                     "is_scoring_event", "is_possession_boundary", "created_at", "updated_at"],
     "provenance_records": ["id", "entity_type", "entity_id", "source_type", "source_id",
@@ -66,6 +75,16 @@ EXPECTED_COLUMNS = {
                      "reviewed_at", "notes", "created_at", "updated_at"],
     "module_entitlements": ["id", "team_id", "module_key", "enabled", "starts_at",
                             "ends_at", "notes", "created_at", "updated_at"],
+    "clips": ["id", "game_id", "video_asset_id", "event_id", "possession_id",
+              "clip_type", "title", "start_timestamp_ms", "end_timestamp_ms",
+              "created_by_user_id", "source", "review_status", "confidence",
+              "notes", "created_at", "updated_at"],
+    "clip_tags": ["id", "clip_id", "tag", "category", "created_by_user_id",
+                  "created_at"],
+    "player_development_clips": ["id", "player_id", "game_id", "event_id",
+                                 "canonical_clip_id", "clip_start_ms",
+                                 "clip_end_ms", "clip_label", "clip_category",
+                                 "season_id", "notes", "created_at", "updated_at"],
 }
 
 
@@ -185,6 +204,8 @@ def test_stage2_backfill_is_idempotent(app, db):
             "teams",
             "event_types",
             "module_entitlements",
+    "clips",
+    "clip_tags",
             "provenance_records",
         ]
     }
@@ -278,6 +299,97 @@ def test_stage3a_review_workflow_tables(db):
     for col in EXPECTED_COLUMNS["review_items"]:
         assert col in cols, f"review_items missing column: {col}"
 
+
+def test_stage3c_possession_clip_foundation_tables(db):
+    for table in ["possessions", "clips", "clip_tags", "player_development_clips"]:
+        cols = get_columns(db, table)
+        for col in EXPECTED_COLUMNS[table]:
+            assert col in cols, f"{table} missing column: {col}"
+
+    event_cols = get_columns(db, "events")
+    assert "possession_id" in event_cols
+
+
+def test_stage3c_possession_clip_foundation_is_idempotent(app, db):
+    before = {
+        table: table_count(db, table)
+        for table in ["possessions", "clips", "clip_tags"]
+    }
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    after = {
+        table: table_count(db, table)
+        for table in before
+    }
+    assert after == before
+
+
+def test_stage3c_manual_possession_and_clip_can_link_to_event(db):
+    db.execute(
+        """INSERT INTO games (source_type, source_key)
+           VALUES ('manual', 'stage3c-foundation-game')"""
+    )
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage3c-foundation-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO events
+              (game_id, event_type, timestamp_ms, review_status, source_type)
+           VALUES (?, 'shot', 12000, 'accepted', 'manual')""",
+        (str(game_id),),
+    )
+    event_id = db.execute(
+        "SELECT id FROM events WHERE game_id=? AND event_type='shot'",
+        (str(game_id),),
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO possessions
+              (game_id, period, start_timestamp_ms, end_timestamp_ms,
+               start_event_id, end_event_id, outcome, points_for,
+               source, review_status)
+           VALUES (?, 1, 10000, 18000, ?, ?, 'made_two', 2,
+                   'manual', 'reviewed')""",
+        (game_id, event_id, event_id),
+    )
+    possession_id = db.execute(
+        "SELECT id FROM possessions WHERE game_id=?",
+        (game_id,),
+    ).fetchone()[0]
+    db.execute(
+        "UPDATE events SET possession_id=? WHERE id=?",
+        (possession_id, event_id),
+    )
+    db.execute(
+        """INSERT INTO clips
+              (game_id, event_id, possession_id, clip_type, title,
+               start_timestamp_ms, end_timestamp_ms, source, review_status)
+           VALUES (?, ?, ?, 'possession', 'Opening possession',
+                   9000, 19000, 'manual', 'reviewed')""",
+        (game_id, event_id, possession_id),
+    )
+    clip_id = db.execute(
+        "SELECT id FROM clips WHERE possession_id=?",
+        (possession_id,),
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO clip_tags (clip_id, tag, category)
+           VALUES (?, 'transition', 'phase')""",
+        (clip_id,),
+    )
+    db.commit()
+
+    event = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    clip = db.execute("SELECT * FROM clips WHERE id=?", (clip_id,)).fetchone()
+    tag = db.execute("SELECT * FROM clip_tags WHERE clip_id=?", (clip_id,)).fetchone()
+
+    assert event["possession_id"] == possession_id
+    assert clip["event_id"] == event_id
+    assert clip["clip_type"] == "possession"
+    assert tag["tag"] == "transition"
 
 def test_stage3a_review_backfill_is_idempotent(app, db):
     db.execute(

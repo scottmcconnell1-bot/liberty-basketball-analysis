@@ -1300,6 +1300,25 @@ def _ensure_migration_columns(db):
             created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS possessions (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id            INTEGER NOT NULL REFERENCES games(id),
+            team_id            INTEGER REFERENCES teams(id),
+            opponent_team_id   INTEGER REFERENCES teams(id),
+            period             INTEGER,
+            start_timestamp_ms INTEGER NOT NULL,
+            end_timestamp_ms   INTEGER,
+            start_event_id     INTEGER REFERENCES events(id),
+            end_event_id       INTEGER REFERENCES events(id),
+            outcome            TEXT,
+            points_for         INTEGER NOT NULL DEFAULT 0,
+            source             TEXT NOT NULL DEFAULT 'manual',
+            review_status      TEXT NOT NULL DEFAULT 'unreviewed',
+            confidence         REAL,
+            notes              TEXT,
+            created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS app_settings (
             key        TEXT PRIMARY KEY,
             value      TEXT NOT NULL,
@@ -1371,11 +1390,38 @@ def _ensure_migration_columns(db):
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(team_id, module_key)
         );
+        CREATE TABLE IF NOT EXISTS clips (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id            INTEGER REFERENCES games(id),
+            video_asset_id     INTEGER REFERENCES video_assets(id),
+            event_id           INTEGER REFERENCES events(id),
+            possession_id      INTEGER REFERENCES possessions(id),
+            clip_type          TEXT NOT NULL DEFAULT 'event',
+            title              TEXT NOT NULL,
+            start_timestamp_ms INTEGER NOT NULL,
+            end_timestamp_ms   INTEGER NOT NULL,
+            created_by_user_id INTEGER REFERENCES users(id),
+            source             TEXT NOT NULL DEFAULT 'manual',
+            review_status      TEXT NOT NULL DEFAULT 'reviewed',
+            confidence         REAL,
+            notes              TEXT,
+            created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS clip_tags (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            clip_id            INTEGER NOT NULL REFERENCES clips(id) ON DELETE CASCADE,
+            tag                TEXT NOT NULL,
+            category           TEXT,
+            created_by_user_id INTEGER REFERENCES users(id),
+            created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS player_development_clips (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             player_id       INTEGER REFERENCES players(id),
             game_id         TEXT,
             event_id        INTEGER REFERENCES events(id),
+            canonical_clip_id INTEGER REFERENCES clips(id),
             clip_start_ms   INTEGER NOT NULL,
             clip_end_ms     INTEGER NOT NULL,
             clip_label      TEXT NOT NULL,
@@ -1494,6 +1540,7 @@ def _ensure_migration_columns(db):
         ("events", "confidence",     "ALTER TABLE events ADD COLUMN confidence REAL"),
         ("events", "review_status",  "ALTER TABLE events ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'"),
         ("events", "source_type",    "ALTER TABLE events ADD COLUMN source_type TEXT DEFAULT 'ai'"),
+        ("events", "possession_id",  "ALTER TABLE events ADD COLUMN possession_id INTEGER REFERENCES possessions(id)"),
         ("events", "reviewed_by_user_id", "ALTER TABLE events ADD COLUMN reviewed_by_user_id INTEGER REFERENCES users(id)"),
         ("events", "reviewed_at",    "ALTER TABLE events ADD COLUMN reviewed_at TIMESTAMP"),
         ("events", "review_notes",   "ALTER TABLE events ADD COLUMN review_notes TEXT"),
@@ -1502,6 +1549,7 @@ def _ensure_migration_columns(db):
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
         ("scheduled_games", "team", "ALTER TABLE scheduled_games ADD COLUMN team TEXT NOT NULL DEFAULT 'boys_hs'"),
         ("practice_plan_items", "sort_order", "ALTER TABLE practice_plan_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"),
+        ("player_development_clips", "canonical_clip_id", "ALTER TABLE player_development_clips ADD COLUMN canonical_clip_id INTEGER REFERENCES clips(id)"),
         ("users", "display_name", "ALTER TABLE users ADD COLUMN display_name TEXT"),
         ("users", "role", "ALTER TABLE users ADD COLUMN role TEXT"),
         ("users", "avatar_url", "ALTER TABLE users ADD COLUMN avatar_url TEXT"),

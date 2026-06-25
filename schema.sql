@@ -247,6 +247,25 @@ CREATE TABLE IF NOT EXISTS video_assets (
     updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS possessions (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id            INTEGER NOT NULL REFERENCES games(id),
+    team_id            INTEGER REFERENCES teams(id),
+    opponent_team_id   INTEGER REFERENCES teams(id),
+    period             INTEGER,
+    start_timestamp_ms INTEGER NOT NULL,
+    end_timestamp_ms   INTEGER,
+    start_event_id     INTEGER REFERENCES events(id),
+    end_event_id       INTEGER REFERENCES events(id),
+    outcome            TEXT,
+    points_for         INTEGER NOT NULL DEFAULT 0,
+    source             TEXT NOT NULL DEFAULT 'manual',
+    review_status      TEXT NOT NULL DEFAULT 'unreviewed',
+    confidence         REAL,
+    notes              TEXT,
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS app_settings (
     key        TEXT PRIMARY KEY,
     value      TEXT NOT NULL,
@@ -326,11 +345,39 @@ CREATE TABLE IF NOT EXISTS module_entitlements (
     UNIQUE(team_id, module_key)
 );
 
+CREATE TABLE IF NOT EXISTS clips (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id            INTEGER REFERENCES games(id),
+    video_asset_id     INTEGER REFERENCES video_assets(id),
+    event_id           INTEGER REFERENCES events(id),
+    possession_id      INTEGER REFERENCES possessions(id),
+    clip_type          TEXT NOT NULL DEFAULT 'event',
+    title              TEXT NOT NULL,
+    start_timestamp_ms INTEGER NOT NULL,
+    end_timestamp_ms   INTEGER NOT NULL,
+    created_by_user_id INTEGER REFERENCES users(id),
+    source             TEXT NOT NULL DEFAULT 'manual',
+    review_status      TEXT NOT NULL DEFAULT 'reviewed',
+    confidence         REAL,
+    notes              TEXT,
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS clip_tags (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    clip_id            INTEGER NOT NULL REFERENCES clips(id) ON DELETE CASCADE,
+    tag                TEXT NOT NULL,
+    category           TEXT,
+    created_by_user_id INTEGER REFERENCES users(id),
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS player_development_clips (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id       INTEGER REFERENCES players(id),
     game_id         TEXT,
     event_id        INTEGER REFERENCES events(id),
+    canonical_clip_id INTEGER REFERENCES clips(id),
     clip_start_ms   INTEGER NOT NULL,
     clip_end_ms     INTEGER NOT NULL,
     clip_label      TEXT NOT NULL,

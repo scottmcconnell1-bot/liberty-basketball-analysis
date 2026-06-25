@@ -2,7 +2,7 @@
 
 Updated: 2026-06-25
 Branch: jason-5-may-updates
-Status: Implemented by Codex on Windows; pending Hermes/OWL Linux verification.
+Status: Implemented by Codex and verified by Hermes/OWL on Linux.
 
 ## Purpose
 
@@ -126,7 +126,7 @@ Stage 3B is not complete until:
 Current verification status:
 
 - Codex local Windows verification is complete.
-- Hermes/OWL Linux verification is pending.
+- Hermes/OWL Linux verification passed on GitHub issue #31: 198 passed, 1 skipped.
 
 ## Open Questions
 

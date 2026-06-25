@@ -560,4 +560,35 @@ Evidence:
 - Codex local Windows verification on 2026-06-25: full local app suite reported 198 passed, 1 skipped.
 
 Follow-up:
-- Hermes/OWL should verify Stage 3B on Linux before the project treats it as independently verified.
+- Hermes/OWL verified Stage 3B on Linux through GitHub issue #31: 198 passed, 1 skipped, with no forbidden behavior changes.
+
+### Decision: Implement Possessions and Canonical Clips Foundation Stage 3C
+
+Decision maker: Scott
+
+Date: 2026-06-25
+
+Decision:
+- Continue the approved platform-core roadmap without waiting for another next-task approval.
+- Implement Stage 3C as an additive possession and canonical clip foundation.
+- Do not implement possession inference, automatic clipping, UI changes, paid-package enforcement, model training, or ball detection changes in this stage.
+
+Scope implemented locally:
+- possessions table.
+- clips table.
+- clip_tags table.
+- events.possession_id optional link column.
+- player_development_clips.canonical_clip_id optional link column.
+- Schema tests for table existence, link columns, idempotency, and manual event-possession-clip linkage.
+
+Rationale:
+- Possessions and canonical clips are required before reliable stats, scouting, strategy, film-room reuse, and AI assistant citations can share the same reviewed basketball units.
+- The first slice should create the foundation without changing current event workflows.
+
+Evidence:
+- Codex local Windows verification on 2026-06-25: tests/test_schema.py reported 16 passed; the full local app suite reported 201 passed, 1 skipped.
+
+Follow-up:
+- Run full local app suite.
+- Push Stage 3C after local verification.
+- Request Hermes/OWL Linux verification through GitHub.
