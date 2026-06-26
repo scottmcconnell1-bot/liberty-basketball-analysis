@@ -1,6 +1,7 @@
 """
 test_player_development.py — Tests for Phase 7: Player Development & Practice Engine.
 """
+import json
 import os
 import sqlite3
 import tempfile
@@ -220,6 +221,84 @@ def test_api_clips_crud(client):
     assert r.status_code == 200
     r = client.get("/api/clips")
     assert r.get_json() == []
+
+
+# ── Stage 5B: API relational_game_id ───────────────────────────────
+
+def test_api_create_clip_with_relational_game_id(client, app):
+    """POST /api/clips accepts and persists relational_game_id with valid FK."""
+    # Insert a game row so relational_game_id FK is satisfied
+    with app.app_context():
+        from app import get_db
+        db = get_db()
+        db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', '5b-api-game')")
+        db.commit()
+        game_id = db.execute("SELECT id FROM games WHERE source_key='5b-api-game'").fetchone()["id"]
+
+    r = client.post("/api/clips", data=json.dumps({
+        "clip_label": "Relational clip",
+        "clip_start_ms": 1000,
+        "clip_end_ms": 2000,
+        "game_id": "legacy-key-5b",
+        "relational_game_id": game_id,
+    }), content_type="application/json")
+    assert r.status_code == 201
+    clip = r.get_json()
+    assert clip["relational_game_id"] == game_id
+    assert clip["game_id"] == "legacy-key-5b"
+
+
+def test_api_update_clip_sets_relational_game_id(client, app):
+    """PUT /api/clips/<id> can update relational_game_id with valid FK."""
+    # Insert a game row for FK
+    with app.app_context():
+        from app import get_db
+        db = get_db()
+        db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', '5b-update-game')")
+        db.commit()
+        game_id = db.execute("SELECT id FROM games WHERE source_key='5b-update-game'").fetchone()["id"]
+
+    r = client.post("/api/clips", data=json.dumps({
+        "clip_label": "Before update",
+        "clip_start_ms": 1000,
+        "clip_end_ms": 2000,
+    }), content_type="application/json")
+    assert r.status_code == 201
+    clip_id = r.get_json()["id"]
+
+    r = client.put(f"/api/clips/{clip_id}", data=json.dumps({
+        "relational_game_id": game_id,
+    }), content_type="application/json")
+    assert r.status_code == 200
+    assert r.get_json()["relational_game_id"] == game_id
+
+
+def test_api_list_clips_filters_by_relational_game_id(client, app):
+    """GET /api/clips?relational_game_id=N filters correctly."""
+    # Insert two game rows so FK is satisfied
+    with app.app_context():
+        from app import get_db
+        db = get_db()
+        db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', '5b-list-game-a')")
+        db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', '5b-list-game-b')")
+        db.commit()
+        game_a = db.execute("SELECT id FROM games WHERE source_key='5b-list-game-a'").fetchone()["id"]
+        game_b = db.execute("SELECT id FROM games WHERE source_key='5b-list-game-b'").fetchone()["id"]
+
+    client.post("/api/clips", data=json.dumps({
+        "clip_label": "Clip A", "clip_start_ms": 1000, "clip_end_ms": 2000,
+        "relational_game_id": game_a,
+    }), content_type="application/json")
+    client.post("/api/clips", data=json.dumps({
+        "clip_label": "Clip B", "clip_start_ms": 3000, "clip_end_ms": 4000,
+        "relational_game_id": game_b,
+    }), content_type="application/json")
+
+    r = client.get(f"/api/clips?relational_game_id={game_a}")
+    assert r.status_code == 200
+    clips = r.get_json()
+    assert len(clips) == 1
+    assert clips[0]["clip_label"] == "Clip A"
 
 
 def test_api_playlists_crud(client):

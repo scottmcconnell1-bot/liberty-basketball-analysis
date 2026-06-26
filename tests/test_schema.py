@@ -89,9 +89,10 @@ EXPECTED_COLUMNS = {
     "clip_tags": ["id", "clip_id", "tag", "category", "created_by_user_id",
                   "created_at"],
     "player_development_clips": ["id", "player_id", "game_id", "event_id",
-                                 "canonical_clip_id", "clip_start_ms",
-                                 "clip_end_ms", "clip_label", "clip_category",
-                                 "season_id", "notes", "created_at", "updated_at"],
+                                 "canonical_clip_id", "relational_game_id",
+                                 "clip_start_ms", "clip_end_ms", "clip_label",
+                                 "clip_category", "season_id", "notes",
+                                 "created_at", "updated_at"],
     "player_minutes": ["id", "game_id", "relational_game_id", "tracker_id", "jersey_number",
                        "player_name", "first_frame", "last_frame",
                        "total_frames", "minutes_played", "created_at"],
@@ -587,3 +588,119 @@ def test_stats_columns(db):
     cols = get_columns(db, "stats")
     for col in EXPECTED_COLUMNS["stats"]:
         assert col in cols, f"stats missing column: {col}"
+
+
+# ── Stage 5B: player_development_clips relational_game_id ─────────────
+
+
+def test_stage5b_player_development_clips_has_relational_game_id(db):
+    cols = get_columns(db, "player_development_clips")
+    assert "relational_game_id" in cols, "player_development_clips missing relational_game_id"
+    types = get_column_types(db, "player_development_clips")
+    assert types["relational_game_id"] == "INTEGER", (
+        f"Expected relational_game_id INTEGER, got {types['relational_game_id']}"
+    )
+
+
+def test_stage5b_legacy_game_id_is_still_text(db):
+    """Legacy TEXT game_id column must remain TEXT (analysis-key separation)."""
+    types = get_column_types(db, "player_development_clips")
+    assert types["game_id"] == "TEXT", (
+        f"Expected game_id TEXT, got {types['game_id']}"
+    )
+
+
+def test_stage5b_relational_game_id_is_idempotent(app, db):
+    """Running init_db twice must not raise or duplicate the column."""
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+        # Second run must not raise (CREATE TABLE IF NOT EXISTS + ADD COLUMN guard)
+        app_module.init_db()
+    cols = get_columns(db, "player_development_clips")
+    assert "relational_game_id" in cols
+
+
+def test_stage5b_create_clip_with_relational_game_id(db):
+    """create_clip accepts and persists relational_game_id."""
+    import player_development as pd
+
+    # Create a valid game first for FK reference
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'test-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='test-game'").fetchone()[0]
+
+    clip = pd.create_clip(
+        db,
+        "Test clip",
+        10000,
+        15000,
+        player_id=None,
+        game_id="game_001",
+        relational_game_id=game_id,
+    )
+    assert clip["relational_game_id"] == game_id
+
+
+def test_stage5b_update_clip_can_set_relational_game_id(db):
+    """update_clip can set relational_game_id."""
+    import player_development as pd
+
+    # Create a valid game first for FK reference
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'upd-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='upd-game'").fetchone()[0]
+
+    clip = pd.create_clip(
+        db,
+        "Update test",
+        10000,
+        15000,
+        player_id=None,
+        game_id="game_001",
+    )
+    assert clip["relational_game_id"] is None
+
+    updated = pd.update_clip(db, clip["id"], relational_game_id=game_id)
+    assert updated["relational_game_id"] == game_id
+
+
+def test_stage5b_get_clips_filters_by_relational_game_id(db):
+    """get_clips supports relational_game_id filter."""
+    import player_development as pd
+
+    # Create a valid game first for FK reference
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'filter-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='filter-game'").fetchone()[0]
+
+    pd.create_clip(db, "Clip A", 1000, 2000, game_id="g1", relational_game_id=game_id)
+    pd.create_clip(db, "Clip B", 3000, 4000, game_id="g2", relational_game_id=None)
+    pd.create_clip(db, "Clip C", 5000, 6000, game_id="g3", relational_game_id=game_id)
+
+    clips = pd.get_clips(db, relational_game_id=game_id)
+    assert len(clips) == 2
+    labels = {c["clip_label"] for c in clips}
+    assert labels == {"Clip A", "Clip C"}
+
+
+def test_stage5b_legacy_game_id_preserved(db):
+    """Legacy TEXT game_id still works alongside relational_game_id."""
+    import player_development as pd
+
+    clip = pd.create_clip(
+        db,
+        "Legacy test",
+        1000,
+        2000,
+        game_id="legacy_game_123",
+        relational_game_id=None,
+    )
+    assert clip["game_id"] == "legacy_game_123"
+    assert clip["relational_game_id"] is None
+
+    # Query by legacy game_id still works
+    clips = pd.get_clips(db, game_id="legacy_game_123")
+    assert len(clips) == 1
+    assert clips[0]["clip_label"] == "Legacy test"

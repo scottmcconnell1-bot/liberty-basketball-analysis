@@ -10,7 +10,7 @@ from datetime import datetime
 
 # ── Development Clips ──────────────────────────────────────────────
 
-def get_clips(db, player_id=None, season_id=None, category=None, game_id=None):
+def get_clips(db, player_id=None, season_id=None, category=None, game_id=None, relational_game_id=None):
     clauses = []
     params = []
     if player_id:
@@ -25,6 +25,9 @@ def get_clips(db, player_id=None, season_id=None, category=None, game_id=None):
     if game_id:
         clauses.append("c.game_id = ?")
         params.append(game_id)
+    if relational_game_id is not None:
+        clauses.append("c.relational_game_id = ?")
+        params.append(relational_game_id)
 
     query = """
         SELECT c.*, p.name AS player_name, s.name AS season_name
@@ -50,8 +53,8 @@ def create_clip(db, clip_label, clip_start_ms, clip_end_ms, **kwargs):
     cur = db.execute(
         """INSERT INTO player_development_clips
            (player_id, game_id, event_id, clip_start_ms, clip_end_ms,
-            clip_label, clip_category, season_id, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            clip_label, clip_category, season_id, notes, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             kwargs.get("player_id"),
             kwargs.get("game_id"),
@@ -62,6 +65,7 @@ def create_clip(db, clip_label, clip_start_ms, clip_end_ms, **kwargs):
             kwargs.get("clip_category", "general"),
             kwargs.get("season_id"),
             kwargs.get("notes"),
+            kwargs.get("relational_game_id"),
         ),
     )
     db.commit()
@@ -75,7 +79,7 @@ def update_clip(db, clip_id, **kwargs):
     db.execute(
         """UPDATE player_development_clips SET
            player_id=?, game_id=?, event_id=?, clip_start_ms=?, clip_end_ms=?,
-           clip_label=?, clip_category=?, season_id=?, notes=?,
+           clip_label=?, clip_category=?, season_id=?, notes=?, relational_game_id=?,
            updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
@@ -88,6 +92,7 @@ def update_clip(db, clip_id, **kwargs):
             kwargs.get("clip_category", row["clip_category"]),
             kwargs.get("season_id", row["season_id"]),
             kwargs.get("notes", row["notes"]),
+            kwargs.get("relational_game_id", row["relational_game_id"] if "relational_game_id" in row.keys() else None),
             clip_id,
         ),
     )

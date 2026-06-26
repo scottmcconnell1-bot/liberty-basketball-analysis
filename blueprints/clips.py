@@ -666,8 +666,10 @@ def api_clips_list():
     season_id = request.args.get("season_id", type=int)
     category = request.args.get("category")
     game_id = request.args.get("game_id")
+    relational_game_id = request.args.get("relational_game_id", type=int)
     clips = pd_helpers.get_clips(db, player_id=player_id, season_id=season_id,
-                                  category=category, game_id=game_id)
+                                  category=category, game_id=game_id,
+                                  relational_game_id=relational_game_id)
     return jsonify(clips)
 
 
@@ -688,6 +690,7 @@ def api_clips_create():
             clip_category=data.get("clip_category", "general"),
             season_id=data.get("season_id"),
             notes=data.get("notes"),
+            relational_game_id=data.get("relational_game_id"),
         )
         return jsonify(clip), 201
     except (ValueError, KeyError) as e:

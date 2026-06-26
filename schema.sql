@@ -400,6 +400,7 @@ CREATE TABLE IF NOT EXISTS player_development_clips (
     game_id         TEXT,
     event_id        INTEGER REFERENCES events(id),
     canonical_clip_id INTEGER REFERENCES clips(id),
+    relational_game_id INTEGER REFERENCES games(id),
     clip_start_ms   INTEGER NOT NULL,
     clip_end_ms     INTEGER NOT NULL,
     clip_label      TEXT NOT NULL,
