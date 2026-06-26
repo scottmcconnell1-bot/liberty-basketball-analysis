@@ -305,13 +305,23 @@ def get_enhanced_stats(db, game_id):
     """, (game_id,)).fetchall()
 
     # Plays summary
-    plays = db.execute("""
-        SELECT play_type, COUNT(*) as cnt
-        FROM play_recognitions
-        WHERE game_id = ?
-        GROUP BY play_type
-        ORDER BY cnt DESC
-    """, (game_id,)).fetchall()
+    if relational_game_id is not None:
+        plays = db.execute("""
+            SELECT play_type, COUNT(*) as cnt
+            FROM play_recognitions
+            WHERE relational_game_id = ?
+               OR (relational_game_id IS NULL AND game_id = ?)
+            GROUP BY play_type
+            ORDER BY cnt DESC
+        """, (relational_game_id, str(game_id))).fetchall()
+    else:
+        plays = db.execute("""
+            SELECT play_type, COUNT(*) as cnt
+            FROM play_recognitions
+            WHERE game_id = ?
+            GROUP BY play_type
+            ORDER BY cnt DESC
+        """, (game_id,)).fetchall()
 
     return {
         "basic_stats": [dict(s) for s in basic],

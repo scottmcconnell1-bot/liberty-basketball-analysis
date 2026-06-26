@@ -753,6 +753,7 @@ CREATE TABLE IF NOT EXISTS shot_classifications (
 CREATE TABLE IF NOT EXISTS play_recognitions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     play_type       TEXT NOT NULL,  -- 'pick_and_roll', 'isolation', 'transition', 'post_up', 'zone_press', 'man_to_man', 'fast_break', 'half_court_set'
     play_subtype    TEXT,           -- e.g., 'pnr_ball_handler', 'pnr_screener', 'iso_left', 'iso_right'
     start_frame     INTEGER NOT NULL,

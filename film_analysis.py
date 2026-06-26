@@ -358,6 +358,8 @@ def recognize_plays(conn, game_id):
         print("[Plays] Not enough detections")
         return []
 
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+
     plays = []
     pnr_plays = _detect_pick_and_roll(conn, game_id)
     plays.extend(pnr_plays)
@@ -371,12 +373,12 @@ def recognize_plays(conn, game_id):
     for play in plays:
         conn.execute("""
             INSERT INTO play_recognitions
-                (game_id, play_type, play_subtype, start_frame, end_frame,
+                (game_id, relational_game_id, play_type, play_subtype, start_frame, end_frame,
                  start_timestamp_ms, end_timestamp_ms, primary_tracker_id,
                  secondary_tracker_id, confidence, details_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            game_id, play["play_type"], play.get("play_subtype"),
+            game_id, relational_game_id, play["play_type"], play.get("play_subtype"),
             play["start_frame"], play["end_frame"],
             play["start_timestamp_ms"], play.get("end_timestamp_ms"),
             play.get("primary_tracker_id"), play.get("secondary_tracker_id"),
