@@ -71,19 +71,11 @@ git pull --ff-only origin jason-5-may-updates
 
 Only after this preflight may an agent say a commit exists, does not exist, a file changed, a doc is current, or the local clone is clean.
 
-## Control Hierarchy (effective 2026-06-26)
-
-1. **Scott** sets direction and makes final decisions.
-2. **Codex** scopes work, creates `[OWL ACTION]` issues, and approves execution via `[CODEX APPROVED]` label or comment.
-3. **Hermes/OWL** executes scoped tasks, verifies evidence, and reports.
-
-**Rule:** When Codex labels an issue `[CODEX APPROVED]`, Hermes executes immediately without waiting for further approval. The old rule "do not push without Scott approval" is superseded: Codex approval is sufficient for push and execution. Scott is only pulled in for product decisions, major tradeoffs, or when Hermes hits a genuine blocker outside the approved scope.
-
 ## Verification Safety
 
 Verification must not destroy, hide, or rewrite local work.
 
-Agents must not run these commands during verification unless Codex or Scott explicitly approves the specific action:
+Agents must not run these commands during verification unless Scott explicitly approves the specific action:
 
 - `git reset --hard`
 - `git checkout -- <path>`
@@ -101,7 +93,7 @@ Preferred alternatives:
 1. Use a clean clone.
 2. Use a separate worktree.
 3. Verify the remote tree directly with non-destructive Git commands.
-4. Ask Codex before changing local state.
+4. Ask Scott before changing local state.
 
 ## No Repo Claims Without Fetch/Compare
 
