@@ -39,4 +39,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 4A Event Participants Foundation is implemented locally and needs Hermes/OWL Linux verification after Codex push.
+Stage 4C Relational Stats Derivation and Possession Linkage are implemented and Hermes/OWL verified. Next platform slice: Stage 4D Player Minutes Foundation (proposal only; implementation not approved).

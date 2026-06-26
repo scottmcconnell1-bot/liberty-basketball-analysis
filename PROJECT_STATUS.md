@@ -110,8 +110,15 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Stage 3C Possessions and Canonical Clips Foundation is implemented and Hermes/OWL verified: additive possessions, clips, and clip_tags tables; events.possession_id; player_development_clips.canonical_clip_id; and schema tests.
 - Codex verified Stage 3C locally on Windows on 2026-06-25: tests/test_schema.py reported 16 passed; the full local app suite reported 201 passed, 1 skipped.
 - Hermes/OWL verified Stage 3C on GitHub issue #35 on 2026-06-25: commit f1c3d09, Linux pytest reported 198 passed, 1 skipped, and Stage 3C scope was limited to the additive possession/clip foundation.
-- Stage 4A Event Participants Foundation is implemented locally: event_participants table; events.relational_game_id, event_type_id, team_id, primary_player_id, primary_roster_membership_id, created_by_user_id, and updated_at; and idempotent legacy player-name backfill into primary event participants.
+- Stage 4A Event Participants Foundation is implemented and Hermes/OWL verified: event_participants table; events relational_game_id, event_type_id, team_id, primary_player_id, primary_roster_membership_id, created_by_user_id, and updated_at; and idempotent legacy player-name backfill into primary event participants.
 - Codex verified Stage 4A locally on Windows on 2026-06-25: tests/test_schema.py reported 19 passed.
+- Hermes/OWL verified Stage 4A on Linux: HEAD matched origin/jason-5-may-updates at 3945d07; Linux pytest reported 225 passed, 1 skipped; event_participants and relational columns verified present; legacy player-name backfill idempotent.
+- Stage 4B Manual Event Write Upgrade is implemented and Hermes/OWL verified: save_event wires relational_game_id, event_type_id, team_id, primary_player_id, and event_participants; possession_id supported in /api/save_event; assign_possessions_for_game() idempotent possession linker.
+- Commit 3945d07 implements Stage 4B save_event relational wiring with focused schema and API tests.
+- Stage 4C Relational Stats Derivation is implemented and Hermes/OWL verified: stats.aggregate_stats reads event_types taxonomy via event_type_id JOIN; counts_for_stats=1 filtering; review_status='rejected' exclusion; legacy event_type alias seeds (two_attempt, three_attempt, shot, 2pt, 3pt, rebound) added.
+- Commit ad1fc67 implements Stage 4C.1 stats derivation rewrite with focused stats tests.
+- Commit 415ec3f implements Stage 4C.2 possession linkage fix: corrects VALUES placeholder count in save_event INSERT; adds assign_possessions_for_game() idempotent possession linker; explicit possession_id support in /api/save_event (NULL when absent); 7 focused possession tests all passed.
+- Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
 
 ## Inferred
 
@@ -140,7 +147,6 @@ These need further evidence.
 - Whether a larger and more diverse crop dataset would make a secondary classifier viable.
 - Whether denser source-video sampling, a stronger tracker, or new labeled data could make temporal methods viable later.
 - Exact paid-package boundaries and pricing are not yet decided.
-- Whether Hermes/OWL Linux verification confirms Stage 4A Event Participants Foundation behavior on the Linux environment.
 - The first paid/add-on module implementation sequence after the base platform core is not yet approved.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
@@ -157,4 +163,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Continue platform-core work with Stage 4A Event Participants Foundation, keeping it additive and independently verified before richer event writes or downstream stats/minutes automation.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation is implemented and independently verified. Stage 4B Manual Event Write Upgrade and Stage 4C Relational Stats Derivation are implemented and independently verified. Continue platform-core work with Stage 4D (Player Minutes Foundation) as the next additive slice, keeping it additive and independently verified before richer stats automation or downstream game_id cleanup.

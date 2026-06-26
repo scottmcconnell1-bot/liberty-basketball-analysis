@@ -648,3 +648,61 @@ Follow-up:
 - Run the full local app suite.
 - Push Stage 4A after local verification.
 - Request Hermes/OWL Linux verification through GitHub.
+
+### Decision: Implement Stage 4C Relational Stats Derivation
+
+Decision maker: Codex under Scott standing approval
+
+Date: 2026-06-25
+
+Decision:
+- Continue the approved platform-core roadmap without waiting for another next-task approval.
+- Implement Stage 4C.1 as a relational stats derivation rewrite.
+- Do not change event-generation behavior, save_event logic, review workflow, possession inference, UI, detector settings, or paid-package enforcement in this stage.
+
+Scope implemented:
+- stats.aggregate_stats now reads relationally via events.event_type_id JOIN event_types.
+- Aggregation filters on counts_for_stats=1 and excludes review_status='rejected'.
+- Legacy event_type alias seeds added (two_attempt, three_attempt, shot, 2pt, 3pt, rebound) for backward compatibility.
+- Focused Stage 4C stats tests covering taxonomy-based aggregation and legacy alias recognition.
+
+Rationale:
+- Stats must derive from reviewed, taxonomy-classified events rather than free-text event types so coach reports, player development views, and future AI assistant answers share one trusted aggregation path.
+- Reading the event_types taxonomy via event_type_id also enables downstream modules (minutes, lineups, scouting, strategy) to share the same canonical event classification.
+
+Evidence:
+- Commit ad1fc67 implements the stats derivation rewrite.
+- Hermes/OWL Linux verification reported focused stats tests passing and aggregation now branches on seeded event_types.code.
+
+Follow-up:
+- Hermes/OWL verified Stage 4C.1 after running AGENT_PROTOCOL.md preflight.
+
+### Decision: Implement Stage 4C.2 Possession Linkage in save_event
+
+Decision maker: Codex under Scott standing approval
+
+Date: 2026-06-25
+
+Decision:
+- Continue the approved platform-core roadmap without waiting for another next-task approval.
+- Fix the VALUES placeholder count in save_event INSERT introduced by Stage 4C.1.
+- Add assign_possessions_for_game() idempotent possession linker and explicit possession_id support in /api/save_event.
+- Do not change stats derivation, review workflow, detector settings, or paid-package enforcement in this stage.
+
+Scope implemented:
+- Corrected save_event INSERT: added missing ? placeholder for possession_id column (was "20 values for 21 columns").
+- assign_possessions_for_game() idempotent possession linker added to helpers.py.
+- /api/save_event now accepts explicit possession_id (NULL when absent).
+- 7 focused possession tests (all passing) covering idempotent linking, NULL possession_id, and manual event-possession-clip linkage.
+
+Rationale:
+- Stage 4B added possession_id to the column list without the corresponding placeholder, causing runtime SQL errors on every manual event save.
+- Possession linkage is required before player minutes, lineup, and scouting modules can aggregate events by possession unit.
+
+Evidence:
+- Commit 415ec3f implements the VALUES placeholder fix, possession linker, and possession_id API support.
+- Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
+
+Follow-up:
+- Hermes/OWL verified Stage 4C.2 after running AGENT_PROTOCOL.md preflight.
+- Next platform slice: Stage 4D Player Minutes Foundation (proposal only; implementation not approved).

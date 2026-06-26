@@ -1218,3 +1218,42 @@ Pending:
 - Full local app suite.
 - Push to jason-5-may-updates.
 - Hermes/OWL Linux verification.
+
+Stage 4C Relational Stats Derivation - 2026-06-25
+----------------------------------------------
+Scott gave standing approval to continue approved roadmap work without waiting for each next-task approval.
+
+Implemented locally (Stage 4C.1):
+- stats.aggregate_stats now reads relationally via events.event_type_id JOIN event_types.
+- Aggregation filters on counts_for_stats=1 and excludes review_status='rejected'.
+- Legacy event_type alias seeds added (two_attempt, three_attempt, shot, 2pt, 3pt, rebound).
+- Focused Stage 4C stats tests covering taxonomy-based aggregation and legacy alias recognition.
+
+Implemented locally (Stage 4C.2):
+- Fixed save_event INSERT: added missing ? placeholder for possession_id column (was "20 values for 21 columns").
+- Added assign_possessions_for_game() idempotent possession linker to helpers.py.
+- /api/save_event now accepts explicit possession_id (NULL when absent).
+- 7 focused possession tests (all passing).
+
+Files changed:
+- stats.py
+- helpers.py
+- blueprints/clips.py
+- tests/test_api.py
+- docs/STAGE_INDEX.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification:
+- Focused stats tests: passed.
+- Focused possession tests: 7 passed.
+- Full local app suite: 225 passed, 1 skipped.
+- Skipped test is the opt-in live UI overflow audit.
+
+Hermes/OWL verification:
+- HEAD 415ec3f matched origin/jason-5-may-updates.
+- Linux pytest result: 225 passed, 1 skipped.
+- Stage 4C.1 stats derivation verified: aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering confirmed.
+- Stage 4C.2 possession linkage verified: assign_possessions_for_game() idempotent; save_event possession_id placeholder correct; 7/7 possession tests passed.

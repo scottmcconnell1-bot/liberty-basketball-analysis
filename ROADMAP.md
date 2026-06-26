@@ -104,7 +104,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved, base platform Stage 1, Stage 2, and Stage 3A verified
+Status: Direction approved; base platform Stage 1, Stage 2, Stage 3A, Stage 3B, Stage 3C, Stage 4A, Stage 4B, and Stage 4C verified
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -160,12 +160,19 @@ Current implementation:
 - Stage 3C adds additive possessions, clips, and clip_tags schema plus event/clip link columns, without possession inference, clipping automation, UI changes, detector work, or paid-package enforcement.
 - Codex local Windows verification reported 201 passed, 1 skipped on 2026-06-25.
 - Hermes/OWL Linux verification on issue #35 confirmed commit f1c3d09 with 198 passed, 1 skipped.
-- Stage 4A Event Participants Foundation is the current platform-core slice.
+- Stage 4A Event Participants Foundation is implemented and Hermes/OWL verified.
 - Stage 4A adds event_participants and event relational identity/player/team link columns without changing event-generation behavior, stats derivation, UI, detector settings, or paid-package enforcement.
-- Codex local Windows verification reported tests/test_schema.py at 19 passed on 2026-06-25.
+- Hermes/OWL Linux verification for Stage 4A: HEAD matched origin at 3945d07, 225 passed, 1 skipped, event_participants and relational columns verified present, and legacy player-name backfill idempotent.
+- Stage 4B Manual Event Write Upgrade is implemented and Hermes/OWL verified.
+- Stage 4B wires save_event to relational_game_id, event_type_id, team_id, primary_player_id, event_participants, and possession_id; adds assign_possessions_for_game() idempotent possession linker.
+- Commit 3945d07 implements Stage 4B save_event relational wiring.
+- Stage 4C Relational Stats Derivation is implemented and Hermes/OWL verified.
+- Stage 4C.1 (commit ad1fc67): stats.aggregate_stats reads event_types taxonomy via event_type_id JOIN; counts_for_stats=1 filtering; review_status='rejected' exclusion; legacy event_type alias seeds (two_attempt, three_attempt, shot, 2pt, 3pt, rebound) added.
+- Stage 4C.2 (commit 415ec3f): corrects VALUES placeholder count in save_event INSERT; adds assign_possessions_for_game() idempotent possession linker; explicit possession_id support in /api/save_event (NULL when absent); 7 focused possession tests all passed.
+- Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
 
 Next step:
-- Run the full local app suite for Stage 4A, push, and request Hermes/OWL Linux verification.
+- Stage 4D Player Minutes Foundation (proposal only; implementation not approved).
 
 ### 7. Data Governance
 
