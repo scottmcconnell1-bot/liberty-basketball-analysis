@@ -846,6 +846,16 @@ def ensure_db():
         _ensure_migration_columns(db)
 
 
+def backfill_player_minutes(game_id=None, fps=30.0, detect_stride=1):
+    """Convenience: backfill player_minutes for one or all games."""
+    db = get_db()
+    if game_id is not None:
+        from player_minutes import backfill_player_minutes as _bf
+        return _bf(db, game_id, fps, detect_stride)
+    from player_minutes import backfill_all_games as _bf_all
+    return _bf_all(db, fps, detect_stride)
+
+
 def _migrate_analysis_runs_identity(db):
     """Split analysis_runs identity into relational game_id and text analysis_key."""
     table_exists = db.execute(
@@ -1741,6 +1751,7 @@ def _ensure_migration_columns(db):
         ("users", "email_verified", "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0"),
         ("users", "updated_at", "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP"),
         ("users", "last_login_at", "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"),
+        ("detections", "player_cluster", "ALTER TABLE detections ADD COLUMN player_cluster INTEGER"),
     ]
     existing = {
         (row[1], row[2]): True

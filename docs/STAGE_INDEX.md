@@ -20,10 +20,11 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 3A | Review workflow foundation | Implemented and Hermes/OWL verified | review_items, event review state, review APIs, human_corrections/provenance wiring |
 | Stage 3B | Review UI | Implemented and Hermes/OWL verified | /review page, Review Queue nav, filters, detail panel, accept/correct/reject UI |
 | Stage 3C | Possessions and canonical clips foundation | Implemented and Hermes/OWL verified | possessions, clips, clip_tags, events.possession_id, player_development_clips.canonical_clip_id |
-| Stage 4 | Event ledger upgrade | Implemented through lettered slices (4A, 4B, 4C) | relational_game_id, event_type_id, event_participants, richer event writes, relational stats derivation |
+| Stage 4 | Event ledger upgrade | Implemented through lettered slices (4A, 4B, 4C, 4D) | relational_game_id, event_type_id, event_participants, relational stats derivation, player_minutes foundation |
 | Stage 4A | Event participants foundation | Implemented and Hermes/OWL verified | event_participants, events relational links, primary player/team links, legacy player-name backfill |
 | Stage 4B | Manual event write upgrade | Implemented and Hermes/OWL verified | save_event wires relational_game_id, event_type_id, team_id, primary_player_id, event_participants |
 | Stage 4C | Relational stats derivation | Implemented and Hermes/OWL verified | stats.aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering; legacy event_type alias seeds added |
+| Stage 4D | Player minutes foundation | Implemented | player_minutes table schema-gated + migration; player_minutes.py backfill from detections.tracker_id (idempotent INSERT OR REPLACE); tests verify computation, idempotency, per-game/per-player query, stats.py integration |
 | Stage 5 | Downstream game_id cleanup | Not started | downstream relational_game_id migration while preserving analysis_key |
 | Stage 6 | Module entitlement wiring | Not started | module_key helpers and team/module permission checks |
 
@@ -39,4 +40,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 4C Relational Stats Derivation and Possession Linkage are implemented and Hermes/OWL verified. Next platform slice: Stage 4D Player Minutes Foundation (proposal only; implementation not approved).
+Stage 4C Relational Stats Derivation and Stage 4D Player Minutes Foundation are implemented.

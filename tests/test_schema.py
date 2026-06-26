@@ -31,6 +31,7 @@ EXPECTED_TABLES = [
     "practice_playlists",
     "practice_playlist_clips",
     "practice_plan_items",
+    "player_minutes",
 ]
 
 EXPECTED_COLUMNS = {
@@ -91,6 +92,9 @@ EXPECTED_COLUMNS = {
                                  "canonical_clip_id", "clip_start_ms",
                                  "clip_end_ms", "clip_label", "clip_category",
                                  "season_id", "notes", "created_at", "updated_at"],
+    "player_minutes": ["id", "game_id", "tracker_id", "jersey_number",
+                       "player_name", "first_frame", "last_frame",
+                       "total_frames", "minutes_played", "created_at"],
 }
 
 

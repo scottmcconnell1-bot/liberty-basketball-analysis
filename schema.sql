@@ -409,6 +409,20 @@ CREATE TABLE IF NOT EXISTS player_development_clips (
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS player_minutes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id         TEXT NOT NULL,
+    tracker_id      INTEGER NOT NULL,
+    jersey_number   INTEGER,
+    player_name     TEXT,
+    first_frame     INTEGER NOT NULL,
+    last_frame      INTEGER NOT NULL,
+    total_frames    INTEGER NOT NULL,
+    minutes_played  REAL NOT NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (game_id, tracker_id)
+);
+
 CREATE TABLE IF NOT EXISTS practice_playlists (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     name            TEXT NOT NULL,
