@@ -706,3 +706,33 @@ Evidence:
 Follow-up:
 - Hermes/OWL verified Stage 4C.2 after running AGENT_PROTOCOL.md preflight.
 - Next platform slice: Stage 4D Player Minutes Foundation (proposal only; implementation not approved).
+
+### Decision: Implement Stage 5A Relational game_id Cleanup for stats and player_minutes
+
+Decision maker: Codex under Scott standing approval
+
+Date: 2026-06-26
+
+Decision:
+- Continue from `origin/jason-5-may-updates` as the project source of truth.
+- Do not revive stale local Stage 4B work that predates verified Stage 4C/4D remote state.
+- Implement Stage 5A as a bounded downstream cleanup only for `stats` and `player_minutes`.
+- Preserve legacy TEXT `game_id` behavior and preserve analysis-key separation.
+
+Scope implemented locally:
+- Added additive `relational_game_id` columns to `stats` and `player_minutes`.
+- Updated `stats.py` to prefer `events.relational_game_id` for manual relational games while preserving legacy TEXT `game_id` reads/writes.
+- Updated `player_minutes.py` to persist and query `relational_game_id` when the requested game resolves to `games.id`.
+- Added focused schema and regression tests for the new columns and bounded resolver behavior.
+
+Rationale:
+- Current remote already contains verified Stage 4B, Stage 4C, and Stage 4D work; reviving the stale local Stage 4B diff would duplicate or regress the program state.
+- `stats` and `player_minutes` are the smallest useful Stage 5 bridge because they sit immediately downstream of the event ledger and minutes backfill.
+
+Evidence:
+- Codex local verification on 2026-06-26: `tests/test_player_minutes.py` reported 11 passed, `tests/test_schema.py` reported 19 passed, `tests/test_api.py` reported 89 passed.
+- `python -m py_compile` passed for `stats.py`, `player_minutes.py`, `helpers.py`, and touched tests.
+
+Follow-up:
+- Push Stage 5A to `jason-5-may-updates`.
+- Request Hermes/OWL Linux verification for the bounded Stage 5A slice.

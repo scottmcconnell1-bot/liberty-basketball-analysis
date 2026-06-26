@@ -56,7 +56,7 @@ EXPECTED_COLUMNS = {
     "roster_memberships": ["id", "player_id", "team_id", "season_id", "jersey_number",
                            "position", "grade", "status", "start_date", "end_date",
                            "created_at", "updated_at"],
-    "stats": ["id", "game_id", "player_id", "player_name", "pts", "fgm", "fga",
+    "stats": ["id", "game_id", "relational_game_id", "player_id", "player_name", "pts", "fgm", "fga",
               "threes_made", "threes_att", "ast", "reb", "tov", "stl", "blk"],
     "video_assets": ["id", "game_id", "source_id", "original_filename", "stored_filename",
                      "file_path", "source_type", "camera_label", "angle_label",
@@ -92,7 +92,7 @@ EXPECTED_COLUMNS = {
                                  "canonical_clip_id", "clip_start_ms",
                                  "clip_end_ms", "clip_label", "clip_category",
                                  "season_id", "notes", "created_at", "updated_at"],
-    "player_minutes": ["id", "game_id", "tracker_id", "jersey_number",
+    "player_minutes": ["id", "game_id", "relational_game_id", "tracker_id", "jersey_number",
                        "player_name", "first_frame", "last_frame",
                        "total_frames", "minutes_played", "created_at"],
 }

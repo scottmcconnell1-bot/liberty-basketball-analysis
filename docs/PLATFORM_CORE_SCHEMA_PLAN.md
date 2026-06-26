@@ -586,6 +586,28 @@ Tasks:
 - Migrate route/helper reads in small batches.
 - Keep analysis_key separated from relational game id.
 
+#### Stage 5A: stats + player_minutes only
+
+Tasks:
+- Add additive `relational_game_id` columns to `stats` and `player_minutes`.
+- Update `stats.py` reads/writes to prefer `relational_game_id` for manual relational games while preserving legacy TEXT `game_id`.
+- Update `player_minutes.py` writes/queries to preserve TEXT `game_id` while storing `relational_game_id` when the input resolves to `games.id`.
+
+Deferred from 5A:
+- `videos`
+- `player_development_clips`
+- `shot_classifications`
+- `play_recognitions`
+- `player_effect`
+- `human_corrections`
+- `detections`
+- broader downstream route cleanup
+
+Acceptance criteria:
+- Existing analysis-key flows still work.
+- Manual relational game flows can persist and read `stats` / `player_minutes` by `games.id`.
+- Focused schema, player_minutes, and API regression tests pass.
+
 Priority tables:
 1. events
 2. videos

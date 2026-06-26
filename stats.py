@@ -1,6 +1,16 @@
 """stats.py – Aggregate and persist per-game stats from the events table."""
 
 
+def _resolve_relational_game_id(db, game_id):
+    try:
+        game_id_int = int(game_id)
+    except (TypeError, ValueError):
+        return None
+
+    row = db.execute("SELECT id FROM games WHERE id=?", (game_id_int,)).fetchone()
+    return row["id"] if row else None
+
+
 def _eligible_event_rows(db, game_id):
     """Return only events eligible for stats derivation.
 
@@ -10,6 +20,19 @@ def _eligible_event_rows(db, game_id):
     everything else (pending/corrected/rejected) is filtered out here so
     aggregation only sees canonical, approved events.
     """
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        return db.execute(
+            """SELECT e.player, e.event_type, e.shot_result, et.code,
+                      et.counts_for_stats, et.is_scoring_event
+               FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.relational_game_id = ?
+                 AND e.review_status != 'rejected'
+                 AND et.counts_for_stats = 1""",
+            (relational_game_id,),
+        ).fetchall()
+
     return db.execute(
         """SELECT e.player, e.event_type, e.shot_result, et.code,
                   et.counts_for_stats, et.is_scoring_event
@@ -94,14 +117,22 @@ def aggregate_stats(db, game_id):
 def refresh_stats(db, game_id):
     """Rebuild persisted stats rows for a game and return the computed payload."""
     aggregated = aggregate_stats(db, game_id)
-    db.execute("DELETE FROM stats WHERE game_id=?", (game_id,))
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        db.execute(
+            "DELETE FROM stats WHERE relational_game_id=? OR game_id=?",
+            (relational_game_id, str(game_id)),
+        )
+    else:
+        db.execute("DELETE FROM stats WHERE game_id=?", (game_id,))
     for stat in aggregated:
         db.execute(
             """INSERT INTO stats
-               (game_id, player_name, pts, fgm, fga, threes_made, threes_att, ast, reb, tov, stl, blk)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (game_id, relational_game_id, player_name, pts, fgm, fga, threes_made, threes_att, ast, reb, tov, stl, blk)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                game_id,
+                str(game_id),
+                relational_game_id,
                 stat["player"],
                 stat["pts"],
                 stat["fgm"],
@@ -125,11 +156,21 @@ def refresh_stats(db, game_id):
 
 def _enhance_stats_from_analysis(db, game_id):
     """Add minutes played and shot type breakdowns from enhanced analysis."""
+    relational_game_id = _resolve_relational_game_id(db, game_id)
 
     # Add minutes played from player_minutes table
-    minutes_rows = db.execute(
-        "SELECT tracker_id, minutes_played FROM player_minutes WHERE game_id=?", (game_id,)
-    ).fetchall()
+    if relational_game_id is not None:
+        minutes_rows = db.execute(
+            """SELECT tracker_id, minutes_played
+               FROM player_minutes
+               WHERE relational_game_id=? OR (relational_game_id IS NULL AND game_id=?)""",
+            (relational_game_id, str(game_id)),
+        ).fetchall()
+    else:
+        minutes_rows = db.execute(
+            "SELECT tracker_id, minutes_played FROM player_minutes WHERE game_id=?",
+            (game_id,),
+        ).fetchall()
 
     for mrow in minutes_rows:
         tracker_id = mrow["tracker_id"]
@@ -144,7 +185,7 @@ def _enhance_stats_from_analysis(db, game_id):
         if player:
             db.execute(
                 "UPDATE stats SET minutes=? WHERE game_id=? AND tracker_id=?",
-                (minutes, game_id, tracker_id)
+                (minutes, str(game_id), tracker_id)
             )
 
     # Add shot type breakdowns from shot_classifications table

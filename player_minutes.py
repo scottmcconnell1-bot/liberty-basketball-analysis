@@ -13,6 +13,16 @@ same output without duplicates.
 import sqlite3
 
 
+def _resolve_relational_game_id(db, game_id):
+    try:
+        game_id_int = int(game_id)
+    except (TypeError, ValueError):
+        return None
+
+    row = db.execute("SELECT id FROM games WHERE id=?", (game_id_int,)).fetchone()
+    return row["id"] if row else None
+
+
 def backfill_player_minutes(db, game_id, fps=30.0, detect_stride=1):
     """Recompute player_minutes for a single game from detection presence.
 
@@ -31,6 +41,7 @@ def backfill_player_minutes(db, game_id, fps=30.0, detect_stride=1):
         seconds_played, minutes_played
     """
     effective_fps = fps / detect_stride
+    relational_game_id = _resolve_relational_game_id(db, game_id)
 
     rows = db.execute(
         """
@@ -55,7 +66,8 @@ def backfill_player_minutes(db, game_id, fps=30.0, detect_stride=1):
         minutes_played = seconds_played / 60.0
 
         results.append({
-            "game_id": game_id,
+            "game_id": str(game_id),
+            "relational_game_id": relational_game_id,
             "tracker_id": row["tracker_id"],
             "first_frame": row["first_frame"],
             "last_frame": row["last_frame"],
@@ -67,10 +79,10 @@ def backfill_player_minutes(db, game_id, fps=30.0, detect_stride=1):
     db.executemany(
         """
         INSERT OR REPLACE INTO player_minutes
-            (game_id, tracker_id, first_frame, last_frame, total_frames,
-             minutes_played, jersey_number, player_name)
-        VALUES (:game_id, :tracker_id, :first_frame, :last_frame,
-                :total_frames, :minutes_played, NULL, NULL)
+            (game_id, relational_game_id, tracker_id, first_frame, last_frame,
+             total_frames, minutes_played, jersey_number, player_name)
+        VALUES (:game_id, :relational_game_id, :tracker_id, :first_frame,
+                :last_frame, :total_frames, :minutes_played, NULL, NULL)
         """,
         results,
     )
@@ -105,6 +117,23 @@ def get_player_minutes(db, game_id):
 
     Returns rows sorted by minutes_played descending.
     """
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        return db.execute(
+            """
+            SELECT pm.tracker_id, pm.first_frame, pm.last_frame,
+                   pm.total_frames, pm.minutes_played,
+                   pm.jersey_number, pm.player_name,
+                   p.id AS player_id, p.name AS resolved_name
+            FROM player_minutes pm
+            LEFT JOIN players p ON p.tracker_id = pm.tracker_id
+            WHERE pm.relational_game_id = ?
+               OR (pm.relational_game_id IS NULL AND pm.game_id = ?)
+            ORDER BY pm.minutes_played DESC
+            """,
+            (relational_game_id, str(game_id)),
+        ).fetchall()
+
     return db.execute(
         """
         SELECT pm.tracker_id, pm.first_frame, pm.last_frame,

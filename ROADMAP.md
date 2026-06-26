@@ -104,7 +104,7 @@ Next step:
 
 ### 6. Product Module Roadmap
 
-Status: Direction approved; base platform Stage 1, Stage 2, Stage 3A, Stage 3B, Stage 3C, Stage 4A, Stage 4B, and Stage 4C verified
+Status: Direction approved; base platform Stage 1, Stage 2, Stage 3A, Stage 3B, Stage 3C, Stage 4A, Stage 4B, Stage 4C, and Stage 4D verified
 
 Base Platform:
 - Teams, players, rosters, seasons, games
@@ -170,9 +170,12 @@ Current implementation:
 - Stage 4C.1 (commit ad1fc67): stats.aggregate_stats reads event_types taxonomy via event_type_id JOIN; counts_for_stats=1 filtering; review_status='rejected' exclusion; legacy event_type alias seeds (two_attempt, three_attempt, shot, 2pt, 3pt, rebound) added.
 - Stage 4C.2 (commit 415ec3f): corrects VALUES placeholder count in save_event INSERT; adds assign_possessions_for_game() idempotent possession linker; explicit possession_id support in /api/save_event (NULL when absent); 7 focused possession tests all passed.
 - Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
+- Stage 4D Player Minutes Foundation is complete and remote at commit 8e67e42.
+- Stage 5A Relational game_id cleanup for `stats` and `player_minutes` is now the active bounded slice.
+- Codex local verification on 2026-06-26: `tests/test_player_minutes.py` reported 11 passed, `tests/test_schema.py` reported 19 passed, and `tests/test_api.py` reported 89 passed.
 
 Next step:
-- Stage 4D Player Minutes Foundation (proposal only; implementation not approved).
+- Push Stage 5A and request Hermes/OWL Linux verification on the bounded `stats` + `player_minutes` slice.
 
 ### 7. Data Governance
 

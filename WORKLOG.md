@@ -1257,3 +1257,37 @@ Hermes/OWL verification:
 - Linux pytest result: 225 passed, 1 skipped.
 - Stage 4C.1 stats derivation verified: aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering confirmed.
 - Stage 4C.2 possession linkage verified: assign_possessions_for_game() idempotent; save_event possession_id placeholder correct; 7/7 possession tests passed.
+
+Stage 5A Relational game_id Cleanup for stats + player_minutes - 2026-06-26
+------------------------------------------------------------------------
+Codex re-checked repo truth and confirmed the old uncommitted Stage 4B local tree was stale and regressive against current remote state. That stale diff was backed up outside the repo and the old working tree was reset to origin/jason-5-may-updates.
+
+Implemented locally:
+- Added additive `relational_game_id` columns to `stats` and `player_minutes`.
+- Updated `stats.py` to derive from `events.relational_game_id` for manual relational games while preserving legacy TEXT `game_id` behavior.
+- Updated `player_minutes.py` to store/query `relational_game_id` when a requested game resolves to `games.id`.
+- Added focused tests for schema coverage and bounded Stage 5A resolver behavior.
+
+Files changed:
+- schema.sql
+- helpers.py
+- stats.py
+- player_minutes.py
+- tests/test_schema.py
+- tests/test_player_minutes.py
+- docs/STAGE_INDEX.md
+- docs/PLATFORM_CORE_SCHEMA_PLAN.md
+- DECISION_LOG.md
+- PROJECT_STATUS.md
+- ROADMAP.md
+- WORKLOG.md
+
+Verification:
+- python -m py_compile stats.py player_minutes.py helpers.py tests/test_player_minutes.py tests/test_schema.py: passed.
+- tests/test_player_minutes.py: 11 passed.
+- tests/test_schema.py: 19 passed.
+- tests/test_api.py: 89 passed.
+
+Pending:
+- Push Stage 5A to jason-5-may-updates.
+- Hermes/OWL Linux verification for bounded Stage 5A.

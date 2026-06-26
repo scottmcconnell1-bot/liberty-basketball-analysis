@@ -88,7 +88,7 @@ def test_player_minutes_columns(app, db):
         r[1] for r in db.execute("PRAGMA table_info(player_minutes)").fetchall()
     }
     required = {
-        "id", "game_id", "tracker_id", "jersey_number", "player_name",
+        "id", "game_id", "relational_game_id", "tracker_id", "jersey_number", "player_name",
         "first_frame", "last_frame", "total_frames", "minutes_played", "created_at",
     }
     assert required.issubset(cols), f"Missing columns: {required - cols}"
@@ -169,6 +169,36 @@ def test_get_player_minutes_for_player(app, populated_db):
     assert game_ids == {"game-one", "game-two"}
 
 
+def test_backfill_sets_relational_game_id_for_numeric_game_ids(app, db):
+    from player_minutes import backfill_player_minutes, get_player_minutes
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'stage5a-minutes-game')")
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage5a-minutes-game'"
+    ).fetchone()[0]
+    for i in range(1, 31):
+        db.execute(
+            """INSERT INTO detections
+               (game_id, frame_number, timestamp_ms, object_class, confidence,
+                x_center, y_center, width, height, tracker_id)
+               VALUES (?, ?, ?, 'person', 0.9, 100, 200, 50, 100, 7)""",
+            (str(game_id), i, i * 33),
+        )
+    db.commit()
+
+    backfill_player_minutes(db, str(game_id))
+
+    row = db.execute(
+        "SELECT game_id, relational_game_id FROM player_minutes WHERE tracker_id=7"
+    ).fetchone()
+    assert row["game_id"] == str(game_id)
+    assert row["relational_game_id"] == game_id
+
+    rows = get_player_minutes(db, game_id)
+    assert len(rows) == 1
+    assert rows[0]["tracker_id"] == 7
+
+
 # ── Stats integration test ───────────────────────────────────
 
 def test_stats_reads_player_minutes(app, populated_db):
@@ -182,6 +212,38 @@ def test_stats_reads_player_minutes(app, populated_db):
     ).fetchall()
     assert len(rows) == 2
     assert rows[0]["minutes_played"] > 0
+
+
+def test_refresh_stats_sets_relational_game_id_for_manual_games(app, db):
+    from stats import refresh_stats
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'stage5a-stats-game')")
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage5a-stats-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, event_type, event_type_id, shot_result,
+               timestamp_ms, review_status, source_type)
+           SELECT ?, ?, 'made_two', id, 'made', 1000, 'accepted', 'manual'
+           FROM event_types WHERE code='made_two'"""
+        ,
+        (str(game_id), game_id),
+    )
+    db.commit()
+
+    refresh_stats(db, game_id)
+
+    row = db.execute(
+        "SELECT game_id, relational_game_id, pts, fgm, fga FROM stats WHERE relational_game_id=?",
+        (game_id,),
+    ).fetchone()
+    assert row is not None
+    assert row["game_id"] == str(game_id)
+    assert row["relational_game_id"] == game_id
+    assert row["pts"] == 2
+    assert row["fgm"] == 1
+    assert row["fga"] == 1
 
 
 # ── Empty-data safety test ──────────────────────────────────

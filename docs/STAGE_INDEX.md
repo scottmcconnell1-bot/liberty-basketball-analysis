@@ -1,6 +1,6 @@
 # Liberty Stage Index
 
-Updated: 2026-06-25
+Updated: 2026-06-26
 Branch: jason-5-may-updates
 Status: Source-of-truth stage numbering for Codex, Hermes/OWL/Rex, and future agents.
 
@@ -24,8 +24,9 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 4A | Event participants foundation | Implemented and Hermes/OWL verified | event_participants, events relational links, primary player/team links, legacy player-name backfill |
 | Stage 4B | Manual event write upgrade | Implemented and Hermes/OWL verified | save_event wires relational_game_id, event_type_id, team_id, primary_player_id, event_participants |
 | Stage 4C | Relational stats derivation | Implemented and Hermes/OWL verified | stats.aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering; legacy event_type alias seeds added |
-| Stage 4D | Player minutes foundation | Implemented | player_minutes table schema-gated + migration; player_minutes.py backfill from detections.tracker_id (idempotent INSERT OR REPLACE); tests verify computation, idempotency, per-game/per-player query, stats.py integration |
-| Stage 5 | Downstream game_id cleanup | Not started | downstream relational_game_id migration while preserving analysis_key |
+| Stage 4D | Player minutes foundation | Implemented and Hermes/OWL verified | player_minutes table schema-gated + migration; player_minutes.py backfill from detections.tracker_id (idempotent INSERT OR REPLACE); tests verify computation, idempotency, per-game/per-player query, stats.py integration |
+| Stage 5 | Downstream game_id cleanup | In progress through lettered slices | downstream relational_game_id migration while preserving analysis_key |
+| Stage 5A | Relational game_id cleanup for stats and player_minutes | Implemented locally; Hermes/OWL verification pending | additive `relational_game_id` columns for `stats` and `player_minutes`; bounded query/write cleanup while preserving legacy TEXT `game_id` behavior |
 | Stage 6 | Module entitlement wiring | Not started | module_key helpers and team/module permission checks |
 
 ## Rules
@@ -33,6 +34,7 @@ Repository history, GitHub issues, and verification reports already reference th
 - Stage 3B always means Review UI.
 - Stage 3C always means Possessions and Canonical Clips Foundation.
 - Stage 4A always means Event Participants Foundation.
+- Stage 5A always means relational game_id cleanup for `stats` and `player_minutes`.
 - Do not use Stage 3B for possessions or clips in future reports.
 - Do not rewrite past issues, commits, or reports to rename completed stages.
 - Use Proven / Inferred / Unknown when reporting stage status.
@@ -40,4 +42,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 4C Relational Stats Derivation and Stage 4D Player Minutes Foundation are implemented.
+Stage 5A is implemented locally and awaiting Hermes/OWL verification.

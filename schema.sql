@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS roster_memberships (
 CREATE TABLE IF NOT EXISTS stats (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id     TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     player_id   INTEGER REFERENCES players(id),
     tracker_id  INTEGER,
     player_name TEXT,
@@ -412,6 +413,7 @@ CREATE TABLE IF NOT EXISTS player_development_clips (
 CREATE TABLE IF NOT EXISTS player_minutes (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     tracker_id      INTEGER NOT NULL,
     jersey_number   INTEGER,
     player_name     TEXT,
@@ -718,6 +720,7 @@ CREATE TABLE IF NOT EXISTS scouting_clips (
 CREATE TABLE IF NOT EXISTS player_minutes (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     tracker_id      INTEGER NOT NULL,
     jersey_number   INTEGER,  -- if known
     player_name     TEXT,     -- if known
