@@ -1740,6 +1740,7 @@ def _ensure_migration_columns(db):
         ("events", "updated_at", "ALTER TABLE events ADD COLUMN updated_at TIMESTAMP"),
         ("stats", "relational_game_id", "ALTER TABLE stats ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("player_minutes", "relational_game_id", "ALTER TABLE player_minutes ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
+        ("shot_classifications", "relational_game_id", "ALTER TABLE shot_classifications ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),

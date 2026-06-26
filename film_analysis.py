@@ -37,6 +37,16 @@ def get_db(db_path):
     return conn
 
 
+def _resolve_relational_game_id(conn, game_id):
+    try:
+        game_id_int = int(game_id)
+    except (TypeError, ValueError):
+        return None
+
+    row = conn.execute("SELECT id FROM games WHERE id = ?", (game_id_int,)).fetchone()
+    return row["id"] if row else None
+
+
 # ── 1. Minutes Played ───────────────────────────────────────
 
 def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
@@ -115,13 +125,24 @@ def _estimate_basket_position(conn, game_id):
     Returns (basket_x, basket_y, three_pt_threshold) in normalized coords.
     Falls back to (0.5, 1.0, 0.50) if insufficient data.
     """
-    rows = conn.execute("""
-        SELECT court_x, court_y
-        FROM shot_classifications
-        WHERE game_id = ? AND shot_type = '2pt' AND shot_result = 'make'
-          AND court_x IS NOT NULL AND court_y IS NOT NULL
-          AND court_x < 0.99 AND court_y < 0.99
-    """, (game_id,)).fetchall()
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    if relational_game_id is not None:
+        rows = conn.execute("""
+            SELECT court_x, court_y
+            FROM shot_classifications
+            WHERE (relational_game_id = ? OR (relational_game_id IS NULL AND game_id = ?))
+              AND shot_type = '2pt' AND shot_result = 'make'
+              AND court_x IS NOT NULL AND court_y IS NOT NULL
+              AND court_x < 0.99 AND court_y < 0.99
+        """, (relational_game_id, str(game_id))).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT court_x, court_y
+            FROM shot_classifications
+            WHERE game_id = ? AND shot_type = '2pt' AND shot_result = 'make'
+              AND court_x IS NOT NULL AND court_y IS NOT NULL
+              AND court_x < 0.99 AND court_y < 0.99
+        """, (game_id,)).fetchall()
     if len(rows) < 3:
         return 0.5, 1.0, 0.50
     xs = [r[0] for r in rows]
@@ -157,6 +178,8 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
     if not shot_events:
         print("[Shots] No shot events found")
         return []
+
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
 
     # Estimate basket position from existing 2pt makes (or use defaults)
     basket_x, basket_y, three_pt_threshold = _estimate_basket_position(conn, game_id)
@@ -287,14 +310,20 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
         })
 
     # Clear existing classifications for this game to prevent duplicates
-    conn.execute("DELETE FROM shot_classifications WHERE game_id = ?", (game_id,))
+    if relational_game_id is not None:
+        conn.execute(
+            "DELETE FROM shot_classifications WHERE relational_game_id = ? OR game_id = ?",
+            (relational_game_id, str(game_id)),
+        )
+    else:
+        conn.execute("DELETE FROM shot_classifications WHERE game_id = ?", (game_id,))
 
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO shot_classifications
-                (event_id, game_id, tracker_id, shot_type, shot_result, court_x, court_y, confidence, timestamp_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (r["event_id"], r["game_id"], r["tracker_id"], r["shot_type"],
+                (event_id, game_id, relational_game_id, tracker_id, shot_type, shot_result, court_x, court_y, confidence, timestamp_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (r["event_id"], r["game_id"], relational_game_id, r["tracker_id"], r["shot_type"],
               r["shot_result"], r["court_x"], r["court_y"],
               r["confidence"], r["timestamp_ms"]))
     conn.commit()

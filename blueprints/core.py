@@ -52,6 +52,7 @@ from helpers import (
     append_query_params,
     save_settings,
 )
+from stats import _resolve_relational_game_id
 
 core = Blueprint("core", __name__)
 
@@ -1172,15 +1173,27 @@ def film(filename=None):
             game_id = row["analysis_key"]
     if game_id:
         db = get_db()
+        relational_game_id = _resolve_relational_game_id(db, game_id)
         # Shot summary: aggregate makes and misses by shot type
-        shot_rows = db.execute(
-            """SELECT shot_type, shot_result, COUNT(*) as cnt
-               FROM shot_classifications
-               WHERE game_id = ?
-               GROUP BY shot_type, shot_result
-               ORDER BY shot_type, shot_result""",
-            (game_id,),
-        ).fetchall()
+        if relational_game_id is not None:
+            shot_rows = db.execute(
+                """SELECT shot_type, shot_result, COUNT(*) as cnt
+                   FROM shot_classifications
+                   WHERE relational_game_id = ?
+                      OR (relational_game_id IS NULL AND game_id = ?)
+                   GROUP BY shot_type, shot_result
+                   ORDER BY shot_type, shot_result""",
+                (relational_game_id, str(game_id)),
+            ).fetchall()
+        else:
+            shot_rows = db.execute(
+                """SELECT shot_type, shot_result, COUNT(*) as cnt
+                   FROM shot_classifications
+                   WHERE game_id = ?
+                   GROUP BY shot_type, shot_result
+                   ORDER BY shot_type, shot_result""",
+                (game_id,),
+            ).fetchall()
         # Pivot: build {shot_type: {make: n, miss: n}}
         shot_pivot = {}
         for r in shot_rows:

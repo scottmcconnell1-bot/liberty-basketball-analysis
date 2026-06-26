@@ -32,6 +32,7 @@ EXPECTED_TABLES = [
     "practice_playlist_clips",
     "practice_plan_items",
     "player_minutes",
+    "shot_classifications",
 ]
 
 EXPECTED_COLUMNS = {
@@ -96,6 +97,10 @@ EXPECTED_COLUMNS = {
     "player_minutes": ["id", "game_id", "relational_game_id", "tracker_id", "jersey_number",
                        "player_name", "first_frame", "last_frame",
                        "total_frames", "minutes_played", "created_at"],
+    "shot_classifications": ["id", "event_id", "game_id", "relational_game_id", "tracker_id",
+                             "jersey_number", "shot_type", "shot_result", "court_x",
+                             "court_y", "confidence", "timestamp_ms", "details_json",
+                             "created_at"],
 }
 
 
@@ -704,3 +709,56 @@ def test_stage5b_legacy_game_id_preserved(db):
     clips = pd.get_clips(db, game_id="legacy_game_123")
     assert len(clips) == 1
     assert clips[0]["clip_label"] == "Legacy test"
+
+
+# ── Stage 5C: shot_classifications relational_game_id ───────────────────
+
+
+def test_stage5c_shot_classifications_has_relational_game_id(db):
+    cols = get_columns(db, "shot_classifications")
+    assert "relational_game_id" in cols, "shot_classifications missing relational_game_id"
+    types = get_column_types(db, "shot_classifications")
+    assert types["relational_game_id"] == "INTEGER", (
+        f"Expected relational_game_id INTEGER, got {types['relational_game_id']}"
+    )
+
+
+def test_stage5c_legacy_game_id_is_still_text(db):
+    types = get_column_types(db, "shot_classifications")
+    assert types["game_id"] == "TEXT", (
+        f"Expected game_id TEXT, got {types['game_id']}"
+    )
+
+
+def test_stage5c_relational_game_id_is_idempotent(app, db):
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+        app_module.init_db()
+    cols = get_columns(db, "shot_classifications")
+    assert "relational_game_id" in cols
+
+
+def test_stage5c_get_enhanced_stats_uses_relational_shot_classifications(db):
+    import stats
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'stage5c-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='stage5c-game'").fetchone()[0]
+
+    db.execute(
+        """INSERT INTO shot_classifications
+           (game_id, relational_game_id, tracker_id, shot_type, shot_result, timestamp_ms)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("legacy-mismatch", game_id, 7, "3pt", "make", 12345),
+    )
+    db.commit()
+
+    enhanced = stats.get_enhanced_stats(db, game_id)
+    assert enhanced["shot_breakdown"] == [{
+        "tracker_id": 7,
+        "shot_type": "3pt",
+        "shot_result": "make",
+        "cnt": 1,
+    }]

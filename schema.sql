@@ -737,6 +737,7 @@ CREATE TABLE IF NOT EXISTS shot_classifications (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id        INTEGER REFERENCES events(id) ON DELETE CASCADE,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     tracker_id      INTEGER,
     jersey_number   INTEGER,
     shot_type       TEXT NOT NULL,  -- '2pt', '3pt', 'ft'

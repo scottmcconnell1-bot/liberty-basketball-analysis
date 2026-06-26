@@ -11,6 +11,12 @@ def _resolve_relational_game_id(db, game_id):
     return row["id"] if row else None
 
 
+def _fetch_shot_rows(db, relational_game_id, game_id, query):
+    if relational_game_id is not None:
+        return db.execute(query, (relational_game_id, str(game_id))).fetchall()
+    return db.execute(query, (game_id,)).fetchall()
+
+
 def _eligible_event_rows(db, game_id):
     """Return only events eligible for stats derivation.
 
@@ -189,12 +195,28 @@ def _enhance_stats_from_analysis(db, game_id):
             )
 
     # Add shot type breakdowns from shot_classifications table
-    shot_rows = db.execute("""
+    shot_rows = _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
         SELECT tracker_id, shot_type, shot_result, COUNT(*) as cnt
         FROM shot_classifications
-        WHERE game_id=?
+        WHERE relational_game_id = ?
+           OR (relational_game_id IS NULL AND game_id = ?)
         GROUP BY tracker_id, shot_type, shot_result
-    """, (game_id,)).fetchall()
+        """,
+    ) if relational_game_id is not None else _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
+        SELECT tracker_id, shot_type, shot_result, COUNT(*) as cnt
+        FROM shot_classifications
+        WHERE game_id = ?
+        GROUP BY tracker_id, shot_type, shot_result
+        """,
+    )
 
     for srow in shot_rows:
         tracker_id = srow["tracker_id"]
@@ -234,6 +256,7 @@ def get_enhanced_stats(db, game_id):
     - plays: recognized plays summary
     """
     basic = aggregate_stats(db, game_id)
+    relational_game_id = _resolve_relational_game_id(db, game_id)
 
     # Minutes
     minutes = db.execute("""
@@ -245,13 +268,30 @@ def get_enhanced_stats(db, game_id):
     """, (game_id,)).fetchall()
 
     # Shot breakdown
-    shots = db.execute("""
+    shots = _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
+        SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
+        FROM shot_classifications sc
+        WHERE sc.relational_game_id = ?
+           OR (sc.relational_game_id IS NULL AND sc.game_id = ?)
+        GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
+        ORDER BY sc.tracker_id, sc.shot_type
+        """,
+    ) if relational_game_id is not None else _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
         SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
         FROM shot_classifications sc
         WHERE sc.game_id = ?
         GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
         ORDER BY sc.tracker_id, sc.shot_type
-    """, (game_id,)).fetchall()
+        """,
+    )
 
     # Player effect
     effects = db.execute("""
