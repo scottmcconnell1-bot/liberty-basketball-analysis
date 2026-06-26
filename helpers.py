@@ -1024,6 +1024,95 @@ def _seed_event_types(db):
         )
 
 
+def assign_possessions_for_game(db, game_id):
+    """Idempotent possession assignment for one game.
+
+    Reads events for the game ordered by (timestamp_ms, id), creates
+    possession rows as needed, and assigns events.possession_id for each
+    event.  A new possession starts on any event whose event_types row
+    has is_possession_boundary = 1 — the boundary event itself belongs to
+    the NEW possession.  Consecutive boundary events merge into the same
+    possession.
+
+    Safe to call multiple times: existing possession_id values on events are
+    checked first; existing possessions linked to this game are reused rather
+    than duplicated.  Event facts (event_type, event_type_id, player,
+    shot_result, timestamp_ms, review status) are never modified.
+    """
+    # Collect events ordered by (timestamp_ms, id) — only those with a
+    # relational_game_id matching this game.
+    events = db.execute(
+        """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
+             FROM events e
+            WHERE e.relational_game_id = ?
+            ORDER BY e.timestamp_ms ASC, e.id ASC""",
+        (game_id,),
+    ).fetchall()
+
+    if not events:
+        return
+
+    # Determine which event types are possession boundaries.
+    type_rows = db.execute(
+        "SELECT code, is_possession_boundary FROM event_types"
+    ).fetchall()
+    boundary_codes = {r["code"] for r in type_rows if r["is_possession_boundary"] == 1}
+
+    # Existing possessions for this game, linked by start_event_id so we
+    # can reuse them on re-run (idempotency).
+    existing = db.execute(
+        """SELECT id, start_event_id FROM possessions WHERE game_id = ?""",
+        (game_id,),
+    ).fetchall()
+    possessed_by_event = {r["start_event_id"]: r["id"] for r in existing}
+
+    current_possession_id = None
+    prev_was_boundary = False
+    for ev in events:
+        if ev["possession_id"] is not None:
+            # Event already linked (previous run) — keep using that possession.
+            current_possession_id = ev["possession_id"]
+            prev_was_boundary = ev["event_type"] in boundary_codes
+            continue
+
+        is_boundary = ev["event_type"] in boundary_codes
+        if is_boundary and not prev_was_boundary and current_possession_id is not None:
+            # Boundary after non-boundary: end current possession. This
+            # boundary event starts a new possession.
+            current_possession_id = None
+
+        if current_possession_id is None:
+            # Reuse an existing possession by start_event_id if present.
+            current_possession_id = possessed_by_event.get(ev["id"])
+
+            if current_possession_id is None:
+                db.execute(
+                    """INSERT INTO possessions
+                          (game_id, start_timestamp_ms,
+                           start_event_id, source, review_status)
+                       VALUES (?, ?, ?, 'manual', 'reviewed')""",
+                    (game_id, ev["timestamp_ms"], ev["id"]),
+                )
+                current_possession_id = db.execute(
+                    "SELECT last_insert_rowid()"
+                ).fetchone()[0]
+                possessed_by_event[ev["id"]] = current_possession_id
+
+            db.execute(
+                "UPDATE events SET possession_id = ? WHERE id = ?",
+                (current_possession_id, ev["id"]),
+            )
+        else:
+            db.execute(
+                "UPDATE events SET possession_id = ? WHERE id = ?",
+                (current_possession_id, ev["id"]),
+            )
+
+        prev_was_boundary = is_boundary
+
+    db.commit()
+
+
 def _seed_base_module_entitlement(db, team_id):
     if team_id is None:
         return

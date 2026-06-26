@@ -125,17 +125,36 @@ def save_event():
     review_status = "accepted" if human_verified else "pending"
     source_type = str(data.get("source_type", "manual"))[:64] if data.get("source_type") else "manual"
 
+    # ── Stage 4C.2: explicit possession_id linkage ──────────
+    possession_id = None
+    raw_pid = data.get("possession_id")
+    if raw_pid is not None:
+        try:
+            pid_int = int(raw_pid)
+        except (TypeError, ValueError):
+            pid_int = None
+        if pid_int is not None:
+            # Validate the possession exists and belongs to the same game.
+            owner = db.execute(
+                "SELECT id FROM possessions WHERE id=? AND game_id=?",
+                (pid_int, relational_game_id),
+            ).fetchone()
+            if owner:
+                possession_id = pid_int
+            # else: silently ignore invalid/mismatched possession_id.
+
     try:
         cur = db.execute(
             """INSERT INTO events
                (game_id, player, event_type, shot_result, timestamp_ms, details_json,
                 source_video, source_frame, human_verified, confidence,
                 review_status, source_type, reviewed_at,
+                possession_id,
                 relational_game_id, event_type_id, team_id,
                 primary_player_id, primary_roster_membership_id,
                 created_by_user_id, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,
-                      ?,?,?,?,?,?, ?,?, CURRENT_TIMESTAMP)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,
+                       ?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)""",
             (
                 game_id,
                 player,
@@ -150,6 +169,7 @@ def save_event():
                 review_status,
                 source_type,
                 review_status,
+                possession_id,
                 relational_game_id,
                 event_type_id,
                 team_id,

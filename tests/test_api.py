@@ -1430,3 +1430,233 @@ def test_auto_stats_routes_hidden_when_feature_disabled(app, client):
         assert client.get("/status").status_code == 404
     finally:
         app.config["FEATURES"]["ENABLE_AUTO_STATS_M1"] = original
+
+
+# ── Stage 4C.2: Possession linkage ─────────────────────────────────────
+
+def _create_game_with_events(client, db, source_key, events_data):
+    """Helper: create a game and insert raw events with timestamps."""
+    game_id = _create_game(client, source_key)
+    for ev in events_data:
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, timestamp_ms,
+                   relational_game_id, human_verified, review_status,
+                   created_by_user_id)
+               VALUES (?, ?, ?, ?, ?, 1, 'accepted', NULL)""",
+            (str(game_id), ev.get("player"), ev["event_type"],
+             ev["timestamp_ms"], game_id),
+        )
+    db.commit()
+    return game_id
+
+
+def test_save_event_persists_valid_possession_id(client, db):
+    """Explicit valid possession_id in save_event is persisted."""
+    game_id = _create_game(client, "possession-save-valid")
+    relational_game_id = game_id
+    # Create a possession row to reference.
+    db.execute(
+        """INSERT INTO possessions (game_id, start_timestamp_ms, source)
+           VALUES (?, 0, 'manual')""",
+        (relational_game_id,),
+    )
+    db.commit()
+    possession_id = db.execute(
+        "SELECT id FROM possessions WHERE game_id=?", (relational_game_id,)
+    ).fetchone()["id"]
+
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "possession_id": possession_id,
+    })
+    assert r.status_code == 200
+    event_id = r.get_json()["id"]
+
+    row = db.execute(
+        "SELECT possession_id FROM events WHERE id=?", (event_id,)
+    ).fetchone()
+    assert row["possession_id"] == possession_id
+
+
+def test_save_event_rejects_invalid_possession_id(client, db):
+    """Invalid/mismatched possession_id is ignored (set to NULL)."""
+    game_id = _create_game(client, "possession-save-invalid")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "possession_id": 99999,
+    })
+    assert r.status_code == 200
+    event_id = r.get_json()["id"]
+
+    row = db.execute(
+        "SELECT possession_id FROM events WHERE id=?", (event_id,)
+    ).fetchone()
+    assert row["possession_id"] is None
+
+
+def test_save_event_null_possession_id_when_absent(client, db):
+    """Without possession_id in request, the column stays NULL."""
+    game_id = _create_game(client, "possession-save-null")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+    })
+    assert r.status_code == 200
+    event_id = r.get_json()["id"]
+
+    row = db.execute(
+        "SELECT possession_id FROM events WHERE id=?", (event_id,)
+    ).fetchone()
+    assert row["possession_id"] is None
+
+
+def test_assign_possessions_for_game_creates_rows(client, db):
+    """assign_possessions_for_game creates possession rows and links events."""
+    events_data = [
+        {"event_type": "shot", "timestamp_ms": 1000},
+        {"event_type": "turnover", "timestamp_ms": 2000},  # boundary
+        {"event_type": "shot", "timestamp_ms": 3000},
+        {"event_type": "steal", "timestamp_ms": 4000},  # boundary
+        {"event_type": "made_two", "timestamp_ms": 5000},
+    ]
+    game_id = _create_game_with_events(
+        client, db, "assign-poss-game", events_data
+    )
+
+    from helpers import assign_possessions_for_game
+    assign_possessions_for_game(db, game_id)
+
+    # 3 possessions: [shot], [turnover, shot], [steal, made_two]
+    poss_count = db.execute(
+        "SELECT COUNT(*) AS cnt FROM possessions WHERE game_id=?",
+        (game_id,),
+    ).fetchone()["cnt"]
+    assert poss_count == 3
+
+    # All events must have a possession_id.
+    null_links = db.execute(
+        """SELECT COUNT(*) AS cnt FROM events
+            WHERE relational_game_id=? AND possession_id IS NULL""",
+        (game_id,),
+    ).fetchone()["cnt"]
+    assert null_links == 0
+
+
+def test_assign_possessions_for_game_is_idempotent(client, db):
+    """Running assign_possessions_for_game twice produces same state."""
+    events_data = [
+        {"event_type": "made_two", "timestamp_ms": 1000},
+        {"event_type": "turnover", "timestamp_ms": 2000},
+        {"event_type": "assist", "timestamp_ms": 3000},
+    ]
+    game_id = _create_game_with_events(
+        client, db, "assign-poss-idempotent", events_data
+    )
+
+    from helpers import assign_possessions_for_game
+    assign_possessions_for_game(db, game_id)
+    ids_before = [
+        r["possession_id"]
+        for r in db.execute(
+            "SELECT possession_id FROM events WHERE relational_game_id=? ORDER BY id",
+            (game_id,),
+        ).fetchall()
+    ]
+    poss_before = db.execute(
+        "SELECT COUNT(*) AS cnt FROM possessions WHERE game_id=?",
+        (game_id,),
+    ).fetchone()["cnt"]
+
+    # Run again.
+    assign_possessions_for_game(db, game_id)
+    ids_after = [
+        r["possession_id"]
+        for r in db.execute(
+            "SELECT possession_id FROM events WHERE relational_game_id=? ORDER BY id",
+            (game_id,),
+        ).fetchall()
+    ]
+    poss_after = db.execute(
+        "SELECT COUNT(*) AS cnt FROM possessions WHERE game_id=?",
+        (game_id,),
+    ).fetchone()["cnt"]
+
+    assert poss_before ==poss_after, "duplicate possessions on re-run"
+    assert ids_before == ids_after, "possession_id links changed on re-run"
+
+
+def test_assign_possessions_boundary_starts_new_possession(client, db):
+    """Boundary events end the current possession; next event starts new one."""
+    events_data = [
+        {"event_type": "made_two", "timestamp_ms": 1000},
+        {"event_type": "made_two", "timestamp_ms": 1500},
+        {"event_type": "turnover", "timestamp_ms": 2000},   # boundary
+        {"event_type": "assist", "timestamp_ms": 3000},     # new possession
+        {"event_type": "made_three", "timestamp_ms": 3500},
+    ]
+    game_id = _create_game_with_events(
+        client, db, "assign-poss-boundary", events_data
+    )
+
+    from helpers import assign_possessions_for_game
+    assign_possessions_for_game(db, game_id)
+
+    rows = db.execute(
+        """SELECT e.id, e.event_type, e.possession_id
+             FROM events e
+            WHERE e.relational_game_id = ?
+            ORDER BY e.timestamp_ms ASC, e.id ASC""",
+        (game_id,),
+    ).fetchall()
+
+    # Possession 1: first two made_twos. Possession 2: turnover + assist + made_three.
+    p1_id = rows[0]["possession_id"]
+    p2_id = rows[2]["possession_id"]
+    assert p1_id != p2_id, "boundary did not split possessions"
+    assert rows[1]["possession_id"] == p1_id
+    assert rows[3]["possession_id"] == p2_id
+    assert rows[4]["possession_id"] == p2_id
+
+
+def test_assign_possessions_preserves_event_facts(client, db):
+    """Linkage must never touch event_type, player, shot_result, timestamp, review."""
+    events_data = [
+        {"event_type": "made_two", "player": "Alice", "timestamp_ms": 1000},
+        {"event_type": "turnover", "player": "Bob", "timestamp_ms": 2000},
+    ]
+    game_id = _create_game_with_events(
+        client, db, "assign-poss-preserve", events_data
+    )
+
+    # Snapshot facts before.
+    before = [
+        dict(r) for r in db.execute(
+            "SELECT id, event_type, player, timestamp_ms, review_status "
+            "FROM events WHERE relational_game_id=? ORDER BY id",
+            (game_id,),
+        ).fetchall()
+    ]
+
+    from helpers import assign_possessions_for_game
+    assign_possessions_for_game(db, game_id)
+
+    # Snapshot facts after.
+    after = [
+        dict(r) for r in db.execute(
+            "SELECT id, event_type, player, timestamp_ms, review_status "
+            "FROM events WHERE relational_game_id=? ORDER BY id",
+            (game_id,),
+        ).fetchall()
+    ]
+
+    for b, a in zip(before, after):
+        assert b["event_type"] == a["event_type"]
+        assert b["player"] == a["player"]
+        assert b["timestamp_ms"] == a["timestamp_ms"]
+        assert b["review_status"] == a["review_status"]
