@@ -344,11 +344,12 @@ def _record_human_correction(db, row, correction_type, field_changed,
                              original_value, corrected_value, notes=None):
     db.execute(
         """INSERT INTO human_corrections
-              (game_id, event_id, correction_type, original_value,
+              (game_id, relational_game_id, event_id, correction_type, original_value,
                corrected_value, field_changed, timestamp_ms, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             row["game_id"],
+            row["relational_game_id"],
             row["id"],
             correction_type,
             _stringify_review_value(original_value),

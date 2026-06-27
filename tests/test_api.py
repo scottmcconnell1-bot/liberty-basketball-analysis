@@ -529,6 +529,7 @@ def test_review_event_reject_preserves_event_and_records_correction(client, db):
         (eid,),
     ).fetchone()
     assert correction is not None
+    assert correction["relational_game_id"] == game_id
     assert correction["field_changed"] == "review_status"
     assert correction["corrected_value"] == "rejected"
 

@@ -802,6 +802,7 @@ CREATE TABLE IF NOT EXISTS scouting_tendencies_aggregated (
 CREATE TABLE IF NOT EXISTS human_corrections (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     event_id        INTEGER REFERENCES events(id) ON DELETE SET NULL,
     correction_type TEXT NOT NULL,  -- 'add_event', 'remove_event', 'change_event', 'change_shot_type', 'change_play_type', 'change_player'
     original_value  TEXT,
