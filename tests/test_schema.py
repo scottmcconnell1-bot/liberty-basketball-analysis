@@ -982,3 +982,69 @@ def test_stage5h_relational_game_id_is_idempotent(app, db):
         app_module.init_db()
     cols = get_columns(db, "videos")
     assert "relational_game_id" in cols
+
+
+# ── Stage 6: Module Entitlement Wiring ──────────────────────
+
+
+def test_stage6_module_keys_defined():
+    from helpers import MODULE_KEYS, NON_BASE_MODULES
+    assert "base_platform" in MODULE_KEYS
+    assert "stats" in MODULE_KEYS
+    assert "film_room" in MODULE_KEYS
+    assert "scouting" in MODULE_KEYS
+    assert "base_platform" not in NON_BASE_MODULES
+    assert "stats" in NON_BASE_MODULES
+
+
+def test_stage6_seed_module_entitlement_creates_row(db):
+    from helpers import seed_module_entitlement
+    # Create a team first
+    db.execute("INSERT INTO teams (team_name, organization_name) VALUES ('Test Team', 'Test School')")
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.commit()
+    eid = seed_module_entitlement(db, team_id, "stats")
+    assert eid is not None
+    row = db.execute(
+        "SELECT enabled FROM module_entitlements WHERE team_id=? AND module_key=?",
+        (team_id, "stats"),
+    ).fetchone()
+    assert row is not None
+    assert row["enabled"] == 1
+
+
+def test_stage6_seed_module_entitlement_is_idempotent(db):
+    from helpers import seed_module_entitlement
+    db.execute("INSERT INTO teams (team_name, organization_name) VALUES ('Test Team 2', 'Test School 2')")
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.commit()
+    eid1 = seed_module_entitlement(db, team_id, "film_room")
+    eid2 = seed_module_entitlement(db, team_id, "film_room")
+    assert eid1 == eid2
+
+
+def test_stage6_seed_module_entitlement_rejects_unknown_key(db):
+    from helpers import seed_module_entitlement
+    db.execute("INSERT INTO teams (team_name, organization_name) VALUES ('Test Team 3', 'Test School 3')")
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.commit()
+    eid = seed_module_entitlement(db, team_id, "nonexistent_module")
+    assert eid is None
+
+
+def test_stage6_team_has_module_base_always_true(db):
+    from helpers import team_has_module
+    assert team_has_module(None, "base_platform") is True
+    assert team_has_module(999, "base_platform") is True
+
+
+def test_stage6_team_has_module_non_base_requires_entitlement(db):
+    from helpers import team_has_module, seed_module_entitlement
+    db.execute("INSERT INTO teams (team_name, organization_name) VALUES ('Test Team 4', 'Test School 4')")
+    team_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.commit()
+    # Before seeding
+    assert team_has_module(team_id, "stats") is False
+    # After seeding
+    seed_module_entitlement(db, team_id, "stats")
+    assert team_has_module(team_id, "stats") is True
