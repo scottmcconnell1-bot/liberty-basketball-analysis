@@ -657,6 +657,7 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
     print(f"[Effect] Calculating POSITION-BASED effect for game {game_id}")
 
     effective_fps = fps / detect_stride
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
 
     # ── Get all cluster IDs from player_minutes ──
     minutes_rows = conn.execute("""
@@ -811,11 +812,12 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO player_effect
-                (game_id, tracker_id, plus_minus, possessions_on, possessions_off,
+                (game_id, relational_game_id, tracker_id, plus_minus, possessions_on, possessions_off,
                  points_for, points_against, ortg, drtg, net_rating)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             r["game_id"],
+            relational_game_id,
             r["tracker_id"],
             r["points_scored"],          # plus_minus — best available proxy (points scored)
             r["possessions"],            # possessions_on — ball-holder possession count

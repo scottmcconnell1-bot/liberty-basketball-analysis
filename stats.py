@@ -294,15 +294,32 @@ def get_enhanced_stats(db, game_id):
     )
 
     # Player effect
-    effects = db.execute("""
-        SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
-               pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
-        FROM player_effect pe
-        LEFT JOIN player_minutes pm ON pm.game_id = pe.game_id AND pm.tracker_id = pe.tracker_id
-        LEFT JOIN players p ON p.tracker_id = pe.tracker_id
-        WHERE pe.game_id = ?
-        ORDER BY pe.ortg DESC
-    """, (game_id,)).fetchall()
+    if relational_game_id is not None:
+        effects = db.execute("""
+            SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+                   pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
+            FROM player_effect pe
+            LEFT JOIN player_minutes pm
+              ON pm.tracker_id = pe.tracker_id
+             AND (
+                   pm.relational_game_id = pe.relational_game_id
+                   OR (pm.relational_game_id IS NULL AND pm.game_id = pe.game_id)
+                 )
+            LEFT JOIN players p ON p.tracker_id = pe.tracker_id
+            WHERE pe.relational_game_id = ?
+               OR (pe.relational_game_id IS NULL AND pe.game_id = ?)
+            ORDER BY pe.ortg DESC
+        """, (relational_game_id, str(game_id))).fetchall()
+    else:
+        effects = db.execute("""
+            SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+                   pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
+            FROM player_effect pe
+            LEFT JOIN player_minutes pm ON pm.game_id = pe.game_id AND pm.tracker_id = pe.tracker_id
+            LEFT JOIN players p ON p.tracker_id = pe.tracker_id
+            WHERE pe.game_id = ?
+            ORDER BY pe.ortg DESC
+        """, (game_id,)).fetchall()
 
     # Plays summary
     if relational_game_id is not None:

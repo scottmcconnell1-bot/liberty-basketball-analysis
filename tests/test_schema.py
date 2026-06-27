@@ -34,6 +34,7 @@ EXPECTED_TABLES = [
     "player_minutes",
     "shot_classifications",
     "play_recognitions",
+    "player_effect",
 ]
 
 EXPECTED_COLUMNS = {
@@ -106,6 +107,9 @@ EXPECTED_COLUMNS = {
                           "start_frame", "end_frame", "start_timestamp_ms", "end_timestamp_ms",
                           "primary_tracker_id", "secondary_tracker_id", "confidence",
                           "details_json", "created_at"],
+    "player_effect": ["id", "game_id", "relational_game_id", "tracker_id", "jersey_number",
+                      "plus_minus", "possessions_on", "possessions_off", "points_for",
+                      "points_against", "ortg", "drtg", "net_rating", "created_at"],
 }
 
 
@@ -817,4 +821,67 @@ def test_stage5d_get_enhanced_stats_uses_relational_play_recognitions(db):
     assert enhanced["plays_summary"] == [{
         "play_type": "pick_and_roll",
         "cnt": 1,
+    }]
+
+
+# ── Stage 5E: player_effect relational_game_id ───────────────────────────
+
+
+def test_stage5e_player_effect_has_relational_game_id(db):
+    cols = get_columns(db, "player_effect")
+    assert "relational_game_id" in cols, "player_effect missing relational_game_id"
+    types = get_column_types(db, "player_effect")
+    assert types["relational_game_id"] == "INTEGER", (
+        f"Expected relational_game_id INTEGER, got {types['relational_game_id']}"
+    )
+
+
+def test_stage5e_legacy_game_id_is_still_text(db):
+    types = get_column_types(db, "player_effect")
+    assert types["game_id"] == "TEXT", (
+        f"Expected game_id TEXT, got {types['game_id']}"
+    )
+
+
+def test_stage5e_relational_game_id_is_idempotent(app, db):
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+        app_module.init_db()
+    cols = get_columns(db, "player_effect")
+    assert "relational_game_id" in cols
+
+
+def test_stage5e_get_enhanced_stats_uses_relational_player_effect(db):
+    import stats
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'stage5e-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='stage5e-game'").fetchone()[0]
+
+    db.execute(
+        """INSERT INTO player_minutes
+           (game_id, relational_game_id, tracker_id, minutes_played, total_frames, first_frame, last_frame)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("minutes-legacy", game_id, 7, 12.5, 100, 1, 100),
+    )
+    db.execute(
+        """INSERT INTO player_effect
+           (game_id, relational_game_id, tracker_id, possessions_on, points_for, ortg)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("effect-legacy", game_id, 7, 11, 9, 81.8),
+    )
+    db.commit()
+
+    enhanced = stats.get_enhanced_stats(db, game_id)
+    assert enhanced["player_effect"] == [{
+        "tracker_id": 7,
+        "possessions": 11,
+        "points_scored": 9,
+        "ortg": 81.8,
+        "drtg": None,
+        "net_rating": None,
+        "minutes_played": 12.5,
+        "name": None,
     }]

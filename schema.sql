@@ -770,6 +770,7 @@ CREATE TABLE IF NOT EXISTS play_recognitions (
 CREATE TABLE IF NOT EXISTS player_effect (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id         TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     tracker_id      INTEGER NOT NULL,
     jersey_number   INTEGER,
     plus_minus      INTEGER DEFAULT 0,  -- score differential while on court
