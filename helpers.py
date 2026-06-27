@@ -1743,6 +1743,7 @@ def _ensure_migration_columns(db):
         ("shot_classifications", "relational_game_id", "ALTER TABLE shot_classifications ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("play_recognitions", "relational_game_id", "ALTER TABLE play_recognitions ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("player_effect", "relational_game_id", "ALTER TABLE player_effect ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
+        ("detections", "relational_game_id", "ALTER TABLE detections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("human_corrections", "relational_game_id", "ALTER TABLE human_corrections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),

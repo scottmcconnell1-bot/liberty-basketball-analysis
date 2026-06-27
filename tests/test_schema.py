@@ -114,6 +114,9 @@ EXPECTED_COLUMNS = {
     "human_corrections": ["id", "game_id", "relational_game_id", "event_id", "correction_type",
                           "original_value", "corrected_value", "field_changed", "timestamp_ms",
                           "notes", "applied_to_model", "created_at"],
+    "detections": ["id", "game_id", "relational_game_id", "frame_number", "timestamp_ms",
+                   "object_class", "confidence", "x_center", "y_center", "width", "height",
+                   "tracker_id", "created_at"],
 }
 
 
@@ -917,4 +920,33 @@ def test_stage5f_relational_game_id_is_idempotent(app, db):
         app_module.init_db()
         app_module.init_db()
     cols = get_columns(db, "human_corrections")
+    assert "relational_game_id" in cols
+
+
+# ── Stage 5G: detections relational_game_id ───────────────────────
+
+
+def test_stage5g_detections_has_relational_game_id(db):
+    cols = get_columns(db, "detections")
+    assert "relational_game_id" in cols, "detections missing relational_game_id"
+    types = get_column_types(db, "detections")
+    assert types["relational_game_id"] == "INTEGER", (
+        f"Expected relational_game_id INTEGER, got {types['relational_game_id']}"
+    )
+
+
+def test_stage5g_legacy_game_id_is_still_text(db):
+    types = get_column_types(db, "detections")
+    assert types["game_id"] == "TEXT", (
+        f"Expected game_id TEXT, got {types['game_id']}"
+    )
+
+
+def test_stage5g_relational_game_id_is_idempotent(app, db):
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+        app_module.init_db()
+    cols = get_columns(db, "detections")
     assert "relational_game_id" in cols

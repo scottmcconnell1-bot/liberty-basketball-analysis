@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
 CREATE TABLE IF NOT EXISTS detections (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id      TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
     frame_number INTEGER NOT NULL,
     timestamp_ms INTEGER NOT NULL,
     object_class TEXT NOT NULL,

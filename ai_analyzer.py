@@ -42,7 +42,7 @@ def ball_detector_settings(ai_settings):
     return resolve_ball_detector_model(ai_settings), class_id, max(0.01, min(confidence, 0.99))
 
 
-def run_ai_analysis(db_path, video_path, game_id):
+def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
     """Run object detection + tracking on a video and save results to the database.
 
     Strategy:
@@ -161,7 +161,7 @@ def run_ai_analysis(db_path, video_path, game_id):
                 used_dets.add(det_idx)
                 used_tracks.add(tid)
                 tracks[tid] = (cx, cy, frame_number)
-                person_rows.append((game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
+                person_rows.append((game_id, relational_game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
 
             # Create new tracks for unmatched detections
             for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
@@ -169,7 +169,7 @@ def run_ai_analysis(db_path, video_path, game_id):
                     tid = next_tracker_id
                     next_tracker_id += 1
                     tracks[tid] = (cx, cy, frame_number)
-                    person_rows.append((game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
+                    person_rows.append((game_id, relational_game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
 
             # Retire stale tracks
             stale_tids = [tid for tid, (cx, cy, lf) in tracks.items()
@@ -249,7 +249,7 @@ def run_ai_analysis(db_path, video_path, game_id):
 
                 for (cx, cy, conf, x1, y1, x2, y2) in ball_positions:
                     ball_rows.append((
-                        game_id, frame_number, timestamp_ms, 'ball', max(conf, 0.05),
+                        game_id, relational_game_id, frame_number, timestamp_ms, 'ball', max(conf, 0.05),
                         cx, cy, max(x2-x1, 10), max(y2-y1, 10), None
                     ))
 
@@ -258,8 +258,8 @@ def run_ai_analysis(db_path, video_path, game_id):
             if all_detections:
                 cursor = db.cursor()
                 cursor.executemany(
-                    '''INSERT INTO detections (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height, tracker_id)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    '''INSERT INTO detections (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height, tracker_id)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     all_detections
                 )
                 db.commit()
@@ -354,11 +354,20 @@ if __name__ == '__main__':
         "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE analysis_key=? AND status='pending'",
         (game_id,)
     )
+
+    # Resolve relational game_id from games table
+    try:
+        gid_int = int(game_id)
+        row = _conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+        _relational_game_id = row[0] if row else None
+    except (TypeError, ValueError):
+        _relational_game_id = None
+
     _conn.commit()
     _conn.close()
 
     try:
-        run_ai_analysis(db_path, video_path, game_id)
+        run_ai_analysis(db_path, video_path, game_id, relational_game_id=_relational_game_id)
         _conn = sqlite3.connect(db_path)
         _conn.execute(
             "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
