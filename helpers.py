@@ -74,22 +74,6 @@ BASE_MODULE_ENTITLEMENT = {
     "notes": "Seeded by platform_core_stage_2_backfill; additional modules require Scott approval.",
 }
 
-# ── Module Keys ──────────────────────────────────────────
-MODULE_KEYS = {
-    "base_platform": "Base Platform (teams, rosters, games, event ledger, review, clips)",
-    "stats": "Stats Module (box scores, team/player stats, shooting splits, Four Factors)",
-    "minutes_lineups": "Minutes and Lineups Module (minutes, substitutions, plus/minus, lineups)",
-    "film_room": "Film Room Module (searchable clips, playlists, player film, coach notes)",
-    "scouting": "Scouting Module (opponent tendencies, scouting reports, game plans)",
-    "playbook": "Playbook and Play Recognition Module (play calls, sets, coverage)",
-    "strategy": "Strategy Module (standout players, adjustments, lineup impact)",
-    "ai_assist": "AI Assist Module (natural language questions, guided workflows)",
-    "advanced_tracking": "Advanced Tracking Module (player/ball tracking, shot quality)",
-}
-
-# All modules other than base_platform require explicit entitlement seeding
-NON_BASE_MODULES = {k for k in MODULE_KEYS if k != "base_platform"}
-
 # ── Configuration ─────────────────────────────────────────
 
 
@@ -106,41 +90,6 @@ def require_feature(flag_name):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
             if not feature_enabled(flag_name):
-                abort(404)
-            return view_func(*args, **kwargs)
-
-        return wrapped
-
-    return decorator
-
-
-def team_has_module(team_id, module_key):
-    """Return True if the given team has an active entitlement for module_key.
-
-    base_platform is always True (every team gets it).  For other modules,
-    checks the module_entitlements table for an enabled row.
-    """
-    if module_key == "base_platform":
-        return True
-    if team_id is None:
-        return False
-    db = get_db()
-    row = db.execute(
-        "SELECT enabled FROM module_entitlements WHERE team_id=? AND module_key=?",
-        (team_id, module_key),
-    ).fetchone()
-    return bool(row and row["enabled"])
-
-
-def require_module(module_key):
-    """Decorator: abort 404 unless g.team_id (or kwargs team_id) has the module."""
-
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapped(*args, **kwargs):
-            # Prefer explicit team_id kwarg, then g.team_id, then None
-            tid = kwargs.get("team_id") or getattr(g, "team_id", None)
-            if not team_has_module(tid, module_key):
                 abort(404)
             return view_func(*args, **kwargs)
 
@@ -1196,37 +1145,6 @@ def _seed_base_module_entitlement(db, team_id):
             f"module:{BASE_MODULE_ENTITLEMENT['module_key']}",
             details={"module_key": BASE_MODULE_ENTITLEMENT["module_key"]},
         )
-
-
-def seed_module_entitlement(db, team_id, module_key, notes=None):
-    """Idempotently enable a module entitlement for a team.
-
-    Validates module_key against MODULE_KEYS.  Writes provenance on creation.
-    Returns the entitlement row id (existing or newly created).
-    """
-    if team_id is None or module_key not in MODULE_KEYS:
-        return None
-    if notes is None:
-        notes = f"Seeded by seed_module_entitlement({module_key})."
-    db.execute(
-        """INSERT OR IGNORE INTO module_entitlements
-              (team_id, module_key, enabled, notes)
-           VALUES (?, ?, 1, ?)""",
-        (team_id, module_key, notes),
-    )
-    row = db.execute(
-        "SELECT id FROM module_entitlements WHERE team_id=? AND module_key=?",
-        (team_id, module_key),
-    ).fetchone()
-    if row:
-        _insert_backfill_provenance(
-            db,
-            "module_entitlement",
-            row["id"],
-            f"module:{module_key}",
-            details={"module_key": module_key},
-        )
-    return row["id"] if row else None
 
 
 def _backfill_roster_memberships(db, team_id):
