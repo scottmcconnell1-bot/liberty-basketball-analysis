@@ -117,6 +117,9 @@ EXPECTED_COLUMNS = {
     "detections": ["id", "game_id", "relational_game_id", "frame_number", "timestamp_ms",
                    "object_class", "confidence", "x_center", "y_center", "width", "height",
                    "tracker_id", "created_at"],
+    "videos": ["id", "original_filename", "stored_filename", "file_path", "file_size_bytes",
+               "opponent", "game_id", "relational_game_id", "upload_timestamp",
+               "is_duplicate", "duplicate_of_id", "created_at"],
 }
 
 
@@ -949,4 +952,33 @@ def test_stage5g_relational_game_id_is_idempotent(app, db):
         app_module.init_db()
         app_module.init_db()
     cols = get_columns(db, "detections")
+    assert "relational_game_id" in cols
+
+
+# ── Stage 5H: videos relational_game_id ───────────────────────
+
+
+def test_stage5h_videos_has_relational_game_id(db):
+    cols = get_columns(db, "videos")
+    assert "relational_game_id" in cols, "videos missing relational_game_id"
+    types = get_column_types(db, "videos")
+    assert types["relational_game_id"] == "INTEGER", (
+        f"Expected relational_game_id INTEGER, got {types['relational_game_id']}"
+    )
+
+
+def test_stage5h_legacy_game_id_is_still_text(db):
+    types = get_column_types(db, "videos")
+    assert types["game_id"] == "TEXT", (
+        f"Expected game_id TEXT, got {types['game_id']}"
+    )
+
+
+def test_stage5h_relational_game_id_is_idempotent(app, db):
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+        app_module.init_db()
+    cols = get_columns(db, "videos")
     assert "relational_game_id" in cols

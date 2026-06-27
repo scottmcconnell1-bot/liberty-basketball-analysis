@@ -229,6 +229,7 @@ CREATE TABLE IF NOT EXISTS videos (
     file_size_bytes   INTEGER,
     opponent          TEXT,
     game_id           TEXT,
+    relational_game_id INTEGER REFERENCES games(id),
     upload_timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_duplicate      INTEGER NOT NULL DEFAULT 0,
     duplicate_of_id   INTEGER REFERENCES videos(id)

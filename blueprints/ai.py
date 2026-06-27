@@ -244,11 +244,19 @@ def upload_chunk():
         is_dup = prior is not None
         dup_of_id = prior["id"] if prior else None
 
+        # Resolve relational_game_id from games table
+        try:
+            gid_int = int(game_id)
+            row = db.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+            relational_game_id = row[0] if row else None
+        except (TypeError, ValueError):
+            relational_game_id = None
+
         video_cur = db.execute(
             """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
-                                   opponent, game_id, is_duplicate, duplicate_of_id)
-               VALUES (?,?,?,?,?,?,?,?)""",
-            (safe_name, stored_filename, dest, file_size, opponent, game_id, int(is_dup), dup_of_id),
+                                   opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (safe_name, stored_filename, dest, file_size, opponent, game_id, relational_game_id, int(is_dup), dup_of_id),
         )
         video_row = db.execute(
             "SELECT * FROM videos WHERE id=?", (video_cur.lastrowid,),
@@ -467,12 +475,20 @@ def upload_and_analyze():
     # ── game_id & DB records ─────────────────────────────────
     game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
 
+    # Resolve relational_game_id from games table
+    try:
+        gid_int = int(game_id)
+        row = db.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+        relational_game_id = row[0] if row else None
+    except (TypeError, ValueError):
+        relational_game_id = None
+
     video_cur = db.execute(
         """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
-                               opponent, game_id, is_duplicate, duplicate_of_id)
-           VALUES (?,?,?,?,?,?,?,?)""",
+                               opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
         (original_filename, stored_filename, dest, file_size,
-         opponent, game_id, int(is_dup), dup_of_id),
+         opponent, game_id, relational_game_id, int(is_dup), dup_of_id),
     )
     video_row = db.execute(
         "SELECT * FROM videos WHERE id=?",
@@ -565,11 +581,19 @@ def upload_only():
     db = get_db()
     game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
 
+    # Resolve relational_game_id from games table
+    try:
+        gid_int = int(game_id)
+        row = db.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+        relational_game_id = row[0] if row else None
+    except (TypeError, ValueError):
+        relational_game_id = None
+
     db.execute(
         """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
-                               opponent, game_id, is_duplicate, duplicate_of_id)
-           VALUES (?,?,?,?,?,?,?,?)""",
-        (original_filename, stored_filename, dest, file_size, opponent, game_id, 0, None),
+                               opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (original_filename, stored_filename, dest, file_size, opponent, game_id, relational_game_id, 0, None),
     )
     db.commit()
 
