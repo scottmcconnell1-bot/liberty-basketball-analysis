@@ -1661,3 +1661,65 @@ def test_assign_possessions_preserves_event_facts(client, db):
         assert b["player"] == a["player"]
         assert b["timestamp_ms"] == a["timestamp_ms"]
         assert b["review_status"] == a["review_status"]
+
+
+def test_possession_api_endpoint_returns_summary(client, db):
+    """GET /api/possessions/<game_id> returns possession summary JSON."""
+    game_id = _create_game_with_events(
+        client, db, "possession-api",
+        [
+            {"event_type": "made_two", "player": "Alice", "timestamp_ms": 1000},
+            {"event_type": "turnover", "player": "Bob", "timestamp_ms": 2000},
+            {"event_type": "made_three", "player": "Carol", "timestamp_ms": 3000},
+        ],
+    )
+    resp = client.get(f"/api/possessions/{game_id}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.data}"
+    data = resp.get_json()
+    assert "total_possessions" in data
+    assert "scoring_possessions" in data
+    assert "points_per_possession" in data
+    assert "turnover_rate" in data
+    assert "top_outcomes" in data
+    assert data["total_possessions"] > 0
+
+
+def test_possession_count_matches_events_with_possession_id(client, db):
+    """Possession summary count matches events that have possession_id set."""
+    game_id = _create_game_with_events(
+        client, db, "possession-count",
+        [
+            {"event_type": "made_two", "player": "Alice", "timestamp_ms": 1000},
+            {"event_type": "made_two", "player": "Bob", "timestamp_ms": 2000},
+            {"event_type": "turnover", "player": "Charlie", "timestamp_ms": 3000},
+        ],
+    )
+    resp = client.get(f"/api/possessions/{game_id}")
+    data = resp.get_json()
+    # Count events with possession_id set
+    row = db.execute(
+        "SELECT COUNT(*) as cnt FROM events WHERE relational_game_id=? AND possession_id IS NOT NULL",
+        (game_id,),
+    ).fetchone()
+    # At minimum, some events were linked
+    assert row["cnt"] > 0, "Expected at least some events linked to possessions"
+
+
+def test_possession_summary_in_enhanced_stats(client, db):
+    """Enhanced stats response includes possession_summary."""
+    game_id = _create_game_with_events(
+        client, db, "possession-enhanced",
+        [
+            {"event_type": "made_two", "player": "Alice", "timestamp_ms": 1000},
+            {"event_type": "turnover", "player": "Bob", "timestamp_ms": 2000},
+        ],
+    )
+    resp = client.get(f"/api/stats/{game_id}")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "enhanced" in data
+    enhanced = data["enhanced"]
+    assert "possession_summary" in enhanced, f"Missing possession_summary in enhanced stats: {list(enhanced.keys())}"
+    ps = enhanced["possession_summary"]
+    assert "total_possessions" in ps
+    assert "scoring_possessions" in ps

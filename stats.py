@@ -340,10 +340,99 @@ def get_enhanced_stats(db, game_id):
             ORDER BY cnt DESC
         """, (game_id,)).fetchall()
 
+    # Possession summary
+    possession_summary = get_possession_summary(db, game_id)
+
     return {
         "basic_stats": [dict(s) for s in basic],
         "minutes": [dict(m) for m in minutes],
         "shot_breakdown": [dict(s) for s in shots],
         "player_effect": [dict(e) for e in effects],
         "plays_summary": [dict(p) for p in plays],
+        "possession_summary": possession_summary,
+    }
+
+
+def get_possession_summary(db, game_id):
+    """Return possession summary for a game.
+
+    Uses events.possession_id (populated by assign_possessions_for_game).
+    Returns dict with: total_possessions, scoring_possessions, points_per_possession,
+    turnover_rate, top_outcomes.
+    """
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+
+    # Count total possessions
+    if relational_game_id is not None:
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
+            (relational_game_id,),
+        ).fetchone()["cnt"]
+    else:
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
+            (game_id,),
+        ).fetchone()["cnt"]
+
+    if total == 0:
+        return {
+            "total_possessions": 0,
+            "scoring_possessions": 0,
+            "points_per_possession": 0.0,
+            "turnover_rate": 0.0,
+            "top_outcomes": [],
+        }
+
+    # Scoring possessions (points_for > 0)
+    scoring = db.execute(
+        "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ? AND points_for > 0",
+        (game_id,),
+    ).fetchone()["cnt"]
+
+    # Total points
+    total_points = db.execute(
+        "SELECT COALESCE(SUM(points_for), 0) as pts FROM possessions WHERE game_id = ?",
+        (game_id,),
+    ).fetchone()["pts"]
+
+    # Turnover events (possession ended in turnover)
+    if relational_game_id is not None:
+        turnovers = db.execute(
+            """SELECT COUNT(*) as cnt FROM events
+               WHERE relational_game_id = ?
+                 AND possession_id IS NOT NULL
+                 AND event_type = 'turnover'""",
+            (relational_game_id,),
+        ).fetchone()["cnt"]
+    else:
+        turnovers = db.execute(
+            """SELECT COUNT(*) as cnt FROM events
+               WHERE game_id = ?
+                 AND possession_id IS NOT NULL
+                 AND event_type = 'turnover'""",
+            (game_id,),
+        ).fetchone()["cnt"]
+
+    # Top 3 possession outcomes by count
+    if relational_game_id is not None:
+        top = db.execute(
+            """SELECT outcome, COUNT(*) as cnt FROM possessions
+               WHERE game_id = ? AND outcome IS NOT NULL
+               GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
+            (game_id,),
+        ).fetchall()
+    else:
+        top = db.execute(
+            """SELECT outcome, COUNT(*) as cnt FROM possessions
+               WHERE game_id = ? AND outcome IS NOT NULL
+               GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
+            (game_id,),
+        ).fetchall()
+
+    return {
+        "total_possessions": total,
+        "scoring_possessions": scoring,
+        "points_per_possession": round(total_points / total, 2) if total else 0.0,
+        "turnover_rate": round(turnovers / total, 2) if total else 0.0,
+        "top_outcomes": [{"outcome": r["outcome"], "count": r["cnt"]} for r in top],
     }

@@ -85,6 +85,14 @@ def get_stats(game_id):
     db = get_db()
     basic = refresh_stats(db, game_id)
     enhanced = get_enhanced_stats(db, game_id)
+
+    # Wire possession inference after stats refresh
+    from helpers import assign_possessions_for_game
+    from stats import _resolve_relational_game_id
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+
     return jsonify({
         "basic": basic,
         "enhanced": enhanced,
@@ -130,6 +138,13 @@ def get_analysis_results(game_id):
     basic = refresh_stats(db, game_id)
     enhanced = get_enhanced_stats(db, game_id)
 
+    # Wire possession inference after stats refresh
+    from helpers import assign_possessions_for_game
+    from stats import _resolve_relational_game_id
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+
     # Events summary
     events_summary = db.execute("""
         SELECT event_type, COUNT(*) as cnt
@@ -151,6 +166,22 @@ def get_analysis_results(game_id):
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
     })
+
+
+# ── API: Possessions ─────────────────────────────────────────
+
+@ai_bp.route("/api/possessions/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_possessions(game_id):
+    """Return possession summary for a game."""
+    from stats import get_possession_summary, _resolve_relational_game_id
+    from helpers import assign_possessions_for_game
+    db = get_db()
+    # Ensure possessions are assigned before returning summary
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+    return jsonify(get_possession_summary(db, game_id))
 
 
 # ── Page: Analysis Results ──────────────────────────────────
