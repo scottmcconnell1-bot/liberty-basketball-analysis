@@ -4,26 +4,25 @@
 
 | Role | Identity | Responsibility |
 |------|----------|----------------|
-| **Scott** | Human coach, project owner | Final decision on everything. Approves phase transitions, feature changes, and anything on the "Requires Scott's Approval" list. |
-| **Codex** | Project lead | Reads repo docs, proposes implementation plans, writes code, creates PRs, updates WORKLOG.md. Works autonomously within authority boundaries below. |
-| **OWL (Hermes)** | GitHub executor + independent auditor | Executes git operations, manages repo, runs commands on the local machine. Provides outside-the-loop review when Scott requests it. |
+| **Scott** | Human coach, project owner | Scope decisions, direction, phase transitions. Does NOT review code. |
+| **Alpha** | Navigator + Code Reviewer | Creates `[OWL ACTION]` issues with bounded scope, reviews Owl's code, adds approval label when satisfied. Does NOT write implementation code. |
+| **Owl (Hermes)** | Executor | Implements code, runs verification (pytest), posts Proven/Inferred/Unknown, pushes feature branches. Pushes to main only after Alpha's approval label. |
 
-## Codex Can Decide Autonomously
+## Alpha Can Decide Autonomously
 
-### Code & Implementation
-- File structure, function signatures, variable naming, error handling, code style
-- Implementation order within a task
-- Internal refactoring that doesn't change behavior
-- Bug fixes (typos, logic errors, crashes)
-- Adding pip packages (flag for Scott's awareness)
-- Test structure and test writing
+### Code Review & Approval
+- Review Owl's code on feature branches
+- Approve Owl's implementation (add approval label to issue)
+- Request changes if code doesn't meet quality bar
 
-### Documentation
-- WORKLOG.md updates, inline comments, docstrings
-- README updates (technical setup/usage)
+### Issue Creation
+- Create `[OWL ACTION]` issues with bounded scope
+- Define objective, context, files to modify, tests, verification steps
+- Mark out-of-scope items
 
-### Git (via OWL)
-- Branch naming, commit messages, when to commit
+### Reporting
+- Report findings to Scott (via Telegram or GitHub comment)
+- Flag blockers, ask Scott for scope decisions
 
 ## Requires Scott's Approval
 
@@ -41,37 +40,37 @@
 - Technology choices: New frameworks, libraries, patterns
 
 ### Process
-- Merging to main: Codex creates PRs, Scott merges
+- Merging to main (jason-5-may-updates)
 - Breaking changes: Anything that changes existing behavior
 - Deleting code or features
 
 ## The Workflow
 
 ```
-1. Codex reads VISION.md + ROADMAP.md + DECISIONS.md + AUDIT
-2. Codex proposes a task plan (what files, what changes, what the diff will look like)
-3. OWL posts the plan to Scott for approval (via Telegram)
-4. Scott approves, adjusts, or rejects
-5. Codex implements (writes code, creates branch, commits)
-6. OWL pushes branch, creates PR
-7. Scott reviews PR, requests changes or merges
-8. Codex updates WORKLOG.md
-9. Repeat
+1. Alpha reads VISION.md + ROADMAP.md + docs
+2. Alpha creates [OWL ACTION] issue with bounded scope
+3. Owl implements code, runs tests, pushes feature branch
+4. Owl posts Proven/Inferred/Unknown as comment on the issue
+5. Alpha reviews the code on the feature branch
+6. If satisfied, Alpha adds approval label to the issue
+7. Owl merges/pushes to jason-5-may-updates only after approval label
+8. Repeat
 ```
 
+## Label Definitions
+
+| Label | Who applies | Meaning |
+|-------|-------------|---------|
+| `OWL ACTION` | Alpha | Issue is ready for Owl to implement |
+| `OWL DONE` | Owl's poller (automated) | Owl's verification passed (Proven). Ready for Alpha to review. |
+| `OWL NEEDS` | Owl | Owl is blocked, needs Scott clarification |
+| `ALPHA APPROVED` | Alpha | Alpha has reviewed and approved. Owl may now merge/push to jason-5-may-updates. |
+
 ## Emergency Rules
-- **If Codex is unsure whether something needs approval → ASK. Don't guess.**
+- **If Alpha is unsure whether something needs Scott's approval → ASK. Don't guess.**
 - **If schema.sql needs to change → STOP. Get Scott's approval first.**
 - **If existing tests break → STOP. Fix or ask.**
 - **If a feature flag is False → Don't implement that feature yet.**
-
-## How Codex Communicates With OWL
-
-Codex and OWL coordinate through the GitHub repo:
-
-1. **Codex needs OWL to do something** → Create a GitHub issue with `[OWL ACTION]` prefix
-2. **OWL needs Codex to do something** → Create a GitHub issue with `[CODEX ACTION]` prefix or leave a PR review comment
-3. **OWL monitors the repo** and picks up issues, pushes branches, creates PRs, runs commands on the machine
 
 ## Repo Structure
 
@@ -79,46 +78,18 @@ Codex and OWL coordinate through the GitHub repo:
 liberty-basketball-analysis/
 ├── app.py                  # Flask app — registers blueprints
 ├── config.py               # Feature flags and app settings
-├── schema.sql              # Database schema — DO NOT change without approval
+├── schema.sql              # Database schema — DO NOT change without Scott approval
 ├── helpers.py              # DB connection, init, AI runtime helpers
-├── film_analysis.py        # Enhanced analysis (minutes, shots, play recognition)
 ├── stats.py                # Stats aggregation
-├── ai_analyzer.py          # YOLO detection on video frames
-├── event_generator.py      # Converts detections → events
-├── tracker_assigner.py     # Player tracking assignment
-├── season_management.py    # Seasons CRUD
-├── settings_store.py       # Runtime settings persistence
-├── nfhs.py                 # NFHS integration
-├── player_development.py   # Player development logic
-├── requirements.txt        # Python deps
-├── blueprints/             # Flask blueprints (11 modules)
-│   ├── ai.py               # Video upload, AI analysis
+├── blueprints/             # Flask blueprints
+│   ├── ai.py               # Video upload, AI analysis, possessions
 │   ├── clips.py            # Clips, events, players
 │   ├── core.py             # Index, schedule, videos, settings, dashboard
-│   ├── games.py            # Games, sources, scheduled games, NFHS
-│   ├── messaging.py        # Team messaging
-│   ├── playbook.py         # Playbook management
-│   ├── player_dev.py       # Player development clips, playlists
-│   ├── practice.py         # Practices, notes, plan items
-│   ├── scouting.py         # Scouting reports, opponent analysis
-│   ├── stats.py            # Seasons, stats
-│   ├── users.py            # User management
-│   └── bulk_import.py      # Bulk data import
-├── templates/              # HTML templates
-├── static/                 # CSS/JS
-├── tests/                  # 16 test files
-├── docs/                   # Project docs
-│   ├── AUDIT_2026-06-13.md      # OWL independent audit
-│   ├── CODEX_ONBOARDING.md       # Codex onboarding guide
-│   ├── CODEX_BRIEFING.md         # Comprehensive Codex briefing
-│   ├── VERIFIED_PROJECT_FACTS.md # Verified technical facts
-│   ├── DATASET_INVENTORY.md      # Dataset provenance
 │   └── ...
-├── experiments/            # Research/experiment scripts and data
-├── deploy/                 # Deployment scripts and configs
+├── tests/                  # Test files
+├── docs/                   # Project docs
 ├── VISION.md               # ← Start here
 ├── ROADMAP.md              # ← Then here
-├── DECISIONS.md            # ← Then here
 ├── AUTHORITY.md            # ← This file
 └── WORKLOG.md              # ← Update after every task
 ```
