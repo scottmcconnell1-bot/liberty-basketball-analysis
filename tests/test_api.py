@@ -1399,6 +1399,89 @@ def test_stats_excludes_zero_counts_for_stats_events(client, db):
     assert gabe["events"] == 1  # only made_two counts_for_stats=1
 
 
+# ── Four Factors ────────────────────────────────────────────────────
+
+def test_four_factors_endpoint_returns_all_keys(client):
+    """GET /api/four_factors/<game_id> returns JSON with all 4 keys."""
+    game_id = _create_game(client, "four-factors-game")
+    r = client.get(f"/api/four_factors/{game_id}")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert "efg_pct" in data
+    assert "tov_pct" in data
+    assert "orb_pct" in data
+    assert "ft_rate" in data
+
+
+def test_four_factors_returns_valid_percentages(client):
+    """Four Factors values must be in 0.0-1.0 range."""
+    game_id = _create_game(client, "four-factors-range-game")
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Alice",
+        "event_type": "made_two",
+        "shot_result": "made",
+        "timestamp_ms": 1000,
+        "human_verified": True,
+    })
+    post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "player": "Bob",
+        "event_type": "rebound_offensive",
+        "timestamp_ms": 2000,
+        "human_verified": True,
+    })
+    r = client.get(f"/api/four_factors/{game_id}")
+    data = r.get_json()
+    for key in ("efg_pct", "tov_pct", "orb_pct", "ft_rate"):
+        assert 0.0 <= data[key] <= 1.0, f"{key}={data[key]} out of range"
+
+
+def test_four_factors_zero_division_returns_zero(client):
+    """Four Factors with no events/shots returns 0.0 for all keys (no crash)."""
+    game_id = _create_game(client, "four-factors-empty-game")
+    r = client.get(f"/api/four_factors/{game_id}")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["efg_pct"] == 0.0
+    assert data["tov_pct"] == 0.0
+    assert data["orb_pct"] == 0.0
+    assert data["ft_rate"] == 0.0
+
+
+def test_four_factors_efg_calculation(client):
+    """eFG% = (FGM + 0.5 * 3PM) / FGA. 2 made 2pt + 1 made 3pt out of 3 FGA."""
+    game_id = _create_game(client, "four-factors-efg-game")
+    # 2 made 2pt attempts
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Alice",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": True,
+    })
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Alice",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 2000, "human_verified": True,
+    })
+    # 1 made 3pt
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Bob",
+        "event_type": "made_three", "shot_result": "made",
+        "timestamp_ms": 3000, "human_verified": True,
+    })
+    r = client.get(f"/api/four_factors/{game_id}")
+    data = r.get_json()
+    # FGM=3, 3PM=1, FGA=3 → eFG% = (3 + 0.5*1) / 3 = 3.5/3 = 1.1667
+    # eFG% can exceed 1.0 when 3PM is high; clamp not applied per spec
+    assert abs(data["efg_pct"] - round(3.5 / 3, 4)) < 0.001
+
+
+def test_four_factors_game_not_found(client):
+    """GET /api/four_factors/<bad_id> returns 404."""
+    r = client.get("/api/four_factors/99999")
+    assert r.status_code == 404
+
+
 def test_schedule_routes_hidden_when_feature_disabled(app, client):
     original = app.config["FEATURES"]["ENABLE_SEASONS_SCHEDULE"]
     app.config["FEATURES"]["ENABLE_SEASONS_SCHEDULE"] = False
@@ -1723,3 +1806,130 @@ def test_possession_summary_in_enhanced_stats(client, db):
     ps = enhanced["possession_summary"]
     assert "total_possessions" in ps
     assert "scoring_possessions" in ps
+
+
+def test_rejected_events_excluded_from_stats(client, db):
+    """Events with review_status='rejected' must not appear in stats output."""
+    game_id = _create_game(client, "rejected-stats")
+
+    # Create accepted event via save_event
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Alice",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": True,
+    })
+    # Mark accepted
+    db.execute("UPDATE events SET review_status='accepted' WHERE player='Alice'")
+
+    # Create rejected event via save_event
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Bob",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 2000, "human_verified": True,
+    })
+    # Mark rejected
+    db.execute("UPDATE events SET review_status='rejected' WHERE player='Bob'")
+    db.commit()
+
+    resp = client.get(f"/api/stats/{game_id}")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    basic = data["basic"]
+
+    # Only Alice (accepted) should count — Bob (rejected) should be excluded
+    alice = next((p for p in basic if p["player"] == "Alice"), None)
+    bob = next((p for p in basic if p["player"] == "Bob"), None)
+
+    assert alice is not None, "Alice (accepted) should be in stats"
+    assert alice["pts"] == 2, f"Alice should have 2 points, got {alice['pts']}"
+    assert bob is None, f"Bob (rejected) should NOT be in stats, but found: {bob}"
+
+
+def test_rejected_events_excluded_from_shot_breakdown(client, db):
+    """Shot classification from rejected events must not appear in shot_breakdown."""
+    game_id = _create_game(client, "rejected-shots")
+
+    # Create accepted event + shot classification
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Alice",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": True,
+    })
+    db.execute("UPDATE events SET review_status='accepted' WHERE player='Alice'")
+    db.commit()
+
+    event_id_accepted = db.execute(
+        "SELECT id FROM events WHERE player='Alice' ORDER BY id DESC LIMIT 1"
+    ).fetchone()[0]
+
+    db.execute(
+        """INSERT INTO shot_classifications (event_id, game_id, relational_game_id,
+                                             tracker_id, shot_type, shot_result, timestamp_ms)
+           VALUES (?, ?, ?, 1, '2pt', 'made', 1000)""",
+        (event_id_accepted, str(game_id), game_id),
+    )
+
+    # Create rejected event + shot classification
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Bob",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 2000, "human_verified": True,
+    })
+    db.execute("UPDATE events SET review_status='rejected' WHERE player='Bob'")
+    db.commit()
+
+    event_id_rejected = db.execute(
+        "SELECT id FROM events WHERE player='Bob' ORDER BY id DESC LIMIT 1"
+    ).fetchone()[0]
+
+    db.execute(
+        """INSERT INTO shot_classifications (event_id, game_id, relational_game_id,
+                                             tracker_id, shot_type, shot_result, timestamp_ms)
+           VALUES (?, ?, ?, 2, '2pt', 'made', 2000)""",
+        (event_id_rejected, str(game_id), game_id),
+    )
+    db.commit()
+
+    resp = client.get(f"/api/stats/{game_id}")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    enhanced = data["enhanced"]
+    shots = enhanced["shot_breakdown"]
+
+    # Only Alice's shot should count
+    alice_shots = [s for s in shots if s["tracker_id"] == 1]
+    bob_shots = [s for s in shots if s["tracker_id"] == 2]
+
+    assert len(alice_shots) > 0, "Alice (accepted) should appear in shot_breakdown"
+    assert len(bob_shots) == 0, f"Bob (rejected) should NOT appear in shot_breakdown, got {bob_shots}"
+
+
+def test_possession_summary_excludes_rejected_events(client, db):
+    """Turnover count in possession_summary must exclude rejected events."""
+    game_id = _create_game(client, "rejected-poss")
+
+    # Create accepted scoring event (not a turnover)
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Alice",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": True,
+    })
+    db.execute("UPDATE events SET review_status='accepted' WHERE player='Alice'")
+
+    # Create rejected turnover event
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Bob",
+        "event_type": "turnover",
+        "timestamp_ms": 2000, "human_verified": True,
+    })
+    db.execute("UPDATE events SET review_status='rejected' WHERE player='Bob'")
+    db.commit()
+
+    resp = client.get(f"/api/possessions/{game_id}")
+    assert resp.status_code == 200
+    data = resp.get_json()
+
+    # Only Alice's event gets a possession (rejected Bob is excluded)
+    # 1 possession total, 0 turnovers (Alice scored, not a turnover)
+    assert data["total_possessions"] == 1, f"Expected 1 possession, got {data['total_possessions']}"
+    assert data["turnover_rate"] == 0.0, f"Expected turnover_rate=0.0, got {data['turnover_rate']}"

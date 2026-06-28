@@ -1044,17 +1044,21 @@ def assign_possessions_for_game(db, game_id):
     the NEW possession.  Consecutive boundary events merge into the same
     possession.
 
+    Rejected events (review_status='rejected') are excluded from possession
+    assignment — coach-corrected events do not enter the possession stream.
+
     Safe to call multiple times: existing possession_id values on events are
     checked first; existing possessions linked to this game are reused rather
     than duplicated.  Event facts (event_type, event_type_id, player,
     shot_result, timestamp_ms, review status) are never modified.
     """
     # Collect events ordered by (timestamp_ms, id) — only those with a
-    # relational_game_id matching this game.
+    # relational_game_id matching this game and not rejected.
     events = db.execute(
         """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
              FROM events e
             WHERE e.relational_game_id = ?
+              AND e.review_status != 'rejected'
             ORDER BY e.timestamp_ms ASC, e.id ASC""",
         (game_id,),
     ).fetchall()

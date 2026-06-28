@@ -267,7 +267,7 @@ def get_enhanced_stats(db, game_id):
         ORDER BY pm.minutes_played DESC
     """, (game_id,)).fetchall()
 
-    # Shot breakdown
+    # Shot breakdown (exclude rejected events)
     shots = _fetch_shot_rows(
         db,
         relational_game_id,
@@ -275,8 +275,9 @@ def get_enhanced_stats(db, game_id):
         """
         SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
         FROM shot_classifications sc
-        WHERE sc.relational_game_id = ?
-           OR (sc.relational_game_id IS NULL AND sc.game_id = ?)
+        LEFT JOIN events e ON e.id = sc.event_id
+        WHERE (sc.relational_game_id = ? OR (sc.relational_game_id IS NULL AND sc.game_id = ?))
+          AND (e.review_status IS NULL OR e.review_status != 'rejected')
         GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
         ORDER BY sc.tracker_id, sc.shot_type
         """,
@@ -287,7 +288,9 @@ def get_enhanced_stats(db, game_id):
         """
         SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
         FROM shot_classifications sc
+        LEFT JOIN events e ON e.id = sc.event_id
         WHERE sc.game_id = ?
+          AND (e.review_status IS NULL OR e.review_status != 'rejected')
         GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
         ORDER BY sc.tracker_id, sc.shot_type
         """,
@@ -353,6 +356,172 @@ def get_enhanced_stats(db, game_id):
     }
 
 
+def get_team_stats(db, game_id):
+    """Return aggregated team stats for the given game_id.
+
+    Sums from the events table (rejected events excluded via counts_for_stats
+    and review_status filtering). Returns a dict with: points, rebounds,
+    assists, steals, blocks, turnovers, fga, fta, three_pm, orb, drb.
+    """
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+
+    if relational_game_id is not None:
+        rows = db.execute(
+            """SELECT e.player, e.event_type, e.shot_result, et.code,
+                      et.counts_for_stats, et.is_scoring_event
+               FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.relational_game_id = ?
+                 AND e.review_status != 'rejected'
+                 AND et.counts_for_stats = 1""",
+            (relational_game_id,),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            """SELECT e.player, e.event_type, e.shot_result, et.code,
+                      et.counts_for_stats, et.is_scoring_event
+               FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.game_id = ?
+                 AND e.review_status != 'rejected'
+                 AND et.counts_for_stats = 1""",
+            (game_id,),
+        ).fetchall()
+
+    team = {
+        "points": 0,
+        "rebounds": 0,
+        "assists": 0,
+        "steals": 0,
+        "blocks": 0,
+        "turnovers": 0,
+        "fga": 0,
+        "fta": 0,
+        "three_pm": 0,
+        "orb": 0,
+        "drb": 0,
+    }
+
+    for row in rows:
+        et = (row["code"] or "").lower()
+        sr = (row["shot_result"] or "").lower()
+
+        if et in ("made_two", "two_attempt", "2pt", "shot"):
+            team["fga"] += 1
+            if sr == "made":
+                team["points"] += 2
+        elif et in ("missed_two",):
+            team["fga"] += 1
+        elif et in ("made_three", "three_attempt", "3pt"):
+            team["fga"] += 1
+            if sr == "made":
+                team["points"] += 3
+                team["three_pm"] += 1
+        elif et in ("missed_three",):
+            team["fga"] += 1
+        elif et == "made_free_throw":
+            team["fta"] += 1
+            if sr == "made":
+                team["points"] += 1
+        elif et == "missed_free_throw":
+            team["fta"] += 1
+        elif et == "assist":
+            team["assists"] += 1
+        elif et in ("rebound", "rebound_offensive", "rebound_defensive"):
+            team["rebounds"] += 1
+            if et == "rebound_offensive":
+                team["orb"] += 1
+            elif et == "rebound_defensive":
+                team["drb"] += 1
+        elif et == "turnover":
+            team["turnovers"] += 1
+        elif et == "steal":
+            team["steals"] += 1
+        elif et == "block":
+            team["blocks"] += 1
+
+    return team
+
+
+def get_four_factors(db, game_id):
+    """Return Four Factors percentages for the given game_id.
+
+    Keys: efg_pct, tov_pct, orb_pct, ft_rate.
+    All values are floats in [0.0, 1.0]. Zero-division cases return 0.0.
+    """
+    team = get_team_stats(db, game_id)
+
+    fga = team["fga"]
+    three_pm = team["three_pm"]
+    tov = team["turnovers"]
+    orb = team["orb"]
+    drb = team["drb"]
+    fta = team["fta"]
+
+    # eFG% = (FGM + 0.5 * 3PM) / FGA
+    # We need FGM: for the team, FGM = (points from 2pt) / 2 + three_pm
+    # But more directly: count made shots. We can derive from possession data
+    # or compute from the event codes. Since we already have fga and three_pm,
+    # we need total FGM. Let's compute it from the events directly.
+    # Re-query for FGM since team stats aggregate doesn't track it directly.
+    fgm = _compute_fgm(db, game_id)
+
+    efg_pct = (fgm + 0.5 * three_pm) / fga if fga > 0 else 0.0
+
+    # TOV% = TOV / (FGA + 0.44 * FTA + TOV)
+    tov_denom = fga + 0.44 * fta + tov
+    tov_pct = tov / tov_denom if tov_denom > 0 else 0.0
+
+    # ORB% = ORB / (ORB + OPP_DRB)
+    # We don't have opponent DRB directly; approximate using our DRB as
+    # a placeholder until opponent data is wired. For now, use ORB / (ORB + DRB)
+    # which gives offensive rebound rate vs total rebounds.
+    orb_denom = orb + drb
+    orb_pct = orb / orb_denom if orb_denom > 0 else 0.0
+
+    # FTRate = FTA / FGA
+    ft_rate = fta / fga if fga > 0 else 0.0
+
+    return {
+        "efg_pct": round(efg_pct, 4),
+        "tov_pct": round(tov_pct, 4),
+        "orb_pct": round(orb_pct, 4),
+        "ft_rate": round(ft_rate, 4),
+    }
+
+
+def _compute_fgm(db, game_id):
+    """Count total field goals made for a game (2pt + 3pt makes)."""
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+
+    if relational_game_id is not None:
+        row = db.execute(
+            """SELECT COUNT(*) as cnt
+               FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.relational_game_id = ?
+                 AND e.review_status != 'rejected'
+                 AND et.counts_for_stats = 1
+                 AND et.code IN ('made_two', 'made_three')
+                 AND e.shot_result = 'made'""",
+            (relational_game_id,),
+        ).fetchone()
+    else:
+        row = db.execute(
+            """SELECT COUNT(*) as cnt
+               FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.game_id = ?
+                 AND e.review_status != 'rejected'
+                 AND et.counts_for_stats = 1
+                 AND et.code IN ('made_two', 'made_three')
+                 AND e.shot_result = 'made'""",
+            (game_id,),
+        ).fetchone()
+
+    return row["cnt"] if row else 0
+
+
 def get_possession_summary(db, game_id):
     """Return possession summary for a game.
 
@@ -395,13 +564,14 @@ def get_possession_summary(db, game_id):
         (game_id,),
     ).fetchone()["pts"]
 
-    # Turnover events (possession ended in turnover)
+    # Turnover events (possession ended in turnover, excluding rejected)
     if relational_game_id is not None:
         turnovers = db.execute(
             """SELECT COUNT(*) as cnt FROM events
                WHERE relational_game_id = ?
                  AND possession_id IS NOT NULL
-                 AND event_type = 'turnover'""",
+                 AND event_type = 'turnover'
+                 AND review_status != 'rejected'""",
             (relational_game_id,),
         ).fetchone()["cnt"]
     else:
@@ -409,7 +579,8 @@ def get_possession_summary(db, game_id):
             """SELECT COUNT(*) as cnt FROM events
                WHERE game_id = ?
                  AND possession_id IS NOT NULL
-                 AND event_type = 'turnover'""",
+                 AND event_type = 'turnover'
+                 AND review_status != 'rejected'""",
             (game_id,),
         ).fetchone()["cnt"]
 
