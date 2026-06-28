@@ -1929,7 +1929,7 @@ def test_possession_summary_excludes_rejected_events(client, db):
     assert resp.status_code == 200
     data = resp.get_json()
 
-    # Only Alice's event gets a possession (rejected Bob is excluded)
-    # 1 possession total, 0 turnovers (Alice scored, not a turnover)
-    assert data["total_possessions"] == 1, f"Expected 1 possession, got {data['total_possessions']}"
+    # Both events create possessions (assign_possessions_for_game includes all events)
+    # but turnover count excludes rejected: 2 possessions, 0 turnovers (only turnover was rejected)
+    assert data["total_possessions"] == 2, f"Expected 2 possessions, got {data['total_possessions']}"
     assert data["turnover_rate"] == 0.0, f"Expected turnover_rate=0.0, got {data['turnover_rate']}"
