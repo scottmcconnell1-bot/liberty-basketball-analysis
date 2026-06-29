@@ -638,7 +638,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     return events
 
 
-def persist_events(conn, game_id, events):
+def persist_events(conn, game_id, events, relational_game_id=None):
     conn.execute("DELETE FROM events WHERE game_id = ? AND human_verified = 0", (game_id,))
     if not events:
         conn.commit()
@@ -648,10 +648,11 @@ def persist_events(conn, game_id, events):
     for ev in events:
         cur.execute(
             """INSERT INTO events
-               (game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 ev["game_id"],
+                relational_game_id,
                 ev.get("player"),
                 ev["event_type"],
                 ev.get("shot_result"),
@@ -663,7 +664,7 @@ def persist_events(conn, game_id, events):
     conn.commit()
 
 
-def main(game_id, db_path):
+def main(game_id, db_path, relational_game_id=None):
     """
     Analyzes raw detection data to identify and store basketball events.
     """
@@ -713,9 +714,9 @@ def main(game_id, db_path):
             print(f"INFO: Built {len(segments)} possession segments for expanded generation.")
             events_to_persist = generate_expanded_events_from_segments(game_id, segments, ball_track)
             print(f"INFO: Expanded generator produced {len(events_to_persist)} events.")
-            persist_events(conn, game_id, events_to_persist)
+            persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)
         else:
-            persist_events(conn, game_id, [])
+            persist_events(conn, game_id, [], relational_game_id=relational_game_id)
 
         print("INFO: Successfully completed event generation pipeline.")
 

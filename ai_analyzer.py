@@ -313,15 +313,18 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         except Exception:
             pass
 
-        generate_events(game_id, db_path)
+        generate_events(game_id, db_path, relational_game_id=relational_game_id)
 
         # Assign possessions after events are generated
-        try:
-            from helpers import assign_possessions_for_game
-            assign_possessions_for_game(db, game_id)
-            print(f"[AI] Possessions assigned for {game_id}")
-        except Exception as e:
-            print(f"[AI] Possession assignment failed: {e}")
+        if relational_game_id:
+            try:
+                from helpers import assign_possessions_for_game
+                assign_possessions_for_game(db, relational_game_id)
+                print(f"[AI] Possessions assigned for game_id={relational_game_id}")
+            except Exception as e:
+                print(f"[AI] Possession assignment failed: {e}")
+        else:
+            print("[AI] Skipping possession assignment: no relational_game_id set")
 
         # Update progress: events done
         try:
