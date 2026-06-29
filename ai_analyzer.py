@@ -99,6 +99,22 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         frame_number = 0
         db = get_db()
 
+        # Ensure game row exists so relational_game_id resolves
+        try:
+            gid_int = int(game_id)
+            row = db.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+            if not row:
+                db.execute(
+                    "INSERT INTO games (id, source_type, source_key, created_at, updated_at) VALUES (?, 'analysis', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    (gid_int, str(game_id)),
+                )
+                db.commit()
+                print(f"[AI] Created games row id={gid_int}")
+            if relational_game_id is None:
+                relational_game_id = gid_int
+        except (TypeError, ValueError):
+            pass
+
         # Active tracks: dict of tracker_id -> (cx, cy, last_seen_frame)
         tracks = {}
         next_tracker_id = 1
@@ -366,11 +382,19 @@ if __name__ == '__main__':
         (game_id,)
     )
 
-    # Resolve relational game_id from games table
+    # Resolve relational game_id from games table (create if missing)
     try:
         gid_int = int(game_id)
         row = _conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
-        _relational_game_id = row[0] if row else None
+        if not row:
+            _conn.execute(
+                "INSERT INTO games (id, source_type, source_key, created_at, updated_at) VALUES (?, 'analysis', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                (gid_int, game_id),
+            )
+            _conn.commit()
+            _relational_game_id = gid_int
+        else:
+            _relational_game_id = row[0]
     except (TypeError, ValueError):
         _relational_game_id = None
 
