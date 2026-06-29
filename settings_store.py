@@ -8,6 +8,7 @@ AI_DEFAULTS = {
     "custom_ball_detector_model": "",
     "ball_class_id": 0,
     "ball_confidence": 0.25,
+    "person_confidence": 0.5,
     "event_generator_mode": "expanded",
     "inference_device": "auto",
     "frame_stride": 1,
@@ -30,6 +31,7 @@ INT_SETTING_KEYS = {
 
 FLOAT_SETTING_KEYS = {
     "ai.ball_confidence",
+    "ai.person_confidence",
 }
 
 

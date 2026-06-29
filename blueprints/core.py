@@ -1380,6 +1380,12 @@ def settings_page():
             ball_confidence = AI_DEFAULTS["ball_confidence"]
         updates["ai.ball_confidence"] = min(0.99, max(0.01, ball_confidence))
 
+        try:
+            person_confidence = float(request.form.get("ai_person_confidence", AI_DEFAULTS["person_confidence"]))
+        except ValueError:
+            person_confidence = AI_DEFAULTS["person_confidence"]
+        updates["ai.person_confidence"] = min(0.99, max(0.01, person_confidence))
+
         inference_device = (request.form.get("ai_inference_device") or AI_DEFAULTS["inference_device"]).strip()
         if inference_device not in device_values:
             inference_device = AI_DEFAULTS["inference_device"]

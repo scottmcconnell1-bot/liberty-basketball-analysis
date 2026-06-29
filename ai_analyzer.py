@@ -42,6 +42,14 @@ def ball_detector_settings(ai_settings):
     return resolve_ball_detector_model(ai_settings), class_id, max(0.01, min(confidence, 0.99))
 
 
+def person_detector_settings(ai_settings):
+    try:
+        confidence = float(ai_settings.get("person_confidence", AI_DEFAULTS["person_confidence"]))
+    except (TypeError, ValueError):
+        confidence = AI_DEFAULTS["person_confidence"]
+    return max(0.01, min(confidence, 0.99))
+
+
 def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
     """Run object detection + tracking on a video and save results to the database.
 
@@ -75,6 +83,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         ai_settings = runtime_settings["ai"]
         person_model_path = resolve_detector_model(ai_settings)
         ball_model_path, ball_class_id, ball_confidence = ball_detector_settings(ai_settings)
+        person_confidence = person_detector_settings(ai_settings)
         model = YOLO(person_model_path)
         ball_model = model if ball_model_path == person_model_path else YOLO(ball_model_path)
         inference_device = ai_settings["inference_device"]
@@ -94,7 +103,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         infer_size = 640
         scale_x = orig_w / infer_size
         scale_y = orig_h / infer_size
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px")
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px, person_conf={person_confidence}, ball_conf={ball_confidence}")
 
         frame_number = 0
         db = get_db()
@@ -116,7 +125,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
             if frame_number % detect_stride == 0:
-                results = model(frame, classes=[0], conf=0.9, verbose=False, imgsz=640)
+                results = model(frame, classes=[0], conf=person_confidence, verbose=False, imgsz=640)
                 for result in results:
                     for box in result.boxes:
                         class_id = int(box.cls[0])
