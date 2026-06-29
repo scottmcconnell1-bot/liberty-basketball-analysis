@@ -13,6 +13,7 @@ import sqlite3
 from flask import Blueprint, jsonify, request
 
 from helpers import get_db, require_feature
+from stats import get_four_factors
 
 stats_bp = Blueprint("stats", __name__)
 
@@ -84,3 +85,13 @@ def api_season_delete(season_id):
     db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
     db.commit()
     return jsonify({"deleted": True})
+
+
+@stats_bp.route("/api/four_factors/<int:game_id>")
+def api_four_factors(game_id):
+    db = get_db()
+    game = db.execute("SELECT id FROM games WHERE id=?", (game_id,)).fetchone()
+    if game is None:
+        return jsonify({"error": "not found"}), 404
+    result = get_four_factors(db, game_id)
+    return jsonify(result)
