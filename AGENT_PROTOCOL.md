@@ -152,6 +152,33 @@ Preferred return path:
 4. Posts a Proven / Inferred / Unknown report as a comment on the same issue.
 5. Adds the `OWL DONE` label only after successful completion.
 
+## ALPHA Continuation Contract
+
+ALPHA must use this section as the operational contract after OWL posts issue results.
+
+Trigger:
+
+- Any open `[OWL ACTION]` issue that now has an OWL comment with a final Proven / Inferred / Unknown report and the `OWL DONE` label
+
+Required ALPHA action on the next cycle:
+
+1. Read the issue body, OWL's latest report, and any linked repository evidence.
+2. Decide the next program move without waiting for Scott to relay that OWL is done.
+3. Perform exactly one of these actions:
+   - create the next `[OWL ACTION]` issue
+   - comment on the same issue with `[OWL FOLLOWUP]` and a narrower correction
+   - record ALPHA's approval/review decision if the issue was a review gate
+   - state a real blocker that requires Scott
+4. Leave repository evidence of the decision in GitHub, not only chat.
+
+Rules that prevent ALPHA idle drift:
+
+- ALPHA must not wait for Scott to copy an `OWL DONE` report that already exists on GitHub.
+- `OWL DONE` is a continuation trigger for ALPHA, not a resting state.
+- If the newest open `[OWL ACTION]` issue is `OWL DONE`, ALPHA must either advance the queue or explain the blocker the same cycle.
+- If ALPHA needs more OWL work, ALPHA must open the next bounded issue immediately instead of assuming OWL will infer the next slice.
+- If no blocker exists, ALPHA owns momentum.
+
 ## OWL Poller Contract
 
 OWL's poller must use this section as the operational contract.
@@ -223,6 +250,8 @@ When OWL successfully resolves the blocker:
 1. Comment with the final Proven / Inferred / Unknown report.
 2. Remove `OWL NEEDS` if present.
 3. Add `OWL DONE`.
+
+When OWL posts `OWL DONE`, ALPHA must treat that issue as actionable on the next poll/review cycle and continue without requiring a Scott relay.
 
 For large tasks that time out, do not keep retrying the same oversized issue body. Split the work into smaller `[OWL ACTION]` issues or ask ALPHA for a smaller follow-up using `OWL NEEDS`.
 
