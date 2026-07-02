@@ -1291,3 +1291,28 @@ Verification:
 Pending:
 - Push Stage 5A to jason-5-may-updates.
 - Hermes/OWL Linux verification for bounded Stage 5A.
+
+Stage 5B through Stage 5F Downstream game_id Cleanup - 2026-07-02
+------------------------------------------------------------------
+Repository history now shows the Stage 5 sequence advanced well beyond the earlier documentation checkpoint.
+
+Implemented in code:
+- Stage 5B at `6a8f9ab`: additive `relational_game_id` support for `player_development_clips`.
+- Stage 5C at `5fa69f4`: additive `relational_game_id` support for `shot_classifications`.
+- Stage 5D at `372e81c`: additive `relational_game_id` support for `play_recognitions`.
+- Stage 5E at `0b0ad40`: additive `relational_game_id` support for `player_effect`.
+- Stage 5F at `a923ee8`: additive `relational_game_id` support for `human_corrections`.
+
+Repo truth now visible in code:
+- `schema.sql` contains downstream `relational_game_id` columns for Stage 5A through 5F tables.
+- `helpers.py` contains the matching additive migration entries.
+- Focused tests exist in `tests/test_schema.py` for Stage 5B through 5F.
+- Focused API coverage verifies `human_corrections.relational_game_id` is recorded during review correction/rejection flows.
+
+Documentation gap discovered:
+- `docs/STAGE_INDEX.md`, `PROJECT_STATUS.md`, and `ROADMAP.md` were stale and still described Stage 5A as the active slice even though commits through Stage 5F were already present on the branch.
+
+Recommended next move:
+- Treat Stage 5A through Stage 5F as implemented in code.
+- Sync documentation and issue state before choosing the next bounded migration target.
+- Do not continue blindly into every remaining `TEXT game_id` table; explicitly scope the next post-Stage-5 slice because the remaining tables are broader core/data-ingest surfaces.
