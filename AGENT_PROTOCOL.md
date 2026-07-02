@@ -1,9 +1,9 @@
 # Agent Protocol
 
-Updated: 2026-06-24
+Updated: 2026-07-02
 Branch: jason-5-may-updates
 
-This file is the repository-level protocol for Codex, Hermes/OWL/Rex, and any other project agent. It exists so operating rules live in the repository instead of private agent memory.
+This file is the repository-level protocol for ALPHA, OWL, and any other project agent. It exists so operating rules live in the repository instead of private agent memory.
 
 ## Authority Order
 
@@ -126,50 +126,107 @@ Before creating corrective commits, agents must:
 
 If the local clone was stale, pull and re-check before proposing or creating a duplicate commit.
 
+## Agent Naming
+
+Use these names consistently in issues, comments, and handoffs:
+
+- `ALPHA` = navigator, reviewer, scope controller
+- `OWL` = executor, verifier, poller-driven worker
+
+Do not require older names such as Codex, Hermes, OWL/Hermes, or Rex for normal coordination.
+
+If older names appear in historical docs or issue text, interpret them as legacy aliases only:
+
+- `Codex` => `ALPHA`
+- `Hermes`, `OWL/Hermes`, `Rex` => `OWL`
+
 ## GitHub Handoff Fallback
 
-Codex may create GitHub issues titled `[OWL ACTION]` to request Hermes/OWL/Rex verification.
+ALPHA may create GitHub issues titled `[OWL ACTION]` to request OWL verification, audit work, or bounded implementation work.
 
 Preferred return path:
 
-1. Hermes/OWL/Rex reads the issue.
+1. OWL reads the issue.
 2. Runs Repository Truth Preflight.
 3. Verifies the issue checklist.
 4. Posts a Proven / Inferred / Unknown report as a comment on the same issue.
 5. Adds the `OWL DONE` label only after successful completion.
 
+## OWL Poller Contract
+
+OWL's poller must use this section as the operational contract.
+
+Watch target:
+
+- Repository: `scottmcconnell1-bot/liberty-basketball-analysis`
+- Branch: `origin/jason-5-may-updates`
+- Primary work queue: open GitHub issues labeled `OWL ACTION`
+
+Poll order on every cycle:
+
+1. Run Repository Truth Preflight locally.
+2. Fetch the current open GitHub issues labeled `OWL ACTION`.
+3. Sort those issues by issue number descending unless ALPHA explicitly pins a different issue in a newer `[OWL FOLLOWUP]` comment.
+4. For each candidate issue, read:
+   - the issue body
+   - the latest comments
+   - the latest `[OWL FOLLOWUP]` comment from ALPHA, if present
+5. Choose work using this priority:
+   - first: newest open `OWL ACTION` issue without `OWL DONE`
+   - second: any open `OWL ACTION` issue with `OWL NEEDS` that now has a newer `[OWL FOLLOWUP]` from ALPHA
+   - third: any still-open `OWL ACTION` issue not yet completed
+6. If no open `OWL ACTION` issues exist, remain idle but continue polling. Do not assume the program is finished.
+
+Rules that prevent idle drift:
+
+- OWL must not wait for chat if an open `OWL ACTION` issue already defines the next step.
+- OWL must not stop polling after posting `OWL NEEDS`.
+- After posting `OWL NEEDS`, OWL must keep polling the same issue and newer `OWL ACTION` issues for `[OWL FOLLOWUP]` from ALPHA.
+- If multiple open `OWL ACTION` issues exist, OWL must prefer the newest issue unless ALPHA explicitly says otherwise in issue comments.
+- OWL must not infer the next task from stale historical issues when a newer open `OWL ACTION` issue exists.
+
+Single source of truth for an OWL task:
+
+1. Scott's newest direct instruction
+2. The current open GitHub issue body
+3. The newest `[OWL FOLLOWUP]` comment from ALPHA on that same issue
+4. This `AGENT_PROTOCOL.md`
+5. Repository code/docs on `origin/jason-5-may-updates`
+
+If sources conflict, use the highest item in that list and report the conflict explicitly.
+
 ## GitHub Handoff State Labels
 
-GitHub labels are the machine-readable coordination state between Codex and Hermes/OWL/Rex.
+GitHub labels are the machine-readable coordination state between ALPHA and OWL.
 
-- `OWL ACTION`: Hermes/OWL/Rex has work to perform or verify.
-- `OWL DONE`: Hermes/OWL/Rex completed the task successfully; Codex may review the evidence and continue.
-- `OWL NEEDS`: Hermes/OWL/Rex is blocked and needs Codex input before it can continue.
+- `OWL ACTION`: OWL has work to perform or verify.
+- `OWL DONE`: OWL completed the task successfully; ALPHA may review the evidence and continue.
+- `OWL NEEDS`: OWL is blocked and needs ALPHA input before it can continue.
 
-Hermes/OWL/Rex must not use `OWL DONE` for partial work, failed verification, timeouts, unclear instructions, missing permissions, or missing runtime configuration.
+OWL must not use `OWL DONE` for partial work, failed verification, timeouts, unclear instructions, missing permissions, or missing runtime configuration.
 
-When Hermes/OWL/Rex needs Codex input:
+When OWL needs ALPHA input:
 
 1. Comment on the issue with a short Proven / Inferred / Unknown report.
 2. Ask the specific question or state the exact blocker.
 3. Add label `OWL NEEDS`.
 4. Do not add `OWL DONE`.
 
-When Codex responds to `OWL NEEDS`:
+When ALPHA responds to `OWL NEEDS`:
 
 1. Comment on the same issue with `[OWL FOLLOWUP]`.
-2. Include `Required next action for Hermes/OWL:` followed by the specific next step.
+2. Include `Required next action for OWL:` followed by the specific next step.
 3. Keep the response small enough for the poller to process without timing out.
 
-When Hermes/OWL/Rex successfully resolves the blocker:
+When OWL successfully resolves the blocker:
 
 1. Comment with the final Proven / Inferred / Unknown report.
 2. Remove `OWL NEEDS` if present.
 3. Add `OWL DONE`.
 
-For large tasks that time out, do not keep retrying the same oversized issue body. Split the work into smaller `[OWL ACTION]` issues or ask Codex for a smaller follow-up using `OWL NEEDS`.
+For large tasks that time out, do not keep retrying the same oversized issue body. Split the work into smaller `[OWL ACTION]` issues or ask ALPHA for a smaller follow-up using `OWL NEEDS`.
 
-If Hermes/OWL/Rex does not have GitHub issue-comment permission, do not fight the token or repeatedly retry failed comment commands.
+If OWL does not have GitHub issue-comment permission, do not fight the token or repeatedly retry failed comment commands.
 
 Use the repository fallback instead:
 
