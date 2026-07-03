@@ -47,6 +47,16 @@ def _resolve_relational_game_id(conn, game_id):
     return row["id"] if row else None
 
 
+def _detections_game_filter(game_id, relational_game_id, alias=None):
+    prefix = f"{alias}." if alias else ""
+    if relational_game_id is not None:
+        return (
+            f"({prefix}relational_game_id = ? OR ({prefix}relational_game_id IS NULL AND {prefix}game_id = ?))",
+            (relational_game_id, str(game_id)),
+        )
+    return f"{prefix}game_id = ?", (str(game_id),)
+
+
 # ── 1. Minutes Played ───────────────────────────────────────
 
 def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
@@ -63,17 +73,19 @@ def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
     print(f"[Minutes] Calculating minutes played for game {game_id}")
 
     effective_fps = fps / detect_stride
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
 
-    rows = conn.execute("""
+    rows = conn.execute(f"""
         SELECT player_cluster as cluster_id,
                MIN(frame_number) as first_frame,
                MAX(frame_number) as last_frame,
                COUNT(DISTINCT frame_number) as total_frames
         FROM detections
-        WHERE game_id = ? AND object_class = 'person' AND player_cluster >= 0
+        WHERE {game_filter_sql} AND object_class = 'person' AND player_cluster >= 0
         GROUP BY player_cluster
         ORDER BY total_frames DESC
-    """, (game_id,)).fetchall()
+    """, game_filter_params).fetchall()
 
     results = []
     for i, row in enumerate(rows):
@@ -126,6 +138,7 @@ def _estimate_basket_position(conn, game_id):
     Falls back to (0.5, 1.0, 0.50) if insufficient data.
     """
     relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
     if relational_game_id is not None:
         rows = conn.execute("""
             SELECT court_x, court_y
@@ -224,15 +237,15 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
         if peak_frame is not None and player_cluster is not None:
             # 1) Try to find the nearest detection for this cluster near the peak frame
             #    Use a wide window (±100 frames) to handle detection stride and interpolation offsets
-            det = conn.execute("""
+            det = conn.execute(f"""
                 SELECT x_center, y_center
                 FROM detections
-                WHERE game_id = ? AND object_class = 'person'
+                WHERE {game_filter_sql} AND object_class = 'person'
                   AND player_cluster = CAST(? AS INTEGER)
                   AND frame_number BETWEEN ? AND ?
                 ORDER BY ABS(frame_number - ?)
                 LIMIT 1
-            """, (game_id, player_cluster, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
+            """, game_filter_params + (player_cluster, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
 
             if det and det[0] is not None:
                 # Accept detections within valid frame bounds [0, video_dimension].
@@ -249,14 +262,14 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
 
             if court_x is None:
                 # 2) Fallback: use the ball position at/near peak_frame as proxy
-                ball = conn.execute("""
+                ball = conn.execute(f"""
                     SELECT x_center, y_center
                     FROM detections
-                    WHERE game_id = ? AND object_class = 'ball'
+                    WHERE {game_filter_sql} AND object_class = 'ball'
                       AND frame_number BETWEEN ? AND ?
                     ORDER BY ABS(frame_number - ?)
                     LIMIT 1
-                """, (game_id, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
+                """, game_filter_params + (peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
 
                 if ball and ball[0] is not None:
                     if 0 <= ball[0] <= video_width and 0 <= ball[1] <= video_height:
@@ -272,14 +285,14 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
             if court_x is None:
                 # 3) Final fallback: use nearest player detection for ANY cluster
                 #    within ±100 frames of peak_frame (best-effort court position)
-                any_det = conn.execute("""
+                any_det = conn.execute(f"""
                     SELECT x_center, y_center
                     FROM detections
-                    WHERE game_id = ? AND object_class = 'person'
+                    WHERE {game_filter_sql} AND object_class = 'person'
                       AND frame_number BETWEEN ? AND ?
                     ORDER BY ABS(frame_number - ?)
                     LIMIT 1
-                """, (game_id, peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
+                """, game_filter_params + (peak_frame - 100, peak_frame + 100, peak_frame)).fetchone()
 
                 if any_det and any_det[0] is not None:
                     if 0 <= any_det[0] <= video_width and 0 <= any_det[1] <= video_height:
@@ -353,12 +366,15 @@ def recognize_plays(conn, game_id):
     """
     print(f"[Plays] Recognizing plays for game_id={game_id}")
 
-    row = conn.execute("SELECT COUNT(*) FROM detections WHERE game_id = ?", (game_id,)).fetchone()
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
+    row = conn.execute(
+        f"SELECT COUNT(*) FROM detections WHERE {game_filter_sql}",
+        game_filter_params,
+    ).fetchone()
     if not row or row[0] < 100:
         print("[Plays] Not enough detections")
         return []
-
-    relational_game_id = _resolve_relational_game_id(conn, game_id)
 
     plays = []
     pnr_plays = _detect_pick_and_roll(conn, game_id)
@@ -393,6 +409,8 @@ def recognize_plays(conn, game_id):
 def _detect_pick_and_roll(conn, game_id):
     """Detect pick and roll plays using SQL queries."""
     plays = []
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
     events = conn.execute("""
         SELECT id, player, timestamp_ms, source_frame
         FROM events
@@ -415,12 +433,12 @@ def _detect_pick_and_roll(conn, game_id):
             else:
                 continue
 
-        window = conn.execute("""
+        window = conn.execute(f"""
             SELECT x_center, y_center
             FROM detections
-            WHERE game_id = ? AND object_class = 'person'
+            WHERE {game_filter_sql} AND object_class = 'person'
               AND frame_number BETWEEN ? AND ?
-        """, (game_id, max(0, frame - 30), frame + 30)).fetchall()
+        """, game_filter_params + (max(0, frame - 30), frame + 30)).fetchall()
 
         if len(window) < 4:
             continue
@@ -450,12 +468,14 @@ def _detect_pick_and_roll(conn, game_id):
 def _detect_transitions(conn, game_id):
     """Detect transition/fast break plays using SQL."""
     plays = []
-    ball_rows = conn.execute("""
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
+    ball_rows = conn.execute(f"""
         SELECT frame_number, x_center, y_center, timestamp_ms
         FROM detections
-        WHERE game_id = ? AND object_class = 'ball'
+        WHERE {game_filter_sql} AND object_class = 'ball'
         ORDER BY frame_number
-    """, (game_id,)).fetchall()
+    """, game_filter_params).fetchall()
 
     if len(ball_rows) < 10:
         return plays
@@ -512,12 +532,14 @@ def _detect_transitions(conn, game_id):
 def _detect_isolation(conn, game_id):
     """Detect isolation plays using SQL."""
     plays = []
-    ball_frames = conn.execute("""
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
+    ball_frames = conn.execute(f"""
         SELECT DISTINCT frame_number
         FROM detections
-        WHERE game_id = ? AND object_class = 'ball'
+        WHERE {game_filter_sql} AND object_class = 'ball'
         ORDER BY frame_number
-    """, (game_id,)).fetchall()
+    """, game_filter_params).fetchall()
 
     if not ball_frames:
         return plays
@@ -525,11 +547,11 @@ def _detect_isolation(conn, game_id):
     sampled = [r["frame_number"] for i, r in enumerate(ball_frames) if i % 15 == 0]
 
     for frame in sampled:
-        persons = conn.execute("""
+        persons = conn.execute(f"""
             SELECT x_center, y_center
             FROM detections
-            WHERE game_id = ? AND object_class = 'person' AND frame_number = ?
-        """, (game_id, frame)).fetchall()
+            WHERE {game_filter_sql} AND object_class = 'person' AND frame_number = ?
+        """, game_filter_params + (frame,)).fetchall()
 
         if len(persons) < 4:
             continue
@@ -555,12 +577,12 @@ def _detect_isolation(conn, game_id):
         # Isolation: players spread out in both directions (high spread = isolation setup)
         # Using high thresholds since normalized std dev is typically 0.1-0.3 for normal play
         if x_std > 0.45 and y_std > 0.35:
-            ball = conn.execute("""
+            ball = conn.execute(f"""
                 SELECT x_center, y_center, timestamp_ms
                 FROM detections
-                WHERE game_id = ? AND object_class = 'ball' AND frame_number = ?
+                WHERE {game_filter_sql} AND object_class = 'ball' AND frame_number = ?
                 LIMIT 1
-            """, (game_id, frame)).fetchone()
+            """, game_filter_params + (frame,)).fetchone()
 
             if ball and ball["x_center"] is not None:
                 plays.append({
@@ -579,28 +601,34 @@ def _detect_isolation(conn, game_id):
 def _detect_post_up(conn, game_id):
     """Detect post-up plays using SQL."""
     plays = []
+    relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
 
-    post_players = conn.execute("""
+    post_players = conn.execute(f"""
         SELECT player_cluster,
                MIN(frame_number) as min_frame,
                MAX(frame_number) as max_frame,
                COUNT(*) as frame_count,
                MIN(timestamp_ms) as min_ts
         FROM detections
-        WHERE game_id = ? AND object_class = 'person'
+        WHERE {game_filter_sql} AND object_class = 'person'
           AND player_cluster >= 0
-          AND y_center > (SELECT MAX(y_center) * 0.85 FROM detections WHERE game_id = ? AND object_class = 'person' AND y_center IS NOT NULL)
+          AND y_center > (
+                SELECT MAX(y_center) * 0.85
+                FROM detections
+                WHERE {game_filter_sql} AND object_class = 'person' AND y_center IS NOT NULL
+          )
         GROUP BY player_cluster
         HAVING COUNT(*) >= 30
-    """, (game_id, game_id)).fetchall()
+    """, game_filter_params + game_filter_params).fetchall()
 
     for pp in post_players:
-        ball_nearby = conn.execute("""
+        ball_nearby = conn.execute(f"""
             SELECT COUNT(*) as cnt
             FROM detections
-            WHERE game_id = ? AND object_class = 'ball'
+            WHERE {game_filter_sql} AND object_class = 'ball'
               AND frame_number BETWEEN ? AND ?
-        """, (game_id, pp["min_frame"], pp["max_frame"])).fetchone()
+        """, game_filter_params + (pp["min_frame"], pp["max_frame"])).fetchone()
 
         if ball_nearby and ball_nearby["cnt"] > 0:
             plays.append({

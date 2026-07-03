@@ -1027,6 +1027,33 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
+def test_analysis_status_counts_detections_via_relational_game_id(client, db):
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", "analysis-relational"),
+    )
+    relational_game_id = game_row.lastrowid
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (relational_game_id, "analysis_relational", "uploads/demo-relational.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy_analysis_relational", relational_game_id, 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_status/analysis_relational")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["status"] == "completed"
+    assert payload["detection_count"] == 1
+    assert payload["event_count"] == 0
+
+
 def test_settings_page_renders(client, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.get("/settings")

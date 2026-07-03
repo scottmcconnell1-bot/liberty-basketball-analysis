@@ -17,11 +17,20 @@ def get_db_connection(db_path):
     return conn
 
 
-def get_detections(conn, game_id):
+def get_detections(conn, game_id, relational_game_id=None):
     """Retrieves all detections for a given game_id from the database and normalizes columns."""
     print(f"INFO: Reading detections for game_id: {game_id}")
-    query = "SELECT * FROM detections WHERE game_id = ?"
-    df = pd.read_sql_query(query, conn, params=(game_id,))
+    if relational_game_id is not None:
+        query = """
+            SELECT * FROM detections
+            WHERE relational_game_id = ?
+               OR (relational_game_id IS NULL AND game_id = ?)
+        """
+        params = (relational_game_id, game_id)
+    else:
+        query = "SELECT * FROM detections WHERE game_id = ?"
+        params = (game_id,)
+    df = pd.read_sql_query(query, conn, params=params)
     print(f"INFO: Found {len(df)} detections in the database.")
 
     # Normalize column names and values for downstream processing
@@ -680,7 +689,7 @@ def main(game_id, db_path, relational_game_id=None):
             db=conn,
         )
         ai_settings = runtime_settings["ai"]
-        detections_df = get_detections(conn, game_id)
+        detections_df = get_detections(conn, game_id, relational_game_id=relational_game_id)
 
         if detections_df.empty:
             print("INFO: No detections found for this game. Exiting.")
