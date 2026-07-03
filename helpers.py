@@ -1312,10 +1312,11 @@ def _backfill_review_workflow_stage3a(db):
     )
     db.execute(
         """INSERT OR IGNORE INTO review_items
-              (entity_type, entity_id, game_id, review_status, priority, reason)
+              (entity_type, entity_id, game_id, relational_game_id, review_status, priority, reason)
            SELECT 'event',
                   id,
                   game_id,
+                  relational_game_id,
                   review_status,
                   'normal',
                   'Event needs coach review'
@@ -1331,6 +1332,11 @@ def _backfill_review_workflow_stage3a(db):
                   ),
                   game_id = (
                       SELECT e.game_id FROM events e
+                       WHERE e.id = review_items.entity_id
+                         AND review_items.entity_type = 'event'
+                  ),
+                  relational_game_id = (
+                      SELECT e.relational_game_id FROM events e
                        WHERE e.id = review_items.entity_id
                          AND review_items.entity_type = 'event'
                   ),
@@ -1746,6 +1752,7 @@ def _ensure_migration_columns(db):
         ("detections", "relational_game_id", "ALTER TABLE detections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("videos", "relational_game_id", "ALTER TABLE videos ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("human_corrections", "relational_game_id", "ALTER TABLE human_corrections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
+        ("review_items", "relational_game_id", "ALTER TABLE review_items ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),

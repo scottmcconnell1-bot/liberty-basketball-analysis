@@ -181,9 +181,9 @@ def save_event():
         if review_status == "pending":
             db.execute(
                 """INSERT OR IGNORE INTO review_items
-                      (entity_type, entity_id, game_id, review_status, reason)
-                   VALUES ('event', ?, ?, 'pending', 'Event needs coach review')""",
-                (cur.lastrowid, game_id),
+                      (entity_type, entity_id, game_id, relational_game_id, review_status, reason)
+                   VALUES ('event', ?, ?, ?, 'pending', 'Event needs coach review')""",
+                (cur.lastrowid, game_id, relational_game_id),
             )
 
         # ── Stage 4B: write primary event_participants row ────

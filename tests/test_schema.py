@@ -81,7 +81,7 @@ EXPECTED_COLUMNS = {
                            "source_path", "source_frame", "source_timestamp_ms",
                            "model_name", "model_version", "confidence", "created_by_user_id",
                            "created_at", "details_json"],
-    "review_items": ["id", "entity_type", "entity_id", "game_id", "review_status",
+    "review_items": ["id", "entity_type", "entity_id", "game_id", "relational_game_id", "review_status",
                      "priority", "reason", "assigned_to_user_id", "reviewed_by_user_id",
                      "reviewed_at", "notes", "created_at", "updated_at"],
     "module_entitlements": ["id", "team_id", "module_key", "enabled", "starts_at",

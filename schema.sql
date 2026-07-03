@@ -344,6 +344,7 @@ CREATE TABLE IF NOT EXISTS review_items (
     entity_type         TEXT NOT NULL,
     entity_id           INTEGER NOT NULL,
     game_id             TEXT,
+    relational_game_id  INTEGER REFERENCES games(id),
     review_status       TEXT NOT NULL DEFAULT 'pending',
     priority            TEXT NOT NULL DEFAULT 'normal',
     reason              TEXT,
