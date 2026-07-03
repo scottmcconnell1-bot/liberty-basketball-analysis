@@ -24,6 +24,7 @@
 - Report findings to Scott (via Telegram or GitHub comment)
 - Flag blockers, ask Scott for scope decisions
 - Continue automatically when Owl marks an open `[OWL ACTION]` issue `OWL DONE`; do not wait for Scott to relay issue comments back into chat
+- Treat the latest actionable GitHub comment as more authoritative than labels alone when issue state is contradictory
 
 ## Requires Scott's Approval
 
@@ -63,6 +64,18 @@
 9. Repeat
 ```
 
+## Communication Contract
+
+- A label by itself is not a valid handoff.
+- Owl completion requires a visible GitHub comment with:
+  - Proven / Inferred / Unknown
+  - files changed
+  - exact tests run and results
+  - commit hash if pushed, or explicit `Not pushed yet`
+- Owl blocker state requires a visible GitHub comment with the exact blocker and the exact next action needed from Alpha.
+- Alpha should ignore stale or contradictory labels until the comment evidence is clear.
+- Local-only chat claims do not count as repository truth until reflected in GitHub comments or the pushed branch.
+
 ## Label Definitions
 
 | Label | Who applies | Meaning |
@@ -77,6 +90,7 @@
 - `OWL DONE` is not an endpoint. It is a trigger for Alpha to act.
 - If Owl completed the newest open `[OWL ACTION]` issue, Alpha must leave a GitHub-visible next step before going idle.
 - If no blocker exists, Scott should not need to forward issue comments between agents.
+- If labels and comments disagree, Alpha and Owl must resolve the mismatch instead of silently proceeding.
 
 ## Emergency Rules
 - **If Alpha is unsure whether something needs Scott's approval → ASK. Don't guess.**
