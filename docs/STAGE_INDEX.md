@@ -52,4 +52,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 5F is implemented in code at commit `a923ee8`. The next gate should be to document/verify the completed Stage 5B-5F sequence and explicitly choose the next bounded post-Stage-5 slice rather than continuing blind across every remaining `TEXT game_id` table.
+Stage 5F is implemented in code at commit `a923ee8`. The post-Stage-5 `review_items` cleanup is implemented through commits `15cecb2` and `5412a54`, and the bounded `detections` relational query-path cleanup is implemented at commit `8c6c83f`. The next gate should be a fresh bounded audit/correction slice for `videos`-linked relational game identity rather than continuing blind across every remaining `TEXT game_id` table.

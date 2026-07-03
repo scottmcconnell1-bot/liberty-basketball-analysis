@@ -126,10 +126,13 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Stage 5D Relational game_id cleanup for `play_recognitions` is implemented at commit `372e81c`.
 - Stage 5E Relational game_id cleanup for `player_effect` is implemented at commit `0b0ad40`.
 - Stage 5F Relational game_id cleanup for `human_corrections` is implemented at commit `a923ee8`.
+- Post-Stage-5 `review_items` relational game identity cleanup is implemented through commits `15cecb2` and `5412a54`.
+- Post-Stage-5 `detections` relational query-path cleanup is implemented at commit `8c6c83f`.
 - schema.sql now defines additive downstream `relational_game_id` columns for `stats`, `player_minutes`, `player_development_clips`, `shot_classifications`, `play_recognitions`, `player_effect`, and `human_corrections`.
 - helpers.py now contains additive migration entries for those Stage 5A-5F downstream tables.
 - tests/test_schema.py contains focused Stage 5B-5F schema/idempotency coverage.
 - tests/test_api.py verifies review-correction writes preserve `human_corrections.relational_game_id`.
+- tests/test_api.py now also verifies `analysis_status` counts detections through `relational_game_id`, and the bounded detections cleanup suite passed with `47 passed` in `tests/test_api.py` plus `47 passed` in `tests/test_schema.py`.
 
 ## Inferred
 
@@ -162,8 +165,7 @@ These need further evidence.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
-- Whether the completed Stage 5B-5F sequence has been fully re-documented and cleanly closed out in GitHub issues with no stale labels/comments.
-- Which remaining `TEXT game_id` surface should become the next explicitly bounded slice after Stage 5F.
+- Whether the next bounded post-detections slice should be `videos` only or a narrower audit around video-linked analysis identity.
 
 ## Current Risks
 
@@ -176,4 +178,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code. The next recommendation is to sync documentation and issue state to the code truth, then choose the next bounded non-Stage-5 `game_id` migration target deliberately instead of continuing a broad table-by-table sweep without a fresh scope decision.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items` and `detections` cleanup slices are now complete. The next recommendation is a fresh bounded audit/correction slice for `videos`-linked relational game identity, not a broad sweep across every remaining `TEXT game_id` table.

@@ -1316,3 +1316,23 @@ Recommended next move:
 - Treat Stage 5A through Stage 5F as implemented in code.
 - Sync documentation and issue state before choosing the next bounded migration target.
 - Do not continue blindly into every remaining `TEXT game_id` table; explicitly scope the next post-Stage-5 slice because the remaining tables are broader core/data-ingest surfaces.
+
+Detections relational query-path cleanup - 2026-07-03
+-----------------------------------------------------
+ALPHA took over the bounded post-Stage-5 detections slice directly because OWL was not executing reliably.
+
+Implemented in code:
+- Commit `8c6c83f` updates `blueprints/ai.py`, `blueprints/core.py`, `event_generator.py`, and `film_analysis.py` so active detections count/query/delete/read paths prefer `relational_game_id` while preserving legacy `game_id` fallback where needed.
+- `tests/test_api.py` adds focused regression coverage proving `/api/analysis_status/<analysis_key>` counts detections through `analysis_runs.game_id` -> `detections.relational_game_id`.
+
+Verification:
+- `python -m pytest tests/test_api.py -q` -> 47 passed
+- `python -m pytest tests/test_schema.py -q` -> 47 passed
+- `python -m py_compile blueprints/ai.py blueprints/core.py event_generator.py film_analysis.py tests/test_api.py` -> passed
+
+Issue state:
+- GitHub issue `#64` was completed, commented with evidence, and closed by ALPHA.
+
+Recommended next move:
+- Treat the bounded detections slice as complete.
+- Choose `videos`-linked relational game identity as the next bounded audit/correction candidate.
