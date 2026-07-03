@@ -1275,6 +1275,42 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
 
 # ── Stats ─────────────────────────────────────────────────────────────
 
+def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch):
+    import blueprints.ai as ai_module
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'video-rel-game')")
+    relational_game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='video-rel-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("sample.mp4", "sample_3.mp4", "uploads/sample_3.mp4", 123, "Test Opponent", "base_game", relational_game_id),
+    )
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
+        ("base_game", "uploads/sample_3.mp4", "completed"),
+    )
+    db.commit()
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+
+    r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
+    assert r.status_code == 200
+
+    rows = db.execute(
+        "SELECT game_id, analysis_key, source_video_id, run_kind FROM analysis_runs ORDER BY id"
+    ).fetchall()
+    assert len(rows) == 2
+    assert rows[0]["game_id"] == relational_game_id
+    assert rows[0]["source_video_id"] == 1
+    assert rows[1]["game_id"] == relational_game_id
+    assert rows[1]["source_video_id"] == 1
+    assert rows[1]["run_kind"] == "rerun"
+
+
 def test_stats_empty_game(client):
     r = client.get("/api/stats/no_such_game")
     assert r.status_code == 200

@@ -658,6 +658,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
 
     for index, run in enumerate(existing):
         updates = {
+            "game_id": video_row["relational_game_id"],
             "source_video_id": video_row["id"],
             "base_game_id": video_row["game_id"],
             "base_analysis_key": video_row["game_id"],
@@ -668,6 +669,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
             updates["settings_json"] = json.dumps(settings_snapshot)
         db.execute(
             """UPDATE analysis_runs SET
+               game_id=COALESCE(game_id, :game_id),
                source_video_id=COALESCE(source_video_id, :source_video_id),
                base_game_id=COALESCE(base_game_id, :base_game_id),
                base_analysis_key=COALESCE(base_analysis_key, :base_analysis_key),
@@ -677,6 +679,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
                WHERE id=:id""",
             {
                 "id": run["id"],
+                "game_id": updates["game_id"],
                 "source_video_id": updates["source_video_id"],
                 "base_game_id": updates["base_game_id"],
                 "base_analysis_key": updates["base_analysis_key"],
@@ -697,7 +700,7 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
            (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status)
            VALUES (?,?,?,?,?,?,?,?,?,?)""",
         (
-            None,
+            video_row["relational_game_id"],
             analysis_key,
             video_row["file_path"],
             video_row["id"],
