@@ -329,6 +329,35 @@ def test_stage2_backfills_players_videos_and_sources(app, db):
     }
 
 
+def test_stage2_video_assets_backfill_prefers_videos_relational_game_id(app, db):
+    db.execute(
+        """INSERT INTO games (source_type, source_key)
+           VALUES ('manual', 'stage2-video-rel-game')"""
+    )
+    game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='stage2-video-rel-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("rel.mp4", "rel_stored.mp4", "/tmp/rel_stored.mp4", 321, "analysis-key-rel", game_id),
+    )
+    db.commit()
+
+    with app.app_context():
+        import app as app_module
+
+        app_module.init_db()
+
+    uploaded_asset = db.execute(
+        """SELECT * FROM video_assets
+           WHERE stored_filename='rel_stored.mp4' AND source_type='uploaded_video'"""
+    ).fetchone()
+    assert uploaded_asset is not None
+    assert uploaded_asset["game_id"] == game_id
+
+
 def test_stage3a_review_workflow_tables(db):
     cols = get_columns(db, "review_items")
     for col in EXPECTED_COLUMNS["review_items"]:

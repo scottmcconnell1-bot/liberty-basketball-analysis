@@ -1201,7 +1201,7 @@ def _backfill_video_assets_from_videos(db):
         return
     rows = db.execute(
         """SELECT id, original_filename, stored_filename, file_path,
-                  file_size_bytes, game_id
+                  file_size_bytes, game_id, relational_game_id
              FROM videos"""
     ).fetchall()
     for row in rows:
@@ -1211,7 +1211,7 @@ def _backfill_video_assets_from_videos(db):
         ).fetchone()
         if existing:
             continue
-        game_id = _game_id_if_relational(db, row["game_id"])
+        game_id = row["relational_game_id"] or _game_id_if_relational(db, row["game_id"])
         cur = db.execute(
             """INSERT INTO video_assets
                   (game_id, original_filename, stored_filename, file_path,
