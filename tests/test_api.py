@@ -534,6 +534,27 @@ def test_review_event_reject_preserves_event_and_records_correction(client, db):
     assert correction["corrected_value"] == "rejected"
 
 
+def test_sync_event_review_item_sets_relational_game_id(client, db):
+    game_id = _create_game(client, "sync-relational-game")
+    # create an event with human_verified=False so it goes to review
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "assist",
+        "timestamp_ms": 1000,
+        "human_verified": False,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    # trigger sync via accept
+    resp = post_json(client, f"/api/review/events/{eid}/accept", {"notes": "test"})
+    assert resp.status_code == 200
+    row = db.execute(
+        "SELECT relational_game_id FROM review_items WHERE entity_id=? AND entity_type='event'",
+        (eid,),
+    ).fetchone()
+    assert row is not None
+    assert row["relational_game_id"] == game_id
+    # ── Stage 4B: save_event relational wiring ────────────────────────────
 # ── Stage 4B: save_event relational wiring ────────────────────────────
 
 def test_save_event_writes_relational_game_id(client, db):

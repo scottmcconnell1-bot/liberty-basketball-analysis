@@ -360,16 +360,16 @@ def _record_human_correction(db, row, correction_type, field_changed,
         ),
     )
 
-
 def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
-    row = db.execute("SELECT id, game_id FROM events WHERE id=?", (event_id,)).fetchone()
+    row = db.execute("SELECT id, game_id, relational_game_id FROM events WHERE id=?",
+                     (event_id,)).fetchone()
     if not row:
         return
     db.execute(
         """INSERT OR IGNORE INTO review_items
-              (entity_type, entity_id, game_id, review_status, reason)
-           VALUES ('event', ?, ?, ?, 'Event needs coach review')""",
-        (event_id, row["game_id"], status),
+              (entity_type, entity_id, game_id, relational_game_id, review_status, reason)
+           VALUES ('event', ?, ?, ?, ?, 'Event needs coach review')""",
+        (event_id, row["game_id"], row["relational_game_id"], status),
     )
     db.execute(
         """UPDATE review_items
