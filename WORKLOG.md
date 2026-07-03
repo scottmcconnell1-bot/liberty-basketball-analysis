@@ -1336,3 +1336,23 @@ Issue state:
 Recommended next move:
 - Treat the bounded detections slice as complete.
 - Choose `videos`-linked relational game identity as the next bounded audit/correction candidate.
+
+Videos linked relational game carry-forward - 2026-07-03
+--------------------------------------------------------
+ALPHA continued directly into the next two bounded video-linked slices.
+
+Implemented in code:
+- Commit `ceaf475` carries `videos.relational_game_id` into linked `analysis_runs.game_id` and backfills that identity onto legacy linked runs via `ensure_primary_run_metadata()`.
+- Commit `cb106e5` carries `videos.relational_game_id` into `video_assets.game_id` during Stage 2 uploaded-video backfill instead of relying only on `videos.game_id` text parsing.
+
+Verification:
+- `python -m pytest tests/test_api.py -k "rerun_video_analysis or compare_video_analysis or analysis_status" -q` -> 5 passed
+- `python -m pytest tests/test_api.py -q` -> 103 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+- `python -m py_compile helpers.py tests/test_api.py tests/test_schema.py` -> passed
+
+Issue state:
+- GitHub issue `#65` was completed, commented with evidence, and closed by ALPHA.
+
+Recommended next move:
+- Audit `/api/videos` latest-run identity/status behavior as the next bounded slice.
