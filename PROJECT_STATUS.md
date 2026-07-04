@@ -132,11 +132,14 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Post-Stage-5 `videos` -> `video_assets` relational game carry-forward is implemented at commit `cb106e5`.
 - Post-Stage-5 `/api/videos` latest-linked-run alignment is implemented at commit `6900763`.
 - Post-Stage-5 `/videos/<id>/compare` per-run count isolation is implemented at commit `954fe91`.
+- Post-Stage-5 event read-path relational alignment is implemented at commit `d1a1b2c`.
 - schema.sql now defines additive downstream `relational_game_id` columns for `stats`, `player_minutes`, `player_development_clips`, `shot_classifications`, `play_recognitions`, `player_effect`, and `human_corrections`.
 - helpers.py now contains additive migration entries for those Stage 5A-5F downstream tables.
 - tests/test_schema.py contains focused Stage 5B-5F schema/idempotency coverage.
 - tests/test_api.py verifies review-correction writes preserve `human_corrections.relational_game_id`.
 - tests/test_api.py now also verifies `analysis_status` counts detections through `relational_game_id`, and the bounded detections cleanup suite passed with `47 passed` in `tests/test_api.py` plus `47 passed` in `tests/test_schema.py`.
+- `blueprints/clips.py` and `blueprints/ai.py` now prefer `events.relational_game_id` on active read paths while preserving fallback to legacy `events.game_id` rows.
+- `tests/test_api.py` now verifies `/api/events/<game_id>`, `/api/analysis_status/<analysis_key>`, and `/api/analysis/<analysis_key>` all surface relationally linked events correctly.
 
 ## Inferred
 
@@ -182,4 +185,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, and compare-run alignment slices are now complete. The next recommendation is a fresh bounded audit from repo truth for the next smallest remaining identity seam rather than a broad sweep across every remaining `TEXT game_id` table.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, compare-run alignment, and event read-path alignment slices are now complete. The next recommendation is a bounded event lifecycle cleanup focused on legacy `DELETE/replace` paths that still key generated events by TEXT analysis key in `event_generator.py` and `blueprints/ai.py`.

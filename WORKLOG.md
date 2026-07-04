@@ -1341,6 +1341,23 @@ Videos linked relational game carry-forward - 2026-07-03
 --------------------------------------------------------
 ALPHA continued directly into the next two bounded video-linked slices.
 
+Event read-path relational alignment - 2026-07-03
+-------------------------------------------------
+ALPHA continued directly with the next bounded event-identity slice after the video-linked seams were stabilized.
+
+Implemented in code:
+- Commit `d1a1b2c` updates `blueprints/clips.py` so `/api/events/<game_id>` prefers `events.relational_game_id` and falls back to legacy `events.game_id` rows.
+- The same commit updates `blueprints/ai.py` so `/api/analysis_status/<analysis_key>` and `/api/analysis_progress/<analysis_key>` count events through `analysis_runs.game_id` when available, and `/api/analysis/<analysis_key>` resolves the linked relational game id before building event summaries/timelines.
+- `blueprints/ai.py` now uses a shared `_resolve_analysis_relational_game_id()` helper so analysis routes treat analysis keys and canonical game keys consistently.
+
+Verification:
+- `python -m pytest tests/test_api.py -q` -> 107 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+
+Recommended next move:
+- Treat the bounded event read-path slice as complete.
+- Target the next bounded seam at event lifecycle cleanup: align legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py` to canonical relational game identity while preserving fallback for older rows.
+
 Implemented in code:
 - Commit `ceaf475` carries `videos.relational_game_id` into linked `analysis_runs.game_id` and backfills that identity onto legacy linked runs via `ensure_primary_run_metadata()`.
 - Commit `cb106e5` carries `videos.relational_game_id` into `video_assets.game_id` during Stage 2 uploaded-video backfill instead of relying only on `videos.game_id` text parsing.

@@ -178,10 +178,11 @@ Current implementation:
 - Stage 5E Relational game_id cleanup for `player_effect` is implemented at `0b0ad40`.
 - Stage 5F Relational game_id cleanup for `human_corrections` is implemented at `a923ee8`.
 - The repo now carries additive downstream `relational_game_id` support across the Stage 5A-5F analysis/review outputs while preserving legacy TEXT `game_id` behavior.
+- Post-Stage-5 event read-path relational alignment is implemented at `d1a1b2c`.
 
 Next step:
-- Synchronize documentation and GitHub issue state with the actual Stage 5A-5F code already on `jason-5-may-updates`.
-- Re-scope the next bounded migration target explicitly before continuing, because the remaining `TEXT game_id` tables are broader core/data-ingest surfaces such as `detections`, `videos`, `video_assets`, `possessions`, `clips`, and related tables.
+- Keep documentation and handoff artifacts synchronized with the actual bounded slices already implemented on `jason-5-may-updates`.
+- Target the next bounded identity seam at event lifecycle cleanup: legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py` still key by TEXT analysis key and should be aligned to canonical relational game identity with legacy fallback.
 
 ### 7. Data Governance
 
