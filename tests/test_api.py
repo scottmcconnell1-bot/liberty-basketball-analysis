@@ -1354,6 +1354,72 @@ def test_api_videos_uses_latest_linked_run_status_and_counts(client, db):
     assert payload[0]["event_count"] == 1
 
 
+def test_compare_video_analysis_keeps_run_specific_counts(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("sample.mp4", "sample_5.mp4", "uploads/sample_5.mp4", 123, "Test Opponent", "base_game"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game", "uploads/sample_5.mp4", 1, "base_game", "Original upload", "primary", "completed"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", "uploads/sample_5.mp4", 1, "base_game", "Rerun A", "rerun", "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", 2, 200, "person", 0.9, 12, 12, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game", "bookmark", 100, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game__rerun_1", "bookmark", 100, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game__rerun_1", "bookmark", 200, 1),
+    )
+    db.commit()
+
+    r = client.get("/videos/1/compare")
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert "Original upload" in html
+    assert "Rerun A" in html
+    assert "2\n          <div class=\"text-muted\">+1</div>" in html
+    assert html.count("+1</div>") >= 2
+
+
 def test_stats_empty_game(client):
     r = client.get("/api/stats/no_such_game")
     assert r.status_code == 200

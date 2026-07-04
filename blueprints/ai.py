@@ -356,10 +356,7 @@ def compare_video_analysis(vid_id):
     ensure_primary_run_metadata(db, video)
     rows = db.execute(
         """SELECT ar.*,
-                  (SELECT COUNT(*)
-                     FROM detections d
-                    WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
-                       OR (d.relational_game_id IS NULL AND d.game_id = ar.analysis_key)) AS detection_count,
+                  (SELECT COUNT(*) FROM detections d WHERE d.game_id = ar.analysis_key) AS detection_count,
                   (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.analysis_key) AS event_count
            FROM analysis_runs ar
            WHERE ar.source_video_id = ?
