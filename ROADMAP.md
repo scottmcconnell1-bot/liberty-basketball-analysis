@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-06-25
+Updated: 2026-07-02
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -171,11 +171,18 @@ Current implementation:
 - Stage 4C.2 (commit 415ec3f): corrects VALUES placeholder count in save_event INSERT; adds assign_possessions_for_game() idempotent possession linker; explicit possession_id support in /api/save_event (NULL when absent); 7 focused possession tests all passed.
 - Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
 - Stage 4D Player Minutes Foundation is complete and remote at commit 8e67e42.
-- Stage 5A Relational game_id cleanup for `stats` and `player_minutes` is now the active bounded slice.
-- Codex local verification on 2026-06-26: `tests/test_player_minutes.py` reported 11 passed, `tests/test_schema.py` reported 19 passed, and `tests/test_api.py` reported 89 passed.
+- Stage 5A Relational game_id cleanup for `stats` and `player_minutes` is implemented at `c42346d`.
+- Stage 5B Relational game_id cleanup for `player_development_clips` is implemented at `6a8f9ab`.
+- Stage 5C Relational game_id cleanup for `shot_classifications` is implemented at `5fa69f4`.
+- Stage 5D Relational game_id cleanup for `play_recognitions` is implemented at `372e81c`.
+- Stage 5E Relational game_id cleanup for `player_effect` is implemented at `0b0ad40`.
+- Stage 5F Relational game_id cleanup for `human_corrections` is implemented at `a923ee8`.
+- The repo now carries additive downstream `relational_game_id` support across the Stage 5A-5F analysis/review outputs while preserving legacy TEXT `game_id` behavior.
+- Post-Stage-5 event read-path relational alignment is implemented at `d1a1b2c`.
 
 Next step:
-- Push Stage 5A and request Hermes/OWL Linux verification on the bounded `stats` + `player_minutes` slice.
+- Keep documentation and handoff artifacts synchronized with the actual bounded slices already implemented on `jason-5-may-updates`.
+- Target the next bounded identity seam at event lifecycle cleanup: legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py` still key by TEXT analysis key and should be aligned to canonical relational game identity with legacy fallback.
 
 ### 7. Data Governance
 

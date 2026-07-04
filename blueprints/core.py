@@ -1808,7 +1808,9 @@ def status_page():
 
     # Count detections and events per game
     det_counts = {r[0]: r[1] for r in db.execute(
-        "SELECT game_id, COUNT(*) FROM detections GROUP BY game_id"
+        """SELECT COALESCE(CAST(d.relational_game_id AS TEXT), d.game_id) AS game_key, COUNT(*)
+           FROM detections d
+           GROUP BY COALESCE(CAST(d.relational_game_id AS TEXT), d.game_id)"""
     ).fetchall()}
     evt_counts = {r[0]: r[1] for r in db.execute(
         "SELECT game_id, COUNT(*) FROM events GROUP BY game_id"

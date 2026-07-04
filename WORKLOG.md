@@ -1291,3 +1291,103 @@ Verification:
 Pending:
 - Push Stage 5A to jason-5-may-updates.
 - Hermes/OWL Linux verification for bounded Stage 5A.
+
+Stage 5B through Stage 5F Downstream game_id Cleanup - 2026-07-02
+------------------------------------------------------------------
+Repository history now shows the Stage 5 sequence advanced well beyond the earlier documentation checkpoint.
+
+Implemented in code:
+- Stage 5B at `6a8f9ab`: additive `relational_game_id` support for `player_development_clips`.
+- Stage 5C at `5fa69f4`: additive `relational_game_id` support for `shot_classifications`.
+- Stage 5D at `372e81c`: additive `relational_game_id` support for `play_recognitions`.
+- Stage 5E at `0b0ad40`: additive `relational_game_id` support for `player_effect`.
+- Stage 5F at `a923ee8`: additive `relational_game_id` support for `human_corrections`.
+
+Repo truth now visible in code:
+- `schema.sql` contains downstream `relational_game_id` columns for Stage 5A through 5F tables.
+- `helpers.py` contains the matching additive migration entries.
+- Focused tests exist in `tests/test_schema.py` for Stage 5B through 5F.
+- Focused API coverage verifies `human_corrections.relational_game_id` is recorded during review correction/rejection flows.
+
+Documentation gap discovered:
+- `docs/STAGE_INDEX.md`, `PROJECT_STATUS.md`, and `ROADMAP.md` were stale and still described Stage 5A as the active slice even though commits through Stage 5F were already present on the branch.
+
+Recommended next move:
+- Treat Stage 5A through Stage 5F as implemented in code.
+- Sync documentation and issue state before choosing the next bounded migration target.
+- Do not continue blindly into every remaining `TEXT game_id` table; explicitly scope the next post-Stage-5 slice because the remaining tables are broader core/data-ingest surfaces.
+
+Detections relational query-path cleanup - 2026-07-03
+-----------------------------------------------------
+ALPHA took over the bounded post-Stage-5 detections slice directly because OWL was not executing reliably.
+
+Implemented in code:
+- Commit `8c6c83f` updates `blueprints/ai.py`, `blueprints/core.py`, `event_generator.py`, and `film_analysis.py` so active detections count/query/delete/read paths prefer `relational_game_id` while preserving legacy `game_id` fallback where needed.
+- `tests/test_api.py` adds focused regression coverage proving `/api/analysis_status/<analysis_key>` counts detections through `analysis_runs.game_id` -> `detections.relational_game_id`.
+
+Verification:
+- `python -m pytest tests/test_api.py -q` -> 47 passed
+- `python -m pytest tests/test_schema.py -q` -> 47 passed
+- `python -m py_compile blueprints/ai.py blueprints/core.py event_generator.py film_analysis.py tests/test_api.py` -> passed
+
+Issue state:
+- GitHub issue `#64` was completed, commented with evidence, and closed by ALPHA.
+
+Recommended next move:
+- Treat the bounded detections slice as complete.
+- Choose `videos`-linked relational game identity as the next bounded audit/correction candidate.
+
+Videos linked relational game carry-forward - 2026-07-03
+--------------------------------------------------------
+ALPHA continued directly into the next two bounded video-linked slices.
+
+Event read-path relational alignment - 2026-07-03
+-------------------------------------------------
+ALPHA continued directly with the next bounded event-identity slice after the video-linked seams were stabilized.
+
+Implemented in code:
+- Commit `d1a1b2c` updates `blueprints/clips.py` so `/api/events/<game_id>` prefers `events.relational_game_id` and falls back to legacy `events.game_id` rows.
+- The same commit updates `blueprints/ai.py` so `/api/analysis_status/<analysis_key>` and `/api/analysis_progress/<analysis_key>` count events through `analysis_runs.game_id` when available, and `/api/analysis/<analysis_key>` resolves the linked relational game id before building event summaries/timelines.
+- `blueprints/ai.py` now uses a shared `_resolve_analysis_relational_game_id()` helper so analysis routes treat analysis keys and canonical game keys consistently.
+
+Verification:
+- `python -m pytest tests/test_api.py -q` -> 107 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+
+Recommended next move:
+- Treat the bounded event read-path slice as complete.
+- Target the next bounded seam at event lifecycle cleanup: align legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py` to canonical relational game identity while preserving fallback for older rows.
+
+Implemented in code:
+- Commit `ceaf475` carries `videos.relational_game_id` into linked `analysis_runs.game_id` and backfills that identity onto legacy linked runs via `ensure_primary_run_metadata()`.
+- Commit `cb106e5` carries `videos.relational_game_id` into `video_assets.game_id` during Stage 2 uploaded-video backfill instead of relying only on `videos.game_id` text parsing.
+
+Verification:
+- `python -m pytest tests/test_api.py -k "rerun_video_analysis or compare_video_analysis or analysis_status" -q` -> 5 passed
+- `python -m pytest tests/test_api.py -q` -> 103 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+- `python -m py_compile helpers.py tests/test_api.py tests/test_schema.py` -> passed
+
+Issue state:
+- GitHub issue `#65` was completed, commented with evidence, and closed by ALPHA.
+
+Recommended next move:
+- Audit `/api/videos` latest-run identity/status behavior as the next bounded slice.
+
+Video run alignment follow-up - 2026-07-03
+------------------------------------------
+ALPHA continued directly through the two smallest remaining video-run listing/comparison seams.
+
+Implemented in code:
+- Commit `6900763` aligns `/api/videos` with the latest linked analysis run instead of pinning the listing to `analysis_key = v.game_id`.
+- Commit `954fe91` keeps compare-page run counts keyed by each run's own `analysis_key`, preserving per-run deltas instead of collapsing reruns together.
+
+Verification:
+- `python -m pytest tests/test_api.py -k "api_videos or rerun_video_analysis or compare_video_analysis" -q` -> 4 passed
+- `python -m pytest tests/test_api.py -k "compare_video_analysis or api_videos" -q` -> 3 passed
+- `python -m pytest tests/test_api.py -q` -> 105 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+- `python -m py_compile blueprints/ai.py tests/test_api.py` -> passed
+
+Recommended next move:
+- Fresh repo-truth audit for the next smallest remaining identity seam outside the now-completed review/detections/video-run cluster.

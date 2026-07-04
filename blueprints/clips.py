@@ -33,6 +33,7 @@ from flask import (
 import player_development as pd_helpers
 
 from helpers import get_db, refresh_game_stats, require_feature
+from stats import _resolve_relational_game_id
 
 clips_bp = Blueprint("clips", __name__)
 
@@ -181,9 +182,9 @@ def save_event():
         if review_status == "pending":
             db.execute(
                 """INSERT OR IGNORE INTO review_items
-                      (entity_type, entity_id, game_id, review_status, reason)
-                   VALUES ('event', ?, ?, 'pending', 'Event needs coach review')""",
-                (cur.lastrowid, game_id),
+                      (entity_type, entity_id, game_id, relational_game_id, review_status, reason)
+                   VALUES ('event', ?, ?, ?, 'pending', 'Event needs coach review')""",
+                (cur.lastrowid, game_id, relational_game_id),
             )
 
         # ── Stage 4B: write primary event_participants row ────
@@ -216,7 +217,26 @@ def save_event():
 def get_events(game_id):
     db = get_db()
     event_type = (request.args.get("event_type") or "").strip()
-    if event_type:
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        if event_type:
+            rows = db.execute(
+                """SELECT * FROM events
+                    WHERE (relational_game_id = ?
+                           OR (relational_game_id IS NULL AND game_id = ?))
+                      AND event_type=?
+                    ORDER BY timestamp_ms ASC""",
+                (relational_game_id, game_id, event_type),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                """SELECT * FROM events
+                    WHERE relational_game_id = ?
+                       OR (relational_game_id IS NULL AND game_id = ?)
+                    ORDER BY timestamp_ms ASC""",
+                (relational_game_id, game_id),
+            ).fetchall()
+    elif event_type:
         rows = db.execute(
             "SELECT * FROM events WHERE game_id=? AND event_type=? ORDER BY timestamp_ms ASC",
             (game_id, event_type),
@@ -360,16 +380,16 @@ def _record_human_correction(db, row, correction_type, field_changed,
         ),
     )
 
-
 def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
-    row = db.execute("SELECT id, game_id FROM events WHERE id=?", (event_id,)).fetchone()
+    row = db.execute("SELECT id, game_id, relational_game_id FROM events WHERE id=?",
+                     (event_id,)).fetchone()
     if not row:
         return
     db.execute(
         """INSERT OR IGNORE INTO review_items
-              (entity_type, entity_id, game_id, review_status, reason)
-           VALUES ('event', ?, ?, ?, 'Event needs coach review')""",
-        (event_id, row["game_id"], status),
+              (entity_type, entity_id, game_id, relational_game_id, review_status, reason)
+           VALUES ('event', ?, ?, ?, ?, 'Event needs coach review')""",
+        (event_id, row["game_id"], row["relational_game_id"], status),
     )
     db.execute(
         """UPDATE review_items

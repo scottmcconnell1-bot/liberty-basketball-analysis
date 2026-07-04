@@ -23,6 +23,8 @@
 ### Reporting
 - Report findings to Scott (via Telegram or GitHub comment)
 - Flag blockers, ask Scott for scope decisions
+- Continue automatically when Owl marks an open `[OWL ACTION]` issue `OWL DONE`; do not wait for Scott to relay issue comments back into chat
+- Treat the latest actionable GitHub comment as more authoritative than labels alone when issue state is contradictory
 
 ## Requires Scott's Approval
 
@@ -51,11 +53,28 @@
 2. Alpha creates [OWL ACTION] issue with bounded scope
 3. Owl implements code, runs tests, pushes feature branch
 4. Owl posts Proven/Inferred/Unknown as comment on the issue
-5. Alpha reviews the code on the feature branch
-6. If satisfied, Alpha adds approval label to the issue
-7. Owl merges/pushes to jason-5-may-updates only after approval label
-8. Repeat
+5. Alpha reviews the issue result immediately after `OWL DONE` appears
+6. Alpha chooses the next action in GitHub the same cycle:
+   - approve
+   - request a narrow correction
+   - open the next bounded `[OWL ACTION]` issue
+   - escalate a real blocker to Scott
+7. If satisfied, Alpha adds approval label to the issue
+8. Owl merges/pushes to jason-5-may-updates only after approval label
+9. Repeat
 ```
+
+## Communication Contract
+
+- A label by itself is not a valid handoff.
+- Owl completion requires a visible GitHub comment with:
+  - Proven / Inferred / Unknown
+  - files changed
+  - exact tests run and results
+  - commit hash if pushed, or explicit `Not pushed yet`
+- Owl blocker state requires a visible GitHub comment with the exact blocker and the exact next action needed from Alpha.
+- Alpha should ignore stale or contradictory labels until the comment evidence is clear.
+- Local-only chat claims do not count as repository truth until reflected in GitHub comments or the pushed branch.
 
 ## Label Definitions
 
@@ -65,6 +84,13 @@
 | `OWL DONE` | Owl's poller (automated) | Owl's verification passed (Proven). Ready for Alpha to review. |
 | `OWL NEEDS` | Owl | Owl is blocked, needs Scott clarification |
 | `ALPHA APPROVED` | Alpha | Alpha has reviewed and approved. Owl may now merge/push to jason-5-may-updates. |
+
+## Anti-Idle Rule
+
+- `OWL DONE` is not an endpoint. It is a trigger for Alpha to act.
+- If Owl completed the newest open `[OWL ACTION]` issue, Alpha must leave a GitHub-visible next step before going idle.
+- If no blocker exists, Scott should not need to forward issue comments between agents.
+- If labels and comments disagree, Alpha and Owl must resolve the mismatch instead of silently proceeding.
 
 ## Emergency Rules
 - **If Alpha is unsure whether something needs Scott's approval → ASK. Don't guess.**

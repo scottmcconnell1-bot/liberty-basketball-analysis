@@ -386,6 +386,30 @@ def test_get_events(client):
     assert events[0]["timestamp_ms"] < events[1]["timestamp_ms"]
 
 
+def test_get_events_prefers_relational_game_id_with_legacy_fallback(client, db):
+    game_id = _create_game(client, "events-relational-game")
+    db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("legacy-other-key", game_id, "assist", 1000, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        (str(game_id), "rebound", 2000, 1),
+    )
+    db.commit()
+
+    r = client.get(f"/api/events/{game_id}")
+    events = r.get_json()
+
+    assert r.status_code == 200
+    assert len(events) == 2
+    assert [event["event_type"] for event in events] == ["assist", "rebound"]
+
+
 def test_get_events_can_filter_by_event_type(client):
     game_id = _create_game(client, "bookmark-game")
     post_json(client, "/api/save_event", {
@@ -534,6 +558,27 @@ def test_review_event_reject_preserves_event_and_records_correction(client, db):
     assert correction["corrected_value"] == "rejected"
 
 
+def test_sync_event_review_item_sets_relational_game_id(client, db):
+    game_id = _create_game(client, "sync-relational-game")
+    # create an event with human_verified=False so it goes to review
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "assist",
+        "timestamp_ms": 1000,
+        "human_verified": False,
+    })
+    assert r.status_code == 200
+    eid = r.get_json()["id"]
+    # trigger sync via accept
+    resp = post_json(client, f"/api/review/events/{eid}/accept", {"notes": "test"})
+    assert resp.status_code == 200
+    row = db.execute(
+        "SELECT relational_game_id FROM review_items WHERE entity_id=? AND entity_type='event'",
+        (eid,),
+    ).fetchone()
+    assert row is not None
+    assert row["relational_game_id"] == game_id
+    # ── Stage 4B: save_event relational wiring ────────────────────────────
 # ── Stage 4B: save_event relational wiring ────────────────────────────
 
 def test_save_event_writes_relational_game_id(client, db):
@@ -1006,6 +1051,66 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
+def test_analysis_status_counts_detections_via_relational_game_id(client, db):
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", "analysis-relational"),
+    )
+    relational_game_id = game_row.lastrowid
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (relational_game_id, "analysis_relational", "uploads/demo-relational.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy_analysis_relational", relational_game_id, 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_status/analysis_relational")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["status"] == "completed"
+    assert payload["detection_count"] == 1
+    assert payload["event_count"] == 0
+
+
+def test_analysis_results_and_status_count_events_via_relational_game_id(client, db):
+    analysis_key = "analysis-events-relational"
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", analysis_key),
+    )
+    relational_game_id = game_row.lastrowid
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (relational_game_id, analysis_key, "uploads/demo-events-relational.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, event_type, player, shot_result, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy-events-key", relational_game_id, "made_two", "Player A", "made", 300, 1),
+    )
+    db.commit()
+
+    status_response = client.get(f"/api/analysis_status/{analysis_key}")
+    status_payload = status_response.get_json()
+    assert status_response.status_code == 200
+    assert status_payload["event_count"] == 1
+
+    analysis_response = client.get(f"/api/analysis/{analysis_key}")
+    analysis_payload = analysis_response.get_json()
+    assert analysis_response.status_code == 200
+    assert analysis_payload["events_summary"] == [{"event_type": "made_two", "cnt": 1}]
+    assert analysis_payload["recent_events"][0]["event_type"] == "made_two"
+    assert analysis_payload["recent_events"][0]["player"] == "Player A"
+
+
 def test_settings_page_renders(client, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.get("/settings")
@@ -1226,6 +1331,151 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
 
 
 # ── Stats ─────────────────────────────────────────────────────────────
+
+def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch):
+    import blueprints.ai as ai_module
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'video-rel-game')")
+    relational_game_id = db.execute(
+        "SELECT id FROM games WHERE source_key='video-rel-game'"
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("sample.mp4", "sample_3.mp4", "uploads/sample_3.mp4", 123, "Test Opponent", "base_game", relational_game_id),
+    )
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
+        ("base_game", "uploads/sample_3.mp4", "completed"),
+    )
+    db.commit()
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+
+    r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
+    assert r.status_code == 200
+
+    rows = db.execute(
+        "SELECT game_id, analysis_key, source_video_id, run_kind FROM analysis_runs ORDER BY id"
+    ).fetchall()
+    assert len(rows) == 2
+    assert rows[0]["game_id"] == relational_game_id
+    assert rows[0]["source_video_id"] == 1
+    assert rows[1]["game_id"] == relational_game_id
+    assert rows[1]["source_video_id"] == 1
+    assert rows[1]["run_kind"] == "rerun"
+
+
+def test_api_videos_uses_latest_linked_run_status_and_counts(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("sample.mp4", "sample_4.mp4", "uploads/sample_4.mp4", 123, "Test Opponent", "base_game"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game", "uploads/sample_4.mp4", 1, "base_game", "Original upload", "primary", "completed"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", "uploads/sample_4.mp4", 1, "base_game", "Rerun A", "rerun", "running"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game__rerun_1", "bookmark", 100, 1),
+    )
+    db.commit()
+
+    r = client.get("/api/videos")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert len(payload) == 1
+    assert payload[0]["analysis_status"] == "running"
+    assert payload[0]["analysis_run_count"] == 2
+    assert payload[0]["detection_count"] == 1
+    assert payload[0]["event_count"] == 1
+
+
+def test_compare_video_analysis_keeps_run_specific_counts(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("sample.mp4", "sample_5.mp4", "uploads/sample_5.mp4", 123, "Test Opponent", "base_game"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game", "uploads/sample_5.mp4", 1, "base_game", "Original upload", "primary", "completed"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", "uploads/sample_5.mp4", 1, "base_game", "Rerun A", "rerun", "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("base_game__rerun_1", 2, 200, "person", 0.9, 12, 12, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game", "bookmark", 100, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game__rerun_1", "bookmark", 100, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        ("base_game__rerun_1", "bookmark", 200, 1),
+    )
+    db.commit()
+
+    r = client.get("/videos/1/compare")
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert "Original upload" in html
+    assert "Rerun A" in html
+    assert "2\n          <div class=\"text-muted\">+1</div>" in html
+    assert html.count("+1</div>") >= 2
+
 
 def test_stats_empty_game(client):
     r = client.get("/api/stats/no_such_game")

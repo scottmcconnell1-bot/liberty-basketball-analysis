@@ -1,6 +1,6 @@
 # Liberty Stage Index
 
-Updated: 2026-06-26
+Updated: 2026-07-02
 Branch: jason-5-may-updates
 Status: Source-of-truth stage numbering for Codex, Hermes/OWL/Rex, and future agents.
 
@@ -25,8 +25,13 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 4B | Manual event write upgrade | Implemented and Hermes/OWL verified | save_event wires relational_game_id, event_type_id, team_id, primary_player_id, event_participants |
 | Stage 4C | Relational stats derivation | Implemented and Hermes/OWL verified | stats.aggregate_stats reads event_types taxonomy via event_type_id; counts_for_stats + review_status filtering; legacy event_type alias seeds added |
 | Stage 4D | Player minutes foundation | Implemented and Hermes/OWL verified | player_minutes table schema-gated + migration; player_minutes.py backfill from detections.tracker_id (idempotent INSERT OR REPLACE); tests verify computation, idempotency, per-game/per-player query, stats.py integration |
-| Stage 5 | Downstream game_id cleanup | In progress through lettered slices | downstream relational_game_id migration while preserving analysis_key |
-| Stage 5A | Relational game_id cleanup for stats and player_minutes | Implemented locally; Hermes/OWL verification pending | additive `relational_game_id` columns for `stats` and `player_minutes`; bounded query/write cleanup while preserving legacy TEXT `game_id` behavior |
+| Stage 5 | Downstream game_id cleanup | In progress through lettered slices | additive downstream `relational_game_id` migration while preserving legacy TEXT analysis-key behavior |
+| Stage 5A | Relational game_id cleanup for stats and player_minutes | Implemented and committed | additive `relational_game_id` columns for `stats` and `player_minutes`; bounded query/write cleanup while preserving legacy TEXT `game_id` behavior |
+| Stage 5B | Relational game_id cleanup for player_development_clips | Implemented and committed | additive `relational_game_id` for `player_development_clips`; bounded CRUD/query support while preserving legacy TEXT `game_id` behavior |
+| Stage 5C | Relational game_id cleanup for shot_classifications | Implemented and committed | additive `relational_game_id` for `shot_classifications`; bounded film/stats query and write cleanup |
+| Stage 5D | Relational game_id cleanup for play_recognitions | Implemented and committed | additive `relational_game_id` for `play_recognitions`; bounded play recognition write/query cleanup |
+| Stage 5E | Relational game_id cleanup for player_effect | Implemented and committed | additive `relational_game_id` for `player_effect`; bounded effect write/query cleanup |
+| Stage 5F | Relational game_id cleanup for human_corrections | Implemented and committed | additive `relational_game_id` for `human_corrections`; review correction writes preserve relational game identity |
 | Stage 6 | Module entitlement wiring | Not started | module_key helpers and team/module permission checks |
 
 ## Rules
@@ -35,6 +40,11 @@ Repository history, GitHub issues, and verification reports already reference th
 - Stage 3C always means Possessions and Canonical Clips Foundation.
 - Stage 4A always means Event Participants Foundation.
 - Stage 5A always means relational game_id cleanup for `stats` and `player_minutes`.
+- Stage 5B always means relational game_id cleanup for `player_development_clips`.
+- Stage 5C always means relational game_id cleanup for `shot_classifications`.
+- Stage 5D always means relational game_id cleanup for `play_recognitions`.
+- Stage 5E always means relational game_id cleanup for `player_effect`.
+- Stage 5F always means relational game_id cleanup for `human_corrections`.
 - Do not use Stage 3B for possessions or clips in future reports.
 - Do not rewrite past issues, commits, or reports to rename completed stages.
 - Use Proven / Inferred / Unknown when reporting stage status.
@@ -42,4 +52,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 5A is implemented locally and awaiting Hermes/OWL verification.
+Stage 5F is implemented in code at commit `a923ee8`. The post-Stage-5 `review_items` cleanup is implemented through commits `15cecb2` and `5412a54`, the bounded `detections` relational query-path cleanup is implemented at commit `8c6c83f`, the `videos -> analysis_runs` relational carry-forward is implemented at commit `ceaf475`, the `videos -> video_assets` relational carry-forward is implemented at commit `cb106e5`, `/api/videos` latest-linked-run alignment is implemented at commit `6900763`, compare-run count isolation is implemented at commit `954fe91`, and event read-path relational alignment is implemented at commit `d1a1b2c`. The next gate should be a bounded event lifecycle cleanup for remaining legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py`.

@@ -658,6 +658,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
 
     for index, run in enumerate(existing):
         updates = {
+            "game_id": video_row["relational_game_id"],
             "source_video_id": video_row["id"],
             "base_game_id": video_row["game_id"],
             "base_analysis_key": video_row["game_id"],
@@ -668,6 +669,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
             updates["settings_json"] = json.dumps(settings_snapshot)
         db.execute(
             """UPDATE analysis_runs SET
+               game_id=COALESCE(game_id, :game_id),
                source_video_id=COALESCE(source_video_id, :source_video_id),
                base_game_id=COALESCE(base_game_id, :base_game_id),
                base_analysis_key=COALESCE(base_analysis_key, :base_analysis_key),
@@ -677,6 +679,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
                WHERE id=:id""",
             {
                 "id": run["id"],
+                "game_id": updates["game_id"],
                 "source_video_id": updates["source_video_id"],
                 "base_game_id": updates["base_game_id"],
                 "base_analysis_key": updates["base_analysis_key"],
@@ -697,7 +700,7 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
            (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status)
            VALUES (?,?,?,?,?,?,?,?,?,?)""",
         (
-            None,
+            video_row["relational_game_id"],
             analysis_key,
             video_row["file_path"],
             video_row["id"],
@@ -1198,7 +1201,7 @@ def _backfill_video_assets_from_videos(db):
         return
     rows = db.execute(
         """SELECT id, original_filename, stored_filename, file_path,
-                  file_size_bytes, game_id
+                  file_size_bytes, game_id, relational_game_id
              FROM videos"""
     ).fetchall()
     for row in rows:
@@ -1208,7 +1211,7 @@ def _backfill_video_assets_from_videos(db):
         ).fetchone()
         if existing:
             continue
-        game_id = _game_id_if_relational(db, row["game_id"])
+        game_id = row["relational_game_id"] or _game_id_if_relational(db, row["game_id"])
         cur = db.execute(
             """INSERT INTO video_assets
                   (game_id, original_filename, stored_filename, file_path,
@@ -1312,10 +1315,11 @@ def _backfill_review_workflow_stage3a(db):
     )
     db.execute(
         """INSERT OR IGNORE INTO review_items
-              (entity_type, entity_id, game_id, review_status, priority, reason)
+              (entity_type, entity_id, game_id, relational_game_id, review_status, priority, reason)
            SELECT 'event',
                   id,
                   game_id,
+                  relational_game_id,
                   review_status,
                   'normal',
                   'Event needs coach review'
@@ -1331,6 +1335,11 @@ def _backfill_review_workflow_stage3a(db):
                   ),
                   game_id = (
                       SELECT e.game_id FROM events e
+                       WHERE e.id = review_items.entity_id
+                         AND review_items.entity_type = 'event'
+                  ),
+                  relational_game_id = (
+                      SELECT e.relational_game_id FROM events e
                        WHERE e.id = review_items.entity_id
                          AND review_items.entity_type = 'event'
                   ),
@@ -1746,6 +1755,7 @@ def _ensure_migration_columns(db):
         ("detections", "relational_game_id", "ALTER TABLE detections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("videos", "relational_game_id", "ALTER TABLE videos ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("human_corrections", "relational_game_id", "ALTER TABLE human_corrections ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
+        ("review_items", "relational_game_id", "ALTER TABLE review_items ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
         ("issue_reports", "browser_console", "ALTER TABLE issue_reports ADD COLUMN browser_console TEXT"),
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),

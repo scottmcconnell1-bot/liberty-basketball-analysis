@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-06-25
+Updated: 2026-07-02
 Branch: jason-5-may-updates
 
 ## Proven
@@ -120,8 +120,26 @@ These facts were verified from repository files, GitHub metadata, or OWL/Hermes 
 - Commit 415ec3f implements Stage 4C.2 possession linkage fix: corrects VALUES placeholder count in save_event INSERT; adds assign_possessions_for_game() idempotent possession linker; explicit possession_id support in /api/save_event (NULL when absent); 7 focused possession tests all passed.
 - Full Linux pytest at HEAD 415ec3f: 225 passed, 1 skipped.
 - Stage 4D Player Minutes Foundation is complete and remote at commit 8e67e42.
-- Stage 5A Relational game_id cleanup for `stats` and `player_minutes` is implemented locally: additive `relational_game_id` columns, bounded resolver logic, and focused regression coverage.
-- Codex verified Stage 5A locally on Windows on 2026-06-26: `tests/test_player_minutes.py` reported 11 passed, `tests/test_schema.py` reported 19 passed, `tests/test_api.py` reported 89 passed, and `python -m py_compile` passed for touched files.
+- Stage 5A Relational game_id cleanup for `stats` and `player_minutes` is implemented at commit `c42346d`.
+- Stage 5B Relational game_id cleanup for `player_development_clips` is implemented at commit `6a8f9ab`.
+- Stage 5C Relational game_id cleanup for `shot_classifications` is implemented at commit `5fa69f4`.
+- Stage 5D Relational game_id cleanup for `play_recognitions` is implemented at commit `372e81c`.
+- Stage 5E Relational game_id cleanup for `player_effect` is implemented at commit `0b0ad40`.
+- Stage 5F Relational game_id cleanup for `human_corrections` is implemented at commit `a923ee8`.
+- Post-Stage-5 `review_items` relational game identity cleanup is implemented through commits `15cecb2` and `5412a54`.
+- Post-Stage-5 `detections` relational query-path cleanup is implemented at commit `8c6c83f`.
+- Post-Stage-5 `videos` -> `analysis_runs` relational game carry-forward is implemented at commit `ceaf475`.
+- Post-Stage-5 `videos` -> `video_assets` relational game carry-forward is implemented at commit `cb106e5`.
+- Post-Stage-5 `/api/videos` latest-linked-run alignment is implemented at commit `6900763`.
+- Post-Stage-5 `/videos/<id>/compare` per-run count isolation is implemented at commit `954fe91`.
+- Post-Stage-5 event read-path relational alignment is implemented at commit `d1a1b2c`.
+- schema.sql now defines additive downstream `relational_game_id` columns for `stats`, `player_minutes`, `player_development_clips`, `shot_classifications`, `play_recognitions`, `player_effect`, and `human_corrections`.
+- helpers.py now contains additive migration entries for those Stage 5A-5F downstream tables.
+- tests/test_schema.py contains focused Stage 5B-5F schema/idempotency coverage.
+- tests/test_api.py verifies review-correction writes preserve `human_corrections.relational_game_id`.
+- tests/test_api.py now also verifies `analysis_status` counts detections through `relational_game_id`, and the bounded detections cleanup suite passed with `47 passed` in `tests/test_api.py` plus `47 passed` in `tests/test_schema.py`.
+- `blueprints/clips.py` and `blueprints/ai.py` now prefer `events.relational_game_id` on active read paths while preserving fallback to legacy `events.game_id` rows.
+- `tests/test_api.py` now verifies `/api/events/<game_id>`, `/api/analysis_status/<analysis_key>`, and `/api/analysis/<analysis_key>` all surface relationally linked events correctly.
 
 ## Inferred
 
@@ -154,12 +172,12 @@ These need further evidence.
 - Whether uploaded video and database files are present only locally, in backups, or in GitHub history.
 - Whether hardcoded secrets are used in any exposed environment.
 - Whether Scott wants standalone video/scouting analysis without a scheduled game or every analysis attached to a games row.
-- Whether Hermes/OWL Linux verification confirms Stage 5A behavior on the Linux environment.
+- Which remaining smallest text-keyed identity seam should follow the now-completed video-run alignment slices.
 
 ## Current Risks
 
 1. Production ball detection quality is the largest technical risk.
-2. Remaining game_id identity ambiguity in downstream tables is a data-model risk.
+2. Remaining game_id identity ambiguity in non-Stage-5 tables is still a data-model risk.
 3. Dataset provenance is incomplete.
 4. Documentation exists but needs hierarchy and currency discipline.
 5. Auth middleware is disabled, which is acceptable only for local/dev use.
@@ -167,4 +185,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Continue platform-core work with Stage 5A as the active bounded slice, keeping the cleanup limited to `stats` and `player_minutes` until Hermes/OWL completes independent verification.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, compare-run alignment, and event read-path alignment slices are now complete. The next recommendation is a bounded event lifecycle cleanup focused on legacy `DELETE/replace` paths that still key generated events by TEXT analysis key in `event_generator.py` and `blueprints/ai.py`.
