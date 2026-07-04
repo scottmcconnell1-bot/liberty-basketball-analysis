@@ -1933,3 +1933,173 @@ def test_possession_summary_excludes_rejected_events(client, db):
     # but turnover count excludes rejected: 2 possessions, 0 turnovers (only turnover was rejected)
     assert data["total_possessions"] == 2, f"Expected 2 possessions, got {data['total_possessions']}"
     assert data["turnover_rate"] == 0.0, f"Expected turnover_rate=0.0, got {data['turnover_rate']}"
+
+def test_delete_video_deletes_unverified_events(client):
+    """delete_video should delete unverified events for the base run."""
+    with client.application.app_context():
+        from helpers import get_db
+        db = get_db()
+        # Create a game via the API to ensure all required columns are populated.
+        # Use helper _create_game from the test module.
+        # We'll import the function from the test module? Since we are in the same module,
+        # we can just call it if it's defined. However, we are in a function scope.
+        # Instead, we can directly insert a game with minimal fields? Safer to use the existing
+        # _create_game helper defined in this file. We'll access it via the client's application?
+        # Actually, we can call the function defined in this module by importing it.
+        # Since we are inside the test module, we can do:
+        from tests.test_api import _create_game
+        game_id = _create_game(client, "test-game")
+        # game_id is integer.
+        # Create a video record linked to this game.
+        video_data = dict(
+            original_filename="test.mp4",
+            stored_filename="test_stored.mp4",
+            file_path="/tmp/test_stored.mp4",
+            file_size_bytes=1000,
+            opponent="Test Opponent",
+            game_id="test_game_id",  # text game_id as stored in events
+            relational_game_id=game_id,
+            is_duplicate=0,
+            duplicate_of_id=None,
+            upload_timestamp="2024-01-01 00:00:00",
+        )
+        db.execute(
+            """INSERT INTO videos (
+                original_filename, stored_filename, file_path, file_size_bytes,
+                opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id, upload_timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                video_data["original_filename"],
+                video_data["stored_filename"],
+                video_data["file_path"],
+                video_data["file_size_bytes"],
+                video_data["opponent"],
+                video_data["game_id"],
+                video_data["relational_game_id"],
+                video_data["is_duplicate"],
+                video_data["duplicate_of_id"],
+                video_data["upload_timestamp"],
+            ),
+        )
+        video_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        db.commit()
+
+        # Create an analysis_run that links to this video (source_video_id)
+        db.execute(
+            """INSERT INTO analysis_runs (
+                source_video_id, base_analysis_key, analysis_key, video_path, status
+            ) VALUES (?, ?, ?, ?, ?)""",
+            (video_id, "test_game_id", "test_game_id", "/tmp/test_stored.mp4", "completed"),
+        )
+        db.commit()
+
+        # Create unverified event (human_verified=0, source_type='ai')
+        db.execute(
+            """INSERT INTO events (
+                game_id, event_type, timestamp_ms, human_verified, source_type, confidence
+            ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (video_data["game_id"], "shot", 5000, 0, "ai", 0.8),
+        )
+        # Create verified event (human_verified=1, source_type='manual')
+        db.execute(
+            """INSERT INTO events (
+                game_id, event_type, timestamp_ms, human_verified, source_type, confidence
+            ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (video_data["game_id"], "shot", 6000, 1, "manual", 0.9),
+        )
+        db.commit()
+
+        # Call delete_video endpoint
+        resp = client.delete(f"/api/videos/{video_id}")
+        assert resp.status_code == 200
+        assert resp.get_json()["success"] is True
+
+        # Check that unverified event is deleted
+        unverified_count = db.execute(
+            "SELECT COUNT(*) FROM events WHERE game_id=? AND human_verified=0", 
+            (video_data["game_id"],)
+        ).fetchone()[0]
+        assert unverified_count == 0, f"Expected 0 unverified events, got {unverified_count}"
+
+        # Check that verified event still exists
+        # Note: The line is incomplete in the original; we need to finish it.
+        # We'll write the rest correctly.
+        verified_count = db.execute(
+            "SELECT COUNT(*) FROM events WHERE game_id=? AND human_verified=1", 
+            (video_data["game_id"],)
+        ).fetchone()[0]
+        assert verified_count == 1, f"Expected 1 verified event, got {verified_count}"
+
+
+def test_delete_video_does_not_delete_verified_events(client):
+    """delete_video should not delete verified events for the base run."""
+    with client.application.app_context():
+        from helpers import get_db
+        db = get_db()
+        from tests.test_api import _create_game
+        game_id = _create_game(client, "test-game-2")
+        video_data = dict(
+            original_filename="test2.mp4",
+            stored_filename="test2_stored.mp4",
+            file_path="/tmp/test2_stored.mp4",
+            file_size_bytes=1000,
+            opponent="Test Opponent 2",
+            game_id="test_game_id_2",
+            relational_game_id=game_id,
+            is_duplicate=0,
+            duplicate_of_id=None,
+            upload_timestamp="2024-01-01 00:00:00",
+        )
+        db.execute(
+            """INSERT INTO videos (
+                original_filename, stored_filename, file_path, file_size_bytes,
+                opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id, upload_timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                video_data["original_filename"],
+                video_data["stored_filename"],
+                video_data["file_path"],
+                video_data["file_size_bytes"],
+                video_data["opponent"],
+                video_data["game_id"],
+                video_data["relational_game_id"],
+                video_data["is_duplicate"],
+                video_data["duplicate_of_id"],
+                video_data["upload_timestamp"],
+            ),
+        )
+        video_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # Create an analysis_run that links to this video (source_video_id)
+        db.execute(
+            """INSERT INTO analysis_runs (
+                source_video_id, base_analysis_key, analysis_key, video_path, game_id, status
+            ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                video_id,
+                video_data["game_id"],
+                video_data["game_id"],
+                video_data["file_path"],
+                video_data["relational_game_id"],
+                "completed",
+            ),
+        )
+        # Create verified event (human_verified=1, source_type='manual')
+        db.execute(
+            """INSERT INTO events (
+                game_id, event_type, timestamp_ms, human_verified, source_type, confidence
+            ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (video_data["game_id"], "shot", 5000, 1, "manual", 0.9),
+        )
+        db.commit()
+
+        # Call delete_video endpoint
+        resp = client.delete(f"/api/videos/{video_id}")
+        assert resp.status_code == 200
+        assert resp.get_json()["success"] is True
+
+        # Check that verified event still exists (should not be deleted)
+        verified_count = db.execute(
+            "SELECT COUNT(*) FROM events WHERE game_id=? AND human_verified=1", 
+            (video_data["game_id"],)
+        ).fetchone()[0]
+        assert verified_count == 1, f"Expected 1 verified event, got {verified_count}"

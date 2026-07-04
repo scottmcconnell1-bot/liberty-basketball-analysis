@@ -41,7 +41,7 @@ def get_analysis_status(game_id):
     row = db.execute(
         """SELECT status, started_at, completed_at, error_message, settings_json,
                   analysis_key,
-                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM detections WHERE (relational_game_id = (SELECT id FROM games WHERE game_id = analysis_runs.analysis_key) OR (relational_game_id IS NULL AND game_id = analysis_runs.analysis_key))) AS detection_count,
                   (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
@@ -109,7 +109,7 @@ def get_analysis_progress(game_id):
     row = db.execute(
         """SELECT status, progress_pct, progress_step, started_at, completed_at,
                   analysis_key,
-                  (SELECT COUNT(*) FROM detections WHERE game_id = analysis_runs.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM detections WHERE (relational_game_id = (SELECT id FROM games WHERE game_id = analysis_runs.analysis_key) OR (relational_game_id IS NULL AND game_id = analysis_runs.analysis_key))) AS detection_count,
                   (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
@@ -319,7 +319,7 @@ def api_videos():
     db = get_db()
     rows = db.execute("""
         SELECT v.*, ar.status as analysis_status, ar.error_message,
-               (SELECT COUNT(*) FROM detections d WHERE d.game_id = v.game_id) as detection_count,
+               (SELECT COUNT(*) FROM detections d WHERE (d.relational_game_id = (SELECT id FROM games WHERE game_id = v.game_id) OR (d.relational_game_id IS NULL AND d.game_id = v.game_id))) as detection_count,
                (SELECT COUNT(*) FROM events e WHERE e.game_id = v.game_id) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
@@ -341,7 +341,7 @@ def compare_video_analysis(vid_id):
     ensure_primary_run_metadata(db, video)
     rows = db.execute(
         """SELECT ar.*,
-                  (SELECT COUNT(*) FROM detections d WHERE d.game_id = ar.analysis_key) AS detection_count,
+                  (SELECT COUNT(*) FROM detections d WHERE (d.relational_game_id = (SELECT id FROM games WHERE game_id = ar.analysis_key) OR (d.relational_game_id IS NULL AND d.game_id = ar.analysis_key))) AS detection_count,
                   (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.analysis_key) AS event_count
            FROM analysis_runs ar
            WHERE ar.source_video_id = ?
@@ -454,8 +454,8 @@ def delete_video(vid_id):
 
     # Delete all related analysis data
     for run_game_id in run_game_ids:
-        db.execute("DELETE FROM events WHERE game_id=?", (run_game_id,))
-        db.execute("DELETE FROM detections WHERE game_id=?", (run_game_id,))
+        db.execute("DELETE FROM events WHERE game_id=? AND human_verified = 0", (run_game_id,))
+        db.execute("DELETE FROM detections WHERE (relational_game_id = (SELECT id FROM games WHERE game_id = ?) OR (relational_game_id IS NULL AND game_id = ?))", (run_game_id, run_game_id))
         db.execute("DELETE FROM stats WHERE game_id=?", (run_game_id,))
     db.execute("DELETE FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?", (vid_id, game_id, game_id, file_path))
     db.execute("DELETE FROM videos WHERE id=?", (vid_id,))
