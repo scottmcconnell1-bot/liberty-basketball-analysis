@@ -327,13 +327,19 @@ def api_videos():
         SELECT v.*, ar.status as analysis_status, ar.error_message,
                (SELECT COUNT(*)
                   FROM detections d
-                 WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
-                    OR (d.relational_game_id IS NULL AND d.game_id = v.game_id)) as detection_count,
-               (SELECT COUNT(*) FROM events e WHERE e.game_id = v.game_id) as event_count,
+                  WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
+                    OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
+               (SELECT COUNT(*) FROM events e WHERE e.game_id = COALESCE(ar.analysis_key, v.game_id)) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.analysis_key = v.game_id
-                                   AND ar.id = (SELECT MAX(id) FROM analysis_runs WHERE analysis_key = v.game_id)
+        LEFT JOIN analysis_runs ar ON ar.id = (
+            SELECT MAX(ar_latest.id)
+            FROM analysis_runs ar_latest
+            WHERE ar_latest.source_video_id = v.id
+               OR ar_latest.base_analysis_key = v.game_id
+               OR ar_latest.analysis_key = v.game_id
+               OR ar_latest.video_path = v.file_path
+        )
         ORDER BY v.id DESC
     """).fetchall()
     return jsonify([dict(r) for r in rows])
