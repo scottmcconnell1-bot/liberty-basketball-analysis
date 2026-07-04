@@ -1356,3 +1356,21 @@ Issue state:
 
 Recommended next move:
 - Audit `/api/videos` latest-run identity/status behavior as the next bounded slice.
+
+Video run alignment follow-up - 2026-07-03
+------------------------------------------
+ALPHA continued directly through the two smallest remaining video-run listing/comparison seams.
+
+Implemented in code:
+- Commit `6900763` aligns `/api/videos` with the latest linked analysis run instead of pinning the listing to `analysis_key = v.game_id`.
+- Commit `954fe91` keeps compare-page run counts keyed by each run's own `analysis_key`, preserving per-run deltas instead of collapsing reruns together.
+
+Verification:
+- `python -m pytest tests/test_api.py -k "api_videos or rerun_video_analysis or compare_video_analysis" -q` -> 4 passed
+- `python -m pytest tests/test_api.py -k "compare_video_analysis or api_videos" -q` -> 3 passed
+- `python -m pytest tests/test_api.py -q` -> 105 passed
+- `python -m pytest tests/test_schema.py -q` -> 48 passed
+- `python -m py_compile blueprints/ai.py tests/test_api.py` -> passed
+
+Recommended next move:
+- Fresh repo-truth audit for the next smallest remaining identity seam outside the now-completed review/detections/video-run cluster.
