@@ -386,6 +386,30 @@ def test_get_events(client):
     assert events[0]["timestamp_ms"] < events[1]["timestamp_ms"]
 
 
+def test_get_events_prefers_relational_game_id_with_legacy_fallback(client, db):
+    game_id = _create_game(client, "events-relational-game")
+    db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("legacy-other-key", game_id, "assist", 1000, 1),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?)""",
+        (str(game_id), "rebound", 2000, 1),
+    )
+    db.commit()
+
+    r = client.get(f"/api/events/{game_id}")
+    events = r.get_json()
+
+    assert r.status_code == 200
+    assert len(events) == 2
+    assert [event["event_type"] for event in events] == ["assist", "rebound"]
+
+
 def test_get_events_can_filter_by_event_type(client):
     game_id = _create_game(client, "bookmark-game")
     post_json(client, "/api/save_event", {
@@ -1052,6 +1076,39 @@ def test_analysis_status_counts_detections_via_relational_game_id(client, db):
     assert payload["status"] == "completed"
     assert payload["detection_count"] == 1
     assert payload["event_count"] == 0
+
+
+def test_analysis_results_and_status_count_events_via_relational_game_id(client, db):
+    analysis_key = "analysis-events-relational"
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", analysis_key),
+    )
+    relational_game_id = game_row.lastrowid
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (relational_game_id, analysis_key, "uploads/demo-events-relational.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, event_type, player, shot_result, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy-events-key", relational_game_id, "made_two", "Player A", "made", 300, 1),
+    )
+    db.commit()
+
+    status_response = client.get(f"/api/analysis_status/{analysis_key}")
+    status_payload = status_response.get_json()
+    assert status_response.status_code == 200
+    assert status_payload["event_count"] == 1
+
+    analysis_response = client.get(f"/api/analysis/{analysis_key}")
+    analysis_payload = analysis_response.get_json()
+    assert analysis_response.status_code == 200
+    assert analysis_payload["events_summary"] == [{"event_type": "made_two", "cnt": 1}]
+    assert analysis_payload["recent_events"][0]["event_type"] == "made_two"
+    assert analysis_payload["recent_events"][0]["player"] == "Player A"
 
 
 def test_settings_page_renders(client, monkeypatch):

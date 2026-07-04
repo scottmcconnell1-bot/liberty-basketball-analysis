@@ -34,6 +34,19 @@ from helpers import (
 ai_bp = Blueprint("ai", __name__)
 
 
+def _resolve_analysis_relational_game_id(db, game_id):
+    """Resolve the canonical game id for either an analysis key or a game key."""
+    row = db.execute(
+        "SELECT game_id FROM analysis_runs WHERE analysis_key=? AND game_id IS NOT NULL ORDER BY id DESC LIMIT 1",
+        (game_id,),
+    ).fetchone()
+    if row and row["game_id"] is not None:
+        return row["game_id"]
+
+    from stats import _resolve_relational_game_id
+    return _resolve_relational_game_id(db, game_id)
+
+
 @ai_bp.route("/api/analysis_status/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_status(game_id):
@@ -45,7 +58,10 @@ def get_analysis_status(game_id):
                      FROM detections d
                     WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
                        OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
+                  (SELECT COUNT(*)
+                     FROM events e
+                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
+                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
@@ -91,8 +107,7 @@ def get_stats(game_id):
 
     # Wire possession inference after stats refresh
     from helpers import assign_possessions_for_game
-    from stats import _resolve_relational_game_id
-    relational_game_id = _resolve_relational_game_id(db, game_id)
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
         assign_possessions_for_game(db, relational_game_id)
 
@@ -116,7 +131,10 @@ def get_analysis_progress(game_id):
                      FROM detections d
                     WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
                        OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
+                  (SELECT COUNT(*)
+                     FROM events e
+                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
+                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
@@ -146,24 +164,51 @@ def get_analysis_results(game_id):
 
     # Wire possession inference after stats refresh
     from helpers import assign_possessions_for_game
-    from stats import _resolve_relational_game_id
-    relational_game_id = _resolve_relational_game_id(db, game_id)
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
         assign_possessions_for_game(db, relational_game_id)
 
     # Events summary
-    events_summary = db.execute("""
-        SELECT event_type, COUNT(*) as cnt
-        FROM events WHERE game_id=?
-        GROUP BY event_type ORDER BY cnt DESC
-    """, (game_id,)).fetchall()
+    if relational_game_id is not None:
+        events_summary = db.execute(
+            """SELECT event_type, COUNT(*) as cnt
+                 FROM events
+                WHERE relational_game_id = ?
+                   OR (relational_game_id IS NULL AND game_id = ?)
+                GROUP BY event_type
+                ORDER BY cnt DESC""",
+            (relational_game_id, game_id),
+        ).fetchall()
 
-    # Top events timeline (last 50)
-    recent_events = db.execute("""
-        SELECT event_type, player, shot_result, timestamp_ms, details_json
-        FROM events WHERE game_id=?
-        ORDER BY timestamp_ms DESC LIMIT 50
-    """, (game_id,)).fetchall()
+        # Top events timeline (last 50)
+        recent_events = db.execute(
+            """SELECT event_type, player, shot_result, timestamp_ms, details_json
+                 FROM events
+                WHERE relational_game_id = ?
+                   OR (relational_game_id IS NULL AND game_id = ?)
+                ORDER BY timestamp_ms DESC
+                LIMIT 50""",
+            (relational_game_id, game_id),
+        ).fetchall()
+    else:
+        events_summary = db.execute(
+            """SELECT event_type, COUNT(*) as cnt
+                 FROM events
+                WHERE game_id=?
+                GROUP BY event_type
+                ORDER BY cnt DESC""",
+            (game_id,),
+        ).fetchall()
+
+        # Top events timeline (last 50)
+        recent_events = db.execute(
+            """SELECT event_type, player, shot_result, timestamp_ms, details_json
+                 FROM events
+                WHERE game_id=?
+                ORDER BY timestamp_ms DESC
+                LIMIT 50""",
+            (game_id,),
+        ).fetchall()
 
     return jsonify({
         "game_id": game_id,
@@ -180,11 +225,11 @@ def get_analysis_results(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_possessions(game_id):
     """Return possession summary for a game."""
-    from stats import get_possession_summary, _resolve_relational_game_id
+    from stats import get_possession_summary
     from helpers import assign_possessions_for_game
     db = get_db()
     # Ensure possessions are assigned before returning summary
-    relational_game_id = _resolve_relational_game_id(db, game_id)
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
         assign_possessions_for_game(db, relational_game_id)
     return jsonify(get_possession_summary(db, game_id))

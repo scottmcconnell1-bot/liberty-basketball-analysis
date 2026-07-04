@@ -33,6 +33,7 @@ from flask import (
 import player_development as pd_helpers
 
 from helpers import get_db, refresh_game_stats, require_feature
+from stats import _resolve_relational_game_id
 
 clips_bp = Blueprint("clips", __name__)
 
@@ -216,7 +217,26 @@ def save_event():
 def get_events(game_id):
     db = get_db()
     event_type = (request.args.get("event_type") or "").strip()
-    if event_type:
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        if event_type:
+            rows = db.execute(
+                """SELECT * FROM events
+                    WHERE (relational_game_id = ?
+                           OR (relational_game_id IS NULL AND game_id = ?))
+                      AND event_type=?
+                    ORDER BY timestamp_ms ASC""",
+                (relational_game_id, game_id, event_type),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                """SELECT * FROM events
+                    WHERE relational_game_id = ?
+                       OR (relational_game_id IS NULL AND game_id = ?)
+                    ORDER BY timestamp_ms ASC""",
+                (relational_game_id, game_id),
+            ).fetchall()
+    elif event_type:
         rows = db.execute(
             "SELECT * FROM events WHERE game_id=? AND event_type=? ORDER BY timestamp_ms ASC",
             (game_id, event_type),
