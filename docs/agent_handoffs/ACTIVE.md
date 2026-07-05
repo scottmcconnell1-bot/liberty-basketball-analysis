@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-9cd-deploy-smoke-parity |
+| **id** | stage-10a-assistant-api |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,11 +15,12 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- Stage 9A merged (#83): secrets audit, VAPID remediation, `.env.example`
-- `scripts/docker_production_smoke.sh` + `docs/DOCKER_PRODUCTION_SMOKE.md` (9C)
-- Transfer bundle includes `blueprints/`, helpers, entitlements, secrets audit (9D)
-- `docs/HERMES_LINUX_PARITY.md` — parity baseline and restore proof steps
+- `POST /api/assistant/query` — read-only Q&A from trusted events, stats, clips
+- `assistant_query.py` heuristic intents: player stats, team stats, turnovers, minutes, four factors, clips
+- `ENABLE_ASSISTANT_READ_ONLY` feature flag + `AI_ASSIST` module gate
+- Citations include event/stat/clip IDs; `review_scope=accepted_and_corrected_only`
+- 360 passed, 1 skipped
 
 ### Next
 
-Hermes runs `bash scripts/docker_production_smoke.sh` on Linux (Scott gate), then Phase 5 AI assist or Scott auth flip review
+Stage 10B — guided workflow: game → player → clip list

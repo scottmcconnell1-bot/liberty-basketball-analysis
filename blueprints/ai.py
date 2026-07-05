@@ -12,6 +12,7 @@ Routes:
   DELETE /api/videos/<int:vid_id>      - Delete a video
   POST /api/admin/reset                - Admin reset
   POST /upload                         - Upload and analyze
+  POST /api/assistant/query            - Read-only Q&A from reviewed data (Stage 10A)
 """
 
 import os
@@ -26,7 +27,7 @@ from helpers import (
     AI_DEFAULTS, ai_runtime_available, append_query_params, build_analysis_settings_snapshot,
     build_resource_status, build_rerun_game_id, build_run_summary,
     build_settings_catalog, default_run_label, display_detector_model,
-    ensure_primary_run_metadata, extract_local_path, get_db,
+    ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
     get_runtime_settings, queue_analysis_run, require_feature,
     resolve_detector_model, safe_return_path, start_analysis_subprocess
 )
@@ -731,4 +732,29 @@ def upload_only():
     </div>
     </body></html>
     """
+
+
+@ai_bp.route("/api/assistant/query", methods=["POST"])
+@require_feature("ENABLE_ASSISTANT_READ_ONLY")
+def assistant_query_route():
+    """Answer coach questions from trusted reviewed events, stats, and clips."""
+    db = get_db()
+    from module_entitlements import enforce_module_access
+    from module_keys import AI_ASSIST
+    from assistant_query import answer_question
+
+    enforce_module_access(db, get_default_team_id(db), AI_ASSIST)
+
+    data = request.get_json(force=True) or {}
+    question = (data.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+
+    game_id = data.get("game_id")
+    if game_id is None:
+        return jsonify({"error": "game_id is required"}), 400
+
+    player = data.get("player")
+    payload = answer_question(db, question=question, game_id=game_id, player=player)
+    return jsonify(payload)
 

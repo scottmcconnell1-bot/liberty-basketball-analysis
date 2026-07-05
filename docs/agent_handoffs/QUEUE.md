@@ -11,14 +11,12 @@ See `ACTIVE.md`.
 
 | # | Stage | Summary | Status |
 | --- | --- | --- | --- |
-| 1 | 9A | Secrets audit | done (#83) |
-| 2 | 9B | Auth re-enable plan | prep done — flip is Scott gate |
-| 3 | 9C | Docker production smoke | done — Hermes/Linux run is Scott gate |
-| 4 | 9D | Transfer bundle + Hermes parity | done |
-| 5 | 10A | Read-only assistant API | queued |
+| 1 | 9C/9D | Docker smoke + transfer parity | done (#84) |
+| 2 | 10A | Read-only assistant API | done |
+| 3 | 10B | Guided workflow: game → player → clip list | queued |
+| 4 | 10C | No ball detector expansion | standing deferral |
 
 ## Done recently
 
+- 9A secrets audit (#83)
 - 8A demo module entitlements (#82)
-- 7E canonical clips (#81)
-- 8C trusted stats (#80)
