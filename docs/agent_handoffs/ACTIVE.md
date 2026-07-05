@@ -8,9 +8,10 @@ Branch: `jason-5-may-updates`
 | Field | Value |
 | --- | --- |
 | **id** | stage-6a-preflight |
-| **status** | `pending` |
+| **status** | `in_progress` |
 | **issued_by** | orchestrator |
-| **assigned_to** | devin *(or cursor-cloud-agent if Devin unavailable)* |
+| **assigned_to** | devin |
+| **started** | 2026-07-05 — Scott confirmed Devin cloned repo and is reading docs |
 
 ## Objective
 
