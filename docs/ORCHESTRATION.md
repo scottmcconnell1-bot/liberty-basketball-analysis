@@ -1,21 +1,17 @@
-# Liberty Orchestration — Cursor-Only Workflow
+# Liberty Orchestration — Cursor + Devin Workflow
 
 Updated: 2026-07-05
 Branch: `jason-5-may-updates`
-Audience: Scott + Cursor Cloud Agent (orchestrator)
+Audience: Scott + Cursor Cloud Agent (orchestrator) + Devin (optional executor)
 
 ## Purpose
 
-Run Liberty Basketball Analysis with **one subscription** (Cursor Pro), **no pay-as-you-go**, and **no second agent product** (Devin). The Cursor Cloud Agent orchestrates work; subagents inside the same session do focused execution. The repository is the message bus.
-
-This replaces the legacy Alpha/Owl label-and-poller workaround.
+Run Liberty Basketball Analysis with **Cursor Pro as orchestrator** and **Devin for heavy implementation** while Scott has a paid Devin month. The repository is the message bus. No GitHub label polling.
 
 ## Parameters (locked)
 
-- **Budget:** Cursor Pro ($20/mo) only
-- **No on-demand / pay-as-you-go billing**
-- **No Devin subscription** for this project
-- **No 24/7 autonomous pollers** until usage is proven sustainable
+- **Cursor budget:** Pro ($20/mo), **no pay-as-you-go** (on-demand disabled or $0 cap — Scott confirmed)
+- **Devin:** use for implementation slices during paid month; do not duplicate the same ACTIVE task in both agents
 - **Repository files are source of truth**, not chat history
 
 ## Account optimization checklist (Scott — do once)
@@ -24,33 +20,51 @@ Complete these in [cursor.com/dashboard](https://cursor.com/dashboard):
 
 ### Billing and usage
 
-1. **Do not subscribe to Devin** for Liberty work. Cursor covers orchestration + implementation.
-2. **Disable on-demand usage**, or set the monthly spend hard limit to **$0**.
-   - Cloud Agents may require on-demand to be *configured*; a $0 cap prevents surprise charges.
-   - When the included ~$20 API pool is exhausted, agents stop. That is acceptable.
-3. **Check usage weekly** at Dashboard → Billing & Invoices → Included Usage.
-4. **Archive stuck Cloud Agents** at [cursor.com/agents](https://cursor.com/agents) if you see false "limit reached" errors.
+1. **Disable on-demand usage**, or set the monthly spend hard limit to **$0**. (Scott confirmed.)
+2. **Check usage weekly** at Dashboard → Billing & Invoices → Included Usage.
+3. **Archive stuck Cloud Agents** at [cursor.com/agents](https://cursor.com/agents) if you see false "limit reached" errors.
 
-### Model strategy (stretch the $20 pool)
+### Model picker (item 3 — nothing to install)
 
-| Use case | Model | Why |
+There is **no separate settings page** for this. When you open Cursor chat or start a Cloud Agent, use the **model dropdown** at the top of the input:
+
+| When | Pick this |
+| --- | --- |
+| Normal Liberty work | **Auto** or **Composer** |
+| Stuck on a hard decision | Sonnet or Opus (uses more of your $20 pool) |
+
+That is the entire step. Default to Auto/Composer so Cursor credits last the month.
+
+### GitHub + Cloud Agents (item 4 — quick verify)
+
+If these are true, you are done — no further setup:
+
+1. Go to [cursor.com/agents](https://cursor.com/agents)
+2. You can start an agent on **`liberty-basketball-analysis`**
+3. The agent checks out **`jason-5-may-updates`** (not `main`)
+
+Optional check: Dashboard → Settings → GitHub shows the repo connected.
+
+### Devin (paid month — use it for heavy lifting)
+
+| Role | Tool | When to use |
 | --- | --- | --- |
-| Routine implementation, tests, docs | **Composer** or **Auto** | Lower cost; included generously |
-| Orchestrator planning and review | **Composer** default; upgrade only for hard decisions | Reserve expensive models |
-| Deep architecture / ambiguous tradeoffs | **Sonnet** or **Opus** | Use sparingly — burns pool fast |
-| Parallel `/orchestrate` cloud workers | **Avoid by default** | Each worker is a separate billed VM run |
+| **Orchestrator** | Cursor Cloud Agent | Plan slices, review PRs, update ACTIVE.md, quick fixes |
+| **Executor** | Devin | Longer implementation runs (new modules, multi-file refactors, test-heavy slices) |
 
-### What not to enable yet
+**Start Devin with one line:**
 
-- **Cursor Automations** on a cron (burns usage while idle)
-- **`/orchestrate` parallel cloud-agent trees** for routine slices
-- **Multiple simultaneous Cloud Agent sessions** on the same task
+```
+Clone scottmcconnell1-bot/liberty-basketball-analysis, branch jason-5-may-updates.
+Read docs/ORCHESTRATION.md and docs/agent_handoffs/ACTIVE.md.
+Execute the active task. Open a PR when done. Update ACTIVE.md report section.
+```
 
-### GitHub connection
+**Rules:**
 
-1. Connect `scottmcconnell1-bot/liberty-basketball-analysis` in Cloud Agents settings.
-2. Working branch: **`jason-5-may-updates`** (not `main`).
-3. Optional later: trigger Cloud Agent from a GitHub comment (`@cursor`) on a PR — only after the manual workflow is stable.
+- Only **one** agent works the ACTIVE task at a time (Cursor **or** Devin, not both).
+- Devin opens a PR; Cursor orchestrator reviews it.
+- Do not renew Devin after the paid month unless Cursor alone is insufficient.
 
 ## Operating model
 
@@ -73,8 +87,9 @@ Scott reviews PR + /status + /preview when product-facing
 | Role | Who | Does | Does not |
 | --- | --- | --- | --- |
 | **Owner** | Scott | Scope, schema approval, phase transitions | Review every line of code |
-| **Orchestrator** | Cursor Cloud Agent | Plan, bounded tasks, implement or subagent, test, PR, docs truth | Drift from repo; unbounded refactors |
-| **Subagents** | In-session Task tool | Focused explore/debug/implementation | Run as separate billed Cloud VMs |
+| **Orchestrator** | Cursor Cloud Agent | Plan, bounded tasks, review PRs, update ACTIVE.md | Unbounded refactors |
+| **Executor** | Devin (paid month) or Cursor subagents | Multi-file implementation, tests, PR | Change scope without ACTIVE.md update |
+| **Subagents** | In-session Task tool (Cursor) | Focused explore/debug when Cursor implements | Separate billed Cloud VMs |
 
 ### Communication (no copy/paste)
 
