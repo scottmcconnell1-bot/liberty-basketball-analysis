@@ -41,6 +41,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, ur
 from helpers import (
     AI_DEFAULTS,
     build_resource_status,
+    build_review_workflow_summary,
     build_settings_catalog,
     extract_local_path,
     get_db,
@@ -302,16 +303,20 @@ def _build_product_checklist():
 
 
 def _build_product_preview(db):
+    review_summary = build_review_workflow_summary(db)
     counts = {
         "scheduled_games": db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0],
         "videos": db.execute("SELECT COUNT(*) FROM videos").fetchone()[0],
         "analysis_runs": db.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0],
-        "pending_review": db.execute(
-            "SELECT COUNT(*) FROM review_items WHERE review_status IN ('pending', 'needs_review')"
-        ).fetchone()[0],
+        "pending_review": review_summary["review_items_open"],
+        "events_pending": review_summary["events_pending"],
+        "events_accepted": review_summary["events_accepted"],
+        "events_corrected": review_summary["events_corrected"],
+        "events_rejected": review_summary["events_rejected"],
+        "events_total": review_summary["events_total"],
         "practices": db.execute("SELECT COUNT(*) FROM practices").fetchone()[0],
     }
-    return PRODUCT_PREVIEW_MODULES, counts
+    return PRODUCT_PREVIEW_MODULES, counts, review_summary
 
 
 @core.route("/")
@@ -322,11 +327,12 @@ def index():
 @core.route("/preview")
 def product_preview_page():
     db = get_db()
-    modules, counts = _build_product_preview(db)
+    modules, counts, review_summary = _build_product_preview(db)
     return render_template(
         "product_preview.html",
         preview_modules=modules,
         preview_counts=counts,
+        review_summary=review_summary,
     )
 
 
@@ -2067,6 +2073,7 @@ def status_page():
     db = get_db()
     product_checklist, checklist_summary = _build_product_checklist()
     module_entitlement_report = audit_team_entitlements(db)
+    review_summary = build_review_workflow_summary(db)
     run_rows = db.execute(
         "SELECT * FROM analysis_runs ORDER BY id DESC"
     ).fetchall()
@@ -2102,6 +2109,7 @@ def status_page():
         checklist_summary=checklist_summary,
         product_surface_links=PRODUCT_SURFACE_LINKS,
         module_entitlement_report=module_entitlement_report,
+        review_summary=review_summary,
         runs=runs,
         detection_rows=[
             {

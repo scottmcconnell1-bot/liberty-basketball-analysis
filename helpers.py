@@ -83,6 +83,39 @@ def get_default_team_id(db):
     return _stage2_default_team_id(db)
 
 
+def build_review_workflow_summary(db):
+    """Aggregate event and review_items counts for coach trust surfaces."""
+    event_rows = db.execute(
+        """SELECT review_status, COUNT(*) AS count
+           FROM events
+           GROUP BY review_status"""
+    ).fetchall()
+    events_by_status = {row["review_status"]: row["count"] for row in event_rows}
+    events_total = sum(events_by_status.values())
+
+    item_rows = db.execute(
+        """SELECT review_status, COUNT(*) AS count
+           FROM review_items
+           GROUP BY review_status"""
+    ).fetchall()
+    items_by_status = {row["review_status"]: row["count"] for row in item_rows}
+    items_total = sum(items_by_status.values())
+
+    return {
+        "events_total": events_total,
+        "events_by_status": events_by_status,
+        "events_pending": events_by_status.get("pending", 0),
+        "events_accepted": events_by_status.get("accepted", 0),
+        "events_corrected": events_by_status.get("corrected", 0),
+        "events_rejected": events_by_status.get("rejected", 0),
+        "review_items_total": items_total,
+        "review_items_by_status": items_by_status,
+        "review_items_open": (
+            items_by_status.get("pending", 0) + items_by_status.get("needs_review", 0)
+        ),
+    }
+
+
 def feature_enabled(flag_name):
     return bool(get_runtime_settings()["features"].get(flag_name, False))
 

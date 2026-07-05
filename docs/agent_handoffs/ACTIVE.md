@@ -7,18 +7,19 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-7a-requirements |
-| **status** | `in_progress` |
+| **id** | stage-7d-review-counts |
+| **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
-## Objective
+## Report
 
-Fix dev onboarding: add `requirements.txt` shim and missing `requirements.docker.txt`.
+### Proven
 
-## Checklist
+- `build_review_workflow_summary()` aggregates events + review_items
+- `/status` shows Review & Trust Summary card
+- `/preview` shows accepted/pending/rejected event KPIs
+- 312 passed, 1 skipped
 
-- [x] Add requirements.txt → requirements-dev.txt
-- [x] Add requirements.docker.txt for Docker/production AI path
-- [x] Add docs/DEV_ENVIRONMENT.md
-- [ ] Run pytest
-- [ ] Merge PR
+### Next
+
+Stage 7B — possession display in film flow
