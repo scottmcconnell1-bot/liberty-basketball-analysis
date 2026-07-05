@@ -1,29 +1,45 @@
 # Agent Handoffs
 
-This folder is the fallback return channel for ALPHA/OWL handoffs when GitHub issue comments are unavailable.
+Current coordination uses **one active task file** — not GitHub labels.
 
-Preferred workflow:
+## Start here
 
-1. ALPHA creates or updates a GitHub issue titled `[OWL ACTION]`.
-2. OWL reads the issue body plus the latest `[OWL FOLLOWUP]` comment from ALPHA, if any.
-3. OWL verifies the checklist and posts a report as an issue comment.
+1. `docs/ORCHESTRATION.md` — account setup, roles, usage rules
+2. **`docs/agent_handoffs/ACTIVE.md`** — current bounded task and report
+3. `PROJECT_STATUS.md` — long-lived verified facts
 
-Fallback workflow:
+## Workflow
 
-1. OWL writes the report here.
-2. File name format: `ISSUE_<number>_<short_task>.md`.
-3. Report format: Proven / Inferred / Unknown.
-4. Commit and push the report to `jason-5-may-updates`.
-5. Report only the commit hash and report path in chat.
+1. Orchestrator writes or updates `ACTIVE.md` with objective + checklist.
+2. Cloud Agent session executes the checklist on `jason-5-may-updates`.
+3. Agent updates the Report section (Proven / Inferred / Unknown) and sets status to `done`.
+4. Completed tasks move to `ARCHIVE/`.
+5. Code changes go through a PR on `cursor/<task>-ac1f`.
 
-This folder prevents Scott from having to copy/paste full verification reports between agents.
+Scott starts a session with:
 
-Current top-level GitHub sync note:
+```
+Read docs/ORCHESTRATION.md and docs/agent_handoffs/ACTIVE.md. Execute the active task.
+```
 
-- `ALPHA_GITHUB_SYNC_2026-07-05.md` is the latest branch-wide handoff snapshot for new agents with no chat context.
+## Legacy (retired)
 
-Poller reminder:
+Alpha/Owl GitHub label polling (`OWL ACTION`, `OWL DONE`, `OWL NEEDS`) is historical. Do not create new Owl-labeled issues.
 
-- OWL's primary queue is always the newest open GitHub issue labeled `OWL ACTION`.
-- If an issue has `OWL NEEDS`, OWL must keep polling that same issue for a newer `[OWL FOLLOWUP]` from ALPHA.
-- OWL must not go idle while an open actionable `OWL ACTION` issue exists.
+Older snapshots remain for audit:
+
+- `ALPHA_GITHUB_SYNC_2026-07-05.md`
+- `ISSUE_*` files
+
+## Report format
+
+```markdown
+### Proven
+(directly verified)
+
+### Inferred
+(reasonable conclusions)
+
+### Unknown
+(not yet verified)
+```
