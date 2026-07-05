@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-7d-review-counts |
+| **id** | stage-7b-possession-film |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,11 +15,11 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `build_review_workflow_summary()` aggregates events + review_items
-- `/status` shows Review & Trust Summary card
-- `/preview` shows accepted/pending/rejected event KPIs
-- 312 passed, 1 skipped
+- `build_possession_workflow_summary()` assigns possessions idempotently and aggregates linkage counts
+- `/film?game_id=…` shows Possessions card (total, scoring, pts/poss, TO rate, linked events)
+- `/analysis/<game_id>` renders possession summary panel (fixed `content` block)
+- 315 passed, 1 skipped
 
 ### Next
 
-Stage 7B — possession display in film flow
+Stage 7C — player minutes on stats pages

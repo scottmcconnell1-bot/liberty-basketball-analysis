@@ -40,10 +40,12 @@ from flask import Blueprint, current_app, redirect, render_template, request, ur
 
 from helpers import (
     AI_DEFAULTS,
+    build_possession_workflow_summary,
     build_resource_status,
     build_review_workflow_summary,
     build_settings_catalog,
     extract_local_path,
+    feature_enabled,
     get_db,
     get_runtime_settings,
     read_filtered_app_logs,
@@ -1436,6 +1438,7 @@ def film(filename=None):
     shot_summary = []
     player_effect_data = []
     player_minutes_data = []
+    possession_summary = None
     if filename and not game_id:
         db = get_db()
         # Find the most recent analysis run for this video file
@@ -1506,6 +1509,9 @@ def film(filename=None):
         ).fetchall()
         player_minutes_data = [dict(r) for r in minutes_rows]
 
+        if feature_enabled("ENABLE_AUTO_STATS_M1"):
+            possession_summary = build_possession_workflow_summary(db, game_id)
+
     return render_template(
         "film_tool.html",
         filename=filename,
@@ -1514,6 +1520,7 @@ def film(filename=None):
         shot_summary=shot_summary,
         player_effect_data=player_effect_data,
         player_minutes_data=player_minutes_data,
+        possession_summary=possession_summary,
     )
 
 

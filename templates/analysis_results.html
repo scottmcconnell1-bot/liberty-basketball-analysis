@@ -73,7 +73,7 @@
 </style>
 {% endblock %}
 
-{% block body %}
+{% block content %}
 <div class="container">
   <div class="nav">
     <a href="/">⬅ Dashboard</a>
@@ -105,6 +105,10 @@
       <div class="card">
         <h2>📈 Event Summary</h2>
         <div id="event-summary"></div>
+      </div>
+      <div class="card">
+        <h2>🏀 Possessions</h2>
+        <div id="possession-summary"></div>
       </div>
       <div class="card">
         <h2>🏀 Plays Recognized</h2>
@@ -181,6 +185,7 @@ async function loadResults() {
 
     await sleep(100);
     renderEventSummary(data.events_summary || []);
+    renderPossessionSummary((data.enhanced && data.enhanced.possession_summary) || null);
     renderPlaysSummary((data.enhanced && data.enhanced.plays_summary) || []);
 
     setStep('step-events', 'done');
@@ -235,6 +240,28 @@ function renderEventSummary(events) {
     html += '<div class="stat-box"><div class="val">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + escapeHtml(e.event_type) + '</div></div>';
   }
   html += '</div><p style="color:var(--muted);font-size:0.8rem">Total: ' + total.toLocaleString() + ' events</p>';
+  el.innerHTML = html;
+}
+
+function renderPossessionSummary(summary) {
+  const el = document.getElementById('possession-summary');
+  if (!summary || !summary.total_possessions) {
+    el.innerHTML = '<p style="color:var(--muted)">No possession data yet</p>';
+    return;
+  }
+  let html = '<div class="stat-grid">';
+  html += '<div class="stat-box"><div class="val">' + summary.total_possessions + '</div><div class="lbl">Total</div></div>';
+  html += '<div class="stat-box"><div class="val">' + summary.scoring_possessions + '</div><div class="lbl">Scoring</div></div>';
+  html += '<div class="stat-box"><div class="val">' + summary.points_per_possession + '</div><div class="lbl">Pts / Poss</div></div>';
+  html += '</div>';
+  html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:12px;">Turnover rate: ' + summary.turnover_rate + '</p>';
+  if (summary.top_outcomes && summary.top_outcomes.length) {
+    html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:8px;">Top outcomes: ';
+    html += summary.top_outcomes.map(function(o) {
+      return escapeHtml(o.outcome) + ' (' + o.count + ')';
+    }).join(', ');
+    html += '</p>';
+  }
   el.innerHTML = html;
 }
 
