@@ -106,6 +106,7 @@ These are included in the transfer bundle script so another server can receive b
 
 ## Documentation map
 
+- `docs/ORCHESTRATION.md` — Cursor-only orchestration workflow and account setup
 - `docs/DEPLOYMENT.md` — standalone install, Docker, GPU containers, server transfer, restore flow
 - `docs/AI_AGENT_HANDOFF.md` — concise handoff brief for another AI agent
 - `docs/IMPLEMENTATION_PLAN.md` — current implementation snapshot and forward roadmap
