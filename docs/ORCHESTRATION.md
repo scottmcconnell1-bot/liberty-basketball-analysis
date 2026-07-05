@@ -10,8 +10,9 @@ Run Liberty Basketball Analysis with **Cursor Pro as orchestrator** and **Devin 
 
 ## Parameters (locked)
 
-- **Cursor budget:** Pro ($20/mo), **no pay-as-you-go** (on-demand disabled or $0 cap — Scott confirmed)
-- **Devin:** use for implementation slices during paid month; do not duplicate the same ACTIVE task in both agents
+- **Cursor budget:** Pro ($20/mo), **no pay-as-you-go** (on-demand disabled or $0 cap)
+- **Devin:** optional executor during paid month
+- **Autonomous mode:** orchestrator follows `docs/COMPLETION_PATH.md` and merges approved slices without per-step Scott relay (Scott gate: schema, auth, production — see completion path)
 - **Repository files are source of truth**, not chat history
 
 ## Account optimization checklist (Scott — do once)

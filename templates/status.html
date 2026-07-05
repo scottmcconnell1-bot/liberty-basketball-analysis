@@ -129,6 +129,40 @@
     color: #64748b;
     font-size: 0.86rem;
   }
+  .entitlement-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .entitlement-team {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+  }
+  .entitlement-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .entitlement-key {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .entitlement-key.enabled {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .entitlement-key.disabled {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .entitlement-key.missing {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
 </style>
 
 <div class="card" data-frame="15.0">
@@ -185,6 +219,47 @@
         </li>
         {% endfor %}
       </ul>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card" data-frame="15.05">
+  <h3 style="margin-bottom:8px;">Module Entitlements</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+  Package modules per team (Stage 6A). Development feature flags in Settings are separate.
+  </div>
+  <div class="entitlement-grid">
+    {% for team in module_entitlement_report.teams %}
+    <section class="entitlement-team">
+      <strong>Team #{{ team.team_id }}</strong>
+      <div class="text-muted" style="font-size:0.85rem;margin-top:4px;">
+        {{ team.row_count }} entitlement row(s) · base platform {% if team.has_base_platform %}enabled{% else %}missing{% endif %}
+      </div>
+      {% if team.enabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Enabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.enabled_module_keys %}
+        <span class="entitlement-key enabled">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.disabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Disabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.disabled_module_keys %}
+        <span class="entitlement-key disabled">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.missing_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Not configured</div>
+      <div class="entitlement-keys">
+        {% for key in team.missing_module_keys %}
+        <span class="entitlement-key missing">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </section>
     {% endfor %}
   </div>

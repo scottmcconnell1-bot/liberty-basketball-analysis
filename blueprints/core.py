@@ -52,6 +52,7 @@ from helpers import (
     append_query_params,
     save_settings,
 )
+from module_entitlements import audit_team_entitlements
 from stats import _resolve_relational_game_id
 
 core = Blueprint("core", __name__)
@@ -2065,6 +2066,7 @@ def status_page():
     """Live status page showing all analysis runs."""
     db = get_db()
     product_checklist, checklist_summary = _build_product_checklist()
+    module_entitlement_report = audit_team_entitlements(db)
     run_rows = db.execute(
         "SELECT * FROM analysis_runs ORDER BY id DESC"
     ).fetchall()
@@ -2099,6 +2101,7 @@ def status_page():
         product_checklist=product_checklist,
         checklist_summary=checklist_summary,
         product_surface_links=PRODUCT_SURFACE_LINKS,
+        module_entitlement_report=module_entitlement_report,
         runs=runs,
         detection_rows=[
             {

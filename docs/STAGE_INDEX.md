@@ -32,8 +32,8 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 5D | Relational game_id cleanup for play_recognitions | Implemented and committed | additive `relational_game_id` for `play_recognitions`; bounded play recognition write/query cleanup |
 | Stage 5E | Relational game_id cleanup for player_effect | Implemented and committed | additive `relational_game_id` for `player_effect`; bounded effect write/query cleanup |
 | Stage 5F | Relational game_id cleanup for human_corrections | Implemented and committed | additive `relational_game_id` for `human_corrections`; review correction writes preserve relational game identity |
-| Stage 6 | Module entitlement wiring | In progress through Stage 6A slices | module_key helpers and team/module permission checks |
-| Stage 6A | Module entitlement helper and audit wiring | Implementation in progress | read-only module key constants, entitlement helpers, and audit tooling without route enforcement |
+| Stage 6A | Module entitlement helper and audit wiring | Implemented (#72) | read-only module key constants, entitlement helpers, audit tooling |
+| Stage 6C | Module entitlements on status page | In progress | `/status` entitlement audit display |
 
 ## Rules
 
@@ -53,4 +53,4 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 5F is implemented in code at commit `a923ee8`. The post-Stage-5 `review_items` cleanup is implemented through commits `15cecb2` and `5412a54`, the bounded `detections` relational query-path cleanup is implemented at commit `8c6c83f`, the `videos -> analysis_runs` relational carry-forward is implemented at commit `ceaf475`, the `videos -> video_assets` relational carry-forward is implemented at commit `cb106e5`, `/api/videos` latest-linked-run alignment is implemented at commit `6900763`, compare-run count isolation is implemented at commit `954fe91`, event read-path relational alignment is implemented at commit `d1a1b2c`, `delete_video()` generated-event safety landed at commit `8a5a067`, and `persist_events()` relational cleanup landed at commit `163b70d`. Stage 6A implementation is now in progress as a helper-only slice for module keys, read-only entitlement helpers, and audit tooling with no `schema.sql` changes and no route enforcement.
+Stage 6A is complete at commit `d0dccd0` (#72). Stage 6C adds entitlement visibility on `/status`. See `docs/COMPLETION_PATH.md` for the autonomous completion queue.
