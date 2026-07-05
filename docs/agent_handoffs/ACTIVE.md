@@ -28,10 +28,10 @@ Implement Stage 6A per **`docs/STAGE_6A_PLAN.md`**: module key constants, read-o
 - [x] Add `tests/test_module_entitlements.py`; all tests listed in plan
 - [x] Update `docs/STAGE_INDEX.md`; Stage 6A implementation in progress
 - [x] Run `python -m pytest tests/test_module_entitlements.py -q`
-- [ ] Run `python -m pytest tests/ -q`; full suite must pass
+- [x] Run `python -m pytest tests/ -q`; full suite must pass
 - [x] Run `python scripts/audit_module_entitlements.py`; shows `base_platform` enabled
 - [x] Update Report below; set status to `done`
-- [ ] Push branch and open PR into `jason-5-may-updates`
+- [x] Push branch and open PR into `jason-5-may-updates`
 
 ## Hard rules
 
@@ -65,44 +65,46 @@ _Fill in when complete._
 - No `schema.sql` change was made.
 - No blueprint route enforcement was added.
 - No auth or billing change was made.
-- Installed and used `C:\Users\scott\AppData\Local\Programs\Python\Python315\python.exe`.
-- `tests/test_module_entitlements.py` passed under that interpreter.
-- `scripts/audit_module_entitlements.py` ran successfully when invoked with `PYTHONPATH=.`.
-- Full-suite execution stopped during collection at `tests/test_event_pipeline.py` because `pandas` is not installed in the Python 3.15 environment.
-- Installing the full `requirements-dev.txt` set on Python 3.15 failed at `numpy` metadata generation because that interpreter is too new for the pinned scientific stack on this machine and no C/C++ compiler toolchain is present.
+- Installed Python `3.12.5` at `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe`.
+- Created repo virtual environment `.venv312`.
+- Installed `requirements-dev.txt` successfully into `.venv312`.
+- `tests/test_module_entitlements.py` passed under `.venv312`.
+- `scripts/audit_module_entitlements.py` ran successfully under `.venv312` when invoked with `PYTHONPATH=.`.
+- Full-suite verification passed under `.venv312`.
+- Pushed branch `cursor/stage-6a-implementation-ac1f` and opened PR `#72`.
 
 ### Inferred
 
 - The Stage 6A implementation matches the approved planning file boundaries.
 - The new helpers are low-risk because they are read-only and not wired into route enforcement yet.
-- A stable Python version such as 3.12 or 3.13 should allow the pinned `requirements-dev.txt` stack to install cleanly and unblock the full-suite verification path.
+- Python 3.12 is the correct local verification baseline for this repo's pinned development stack.
 
 ### Unknown
 
-- Whether the full repo test suite passes once run under a stable Python with the pinned scientific stack installed.
 - Whether push/PR from this shell will succeed once authentication is available.
 
 ### Tests
 
 ```text
-python -m pytest tests/test_module_entitlements.py -q
+.venv312\Scripts\python.exe -m pip install -r requirements-dev.txt
+Succeeded
+
+.venv312\Scripts\python.exe -m pytest tests/test_module_entitlements.py -q
 8 passed in 3.20s
 
-$env:PYTHONPATH='.'; python scripts/audit_module_entitlements.py
+$env:PYTHONPATH='.'; .venv312\Scripts\python.exe scripts/audit_module_entitlements.py
 team_count=1
 team_id=1
   enabled=base_platform
   disabled=(none)
   missing=stats, minutes_lineups, film_room, scouting, playbook_recognition, strategy, ai_assist, advanced_tracking
 
-python -m pytest tests/ -q
-ERROR tests/test_event_pipeline.py
-ModuleNotFoundError: No module named 'pandas'
-
-python -m pip install -r requirements-dev.txt
-Failed on numpy metadata generation under Python 3.15.0b3 because no compatible wheel/compiler toolchain was available.
+.venv312\Scripts\python.exe -m pytest tests/ -q
+304 passed, 1 skipped in 113.19s
 ```
 
 ### Commits / PR
 
 - `69e7855` - `feat(stage6a): add module entitlement helpers and audit tooling`
+- `d1583c5` - `docs(stage6a): record local verification status`
+- PR `#72` - `Stage 6A: module entitlement helpers and audit tooling`
