@@ -1,18 +1,18 @@
-# Liberty Orchestration — Cursor + Devin Workflow
+# Liberty Orchestration — Cursor-Only Workflow
 
 Updated: 2026-07-05
 Branch: `jason-5-may-updates`
-Audience: Scott + Cursor Cloud Agent (orchestrator) + Devin (optional executor)
+Audience: Scott + Cursor Cloud Agent (orchestrator + executor)
 
 ## Purpose
 
-Run Liberty Basketball Analysis with **Cursor Pro as orchestrator** and **Devin for heavy implementation** while Scott has a paid Devin month. The repository is the message bus. No GitHub label polling.
+Run Liberty Basketball Analysis with **Cursor Pro only**. The Cloud Agent plans, implements, tests, merges, and updates docs. The repository is the message bus.
 
 ## Parameters (locked)
 
 - **Cursor budget:** Pro ($20/mo), **no pay-as-you-go** (on-demand disabled or $0 cap)
-- **Devin:** optional executor during paid month
-- **Autonomous mode:** orchestrator follows `docs/COMPLETION_PATH.md` and merges approved slices without per-step Scott relay (Scott gate: schema, auth, production — see completion path)
+- **Cursor only:** Scott uses Devin for other projects; Liberty is driven entirely by the Cloud Agent
+- **Autonomous mode:** orchestrator follows `docs/COMPLETION_PATH.md` and merges bounded slices after tests pass
 - **Repository files are source of truth**, not chat history
 
 ## Account optimization checklist (Scott — do once)
@@ -46,26 +46,15 @@ If these are true, you are done — no further setup:
 
 Optional check: Dashboard → Settings → GitHub shows the repo connected.
 
-### Devin (paid month — use it for heavy lifting)
+### Cursor Cloud Agent (sole executor)
 
-| Role | Tool | When to use |
-| --- | --- | --- |
-| **Orchestrator** | Cursor Cloud Agent | Plan slices, review PRs, update ACTIVE.md, quick fixes |
-| **Executor** | Devin | Longer implementation runs (new modules, multi-file refactors, test-heavy slices) |
+One session reads `ACTIVE.md`, implements, tests, opens PR, merges when green.
 
-**Start Devin with one line:**
+**Start a session (optional — agent can also continue from queue):**
 
 ```
-Clone scottmcconnell1-bot/liberty-basketball-analysis, branch jason-5-may-updates.
-Read docs/ORCHESTRATION.md and docs/agent_handoffs/ACTIVE.md.
-Execute the active task. Open a PR when done. Update ACTIVE.md report section.
+Read docs/COMPLETION_PATH.md and docs/agent_handoffs/ACTIVE.md. Execute the active task.
 ```
-
-**Rules:**
-
-- Only **one** agent works the ACTIVE task at a time (Cursor **or** Devin, not both).
-- Devin opens a PR; Cursor orchestrator reviews it.
-- Do not renew Devin after the paid month unless Cursor alone is insufficient.
 
 ## Operating model
 
@@ -88,9 +77,7 @@ Scott reviews PR + /status + /preview when product-facing
 | Role | Who | Does | Does not |
 | --- | --- | --- | --- |
 | **Owner** | Scott | Scope, schema approval, phase transitions | Review every line of code |
-| **Orchestrator** | Cursor Cloud Agent | Plan, bounded tasks, review PRs, update ACTIVE.md | Unbounded refactors |
-| **Executor** | Devin (paid month) or Cursor subagents | Multi-file implementation, tests, PR | Change scope without ACTIVE.md update |
-| **Subagents** | In-session Task tool (Cursor) | Focused explore/debug when Cursor implements | Separate billed Cloud VMs |
+| **Orchestrator + executor** | Cursor Cloud Agent | Plan, implement, test, merge, update docs |
 
 ### Communication (no copy/paste)
 

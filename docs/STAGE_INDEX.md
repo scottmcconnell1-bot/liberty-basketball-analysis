@@ -33,7 +33,8 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 5E | Relational game_id cleanup for player_effect | Implemented and committed | additive `relational_game_id` for `player_effect`; bounded effect write/query cleanup |
 | Stage 5F | Relational game_id cleanup for human_corrections | Implemented and committed | additive `relational_game_id` for `human_corrections`; review correction writes preserve relational game identity |
 | Stage 6A | Module entitlement helper and audit wiring | Implemented (#72) | read-only module key constants, entitlement helpers, audit tooling |
-| Stage 6C | Module entitlements on status page | In progress | `/status` entitlement audit display |
+| Stage 6C | Module entitlements on status page | Implemented (#73) | `/status` entitlement audit display |
+| Stage 6B | Module route soft gating | In progress | scouting + playbook `is_module_accessible` gates |
 
 ## Rules
 

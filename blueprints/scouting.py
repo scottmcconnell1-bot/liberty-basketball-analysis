@@ -32,10 +32,17 @@ from datetime import date
 
 from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort, current_app
 
-from helpers import get_db, require_feature
-from nfhs import login_nfhs, lookup_game, download_nfhs_vod, _encrypt_password, _decrypt_password
+from helpers import get_db, require_feature, get_default_team_id
+from module_entitlements import enforce_module_access
+from module_keys import SCOUTING
 
 scouting_bp = Blueprint("scouting", __name__)
+
+
+@scouting_bp.before_request
+def _scouting_module_gate():
+    db = get_db()
+    enforce_module_access(db, get_default_team_id(db), SCOUTING)
 
 
 # ── NFHS Credentials ─────────────────────────────────────────
