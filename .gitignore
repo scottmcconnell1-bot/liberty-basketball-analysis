@@ -93,6 +93,7 @@ detect.log
 detect_*.log
 train.log
 v*.log
+codex_preview_server*.log
 
 # Model weights in root
 yolo*.pt

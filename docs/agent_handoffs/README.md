@@ -18,6 +18,10 @@ Fallback workflow:
 
 This folder prevents Scott from having to copy/paste full verification reports between agents.
 
+Current top-level GitHub sync note:
+
+- `ALPHA_GITHUB_SYNC_2026-07-05.md` is the latest branch-wide handoff snapshot for new agents with no chat context.
+
 Poller reminder:
 
 - OWL's primary queue is always the newest open GitHub issue labeled `OWL ACTION`.
