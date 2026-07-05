@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-07-02
+Updated: 2026-07-05
 Branch: jason-5-may-updates
 
 ## Proven
@@ -185,4 +185,4 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, compare-run alignment, and event read-path alignment slices are now complete. The next recommendation is a bounded event lifecycle cleanup focused on legacy `DELETE/replace` paths that still key generated events by TEXT analysis key in `event_generator.py` and `blueprints/ai.py`.
+Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, compare-run alignment, and event read-path alignment slices are complete. The generated-event lifecycle cleanup is now also complete through commits `8a5a067` and `163b70d`, and the product status page exposes a clickable checklist/proof surface at `85b2120`. The next recommendation is a bounded post-cleanup product-proof or Stage 6A planning slice, with the leading candidate being module entitlement helper/audit wiring without auth enforcement or billing changes.

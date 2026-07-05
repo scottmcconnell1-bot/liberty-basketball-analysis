@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Analysis Status – Liberty Basketball{% endblock %}
+{% block title %}Analysis Status - Liberty Basketball{% endblock %}
 {% block head %}
 <meta http-equiv="refresh" content="5">
 {% endblock %}
@@ -29,6 +29,26 @@
     display: block;
     font-size: 1.35rem;
     line-height: 1.2;
+  }
+  .surface-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .surface-link {
+    display: block;
+    text-align: center;
+    padding: 12px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .surface-link:hover {
+    background: #e2e8f0;
   }
   .phase-grid {
     display: grid;
@@ -117,6 +137,12 @@
     This tracks the full product from first phase to final polish. Completed items are checked and struck through, active work is blue, and future work is gray.
   </div>
 
+  <div class="surface-links">
+    {% for link in product_surface_links %}
+    <a class="surface-link" href="{{ link.href }}">{{ link.label }}</a>
+    {% endfor %}
+  </div>
+
   <div class="checklist-summary">
     <div class="checklist-pill">
       <span class="item-badge status-complete">Complete</span>
@@ -149,7 +175,7 @@
         {% for item in phase["items"] %}
         <li>
           <span class="item-mark">
-            {% if item.status == "complete" %}✓{% elif item.status == "in_progress" %}•{% else %}○{% endif %}
+            {% if item.status == "complete" %}&#10003;{% elif item.status == "in_progress" %}&bull;{% else %}&#9675;{% endif %}
           </span>
           <div class="item-copy {{ item.status }}">
             <div class="item-label">{{ item.label }}</div>
@@ -191,8 +217,8 @@
             <div style="margin-top:4px;color:#dc2626;font-size:0.82rem;">{{ run.error_message }}</div>
             {% endif %}
           </td>
-          <td>{{ run.started_at or '–' }}</td>
-          <td>{{ run.completed_at or '–' }}</td>
+          <td>{{ run.started_at or '-' }}</td>
+          <td>{{ run.completed_at or '-' }}</td>
         </tr>
         {% else %}
         <tr><td colspan="6" class="text-muted">No uploads yet.</td></tr>

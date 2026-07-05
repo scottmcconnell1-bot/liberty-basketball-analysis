@@ -1205,6 +1205,40 @@ def test_status_page_shows_product_progress_checklist(client):
     assert "Phase 8" in html
     assert "Manual Tagging &amp; Bookmarks MVP" in html
     assert "Season Packets, Reviews &amp; Final Polish" in html
+    assert 'href="/schedule"' in html
+    assert 'href="/review"' in html
+    assert 'href="/practices"' in html
+
+
+def test_status_page_groups_detection_and_event_counts_by_canonical_game_id(client, db):
+    game_id = "status-canonical-game"
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", game_id),
+    )
+    relational_game_id = game_row.lastrowid
+    db.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+            confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy-detection-key", relational_game_id, 12, 400, "player", 0.9, 10, 20, 30, 40),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, event_type, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("legacy-event-key", relational_game_id, "made_two", 200, 1),
+    )
+    db.commit()
+
+    r = client.get("/status")
+    html = r.get_data(as_text=True)
+
+    assert r.status_code == 200
+    assert "status-canonical-game" in html
+    assert "legacy-detection-key" not in html
+    assert "legacy-event-key" not in html
 
 
 def test_settings_page_renders(client, monkeypatch):

@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-07-02
+Updated: 2026-07-05
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -182,7 +182,8 @@ Current implementation:
 
 Next step:
 - Keep documentation and handoff artifacts synchronized with the actual bounded slices already implemented on `jason-5-may-updates`.
-- Target the next bounded identity seam at event lifecycle cleanup: legacy generated-event delete/replace paths in `event_generator.py` and `blueprints/ai.py` still key by TEXT analysis key and should be aligned to canonical relational game identity with legacy fallback.
+- Event lifecycle cleanup for generated-event delete/replace paths is complete through commits `8a5a067` and `163b70d`.
+- Move next to a bounded post-cleanup product-proof slice or Stage 6A planning slice; the leading candidate is module entitlement helper/audit wiring without auth enforcement or billing changes.
 
 ### 7. Data Governance
 

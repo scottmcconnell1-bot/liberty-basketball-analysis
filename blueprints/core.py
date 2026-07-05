@@ -173,7 +173,7 @@ PRODUCT_CHECKLIST = [
     {
         "phase": "Phase 5",
         "title": "Downstream Identity Cleanup",
-        "status": "in_progress",
+        "status": "complete",
         "items": [
             {
                 "label": "delete_video() now preserves verified/manual events.",
@@ -186,9 +186,9 @@ PRODUCT_CHECKLIST = [
                 "proof": "163b70d",
             },
             {
-                "label": "Remaining video/run identity seams are still being finished in bounded slices.",
-                "status": "in_progress",
-                "proof": "next active work is the mixed analysis_runs/video status surface",
+                "label": "Generated-event lifecycle cleanup now prefers relational identity with safe fallback.",
+                "status": "complete",
+                "proof": "163b70d plus focused event pipeline coverage",
             },
         ],
     },
@@ -238,6 +238,19 @@ PRODUCT_CHECKLIST = [
             },
         ],
     },
+]
+
+PRODUCT_SURFACE_LINKS = [
+    {"label": "Dashboard", "href": "/"},
+    {"label": "Schedule", "href": "/schedule"},
+    {"label": "Film Upload", "href": "/film"},
+    {"label": "Videos", "href": "/videos"},
+    {"label": "Review Queue", "href": "/review"},
+    {"label": "Practices", "href": "/practices"},
+    {"label": "Scouting", "href": "/scouting"},
+    {"label": "Playbook", "href": "/playbook"},
+    {"label": "Messages", "href": "/messages"},
+    {"label": "Status", "href": "/status"},
 ]
 
 
@@ -1999,19 +2012,30 @@ def status_page():
         runs.append(run)
 
     # Count detections and events per game
-    det_counts = {r[0]: r[1] for r in db.execute(
-        """SELECT COALESCE(CAST(d.relational_game_id AS TEXT), d.game_id) AS game_key, COUNT(*)
-           FROM detections d
-           GROUP BY COALESCE(CAST(d.relational_game_id AS TEXT), d.game_id)"""
-    ).fetchall()}
-    evt_counts = {r[0]: r[1] for r in db.execute(
-        "SELECT game_id, COUNT(*) FROM events GROUP BY game_id"
-    ).fetchall()}
+    det_counts = {
+        r[0]: r[1]
+        for r in db.execute(
+            """SELECT COALESCE(g.source_key, d.game_id) AS game_key, COUNT(*)
+               FROM detections d
+               LEFT JOIN games g ON g.id = d.relational_game_id
+               GROUP BY COALESCE(g.source_key, d.game_id)"""
+        ).fetchall()
+    }
+    evt_counts = {
+        r[0]: r[1]
+        for r in db.execute(
+            """SELECT COALESCE(g.source_key, e.game_id) AS game_key, COUNT(*)
+               FROM events e
+               LEFT JOIN games g ON g.id = e.relational_game_id
+               GROUP BY COALESCE(g.source_key, e.game_id)"""
+        ).fetchall()
+    }
 
     return render_template(
         "status.html",
         product_checklist=product_checklist,
         checklist_summary=checklist_summary,
+        product_surface_links=PRODUCT_SURFACE_LINKS,
         runs=runs,
         detection_rows=[
             {
