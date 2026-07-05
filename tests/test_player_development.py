@@ -54,6 +54,8 @@ def test_create_and_get_clip(db):
     assert clip["clip_start_ms"] == 10000
     assert clip["clip_end_ms"] == 15000
     assert clip["clip_category"] == "turnover"
+    assert clip["canonical_clip_id"] is not None
+    assert clip["canonical_title"] == "Turnover vs press"
     clips = pd.get_clips(db)
     assert len(clips) == 1
 
@@ -379,6 +381,53 @@ def test_player_development_page_renders(client):
     r = client.get("/player-development")
     assert r.status_code == 200
     assert b"Player Development" in r.data
+    assert b"Canonical Clip" in r.data
+    assert b"canonical_clip_id" in r.data
+
+
+def test_create_clip_links_existing_canonical_clip(db):
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'canon-game')")
+    db.commit()
+    game_id = db.execute("SELECT id FROM games WHERE source_key='canon-game'").fetchone()[0]
+    canonical_id = pd.create_canonical_clip(
+        db, "Press trap", 5000, 9000, relational_game_id=game_id
+    )
+    clip = pd.create_clip(
+        db,
+        "Press trap teach",
+        5000,
+        9000,
+        game_id="canon-game",
+        relational_game_id=game_id,
+        canonical_clip_id=canonical_id,
+        auto_link_canonical=False,
+    )
+    assert clip["canonical_clip_id"] == canonical_id
+
+
+def test_link_development_clip_to_canonical(db):
+    canonical_id = pd.create_canonical_clip(db, "Help rotation", 1000, 2500)
+    clip = pd.create_clip(
+        db, "Unlinked clip", 1000, 2500, auto_link_canonical=False
+    )
+    assert clip["canonical_clip_id"] is None
+    linked = pd.link_development_clip_to_canonical(db, clip["id"], canonical_id)
+    assert linked["canonical_clip_id"] == canonical_id
+
+
+def test_player_development_form_create_auto_links_canonical(client):
+    r = client.post(
+        "/api/clips",
+        data={
+            "clip_label": "Form clip",
+            "clip_start_ms": "12000",
+            "clip_end_ms": "15000",
+            "clip_category": "defense",
+        },
+        follow_redirects=True,
+    )
+    assert r.status_code == 200
+    assert b"linked to canonical ledger" in r.data or b"Form clip" in r.data
 
 
 def test_practice_playlists_page_renders(client):
