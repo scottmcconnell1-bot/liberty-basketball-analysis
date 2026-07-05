@@ -54,10 +54,6 @@ def get_analysis_status(game_id):
     row = db.execute(
         """SELECT status, started_at, completed_at, error_message, settings_json,
                   analysis_key,
-<<<<<<< HEAD
-                  (SELECT COUNT(*) FROM detections WHERE (relational_game_id = (SELECT id FROM games WHERE game_id = analysis_runs.analysis_key) OR (relational_game_id IS NULL AND game_id = analysis_runs.analysis_key))) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
-=======
                   (SELECT COUNT(*)
                      FROM detections d
                     WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
@@ -66,7 +62,6 @@ def get_analysis_status(game_id):
                      FROM events e
                     WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
                        OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
->>>>>>> 5ace27657675e65f6981b4f5511392e28de30d86
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
@@ -132,10 +127,6 @@ def get_analysis_progress(game_id):
     row = db.execute(
         """SELECT status, progress_pct, progress_step, started_at, completed_at,
                   analysis_key,
-<<<<<<< HEAD
-                  (SELECT COUNT(*) FROM detections WHERE (relational_game_id = (SELECT id FROM games WHERE game_id = analysis_runs.analysis_key) OR (relational_game_id IS NULL AND game_id = analysis_runs.analysis_key))) AS detection_count,
-                  (SELECT COUNT(*) FROM events WHERE game_id = analysis_runs.analysis_key) AS event_count
-=======
                   (SELECT COUNT(*)
                      FROM detections d
                     WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
@@ -144,7 +135,6 @@ def get_analysis_progress(game_id):
                      FROM events e
                     WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
                        OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
->>>>>>> 5ace27657675e65f6981b4f5511392e28de30d86
            FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
         (game_id,),
     ).fetchone()
@@ -380,16 +370,11 @@ def api_videos():
     db = get_db()
     rows = db.execute("""
         SELECT v.*, ar.status as analysis_status, ar.error_message,
-<<<<<<< HEAD
-               (SELECT COUNT(*) FROM detections d WHERE (d.relational_game_id = (SELECT id FROM games WHERE game_id = v.game_id) OR (d.relational_game_id IS NULL AND d.game_id = v.game_id))) as detection_count,
-               (SELECT COUNT(*) FROM events e WHERE e.game_id = v.game_id) as event_count,
-=======
                (SELECT COUNT(*)
                   FROM detections d
                   WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
                     OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
                (SELECT COUNT(*) FROM events e WHERE e.game_id = COALESCE(ar.analysis_key, v.game_id)) as event_count,
->>>>>>> 5ace27657675e65f6981b4f5511392e28de30d86
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
         LEFT JOIN analysis_runs ar ON ar.id = (

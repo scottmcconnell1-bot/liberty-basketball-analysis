@@ -440,6 +440,50 @@ def test_update_event(client):
     assert r2.get_json()["event_type"] == "block"
 
 
+def test_update_event_preserves_relational_identity(client, db):
+    game_id = _create_game(client, "update-relational-identity-game")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "player": "Player 1",
+    })
+    eid = r.get_json()["id"]
+
+    before = db.execute(
+        "SELECT game_id, relational_game_id FROM events WHERE id=?",
+        (eid,),
+    ).fetchone()
+
+    r2 = put_json(client, f"/api/events/{eid}", {
+        "player": "Player 2",
+        "event_type": "rebound",
+        "shot_result": "offensive",
+        "timestamp_ms": 2000,
+        "details_json": "{\"new\": \"data\"}",
+        "human_verified": True,
+        "confidence": 0.8,
+    })
+    assert r2.status_code == 200
+
+    after = db.execute(
+        """SELECT game_id, relational_game_id, player, event_type, shot_result,
+                  timestamp_ms, details_json, confidence, human_verified
+             FROM events WHERE id=?""",
+        (eid,),
+    ).fetchone()
+
+    assert after["game_id"] == before["game_id"] == str(game_id)
+    assert after["relational_game_id"] == before["relational_game_id"] == game_id
+    assert after["player"] == "Player 2"
+    assert after["event_type"] == "rebound"
+    assert after["shot_result"] == "offensive"
+    assert after["timestamp_ms"] == 2000
+    assert json.loads(after["details_json"]) == {"new": "data"}
+    assert after["confidence"] == 0.8
+    assert after["human_verified"] == 1
+
+
 def test_delete_event(client):
     game_id = _create_game(client, "delete-event-game")
     r = post_json(client, "/api/save_event", {
@@ -450,6 +494,47 @@ def test_delete_event(client):
     assert r2.status_code == 200
     r3 = client.get(f"/api/events/{game_id}")
     assert not any(e["id"] == eid for e in r3.get_json())
+
+
+def test_delete_event_does_not_disturb_relationally_linked_events(client, db):
+    game_id = _create_game(client, "delete-relational-identity-game")
+    r1 = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "shot",
+        "timestamp_ms": 1000,
+        "player": "Player 1",
+    })
+    r2 = post_json(client, "/api/save_event", {
+        "game_id": game_id,
+        "event_type": "rebound",
+        "timestamp_ms": 2000,
+        "player": "Player 2",
+    })
+    eid1 = r1.get_json()["id"]
+    eid2 = r2.get_json()["id"]
+
+    delete_resp = client.delete(f"/api/events/{eid1}")
+    assert delete_resp.status_code == 200
+    assert delete_resp.get_json()["deleted"] is True
+
+    remaining = db.execute(
+        """SELECT id, game_id, relational_game_id, player, event_type, shot_result,
+                  timestamp_ms, details_json, confidence, human_verified
+             FROM events WHERE id=?""",
+        (eid2,),
+    ).fetchone()
+
+    assert remaining is not None
+    assert remaining["id"] == eid2
+    assert remaining["game_id"] == str(game_id)
+    assert remaining["relational_game_id"] == game_id
+    assert remaining["player"] == "Player 2"
+    assert remaining["event_type"] == "rebound"
+    assert remaining["shot_result"] is None
+    assert remaining["timestamp_ms"] == 2000
+
+    deleted = db.execute("SELECT id FROM events WHERE id=?", (eid1,)).fetchone()
+    assert deleted is None
 
 
 def test_review_events_lists_pending_ai_events(client):
