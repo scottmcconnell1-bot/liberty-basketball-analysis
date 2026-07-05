@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-8a-demo-entitlements |
+| **id** | stage-9a-secrets-audit |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,12 +15,12 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `DEMO_MODULE_ENTITLEMENTS` seeds `stats` and `scouting` via INSERT OR IGNORE (no schema change)
-- `_backfill_demo_module_entitlements_stage8a()` runs on `init_db`
-- `seed_demo_module_entitlements()` public helper + `scripts/seed_demo_module_entitlements.py` CLI
-- Audit/preview surfaces show stats + scouting enabled on default team
-- 326 passed, 1 skipped
+- `docs/SECRETS_AUDIT.md` inventories VAPID, SMTP, SECRET_KEY, NFHS, auth state
+- `scripts/audit_secrets.py` + `secrets_audit.py` operator CLI (no secret values printed)
+- Removed committed VAPID key material from `config.py`; added `.env.example`
+- `docs/AUTH_REENABLE_PLAN.md` — Stage 9B prep (plan only, auth still disabled)
+- 331 passed, 1 skipped
 
 ### Next
 
-Phase 4 deploy gates (9A secrets audit) — Scott gate; or polish/docs pass on COMPLETION_PATH
+Stage 9C — Docker production smoke (Scott gate) or Scott review of 9A/9B before auth flip
