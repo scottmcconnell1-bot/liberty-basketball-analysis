@@ -106,6 +106,7 @@ These are included in the transfer bundle script so another server can receive b
 
 ## Documentation map
 
+- `docs/DEV_ENVIRONMENT.md` — Python version and requirements file map
 - `docs/COMPLETION_PATH.md` — full path to finish the program (orchestrator drives this)
 - `docs/ORCHESTRATION.md` — Cursor-only orchestration workflow and account setup
 - `docs/DEPLOYMENT.md` — standalone install, Docker, GPU containers, server transfer, restore flow

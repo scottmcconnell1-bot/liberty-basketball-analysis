@@ -11,8 +11,8 @@ See `ACTIVE.md`.
 
 | # | Stage | Summary | Status |
 | --- | --- | --- | --- |
-| 1 | 6B | `require_module` + scouting/playbook soft gating | **in progress** |
-| 2 | 7A | requirements.txt / dev env fix | queued |
+| 1 | 6B | `require_module` + scouting/playbook soft gating | done (#74) |
+| 2 | 7A | requirements.txt / dev env fix | **in progress** |
 | 3 | 7D | Review counts on status/preview | queued |
 | 4 | 7B | Possession display in film flow | queued |
 | 5 | 7C | Player minutes on stats pages | queued |
