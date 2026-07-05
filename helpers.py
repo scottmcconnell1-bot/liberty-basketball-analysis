@@ -78,6 +78,11 @@ BASE_MODULE_ENTITLEMENT = {
 # ── Configuration ─────────────────────────────────────────
 
 
+def get_default_team_id(db):
+    """Return the default Liberty team id after Stage 2 backfill."""
+    return _stage2_default_team_id(db)
+
+
 def feature_enabled(flag_name):
     return bool(get_runtime_settings()["features"].get(flag_name, False))
 

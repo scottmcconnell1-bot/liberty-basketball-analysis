@@ -22,9 +22,17 @@ import json
 
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, current_app
 
-from helpers import get_db, require_feature
+from helpers import get_db, require_feature, get_default_team_id
+from module_entitlements import enforce_module_access
+from module_keys import PLAYBOOK_RECOGNITION
 
 playbook_bp = Blueprint("playbook", __name__)
+
+
+@playbook_bp.before_request
+def _playbook_module_gate():
+    db = get_db()
+    enforce_module_access(db, get_default_team_id(db), PLAYBOOK_RECOGNITION)
 
 
 def _serialize(obj):

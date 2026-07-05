@@ -3,7 +3,7 @@
 Updated: 2026-07-05
 Branch: `jason-5-may-updates`
 Owner: Scott McConnell
-Driver: Cursor Cloud Agent (orchestrator) + Devin (executor when useful)
+Driver: Cursor Cloud Agent (orchestrator + executor)
 
 ## North star
 
@@ -24,7 +24,7 @@ Scott can run Liberty as a **trusted coach operations platform**: schedule → f
 | --- | --- |
 | **Scott** | Product vision, schema approval, auth/production go-live, cancel/pivot |
 | **Orchestrator** | Own this path, queue slices, review, **merge** bounded PRs |
-| **Devin** | Optional executor for multi-file slices when push works |
+| **Devin** | Optional executor for multi-file slices | **Retired for Liberty** — Scott uses Devin on other projects |
 | **Repo** | `docs/agent_handoffs/ACTIVE.md` = current task; this file = full path |
 
 ### Orchestrator may do without asking Scott
@@ -32,7 +32,7 @@ Scott can run Liberty as a **trusted coach operations platform**: schedule → f
 - Implement bounded slices in this document
 - Merge PRs after tests pass and scope matches ACTIVE.md
 - Update `PROJECT_STATUS.md`, `STAGE_INDEX.md`, `ACTIVE.md`, `QUEUE.md`
-- Assign Devin via ACTIVE.md
+- Queue slices in ACTIVE.md / QUEUE.md
 - Fix tests, docs, dev-env gaps that block the path
 
 ### Orchestrator must pause for Scott

@@ -115,3 +115,29 @@ def audit_team_entitlements(db, team_id=None, *, at=None):
         "team_count": len(teams),
         "teams": teams,
     }
+
+
+def is_module_accessible(db, team_id, module_key, *, at=None):
+    """Soft add-on gate: base platform required; missing add-on rows stay accessible."""
+    normalized = canonicalize_module_key(module_key)
+    if team_id is None or normalized not in ALL_MODULE_KEYS:
+        return False
+    if not is_module_entitled(db, team_id, BASE_PLATFORM, at=at):
+        return False
+    if normalized == BASE_PLATFORM:
+        return True
+    row = db.execute(
+        """SELECT * FROM module_entitlements
+           WHERE team_id = ? AND module_key = ?""",
+        (team_id, normalized),
+    ).fetchone()
+    if row is None:
+        return True
+    return is_module_entitled(db, team_id, normalized, at=at)
+
+
+def enforce_module_access(db, team_id, module_key, *, at=None):
+    from flask import abort
+
+    if not is_module_accessible(db, team_id, module_key, at=at):
+        abort(404)

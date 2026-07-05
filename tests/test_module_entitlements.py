@@ -4,6 +4,7 @@ from helpers import DEFAULT_TEAM_SEED
 from module_entitlements import (
     audit_team_entitlements,
     get_team_entitlements,
+    is_module_accessible,
     is_module_entitled,
     list_enabled_module_keys,
 )
@@ -12,6 +13,7 @@ from module_keys import (
     ALL_MODULE_KEYS,
     BASE_PLATFORM,
     LEGACY_BASE_ALIAS,
+    SCOUTING,
     STATS,
     canonicalize_module_key,
 )
@@ -123,3 +125,40 @@ def test_get_team_entitlements_ordered(db):
     rows = get_team_entitlements(db, team_id)
     keys = [row["module_key"] for row in rows]
     assert keys == sorted(keys)
+
+
+def test_is_module_accessible_allows_unconfigured_addon(db):
+    team_id = _default_team_id(db)
+    assert is_module_accessible(db, team_id, SCOUTING) is True
+
+
+def test_is_module_accessible_blocks_disabled_addon(db):
+    team_id = _default_team_id(db)
+    db.execute(
+        """INSERT OR REPLACE INTO module_entitlements
+           (team_id, module_key, enabled, notes)
+           VALUES (?, ?, ?, ?)""",
+        (team_id, SCOUTING, 0, "disabled in test"),
+    )
+    db.commit()
+    assert is_module_accessible(db, team_id, SCOUTING) is False
+
+
+def test_scouting_page_soft_gate_allows_base_only(client, db):
+    team_id = _default_team_id(db)
+    assert is_module_accessible(db, team_id, SCOUTING) is True
+    r = client.get("/scouting")
+    assert r.status_code == 200
+
+
+def test_scouting_page_blocked_when_module_disabled(client, db):
+    team_id = _default_team_id(db)
+    db.execute(
+        """INSERT OR REPLACE INTO module_entitlements
+           (team_id, module_key, enabled, notes)
+           VALUES (?, ?, ?, ?)""",
+        (team_id, SCOUTING, 0, "disabled in test"),
+    )
+    db.commit()
+    r = client.get("/scouting")
+    assert r.status_code == 404
