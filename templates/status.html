@@ -12,6 +12,158 @@
   </div>
 </div>
 
+<style>
+  .checklist-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .checklist-pill {
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #f8fafc;
+  }
+  .checklist-pill strong {
+    display: block;
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+  .phase-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .phase-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+    background: #fff;
+  }
+  .phase-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .phase-head h4 {
+    margin: 0;
+  }
+  .phase-badge,
+  .item-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-complete {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .status-in_progress {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  .status-planned {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+  .phase-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .phase-items li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 0;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+  .phase-items li:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .item-mark {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  .item-copy.complete .item-label {
+    text-decoration: line-through;
+    color: #475569;
+  }
+  .item-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .item-proof {
+    color: #64748b;
+    font-size: 0.86rem;
+  }
+</style>
+
+<div class="card" data-frame="15.0">
+  <h3 style="margin-bottom:8px;">Product Progress Checklist</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    This tracks the full product from first phase to final polish. Completed items are checked and struck through, active work is blue, and future work is gray.
+  </div>
+
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Complete</span>
+      <strong>{{ checklist_summary.complete }}</strong>
+      <span class="text-muted">phases complete</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">In Progress</span>
+      <strong>{{ checklist_summary.in_progress }}</strong>
+      <span class="text-muted">phases active</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Planned</span>
+      <strong>{{ checklist_summary.planned }}</strong>
+      <span class="text-muted">phases ahead</span>
+    </div>
+  </div>
+
+  <div class="phase-grid">
+    {% for phase in product_checklist %}
+    <section class="phase-card">
+      <div class="phase-head">
+        <div>
+          <div class="text-muted" style="font-size:0.8rem;">{{ phase.phase }}</div>
+          <h4>{{ phase.title }}</h4>
+        </div>
+        <span class="phase-badge status-{{ phase.status }}">{{ phase.status.replace('_', ' ') }}</span>
+      </div>
+      <ul class="phase-items">
+        {% for item in phase["items"] %}
+        <li>
+          <span class="item-mark">
+            {% if item.status == "complete" %}✓{% elif item.status == "in_progress" %}•{% else %}○{% endif %}
+          </span>
+          <div class="item-copy {{ item.status }}">
+            <div class="item-label">{{ item.label }}</div>
+            <div class="item-proof">Proof: {{ item.proof }}</div>
+          </div>
+          <span class="item-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
 <div class="card" data-frame="15.1">
   <h3 style="margin-bottom:12px;">Runs</h3>
   <div style="overflow:auto;">

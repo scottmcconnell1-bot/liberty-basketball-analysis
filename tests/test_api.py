@@ -1196,6 +1196,17 @@ def test_analysis_results_and_status_count_events_via_relational_game_id(client,
     assert analysis_payload["recent_events"][0]["player"] == "Player A"
 
 
+def test_status_page_shows_product_progress_checklist(client):
+    r = client.get("/status")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "Product Progress Checklist" in html
+    assert "Phase 0" in html
+    assert "Phase 8" in html
+    assert "Manual Tagging &amp; Bookmarks MVP" in html
+    assert "Season Packets, Reviews &amp; Final Polish" in html
+
+
 def test_settings_page_renders(client, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.get("/settings")

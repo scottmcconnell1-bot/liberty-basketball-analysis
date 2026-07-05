@@ -57,6 +57,197 @@ from stats import _resolve_relational_game_id
 core = Blueprint("core", __name__)
 
 
+PRODUCT_CHECKLIST = [
+    {
+        "phase": "Phase 0",
+        "title": "Foundation & Principles",
+        "status": "complete",
+        "items": [
+            {
+                "label": "Feature-flagged rollout pattern is in place for major surfaces.",
+                "status": "complete",
+                "proof": "config-driven route gating and bounded rollout discipline",
+            },
+            {
+                "label": "SQLite schema + migration flow remains the source of truth for platform changes.",
+                "status": "complete",
+                "proof": "schema.sql + helpers.py migration path",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 1",
+        "title": "Data Model & Schema",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "Core basketball entities and additive relational game identity are established.",
+                "status": "in_progress",
+                "proof": "games/events/analysis_runs plus Stage 5A-5F cleanup slices",
+            },
+            {
+                "label": "Downstream analysis tables now carry relational_game_id where proven safe.",
+                "status": "complete",
+                "proof": "stats, player_minutes, player_effect, shot_classifications, play_recognitions, human_corrections",
+            },
+            {
+                "label": "Final broad platform-core migration is still incomplete.",
+                "status": "planned",
+                "proof": "remaining identity seams are being finished in bounded slices",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 2",
+        "title": "Schedule, Games & Film Intake",
+        "status": "complete",
+        "items": [
+            {
+                "label": "Seasons and scheduled games CRUD are visible in the app.",
+                "status": "complete",
+                "proof": "/schedule plus seasons and scheduled_games APIs",
+            },
+            {
+                "label": "Video upload, listing, rerun, compare, and status pages are live.",
+                "status": "complete",
+                "proof": "/film, /videos, /status, /api/videos, rerun and compare flows",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 2.5",
+        "title": "Manual Tagging & Bookmarks MVP",
+        "status": "complete",
+        "items": [
+            {
+                "label": "Manual save, list, update, and delete event flows are active.",
+                "status": "complete",
+                "proof": "/api/save_event and /api/events routes with integration coverage",
+            },
+            {
+                "label": "Manual event maintenance now preserves relational identity through edit and delete flows.",
+                "status": "complete",
+                "proof": "tests/test_api.py coverage landed in commit 8390381",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 3",
+        "title": "Analysis Runs, Status & Auto Stats MVP",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "Run status, progress, and analysis result APIs are visible in the product.",
+                "status": "complete",
+                "proof": "/api/analysis_status, /api/analysis_progress, /api/analysis, /status",
+            },
+            {
+                "label": "Counts and analysis surfaces now prefer relational identity where the bounded slices are complete.",
+                "status": "in_progress",
+                "proof": "status/results/videos paths stabilized through recent event and video identity fixes",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 4",
+        "title": "Review Workflow, Possessions & Minutes Foundation",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "Review queue, accept/correct/reject flows, and review_items wiring exist.",
+                "status": "complete",
+                "proof": "review event endpoints plus review_items/human_corrections coverage",
+            },
+            {
+                "label": "Possession linking and player-minutes foundation are implemented.",
+                "status": "complete",
+                "proof": "Stage 4C and Stage 4D slices landed on branch",
+            },
+            {
+                "label": "Trust/polish of the full reviewed-event pipeline is still being hardened.",
+                "status": "in_progress",
+                "proof": "bounded cleanup continues on event/video identity seams",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 5",
+        "title": "Downstream Identity Cleanup",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "delete_video() now preserves verified/manual events.",
+                "status": "complete",
+                "proof": "8a5a067",
+            },
+            {
+                "label": "persist_events() now replaces generated events by relational identity with legacy fallback.",
+                "status": "complete",
+                "proof": "163b70d",
+            },
+            {
+                "label": "Remaining video/run identity seams are still being finished in bounded slices.",
+                "status": "in_progress",
+                "proof": "next active work is the mixed analysis_runs/video status surface",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 6",
+        "title": "Practices & Practice Reports",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "Practice pages and supporting routes exist in the product.",
+                "status": "in_progress",
+                "proof": "/practices, practice reports, and summary templates/routes",
+            },
+            {
+                "label": "End-to-end proof and polish for practice workflows still need product verification.",
+                "status": "planned",
+                "proof": "not yet surfaced as a verified finished slice",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 7",
+        "title": "Scouting, Playbook & Messaging",
+        "status": "in_progress",
+        "items": [
+            {
+                "label": "Scouting, playbook, and messaging surfaces exist in the app shell.",
+                "status": "in_progress",
+                "proof": "/scouting, /playbook, /messages routes/templates",
+            },
+            {
+                "label": "These modules still need full product-level validation and checklist proof.",
+                "status": "planned",
+                "proof": "visible but not yet signed off as complete",
+            },
+        ],
+    },
+    {
+        "phase": "Phase 8",
+        "title": "Season Packets, Reviews & Final Polish",
+        "status": "planned",
+        "items": [
+            {
+                "label": "Weekly packets, season review, and final mobile/operator polish remain ahead.",
+                "status": "planned",
+                "proof": "not yet implemented as a finished product slice",
+            },
+        ],
+    },
+]
+
+
+def _build_product_checklist():
+    summary = {"complete": 0, "in_progress": 0, "planned": 0}
+    for phase in PRODUCT_CHECKLIST:
+        summary[phase["status"]] += 1
+    return PRODUCT_CHECKLIST, summary
+
+
 @core.route("/")
 def index():
     return render_template("index.html")
@@ -1797,6 +1988,7 @@ def api_resource_status():
 def status_page():
     """Live status page showing all analysis runs."""
     db = get_db()
+    product_checklist, checklist_summary = _build_product_checklist()
     run_rows = db.execute(
         "SELECT * FROM analysis_runs ORDER BY id DESC"
     ).fetchall()
@@ -1818,6 +2010,8 @@ def status_page():
 
     return render_template(
         "status.html",
+        product_checklist=product_checklist,
+        checklist_summary=checklist_summary,
         runs=runs,
         detection_rows=[
             {
