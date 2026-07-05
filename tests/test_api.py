@@ -2382,6 +2382,52 @@ def test_rejected_events_excluded_from_stats(client, db):
     assert bob is None, f"Bob (rejected) should NOT be in stats, but found: {bob}"
 
 
+def test_pending_events_excluded_from_stats(client, db):
+    """Pending AI events must not contribute to box score until accepted."""
+    game_id = _create_game(client, "pending-stats")
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Pending Pat",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": False, "source_type": "ai",
+    })
+    post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Trusted Tina",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 2000, "human_verified": True,
+    })
+
+    basic = client.get(f"/api/stats/{game_id}").get_json()["basic"]
+    pat = next((p for p in basic if p["player"] == "Pending Pat"), None)
+    tina = next((p for p in basic if p["player"] == "Trusted Tina"), None)
+
+    assert pat is None, "Pending Pat should be excluded from stats"
+    assert tina is not None
+    assert tina["pts"] == 2
+
+
+def test_corrected_events_included_in_stats(client, db):
+    """Coach-corrected events remain trusted for stats."""
+    game_id = _create_game(client, "corrected-stats")
+    r = post_json(client, "/api/save_event", {
+        "game_id": game_id, "player": "Wrong",
+        "event_type": "made_two", "shot_result": "made",
+        "timestamp_ms": 1000, "human_verified": False, "source_type": "ai",
+    })
+    event_id = r.get_json()["id"]
+    post_json(client, f"/api/review/events/{event_id}/correct", {
+        "player": "Fixed",
+        "notes": "jersey fix",
+    })
+
+    basic = client.get(f"/api/stats/{game_id}").get_json()["basic"]
+    fixed = next((p for p in basic if p["player"] == "Fixed"), None)
+    wrong = next((p for p in basic if p["player"] == "Wrong"), None)
+
+    assert fixed is not None
+    assert fixed["pts"] == 2
+    assert wrong is None
+
+
 def test_rejected_events_excluded_from_shot_breakdown(client, db):
     """Shot classification from rejected events must not appear in shot_breakdown."""
     game_id = _create_game(client, "rejected-shots")

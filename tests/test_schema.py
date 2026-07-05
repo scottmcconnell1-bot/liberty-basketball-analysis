@@ -796,10 +796,18 @@ def test_stage5c_get_enhanced_stats_uses_relational_shot_classifications(db):
     game_id = db.execute("SELECT id FROM games WHERE source_key='stage5c-game'").fetchone()[0]
 
     db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, event_type, timestamp_ms,
+               review_status, human_verified, source_type)
+           VALUES (?, ?, 'made_three', 12345, 'accepted', 1, 'manual')""",
+        (str(game_id), game_id),
+    )
+    event_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.execute(
         """INSERT INTO shot_classifications
-           (game_id, relational_game_id, tracker_id, shot_type, shot_result, timestamp_ms)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        ("legacy-mismatch", game_id, 7, "3pt", "make", 12345),
+           (event_id, game_id, relational_game_id, tracker_id, shot_type, shot_result, timestamp_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (event_id, "legacy-mismatch", game_id, 7, "3pt", "make", 12345),
     )
     db.commit()
 

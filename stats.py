@@ -1,5 +1,12 @@
 """stats.py – Aggregate and persist per-game stats from the events table."""
 
+TRUSTED_REVIEW_STATUSES = ("accepted", "corrected")
+TRUSTED_REVIEW_STATUS_SQL = "review_status IN ('accepted', 'corrected')"
+
+
+def _trusted_event_review_clause(column="e.review_status"):
+    return f"{column} IN ('accepted', 'corrected')"
+
 
 def _resolve_relational_game_id(db, game_id):
     try:
@@ -20,32 +27,31 @@ def _fetch_shot_rows(db, relational_game_id, game_id, query):
 def _eligible_event_rows(db, game_id):
     """Return only events eligible for stats derivation.
 
-    Eligible = events resolved to a known event_type_id AND not rejected.
-    Manual events (human_verified=1) and accepted AI events
-    (human_verified=0 AND review_status='accepted') are included;
-    everything else (pending/corrected/rejected) is filtered out here so
-    aggregation only sees canonical, approved events.
+    Eligible = events resolved to a known event_type_id with counts_for_stats=1
+    and coach-trusted review_status (accepted or corrected). Pending and
+    rejected events are excluded from box score aggregation.
     """
+    review_clause = _trusted_event_review_clause()
     relational_game_id = _resolve_relational_game_id(db, game_id)
     if relational_game_id is not None:
         return db.execute(
-            """SELECT e.player, e.event_type, e.shot_result, et.code,
+            f"""SELECT e.player, e.event_type, e.shot_result, et.code,
                       et.counts_for_stats, et.is_scoring_event
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
                WHERE e.relational_game_id = ?
-                 AND e.review_status != 'rejected'
+                 AND {review_clause}
                  AND et.counts_for_stats = 1""",
             (relational_game_id,),
         ).fetchall()
 
     return db.execute(
-        """SELECT e.player, e.event_type, e.shot_result, et.code,
+        f"""SELECT e.player, e.event_type, e.shot_result, et.code,
                   et.counts_for_stats, et.is_scoring_event
            FROM events e
            JOIN event_types et ON et.id = e.event_type_id
            WHERE e.game_id = ?
-             AND e.review_status != 'rejected'
+             AND {review_clause}
              AND et.counts_for_stats = 1""",
         (game_id,),
     ).fetchall()
@@ -112,7 +118,7 @@ def aggregate_stats(db, game_id):
     Implementation reads stats relationally from the event_types taxonomy:
     - JOIN event_types by events.event_type_id
     - filter where counts_for_stats = 1
-    - exclude events with review_status = 'rejected'
+    - include only coach-trusted review_status values (accepted, corrected)
     Branching uses the seeded event_types.code (made_two, made_three, ...)
     while still recognizing legacy free-text event_type strings.
     """
@@ -267,17 +273,18 @@ def get_enhanced_stats(db, game_id):
         ORDER BY pm.minutes_played DESC
     """, (game_id,)).fetchall()
 
-    # Shot breakdown (exclude rejected events)
+    # Shot breakdown (trusted events only)
+    review_clause = _trusted_event_review_clause()
     shots = _fetch_shot_rows(
         db,
         relational_game_id,
         game_id,
-        """
+        f"""
         SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
         FROM shot_classifications sc
-        LEFT JOIN events e ON e.id = sc.event_id
+        INNER JOIN events e ON e.id = sc.event_id
         WHERE (sc.relational_game_id = ? OR (sc.relational_game_id IS NULL AND sc.game_id = ?))
-          AND (e.review_status IS NULL OR e.review_status != 'rejected')
+          AND {review_clause}
         GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
         ORDER BY sc.tracker_id, sc.shot_type
         """,
@@ -285,12 +292,12 @@ def get_enhanced_stats(db, game_id):
         db,
         relational_game_id,
         game_id,
-        """
+        f"""
         SELECT sc.tracker_id, sc.shot_type, sc.shot_result, COUNT(*) as cnt
         FROM shot_classifications sc
-        LEFT JOIN events e ON e.id = sc.event_id
+        INNER JOIN events e ON e.id = sc.event_id
         WHERE sc.game_id = ?
-          AND (e.review_status IS NULL OR e.review_status != 'rejected')
+          AND {review_clause}
         GROUP BY sc.tracker_id, sc.shot_type, sc.shot_result
         ORDER BY sc.tracker_id, sc.shot_type
         """,
@@ -359,31 +366,30 @@ def get_enhanced_stats(db, game_id):
 def get_team_stats(db, game_id):
     """Return aggregated team stats for the given game_id.
 
-    Sums from the events table (rejected events excluded via counts_for_stats
-    and review_status filtering). Returns a dict with: points, rebounds,
-    assists, steals, blocks, turnovers, fga, fta, three_pm, orb, drb.
+    Sums from trusted events only (accepted/corrected review_status).
     """
     relational_game_id = _resolve_relational_game_id(db, game_id)
+    review_clause = _trusted_event_review_clause()
 
     if relational_game_id is not None:
         rows = db.execute(
-            """SELECT e.player, e.event_type, e.shot_result, et.code,
+            f"""SELECT e.player, e.event_type, e.shot_result, et.code,
                       et.counts_for_stats, et.is_scoring_event
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
                WHERE e.relational_game_id = ?
-                 AND e.review_status != 'rejected'
+                 AND {review_clause}
                  AND et.counts_for_stats = 1""",
             (relational_game_id,),
         ).fetchall()
     else:
         rows = db.execute(
-            """SELECT e.player, e.event_type, e.shot_result, et.code,
+            f"""SELECT e.player, e.event_type, e.shot_result, et.code,
                       et.counts_for_stats, et.is_scoring_event
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
                WHERE e.game_id = ?
-                 AND e.review_status != 'rejected'
+                 AND {review_clause}
                  AND et.counts_for_stats = 1""",
             (game_id,),
         ).fetchall()
@@ -493,14 +499,15 @@ def get_four_factors(db, game_id):
 def _compute_fgm(db, game_id):
     """Count total field goals made for a game (2pt + 3pt makes)."""
     relational_game_id = _resolve_relational_game_id(db, game_id)
+    review_clause = _trusted_event_review_clause()
 
     if relational_game_id is not None:
         row = db.execute(
-            """SELECT COUNT(*) as cnt
+            f"""SELECT COUNT(*) as cnt
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
                WHERE e.relational_game_id = ?
-                 AND e.review_status != 'rejected'
+                 AND {review_clause}
                  AND et.counts_for_stats = 1
                  AND et.code IN ('made_two', 'made_three')
                  AND e.shot_result = 'made'""",
@@ -508,11 +515,11 @@ def _compute_fgm(db, game_id):
         ).fetchone()
     else:
         row = db.execute(
-            """SELECT COUNT(*) as cnt
+            f"""SELECT COUNT(*) as cnt
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
                WHERE e.game_id = ?
-                 AND e.review_status != 'rejected'
+                 AND {review_clause}
                  AND et.counts_for_stats = 1
                  AND et.code IN ('made_two', 'made_three')
                  AND e.shot_result = 'made'""",
@@ -564,23 +571,24 @@ def get_possession_summary(db, game_id):
         (game_id,),
     ).fetchone()["pts"]
 
-    # Turnover events (possession ended in turnover, excluding rejected)
+    # Turnover events (trusted review status only)
+    turnover_review_clause = _trusted_event_review_clause("review_status")
     if relational_game_id is not None:
         turnovers = db.execute(
-            """SELECT COUNT(*) as cnt FROM events
+            f"""SELECT COUNT(*) as cnt FROM events
                WHERE relational_game_id = ?
                  AND possession_id IS NOT NULL
                  AND event_type = 'turnover'
-                 AND review_status != 'rejected'""",
+                 AND {turnover_review_clause}""",
             (relational_game_id,),
         ).fetchone()["cnt"]
     else:
         turnovers = db.execute(
-            """SELECT COUNT(*) as cnt FROM events
+            f"""SELECT COUNT(*) as cnt FROM events
                WHERE game_id = ?
                  AND possession_id IS NOT NULL
                  AND event_type = 'turnover'
-                 AND review_status != 'rejected'""",
+                 AND {turnover_review_clause}""",
             (game_id,),
         ).fetchone()["cnt"]
 

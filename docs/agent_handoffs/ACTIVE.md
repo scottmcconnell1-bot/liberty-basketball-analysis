@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-8b-module-preview |
+| **id** | stage-8c-accepted-stats |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,11 +15,11 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `build_preview_entitlements_view()` enriches preview modules with access state per team
-- `/preview` shows Included/Not included badges on module cards
-- `/preview` shows per-team enabled/disabled/not-configured module packaging section
-- KPIs for modules enabled/disabled; 320 passed, 1 skipped
+- Box score and enhanced stats use trusted review_status only (`accepted`, `corrected`)
+- Pending and rejected events excluded from aggregation, shot breakdown, team stats, possession turnovers
+- Shot breakdown requires linked trusted event (INNER JOIN)
+- 322 passed, 1 skipped
 
 ### Next
 
-Stage 8C — stats from accepted events only
+Stage 7E — canonical clips in player_dev UI
