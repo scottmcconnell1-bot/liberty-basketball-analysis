@@ -238,3 +238,143 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
     # Verify no miss/rebound events for this make
     assert "miss" not in event_types
     assert "rebound" not in event_types
+
+def test_persist_events_deletes_unverified_relational_events_when_relational_game_id_provided():
+    """Test that persist_events deletes unverified events matching relational_game_id or legacy NULL with matching game_id."""
+    from event_generator import persist_events
+
+    import sqlite3
+    import tempfile
+    import os
+
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(db_fd)
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE events (game_id TEXT, relational_game_id INTEGER, player TEXT, event_type TEXT, shot_result TEXT, timestamp_ms INTEGER, details_json TEXT, confidence REAL, human_verified INTEGER)")
+        conn.execute("CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        conn.execute("INSERT INTO app_settings (key, value) VALUES (?, ?)", ("ai.detector_model", "yolov8n.pt"))
+        # Insert test events
+        # unverified, matching relational_game_id -> should be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player1", "shot", None, 1000, "{}", 0.5, 0))
+        # unverified, relational_game_id NULL, matching game_id -> should be deleted (legacy fallback)
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", None, "player2", "shot", None, 2000, "{}", 0.5, 0))
+        # unverified, different relational_game_id -> should NOT be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 999, "player3", "shot", None, 3000, "{}", 0.5, 0))
+        # verified, matching relational_game_id -> should NOT be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player4", "shot", None, 4000, "{}", 0.5, 1))
+        conn.commit()
+
+        # Call persist_events with relational_game_id=123, game_id='legacy-game-id', no new events
+        persist_events(conn, "legacy-game-id", [], relational_game_id=123)
+        conn.commit()
+
+        # Check remaining events
+        cur = conn.cursor()
+        cur.execute("SELECT game_id, relational_game_id, human_verified FROM events ORDER BY timestamp_ms")
+        rows = cur.fetchall()
+        # Expect two rows: the unverified with relational_game_id=999 and the verified with relational_game_id=123
+        assert len(rows) == 2
+        assert rows[0] == ("legacy-game-id", 999, 0)
+        assert rows[1] == ("legacy-game-id", 123, 1)
+        conn.close()
+    finally:
+        os.unlink(db_path)
+
+
+def test_persist_events_preserves_verified_events_when_relational_game_id_provided():
+    """Test that persist_events preserves verified/manual events when relational_game_id is provided."""
+    from event_generator import persist_events
+
+    import sqlite3
+    import tempfile
+    import os
+
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(db_fd)
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE events (game_id TEXT, relational_game_id INTEGER, player TEXT, event_type TEXT, shot_result TEXT, timestamp_ms INTEGER, details_json TEXT, confidence REAL, human_verified INTEGER)")
+        conn.execute("CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        conn.execute("INSERT INTO app_settings (key, value) VALUES (?, ?)", ("ai.detector_model", "yolov8n.pt"))
+        # Insert test events
+        # unverified, matching relational_game_id -> should be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player1", "shot", None, 1000, "{}", 0.5, 0))
+        # verified, matching relational_game_id -> should NOT be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player2", "shot", None, 2000, "{}", 0.5, 1))
+        # verified, relational_game_id NULL, matching game_id -> should NOT be deleted (verified overrides)
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", None, "player3", "shot", None, 3000, "{}", 0.5, 1))
+        conn.commit()
+
+        # Call persist_events with relational_game_id=123, game_id='legacy-game-id', no new events
+        persist_events(conn, "legacy-game-id", [], relational_game_id=123)
+        conn.commit()
+
+        # Check remaining events: both verified should remain
+        cur = conn.cursor()
+        cur.execute("SELECT game_id, relational_game_id, human_verified FROM events ORDER BY timestamp_ms")
+        rows = cur.fetchall()
+        assert len(rows) == 2
+        # Both should have human_verified=1
+        assert all(row[2] == 1 for row in rows)
+        # One with relational_game_id=123, one with NULL
+        assert {row[1] for row in rows} == {None, 123}
+        conn.close()
+    finally:
+        os.unlink(db_path)
+
+
+def test_persist_events_legacy_fallback_works_when_relational_game_id_absent():
+    """Test that persist_events maintains legacy behavior when relational_game_id is absent."""
+    from event_generator import persist_events
+
+    import sqlite3
+    import tempfile
+    import os
+
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(db_fd)
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE events (game_id TEXT, relational_game_id INTEGER, player TEXT, event_type TEXT, shot_result TEXT, timestamp_ms INTEGER, details_json TEXT, confidence REAL, human_verified INTEGER)")
+        conn.execute("CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        conn.execute("INSERT INTO app_settings (key, value) VALUES (?, ?)", ("ai.detector_model", "yolov8n.pt"))
+        # Insert test events
+        # unverified, matching game_id -> should be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player1", "shot", None, 1000, "{}", 0.5, 0))
+        # unverified, matching game_id but different relational_game_id -> should be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 999, "player2", "shot", None, 2000, "{}", 0.5, 0))
+        # unverified, NOT matching game_id -> should NOT be deleted
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("other-game-id", 123, "player3", "shot", None, 3000, "{}", 0.5, 0))
+        # verified, matching game_id -> should NOT be deleted (verified preserved)
+        conn.execute("INSERT INTO events (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence, human_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("legacy-game-id", 123, "player4", "shot", None, 4000, "{}", 0.5, 1))
+        conn.commit()
+
+        # Call persist_events with relational_game_id=None (legacy), game_id='legacy-game-id', no new events
+        persist_events(conn, "legacy-game-id", [], relational_game_id=None)
+        conn.commit()
+
+        # Check remaining events: unverified with other-game-id and verified legacy-game-id
+        cur = conn.cursor()
+        cur.execute("SELECT game_id, relational_game_id, human_verified FROM events ORDER BY timestamp_ms")
+        rows = cur.fetchall()
+        assert len(rows) == 2
+        # One should be the other-game-id unverified
+        assert any(row[0] == "other-game-id" and row[2] == 0 for row in rows)
+        # One should be the verified legacy-game-id
+        assert any(row[0] == "legacy-game-id" and row[2] == 1 for row in rows)
+        conn.close()
+    finally:
+        os.unlink(db_path)
+

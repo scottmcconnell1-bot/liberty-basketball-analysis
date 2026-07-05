@@ -648,7 +648,26 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
 
 
 def persist_events(conn, game_id, events, relational_game_id=None):
-    conn.execute("DELETE FROM events WHERE game_id = ? AND human_verified = 0", (game_id,))
+    if relational_game_id is not None:
+        # Delete unverified events that are either linked to the relational game_id
+        # or, for legacy rows where relational_game_id is NULL, match by game_id.
+        conn.execute(
+            """
+            DELETE FROM events
+            WHERE human_verified = 0
+              AND (
+                    relational_game_id = ?
+                    OR (relational_game_id IS NULL AND game_id = ?)
+                  )
+            """,
+            (relational_game_id, game_id),
+        )
+    else:
+        # Legacy behavior: delete only unverified events matching game_id
+        conn.execute(
+            "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
+            (game_id,),
+        )
     if not events:
         conn.commit()
         return
@@ -656,9 +675,11 @@ def persist_events(conn, game_id, events, relational_game_id=None):
     cur = conn.cursor()
     for ev in events:
         cur.execute(
-            """INSERT INTO events
+            """
+            INSERT INTO events
                (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
                 ev["game_id"],
                 relational_game_id,
