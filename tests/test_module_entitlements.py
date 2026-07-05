@@ -8,6 +8,7 @@ from module_entitlements import (
     is_module_accessible,
     is_module_entitled,
     list_enabled_module_keys,
+    seed_demo_module_entitlements,
 )
 from module_keys import (
     ADVANCED_TRACKING,
@@ -113,6 +114,23 @@ def test_audit_team_entitlements(db):
     assert report["team_count"] == 1
     assert report["teams"][0]["team_id"] == team_id
     assert BASE_PLATFORM in report["teams"][0]["enabled_module_keys"]
+    assert STATS in report["teams"][0]["enabled_module_keys"]
+    assert SCOUTING in report["teams"][0]["enabled_module_keys"]
+
+
+def test_seed_demo_module_entitlements_is_idempotent(db):
+    team_id = _default_team_id(db)
+    keys_first = seed_demo_module_entitlements(db, team_id)
+    keys_second = seed_demo_module_entitlements(db, team_id)
+    assert STATS in keys_first
+    assert SCOUTING in keys_first
+    assert keys_second == keys_first
+    row_count = db.execute(
+        """SELECT COUNT(*) AS cnt FROM module_entitlements
+            WHERE team_id=? AND module_key IN (?, ?)""",
+        (team_id, STATS, SCOUTING),
+    ).fetchone()["cnt"]
+    assert row_count == 2
 
 
 def test_build_preview_entitlements_view_marks_modules(db):

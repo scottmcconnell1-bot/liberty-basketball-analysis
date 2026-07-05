@@ -199,3 +199,12 @@ def build_preview_entitlements_view(db, preview_modules, *, team_id=None):
         "missing_module_count": len(team["missing_module_keys"]) if team else 0,
         "module_key_labels": MODULE_KEY_LABELS,
     }
+
+
+def seed_demo_module_entitlements(db, team_id=None):
+    """Public helper to seed demo stats/scouting entitlements (idempotent)."""
+    from helpers import _seed_demo_module_entitlements, get_default_team_id
+
+    if team_id is None:
+        team_id = get_default_team_id(db)
+    return _seed_demo_module_entitlements(db, team_id)

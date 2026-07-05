@@ -21,7 +21,7 @@ from flask import g, current_app, request, render_template, abort, redirect, url
 from werkzeug.utils import secure_filename
 
 from config import Config
-from module_keys import BASE_PLATFORM
+from module_keys import BASE_PLATFORM, SCOUTING, STATS
 from settings_store import AI_DEFAULTS, load_all_settings, save_settings
 
 try:
@@ -74,6 +74,17 @@ BASE_MODULE_ENTITLEMENT = {
     "module_key": BASE_PLATFORM,
     "notes": "Seeded by platform_core_stage_2_backfill; additional modules require Scott approval.",
 }
+
+DEMO_MODULE_ENTITLEMENTS = (
+    {
+        "module_key": STATS,
+        "notes": "Seeded demo module entitlement (Stage 8A); stats packaging preview.",
+    },
+    {
+        "module_key": SCOUTING,
+        "notes": "Seeded demo module entitlement (Stage 8A); scouting packaging preview.",
+    },
+)
 
 # ── Configuration ─────────────────────────────────────────
 
@@ -1263,6 +1274,36 @@ def _seed_base_module_entitlement(db, team_id):
         )
 
 
+def _seed_demo_module_entitlements(db, team_id):
+    """Seed optional demo add-on modules (stats, scouting) without schema changes."""
+    if team_id is None:
+        return []
+
+    seeded_keys = []
+    for entry in DEMO_MODULE_ENTITLEMENTS:
+        db.execute(
+            """INSERT OR IGNORE INTO module_entitlements
+                  (team_id, module_key, enabled, notes)
+               VALUES (?, ?, 1, ?)""",
+            (team_id, entry["module_key"], entry["notes"]),
+        )
+        row = db.execute(
+            """SELECT id FROM module_entitlements
+               WHERE team_id=? AND module_key=?""",
+            (team_id, entry["module_key"]),
+        ).fetchone()
+        if row:
+            seeded_keys.append(entry["module_key"])
+            _insert_backfill_provenance(
+                db,
+                "module_entitlement",
+                row["id"],
+                f"module:{entry['module_key']}",
+                details={"module_key": entry["module_key"], "seed": "stage_8a_demo"},
+            )
+    return seeded_keys
+
+
 def _backfill_roster_memberships(db, team_id):
     if team_id is None or not _table_exists(db, "players"):
         return
@@ -1403,6 +1444,14 @@ def _backfill_platform_core_stage2(db):
     _backfill_roster_memberships(db, team_id)
     _backfill_video_assets_from_videos(db)
     _backfill_video_assets_from_sources(db)
+
+
+def _backfill_demo_module_entitlements_stage8a(db):
+    """Seed demo add-on module rows for packaging preview surfaces."""
+    if not _table_exists(db, "module_entitlements"):
+        return
+    team_id = _stage2_default_team_id(db)
+    _seed_demo_module_entitlements(db, team_id)
 
 
 def _backfill_review_workflow_stage3a(db):
@@ -1900,6 +1949,7 @@ def _ensure_migration_columns(db):
         except Exception:
             pass
     _backfill_platform_core_stage2(db)
+    _backfill_demo_module_entitlements_stage8a(db)
     _backfill_review_workflow_stage3a(db)
     _backfill_event_participants_stage4a(db)
     db.commit()
