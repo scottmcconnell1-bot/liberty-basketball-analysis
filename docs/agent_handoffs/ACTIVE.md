@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-7e-canonical-clips |
+| **id** | stage-8a-demo-entitlements |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,12 +15,12 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `create_canonical_clip()` / `link_development_clip_to_canonical()` wire dev clips to `clips` ledger
-- New dev clips auto-create canonical rows unless an existing clip is selected
-- `/player-development` shows canonical link column, link dropdown, and create-form selector
-- `POST /api/clips/<id>/link-canonical` for inline linking; form POST supported on create
-- 325 passed, 1 skipped
+- `DEMO_MODULE_ENTITLEMENTS` seeds `stats` and `scouting` via INSERT OR IGNORE (no schema change)
+- `_backfill_demo_module_entitlements_stage8a()` runs on `init_db`
+- `seed_demo_module_entitlements()` public helper + `scripts/seed_demo_module_entitlements.py` CLI
+- Audit/preview surfaces show stats + scouting enabled on default team
+- 326 passed, 1 skipped
 
 ### Next
 
-Review `COMPLETION_PATH.md` Phase 3/4 for next bounded slice (8A seed entitlements or 7E follow-ups)
+Phase 4 deploy gates (9A secrets audit) — Scott gate; or polish/docs pass on COMPLETION_PATH
