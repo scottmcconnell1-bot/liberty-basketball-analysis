@@ -27,7 +27,7 @@ import json
 import sqlite3
 
 from flask import (
-    Blueprint, abort, current_app, g, jsonify, request, session,
+    Blueprint, abort, current_app, g, jsonify, redirect, request, session, url_for,
 )
 
 import player_development as pd_helpers
@@ -698,23 +698,35 @@ def api_clips_list():
 @require_feature("ENABLE_PLAYER_DEVELOPMENT")
 def api_clips_create():
     db = get_db()
-    data = request.get_json(force=True)
+    data = request.get_json(silent=True) or request.form.to_dict()
     try:
+        canonical_clip_id = data.get("canonical_clip_id")
+        if canonical_clip_id not in (None, ""):
+            canonical_clip_id = int(canonical_clip_id)
+        else:
+            canonical_clip_id = None
+        auto_link = str(data.get("auto_link_canonical", "true")).lower() not in ("0", "false", "no")
         clip = pd_helpers.create_clip(
             db,
             clip_label=data["clip_label"],
             clip_start_ms=int(data["clip_start_ms"]),
             clip_end_ms=int(data["clip_end_ms"]),
-            player_id=data.get("player_id"),
+            player_id=data.get("player_id") or None,
             game_id=data.get("game_id"),
             event_id=data.get("event_id"),
             clip_category=data.get("clip_category", "general"),
-            season_id=data.get("season_id"),
+            season_id=data.get("season_id") or None,
             notes=data.get("notes"),
             relational_game_id=data.get("relational_game_id"),
+            canonical_clip_id=canonical_clip_id,
+            auto_link_canonical=auto_link and canonical_clip_id is None,
         )
+        if request.form:
+            return redirect(url_for("player_dev.player_development_page", message="Clip saved"))
         return jsonify(clip), 201
     except (ValueError, KeyError) as e:
+        if request.form:
+            return redirect(url_for("player_dev.player_development_page", error=str(e)))
         return jsonify({"error": str(e)}), 400
 
 
@@ -734,11 +746,34 @@ def api_clips_update(clip_id):
     db = get_db()
     data = request.get_json(force=True)
     try:
+        if "canonical_clip_id" in data and data["canonical_clip_id"] is not None:
+            data["canonical_clip_id"] = int(data["canonical_clip_id"])
         clip = pd_helpers.update_clip(db, clip_id, **data)
         return jsonify(clip)
     except KeyError as e:
         return jsonify({"error": str(e)}), 404
     except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@clips_bp.route("/api/clips/<int:clip_id>/link-canonical", methods=["POST"])
+@require_feature("ENABLE_PLAYER_DEVELOPMENT")
+def api_clips_link_canonical(clip_id):
+    db = get_db()
+    data = request.get_json(silent=True) or request.form.to_dict()
+    canonical_clip_id = data.get("canonical_clip_id")
+    if not canonical_clip_id:
+        return jsonify({"error": "canonical_clip_id is required"}), 400
+    try:
+        clip = pd_helpers.link_development_clip_to_canonical(
+            db, clip_id, int(canonical_clip_id)
+        )
+        if request.form:
+            return redirect(url_for("player_dev.player_development_page", message="Canonical clip linked"))
+        return jsonify(clip)
+    except (KeyError, ValueError) as e:
+        if request.form:
+            return redirect(url_for("player_dev.player_development_page", error=str(e)))
         return jsonify({"error": str(e)}), 400
 
 

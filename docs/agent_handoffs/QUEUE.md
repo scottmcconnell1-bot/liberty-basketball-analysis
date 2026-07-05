@@ -11,12 +11,13 @@ See `ACTIVE.md`.
 
 | # | Stage | Summary | Status |
 | --- | --- | --- | --- |
-| 1 | 8B | Module state on `/preview` | done (#79) |
-| 2 | 8C | Stats from accepted events only | done |
-| 3 | 7E | Canonical clips in player_dev UI | queued |
+| 1 | 8C | Stats from accepted events only | done (#80) |
+| 2 | 7E | Canonical clips in player_dev UI | done |
+| 3 | 8A | Seed optional module entitlements (additive) | queued |
+| 4 | 9A | Secrets audit | Scott gate |
 
 ## Done recently
 
-- 8B module entitlements on preview (#79)
-- 7C player minutes on stats (#78)
-- 7B possession counts in film/stats (#77)
+- 8C trusted stats only (#80)
+- 8B module state on preview (#79)
+- 7C player minutes (#78)

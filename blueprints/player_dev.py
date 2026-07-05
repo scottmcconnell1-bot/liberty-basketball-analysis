@@ -123,12 +123,18 @@ def player_development_page():
     game_id = request.args.get("game_id")
     clips = pd_helpers.get_clips(db, player_id=player_id, season_id=season_id,
                                   category=category, game_id=game_id)
+    canonical_clips = pd_helpers.get_canonical_clips(db, game_id=game_id)
+    linked_count = sum(1 for clip in clips if clip.get("canonical_clip_id"))
     return render_template(
         "player_development.html",
         seasons=seasons,
         players=players,
         clips=clips,
+        canonical_clips=canonical_clips,
+        linked_count=linked_count,
         level_options=SCHEDULE_LEVEL_OPTIONS,
+        message=request.args.get("message"),
+        error=request.args.get("error"),
     )
 
 
