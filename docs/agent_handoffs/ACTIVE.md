@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-7b-possession-film |
+| **id** | stage-7c-player-minutes |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,11 +15,12 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `build_possession_workflow_summary()` assigns possessions idempotently and aggregates linkage counts
-- `/film?game_id=…` shows Possessions card (total, scoring, pts/poss, TO rate, linked events)
-- `/analysis/<game_id>` renders possession summary panel (fixed `content` block)
-- 315 passed, 1 skipped
+- `build_player_minutes_summary()` aggregates games, players, total minutes, top players
+- `/status` shows Player Minutes Summary card
+- `/preview` shows games-with-minutes, players-tracked, total-minutes KPIs
+- `/film` uses `get_player_minutes()` with relational resolution; analysis results has minutes panel
+- 318 passed, 1 skipped
 
 ### Next
 
-Stage 7C — player minutes on stats pages
+Stage 8B — module state on `/preview`

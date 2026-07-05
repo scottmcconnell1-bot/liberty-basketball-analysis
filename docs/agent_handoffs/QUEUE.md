@@ -11,15 +11,14 @@ See `ACTIVE.md`.
 
 | # | Stage | Summary | Status |
 | --- | --- | --- | --- |
-| 1 | 7D | Review counts on status/preview | done (#76) |
-| 2 | 7B | Possession display in film flow | done |
-| 3 | 7C | Player minutes on stats pages | queued |
-| 4 | 8B | Module state on `/preview` | queued |
-| 5 | 8C | Stats from accepted events only | queued |
+| 1 | 7B | Possession display in film flow | done (#77) |
+| 2 | 7C | Player minutes on stats pages | done |
+| 3 | 8B | Module state on `/preview` | queued |
+| 4 | 8C | Stats from accepted events only | queued |
+| 5 | 7E | Canonical clips in player_dev UI | queued |
 
 ## Done recently
 
+- 7B possession counts in film/stats (#77)
 - 7D review trust counts (#76)
 - 7A requirements / dev env (#75)
-- 6B module soft gating (#74)
-- 6C entitlements on `/status` (#73)

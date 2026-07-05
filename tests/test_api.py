@@ -1203,6 +1203,8 @@ def test_status_page_shows_product_progress_checklist(client):
     assert "Product Progress Checklist" in html
     assert "Module Entitlements" in html
     assert "Review &amp; Trust Summary" in html
+    assert "Player Minutes Summary" in html
+    assert "with minutes data" in html
     assert "base_platform" in html
     assert "Phase 0" in html
     assert "Phase 8" in html
@@ -1219,6 +1221,8 @@ def test_product_preview_page_renders_final_product_surface(client):
     html = r.get_data(as_text=True)
     assert "Final Product Preview" in html
     assert "Accepted events" in html
+    assert "Games with minutes" in html
+    assert "Total minutes logged" in html
     assert "Pending events" in html
     assert "Coach command center" in html
     assert "What the finished platform feels like" in html
@@ -2248,6 +2252,62 @@ def test_analysis_results_page_includes_possession_panel(client):
     assert resp.status_code == 200
     assert b"possession-summary" in resp.data
     assert b"renderPossessionSummary" in resp.data
+
+
+def test_build_player_minutes_summary_aggregates_rows(client, db):
+    """build_player_minutes_summary totals games, players, and minutes."""
+    game_id = _create_game(client, "minutes-summary-game")
+    game_id_2 = _create_game(client, "minutes-summary-game-2")
+    for gid, tracker_id, minutes in [
+        (game_id, 1, 12.5),
+        (game_id, 2, 8.0),
+        (game_id_2, 1, 5.0),
+    ]:
+        db.execute(
+            """INSERT INTO player_minutes
+                  (game_id, relational_game_id, tracker_id,
+                   first_frame, last_frame, total_frames, minutes_played)
+               VALUES (?, ?, ?, 0, 100, 100, ?)""",
+            (str(gid), gid, tracker_id, minutes),
+        )
+    db.commit()
+
+    from helpers import build_player_minutes_summary
+
+    summary = build_player_minutes_summary(db)
+    assert summary["games_with_minutes"] == 2
+    assert summary["player_rows"] == 3
+    assert summary["players_tracked"] == 2
+    assert summary["total_minutes"] == 25.5
+    assert summary["top_players"][0]["tracker_id"] == 1
+    assert summary["top_players"][0]["total_minutes"] == 17.5
+
+
+def test_film_page_shows_player_minutes_for_game(client, db):
+    """Film tool shows per-game minutes using relational_game_id resolution."""
+    game_id = _create_game(client, "film-minutes-game")
+    db.execute(
+        """INSERT INTO player_minutes
+              (game_id, relational_game_id, tracker_id,
+               first_frame, last_frame, total_frames, minutes_played)
+           VALUES (?, ?, 7, 0, 200, 200, 22.3)""",
+        (str(game_id), game_id),
+    )
+    db.commit()
+
+    resp = client.get(f"/film?game_id={game_id}")
+    assert resp.status_code == 200
+    assert b"Player Minutes" in resp.data
+    assert b"22.3" in resp.data
+    assert b"Pos 7" in resp.data
+
+
+def test_analysis_results_page_includes_minutes_panel(client):
+    """Analysis results dashboard includes player minutes mount point."""
+    resp = client.get("/analysis/test-game-key")
+    assert resp.status_code == 200
+    assert b"minutes-summary" in resp.data
+    assert b"renderMinutesSummary" in resp.data
 
 
 def test_rejected_events_excluded_from_stats(client, db):

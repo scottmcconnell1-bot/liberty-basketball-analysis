@@ -114,6 +114,10 @@
         <h2>🏀 Plays Recognized</h2>
         <div id="plays-summary"></div>
       </div>
+      <div class="card">
+        <h2>⏱ Player Minutes</h2>
+        <div id="minutes-summary"></div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:24px">
@@ -187,6 +191,7 @@ async function loadResults() {
     renderEventSummary(data.events_summary || []);
     renderPossessionSummary((data.enhanced && data.enhanced.possession_summary) || null);
     renderPlaysSummary((data.enhanced && data.enhanced.plays_summary) || []);
+    renderMinutesSummary((data.enhanced && data.enhanced.minutes) || []);
 
     setStep('step-events', 'done');
     setProgress(55, 'Building box score…');
@@ -275,6 +280,25 @@ function renderPlaysSummary(plays) {
     const pct = max > 0 ? (p.cnt / max * 100) : 0;
     html += '<div class="play-bar"><span class="label">' + escapeHtml(p.play_type) + '</span><div class="bar"><div class="fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + '">' + p.cnt + '</div></div></div>';
   });
+  el.innerHTML = html;
+}
+
+function renderMinutesSummary(minutes) {
+  const el = document.getElementById('minutes-summary');
+  if (!minutes.length) {
+    el.innerHTML = '<p style="color:var(--muted)">No minutes data yet</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Player</th><th class="num">Min</th></tr></thead><tbody>';
+  minutes.slice(0, 8).forEach(function(row) {
+    const label = row.name || ('Pos ' + row.tracker_id);
+    html += '<tr><td><strong>' + escapeHtml(label) + '</strong></td>';
+    html += '<td class="num">' + (row.minutes_played != null ? row.minutes_played.toFixed(1) : '-') + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  if (minutes.length > 8) {
+    html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:8px;">+' + (minutes.length - 8) + ' more players</p>';
+  }
   el.innerHTML = html;
 }
 

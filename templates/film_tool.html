@@ -737,14 +737,14 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>Pos</th>
+                      <th>Player</th>
                       <th style="text-align:right;">Min</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for row in player_minutes_data %}
                     <tr>
-                      <td><strong>{{ row.tracker_id }}</strong></td>
+                      <td><strong>{% if row.player_name %}{{ row.player_name }}{% else %}Pos {{ row.tracker_id }}{% endif %}</strong></td>
                       <td style="text-align:right;font-weight:600;">{{ "%.1f"|format(row.minutes_played) }}</td>
                     </tr>
                     {% endfor %}
