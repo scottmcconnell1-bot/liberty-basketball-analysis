@@ -16,6 +16,18 @@ ADVANCED_TRACKING = "advanced_tracking"
 
 LEGACY_BASE_ALIAS = "base"
 
+MODULE_KEY_LABELS = {
+    BASE_PLATFORM: "Base Platform",
+    STATS: "Stats",
+    MINUTES_LINEUPS: "Minutes & Lineups",
+    FILM_ROOM: "Film Room",
+    SCOUTING: "Scouting",
+    PLAYBOOK_RECOGNITION: "Playbook",
+    STRATEGY: "Strategy",
+    AI_ASSIST: "AI Assist",
+    ADVANCED_TRACKING: "Advanced Tracking",
+}
+
 ALL_MODULE_KEYS = (
     BASE_PLATFORM,
     STATS,

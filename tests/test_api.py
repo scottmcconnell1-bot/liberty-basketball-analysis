@@ -1201,6 +1201,8 @@ def test_status_page_shows_product_progress_checklist(client):
     assert r.status_code == 200
     html = r.get_data(as_text=True)
     assert "Product Progress Checklist" in html
+    assert "Module Entitlements" in html
+    assert "base_platform" in html
     assert "Phase 0" in html
     assert "Phase 8" in html
     assert "Manual Tagging &amp; Bookmarks MVP" in html
