@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-7c-player-minutes |
+| **id** | stage-8b-module-preview |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,12 +15,11 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `build_player_minutes_summary()` aggregates games, players, total minutes, top players
-- `/status` shows Player Minutes Summary card
-- `/preview` shows games-with-minutes, players-tracked, total-minutes KPIs
-- `/film` uses `get_player_minutes()` with relational resolution; analysis results has minutes panel
-- 318 passed, 1 skipped
+- `build_preview_entitlements_view()` enriches preview modules with access state per team
+- `/preview` shows Included/Not included badges on module cards
+- `/preview` shows per-team enabled/disabled/not-configured module packaging section
+- KPIs for modules enabled/disabled; 320 passed, 1 skipped
 
 ### Next
 
-Stage 8B — module state on `/preview`
+Stage 8C — stats from accepted events only

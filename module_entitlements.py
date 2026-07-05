@@ -141,3 +141,61 @@ def enforce_module_access(db, team_id, module_key, *, at=None):
 
     if not is_module_accessible(db, team_id, module_key, at=at):
         abort(404)
+
+
+def build_preview_entitlements_view(db, preview_modules, *, team_id=None):
+    """Coach-facing module packaging state for /preview."""
+    from helpers import get_default_team_id
+    from module_keys import MODULE_KEY_LABELS
+
+    if team_id is None:
+        team_id = get_default_team_id(db)
+
+    report = audit_team_entitlements(db, team_id)
+    team = report["teams"][0] if report["teams"] else None
+
+    enriched_modules = []
+    for module in preview_modules:
+        keys = module.get("module_keys", [])
+        accessible = bool(
+            team_id
+            and keys
+            and all(is_module_accessible(db, team_id, key) for key in keys)
+        )
+        enriched_modules.append(
+            {
+                **module,
+                "access_state": "available" if accessible else "unavailable",
+                "module_keys": keys,
+            }
+        )
+
+    labeled_teams = []
+    for current_team in report["teams"]:
+        labeled_teams.append(
+            {
+                **current_team,
+                "enabled_labels": [
+                    MODULE_KEY_LABELS.get(key, key)
+                    for key in current_team["enabled_module_keys"]
+                ],
+                "disabled_labels": [
+                    MODULE_KEY_LABELS.get(key, key)
+                    for key in current_team["disabled_module_keys"]
+                ],
+                "missing_labels": [
+                    MODULE_KEY_LABELS.get(key, key)
+                    for key in current_team["missing_module_keys"]
+                ],
+            }
+        )
+
+    return {
+        "team_id": team_id,
+        "module_entitlement_report": {**report, "teams": labeled_teams},
+        "preview_modules": enriched_modules,
+        "enabled_module_count": len(team["enabled_module_keys"]) if team else 0,
+        "disabled_module_count": len(team["disabled_module_keys"]) if team else 0,
+        "missing_module_count": len(team["missing_module_keys"]) if team else 0,
+        "module_key_labels": MODULE_KEY_LABELS,
+    }
