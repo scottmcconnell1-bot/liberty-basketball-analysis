@@ -77,6 +77,9 @@
   .module-card.slate { border-top: 5px solid #334155; }
   .module-card.green { border-top: 5px solid #15803d; }
   .module-card.red { border-top: 5px solid #b91c1c; }
+  .module-card.module-card-muted {
+    opacity: 0.82;
+  }
   .module-card h3 {
     margin-bottom: 8px;
   }
@@ -122,6 +125,62 @@
     color: var(--color-muted);
     font-size: 0.92rem;
     line-height: 1.5;
+  }
+  .module-access-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .module-access-badge.available {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .module-access-badge.unavailable {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .entitlement-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .entitlement-team {
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    background: #fff;
+  }
+  .entitlement-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .entitlement-key {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .entitlement-key.enabled {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .entitlement-key.disabled {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .entitlement-key.missing {
+    background: #f1f5f9;
+    color: #475569;
   }
 </style>
 
@@ -177,6 +236,14 @@
       <span>Total minutes logged</span>
     </div>
     <div class="preview-kpi">
+      <strong>{{ preview_counts.enabled_modules }}</strong>
+      <span>Modules enabled</span>
+    </div>
+    <div class="preview-kpi">
+      <strong>{{ preview_counts.disabled_modules }}</strong>
+      <span>Modules disabled</span>
+    </div>
+    <div class="preview-kpi">
       <strong>{{ preview_counts.practices }}</strong>
       <span>Practices</span>
     </div>
@@ -195,7 +262,10 @@
 
   <div class="module-grid">
     {% for module in preview_modules %}
-    <article class="module-card {{ module.accent }}">
+    <article class="module-card {{ module.accent }}{% if module.access_state == 'unavailable' %} module-card-muted{% endif %}">
+      <span class="module-access-badge {{ module.access_state }}">
+        {% if module.access_state == 'available' %}Included{% else %}Not included{% endif %}
+      </span>
       <h3>{{ module.title }}</h3>
       <p>{{ module.summary }}</p>
       <ul class="module-list">
@@ -203,8 +273,56 @@
         <li>{{ item }}</li>
         {% endfor %}
       </ul>
+      {% if module.module_keys %}
+      <div class="text-muted" style="font-size:0.8rem;margin-bottom:12px;">
+        Package keys:
+        {% for key in module.module_keys %}
+          <code style="margin-right:6px;">{{ key }}</code>
+        {% endfor %}
+      </div>
+      {% endif %}
       <a class="btn btn-primary" href="{{ module.href }}">Open {{ module.title }}</a>
     </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="preview-section">
+  <h2>Module packaging per team</h2>
+  <p>Soft module entitlements for add-on surfaces. Unconfigured add-ons remain open when base platform is enabled.</p>
+
+  <div class="entitlement-grid">
+    {% for team in module_entitlement_report.teams %}
+    <section class="entitlement-team">
+      <strong>Team #{{ team.team_id }}</strong>
+      <div class="text-muted" style="font-size:0.85rem;margin-top:4px;">
+        {{ team.row_count }} entitlement row(s) · base platform {% if team.has_base_platform %}enabled{% else %}missing{% endif %}
+      </div>
+      {% if team.enabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Enabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.enabled_module_keys %}
+        <span class="entitlement-key enabled" title="{{ key }}">{{ entitlements_view.module_key_labels.get(key, key) }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.disabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Disabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.disabled_module_keys %}
+        <span class="entitlement-key disabled" title="{{ key }}">{{ entitlements_view.module_key_labels.get(key, key) }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.missing_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Not configured</div>
+      <div class="entitlement-keys">
+        {% for key in team.missing_module_keys %}
+        <span class="entitlement-key missing" title="{{ key }}">{{ entitlements_view.module_key_labels.get(key, key) }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
     {% endfor %}
   </div>
 </section>

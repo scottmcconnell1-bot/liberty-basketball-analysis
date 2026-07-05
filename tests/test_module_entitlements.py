@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from helpers import DEFAULT_TEAM_SEED
 from module_entitlements import (
     audit_team_entitlements,
+    build_preview_entitlements_view,
     get_team_entitlements,
     is_module_accessible,
     is_module_entitled,
@@ -12,6 +13,7 @@ from module_keys import (
     ADVANCED_TRACKING,
     ALL_MODULE_KEYS,
     BASE_PLATFORM,
+    FILM_ROOM,
     LEGACY_BASE_ALIAS,
     SCOUTING,
     STATS,
@@ -111,6 +113,28 @@ def test_audit_team_entitlements(db):
     assert report["team_count"] == 1
     assert report["teams"][0]["team_id"] == team_id
     assert BASE_PLATFORM in report["teams"][0]["enabled_module_keys"]
+
+
+def test_build_preview_entitlements_view_marks_modules(db):
+    team_id = _default_team_id(db)
+    preview_modules = [
+        {"title": "Film Room", "module_keys": [FILM_ROOM]},
+        {"title": "Scouting", "module_keys": [SCOUTING]},
+    ]
+    view = build_preview_entitlements_view(db, preview_modules, team_id=team_id)
+    assert view["enabled_module_count"] >= 1
+    assert view["preview_modules"][0]["access_state"] == "available"
+
+    db.execute(
+        """INSERT OR REPLACE INTO module_entitlements
+           (team_id, module_key, enabled, notes)
+           VALUES (?, ?, ?, ?)""",
+        (team_id, SCOUTING, 0, "disabled in test"),
+    )
+    db.commit()
+    view = build_preview_entitlements_view(db, preview_modules, team_id=team_id)
+    assert view["preview_modules"][1]["access_state"] == "unavailable"
+    assert SCOUTING in view["module_entitlement_report"]["teams"][0]["disabled_module_keys"]
 
 
 def test_get_team_entitlements_ordered(db):
