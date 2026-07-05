@@ -11,10 +11,11 @@ See `ACTIVE.md`.
 
 | # | Stage | Summary | Status |
 | --- | --- | --- | --- |
-| 1 | 7E | Canonical clips in player_dev UI | done (#81) |
-| 2 | 8A | Seed demo module entitlements | done |
-| 3 | 9A | Secrets audit | Scott gate |
-| 4 | 9B | Auth middleware plan | Scott gate |
+| 1 | 8A | Seed demo module entitlements | done (#82) |
+| 2 | 9A | Secrets audit | done |
+| 3 | 9B | Auth re-enable plan | prep done — flip is Scott gate |
+| 4 | 9C | Docker production smoke | Scott gate |
+| 5 | 9D | Transfer bundle + Hermes parity | queued |
 
 ## Done recently
 

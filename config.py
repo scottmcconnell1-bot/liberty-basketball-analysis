@@ -34,16 +34,9 @@ class Config:
     }
 
     # ── VAPID Keys (Browser Push) ──────────────────────────
-    # Generated on 2026-05-08. Override via env vars if needed.
-    VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", """-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgvXgGzvO9gi39B6vi
-sYX5M4ZeesmmBFw7a5RfEY3QcV2hRANCAATUd8oSuyEx9UnKKUb/l3lPqCkgHvjP
-1s0mBkGy2bYrJ8tEUS4e5ej5IOvsslQOGghfEKM5aIJIeQGPwFBT6A8Q
------END PRIVATE KEY-----""")
-    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", """-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1HfKErshMfVJyilG/5d5T6gpIB74
-z9bNJgZBstm2KyfLRFEuHuXo+SDr7LJUDhoIXxCjOWiCSHkBj8BQU+gPEA==
------END PUBLIC KEY-----""")
+    # Set via environment. Do not commit key material to the repository.
+    VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 
     # ── SMTP (Email) ───────────────────────────────────────
     SMTP_SERVER = os.environ.get("SMTP_SERVER", "")
