@@ -7,7 +7,7 @@ Branch: `jason-5-may-updates`
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-9a-secrets-audit |
+| **id** | stage-9cd-deploy-smoke-parity |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,12 +15,11 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `docs/SECRETS_AUDIT.md` inventories VAPID, SMTP, SECRET_KEY, NFHS, auth state
-- `scripts/audit_secrets.py` + `secrets_audit.py` operator CLI (no secret values printed)
-- Removed committed VAPID key material from `config.py`; added `.env.example`
-- `docs/AUTH_REENABLE_PLAN.md` — Stage 9B prep (plan only, auth still disabled)
-- 331 passed, 1 skipped
+- Stage 9A merged (#83): secrets audit, VAPID remediation, `.env.example`
+- `scripts/docker_production_smoke.sh` + `docs/DOCKER_PRODUCTION_SMOKE.md` (9C)
+- Transfer bundle includes `blueprints/`, helpers, entitlements, secrets audit (9D)
+- `docs/HERMES_LINUX_PARITY.md` — parity baseline and restore proof steps
 
 ### Next
 
-Stage 9C — Docker production smoke (Scott gate) or Scott review of 9A/9B before auth flip
+Hermes runs `bash scripts/docker_production_smoke.sh` on Linux (Scott gate), then Phase 5 AI assist or Scott auth flip review

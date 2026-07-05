@@ -159,6 +159,16 @@ Excluded content:
 .venv/bin/python -m pytest tests/ -q
 ```
 
+### Docker production smoke (Stage 9C)
+
+On a Linux host with Docker installed:
+
+```bash
+bash scripts/docker_production_smoke.sh
+```
+
+See `docs/DOCKER_PRODUCTION_SMOKE.md` for the full checklist and `docs/HERMES_LINUX_PARITY.md` for Hermes/Linux parity expectations.
+
 ### Container logs
 
 ```bash

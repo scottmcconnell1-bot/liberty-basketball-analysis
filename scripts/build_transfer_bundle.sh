@@ -12,26 +12,14 @@ declare -a INCLUDE_PATHS=()
 for rel_path in \
   README.md \
   .dockerignore \
+  .env.example \
   Dockerfile \
   docker-compose.yml \
   docker-compose.gpu.yml \
   pytest.ini \
   requirements.txt \
   requirements.docker.txt \
-  app.py \
-  ai_analyzer.py \
-  config.py \
-  event_generator.py \
   schema.sql \
-  season_management.py \
-  settings_store.py \
-  stats.py \
-  tracker_assigner.py \
-  templates \
-  tests \
-  docs \
-  scripts \
-  deploy \
   film_analysis.db \
   uploads
 do
@@ -39,6 +27,20 @@ do
     INCLUDE_PATHS+=("${rel_path}")
   fi
 done
+
+for rel_dir in templates tests docs scripts deploy blueprints services src; do
+  if [[ -d "${ROOT_DIR}/${rel_dir}" ]]; then
+    INCLUDE_PATHS+=("${rel_dir}")
+  fi
+done
+
+while IFS= read -r -d '' py_file; do
+  base_name="$(basename "${py_file}")"
+  if [[ "${base_name}" == benchmark_* ]]; then
+    continue
+  fi
+  INCLUDE_PATHS+=("${py_file#${ROOT_DIR}/}")
+done < <(find "${ROOT_DIR}" -maxdepth 1 -type f -name '*.py' -print0 | sort -z)
 
 while IFS= read -r -d '' model_file; do
   INCLUDE_PATHS+=("${model_file#${ROOT_DIR}/}")
