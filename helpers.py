@@ -21,6 +21,7 @@ from flask import g, current_app, request, render_template, abort, redirect, url
 from werkzeug.utils import secure_filename
 
 from config import Config
+from module_keys import BASE_PLATFORM
 from settings_store import AI_DEFAULTS, load_all_settings, save_settings
 
 try:
@@ -70,7 +71,7 @@ EVENT_TYPE_SEEDS = [
 ]
 
 BASE_MODULE_ENTITLEMENT = {
-    "module_key": "base_platform",
+    "module_key": BASE_PLATFORM,
     "notes": "Seeded by platform_core_stage_2_backfill; additional modules require Scott approval.",
 }
 
