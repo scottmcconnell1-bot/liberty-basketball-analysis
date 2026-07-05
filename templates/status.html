@@ -265,6 +265,48 @@
   </div>
 </div>
 
+<div class="card" data-frame="15.06">
+  <h3 style="margin-bottom:8px;">Review &amp; Trust Summary</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    Event ledger review state and open review queue items. Stats prefer accepted events; rejected events are excluded.
+  </div>
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Events</span>
+      <strong>{{ review_summary.events_total }}</strong>
+      <span class="text-muted">total tagged events</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Accepted</span>
+      <strong>{{ review_summary.events_accepted }}</strong>
+      <span class="text-muted">trusted for stats</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Pending</span>
+      <strong>{{ review_summary.events_pending }}</strong>
+      <span class="text-muted">awaiting review</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Corrected</span>
+      <strong>{{ review_summary.events_corrected }}</strong>
+      <span class="text-muted">coach corrected</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Rejected</span>
+      <strong>{{ review_summary.events_rejected }}</strong>
+      <span class="text-muted">excluded from stats</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Queue</span>
+      <strong>{{ review_summary.review_items_open }}</strong>
+      <span class="text-muted">open review items</span>
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <a class="btn btn-secondary btn-sm" href="/review">Open Review Queue</a>
+  </div>
+</div>
+
 <div class="card" data-frame="15.1">
   <h3 style="margin-bottom:12px;">Runs</h3>
   <div style="overflow:auto;">

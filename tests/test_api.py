@@ -1202,6 +1202,7 @@ def test_status_page_shows_product_progress_checklist(client):
     html = r.get_data(as_text=True)
     assert "Product Progress Checklist" in html
     assert "Module Entitlements" in html
+    assert "Review &amp; Trust Summary" in html
     assert "base_platform" in html
     assert "Phase 0" in html
     assert "Phase 8" in html
@@ -1217,6 +1218,8 @@ def test_product_preview_page_renders_final_product_surface(client):
     assert r.status_code == 200
     html = r.get_data(as_text=True)
     assert "Final Product Preview" in html
+    assert "Accepted events" in html
+    assert "Pending events" in html
     assert "Coach command center" in html
     assert "What the finished platform feels like" in html
     assert 'href="/film"' in html
