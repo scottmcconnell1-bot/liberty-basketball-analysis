@@ -636,6 +636,7 @@
     <button class="nav-hamburger" type="button" aria-label="Toggle navigation" onclick="document.getElementById('nav-links').classList.toggle('open')">☰</button>
     <div class="nav-links" id="nav-links">
     <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a>
+    <a href="/preview" {% if request.endpoint == 'core.product_preview_page' %}class="active"{% endif %}>Preview</a>
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
     <div class="nav-dropdown">
       <a href="javascript:void(0)" role="button" tabindex="0">Teams</a>

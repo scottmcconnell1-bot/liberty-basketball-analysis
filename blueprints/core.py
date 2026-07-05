@@ -242,6 +242,7 @@ PRODUCT_CHECKLIST = [
 
 PRODUCT_SURFACE_LINKS = [
     {"label": "Dashboard", "href": "/"},
+    {"label": "Preview", "href": "/preview"},
     {"label": "Schedule", "href": "/schedule"},
     {"label": "Film Upload", "href": "/film"},
     {"label": "Videos", "href": "/videos"},
@@ -253,6 +254,44 @@ PRODUCT_SURFACE_LINKS = [
     {"label": "Status", "href": "/status"},
 ]
 
+PRODUCT_PREVIEW_MODULES = [
+    {
+        "title": "Team Operations",
+        "summary": "Run the season schedule, game planning, and practice workflow from one place.",
+        "href": "/schedule",
+        "accent": "teal",
+        "items": ["Season schedule", "Completed games", "Practice planning"],
+    },
+    {
+        "title": "Film Room",
+        "summary": "Upload video, review AI output, and correct plays inside the same workflow.",
+        "href": "/film",
+        "accent": "amber",
+        "items": ["Upload and tag film", "Review queue", "Compare reruns"],
+    },
+    {
+        "title": "Analysis & Trust",
+        "summary": "Track analysis runs, live status, and reviewed event quality with proof.",
+        "href": "/status",
+        "accent": "slate",
+        "items": ["Run status", "Event trust layer", "Canonical identity tracking"],
+    },
+    {
+        "title": "Player Development",
+        "summary": "Turn reviewed clips and tagged events into player-facing improvement work.",
+        "href": "/player-development",
+        "accent": "green",
+        "items": ["Development playlists", "Minutes foundation", "Clip workflows"],
+    },
+    {
+        "title": "Scouting & Playbook",
+        "summary": "Keep opponent prep, play organization, and coach communication in one shell.",
+        "href": "/scouting",
+        "accent": "red",
+        "items": ["Scouting notes", "Playbook", "Coach messaging"],
+    },
+]
+
 
 def _build_product_checklist():
     summary = {"complete": 0, "in_progress": 0, "planned": 0}
@@ -261,9 +300,33 @@ def _build_product_checklist():
     return PRODUCT_CHECKLIST, summary
 
 
+def _build_product_preview(db):
+    counts = {
+        "scheduled_games": db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0],
+        "videos": db.execute("SELECT COUNT(*) FROM videos").fetchone()[0],
+        "analysis_runs": db.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0],
+        "pending_review": db.execute(
+            "SELECT COUNT(*) FROM review_items WHERE review_status IN ('pending', 'needs_review')"
+        ).fetchone()[0],
+        "practices": db.execute("SELECT COUNT(*) FROM practices").fetchone()[0],
+    }
+    return PRODUCT_PREVIEW_MODULES, counts
+
+
 @core.route("/")
 def index():
     return render_template("index.html")
+
+
+@core.route("/preview")
+def product_preview_page():
+    db = get_db()
+    modules, counts = _build_product_preview(db)
+    return render_template(
+        "product_preview.html",
+        preview_modules=modules,
+        preview_counts=counts,
+    )
 
 
 @core.route("/schedule")

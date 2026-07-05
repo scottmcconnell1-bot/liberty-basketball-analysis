@@ -1210,6 +1210,18 @@ def test_status_page_shows_product_progress_checklist(client):
     assert 'href="/practices"' in html
 
 
+def test_product_preview_page_renders_final_product_surface(client):
+    r = client.get("/preview")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "Final Product Preview" in html
+    assert "Coach command center" in html
+    assert "What the finished platform feels like" in html
+    assert 'href="/film"' in html
+    assert 'href="/review"' in html
+    assert 'href="/practices"' in html
+
+
 def test_status_page_groups_detection_and_event_counts_by_canonical_game_id(client, db):
     game_id = "status-canonical-game"
     game_row = db.execute(
