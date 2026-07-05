@@ -2205,6 +2205,51 @@ def test_possession_summary_in_enhanced_stats(client, db):
     assert "scoring_possessions" in ps
 
 
+def test_build_possession_workflow_summary_links_events(client, db):
+    """build_possession_workflow_summary assigns possessions and counts linkage."""
+    game_id = _create_game_with_events(
+        client, db, "possession-workflow",
+        [
+            {"event_type": "made_two", "timestamp_ms": 1000},
+            {"event_type": "turnover", "timestamp_ms": 2000},
+            {"event_type": "made_three", "timestamp_ms": 3000},
+        ],
+    )
+    from helpers import build_possession_workflow_summary
+
+    summary = build_possession_workflow_summary(db, game_id)
+    assert summary["total_possessions"] > 0
+    assert summary["events_total"] == 3
+    assert summary["events_linked"] == 3
+    assert summary["events_unlinked"] == 0
+
+
+def test_film_page_shows_possession_summary(client, db):
+    """Film tool renders possession counts when a game has tagged events."""
+    game_id = _create_game_with_events(
+        client, db, "film-possession",
+        [
+            {"event_type": "made_two", "timestamp_ms": 1000},
+            {"event_type": "turnover", "timestamp_ms": 2000},
+            {"event_type": "made_three", "timestamp_ms": 3000},
+        ],
+    )
+    resp = client.get(f"/film?game_id={game_id}")
+    assert resp.status_code == 200
+    html = resp.data
+    assert b"Possessions" in html
+    assert b"total possessions" in html
+    assert b"events linked to possessions" in html
+
+
+def test_analysis_results_page_includes_possession_panel(client):
+    """Analysis results dashboard includes possession summary mount point."""
+    resp = client.get("/analysis/test-game-key")
+    assert resp.status_code == 200
+    assert b"possession-summary" in resp.data
+    assert b"renderPossessionSummary" in resp.data
+
+
 def test_rejected_events_excluded_from_stats(client, db):
     """Events with review_status='rejected' must not appear in stats output."""
     game_id = _create_game(client, "rejected-stats")

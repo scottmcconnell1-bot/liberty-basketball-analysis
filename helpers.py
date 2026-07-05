@@ -116,6 +116,44 @@ def build_review_workflow_summary(db):
     }
 
 
+def build_possession_workflow_summary(db, game_id):
+    """Aggregate possession linkage counts for film and stats surfaces."""
+    from stats import _resolve_relational_game_id, get_possession_summary
+
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+
+    summary = get_possession_summary(db, game_id)
+
+    if relational_game_id is not None:
+        row = db.execute(
+            """SELECT COUNT(*) AS events_total,
+                      SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
+                 FROM events
+                WHERE relational_game_id = ?""",
+            (relational_game_id,),
+        ).fetchone()
+    else:
+        row = db.execute(
+            """SELECT COUNT(*) AS events_total,
+                      SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
+                 FROM events
+                WHERE game_id = ?""",
+            (str(game_id),),
+        ).fetchone()
+
+    events_total = row["events_total"] or 0
+    events_linked = row["events_linked"] or 0
+
+    return {
+        **summary,
+        "events_total": events_total,
+        "events_linked": events_linked,
+        "events_unlinked": events_total - events_linked,
+    }
+
+
 def feature_enabled(flag_name):
     return bool(get_runtime_settings()["features"].get(flag_name, False))
 

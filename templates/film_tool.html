@@ -586,18 +586,57 @@
     <!-- ═══════════════════════════════════════════════════════
          ANALYSIS RESULTS
          ═══════════════════════════════════════════════════════ -->
-    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data) %}
+    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data or possession_summary) %}
     <section class="ft-analysis-results" style="margin-top:1.5rem;">
       <div class="panel">
         <div class="panel-head">
           <div>
             <h2>📊 Analysis Results</h2>
-            <p>Shot classifications, player effect, and minutes from AI analysis.</p>
+            <p>Shot classifications, possessions, player effect, and minutes from AI analysis.</p>
           </div>
         </div>
         <div class="panel-body">
 
           <div class="split" style="gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+
+            <!-- Possession Summary -->
+            {% if possession_summary and possession_summary.events_total > 0 %}
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">🏀 Possessions</div>
+              <div class="checklist-summary" style="display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;">
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.total_possessions }}</strong>
+                  <span class="text-muted">total possessions</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.scoring_possessions }}</strong>
+                  <span class="text-muted">scoring</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.points_per_possession }}</strong>
+                  <span class="text-muted">pts / poss</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.turnover_rate }}</strong>
+                  <span class="text-muted">TO rate</span>
+                </div>
+              </div>
+              <div class="text-muted" style="font-size:.82rem;margin-bottom:.5rem;">
+                {{ possession_summary.events_linked }} of {{ possession_summary.events_total }} events linked to possessions
+                {% if possession_summary.events_unlinked > 0 %}
+                  ({{ possession_summary.events_unlinked }} unlinked)
+                {% endif %}
+              </div>
+              {% if possession_summary.top_outcomes %}
+              <div class="text-muted" style="font-size:.82rem;">
+                Top outcomes:
+                {% for row in possession_summary.top_outcomes %}
+                  <span style="margin-right:.5rem;">{{ row.outcome }} ({{ row.count }})</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
 
             <!-- Shot Summary -->
             {% if shot_summary %}
