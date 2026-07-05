@@ -154,6 +154,42 @@ def build_possession_workflow_summary(db, game_id):
     }
 
 
+def build_player_minutes_summary(db):
+    """Aggregate player_minutes counts for coach stats surfaces."""
+    totals = db.execute(
+        """SELECT COUNT(*) AS player_rows,
+                  COUNT(DISTINCT tracker_id) AS players_tracked,
+                  COUNT(DISTINCT COALESCE(CAST(relational_game_id AS TEXT), game_id)) AS games_with_minutes,
+                  COALESCE(SUM(minutes_played), 0) AS total_minutes
+             FROM player_minutes"""
+    ).fetchone()
+
+    top_rows = db.execute(
+        """SELECT tracker_id,
+                  COALESCE(SUM(minutes_played), 0) AS total_minutes,
+                  COUNT(DISTINCT COALESCE(CAST(relational_game_id AS TEXT), game_id)) AS games_played
+             FROM player_minutes
+            GROUP BY tracker_id
+            ORDER BY total_minutes DESC
+            LIMIT 5"""
+    ).fetchall()
+
+    return {
+        "games_with_minutes": totals["games_with_minutes"] or 0,
+        "player_rows": totals["player_rows"] or 0,
+        "players_tracked": totals["players_tracked"] or 0,
+        "total_minutes": round(totals["total_minutes"] or 0, 1),
+        "top_players": [
+            {
+                "tracker_id": row["tracker_id"],
+                "total_minutes": round(row["total_minutes"], 1),
+                "games_played": row["games_played"],
+            }
+            for row in top_rows
+        ],
+    }
+
+
 def feature_enabled(flag_name):
     return bool(get_runtime_settings()["features"].get(flag_name, False))
 

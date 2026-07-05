@@ -41,6 +41,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, ur
 from helpers import (
     AI_DEFAULTS,
     build_possession_workflow_summary,
+    build_player_minutes_summary,
     build_resource_status,
     build_review_workflow_summary,
     build_settings_catalog,
@@ -306,6 +307,7 @@ def _build_product_checklist():
 
 def _build_product_preview(db):
     review_summary = build_review_workflow_summary(db)
+    minutes_summary = build_player_minutes_summary(db)
     counts = {
         "scheduled_games": db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0],
         "videos": db.execute("SELECT COUNT(*) FROM videos").fetchone()[0],
@@ -316,9 +318,12 @@ def _build_product_preview(db):
         "events_corrected": review_summary["events_corrected"],
         "events_rejected": review_summary["events_rejected"],
         "events_total": review_summary["events_total"],
+        "games_with_minutes": minutes_summary["games_with_minutes"],
+        "players_tracked": minutes_summary["players_tracked"],
+        "total_minutes": minutes_summary["total_minutes"],
         "practices": db.execute("SELECT COUNT(*) FROM practices").fetchone()[0],
     }
-    return PRODUCT_PREVIEW_MODULES, counts, review_summary
+    return PRODUCT_PREVIEW_MODULES, counts, review_summary, minutes_summary
 
 
 @core.route("/")
@@ -329,12 +334,13 @@ def index():
 @core.route("/preview")
 def product_preview_page():
     db = get_db()
-    modules, counts, review_summary = _build_product_preview(db)
+    modules, counts, review_summary, minutes_summary = _build_product_preview(db)
     return render_template(
         "product_preview.html",
         preview_modules=modules,
         preview_counts=counts,
         review_summary=review_summary,
+        minutes_summary=minutes_summary,
     )
 
 
@@ -1500,14 +1506,16 @@ def film(filename=None):
         player_effect_data = [dict(r) for r in effect_rows]
 
         # Player minutes
-        minutes_rows = db.execute(
-            """SELECT tracker_id, minutes_played
-               FROM player_minutes
-               WHERE game_id = ?
-               ORDER BY tracker_id""",
-            (game_id,),
-        ).fetchall()
-        player_minutes_data = [dict(r) for r in minutes_rows]
+        from player_minutes import get_player_minutes
+
+        player_minutes_data = [
+            {
+                "tracker_id": row["tracker_id"],
+                "minutes_played": row["minutes_played"],
+                "player_name": row["resolved_name"] or row["player_name"],
+            }
+            for row in get_player_minutes(db, game_id)
+        ]
 
         if feature_enabled("ENABLE_AUTO_STATS_M1"):
             possession_summary = build_possession_workflow_summary(db, game_id)
@@ -2081,6 +2089,7 @@ def status_page():
     product_checklist, checklist_summary = _build_product_checklist()
     module_entitlement_report = audit_team_entitlements(db)
     review_summary = build_review_workflow_summary(db)
+    minutes_summary = build_player_minutes_summary(db)
     run_rows = db.execute(
         "SELECT * FROM analysis_runs ORDER BY id DESC"
     ).fetchall()
@@ -2117,6 +2126,7 @@ def status_page():
         product_surface_links=PRODUCT_SURFACE_LINKS,
         module_entitlement_report=module_entitlement_report,
         review_summary=review_summary,
+        minutes_summary=minutes_summary,
         runs=runs,
         detection_rows=[
             {

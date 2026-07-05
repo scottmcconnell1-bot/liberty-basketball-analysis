@@ -307,6 +307,43 @@
   </div>
 </div>
 
+<div class="card" data-frame="15.07">
+  <h3 style="margin-bottom:8px;">Player Minutes Summary</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    Minutes derived from detection presence in film analysis. Visible on film and stats dashboards per game.
+  </div>
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Games</span>
+      <strong>{{ minutes_summary.games_with_minutes }}</strong>
+      <span class="text-muted">with minutes data</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Players</span>
+      <strong>{{ minutes_summary.players_tracked }}</strong>
+      <span class="text-muted">tracked across games</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Minutes</span>
+      <strong>{{ minutes_summary.total_minutes }}</strong>
+      <span class="text-muted">total logged</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Rows</span>
+      <strong>{{ minutes_summary.player_rows }}</strong>
+      <span class="text-muted">game-player records</span>
+    </div>
+  </div>
+  {% if minutes_summary.top_players %}
+  <div style="margin-top:12px;font-size:0.85rem;">
+    <strong>Top minutes:</strong>
+    {% for row in minutes_summary.top_players %}
+      <span style="margin-right:10px;">#{{ row.tracker_id }} — {{ row.total_minutes }} min ({{ row.games_played }} games)</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
 <div class="card" data-frame="15.1">
   <h3 style="margin-bottom:12px;">Runs</h3>
   <div style="overflow:auto;">
