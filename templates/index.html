@@ -198,8 +198,8 @@
         scheduleHtml += '<div class="schedule-list">';
         scheduleHtml += t.upcoming.map(g => {
           const loc = g.location_type || 'home';
-          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
-          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
+          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : (loc === 'tbd' ? 'TBD' : 'T'));
+          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : (loc === 'tbd' ? 'loc-tbd' : 'loc-tournament'));
           const shortDate = formatGameDate(g.game_date, g.game_time);
           return `<div class="sched-row">
             <span class="sched-date">${shortDate}</span>
@@ -236,10 +236,13 @@
       const fd = new FormData();
       fd.append('state', 'Idaho');
       const r = await fetch('/api/teams/rankings', { method: 'POST', body: fd });
-      const d = await r.json();
-      const rk = d.rankings[teamKey];
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        alert(d.error || 'Failed to update ranking. MaxPreps scrape may be unavailable on this machine.');
+        return;
+      }
+      const rk = (d.rankings || {})[teamKey];
       if (rk && rk.ranking) {
-        // Update the ranking display without full reload
         const card = document.querySelector(`[data-frame="1.1-${teamKey}"]`);
         if (card) {
           const rankBadge = card.querySelector('.team-rank');
@@ -252,12 +255,13 @@
           const rankLink = card.querySelector('.rank-link');
           if (rankLink && rk.ranking_url) rankLink.href = rk.ranking_url;
         }
+      } else {
+        alert('Ranking not found on MaxPreps right now. Try again in a few minutes.');
       }
     } catch(e) {
       alert('Failed to update ranking. Please try again.');
     } finally {
-      btn.disabled = false;
-      btn.textContent = '↻ Update';
+      if (btn) { btn.disabled = false; btn.textContent = '↻ Update'; }
     }
   }
 

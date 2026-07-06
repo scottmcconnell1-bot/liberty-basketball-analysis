@@ -454,7 +454,7 @@ def schedule_save_game():
     game_id = form.get("game_id", "").strip()
     season_id = form.get("season_id", "").strip()
     game_date = (form.get("game_date") or "").strip()
-    opponent_name = (form.get("opponent_name") or "").strip()
+    opponent_name = _normalize_opponent_name((form.get("opponent_name") or "").strip())
 
     if not season_id or not game_date or not opponent_name:
         return render_schedule_page(
@@ -472,7 +472,7 @@ def schedule_save_game():
                 "game_time": (form.get("game_time") or "").strip(),
                 "jv_game_time": (form.get("jv_game_time") or "").strip(),
                 "frosh_game_time": (form.get("frosh_game_time") or "").strip(),
-                "location_type": (form.get("location_type") or "home").strip(),
+                "location_type": _normalize_location_type(form.get("location_type")),
                 "opponent_name": opponent_name,
                 "tournament_name": (form.get("tournament_name") or "").strip(),
                 "status": (form.get("status") or "scheduled").strip(),
@@ -491,7 +491,7 @@ def schedule_save_game():
         (form.get("game_time") or "").strip() or None,
         (form.get("jv_game_time") or "").strip() or None,
         (form.get("frosh_game_time") or "").strip() or None,
-        (form.get("location_type") or "home").strip() or "home",
+        _normalize_location_type(form.get("location_type")),
         opponent_name,
         (form.get("tournament_name") or "").strip() or None,
         (form.get("status") or "scheduled").strip() or "scheduled",
@@ -596,6 +596,160 @@ def schedule_import_pdf():
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
 
+def _build_month_year_map(season_info):
+    """Map month numbers to years using a season's start/end dates."""
+    import datetime
+
+    month_year_map = {}
+    if season_info and season_info.get("start_date") and season_info.get("end_date"):
+        s_start = datetime.date.fromisoformat(season_info["start_date"])
+        s_end = datetime.date.fromisoformat(season_info["end_date"])
+        d = s_start
+        while d <= s_end:
+            month_year_map[d.month] = d.year
+            if d.month == 12:
+                d = datetime.date(d.year + 1, 1, 1)
+            else:
+                d = datetime.date(d.year, d.month + 1, 1)
+    return month_year_map
+
+
+def _is_maxpreps_printable_schedule(text):
+    """Detect MaxPreps printable schedule PDFs (print view export)."""
+    import re
+
+    return bool(re.search(
+        r'maxpreps\.com/print/schedule|Printable\s+Liberty\s+Charter.*Basketball\s+Schedule|Date\s+Opponent\s+Result',
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def _maxpreps_result_to_app_result(result_code):
+    """Map MaxPreps W/L/T codes to app result values."""
+    return {"W": "win", "L": "loss", "T": "tie"}.get((result_code or "").upper(), "")
+
+
+def _liberty_scores_to_venue_scores(location_type, liberty_score, opponent_score):
+    """Convert Liberty/opponent points to home/away score columns."""
+    if location_type == "away":
+        return opponent_score, liberty_score
+    return liberty_score, opponent_score
+
+
+def _opponent_raw_is_conference(opponent_raw):
+    """Conference games are marked with a single trailing * in MaxPreps exports."""
+    import re
+
+    text = opponent_raw or ""
+    return bool(re.search(r"\*", text)) and not bool(re.search(r"\*\*", text))
+
+
+def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
+    """Parse MaxPreps printable schedule PDF text into game dicts."""
+    import re
+
+    month_year_map = _build_month_year_map(season_info)
+    team_gender = "girls" if "girls" in pdf_team else "boys"
+    team_level = "jr_high" if "jr_" in pdf_team else "varsity"
+
+    skip_patterns = [
+        r'^\d{1,2}/\d{1,2}/\d{2,4},\s*\d{1,2}:\d{2}\s*(?:AM|PM)\b',
+        r'^Printable\b',
+        r"^America's Source",
+        r'^Liberty Charter Basketball Schedule',
+        r'^(Mascot|Team|Coach|Overall|League|Record Breakdown|Colors|Address|State \(ID\)|Rank\b|All-Time|Win %)',
+        r'^Date Opponent Result',
+        r'^Schedule Legend',
+        r'^Conference Game|^Tournament Game|^Playoff Game',
+        r'maxpreps\.com',
+    ]
+    game_line_re = re.compile(
+        r'^(\d{1,2}/\d{1,2})\s+(@\s*)?(.+?)\s+\(([WLT])\)(?:\s+(\d+)\s*-\s*(\d+))?',
+        re.IGNORECASE,
+    )
+    time_line_re = re.compile(r'^(\d{1,2}:\d{2}p?)\b', re.IGNORECASE)
+    tournament_details_re = re.compile(r'^Game Details:\s*(.+)$', re.IGNORECASE)
+
+    games = []
+    pending = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if any(re.search(p, line, re.IGNORECASE) for p in skip_patterns):
+            continue
+
+        game_match = game_line_re.match(line)
+        if game_match:
+            if pending:
+                games.append(pending)
+            date_str = game_match.group(1)
+            is_away = bool(game_match.group(2))
+            opponent_raw = game_match.group(3).strip()
+            result_code = game_match.group(4).upper()
+            score_a = int(game_match.group(5)) if game_match.group(5) else None
+            score_b = int(game_match.group(6)) if game_match.group(6) else None
+            if score_a is not None and score_b is not None:
+                if result_code == "L":
+                    liberty_score, opponent_score = score_b, score_a
+                else:
+                    liberty_score, opponent_score = score_a, score_b
+            else:
+                liberty_score, opponent_score = None, None
+            is_conference = _opponent_raw_is_conference(opponent_raw)
+            opponent = re.sub(r'\s*\*+\s*$', '', opponent_raw).strip()
+            opponent = re.sub(r'\s*\([^)]+\)\s*$', '', opponent).strip()
+            opponent = re.sub(
+                r'^Non Varsity Tournament Opponent$',
+                'Tournament Opponent',
+                opponent,
+                flags=re.IGNORECASE,
+            )
+            game_date = _reparse_date_with_map(date_str, month_year_map)
+            if not game_date:
+                pending = None
+                continue
+            result = _maxpreps_result_to_app_result(result_code)
+            has_result = bool(result and liberty_score is not None and opponent_score is not None)
+            pending = {
+                "game_date": game_date,
+                "raw_date": date_str,
+                "game_time": "",
+                "jv_game_time": "",
+                "frosh_game_time": "",
+                "opponent_name": _normalize_opponent_name(opponent),
+                "team": pdf_team,
+                "level": team_level,
+                "gender": team_gender,
+                "location_type": "away" if is_away else "home",
+                "tournament_name": "",
+                "status": "completed" if has_result else "scheduled",
+                "result": result if has_result else "",
+                "liberty_score": liberty_score if has_result else "",
+                "opponent_score": opponent_score if has_result else "",
+                "is_conference": is_conference,
+                "notes": "",
+            }
+            continue
+
+        if not pending:
+            continue
+
+        time_match = time_line_re.match(line)
+        if time_match:
+            pending["game_time"] = _normalize_time(time_match.group(1))
+            continue
+
+        tournament_match = tournament_details_re.match(line)
+        if tournament_match:
+            pending["tournament_name"] = tournament_match.group(1).strip()
+
+    if pending:
+        games.append(pending)
+    return games
+
+
 def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     """Parse extracted PDF text into game dicts. Handles common schedule formats
     including multi-time layouts like '4:30/6:00/7:30' (JV/Frosh/Varsity).
@@ -614,26 +768,18 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
        (times appear on same line or next line after opponent)
     2. Row-based: '12/2 Marsing 7:30p' all on one line
+    3. MaxPreps printable: '12/1 @ Opponent (W) 44 - 40' with time on next line
     """
     import re, datetime
+
+    if _is_maxpreps_printable_schedule(text):
+        return _parse_maxpreps_printable_text(text, pdf_team=pdf_team, season_info=season_info)
+
     games = []
     lines = text.splitlines()
 
     # Build a month→year mapping from season_info for dates without a year
-    # e.g. for season 2025-11-01→2026-03-31: Nov,Dec→2025; Jan,Feb,Mar→2026
-    month_year_map = {}
-    if season_info and season_info.get("start_date") and season_info.get("end_date"):
-        s_start = datetime.date.fromisoformat(season_info["start_date"])
-        s_end = datetime.date.fromisoformat(season_info["end_date"])
-        # Map every month in the season range to its correct year
-        d = s_start
-        while d <= s_end:
-            month_year_map[d.month] = d.year
-            # advance to next month
-            if d.month == 12:
-                d = datetime.date(d.year + 1, 1, 1)
-            else:
-                d = datetime.date(d.year, d.month + 1, 1)
+    month_year_map = _build_month_year_map(season_info)
 
     # Pre-process: detect column-based layout by looking for DATE/OPPONENT/TIMES headers
     has_column_layout = False
@@ -699,6 +845,14 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
                 i += 1
                 continue
 
+            if re.search(
+                r'^\d{1,2}/\d{1,2}/\d{2,4},\s*\d{1,2}:\d{2}\s*(?:AM|PM)\b|Printable\s+Liberty\s+Charter|maxpreps\.com/print',
+                line,
+                re.IGNORECASE,
+            ):
+                i += 1
+                continue
+
             # Check if this line is a "time-only" line
             time_only = re.match(r'^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?\s*/?\s*)+$', line)
             if time_only and joined_lines:
@@ -750,34 +904,86 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     return games
 
 
+def _normalize_schedule_time(time_str):
+    """Convert schedule time text to HH:MM (24h).
+
+  Basketball schedules often omit AM/PM. Bare times like ``3:30`` are treated as PM.
+  Supports ``3:30p``, ``3:30 PM``, and ``15:30``.
+    """
+    import re
+
+    text = (time_str or "").strip()
+    if not text:
+        return ""
+
+    lower = text.lower().replace(" ", "")
+    is_am = "am" in lower or re.search(r"\d[ap]m", lower) and "pm" not in lower
+    is_pm = "pm" in lower or bool(re.search(r"\d{1,2}:\d{2}p(?!m)", lower))
+
+    match = re.search(r"(\d{1,2}):(\d{2})", text)
+    if not match:
+        return text
+
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+
+    if not is_am and not is_pm and 1 <= hour <= 11:
+        is_pm = True
+    if is_pm and hour < 12:
+        hour += 12
+    if is_am and hour == 12:
+        hour = 0
+
+    return f"{hour:02d}:{minute:02d}"
+
+
 def _normalize_time(time_str):
     """Convert a time string to HH:MM format."""
-    import datetime
-    time_str = time_str.strip()
-    for fmt in ['%I:%M %p', '%I:%M%p', '%I:%M', '%H:%M']:
-        try:
-            return datetime.datetime.strptime(time_str, fmt).strftime('%H:%M')
-        except ValueError:
-            continue
-    return time_str  # Return as-is if can't parse
+    return _normalize_schedule_time(time_str)
 
+
+def _normalize_opponent_name(name):
+    """Normalize school/opponent names to title case (e.g. NOTUS -> Notus)."""
+    text = (name or "").strip()
+    if not text:
+        return text
+    if text.upper() == "TBD":
+        return "TBD"
+    return " ".join(
+        word[:1].upper() + word[1:].lower() if word else ""
+        for word in text.split()
+    )
+
+
+def _normalize_location_type(value):
+    """Normalize schedule location values; TBD is stored as ``tbd``."""
+    text = (value or "").strip().lower()
+    if text == "tbd":
+        return "tbd"
+    if text in ("home", "away", "neutral"):
+        return text
+    return text or "home"
+
+
+def _canonicalize_schedule_time_text(text):
+    """Normalize compact meridiem markers before regex time extraction."""
+    import re
+
+    if not text:
+        return text
+    return re.sub(
+        r"(\d{1,2}:\d{2})\s*p\b",
+        r"\1 PM",
+        text,
+        flags=re.IGNORECASE,
+    )
 
 def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
-    """Try to parse a single line of schedule text into a game dict.
-    Handles formats like:
-      'TUES, DEC 2 MARSING (H) 4:30/6:00/7:30'
-      '12/2 Marsing (Marsing, ID) 7:30p'
-      '1/5 @ Idaho City (A) 7:30p'
+    """Try to parse a single line of schedule text into a game dict."""
+    import re
+    import datetime
 
-    pdf_team sets default gender/level:
-      boys_hs/girls_hs → level=varsity
-      jr_boys/jr_girls → level=jr_high
-      gender is boys for *_hs/boys_*, girls for girls_*
-
-    month_year_map: optional dict mapping month number → year, used to
-    infer the correct year for dates without a year (e.g. "DEC 2").
-    """
-    import re, datetime
+    line = _canonicalize_schedule_time_text(line)
 
     # Derive defaults from the selected team (must be defined early for Jr High detection)
     _team_gender = "girls" if "girls" in pdf_team else "boys"
@@ -875,12 +1081,12 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     remainder = line[line.index(date_str) + len(date_str):].strip()
     remainder = re.sub(r'^\s*[:\\\-–—]\s*', '', remainder)
 
-    # Detect location: (H), (A), (N) or @/at prefix
+    # Detect location: (H), (A), (N), (TBD) or @/at prefix
     location_type = 'home'
-    loc_h = re.search(r'\((H|A|N)\)', remainder, re.IGNORECASE)
+    loc_h = re.search(r'\((H|A|N|TBD)\)', remainder, re.IGNORECASE)
     if loc_h:
         loc_code = loc_h.group(1).upper()
-        location_type = {'H': 'home', 'A': 'away', 'N': 'neutral'}.get(loc_code, 'home')
+        location_type = {'H': 'home', 'A': 'away', 'N': 'neutral', 'TBD': 'tbd'}.get(loc_code, 'home')
         remainder = remainder[:loc_h.start()] + remainder[loc_h.end():]
         remainder = remainder.strip()
     else:
@@ -932,10 +1138,29 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
             varsity_time = _normalize_time(a_inline.group(1))
             remainder = remainder[:a_inline.start()].strip()
 
-    # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
-    # This handles the PDF column layout where times appear after (H)/(A)
+    # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30", "4:30/7:30", or "3:30 5:00"
     if not varsity_time:
-        multi_time_match = re.search(r'(\d{1,2}:\d{2}(?:\s*/\s*\d{1,2}:\d{2})+)\s*$', remainder)
+        space_pair = re.search(
+            r'(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s+(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$',
+            remainder,
+            re.IGNORECASE,
+        )
+        if space_pair:
+            remainder = remainder[:space_pair.start()].strip()
+            if _team_level == 'jr_high':
+                jv_time = _normalize_time(space_pair.group(1))
+                varsity_time = _normalize_time(space_pair.group(2))
+            else:
+                jv_time = _normalize_time(space_pair.group(1))
+                varsity_time = _normalize_time(space_pair.group(2))
+
+    if not varsity_time:
+        time_token = r'\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?'
+        multi_time_match = re.search(
+            rf'({time_token}(?:\s*/\s*{time_token})+)\s*$',
+            remainder,
+            re.IGNORECASE,
+        )
         if multi_time_match:
             times_str = multi_time_match.group(1)
             remainder = remainder[:multi_time_match.start()].strip()
@@ -1011,7 +1236,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     # Clean up opponent name
     opponent = remainder
     opponent = re.sub(r'\*+', '', opponent).strip()  # Remove conference markers like *
-    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman|tbd)\b', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\b(vs\.?|versus)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'^\s*vs\.?\s*', '', opponent, flags=re.IGNORECASE).strip()  # Remove leading "vs."
     opponent = re.sub(r'^\.\s*', '', opponent).strip()  # Remove leading orphaned period
@@ -1019,6 +1244,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
     opponent = re.sub(r'\(H\)|\(A\)|\(N\)', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\s+', ' ', opponent).strip()
+    opponent = _normalize_opponent_name(opponent)
 
     if not opponent:
         return None
@@ -1079,7 +1305,7 @@ def schedule_import_pdf_confirm():
 
     for i, g in enumerate(games):
         game_date = (g.get("game_date") or "").strip()
-        opponent = (g.get("opponent_name") or "").strip()
+        opponent = _normalize_opponent_name((g.get("opponent_name") or "").strip())
 
         # Re-parse date from raw string only if user didn't edit it.
         # Compare submitted game_date to original_date — if they differ, user edited it.
@@ -1095,7 +1321,14 @@ def schedule_import_pdf_confirm():
             errors.append(f"Row {i+1}: date and opponent required")
             continue
         try:
-            db.execute(
+            result = (g.get("result") or "").strip().lower()
+            liberty_score = g.get("liberty_score")
+            opponent_score = g.get("opponent_score")
+            has_result = result in ("win", "loss", "tie") and liberty_score not in (None, "") and opponent_score not in (None, "")
+            status = "completed" if has_result else (g.get("status") or "scheduled").strip() or "scheduled"
+            location_type = _normalize_location_type(g.get("location_type"))
+
+            cur = db.execute(
                 """INSERT INTO scheduled_games
                    (season_id, program_name, team, gender, level, game_date, game_time,
                     jv_game_time, frosh_game_time,
@@ -1111,13 +1344,35 @@ def schedule_import_pdf_confirm():
                     (g.get("game_time") or "").strip() or None,
                     (g.get("jv_game_time") or "").strip() or None,
                     (g.get("frosh_game_time") or "").strip() or None,
-                    (g.get("location_type") or "home").strip(),
+                    location_type,
                     opponent,
                     (g.get("tournament_name") or "").strip() or None,
-                    "scheduled",
+                    status,
                     (g.get("notes") or "").strip() or None,
                 ),
             )
+            if has_result:
+                home_score, away_score = _liberty_scores_to_venue_scores(
+                    location_type,
+                    int(liberty_score),
+                    int(opponent_score),
+                )
+                source_key = f"pdf-import-{game_date}-{opponent.lower().replace(' ', '-')}"
+                db.execute(
+                    """INSERT INTO games
+                       (scheduled_game_id, source_type, source_key,
+                        home_score, away_score, result, is_conference)
+                       VALUES (?,?,?,?,?,?,?)""",
+                    (
+                        cur.lastrowid,
+                        "manual",
+                        source_key,
+                        home_score,
+                        away_score,
+                        result,
+                        int(bool(g.get("is_conference"))),
+                    ),
+                )
             imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)}")
@@ -1309,6 +1564,17 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     if year1 is None:
         return None
 
+    schedule_title_year = None
+    for line in lines[:40]:
+        title_match = re.search(
+            r'^\s*(20\d{2})\s+.*?(?:junior\s+high|jr\.?\s*high).*?(?:schedule|basketball)',
+            line,
+            re.IGNORECASE,
+        )
+        if title_match:
+            schedule_title_year = int(title_match.group(1))
+            break
+
     # Determine team type for date range (needed for sanity clamp below)
     is_jr_boys = pdf_team == "jr_boys"
     is_jr_girls = pdf_team == "jr_girls"
@@ -1354,9 +1620,9 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
 
     # Determine date range based on actual Liberty Charter season dates
     if is_jr_boys:
-        # Jr High Boys: Jan(year2) - Feb(year2)  e.g. Jan 2026 - Feb 2026
-        start_date = f"{year2}-01-01"
-        end_date = f"{year2}-02-28"
+        season_year = schedule_title_year or year1 or year2
+        start_date = f"{season_year}-01-01"
+        end_date = f"{season_year}-02-28"
     elif is_jr_girls:
         # Jr High Girls: Nov(year1) - Dec(year1)  e.g. Nov 2025 - Dec 2025
         start_date = f"{year1}-11-01"
@@ -1429,7 +1695,14 @@ def schedule_export_maxpreps():
         "Team", "Level", "Gender", "Tournament", "Conference", "Season"
     ])
     for g in games:
-        location = "Away" if g["location_type"] == "away" else "Home"
+        if g["location_type"] == "away":
+            location = "Away"
+        elif g["location_type"] == "tbd":
+            location = "TBD"
+        elif g["location_type"] == "neutral":
+            location = "Neutral"
+        else:
+            location = "Home"
         writer.writerow([
             g["game_date"],
             g["jv_game_time"] or "",
@@ -2014,13 +2287,8 @@ def api_teams_schedule():
     return jsonify(result)
 
 
-def _scrape_maxpreps_ranking(state, gender):
-    """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
-    Returns (ranking_int, url_str) or (None, None) if not found.
-    Uses Playwright for an isolated browser session (no agent-browser conflicts).
-    """
-    from playwright.sync_api import sync_playwright
-
+def _maxpreps_ranking_url(state, gender):
+    """Build the MaxPreps rankings page URL for a state/gender."""
     state_slug = state.lower().replace(" ", "-")
     state_slug_overrides = {"idaho": "id"}
     state_slug = state_slug_overrides.get(state_slug, state_slug)
@@ -2034,22 +2302,85 @@ def _scrape_maxpreps_ranking(state, gender):
     div_id = division_ids.get((state_slug, gender_slug))
     if div_id:
         if gender_slug == "girls":
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-        else:
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-    else:
-        url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
+            return f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+        return f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+    return f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
+
+
+def _parse_maxpreps_ranking_html(html):
+    """Extract Liberty's state rank from a MaxPreps rankings HTML page."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html or "", "html.parser")
+    for row in soup.select("tr"):
+        if "liberty" not in row.get_text(" ", strip=True).lower():
+            continue
+        rank_cell = row.select_one("td.rank")
+        if not rank_cell:
+            continue
+        try:
+            ranking = int(rank_cell.get_text(strip=True))
+        except ValueError:
+            continue
+        if 1 <= ranking <= 100:
+            return ranking
+    return None
+
+
+def _scrape_maxpreps_ranking_http(state, gender):
+    """Fetch MaxPreps rankings with requests (no browser required)."""
+    import requests
+
+    url = _maxpreps_ranking_url(state, gender)
+    try:
+        response = requests.get(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+    except Exception:
+        return None, url
+    return _parse_maxpreps_ranking_html(response.text), url
+
+
+def _scrape_maxpreps_ranking(state, gender):
+    """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
+    Returns (ranking_int, url_str) or (None, url_str) if not found/unavailable.
+    Tries lightweight HTTP fetch first, then Playwright as a fallback.
+    """
+    ranking, url = _scrape_maxpreps_ranking_http(state, gender)
+    if ranking is not None:
+        return ranking, url
+
+    import os
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None, url
 
     ranking = None
-    chromium_path = "/snap/bin/chromium"
+    chromium_path = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH")
+    if not chromium_path:
+        snap_path = "/snap/bin/chromium"
+        chromium_path = snap_path if os.path.exists(snap_path) else None
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                executable_path=chromium_path,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
-            )
+            launch_kwargs = {
+                "headless": True,
+                "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+            }
+            if chromium_path:
+                launch_kwargs["executable_path"] = chromium_path
+            browser = p.chromium.launch(**launch_kwargs)
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1280, "height": 900},
@@ -2063,7 +2394,7 @@ def _scrape_maxpreps_ranking(state, gender):
                 time.sleep(5)
                 page.wait_for_selector("table", timeout=15000)
             except Exception:
-                pass  # Continue even if table doesn't appear in time
+                pass
 
             result = page.evaluate("""() => {
                 const rows = document.querySelectorAll('tr');
@@ -2087,7 +2418,7 @@ def _scrape_maxpreps_ranking(state, gender):
 
             browser.close()
     except Exception:
-        pass
+        return None, url
 
     return ranking, url
 
@@ -2102,9 +2433,11 @@ def api_teams_rankings():
     state = request.args.get("state", "Idaho") if request.method == "GET" else request.form.get("state", "Idaho")
 
     if request.method == "POST":
-        # Scrape fresh rankings for both varsity teams
         for team_key, gender in [("varsity_boys", "boys"), ("varsity_girls", "girls")]:
-            ranking, url = _scrape_maxpreps_ranking(state, gender)
+            try:
+                ranking, url = _scrape_maxpreps_ranking(state, gender)
+            except Exception:
+                ranking, url = None, _maxpreps_ranking_url(state, gender)
             db.execute(
                 """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)

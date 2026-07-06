@@ -35,7 +35,7 @@
 </div>
 
 <!-- PDF Import Preview Modal -->
-<div id="pdf-import-modal" class="modal-backdrop" data-frame="2.3">
+<div id="pdf-import-modal" class="modal-backdrop pdf-import-backdrop" data-frame="2.3">
   <div class="modal pdf-modal pdf-modal--wide">
     <h3 style="margin-bottom:12px;">Review Imported Games</h3>
     <p class="text-muted" style="margin-bottom:16px;">Edit any field, then click Import All Games. Jr High uses <strong>B Team</strong> and <strong>A Team</strong> times (not varsity/JV).</p>
@@ -132,6 +132,8 @@
               <span style="color:#dc2626;font-size:0.8rem;margin-left:4px;">(A)</span>
               {% elif game.location_type == 'neutral' %}
               <span style="color:#6b7280;font-size:0.8rem;margin-left:4px;">(N)</span>
+              {% elif game.location_type == 'tbd' %}
+              <span style="color:#9ca3af;font-size:0.8rem;margin-left:4px;">(TBD)</span>
               {% endif %}
             </div>
             <div style="margin-top:3px;">
@@ -387,11 +389,32 @@
   .badge-cancelled { background: #fee2e2; color: #991b1b; }
   .badge-rescheduled { background: #fef3c7; color: #92400e; }
   .badge-completed { background: #dbeafe; color: #1d4ed8; }
-  .pdf-modal--wide { max-width: min(1100px, 96vw); width: 100%; }
+  .pdf-import-backdrop {
+    align-items: flex-start;
+    padding: 2vh 1vw;
+    overflow-y: auto;
+  }
+  .pdf-modal--wide {
+    max-width: min(1400px, 98vw) !important;
+    width: min(1400px, 98vw);
+  }
   .pdf-modal--narrow { max-width: 480px; width: 100%; }
   .pdf-help-text { font-size: 0.85rem; color: #6b7280; margin-bottom: 16px; line-height: 1.5; }
-  .pdf-preview-scroll { max-height: 55vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
-  .pdf-preview-table { width: 100%; min-width: 920px; font-size: 0.875rem; border-collapse: collapse; }
+  .pdf-preview-scroll {
+    max-height: 62vh;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pdf-preview-table {
+    width: max-content;
+    min-width: 100%;
+    font-size: 0.875rem;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
   .schedule-table { font-size:0.875rem; }
   .schedule-table th {
     background:#f8fafc;
@@ -412,18 +435,40 @@
   .pdf-preview-table th {
     position: sticky;
     top: 0;
+    z-index: 1;
     background: #f8fafc;
     color: #374151;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    padding: 10px 8px;
+    padding: 10px 10px;
     border-bottom: 2px solid #e5e7eb;
     white-space: nowrap;
   }
-  .pdf-preview-table td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
-  .pdf-preview-table input,
-  .pdf-preview-table select { min-width: 0; }
+  .pdf-preview-table td {
+    padding: 8px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
+  }
+  .pdf-preview-table .col-date { min-width: 138px; }
+  .pdf-preview-table .col-time { min-width: 118px; }
+  .pdf-preview-table .col-opponent { min-width: 210px; white-space: normal; }
+  .pdf-preview-table .col-program { min-width: 158px; }
+  .pdf-preview-table .col-level { min-width: 118px; }
+  .pdf-preview-table .col-gender { min-width: 98px; }
+  .pdf-preview-table .col-location { min-width: 118px; }
+  .pdf-preview-table .col-result { min-width: 98px; }
+  .pdf-preview-table .col-score { min-width: 74px; }
+  .pdf-preview-table input.form-control,
+  .pdf-preview-table select.form-control {
+    width: 100%;
+    min-width: 100%;
+    font-size: 0.84rem;
+    padding: 6px 8px;
+    box-sizing: border-box;
+  }
+  .pdf-preview-table .col-opponent input.form-control { min-width: 190px; }
 </style>
 {% endblock %}
 
@@ -519,40 +564,55 @@ function renderPdfPreview() {
   const time1Label = isJrHigh ? 'B Team' : 'JV';
   const time2Label = isJrHigh ? 'A Team' : 'Frosh';
   const time3Label = isJrHigh ? '' : 'Varsity';
+  const hasResults = pdfExtractedGames.some(g => g.result || g.liberty_score || g.opponent_score);
 
   let html = '<table class="pdf-preview-table"><thead><tr>' +
-    '<th>Date</th><th>' + time1Label + '</th><th>' + time2Label + '</th>' +
-    (time3Label ? '<th>' + time3Label + '</th>' : '') +
-    '<th>Opponent</th><th>Program</th>' + (isJrHigh ? '' : '<th>Level</th>') +
-    '<th>Gender</th><th>Location</th></tr></thead><tbody>';
+    '<th class="col-date">Date</th><th class="col-time">' + time1Label + '</th><th class="col-time">' + time2Label + '</th>' +
+    (time3Label ? '<th class="col-time">' + time3Label + '</th>' : '') +
+    '<th class="col-opponent">Opponent</th><th class="col-program">Program</th>' + (isJrHigh ? '' : '<th class="col-level">Level</th>') +
+    '<th class="col-gender">Gender</th><th class="col-location">Location</th>' +
+    (hasResults ? '<th class="col-result">Result</th><th class="col-score">Lib</th><th class="col-score">Opp</th>' : '') +
+    '</tr></thead><tbody>';
 
   pdfExtractedGames.forEach((g, i) => {
     const aTeamValue = isJrHigh ? (g.game_time || '') : (g.frosh_game_time || '');
     const aTeamField = isJrHigh ? 'game_time' : 'frosh_game_time';
     html += '<tr>' +
-      '<td><input type="date" class="form-control" value="' + escapeHtml(g.game_date || '') + '" onchange="pdfExtractedGames[' + i + '].game_date=this.value"></td>' +
-      '<td><input type="time" class="form-control" value="' + escapeHtml(g.jv_game_time || '') + '" onchange="pdfExtractedGames[' + i + '].jv_game_time=this.value"></td>' +
-      '<td><input type="time" class="form-control" value="' + escapeHtml(aTeamValue) + '" onchange="pdfExtractedGames[' + i + '].' + aTeamField + '=this.value"></td>';
+      '<td class="col-date"><input type="date" class="form-control" value="' + escapeHtml(g.game_date || '') + '" onchange="pdfExtractedGames[' + i + '].game_date=this.value"></td>' +
+      '<td class="col-time"><input type="time" class="form-control" value="' + escapeHtml(g.jv_game_time || '') + '" onchange="pdfExtractedGames[' + i + '].jv_game_time=this.value"></td>' +
+      '<td class="col-time"><input type="time" class="form-control" value="' + escapeHtml(aTeamValue) + '" onchange="pdfExtractedGames[' + i + '].' + aTeamField + '=this.value"></td>';
     if (!isJrHigh) {
-      html += '<td><input type="time" class="form-control" value="' + escapeHtml(g.game_time || '') + '" onchange="pdfExtractedGames[' + i + '].game_time=this.value"></td>';
+      html += '<td class="col-time"><input type="time" class="form-control" value="' + escapeHtml(g.game_time || '') + '" onchange="pdfExtractedGames[' + i + '].game_time=this.value"></td>';
     }
     html +=
-      '<td><input type="text" class="form-control" value="' + escapeHtml(g.opponent_name || '') + '" onchange="pdfExtractedGames[' + i + '].opponent_name=this.value"></td>' +
-      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].team=this.value">' +
+      '<td class="col-opponent"><input type="text" class="form-control" value="' + escapeHtml(g.opponent_name || '') + '" onchange="pdfExtractedGames[' + i + '].opponent_name=this.value"></td>' +
+      '<td class="col-program"><select class="form-control" onchange="pdfExtractedGames[' + i + '].team=this.value">' +
         buildSelectOptions(scheduleTeamOptions, g.team || pdfSelectedTeam) +
       '</select></td>';
     if (!isJrHigh) {
-      html += '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].level=this.value">' +
+      html += '<td class="col-level"><select class="form-control" onchange="pdfExtractedGames[' + i + '].level=this.value">' +
         buildSelectOptions(scheduleLevelOptions, g.level || 'varsity') +
       '</select></td>';
     }
     html +=
-      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].gender=this.value">' +
+      '<td class="col-gender"><select class="form-control" onchange="pdfExtractedGames[' + i + '].gender=this.value">' +
         buildSelectOptions(scheduleGenderOptions, g.gender || 'boys') +
       '</select></td>' +
-      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].location_type=this.value">' +
+      '<td class="col-location"><select class="form-control" onchange="pdfExtractedGames[' + i + '].location_type=this.value">' +
         buildSelectOptions(scheduleLocationOptions, g.location_type || 'home') +
-      '</select></td>' +
+      '</select></td>';
+    if (hasResults) {
+      html +=
+        '<td class="col-result"><select class="form-control" onchange="pdfExtractedGames[' + i + '].result=this.value">' +
+          '<option value=""' + (!g.result ? ' selected' : '') + '>—</option>' +
+          '<option value="win"' + (g.result === 'win' ? ' selected' : '') + '>Win</option>' +
+          '<option value="loss"' + (g.result === 'loss' ? ' selected' : '') + '>Loss</option>' +
+          '<option value="tie"' + (g.result === 'tie' ? ' selected' : '') + '>Tie</option>' +
+        '</select></td>' +
+        '<td class="col-score"><input type="number" min="0" class="form-control" value="' + escapeHtml(g.liberty_score ?? '') + '" onchange="pdfExtractedGames[' + i + '].liberty_score=this.value ? parseInt(this.value, 10) : \'\'"></td>' +
+        '<td class="col-score"><input type="number" min="0" class="form-control" value="' + escapeHtml(g.opponent_score ?? '') + '" onchange="pdfExtractedGames[' + i + '].opponent_score=this.value ? parseInt(this.value, 10) : \'\'"></td>';
+    }
+    html +=
     '</tr>';
   });
   html += '</tbody></table>';
