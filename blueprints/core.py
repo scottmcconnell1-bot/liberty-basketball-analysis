@@ -750,34 +750,63 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     return games
 
 
+def _normalize_schedule_time(time_str):
+    """Convert schedule time text to HH:MM (24h).
+
+  Basketball schedules often omit AM/PM. Bare times like ``3:30`` are treated as PM.
+  Supports ``3:30p``, ``3:30 PM``, and ``15:30``.
+    """
+    import re
+
+    text = (time_str or "").strip()
+    if not text:
+        return ""
+
+    lower = text.lower().replace(" ", "")
+    is_am = "am" in lower or re.search(r"\d[ap]m", lower) and "pm" not in lower
+    is_pm = "pm" in lower or bool(re.search(r"\d{1,2}:\d{2}p(?!m)", lower))
+
+    match = re.search(r"(\d{1,2}):(\d{2})", text)
+    if not match:
+        return text
+
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+
+    if not is_am and not is_pm and 1 <= hour <= 11:
+        is_pm = True
+    if is_pm and hour < 12:
+        hour += 12
+    if is_am and hour == 12:
+        hour = 0
+
+    return f"{hour:02d}:{minute:02d}"
+
+
 def _normalize_time(time_str):
     """Convert a time string to HH:MM format."""
-    import datetime
-    time_str = time_str.strip()
-    for fmt in ['%I:%M %p', '%I:%M%p', '%I:%M', '%H:%M']:
-        try:
-            return datetime.datetime.strptime(time_str, fmt).strftime('%H:%M')
-        except ValueError:
-            continue
-    return time_str  # Return as-is if can't parse
+    return _normalize_schedule_time(time_str)
 
+
+def _canonicalize_schedule_time_text(text):
+    """Normalize compact meridiem markers before regex time extraction."""
+    import re
+
+    if not text:
+        return text
+    return re.sub(
+        r"(\d{1,2}:\d{2})\s*p\b",
+        r"\1 PM",
+        text,
+        flags=re.IGNORECASE,
+    )
 
 def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
-    """Try to parse a single line of schedule text into a game dict.
-    Handles formats like:
-      'TUES, DEC 2 MARSING (H) 4:30/6:00/7:30'
-      '12/2 Marsing (Marsing, ID) 7:30p'
-      '1/5 @ Idaho City (A) 7:30p'
+    """Try to parse a single line of schedule text into a game dict."""
+    import re
+    import datetime
 
-    pdf_team sets default gender/level:
-      boys_hs/girls_hs → level=varsity
-      jr_boys/jr_girls → level=jr_high
-      gender is boys for *_hs/boys_*, girls for girls_*
-
-    month_year_map: optional dict mapping month number → year, used to
-    infer the correct year for dates without a year (e.g. "DEC 2").
-    """
-    import re, datetime
+    line = _canonicalize_schedule_time_text(line)
 
     # Derive defaults from the selected team (must be defined early for Jr High detection)
     _team_gender = "girls" if "girls" in pdf_team else "boys"
@@ -932,10 +961,29 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
             varsity_time = _normalize_time(a_inline.group(1))
             remainder = remainder[:a_inline.start()].strip()
 
-    # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
-    # This handles the PDF column layout where times appear after (H)/(A)
+    # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30", "4:30/7:30", or "3:30 5:00"
     if not varsity_time:
-        multi_time_match = re.search(r'(\d{1,2}:\d{2}(?:\s*/\s*\d{1,2}:\d{2})+)\s*$', remainder)
+        space_pair = re.search(
+            r'(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s+(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$',
+            remainder,
+            re.IGNORECASE,
+        )
+        if space_pair:
+            remainder = remainder[:space_pair.start()].strip()
+            if _team_level == 'jr_high':
+                jv_time = _normalize_time(space_pair.group(1))
+                varsity_time = _normalize_time(space_pair.group(2))
+            else:
+                jv_time = _normalize_time(space_pair.group(1))
+                varsity_time = _normalize_time(space_pair.group(2))
+
+    if not varsity_time:
+        time_token = r'\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?'
+        multi_time_match = re.search(
+            rf'({time_token}(?:\s*/\s*{time_token})+)\s*$',
+            remainder,
+            re.IGNORECASE,
+        )
         if multi_time_match:
             times_str = multi_time_match.group(1)
             remainder = remainder[:multi_time_match.start()].strip()
@@ -1309,6 +1357,17 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     if year1 is None:
         return None
 
+    schedule_title_year = None
+    for line in lines[:40]:
+        title_match = re.search(
+            r'^\s*(20\d{2})\s+.*?(?:junior\s+high|jr\.?\s*high).*?(?:schedule|basketball)',
+            line,
+            re.IGNORECASE,
+        )
+        if title_match:
+            schedule_title_year = int(title_match.group(1))
+            break
+
     # Determine team type for date range (needed for sanity clamp below)
     is_jr_boys = pdf_team == "jr_boys"
     is_jr_girls = pdf_team == "jr_girls"
@@ -1354,9 +1413,9 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
 
     # Determine date range based on actual Liberty Charter season dates
     if is_jr_boys:
-        # Jr High Boys: Jan(year2) - Feb(year2)  e.g. Jan 2026 - Feb 2026
-        start_date = f"{year2}-01-01"
-        end_date = f"{year2}-02-28"
+        season_year = schedule_title_year or year1 or year2
+        start_date = f"{season_year}-01-01"
+        end_date = f"{season_year}-02-28"
     elif is_jr_girls:
         # Jr High Girls: Nov(year1) - Dec(year1)  e.g. Nov 2025 - Dec 2025
         start_date = f"{year1}-11-01"
