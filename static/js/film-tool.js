@@ -1326,10 +1326,20 @@ function initRunAnalysis() {
     const statusEl = document.getElementById('runAnalysisStatus');
     if (!autoStatsEnabled || !videoId || !bar || !btn) return;
 
+    const aiAvailable = window.FILM_TOOL_AI_AVAILABLE !== false && String(window.FILM_TOOL_AI_AVAILABLE) !== 'false';
     let analysisStatus = window.FILM_TOOL_ANALYSIS_STATUS || 'not_started';
 
     function updateRunAnalysisBar(status) {
         analysisStatus = status || analysisStatus;
+        if (!aiAvailable) {
+            bar.style.display = 'flex';
+            btn.style.display = 'none';
+            if (statusEl) {
+                statusEl.innerHTML = 'AI packages are not installed on this server (opencv-python, ultralytics). '
+                    + 'Install the AI stack and restart — see Settings → Runtime or Compare AI page for commands.';
+            }
+            return;
+        }
         if (analysisStatus === 'running' || analysisStatus === 'pending') {
             bar.style.display = 'flex';
             btn.style.display = 'none';

@@ -718,6 +718,20 @@ def ai_runtime_available():
     return module_available("cv2") and module_available("ultralytics")
 
 
+def ai_packages_install_hint() -> str:
+    return (
+        "AI packages are not installed on this server (opencv-python and ultralytics). "
+        "Install the AI stack, then restart the app. Check Settings → Runtime for status."
+    )
+
+
+def ai_packages_install_commands() -> str:
+    return (
+        "pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
+        "pip install -r requirements.docker.txt"
+    )
+
+
 def resolve_detector_model(ai_settings):
     selected_model = (ai_settings.get("detector_model") or AI_DEFAULTS["detector_model"]).strip()
     if selected_model == "custom":

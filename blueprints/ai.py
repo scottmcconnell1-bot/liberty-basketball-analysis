@@ -34,7 +34,8 @@ from helpers import (
     build_settings_catalog, default_run_label, display_detector_model,
     ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
     get_runtime_settings, queue_analysis_run, require_feature,
-    resolve_detector_model, safe_return_path, start_analysis_subprocess
+    resolve_detector_model, safe_return_path, start_analysis_subprocess,
+    ai_packages_install_commands, ai_packages_install_hint,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -445,6 +446,9 @@ def compare_video_analysis(vid_id):
         current_ai_settings=current_ai_settings,
         current_detector_model=display_detector_model(current_ai_settings),
         message=request.args.get("message"),
+        error=request.args.get("error"),
+        ai_runtime_available=ai_runtime_available(),
+        ai_install_commands=ai_packages_install_commands(),
     )
 
 
@@ -454,6 +458,9 @@ def _video_analysis_runs_clause():
 
 def _start_video_analysis_run(video, *, run_label=None):
     """Queue and optionally launch AI analysis for an existing video."""
+    if not ai_runtime_available():
+        return None, ai_packages_install_hint(), "ai_packages_unavailable"
+
     db = get_db()
     clause = _video_analysis_runs_clause()
     running = db.execute(
@@ -463,7 +470,7 @@ def _start_video_analysis_run(video, *, run_label=None):
         (video["id"], video["game_id"], video["game_id"], video["file_path"]),
     ).fetchone()
     if running:
-        return None, "Analysis already in progress"
+        return None, "Analysis already in progress", "already_running"
 
     runtime_settings = get_runtime_settings()
     existing_runs = db.execute(
@@ -482,16 +489,11 @@ def _start_video_analysis_run(video, *, run_label=None):
         run_label=run_label or default_label,
     )
 
-    if ai_runtime_available():
-        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
-        message = f"AI analysis started ({run_payload['run_label']})."
+    start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
+    if run_kind == "rerun":
+        message = f"Queued rerun '{run_payload['run_label']}'."
     else:
-        db.execute(
-            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
-            ("Missing AI packages (cv2/ultralytics)", run_payload["id"]),
-        )
-        db.commit()
-        message = "Analysis queued, but AI packages are unavailable in the current runtime."
+        message = f"AI analysis started ({run_payload['run_label']})."
 
     return {
         "status": "started",
@@ -500,7 +502,7 @@ def _start_video_analysis_run(video, *, run_label=None):
         "run_label": run_payload["run_label"],
         "run_kind": run_kind,
         "message": message,
-    }, None
+    }, None, None
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/analyze", methods=["POST"])
@@ -512,9 +514,10 @@ def api_start_video_analysis(vid_id):
     if not video:
         return jsonify({"error": "Video not found"}), 404
 
-    payload, error = _start_video_analysis_run(video)
+    payload, error, error_code = _start_video_analysis_run(video)
     if error:
-        return jsonify({"error": error, "status": "running"}), 409
+        status = 503 if error_code == "ai_packages_unavailable" else 409
+        return jsonify({"error": error, "code": error_code}), status
     return jsonify(payload)
 
 
@@ -526,28 +529,22 @@ def rerun_video_analysis(vid_id):
     if not video:
         abort(404)
 
-    runtime_settings = get_runtime_settings()
-    ensure_primary_run_metadata(db, video, build_analysis_settings_snapshot(runtime_settings))
-    run_payload = queue_analysis_run(
-        db,
+    run_payload, error, error_code = _start_video_analysis_run(
         video,
-        runtime_settings,
-        run_kind="rerun",
         run_label=request.form.get("run_label"),
     )
+    if error:
+        return redirect(url_for(
+            "ai.compare_video_analysis",
+            vid_id=vid_id,
+            error=error,
+        ))
 
-    if ai_runtime_available():
-        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
-        message = f"Queued rerun '{run_payload['run_label']}'."
-    else:
-        db.execute(
-            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
-            ("Missing AI packages (cv2/ultralytics)", run_payload["id"]),
-        )
-        db.commit()
-        message = "Rerun saved, but AI packages are unavailable in the current runtime."
-
-    return redirect(url_for("ai.compare_video_analysis", vid_id=vid_id, message=message))
+    return redirect(url_for(
+        "ai.compare_video_analysis",
+        vid_id=vid_id,
+        message=run_payload["message"],
+    ))
 
 
 @ai_bp.route("/api/check_duplicate")

@@ -212,3 +212,22 @@ def test_start_video_analysis_rejects_duplicate_running_job(client, db, monkeypa
     resp = client.post("/api/videos/1/analyze")
     assert resp.status_code == 409
     assert "already in progress" in resp.get_json()["error"]
+
+
+def test_start_video_analysis_requires_ai_packages(client, db, tmp_path):
+    video_path = tmp_path / "nfhs_gam777.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam777.mp4", "nfhs_gam777.mp4", str(video_path), 16, "Opponent", "nfhs_gam777_20260101"),
+    )
+    db.commit()
+
+    resp = client.post("/api/videos/1/analyze")
+    assert resp.status_code == 503
+    payload = resp.get_json()
+    assert payload["code"] == "ai_packages_unavailable"
+    assert "opencv" in payload["error"].lower() or "ultralytics" in payload["error"].lower()
+    assert db.execute("SELECT COUNT(*) AS c FROM analysis_runs").fetchone()["c"] == 0
