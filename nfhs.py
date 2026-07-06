@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from datetime import datetime
 
 import requests
@@ -336,6 +337,38 @@ def _format_section_time(ms: int) -> str:
     return f"{mins}:{secs:02d}"
 
 
+class NfhsDownloadControl:
+    """Thread-safe handle for cancelling an in-progress yt-dlp download."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.cancelled = False
+        self._proc = None
+        self._output_path: str | None = None
+
+    def attach(self, proc, output_path: str) -> None:
+        with self._lock:
+            self._proc = proc
+            self._output_path = output_path
+
+    def request_cancel(self) -> None:
+        with self._lock:
+            self.cancelled = True
+            proc = self._proc
+            output_path = self._output_path
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        if output_path:
+            _cleanup_files([output_path])
+            partial = f"{output_path}.part"
+            if os.path.exists(partial):
+                _cleanup_files([partial])
+
+
 def download_nfhs_vod(
     game_id: str,
     email: str,
@@ -346,6 +379,7 @@ def download_nfhs_vod(
     progress_callback=None,
     start_ms: int | None = None,
     end_ms: int | None = None,
+    download_control: NfhsDownloadControl | None = None,
 ) -> dict:
     """
     Download NFHS VOD using yt-dlp with authenticated session cookies.
@@ -412,15 +446,36 @@ def download_nfhs_vod(
             text=True,
             bufsize=1,
         )
+        if download_control:
+            download_control.attach(proc, output_path)
         output_lines: list[str] = []
         assert proc.stdout is not None
         for line in iter(proc.stdout.readline, ""):
+            if download_control and download_control.cancelled:
+                download_control.request_cancel()
+                _cleanup_files([header_file])
+                return {
+                    "success": False,
+                    "file_path": None,
+                    "file_size": 0,
+                    "error": "Download cancelled",
+                    "cancelled": True,
+                }
             output_lines.append(line)
             if progress_callback:
                 parsed = _parse_yt_dlp_progress(line)
                 if parsed:
                     progress_callback(**parsed)
         return_code = proc.wait(timeout=7200)
+        if download_control and download_control.cancelled:
+            _cleanup_files([header_file])
+            return {
+                "success": False,
+                "file_path": None,
+                "file_size": 0,
+                "error": "Download cancelled",
+                "cancelled": True,
+            }
         if return_code == 0 and os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             _cleanup_files([header_file])

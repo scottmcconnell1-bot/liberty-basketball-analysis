@@ -539,6 +539,18 @@ def api_scouting_nfhs_download():
     })
 
 
+@scouting_bp.route("/api/scouting/nfhs/download/<job_id>/cancel", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_scouting_nfhs_download_cancel(job_id):
+    """Cancel a background NFHS download in progress."""
+    from nfhs_download_jobs import cancel_download_job
+
+    ok, message = cancel_download_job(job_id)
+    if not ok:
+        return jsonify({"error": message}), 409
+    return jsonify({"status": "cancelled", "message": message})
+
+
 @scouting_bp.route("/api/scouting/nfhs/download/<job_id>", methods=["GET"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_scouting_nfhs_download_status(job_id):

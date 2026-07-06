@@ -23,6 +23,7 @@
             downloadProgress: prefix + 'download-progress',
             downloadProgressBar: prefix + 'download-progress-bar',
             downloadProgressText: prefix + 'download-progress-text',
+            downloadCancelBtn: prefix + 'download-cancel-btn',
             downloadBtn: prefix + 'download-btn',
             downloadFullBtn: prefix + 'download-full-btn',
             downloadOptions: prefix + 'download-options',
@@ -30,6 +31,7 @@
             downloadEnd: prefix + 'download-end',
         };
         let activePoll = null;
+        let activeJobId = null;
         let lookupReady = false;
         let lastSiteUrl = null;
 
@@ -80,14 +82,19 @@
             const shell = el(ids.downloadProgress);
             const bar = el(ids.downloadProgressBar);
             const label = el(ids.downloadProgressText);
+            const cancelBtn = el(ids.downloadCancelBtn);
             if (shell) shell.style.display = 'block';
             if (bar) bar.style.width = `${Math.max(0, Math.min(100, percent || 0))}%`;
             if (label) label.textContent = text || 'Downloading…';
+            if (cancelBtn) cancelBtn.style.display = activeJobId ? 'inline-block' : 'none';
         }
 
         function hideProgress() {
             const shell = el(ids.downloadProgress);
+            const cancelBtn = el(ids.downloadCancelBtn);
             if (shell) shell.style.display = 'none';
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            activeJobId = null;
         }
 
         function renderDownloadComplete(result) {
@@ -210,7 +217,28 @@
                 });
         }
 
+        function cancelDownload() {
+            if (!activeJobId) return;
+            const cancelBtn = el(ids.downloadCancelBtn);
+            if (cancelBtn) cancelBtn.disabled = true;
+            fetch('/api/scouting/nfhs/download/' + encodeURIComponent(activeJobId) + '/cancel', {
+                method: 'POST',
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    const status = el(ids.downloadStatus);
+                    if (status) status.innerHTML = '<span class="text-muted">Cancelling download…</span>';
+                })
+                .catch(err => {
+                    if (cancelBtn) cancelBtn.disabled = false;
+                    const status = el(ids.downloadStatus);
+                    if (status) status.innerHTML = '<span class="text-error">❌ ' + err.message + '</span>';
+                });
+        }
+
         function pollDownloadJob(jobId) {
+            activeJobId = jobId;
             if (activePoll) clearInterval(activePoll);
             activePoll = setInterval(() => {
                 fetch('/api/scouting/nfhs/download/' + encodeURIComponent(jobId))
@@ -231,6 +259,13 @@
                             setDownloadBusy(false);
                             hideProgress();
                             renderDownloadComplete(job);
+                        } else if (job.status === 'cancelled') {
+                            clearInterval(activePoll);
+                            activePoll = null;
+                            setDownloadBusy(false);
+                            hideProgress();
+                            const status = el(ids.downloadStatus);
+                            if (status) status.innerHTML = '<span class="text-muted">Download cancelled. Set start/end times and try again.</span>';
                         } else if (job.status === 'error') {
                             clearInterval(activePoll);
                             activePoll = null;
@@ -339,6 +374,7 @@
         el(prefix + 'lookup-btn')?.addEventListener('click', lookupGame);
         el(prefix + 'download-btn')?.addEventListener('click', () => downloadFilm(true));
         el(prefix + 'download-full-btn')?.addEventListener('click', () => downloadFilm(false));
+        el(prefix + 'download-cancel-btn')?.addEventListener('click', cancelDownload);
 
         checkCredentials();
 

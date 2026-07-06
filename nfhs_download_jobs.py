@@ -8,6 +8,7 @@ import uuid
 from copy import deepcopy
 
 _jobs: dict[str, dict] = {}
+_controls: dict[str, object] = {}
 _jobs_lock = threading.Lock()
 _JOB_TTL_SECONDS = 60 * 60
 
@@ -21,6 +22,7 @@ def _prune_old_jobs() -> None:
     stale = [job_id for job_id, job in _jobs.items() if job.get("updated_at", 0) < cutoff]
     for job_id in stale:
         _jobs.pop(job_id, None)
+        _controls.pop(job_id, None)
 
 
 def _public_job(job: dict) -> dict:
@@ -34,6 +36,8 @@ def _public_job(job: dict) -> dict:
         "nfhs_game_id": job.get("nfhs_game_id"),
         "error": job.get("error"),
     }
+    if job.get("status") == "cancelled":
+        payload["status"] = "cancelled"
     if job.get("status") == "complete":
         payload.update({
             "file_size": job.get("file_size"),
@@ -51,6 +55,25 @@ def get_download_job(job_id: str) -> dict | None:
         _prune_old_jobs()
         job = _jobs.get(job_id)
         return deepcopy(_public_job(job)) if job else None
+
+
+def cancel_download_job(job_id: str) -> tuple[bool, str]:
+    """Request cancellation of a running NFHS download."""
+    from nfhs import NfhsDownloadControl
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        control = _controls.get(job_id)
+    if not job:
+        return False, "Download job not found or expired"
+    if job.get("status") in {"complete", "error", "cancelled"}:
+        return False, f"Download already {job.get('status')}"
+    if isinstance(control, NfhsDownloadControl):
+        control.request_cancel()
+    _update_job(job_id, status="cancelled", message="Download cancelled", error=None, percent=0)
+    with _jobs_lock:
+        _controls.pop(job_id, None)
+    return True, "Download cancelled"
 
 
 def _update_job(job_id: str, **fields) -> None:
@@ -108,7 +131,11 @@ def _run_download_job(
     start_ms: int | None,
     end_ms: int | None,
 ) -> None:
-    from nfhs import download_nfhs_vod, lookup_game, register_nfhs_download
+    from nfhs import NfhsDownloadControl, download_nfhs_vod, lookup_game, register_nfhs_download
+
+    control = NfhsDownloadControl()
+    with _jobs_lock:
+        _controls[job_id] = control
 
     def on_progress(percent, speed=None, eta=None, message=""):
         _update_job(
@@ -133,7 +160,11 @@ def _run_download_job(
                 progress_callback=on_progress,
                 start_ms=start_ms,
                 end_ms=end_ms,
+                download_control=control,
             )
+            if result.get("cancelled"):
+                _update_job(job_id, status="cancelled", message="Download cancelled", percent=0)
+                return
             if not result["success"]:
                 _update_job(job_id, status="error", error=result["error"], message=result["error"])
                 return
@@ -167,3 +198,6 @@ def _run_download_job(
             )
     except Exception as exc:
         _update_job(job_id, status="error", error=str(exc), message=str(exc))
+    finally:
+        with _jobs_lock:
+            _controls.pop(job_id, None)

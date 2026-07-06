@@ -173,6 +173,32 @@ def test_nfhs_download_status_missing_job(client):
     assert resp.status_code == 404
 
 
+def test_nfhs_download_cancel_missing_job(client):
+    resp = client.post("/api/scouting/nfhs/download/does-not-exist/cancel")
+    assert resp.status_code == 409
+
+
+def test_nfhs_download_cancel_marks_job_cancelled():
+    import nfhs_download_jobs as jobs
+    from nfhs import NfhsDownloadControl
+
+    job_id = "testjob123"
+    with jobs._jobs_lock:
+        jobs._jobs[job_id] = {
+            "job_id": job_id,
+            "status": "downloading",
+            "percent": 10,
+            "message": "Downloading",
+            "updated_at": jobs._now(),
+        }
+        jobs._controls[job_id] = NfhsDownloadControl()
+
+    ok, message = jobs.cancel_download_job(job_id)
+    assert ok is True
+    job = jobs.get_download_job(job_id)
+    assert job["status"] == "cancelled"
+
+
 def test_start_video_analysis_for_library_video(client, db, monkeypatch, tmp_path):
     import blueprints.ai as ai_module
 

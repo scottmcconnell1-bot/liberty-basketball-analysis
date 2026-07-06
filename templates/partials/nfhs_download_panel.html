@@ -58,7 +58,10 @@
 
   <div id="{{ p }}download-progress" style="display:none;margin-top:.75rem;">
     <div class="upload-progress-bar"><span id="{{ p }}download-progress-bar" style="width:0%"></span></div>
-    <div id="{{ p }}download-progress-text" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);">Starting…</div>
+    <div style="display:flex;gap:.5rem;align-items:center;margin-top:.35rem;flex-wrap:wrap;">
+      <div id="{{ p }}download-progress-text" class="tiny" style="color:var(--color-text-muted);flex:1;">Starting…</div>
+      <button type="button" class="btn btn-danger btn-sm" id="{{ p }}download-cancel-btn" style="display:none;">Cancel Download</button>
+    </div>
   </div>
   <div id="{{ p }}download-status" class="tiny" style="margin-top:.5rem;"></div>
 </div>
