@@ -2310,6 +2310,7 @@ def _ensure_migration_columns(db):
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
         ("scheduled_games", "team", "ALTER TABLE scheduled_games ADD COLUMN team TEXT NOT NULL DEFAULT 'boys_hs'"),
+        ("seasons", "season_type", "ALTER TABLE seasons ADD COLUMN season_type TEXT NOT NULL DEFAULT 'regular'"),
         ("practice_plan_items", "sort_order", "ALTER TABLE practice_plan_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"),
         ("player_development_clips", "canonical_clip_id", "ALTER TABLE player_development_clips ADD COLUMN canonical_clip_id INTEGER REFERENCES clips(id)"),
         ("player_development_clips", "relational_game_id", "ALTER TABLE player_development_clips ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
@@ -2366,6 +2367,10 @@ SCHEDULE_STATUS_OPTIONS = [
     ("cancelled", "Cancelled"),
     ("rescheduled", "Rescheduled"),
     ("completed", "Completed"),
+]
+SEASON_TYPE_OPTIONS = [
+    ("regular", "Regular Season"),
+    ("summer", "Summer Program"),
 ]
 SCHEDULE_TEAM_OPTIONS = [
     ("boys_hs", "Boys High School"),
@@ -2502,6 +2507,7 @@ def render_schedule_page(
         "name": edit_season["name"] if edit_season else "",
         "start_date": edit_season["start_date"] if edit_season else "",
         "end_date": edit_season["end_date"] if edit_season else "",
+        "season_type": (edit_season["season_type"] if edit_season else "regular") or "regular",
     }
 
     return render_template(
@@ -2520,6 +2526,7 @@ def render_schedule_page(
         location_options=SCHEDULE_LOCATION_OPTIONS,
         status_options=SCHEDULE_STATUS_OPTIONS,
         team_options=SCHEDULE_TEAM_OPTIONS,
+        season_type_options=SEASON_TYPE_OPTIONS,
     )
 
 
