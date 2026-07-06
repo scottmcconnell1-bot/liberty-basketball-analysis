@@ -883,6 +883,69 @@ def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new ana
     db.commit()
 
 
+def resolve_relational_game_id_for_analysis(db_path: str, game_id: str) -> int | None:
+    """Resolve the relational games.id for an analysis key or legacy numeric id."""
+    conn = sqlite3.connect(db_path)
+    try:
+        try:
+            gid_int = int(game_id)
+        except (TypeError, ValueError):
+            gid_int = None
+        if gid_int is not None:
+            row = conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+            if row:
+                return row[0]
+
+        row = conn.execute(
+            """SELECT ar.game_id, v.relational_game_id
+               FROM analysis_runs ar
+               LEFT JOIN videos v ON v.id = ar.source_video_id
+               WHERE ar.analysis_key = ?
+               ORDER BY ar.id DESC
+               LIMIT 1""",
+            (game_id,),
+        ).fetchone()
+        if row:
+            if row[0]:
+                return row[0]
+            if row[1]:
+                return row[1]
+
+        row = conn.execute(
+            "SELECT relational_game_id FROM videos WHERE game_id = ? ORDER BY id DESC LIMIT 1",
+            (game_id,),
+        ).fetchone()
+        if row and row[0]:
+            return row[0]
+    finally:
+        conn.close()
+    return None
+
+
+def validate_video_for_analysis(video_path: str) -> tuple[bool, str | None]:
+    """Return (ok, error_message) for a video before launching AI analysis."""
+    video_path = os.path.abspath(video_path)
+    if not os.path.exists(video_path):
+        return False, f"Video file not found: {video_path}"
+    size = os.path.getsize(video_path)
+    if size < 1024:
+        return False, f"Video file is too small to analyze ({size} bytes): {video_path}"
+    try:
+        import cv2
+    except ImportError:
+        return True, None
+    cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+    if not cap.isOpened():
+        return False, f"Could not open video for analysis: {video_path}"
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    cap.release()
+    if frame_count <= 0 and width <= 0 and height <= 0:
+        return False, f"Video has no readable frames: {video_path}"
+    return True, None
+
+
 def ai_analysis_log_path(game_id: str) -> str:
     root = os.path.dirname(os.path.abspath(__file__))
     logs_dir = os.path.join(root, "logs")

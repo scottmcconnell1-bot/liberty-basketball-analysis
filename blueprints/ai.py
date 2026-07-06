@@ -39,6 +39,7 @@ from helpers import (
     resolve_detector_model, safe_return_path, start_analysis_subprocess,
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
+    validate_video_for_analysis,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -135,7 +136,7 @@ def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
     db = get_db()
     row = db.execute(
-        """SELECT status, progress_pct, progress_step, started_at, completed_at,
+        """SELECT status, progress_pct, progress_step, started_at, completed_at, error_message,
                   analysis_key,
                   (SELECT COUNT(*)
                      FROM detections d
@@ -154,6 +155,7 @@ def get_analysis_progress(game_id):
         "status": row["status"],
         "progress_pct": row["progress_pct"] or 0,
         "progress_step": row["progress_step"] or "",
+        "error_message": row["error_message"],
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
         "detection_count": row["detection_count"],
@@ -395,7 +397,9 @@ def api_videos():
                   FROM detections d
                   WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
                     OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
-               (SELECT COUNT(*) FROM events e WHERE e.game_id = COALESCE(ar.analysis_key, v.game_id)) as event_count,
+               (SELECT COUNT(*) FROM events e
+                  WHERE (ar.game_id IS NOT NULL AND e.relational_game_id = ar.game_id)
+                     OR (e.relational_game_id IS NULL AND e.game_id = COALESCE(ar.analysis_key, v.game_id))) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
         LEFT JOIN analysis_runs ar ON ar.id = (
@@ -479,6 +483,10 @@ def _start_video_analysis_run(video, *, run_label=None):
     ).fetchone()
     if running:
         return None, "Analysis already in progress", "already_running"
+
+    video_ok, video_error = validate_video_for_analysis(video["file_path"])
+    if not video_ok:
+        return None, video_error, "invalid_video"
 
     runtime_settings = get_runtime_settings()
     existing_runs = db.execute(

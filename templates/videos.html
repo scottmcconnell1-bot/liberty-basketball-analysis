@@ -80,9 +80,14 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
-function statusBadge(status) {
+function statusBadge(status, detectionCount, errorMessage) {
+  if (status === 'completed' && (detectionCount ?? 0) === 0) {
+    const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
+    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
+  }
   const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
-  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;">${s.label}</span>`;
+  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
 }
 
 function formatBytes(b) {
@@ -192,7 +197,7 @@ async function loadVideos() {
       <td>${escHtml(v.opponent || '—')}</td>
       <td style="white-space:nowrap;">${formatDate(v.upload_timestamp)}</td>
       <td>${formatBytes(v.file_size_bytes)}</td>
-      <td>${statusBadge(v.analysis_status || 'not_started')}</td>
+      <td>${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message)}</td>
       <td style="text-align:center;">${v.detection_count ?? 0}</td>
       <td style="text-align:center;">${v.event_count ?? 0}</td>
       <td style="text-align:center;">${v.analysis_run_count ?? 0}</td>

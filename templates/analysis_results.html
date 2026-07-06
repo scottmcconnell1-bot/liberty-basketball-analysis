@@ -176,6 +176,30 @@ function setProgress(pct, text) {
 
 async function loadResults() {
   try {
+    setProgress(10, 'Checking analysis status…');
+    const statusResp = await fetch('/api/analysis_status/' + encodeURIComponent(GAME_ID));
+    const statusData = statusResp.ok ? await statusResp.json() : null;
+    if (statusData && (statusData.status === 'running' || statusData.status === 'pending')) {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('results').style.display = 'none';
+      pollAnalysisProgress();
+      return;
+    }
+    if (statusData && statusData.status === 'failed') {
+      throw new Error(statusData.error_message || 'AI analysis failed');
+    }
+    if (statusData && statusData.status === 'completed' && (statusData.detection_count ?? 0) === 0) {
+      document.getElementById('loading').style.display = 'none';
+      const el = document.getElementById('error');
+      el.style.display = 'block';
+      el.innerHTML = 'AI analysis finished but found <strong>no detections</strong>. '
+        + 'The video may not have opened correctly, or the file may be corrupt. '
+        + 'Open the video in <a href="/film">Film Tool</a> to confirm it plays, then click '
+        + '<strong>Run AI Analysis</strong> again. '
+        + (statusData.error_message ? '<br><br>Server message: ' + escapeHtml(statusData.error_message) : '');
+      return;
+    }
+
     setProgress(20, 'Fetching analysis data…');
     setStep('step-fetch', 'active');
 
@@ -235,6 +259,30 @@ async function loadResults() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function pollAnalysisProgress() {
+  try {
+    const resp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const pct = data.progress_pct || 0;
+    const step = data.progress_step || 'Analyzing…';
+    setProgress(Math.max(5, pct), step + (pct ? ` (${Math.round(pct)}%)` : ''));
+    if (data.status === 'running' || data.status === 'pending') {
+      setTimeout(pollAnalysisProgress, 2000);
+      return;
+    }
+    if (data.status === 'failed') {
+      throw new Error(data.error_message || 'AI analysis failed');
+    }
+    loadResults();
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error');
+    el.style.display = 'block';
+    el.textContent = 'Error loading analysis: ' + err.message;
+  }
+}
 
 function renderEventSummary(events) {
   const el = document.getElementById('event-summary');

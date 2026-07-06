@@ -90,13 +90,14 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
         cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
         if not cap.isOpened():
-            print(f"[AI] Error: Could not open video file {video_path}")
-            return
+            raise RuntimeError(f"Could not open video file: {video_path}")
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        if total_frames <= 0 and orig_w <= 0 and orig_h <= 0:
+            raise RuntimeError(f"Video has no readable frames: {video_path}")
         detect_stride = int(ai_settings.get("detection_stride", 1))
         if detect_stride < 1:
             detect_stride = 1
@@ -107,6 +108,12 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
         frame_number = 0
         db = get_db()
+
+        if relational_game_id is None:
+            from helpers import resolve_relational_game_id_for_analysis
+            relational_game_id = resolve_relational_game_id_for_analysis(db_path, game_id)
+            if relational_game_id:
+                print(f"[AI] Resolved relational_game_id={relational_game_id} for {game_id}")
 
         # Ensure game row exists so relational_game_id resolves
         try:
@@ -308,6 +315,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 except Exception:
                     pass
 
+        if frame_number == 0:
+            raise RuntimeError(f"No frames processed from video: {video_path}")
+
     except Exception as e:
         print(f"[AI] An error occurred during analysis: {e}")
         import traceback
@@ -391,21 +401,24 @@ if __name__ == '__main__':
         (game_id,)
     )
 
-    # Resolve relational game_id from games table (create if missing)
-    try:
-        gid_int = int(game_id)
-        row = _conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
-        if not row:
-            _conn.execute(
-                "INSERT INTO games (id, source_type, source_key, created_at, updated_at) VALUES (?, 'analysis', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                (gid_int, game_id),
-            )
-            _conn.commit()
-            _relational_game_id = gid_int
-        else:
-            _relational_game_id = row[0]
-    except (TypeError, ValueError):
-        _relational_game_id = None
+    # Resolve relational game_id for NFHS/library analysis keys.
+    from helpers import resolve_relational_game_id_for_analysis
+
+    _relational_game_id = resolve_relational_game_id_for_analysis(db_path, game_id)
+    if _relational_game_id is None:
+        try:
+            gid_int = int(game_id)
+            row = _conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+            if not row:
+                _conn.execute(
+                    "INSERT INTO games (id, source_type, source_key, created_at, updated_at) VALUES (?, 'analysis', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    (gid_int, game_id),
+                )
+                _relational_game_id = gid_int
+            else:
+                _relational_game_id = row[0]
+        except (TypeError, ValueError):
+            pass
 
     _conn.commit()
     _conn.close()
@@ -414,8 +427,8 @@ if __name__ == '__main__':
         run_ai_analysis(db_path, video_path, game_id, relational_game_id=_relational_game_id)
         _conn = sqlite3.connect(db_path)
         _conn.execute(
-            "UPDATE analysis_runs SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
-            (game_id,)
+            "UPDATE analysis_runs SET status='completed', progress_pct=100, progress_step='Done', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
+            (game_id,),
         )
         _conn.commit()
         _conn.close()
