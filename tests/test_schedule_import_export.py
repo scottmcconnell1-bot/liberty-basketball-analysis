@@ -232,6 +232,41 @@ def test_parse_schedule_text_jr_high_ab_continuation_line():
     assert games[0]["game_time"] == "18:00"
 
 
+def test_parse_maxpreps_printable_schedule():
+    from blueprints.core import _parse_schedule_text
+
+    text = """7/5/26, 9:41 PM Printable Liberty Charter High School Basketball Schedule
+Liberty Charter Basketball Schedule (2021-22)
+Date Opponent Result
+12/1 @ Glenns Ferry (Glenns Ferry, ID) (W) 44 - 40
+7:30p Location: Glenns Ferry High School
+12/4 Council (Council, ID) (W) 50 - 30
+2:30p Location: Liberty Charter
+1/8 @ Murtaugh (Murtaugh, ID) (W) 51 - 32
+5:00p Location: Murtaugh High School
+"""
+    season = {"name": "2021-22 Boys", "start_date": "2021-11-01", "end_date": "2022-03-31"}
+    games = _parse_schedule_text(text, pdf_team="boys_hs", season_info=season)
+    assert len(games) == 3
+    assert games[0]["opponent_name"] == "Glenns Ferry"
+    assert games[0]["game_date"] == "2021-12-01"
+    assert games[0]["game_time"] == "19:30"
+    assert games[0]["location_type"] == "away"
+    assert games[1]["opponent_name"] == "Council"
+    assert games[1]["location_type"] == "home"
+    assert games[2]["opponent_name"] == "Murtaugh"
+    assert games[2]["game_time"] == "17:00"
+
+
+def test_rankings_post_without_playwright(client):
+    """Ranking refresh should not 500 when Playwright is unavailable."""
+    resp = client.post("/api/teams/rankings", data={"state": "Idaho"})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "rankings" in data
+    assert "varsity_boys" in data["rankings"]
+
+
 def test_schedule_table_column_widths(client):
     """Verify schedule table has correct column headers."""
     resp = client.get("/schedule")

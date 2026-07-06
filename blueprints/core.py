@@ -596,6 +596,123 @@ def schedule_import_pdf():
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
 
+def _build_month_year_map(season_info):
+    """Map month numbers to years using a season's start/end dates."""
+    import datetime
+
+    month_year_map = {}
+    if season_info and season_info.get("start_date") and season_info.get("end_date"):
+        s_start = datetime.date.fromisoformat(season_info["start_date"])
+        s_end = datetime.date.fromisoformat(season_info["end_date"])
+        d = s_start
+        while d <= s_end:
+            month_year_map[d.month] = d.year
+            if d.month == 12:
+                d = datetime.date(d.year + 1, 1, 1)
+            else:
+                d = datetime.date(d.year, d.month + 1, 1)
+    return month_year_map
+
+
+def _is_maxpreps_printable_schedule(text):
+    """Detect MaxPreps printable schedule PDFs (print view export)."""
+    import re
+
+    return bool(re.search(
+        r'maxpreps\.com/print/schedule|Printable\s+Liberty\s+Charter.*Basketball\s+Schedule|Date\s+Opponent\s+Result',
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
+    """Parse MaxPreps printable schedule PDF text into game dicts."""
+    import re
+
+    month_year_map = _build_month_year_map(season_info)
+    team_gender = "girls" if "girls" in pdf_team else "boys"
+    team_level = "jr_high" if "jr_" in pdf_team else "varsity"
+
+    skip_patterns = [
+        r'^\d{1,2}/\d{1,2}/\d{2,4},\s*\d{1,2}:\d{2}\s*(?:AM|PM)\b',
+        r'^Printable\b',
+        r"^America's Source",
+        r'^Liberty Charter Basketball Schedule',
+        r'^(Mascot|Team|Coach|Overall|League|Record Breakdown|Colors|Address|State \(ID\)|Rank\b|All-Time|Win %)',
+        r'^Date Opponent Result',
+        r'^Schedule Legend',
+        r'^Conference Game|^Tournament Game|^Playoff Game',
+        r'maxpreps\.com',
+    ]
+    game_line_re = re.compile(
+        r'^(\d{1,2}/\d{1,2})\s+(@\s*)?(.+?)\s+\([WLT]\)',
+        re.IGNORECASE,
+    )
+    time_line_re = re.compile(r'^(\d{1,2}:\d{2}p?)\b', re.IGNORECASE)
+    tournament_details_re = re.compile(r'^Game Details:\s*(.+)$', re.IGNORECASE)
+
+    games = []
+    pending = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if any(re.search(p, line, re.IGNORECASE) for p in skip_patterns):
+            continue
+
+        game_match = game_line_re.match(line)
+        if game_match:
+            if pending:
+                games.append(pending)
+            date_str = game_match.group(1)
+            is_away = bool(game_match.group(2))
+            opponent_raw = game_match.group(3).strip()
+            opponent = re.sub(r'\s*\*+\s*$', '', opponent_raw).strip()
+            opponent = re.sub(r'\s*\([^)]+\)\s*$', '', opponent).strip()
+            opponent = re.sub(
+                r'^Non Varsity Tournament Opponent$',
+                'Tournament Opponent',
+                opponent,
+                flags=re.IGNORECASE,
+            )
+            game_date = _reparse_date_with_map(date_str, month_year_map)
+            if not game_date:
+                pending = None
+                continue
+            pending = {
+                "game_date": game_date,
+                "raw_date": date_str,
+                "game_time": "",
+                "jv_game_time": "",
+                "frosh_game_time": "",
+                "opponent_name": _normalize_opponent_name(opponent),
+                "team": pdf_team,
+                "level": team_level,
+                "gender": team_gender,
+                "location_type": "away" if is_away else "home",
+                "tournament_name": "",
+                "status": "scheduled",
+                "notes": "",
+            }
+            continue
+
+        if not pending:
+            continue
+
+        time_match = time_line_re.match(line)
+        if time_match:
+            pending["game_time"] = _normalize_time(time_match.group(1))
+            continue
+
+        tournament_match = tournament_details_re.match(line)
+        if tournament_match:
+            pending["tournament_name"] = tournament_match.group(1).strip()
+
+    if pending:
+        games.append(pending)
+    return games
+
+
 def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     """Parse extracted PDF text into game dicts. Handles common schedule formats
     including multi-time layouts like '4:30/6:00/7:30' (JV/Frosh/Varsity).
@@ -614,26 +731,18 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
        (times appear on same line or next line after opponent)
     2. Row-based: '12/2 Marsing 7:30p' all on one line
+    3. MaxPreps printable: '12/1 @ Opponent (W) 44 - 40' with time on next line
     """
     import re, datetime
+
+    if _is_maxpreps_printable_schedule(text):
+        return _parse_maxpreps_printable_text(text, pdf_team=pdf_team, season_info=season_info)
+
     games = []
     lines = text.splitlines()
 
     # Build a month→year mapping from season_info for dates without a year
-    # e.g. for season 2025-11-01→2026-03-31: Nov,Dec→2025; Jan,Feb,Mar→2026
-    month_year_map = {}
-    if season_info and season_info.get("start_date") and season_info.get("end_date"):
-        s_start = datetime.date.fromisoformat(season_info["start_date"])
-        s_end = datetime.date.fromisoformat(season_info["end_date"])
-        # Map every month in the season range to its correct year
-        d = s_start
-        while d <= s_end:
-            month_year_map[d.month] = d.year
-            # advance to next month
-            if d.month == 12:
-                d = datetime.date(d.year + 1, 1, 1)
-            else:
-                d = datetime.date(d.year, d.month + 1, 1)
+    month_year_map = _build_month_year_map(season_info)
 
     # Pre-process: detect column-based layout by looking for DATE/OPPONENT/TIMES headers
     has_column_layout = False
@@ -696,6 +805,14 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
         while i < len(lines):
             line = lines[i].strip()
             if not line:
+                i += 1
+                continue
+
+            if re.search(
+                r'^\d{1,2}/\d{1,2}/\d{2,4},\s*\d{1,2}:\d{2}\s*(?:AM|PM)\b|Printable\s+Liberty\s+Charter|maxpreps\.com/print',
+                line,
+                re.IGNORECASE,
+            ):
                 i += 1
                 continue
 
@@ -2104,13 +2221,8 @@ def api_teams_schedule():
     return jsonify(result)
 
 
-def _scrape_maxpreps_ranking(state, gender):
-    """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
-    Returns (ranking_int, url_str) or (None, None) if not found.
-    Uses Playwright for an isolated browser session (no agent-browser conflicts).
-    """
-    from playwright.sync_api import sync_playwright
-
+def _maxpreps_ranking_url(state, gender):
+    """Build the MaxPreps rankings page URL for a state/gender."""
     state_slug = state.lower().replace(" ", "-")
     state_slug_overrides = {"idaho": "id"}
     state_slug = state_slug_overrides.get(state_slug, state_slug)
@@ -2124,22 +2236,39 @@ def _scrape_maxpreps_ranking(state, gender):
     div_id = division_ids.get((state_slug, gender_slug))
     if div_id:
         if gender_slug == "girls":
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-        else:
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-    else:
-        url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
+            return f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+        return f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
+    return f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
+
+
+def _scrape_maxpreps_ranking(state, gender):
+    """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
+    Returns (ranking_int, url_str) or (None, url_str) if not found/unavailable.
+    Uses Playwright when installed; otherwise returns cached-null gracefully.
+    """
+    import os
+
+    url = _maxpreps_ranking_url(state, gender)
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None, url
 
     ranking = None
-    chromium_path = "/snap/bin/chromium"
+    chromium_path = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH")
+    if not chromium_path:
+        snap_path = "/snap/bin/chromium"
+        chromium_path = snap_path if os.path.exists(snap_path) else None
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                executable_path=chromium_path,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
-            )
+            launch_kwargs = {
+                "headless": True,
+                "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+            }
+            if chromium_path:
+                launch_kwargs["executable_path"] = chromium_path
+            browser = p.chromium.launch(**launch_kwargs)
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1280, "height": 900},
@@ -2153,7 +2282,7 @@ def _scrape_maxpreps_ranking(state, gender):
                 time.sleep(5)
                 page.wait_for_selector("table", timeout=15000)
             except Exception:
-                pass  # Continue even if table doesn't appear in time
+                pass
 
             result = page.evaluate("""() => {
                 const rows = document.querySelectorAll('tr');
@@ -2177,7 +2306,7 @@ def _scrape_maxpreps_ranking(state, gender):
 
             browser.close()
     except Exception:
-        pass
+        return None, url
 
     return ranking, url
 
@@ -2192,9 +2321,11 @@ def api_teams_rankings():
     state = request.args.get("state", "Idaho") if request.method == "GET" else request.form.get("state", "Idaho")
 
     if request.method == "POST":
-        # Scrape fresh rankings for both varsity teams
         for team_key, gender in [("varsity_boys", "boys"), ("varsity_girls", "girls")]:
-            ranking, url = _scrape_maxpreps_ranking(state, gender)
+            try:
+                ranking, url = _scrape_maxpreps_ranking(state, gender)
+            except Exception:
+                ranking, url = None, _maxpreps_ranking_url(state, gender)
             db.execute(
                 """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
