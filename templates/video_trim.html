@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Trim Video – Liberty Basketball{% endblock %}
+
+{% block content %}
+<style>
+  .upload-progress-bar { height: 8px; background: var(--color-border, #e5e7eb); border-radius: 999px; overflow: hidden; }
+  .upload-progress-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #0d9488, #14b8a6); width: 0; transition: width .3s ease; }
+</style>
+<div class="page-header" data-frame="4.5">
+  <div>
+    <h2>✂️ Trim Video</h2>
+    <span class="text-muted">{{ video.original_filename }}{% if video.opponent %} · {{ video.opponent }}{% endif %}</span>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a href="{{ url_for('core.videos_page') }}" class="btn btn-secondary btn-sm">Back to Videos</a>
+    <a href="{{ url_for('core.film', filename=video.stored_filename, game_id=video.game_id) }}" class="btn btn-secondary btn-sm">Open in Film Tool</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;padding:14px 20px;background:#f0fdfb;border-color:#99d4d6;">
+  <strong>How trimming works:</strong>
+  Scrub to the real game start (after the previous game / warmups) and click <em>Set Start</em>.
+  Scrub to where the game ends (before empty gym / lights out) and click <em>Set End</em>.
+  Save creates a <strong>new trimmed copy</strong> in your library — the original NFHS file is kept.
+  Cuts use ffmpeg stream copy (fast); start/end may shift a few seconds to the nearest keyframe.
+</div>
+
+{% if not ffmpeg_available %}
+<div class="alert alert-error">
+  ffmpeg is not installed on this server. Install ffmpeg and restart the app before trimming.
+  On Windows: <code>winget install Gyan.FFmpeg</code>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:16px;">
+  <video id="trimVideo" controls preload="metadata" style="width:100%;max-height:58vh;background:#000;border-radius:8px;"></video>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px;">
+    <span class="tiny" id="trimCurrentTime" style="font-variant-numeric:tabular-nums;">0:00.0</span>
+    <span class="tiny text-muted" id="trimDuration">Duration: —</span>
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn-secondary btn-sm" id="trimPreviewBtn" {% if not ffmpeg_available %}disabled{% endif %}>Preview Range</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:1rem;">Trim range</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+    <div class="field">
+      <label for="trimStart">Start</label>
+      <div style="display:flex;gap:6px;">
+        <input id="trimStart" class="form-control" placeholder="0:00 or 1:23:45">
+        <button type="button" class="btn btn-secondary btn-sm" id="trimSetStartBtn">Set Start</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="trimEnd">End</label>
+      <div style="display:flex;gap:6px;">
+        <input id="trimEnd" class="form-control" placeholder="1:30:00">
+        <button type="button" class="btn btn-secondary btn-sm" id="trimSetEndBtn">Set End</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="trimLabel">Label (optional)</label>
+      <input id="trimLabel" class="form-control" placeholder="e.g. game only">
+    </div>
+  </div>
+  <p class="tiny text-muted" style="margin:.75rem 0 0;">
+    Selected length: <strong id="trimSelectedLength">—</strong>
+  </p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;">
+    <button type="button" class="btn btn-primary" id="trimSaveBtn" {% if not ffmpeg_available %}disabled{% endif %}>💾 Save Trimmed Copy</button>
+    <span class="tiny text-muted" id="trimStatus"></span>
+  </div>
+  <div id="trimProgressShell" style="display:none;margin-top:12px;">
+    <div class="upload-progress-bar"><span id="trimProgressBar" style="width:0%"></span></div>
+    <div class="tiny" id="trimProgressText" style="margin-top:.35rem;color:var(--color-text-muted);">Trimming…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.VIDEO_TRIM = {
+    videoId: {{ video.id }},
+    videoUrl: {{ video_url|tojson|safe }},
+    ffmpegAvailable: {{ "true" if ffmpeg_available else "false" }},
+  };
+</script>
+<script src="{{ url_for('static', filename='js/video-trim.js') }}"></script>
+{% endblock %}

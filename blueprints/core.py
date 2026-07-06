@@ -36,7 +36,7 @@ import sqlite3
 import subprocess
 import tempfile
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory
+from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort
 
 from helpers import (
     AI_DEFAULTS,
@@ -1478,6 +1478,23 @@ def _gender_display_name(val):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def videos_page():
     return render_template("videos.html")
+
+
+@core.route("/videos/<int:vid_id>/trim")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def video_trim_page(vid_id):
+    from video_trim import ffmpeg_available
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        abort(404)
+    return render_template(
+        "video_trim.html",
+        video=dict(video),
+        video_url=url_for("core.uploaded_file", filename=video["stored_filename"]),
+        ffmpeg_available=ffmpeg_available(),
+    )
 
 
 @core.route("/review")

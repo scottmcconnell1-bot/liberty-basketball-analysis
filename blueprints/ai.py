@@ -11,6 +11,8 @@ Routes:
   POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
   DELETE /api/videos/<int:vid_id>      - Delete a video
+  POST /api/videos/<int:vid_id>/trim   - Trim video to start/end range
+  GET  /api/videos/trim/<job_id>       - Poll trim job status
   POST /api/admin/reset                - Admin reset
   POST /upload                         - Upload and analyze
   POST /api/assistant/query            - Read-only Q&A from reviewed data (Stage 10A)
@@ -630,6 +632,90 @@ def delete_video(vid_id):
     db.commit()
 
     return jsonify({"success": True, "deleted_game_id": game_id})
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/trim", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_trim_video(vid_id):
+    """Trim a saved video to a start/end range; writes a new library copy."""
+    from video_trim import ffmpeg_available, ffprobe_duration_ms, parse_time_input, start_trim_job
+
+    if not ffmpeg_available():
+        return jsonify({
+            "error": "ffmpeg is not installed. Install ffmpeg and restart the app.",
+            "code": "ffmpeg_missing",
+        }), 503
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    start_ms = data.get("start_ms")
+    end_ms = data.get("end_ms")
+    if start_ms is None and data.get("start"):
+        start_ms = parse_time_input(data.get("start"))
+    if end_ms is None and data.get("end"):
+        end_ms = parse_time_input(data.get("end"))
+    try:
+        start_ms = int(start_ms)
+        end_ms = int(end_ms)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid start_ms/end_ms"}), 400
+
+    if start_ms < 0 or end_ms <= start_ms:
+        return jsonify({"error": "End time must be after start time"}), 400
+
+    duration_ms = ffprobe_duration_ms(video["file_path"])
+    if duration_ms is not None and end_ms > duration_ms + 1000:
+        return jsonify({"error": "End time is past the end of the video"}), 400
+
+    label = (data.get("label") or "trimmed").strip() or "trimmed"
+    job_id = start_trim_job(
+        app=current_app._get_current_object(),
+        video_row=dict(video),
+        start_ms=start_ms,
+        end_ms=end_ms,
+        label=label,
+    )
+    return jsonify({
+        "status": "started",
+        "job_id": job_id,
+        "message": "Trim started. This may take a few minutes for long files.",
+    })
+
+
+@ai_bp.route("/api/videos/trim/<job_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_trim_video_status(job_id):
+    from video_trim import get_trim_job
+
+    job = get_trim_job(job_id)
+    if not job:
+        return jsonify({"error": "Trim job not found or expired"}), 404
+    return jsonify(job)
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/meta", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_meta(vid_id):
+    """Return duration and paths for the trim editor."""
+    from video_trim import ffprobe_duration_ms
+
+    video = get_db().execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+    duration_ms = ffprobe_duration_ms(video["file_path"])
+    return jsonify({
+        "id": video["id"],
+        "original_filename": video["original_filename"],
+        "stored_filename": video["stored_filename"],
+        "opponent": video["opponent"],
+        "file_size_bytes": video["file_size_bytes"],
+        "duration_ms": duration_ms,
+        "video_url": url_for("core.uploaded_file", filename=video["stored_filename"]),
+    })
 
 
 @ai_bp.route("/upload", methods=["POST"])
