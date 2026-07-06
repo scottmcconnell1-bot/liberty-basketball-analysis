@@ -337,8 +337,10 @@ def _yt_dlp_status_message(line: str) -> str | None:
     lowered = text.lower()
     if text.startswith("[") or any(
         token in lowered
-        for token in ("extracting", "downloading", "merging", "ffmpeg", "error", "warning", "nfhs", "format")
+        for token in ("extracting", "downloading", "merging", "ffmpeg", "error", "warning", "nfhs", "format", "opening")
     ):
+        if ".ts" in lowered or "cloudfront" in lowered:
+            return "Downloading video segments from NFHS stream…"
         return text[-160:]
     return None
 

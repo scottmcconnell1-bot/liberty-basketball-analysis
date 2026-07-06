@@ -27,6 +27,7 @@
             downloadBtn: prefix + 'download-btn',
             downloadFullBtn: prefix + 'download-full-btn',
             downloadOptions: prefix + 'download-options',
+            downloadHelp: prefix + 'download-help',
             downloadStart: prefix + 'download-start',
             downloadEnd: prefix + 'download-end',
         };
@@ -71,10 +72,18 @@
             lastSiteUrl = siteUrl || null;
             const options = el(ids.downloadOptions);
             if (options) options.style.display = ready ? 'block' : 'none';
+            setDownloadOptionsVisible(ready && !activeJobId);
             setDownloadBusy(false);
             if (ready) {
                 const startInput = el(ids.downloadStart);
                 if (startInput) startInput.focus();
+            }
+        }
+
+        function setDownloadOptionsVisible(show) {
+            const options = el(ids.downloadOptions);
+            if (options && lookupReady) {
+                options.style.display = show ? 'block' : 'none';
             }
         }
 
@@ -83,6 +92,7 @@
             const bar = el(ids.downloadProgressBar);
             const label = el(ids.downloadProgressText);
             const cancelBtn = el(ids.downloadCancelBtn);
+            setDownloadOptionsVisible(false);
             if (shell) shell.style.display = 'block';
             if (bar) bar.style.width = `${Math.max(0, Math.min(100, percent || 0))}%`;
             if (label) label.textContent = text || 'Downloading…';
@@ -95,6 +105,7 @@
             if (shell) shell.style.display = 'none';
             if (cancelBtn) cancelBtn.style.display = 'none';
             activeJobId = null;
+            setDownloadOptionsVisible(true);
         }
 
         function renderDownloadComplete(result) {
@@ -309,6 +320,10 @@
             const gameId = el(ids.gameId)?.value.trim();
             if (!gameId) {
                 alert('Enter an NFHS GameID or URL');
+                return;
+            }
+            if (activeJobId) {
+                alert('A download is already running. Use Cancel Download or wait for it to finish.');
                 return;
             }
             if (!lookupReady) {

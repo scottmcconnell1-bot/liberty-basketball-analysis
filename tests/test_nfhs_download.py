@@ -167,6 +167,9 @@ def test_yt_dlp_status_message_surfaces_extractor_output():
 
     assert _yt_dlp_status_message("[NFHSNetwork] Extracting URL: https://example.com/game/gam123") is not None
     assert _yt_dlp_status_message("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00") is None
+    assert "segments" in _yt_dlp_status_message(
+        "[https @ 0000] Opening 'https://d1.cloudfront.net/hd116.ts' for reading"
+    )
 
 
 def test_film_page_path_without_request_context():
