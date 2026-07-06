@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from nfhs import register_nfhs_download
+from nfhs import _yt_dlp_available, _yt_dlp_command, register_nfhs_download
 
 
 def test_register_nfhs_download_creates_video_record(app, tmp_path):
@@ -93,3 +93,18 @@ def test_upload_chunk_tag_only_skips_analysis(client, app):
         runs = db.execute("SELECT COUNT(*) AS c FROM analysis_runs").fetchone()["c"]
     assert video is not None
     assert runs == 0
+
+
+def test_yt_dlp_command_prefers_module_fallback():
+    cmd = _yt_dlp_command()
+    assert cmd
+    assert cmd[-1] != ""
+
+
+def test_yt_dlp_available_after_install():
+    """yt-dlp should be listed in requirements-dev and importable in CI."""
+    try:
+        import yt_dlp  # noqa: F401
+    except ImportError:
+        pytest.skip("yt-dlp not installed in this environment yet")
+    assert _yt_dlp_available() is True

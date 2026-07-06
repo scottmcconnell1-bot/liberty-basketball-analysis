@@ -11,7 +11,9 @@ Handles:
 import json
 import os
 import re
+import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime
 
@@ -237,6 +239,28 @@ def lookup_game(game_id: str, email: str, password: str) -> dict:
     }
 
 
+def _yt_dlp_command() -> list[str]:
+    """Resolve yt-dlp executable: PATH binary, else python -m yt_dlp from venv."""
+    if shutil.which("yt-dlp"):
+        return ["yt-dlp"]
+    return [sys.executable, "-m", "yt_dlp"]
+
+
+def _yt_dlp_available() -> bool:
+    if shutil.which("yt-dlp"):
+        return True
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "yt_dlp", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+
+
 def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) -> dict:
     """
     Download NFHS VOD using yt-dlp with authenticated session cookies.
@@ -269,10 +293,19 @@ def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) 
 
     nfhs_url = f"{NFHS_BASE_URL}/game/{game_id}"
 
+    if not _yt_dlp_available():
+        _cleanup_files([header_file])
+        return {
+            "success": False,
+            "file_path": None,
+            "file_size": 0,
+            "error": "yt-dlp not installed. From your project venv run: pip install yt-dlp",
+        }
+
     # Try yt-dlp with custom headers
     try:
         cmd = [
-            "yt-dlp",
+            *_yt_dlp_command(),
             "--no-check-certificates",
             "--add-header", f"Authorization: Bearer {token}",
             "--add-header", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -280,7 +313,7 @@ def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) 
             "--merge-output-format", "mp4",
             "--retries", "3",
             "--fragment-retries", "3",
-            nfhs_url
+            nfhs_url,
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
         if result.returncode == 0 and os.path.exists(output_path):
@@ -288,12 +321,17 @@ def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) 
             _cleanup_files([header_file])
             return {"success": True, "file_path": output_path, "file_size": file_size, "error": None}
         else:
-            error_msg = result.stderr[-500:] if result.stderr else "yt-dlp failed"
+            error_msg = (result.stderr or result.stdout or "yt-dlp failed")[-500:]
             _cleanup_files([header_file])
             return {"success": False, "file_path": None, "file_size": 0, "error": f"yt-dlp error: {error_msg}"}
     except FileNotFoundError:
         _cleanup_files([header_file])
-        return {"success": False, "file_path": None, "file_size": 0, "error": "yt-dlp not installed. Install with: pip install yt-dlp"}
+        return {
+            "success": False,
+            "file_path": None,
+            "file_size": 0,
+            "error": "yt-dlp not installed. From your project venv run: pip install yt-dlp",
+        }
     except subprocess.TimeoutExpired:
         _cleanup_files([header_file])
         return {"success": False, "file_path": None, "file_size": 0, "error": "Download timed out (2 hour limit)"}
