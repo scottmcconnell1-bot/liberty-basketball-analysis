@@ -2236,24 +2236,47 @@ def api_teams_schedule():
 
     teams = []
     for sec in TEAM_SECTIONS:
-        default_season_id = _default_dashboard_season_id(db, sec, active_seasons)
-        season_id = _resolve_dashboard_season_id(request, sec["key"], default_season_id)
+        team_seasons = _seasons_for_team_section(db, sec)
+        allowed_ids = {s["id"] for s in team_seasons}
+        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, allowed_ids)
+        season_id = _resolve_dashboard_season_id(
+            request, sec["key"], default_season_id, allowed_ids
+        )
         summary = _fetch_team_dashboard_summary(db, sec, season_id)
-        selected_season = next((s for s in all_seasons if s["id"] == season_id), None) if season_id else None
+        selected_season = next((s for s in team_seasons if s["id"] == season_id), None) if season_id else None
         teams.append({
             "key": sec["key"],
             "label": sec["label"],
             "season_id": season_id,
             "default_season_id": default_season_id,
             "season_name": selected_season["name"] if selected_season else None,
+            "seasons": team_seasons,
             **summary,
         })
 
     return jsonify({
-        "seasons": all_seasons,
         "active_season_count": len(active_seasons),
         "teams": teams,
     })
+
+
+def _seasons_for_team_section(db, sec):
+    """Seasons that have at least one scheduled game for this dashboard team card."""
+    clauses = ["sg.team = ?"]
+    params = [sec["team"]]
+    if sec["level"]:
+        clauses.append("sg.level = ?")
+        params.append(sec["level"])
+    where = " AND ".join(clauses)
+    rows = db.execute(
+        f"""SELECT DISTINCT s.id, s.name, s.start_date, s.end_date, s.season_type
+            FROM seasons s
+            JOIN scheduled_games sg ON sg.season_id = s.id
+            WHERE {where}
+            ORDER BY s.start_date DESC""",
+        params,
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def _team_section_where(sec, season_id=None):
@@ -2269,7 +2292,7 @@ def _team_section_where(sec, season_id=None):
     return where, params
 
 
-def _resolve_dashboard_season_id(request, team_key, default_season_id):
+def _resolve_dashboard_season_id(request, team_key, default_season_id, allowed_season_ids=None):
     """Read per-team season override from query string."""
     if team_key not in request.args:
         return default_season_id
@@ -2277,24 +2300,23 @@ def _resolve_dashboard_season_id(request, team_key, default_season_id):
     if raw is None or raw == "":
         return None
     try:
-        return int(raw)
+        season_id = int(raw)
     except (TypeError, ValueError):
         return default_season_id
+    if allowed_season_ids is not None and season_id not in allowed_season_ids:
+        return default_season_id
+    return season_id
 
 
-def _default_dashboard_season_id(db, sec, active_seasons):
+def _default_dashboard_season_id(db, sec, active_seasons, allowed_season_ids):
     """Pick the active season for a team, or None between seasons."""
-    if not active_seasons:
+    if not active_seasons or not allowed_season_ids:
         return None
-    for season in sorted(active_seasons, key=lambda s: (s["season_type"] != "regular", s["start_date"])):
-        where, params = _team_section_where(sec, season["id"])
-        row = db.execute(
-            f"SELECT 1 FROM scheduled_games sg {where} LIMIT 1",
-            params,
-        ).fetchone()
-        if row:
-            return season["id"]
-    return active_seasons[0]["id"]
+    team_active = [s for s in active_seasons if s["id"] in allowed_season_ids]
+    if not team_active:
+        return None
+    team_active.sort(key=lambda s: (s["season_type"] != "regular", s["start_date"]))
+    return team_active[0]["id"]
 
 
 def _fetch_team_dashboard_summary(db, sec, season_id=None):
