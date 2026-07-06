@@ -11,6 +11,7 @@ mkdir -p "${OUT_DIR}"
 declare -a INCLUDE_PATHS=()
 for rel_path in \
   README.md \
+  "Start Liberty.bat" \
   .dockerignore \
   .env.example \
   Dockerfile \

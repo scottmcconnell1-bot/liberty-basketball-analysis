@@ -29,6 +29,18 @@ Flask-based basketball operations app for Liberty that combines scheduling, game
 
 ## Quick start
 
+### Fastest: local test launcher (coach walkthrough)
+
+**Windows:** double-click **`Start Liberty.bat`** in the repo root.
+
+**Linux:**
+
+```bash
+bash scripts/launch_liberty.sh
+```
+
+This checks Python/ffmpeg, creates `.venv`, installs dependencies, initializes the database, starts the app, and opens the dashboard. See `docs/LOCAL_TEST_LAUNCH.md`.
+
 ### Recommended: use the setup TUI
 
 ```bash
