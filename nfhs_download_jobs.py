@@ -33,6 +33,8 @@ def _public_job(job: dict) -> dict:
         "speed": job.get("speed"),
         "eta": job.get("eta"),
         "message": job.get("message", ""),
+        "segments": job.get("segments"),
+        "last_segment": job.get("last_segment"),
         "nfhs_game_id": job.get("nfhs_game_id"),
         "error": job.get("error"),
     }
@@ -137,7 +139,7 @@ def _run_download_job(
     with _jobs_lock:
         _controls[job_id] = control
 
-    def on_progress(percent=None, speed=None, eta=None, message=""):
+    def on_progress(percent=None, speed=None, eta=None, message="", segments=None, last_segment=None):
         fields = {
             "status": "downloading",
             "message": message or "Downloading…",
@@ -150,6 +152,10 @@ def _run_download_job(
             fields["speed"] = speed
         if eta is not None:
             fields["eta"] = eta
+        if segments is not None:
+            fields["segments"] = segments
+        if last_segment is not None:
+            fields["last_segment"] = last_segment
         _update_job(job_id, **fields)
 
     _update_job(job_id, status="downloading", message="Starting NFHS download…", percent=0)

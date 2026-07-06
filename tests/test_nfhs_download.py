@@ -162,6 +162,15 @@ def test_format_section_time():
     assert _format_section_time(3_705_000) == "1:01:45"
 
 
+def test_hls_segment_index_from_log_line():
+    from nfhs import _hls_segment_index
+
+    assert _hls_segment_index(
+        "[https @ 0000] Opening 'https://d1.cloudfront.net/hd116.ts' for reading"
+    ) == 116
+    assert _hls_segment_index("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00") is None
+
+
 def test_friendly_download_phase_hides_technical_logs():
     from nfhs import _friendly_download_phase, _parse_yt_dlp_progress
 

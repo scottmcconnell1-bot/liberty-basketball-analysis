@@ -104,7 +104,14 @@
             return percent > 0 ? 'Downloading…' : 'Connecting to NFHS…';
         }
 
-        function showProgress(percent, phase, speed, eta) {
+        function formatElapsed(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (mins) return `${mins}m ${secs}s`;
+            return `${secs}s`;
+        }
+
+        function showProgress(percent, phase, speed, eta, segments, elapsedSec) {
             const shell = el(ids.downloadProgress);
             const bar = el(ids.downloadProgressBar);
             const pctLabel = el(ids.downloadProgressPct);
@@ -113,7 +120,10 @@
             const cancelBtn = el(ids.downloadCancelBtn);
             const pct = Math.max(0, Math.min(100, percent || 0));
             const indeterminate = pct === 0 && !!activeJobId;
-            const phaseText = friendlyPhase(phase, pct);
+            let phaseText = friendlyPhase(phase, pct);
+            if (indeterminate && segments > 0) {
+                phaseText = `Downloading segments… (${segments} received)`;
+            }
 
             setDownloadOptionsVisible(false);
             if (shell) {
@@ -127,6 +137,7 @@
                 const parts = [];
                 if (speed) parts.push(speed);
                 if (eta) parts.push(`ETA ${eta}`);
+                if (indeterminate && elapsedSec != null) parts.push(formatElapsed(elapsedSec));
                 detail.textContent = parts.join(' • ');
             }
             if (cancelBtn) cancelBtn.style.display = activeJobId ? 'inline-block' : 'none';
@@ -283,6 +294,7 @@
 
         function pollDownloadJob(jobId) {
             activeJobId = jobId;
+            const startedAt = Date.now();
             if (activePoll) clearInterval(activePoll);
             activePoll = setInterval(() => {
                 fetch('/api/scouting/nfhs/download/' + encodeURIComponent(jobId))
@@ -292,7 +304,8 @@
                             throw new Error(job.error);
                         }
                         const pct = job.percent || 0;
-                        showProgress(pct, job.message, job.speed, job.eta);
+                        const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
+                        showProgress(pct, job.message, job.speed, job.eta, job.segments || 0, elapsedSec);
 
                         if (job.status === 'complete') {
                             clearInterval(activePoll);
@@ -382,7 +395,7 @@
             const status = el(ids.downloadStatus);
             if (status) status.innerHTML = '<span class="text-muted">Download runs on the server. You can stay on this page for progress, or check Videos later.</span>';
             setDownloadBusy(true);
-            showProgress(0, 'Starting download…', null, null);
+            showProgress(0, 'Starting download…', null, null, 0, 0);
 
             const payload = { game_id: gameId };
             if (startMs != null) payload.start_ms = startMs;

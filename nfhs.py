@@ -310,6 +310,15 @@ def _yt_dlp_available() -> bool:
         return False
 
 
+_HLS_SEGMENT_RE = re.compile(r"hd(\d+)\.ts", re.IGNORECASE)
+
+
+def _hls_segment_index(line: str) -> int | None:
+    """Parse NFHS HLS segment number from ffmpeg log lines (e.g. hd116.ts)."""
+    match = _HLS_SEGMENT_RE.search(line or "")
+    return int(match.group(1)) if match else None
+
+
 def _parse_yt_dlp_progress(line: str) -> dict | None:
     """Parse a yt-dlp progress line into percent/speed/eta."""
     if "[download]" not in line or "%" not in line:
@@ -345,7 +354,16 @@ def _friendly_download_phase(line: str) -> str | None:
     return None
 
 
-def _emit_download_status(progress_callback, *, percent=None, speed=None, eta=None, message="") -> None:
+def _emit_download_status(
+    progress_callback,
+    *,
+    percent=None,
+    speed=None,
+    eta=None,
+    message="",
+    segments=None,
+    last_segment=None,
+) -> None:
     if not progress_callback:
         return
     payload = {"message": message}
@@ -355,6 +373,10 @@ def _emit_download_status(progress_callback, *, percent=None, speed=None, eta=No
         payload["speed"] = speed
     if eta is not None:
         payload["eta"] = eta
+    if segments is not None:
+        payload["segments"] = segments
+    if last_segment is not None:
+        payload["last_segment"] = last_segment
     progress_callback(**payload)
 
 
@@ -460,6 +482,7 @@ def download_nfhs_vod(
             "--newline",
             "--progress",
             "--socket-timeout", "30",
+            "--concurrent-fragments", "4",
             "--add-header", f"Authorization: Bearer {token}",
             "--add-header", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "-o", output_path,
@@ -470,7 +493,7 @@ def download_nfhs_vod(
         ]
         if start_ms is not None and end_ms is not None and end_ms > start_ms:
             section = f"*{_format_section_time(start_ms)}-{_format_section_time(end_ms)}"
-            cmd = cmd[:-1] + ["--download-sections", section, "--force-keyframes-at-cuts", cmd[-1]]
+            cmd = cmd[:-1] + ["--download-sections", section, cmd[-1]]
         _emit_download_status(progress_callback, percent=0, message="Connecting to NFHS…")
         proc = subprocess.Popen(
             cmd,
@@ -482,6 +505,8 @@ def download_nfhs_vod(
         if download_control:
             download_control.attach(proc, output_path)
         output_lines: list[str] = []
+        segments_seen = 0
+        last_segment = 0
         assert proc.stdout is not None
         for line in iter(proc.stdout.readline, ""):
             if download_control and download_control.cancelled:
@@ -500,9 +525,21 @@ def download_nfhs_vod(
                 if parsed:
                     progress_callback(**parsed)
                 else:
-                    phase_message = _friendly_download_phase(line)
-                    if phase_message:
-                        _emit_download_status(progress_callback, percent=0, message=phase_message)
+                    segment_index = _hls_segment_index(line)
+                    if segment_index is not None:
+                        segments_seen += 1
+                        last_segment = max(last_segment, segment_index)
+                        _emit_download_status(
+                            progress_callback,
+                            percent=0,
+                            message=f"Downloading segments… ({segments_seen} received)",
+                            segments=segments_seen,
+                            last_segment=last_segment,
+                        )
+                    else:
+                        phase_message = _friendly_download_phase(line)
+                        if phase_message:
+                            _emit_download_status(progress_callback, percent=0, message=phase_message)
         return_code = proc.wait(timeout=7200)
         if download_control and download_control.cancelled:
             _cleanup_files([header_file])
