@@ -140,7 +140,6 @@
     const TEAM_SECTION_KEYS = [
       'varsity_boys', 'varsity_girls', 'jv_boys', 'jv_girls', 'jr_high_boys', 'jr_high_girls'
     ];
-    let dashboardSeasons = [];
     let dashboardTeams = [];
 
     function seasonStorageKey(teamKey) {
@@ -232,7 +231,7 @@
         </div>
         <div class="team-season-row">
           <select class="team-season-select" aria-label="Season for ${t.label}" onchange="onTeamSeasonChange('${t.key}', this.value)">
-            ${buildSeasonSelectOptions(dashboardSeasons, t.season_id ?? '')}
+            ${buildSeasonSelectOptions(t.seasons || [], t.season_id ?? '')}
           </select>
         </div>
         <div class="team-records">
@@ -259,7 +258,6 @@
       const qs = storedParams.toString();
       const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
       const payload = await tr.json();
-      dashboardSeasons = payload.seasons || [];
       dashboardTeams = payload.teams || [];
 
       const label = document.getElementById('season-label');
@@ -296,7 +294,6 @@
       const qs = params.toString();
       const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
       const payload = await tr.json();
-      dashboardSeasons = payload.seasons || dashboardSeasons;
       dashboardTeams = payload.teams || [];
 
       let rankings = {};
