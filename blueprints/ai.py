@@ -565,10 +565,22 @@ def api_video_analysis_debug(vid_id):
             ORDER BY id DESC LIMIT 1""",
         (vid_id, video["game_id"], video["game_id"], video["file_path"]),
     ).fetchone()
-    if not row:
-        return jsonify({"video_id": vid_id, "run": None, "log_tail": ""})
+    game_id = video["game_id"]
+    if row:
+        game_id = row["analysis_key"] or video["game_id"]
+        row = resolve_analysis_run_for_progress(db, game_id) or row
 
-    game_id = row["analysis_key"] or video["game_id"]
+    if not row:
+        return jsonify({
+            "video_id": vid_id,
+            "video_path": video["file_path"],
+            "video_exists": os.path.exists(video["file_path"]),
+            "run": None,
+            "log_path": ai_analysis_log_path(game_id) if game_id else None,
+            "log_tail": "",
+        })
+
+    game_id = row["analysis_key"] or game_id
     reconcile_stuck_analysis_run(db, game_id)
     row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
     log_path = ai_analysis_log_path(game_id)

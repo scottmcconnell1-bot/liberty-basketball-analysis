@@ -1347,8 +1347,20 @@ function initAnalysisStatus() {
                 pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
                 pollTimer = null;
-                showRunAnalysisProgress(100, 'Analysis complete!', 'completed', elapsedSec);
-                showUploadAnalysisProgress(100, 'Analysis complete!');
+                const detCount = data.detection_count ?? 0;
+                const evtCount = data.event_count ?? 0;
+                const completeStep = detCount === 0
+                    ? `Analysis finished but found 0 detections (${evtCount} events). Check Debug on Video Library or run again on the trimmed clip.`
+                    : 'Analysis complete!';
+                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec);
+                showUploadAnalysisProgress(100, completeStep);
+                const runDetail = document.getElementById('runAnalysisDetail');
+                if (runDetail && window.FILM_TOOL_VIDEO_ID) {
+                    const debugUrl = `/api/videos/${window.FILM_TOOL_VIDEO_ID}/analysis-debug`;
+                    runDetail.innerHTML = detCount === 0
+                        ? `No detections written. <a href="${debugUrl}" target="_blank" rel="noopener">Open debug info</a>`
+                        : `${detCount} detections, ${evtCount} events. <a href="${debugUrl}" target="_blank" rel="noopener">Debug</a>`;
+                }
                 setTimeout(() => {
                     const analysisShell = document.getElementById('analysisProgressShell');
                     if (analysisShell) analysisShell.style.display = 'none';
