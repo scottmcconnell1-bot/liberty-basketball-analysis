@@ -1249,12 +1249,12 @@ function undoLastRow() {
 
 // ── Analysis Status Polling ─────────────────────────────────
 function initAnalysisStatus() {
-    const gameId = window.FILM_TOOL_GAME_ID || '';
     const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
     const analysisShell = document.getElementById('analysisProgressShell');
     const analysisBar = document.getElementById('analysisProgressBar');
     const analysisPct = document.getElementById('analysisProgressPct');
     const analysisText = document.getElementById('analysisProgressText');
+    let gameId = window.FILM_TOOL_GAME_ID || '';
 
     function showAnalysisProgress(pct, step) {
         if (analysisShell) analysisShell.style.display = 'block';
@@ -1263,24 +1263,30 @@ function initAnalysisStatus() {
         if (analysisText) analysisText.textContent = step || '';
     }
 
+    function hideRunAnalysisBar() {
+        const bar = document.getElementById('runAnalysisBar');
+        if (bar) bar.style.display = 'none';
+    }
+
     async function fetchAnalysisProgress() {
         if (!gameId) return;
         try {
             const response = await fetch('/api/analysis_progress/' + encodeURIComponent(gameId));
             if (!response.ok) return;
             const data = await response.json();
-            if (data.status === 'running') {
+            if (data.status === 'running' || data.status === 'pending') {
+                hideRunAnalysisBar();
                 showAnalysisProgress(data.progress_pct || 0, data.progress_step || 'Analyzing…');
                 setTimeout(fetchAnalysisProgress, 3000);
             } else if (data.status === 'completed') {
                 showAnalysisProgress(100, 'Analysis complete!');
                 setTimeout(() => { if (analysisShell) analysisShell.style.display = 'none'; }, 3000);
+                hideRunAnalysisBar();
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
                 showAnalysisProgress(0, 'Analysis failed');
+                if (window.updateRunAnalysisBar) window.updateRunAnalysisBar('failed');
             } else {
-                // pending or not_started — keep polling
-                if (data.status === 'pending') showAnalysisProgress(0, 'Waiting to start…');
                 setTimeout(fetchAnalysisProgress, 5000);
             }
         } catch (err) {
@@ -1289,11 +1295,80 @@ function initAnalysisStatus() {
         }
     }
 
-    window.addEventListener('load', () => {
-        if (!autoStatsEnabled) return;
-        if (gameId) {
-            showAnalysisProgress(0, 'Checking analysis status…');
-            fetchAnalysisProgress();
+    window.startAnalysisProgressPolling = function (newGameId) {
+        if (newGameId) {
+            gameId = newGameId;
+            window.FILM_TOOL_GAME_ID = newGameId;
+        }
+        if (!autoStatsEnabled || !gameId) return;
+        showAnalysisProgress(0, 'Checking analysis status…');
+        fetchAnalysisProgress();
+    };
+
+    if (autoStatsEnabled && gameId) {
+        fetch('/api/analysis_progress/' + encodeURIComponent(gameId))
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                if (data.status === 'running' || data.status === 'pending') {
+                    window.startAnalysisProgressPolling(gameId);
+                }
+            })
+            .catch(() => {});
+    }
+}
+
+function initRunAnalysis() {
+    const videoId = window.FILM_TOOL_VIDEO_ID;
+    const autoStatsEnabled = window.ENABLE_AUTO_STATS_M1;
+    const bar = document.getElementById('runAnalysisBar');
+    const btn = document.getElementById('runAnalysisBtn');
+    const statusEl = document.getElementById('runAnalysisStatus');
+    if (!autoStatsEnabled || !videoId || !bar || !btn) return;
+
+    let analysisStatus = window.FILM_TOOL_ANALYSIS_STATUS || 'not_started';
+
+    function updateRunAnalysisBar(status) {
+        analysisStatus = status || analysisStatus;
+        if (analysisStatus === 'running' || analysisStatus === 'pending') {
+            bar.style.display = 'flex';
+            btn.style.display = 'none';
+            if (statusEl) statusEl.textContent = 'AI analysis in progress…';
+            return;
+        }
+        if (analysisStatus === 'completed') {
+            bar.style.display = 'none';
+            return;
+        }
+        bar.style.display = 'flex';
+        btn.style.display = '';
+        btn.disabled = false;
+        btn.textContent = analysisStatus === 'failed' ? '🔄 Retry AI Analysis' : '🤖 Run AI Analysis';
+        if (statusEl) {
+            statusEl.textContent = analysisStatus === 'failed'
+                ? 'Previous analysis failed. You can try again.'
+                : 'AI analysis has not been run for this video yet.';
+        }
+    }
+
+    window.updateRunAnalysisBar = updateRunAnalysisBar;
+    updateRunAnalysisBar(analysisStatus);
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Starting AI analysis…';
+        try {
+            const resp = await fetch('/api/videos/' + encodeURIComponent(videoId) + '/analyze', { method: 'POST' });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
+            updateRunAnalysisBar('pending');
+            if (typeof window.startAnalysisProgressPolling === 'function') {
+                window.startAnalysisProgressPolling(data.game_id || window.FILM_TOOL_GAME_ID);
+            }
+            setStatus(data.message || 'AI analysis started.');
+        } catch (err) {
+            if (statusEl) statusEl.textContent = err.message;
+            btn.disabled = false;
         }
     });
 }
@@ -1764,6 +1839,8 @@ function init() {
     initResourceMonitor();
     initReportDrawer();
     initAiUpload();
+    initAnalysisStatus();
+    initRunAnalysis();
     if (window.ENABLE_AUTO_STATS_M1 && typeof initNfhsDownload === 'function') {
       initNfhsDownload({
         prefix: 'ft-nfhs-',

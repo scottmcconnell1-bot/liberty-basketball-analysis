@@ -8,6 +8,7 @@ Routes:
   GET  /api/videos                     - List all videos
   GET  /videos/<int:vid_id>/compare    - Compare video analysis
   POST /videos/<int:vid_id>/rerun      - Re-run video analysis
+  POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
   DELETE /api/videos/<int:vid_id>      - Delete a video
   POST /api/admin/reset                - Admin reset
@@ -445,6 +446,76 @@ def compare_video_analysis(vid_id):
         current_detector_model=display_detector_model(current_ai_settings),
         message=request.args.get("message"),
     )
+
+
+def _video_analysis_runs_clause():
+    return """(source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?)"""
+
+
+def _start_video_analysis_run(video, *, run_label=None):
+    """Queue and optionally launch AI analysis for an existing video."""
+    db = get_db()
+    clause = _video_analysis_runs_clause()
+    running = db.execute(
+        f"""SELECT id FROM analysis_runs
+            WHERE {clause} AND status IN ('pending', 'running')
+            LIMIT 1""",
+        (video["id"], video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    if running:
+        return None, "Analysis already in progress"
+
+    runtime_settings = get_runtime_settings()
+    existing_runs = db.execute(
+        f"SELECT COUNT(*) AS c FROM analysis_runs WHERE {clause}",
+        (video["id"], video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()["c"]
+    run_kind = "primary" if existing_runs == 0 else "rerun"
+    if run_kind == "rerun":
+        ensure_primary_run_metadata(db, video, build_analysis_settings_snapshot(runtime_settings))
+    default_label = "NFHS / library video" if run_kind == "primary" else None
+    run_payload = queue_analysis_run(
+        db,
+        video,
+        runtime_settings,
+        run_kind=run_kind,
+        run_label=run_label or default_label,
+    )
+
+    if ai_runtime_available():
+        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
+        message = f"AI analysis started ({run_payload['run_label']})."
+    else:
+        db.execute(
+            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
+            ("Missing AI packages (cv2/ultralytics)", run_payload["id"]),
+        )
+        db.commit()
+        message = "Analysis queued, but AI packages are unavailable in the current runtime."
+
+    return {
+        "status": "started",
+        "game_id": run_payload["analysis_key"],
+        "analysis_key": run_payload["analysis_key"],
+        "run_label": run_payload["run_label"],
+        "run_kind": run_kind,
+        "message": message,
+    }, None
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/analyze", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_start_video_analysis(vid_id):
+    """Start AI analysis for a video already in the library (e.g. NFHS download)."""
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    payload, error = _start_video_analysis_run(video)
+    if error:
+        return jsonify({"error": error, "status": "running"}), 409
+    return jsonify(payload)
 
 
 @ai_bp.route("/videos/<int:vid_id>/rerun", methods=["POST"])

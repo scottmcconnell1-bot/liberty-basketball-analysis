@@ -157,3 +157,58 @@ def test_parse_yt_dlp_progress_line():
 def test_nfhs_download_status_missing_job(client):
     resp = client.get("/api/scouting/nfhs/download/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_start_video_analysis_for_library_video(client, db, monkeypatch, tmp_path):
+    import blueprints.ai as ai_module
+
+    video_path = tmp_path / "nfhs_gam999.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam999.mp4", "nfhs_gam999.mp4", str(video_path), 16, "Opponent", "nfhs_gam999_20260101"),
+    )
+    db.commit()
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    started = []
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: started.append(args))
+
+    resp = client.post("/api/videos/1/analyze")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload["status"] == "started"
+    assert payload["game_id"] == "nfhs_gam999_20260101"
+    assert started
+
+    row = db.execute("SELECT analysis_key, run_kind, status FROM analysis_runs").fetchone()
+    assert row["analysis_key"] == "nfhs_gam999_20260101"
+    assert row["run_kind"] == "primary"
+    assert row["status"] == "pending"
+
+
+def test_start_video_analysis_rejects_duplicate_running_job(client, db, monkeypatch, tmp_path):
+    import blueprints.ai as ai_module
+
+    video_path = tmp_path / "nfhs_gam888.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam888.mp4", "nfhs_gam888.mp4", str(video_path), 16, "Opponent", "nfhs_gam888_20260101"),
+    )
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
+        ("nfhs_gam888_20260101", str(video_path), "running"),
+    )
+    db.commit()
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+
+    resp = client.post("/api/videos/1/analyze")
+    assert resp.status_code == 409
+    assert "already in progress" in resp.get_json()["error"]

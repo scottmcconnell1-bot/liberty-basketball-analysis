@@ -1494,15 +1494,37 @@ def film(filename=None):
     player_effect_data = []
     player_minutes_data = []
     possession_summary = None
-    if filename and not game_id:
+    video_id = None
+    analysis_status = None
+    if filename:
         db = get_db()
-        # Find the most recent analysis run for this video file
-        row = db.execute(
-            "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
-            (f"%{filename}",),
+        video_row = db.execute(
+            """SELECT v.id, v.game_id,
+                      ar.status AS analysis_status, ar.analysis_key
+               FROM videos v
+               LEFT JOIN analysis_runs ar ON ar.id = (
+                   SELECT MAX(ar2.id)
+                   FROM analysis_runs ar2
+                   WHERE ar2.source_video_id = v.id
+                      OR ar2.base_analysis_key = v.game_id
+                      OR ar2.analysis_key = v.game_id
+                      OR ar2.video_path = v.file_path
+               )
+               WHERE v.stored_filename = ?""",
+            (filename,),
         ).fetchone()
-        if row:
-            game_id = row["analysis_key"]
+        if video_row:
+            video_id = video_row["id"]
+            analysis_status = video_row["analysis_status"] or "not_started"
+            if not game_id:
+                game_id = video_row["analysis_key"] or video_row["game_id"]
+        elif not game_id:
+            row = db.execute(
+                "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
+                (f"%{filename}",),
+            ).fetchone()
+            if row:
+                game_id = row["analysis_key"]
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)
@@ -1573,6 +1595,8 @@ def film(filename=None):
         "film_tool.html",
         filename=filename,
         game_id=game_id,
+        video_id=video_id,
+        analysis_status=analysis_status,
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
         shot_summary=shot_summary,
         player_effect_data=player_effect_data,

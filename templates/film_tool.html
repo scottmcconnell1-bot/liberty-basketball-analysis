@@ -412,11 +412,20 @@
           <span style="flex:1"></span>
           <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
         </div>
+        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
+        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
+          <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
+          <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">🤖 Run AI Analysis</button>
+        </div>
+        {% endif %}
         <div class="tiny" style="padding:.25rem 0 .5rem;">
           {% if uploaded_video_url %}
           Server video <code>{{ filename }}</code> will auto-load below.
+          {% if features.ENABLE_AUTO_STATS_M1 %}
+          Use <strong>Run AI Analysis</strong> above to detect events automatically, or tag manually.
+          {% endif %}
           {% else %}
-          For tagging only. This does not run AI analysis.
+          Load a video from your computer, or open a saved video from the Video Library.
           {% endif %}
         </div>
 
@@ -956,6 +965,8 @@
   window.FILM_TOOL_UPLOADED_VIDEO_URL = {{ uploaded_video_url|tojson|safe }};
   window.FILM_TOOL_UPLOADED_VIDEO_NAME = {{ filename|tojson|safe }};
   window.FILM_TOOL_GAME_ID = {{ game_id|tojson|safe }};
+  window.FILM_TOOL_VIDEO_ID = {{ video_id|tojson|safe }};
+  window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
