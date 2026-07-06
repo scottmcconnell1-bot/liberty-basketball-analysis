@@ -83,21 +83,30 @@ Write-Step "Verifying imports..."
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (Get-Command git -ErrorAction SilentlyContinue) {
-    Write-Step "Pulling Git LFS model weights (models/*.pt)..."
-    git lfs pull --include="models/*.pt"
+    Write-Step "Fetching Git LFS model weights..."
+    git lfs install 2>$null | Out-Null
+    git lfs fetch --include="models/*.pt" 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[liberty-ai] git lfs pull failed. Install Git LFS, then run: git lfs pull" -ForegroundColor Yellow
+        git lfs fetch --all 2>$null
+    }
+    Write-Step "Materializing models/*.pt from Git LFS..."
+    & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) scripts/materialize_lfs_models.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[liberty-ai] Model materialize failed. Run manually:" -ForegroundColor Yellow
+        Write-Host "  git lfs install" -ForegroundColor Yellow
+        Write-Host "  git lfs fetch --all" -ForegroundColor Yellow
+        Write-Host "  python scripts/materialize_lfs_models.py" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[liberty-ai] git not found; skip LFS model pull. Ball detector may fail until you run: git lfs pull" -ForegroundColor Yellow
+    Write-Host "[liberty-ai] git not found; run scripts/materialize_lfs_models.py after installing Git LFS." -ForegroundColor Yellow
 }
 
 $ballModel = Join-Path $Root "models\ball_detector.pt"
 if (Test-Path $ballModel) {
-    $firstLine = Get-Content $ballModel -TotalCount 1 -ErrorAction SilentlyContinue
-    if ($firstLine -like "version https://git-lfs.github.com/spec/v1*") {
-        Write-Host "[liberty-ai] WARNING: models/ball_detector.pt is still a Git LFS pointer." -ForegroundColor Yellow
-        Write-Host "  Run: git lfs install   then   git lfs pull" -ForegroundColor Yellow
+    $ballSize = (Get-Item $ballModel).Length
+    if ($ballSize -lt 10000) {
+        Write-Host "[liberty-ai] WARNING: models/ball_detector.pt is still only $ballSize bytes." -ForegroundColor Yellow
+        Write-Host "  Run: python scripts/materialize_lfs_models.py" -ForegroundColor Yellow
     }
 }
 

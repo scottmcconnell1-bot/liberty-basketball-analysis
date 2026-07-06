@@ -63,3 +63,11 @@ See the coach walkthrough in chat or `docs/agent_handoffs/` for the full test ch
 - **Stale dependencies:** `python scripts/launch_liberty.py --reinstall-deps`
 - **winget blocked:** Install Python 3.12 from python.org, then re-run `Start Liberty.bat`
 - **`pip install torch` → "No matching distribution found":** Your Python is not 3.12/3.13. Run `python --version` and `py -0p`. Install 3.12 with `winget install Python.Python.3.12`, recreate `.venv` with `py -3.12 -m venv .venv`, then run `.\scripts\install_ai_deps.ps1`
+- **AI analysis fails with `invalid load key, 'v'` or ball model is ~137 bytes:** The fine-tuned weights are in Git LFS. Run:
+  ```powershell
+  git lfs install
+  git lfs fetch --all
+  python scripts/materialize_lfs_models.py
+  (Get-Item models\ball_detector.pt).Length
+  ```
+  The last command should print about **172669123**, not 137.
