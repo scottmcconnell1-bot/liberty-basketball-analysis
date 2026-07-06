@@ -157,6 +157,29 @@ def test_parse_schedule_line_various_formats():
     assert result["gender"] == "girls"
 
 
+def test_parse_schedule_line_jr_high_b_and_a_times():
+    """Jr High PDF rows map first time to B team and second to A team."""
+    from blueprints.core import _parse_schedule_line
+
+    result = _parse_schedule_line("TUES, DEC 2 MARSING (H) 4:30/6:00", pdf_team="jr_boys")
+    assert result is not None
+    assert result["level"] == "jr_high"
+    assert result["jv_game_time"] == "04:30"
+    assert result["game_time"] == "06:00"
+    assert result["frosh_game_time"] in ("", None)
+
+
+def test_parse_schedule_text_jr_high_ab_continuation_line():
+    """Separate 'A 6:00' continuation lines attach to the previous game."""
+    from blueprints.core import _parse_schedule_text
+
+    text = "TUES, DEC 2 MARSING (H) 4:30\nA 6:00"
+    games = _parse_schedule_text(text, pdf_team="jr_boys")
+    assert len(games) == 1
+    assert games[0]["jv_game_time"] == "04:30"
+    assert games[0]["game_time"] == "06:00"
+
+
 def test_schedule_table_column_widths(client):
     """Verify schedule table has correct column headers."""
     resp = client.get("/schedule")
