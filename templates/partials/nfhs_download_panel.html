@@ -1,0 +1,37 @@
+{# NFHS download panel. Set nfhs_prefix before include (e.g. "nfhs-" or "ft-nfhs-"). #}
+{% set p = nfhs_prefix|default('nfhs-') %}
+<p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">
+  Download <strong>your Liberty games</strong> or <strong>opponent film</strong> from NFHS Network.
+  Paste a Game ID or full NFHS URL.
+</p>
+
+<div id="{{ p }}logged-in" style="display:none;margin-bottom:.75rem;">
+  <p class="text-success small" style="margin:0 0 .5rem;">✅ Logged in as <span id="{{ p }}user-email"></span></p>
+  <button class="btn btn-sm btn-secondary" type="button" id="{{ p }}logout-btn">Log Out</button>
+</div>
+
+<div id="{{ p }}login-form">
+  <div class="field">
+    <label for="{{ p }}email">NFHS Email</label>
+    <input type="email" id="{{ p }}email" class="form-control" placeholder="your@email.com">
+  </div>
+  <div class="field">
+    <label for="{{ p }}password">NFHS Password</label>
+    <input type="password" id="{{ p }}password" class="form-control" placeholder="Password">
+  </div>
+  <button class="btn btn-primary btn-sm" type="button" id="{{ p }}login-btn">Log In to NFHS</button>
+  <div id="{{ p }}login-status" class="tiny" style="margin-top:.5rem;"></div>
+</div>
+
+<div id="{{ p }}lookup-section" style="display:none;margin-top:1rem;">
+  <div class="field">
+    <label for="{{ p }}game-id">NFHS Game ID or URL</label>
+    <input type="text" id="{{ p }}game-id" class="form-control" placeholder="e.g. gam12d9559efc or https://www.nfhsnetwork.com/game/...">
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;">
+    <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}lookup-btn">🔍 Look Up Game</button>
+    <button class="btn btn-primary btn-sm" type="button" id="{{ p }}download-btn">📥 Download Film</button>
+  </div>
+  <div id="{{ p }}game-info" class="tiny" style="margin-top:.5rem;"></div>
+  <div id="{{ p }}download-status" class="tiny" style="margin-top:.5rem;"></div>
+</div>

@@ -392,6 +392,15 @@
             </div>
           </form>
         </div>
+
+        <div class="ft-ai-upload-toggle" id="ftNfhsToggle">
+          <span class="ft-chevron">▶</span>
+          <span>📥 Download from NFHS — your games or opponents</span>
+        </div>
+        <div class="ft-ai-upload-body" id="ftNfhsBody">
+          {% set nfhs_prefix = 'ft-nfhs-' %}
+          {% include 'partials/nfhs_download_panel.html' %}
+        </div>
         {% endif %}
 
         <!-- Video Player -->
@@ -948,5 +957,6 @@
   window.FILM_TOOL_UPLOADED_VIDEO_NAME = {{ filename|tojson|safe }};
   window.FILM_TOOL_GAME_ID = {{ game_id|tojson|safe }};
 </script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
 {% endblock %}

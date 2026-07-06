@@ -1742,6 +1742,10 @@ function init() {
       this.classList.toggle('open');
       document.getElementById('ftAiUploadBody').classList.toggle('open');
     });
+    document.getElementById('ftNfhsToggle')?.addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('ftNfhsBody').classList.toggle('open');
+    });
     document.getElementById('ftGameInfoToggle')?.addEventListener('click', function() {
       this.classList.toggle('open');
       document.getElementById('ftGameInfoBody').classList.toggle('open');
@@ -1760,6 +1764,16 @@ function init() {
     initResourceMonitor();
     initReportDrawer();
     initAiUpload();
+    if (window.ENABLE_AUTO_STATS_M1 && typeof initNfhsDownload === 'function') {
+      initNfhsDownload({
+        prefix: 'ft-nfhs-',
+        onDownloadComplete(result) {
+          if (result.redirect_url && !result.already_saved) {
+            setStatus('NFHS film saved. Open it from the link below or reload when ready.');
+          }
+        },
+      });
+    }
     } catch (err) { console.error('Film tool init error:', err); }
 }
 
