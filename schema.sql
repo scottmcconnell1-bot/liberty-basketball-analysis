@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS seasons (
     name       TEXT NOT NULL UNIQUE,
     start_date DATE NOT NULL,
     end_date   DATE NOT NULL,
+    season_type TEXT NOT NULL DEFAULT 'regular',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

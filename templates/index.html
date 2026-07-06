@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h2>Dashboard</h2>
-  <span class="text-muted" id="season-label">Loading…</span>
+  <span class="text-muted" id="season-label">Select a season on each team card</span>
 </div>
 
 <!-- ── Team Sections (1.1) ─────────────────────────────────── -->
@@ -137,33 +137,48 @@
     await loadPhotos();
 
     // ── Team sections ──────────────────────────────────────
-    const tr = await fetch('/api/teams/schedule');
-    const teams = await tr.json();
+    const TEAM_SECTION_KEYS = [
+      'varsity_boys', 'varsity_girls', 'jv_boys', 'jv_girls', 'jr_high_boys', 'jr_high_girls'
+    ];
+    let dashboardTeams = [];
 
-    // Load rankings
-    let rankings = {};
-    try {
-      const rr = await fetch('/api/teams/rankings');
-      const rd = await rr.json();
-      rankings = rd.rankings || {};
-    } catch(e) { /* rankings optional */ }
+    function seasonStorageKey(teamKey) {
+      return `dashboard_season_${teamKey}`;
+    }
 
-    const grid = document.getElementById('team-grid');
-    grid.innerHTML = teams.map(t => {
+    function buildSeasonSelectOptions(seasons, selectedId) {
+      const regular = seasons.filter(s => (s.season_type || 'regular') !== 'summer');
+      const summer = seasons.filter(s => s.season_type === 'summer');
+      let html = '<option value="">All seasons / off-season</option>';
+      if (regular.length) {
+        html += '<optgroup label="Regular Season">';
+        html += regular.map(s =>
+          `<option value="${s.id}"${String(selectedId) === String(s.id) ? ' selected' : ''}>${s.name}</option>`
+        ).join('');
+        html += '</optgroup>';
+      }
+      if (summer.length) {
+        html += '<optgroup label="Summer Program">';
+        html += summer.map(s =>
+          `<option value="${s.id}"${String(selectedId) === String(s.id) ? ' selected' : ''}>${s.name}</option>`
+        ).join('');
+        html += '</optgroup>';
+      }
+      return html;
+    }
+
+    function renderTeamCard(t, rankings) {
       const isVarsity = t.key === 'varsity_boys' || t.key === 'varsity_girls';
       const rankData = rankings[t.key] || {};
       const rankNum = rankData.ranking;
       const rankUrl = rankData.ranking_url || '#';
       const rankDate = rankData.scraped_at ? new Date(rankData.scraped_at).toLocaleDateString() : null;
-
-      // Record display: Overall | Conference
       const overall = `${t.wins}-${t.losses}`;
       const conf = (t.conf_wins + t.conf_losses) > 0 ? `${t.conf_wins}-${t.conf_losses}` : '0-0';
 
-      // Ranking badge (varsity only)
       let rankHtml = '';
       if (isVarsity) {
-        const rankBadge = rankNum ? `<span class="team-rank">${rankNum}</span>` : `<span class="team-rank rank-na">Not Ranked</span>`;
+        const rankBadge = rankNum ? `<span class="team-rank">#${rankNum}</span>` : `<span class="team-rank rank-na">Not Ranked</span>`;
         const rankDateHtml = rankDate ? `<span class="rank-date">Updated ${rankDate}</span>` : '<span class="rank-date">Never updated</span>';
         rankHtml = `
           <div class="team-ranking">
@@ -175,11 +190,9 @@
             ${rankDateHtml}
           </div>`;
       } else {
-        // Non-varsity: empty placeholder to keep card heights consistent
         rankHtml = `<div class="team-ranking team-ranking-empty"></div>`;
       }
 
-      // Last game
       let lastGameHtml = '';
       if (t.last_game) {
         const lg = t.last_game;
@@ -190,7 +203,6 @@
         lastGameHtml = `<div class="last-game">No games played yet</div>`;
       }
 
-      // Upcoming: stacked card layout
       let scheduleHtml = '<div class="schedule-label">Upcoming</div>';
       if (t.upcoming.length === 0) {
         scheduleHtml += '<div class="no-games">No upcoming games</div>';
@@ -198,22 +210,29 @@
         scheduleHtml += '<div class="schedule-list">';
         scheduleHtml += t.upcoming.map(g => {
           const loc = g.location_type || 'home';
-          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
-          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
+          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : (loc === 'tbd' ? 'TBD' : 'T'));
+          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : (loc === 'tbd' ? 'loc-tbd' : 'loc-tournament'));
           const shortDate = formatGameDate(g.game_date, g.game_time);
+          const tournament = g.tournament_name ? ` <span class="text-muted">(${g.tournament_name})</span>` : '';
           return `<div class="sched-row">
             <span class="sched-date">${shortDate}</span>
-            <span class="sched-opp">${g.opponent_name}</span>
+            <span class="sched-opp">${g.opponent_name}${tournament}</span>
             <span class="loc-badge ${locClass}">${locLabel}</span>
           </div>`;
         }).join('');
         scheduleHtml += '</div>';
       }
 
-      return `<div class="team-card" data-frame="1.1-${t.key}">
+      const seasonLabel = t.season_name ? t.season_name : 'All seasons';
+      return `<div class="team-card" data-frame="1.1-${t.key}" data-team-key="${t.key}">
         <div class="team-card-top">
           <div class="team-name">${t.label}</div>
           ${rankHtml}
+        </div>
+        <div class="team-season-row">
+          <select class="team-season-select" aria-label="Season for ${t.label}" onchange="onTeamSeasonChange('${t.key}', this.value)">
+            ${buildSeasonSelectOptions(t.seasons || [], t.season_id ?? '')}
+          </select>
         </div>
         <div class="team-records">
           <div class="record-block"><span class="record-label">Overall</span><span class="record-val">${overall}</span></div>
@@ -222,11 +241,78 @@
         ${lastGameHtml}
         ${scheduleHtml}
       </div>`;
-    }).join('');
-    if (window.libertyProcessFrameLabels) window.libertyProcessFrameLabels();
+    }
 
-    // Auto-refresh rankings status
-    window._rankingsLoaded = true;
+    function renderTeamGrid(rankings) {
+      const grid = document.getElementById('team-grid');
+      grid.innerHTML = dashboardTeams.map(t => renderTeamCard(t, rankings)).join('');
+      if (window.libertyProcessFrameLabels) window.libertyProcessFrameLabels();
+    }
+
+    async function loadTeamDashboard() {
+      const storedParams = new URLSearchParams();
+      TEAM_SECTION_KEYS.forEach(key => {
+        const stored = localStorage.getItem(seasonStorageKey(key));
+        if (stored !== null) storedParams.set(key, stored);
+      });
+      const qs = storedParams.toString();
+      const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
+      const payload = await tr.json();
+      dashboardTeams = payload.teams || [];
+
+      const label = document.getElementById('season-label');
+      if (payload.active_season_count > 0) {
+        label.textContent = 'In-season: cards default to the active season';
+      } else {
+        label.textContent = 'Off-season: cards default to all seasons';
+      }
+
+      let rankings = {};
+      try {
+        const rr = await fetch('/api/teams/rankings');
+        const rd = await rr.json();
+        rankings = rd.rankings || {};
+      } catch (e) { /* optional */ }
+
+      renderTeamGrid(rankings);
+      window._rankingsLoaded = true;
+    }
+
+    await loadTeamDashboard();
+
+    window.onTeamSeasonChange = async function(teamKey, seasonId) {
+      localStorage.setItem(seasonStorageKey(teamKey), seasonId);
+      const params = new URLSearchParams();
+      TEAM_SECTION_KEYS.forEach(key => {
+        const stored = localStorage.getItem(seasonStorageKey(key));
+        if (stored !== null) params.set(key, stored);
+        else {
+          const team = dashboardTeams.find(t => t.key === key);
+          if (team && team.default_season_id) params.set(key, String(team.default_season_id));
+        }
+      });
+      const qs = params.toString();
+      const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
+      const payload = await tr.json();
+      dashboardTeams = payload.teams || [];
+
+      let rankings = {};
+      try {
+        const rr = await fetch('/api/teams/rankings');
+        rankings = (await rr.json()).rankings || {};
+      } catch (e) {}
+
+      const card = document.querySelector(`[data-team-key="${teamKey}"]`);
+      const team = dashboardTeams.find(t => t.key === teamKey);
+      if (card && team) {
+        card.outerHTML = renderTeamCard(team, rankings);
+        if (window.libertyProcessFrameLabels) window.libertyProcessFrameLabels();
+      } else {
+        renderTeamGrid(rankings);
+      }
+    };
+
+    await loadTeamDashboard();
   }
 
   async function updateRanking(teamKey) {
@@ -236,10 +322,13 @@
       const fd = new FormData();
       fd.append('state', 'Idaho');
       const r = await fetch('/api/teams/rankings', { method: 'POST', body: fd });
-      const d = await r.json();
-      const rk = d.rankings[teamKey];
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        alert(d.error || 'Failed to update ranking. MaxPreps scrape may be unavailable on this machine.');
+        return;
+      }
+      const rk = (d.rankings || {})[teamKey];
       if (rk && rk.ranking) {
-        // Update the ranking display without full reload
         const card = document.querySelector(`[data-frame="1.1-${teamKey}"]`);
         if (card) {
           const rankBadge = card.querySelector('.team-rank');
@@ -252,12 +341,13 @@
           const rankLink = card.querySelector('.rank-link');
           if (rankLink && rk.ranking_url) rankLink.href = rk.ranking_url;
         }
+      } else {
+        alert('Ranking not found on MaxPreps right now. Try again in a few minutes.');
       }
     } catch(e) {
       alert('Failed to update ranking. Please try again.');
     } finally {
-      btn.disabled = false;
-      btn.textContent = '↻ Update';
+      if (btn) { btn.disabled = false; btn.textContent = '↻ Update'; }
     }
   }
 
