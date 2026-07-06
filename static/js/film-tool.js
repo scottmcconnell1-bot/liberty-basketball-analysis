@@ -123,7 +123,7 @@ let reportScope, reportType, reportTitle, reportSummary, reportHeadRow, reportTa
 let myGamesList, scoutGamesList;
 let aiEventsList, aiEventsScroller, aiEventsCount, aiCurrentEventLabel;
 let termDialog, termFieldSelect, termList, newTermInput;
-let rosterDialog, playerList, rosterCsvInput;
+let rosterDialog, playerList, rosterFileInput, rosterFileTypeSelect;
 let playerDialog, playerPosInput, playerNumInput, playerNameInput, playerGradeInput;
 let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
 let startersDialog, libertyStartersList, opponentStartersList, startersHelp;
@@ -982,29 +982,38 @@ function showRoster() {
     });
 }
 
-function importRosterCsv(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        const text = e.target.result;
-        const lines = text.split(/\r?\n/);
+function rosterImportTypeLabel(detectedType) {
+    return {
+        auto: 'file',
+        csv: 'CSV',
+        pdf: 'PDF',
+        maxpreps_pdf: 'MaxPreps PDF',
+    }[detectedType] || detectedType;
+}
+
+async function importRosterFile(file) {
+    const fileType = rosterFileTypeSelect?.value || 'auto';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', fileType);
+    setStatus('Importing roster...');
+    try {
+        const resp = await fetch('/api/rosters/import', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Roster import failed.');
         const key = getRosterKey();
-        const players = rosters[key] || [];
-        const headerWords = ['pos', 'position', '#', 'num', 'number', 'name', 'grade', 'class', 'yr'];
-        lines.forEach(line => {
-            const raw = line.trim(); if (!raw) return;
-            const parts = raw.split(',').map(x => x.trim()).filter(Boolean);
-            if (parts.length === 0) return;
-            const lower = parts.map(p => p.toLowerCase());
-            if (lower.some(p => headerWords.includes(p))) return;
-            let numPart = null, namePart = null;
-            parts.forEach(p => { if (/^\d+$/.test(p)) { if (numPart === null) numPart = p; } else if (!headerWords.includes(p.toLowerCase())) { if (!namePart || p.length > namePart.length) namePart = p; } });
-            if (!namePart) return;
-            players.push(numPart ? `${numPart} - ${namePart}` : namePart);
-        });
-        rosters[key] = sortPlayers(players);
-        persistRosters(); showRoster(); setStatus('Imported roster from CSV.');
-    };
-    reader.readAsText(file);
+        const labels = (data.players || []).map(player => player.label).filter(Boolean);
+        if (!labels.length) throw new Error('No players found in file.');
+        rosters[key] = sortPlayers(labels);
+        persistRosters();
+        showRoster();
+        setStatus(`Imported ${data.count} players from ${rosterImportTypeLabel(data.detected_type)}.`);
+    } catch (err) {
+        alert(err.message || 'Roster import failed.');
+        setStatus('Roster import failed.');
+    } finally {
+        if (rosterFileInput) rosterFileInput.value = '';
+    }
 }
 
 function openAddPlayerDialog() {
@@ -1680,7 +1689,7 @@ function attachEventHandlers() {
     document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; showRoster(); }); });
     document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => showRoster()); });
     document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => showRoster()); });
-    rosterCsvInput?.addEventListener('change', e => { const file = e.target.files[0]; if (file) importRosterCsv(file); });
+    rosterFileInput?.addEventListener('change', e => { const file = e.target.files[0]; if (file) importRosterFile(file); });
     document.getElementById('addPlayerBtn')?.addEventListener('click', openAddPlayerDialog);
     document.getElementById('playerCancelBtn')?.addEventListener('click', () => playerDialog.close());
     document.getElementById('playerSaveBtn')?.addEventListener('click', savePlayerFromDialog);
@@ -1773,7 +1782,8 @@ function init() {
     newTermInput = document.getElementById('newTermInput');
     rosterDialog = document.getElementById('rosterDialog');
     playerList = document.getElementById('playerList');
-    rosterCsvInput = document.getElementById('rosterCsvInput');
+    rosterFileInput = document.getElementById('rosterFileInput');
+    rosterFileTypeSelect = document.getElementById('rosterFileTypeSelect');
     playerDialog = document.getElementById('playerDialog');
     playerPosInput = document.getElementById('playerPosInput');
     playerNumInput = document.getElementById('playerNumInput');
