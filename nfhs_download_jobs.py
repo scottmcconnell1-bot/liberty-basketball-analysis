@@ -137,17 +137,22 @@ def _run_download_job(
     with _jobs_lock:
         _controls[job_id] = control
 
-    def on_progress(percent, speed=None, eta=None, message=""):
-        _update_job(
-            job_id,
-            status="downloading",
-            percent=percent,
-            speed=speed,
-            eta=eta,
-            message=message or f"Downloading… {percent:.1f}%",
-        )
+    def on_progress(percent=None, speed=None, eta=None, message=""):
+        fields = {
+            "status": "downloading",
+            "message": message or "Downloading…",
+        }
+        if percent is not None:
+            fields["percent"] = percent
+            if not message:
+                fields["message"] = f"Downloading… {percent:.1f}%"
+        if speed is not None:
+            fields["speed"] = speed
+        if eta is not None:
+            fields["eta"] = eta
+        _update_job(job_id, **fields)
 
-    _update_job(job_id, status="downloading", message="Connecting to NFHS…", percent=0)
+    _update_job(job_id, status="downloading", message="Starting NFHS download…", percent=0)
 
     try:
         with app.app_context():

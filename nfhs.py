@@ -327,6 +327,35 @@ def _parse_yt_dlp_progress(line: str) -> dict | None:
     }
 
 
+def _yt_dlp_status_message(line: str) -> str | None:
+    """Turn yt-dlp log lines into user-visible status text."""
+    text = re.sub(r"\x1b\[[0-9;]*m", "", (line or "").strip())
+    if not text:
+        return None
+    if _parse_yt_dlp_progress(text):
+        return None
+    lowered = text.lower()
+    if text.startswith("[") or any(
+        token in lowered
+        for token in ("extracting", "downloading", "merging", "ffmpeg", "error", "warning", "nfhs", "format")
+    ):
+        return text[-160:]
+    return None
+
+
+def _emit_download_status(progress_callback, *, percent=None, speed=None, eta=None, message="") -> None:
+    if not progress_callback:
+        return
+    payload = {"message": message}
+    if percent is not None:
+        payload["percent"] = percent
+    if speed is not None:
+        payload["speed"] = speed
+    if eta is not None:
+        payload["eta"] = eta
+    progress_callback(**payload)
+
+
 def _format_section_time(ms: int) -> str:
     total_sec = max(0, int(ms // 1000))
     hrs = total_sec // 3600
@@ -394,12 +423,12 @@ def download_nfhs_vod(
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"nfhs_{game_id}.mp4")
 
-    # Get authenticated token
+    _emit_download_status(progress_callback, percent=0, message="Authenticating with NFHS…")
     token = get_nfhs_token(email, password)
     if not token:
         return {"success": False, "file_path": None, "file_size": 0, "error": "Could not authenticate with NFHS Network"}
 
-    # Create a requests session with the token and export cookies for yt-dlp
+    _emit_download_status(progress_callback, percent=0, message="Preparing download…")
     session = requests.Session()
     session.headers.update(_get_auth_headers(token))
 
@@ -428,6 +457,8 @@ def download_nfhs_vod(
             "--no-check-certificates",
             "--newline",
             "--progress",
+            "--verbose",
+            "--socket-timeout", "30",
             "--add-header", f"Authorization: Bearer {token}",
             "--add-header", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "-o", output_path,
@@ -439,6 +470,7 @@ def download_nfhs_vod(
         if start_ms is not None and end_ms is not None and end_ms > start_ms:
             section = f"*{_format_section_time(start_ms)}-{_format_section_time(end_ms)}"
             cmd = cmd[:-1] + ["--download-sections", section, "--force-keyframes-at-cuts", cmd[-1]]
+        _emit_download_status(progress_callback, percent=0, message="Starting yt-dlp… this can take 1–2 minutes")
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -466,6 +498,10 @@ def download_nfhs_vod(
                 parsed = _parse_yt_dlp_progress(line)
                 if parsed:
                     progress_callback(**parsed)
+                else:
+                    status_message = _yt_dlp_status_message(line)
+                    if status_message:
+                        _emit_download_status(progress_callback, message=status_message)
         return_code = proc.wait(timeout=7200)
         if download_control and download_control.cancelled:
             _cleanup_files([header_file])

@@ -239,6 +239,8 @@
 
         function pollDownloadJob(jobId) {
             activeJobId = jobId;
+            let lastMessage = '';
+            let lastChangeAt = Date.now();
             if (activePoll) clearInterval(activePoll);
             activePoll = setInterval(() => {
                 fetch('/api/scouting/nfhs/download/' + encodeURIComponent(jobId))
@@ -251,6 +253,12 @@
                         let text = job.message || 'Downloading…';
                         if (job.speed) text += ` • ${job.speed}`;
                         if (job.eta) text += ` • ETA ${job.eta}`;
+                        if (text !== lastMessage) {
+                            lastMessage = text;
+                            lastChangeAt = Date.now();
+                        } else if (pct === 0 && Date.now() - lastChangeAt > 90000) {
+                            text += ' — still working; yt-dlp can take a few minutes before progress appears';
+                        }
                         showProgress(pct, text);
 
                         if (job.status === 'complete') {

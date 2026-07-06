@@ -162,6 +162,13 @@ def test_format_section_time():
     assert _format_section_time(3_705_000) == "1:01:45"
 
 
+def test_yt_dlp_status_message_surfaces_extractor_output():
+    from nfhs import _yt_dlp_status_message
+
+    assert _yt_dlp_status_message("[NFHSNetwork] Extracting URL: https://example.com/game/gam123") is not None
+    assert _yt_dlp_status_message("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00") is None
+
+
 def test_film_page_path_without_request_context():
     from helpers import film_page_path
 
