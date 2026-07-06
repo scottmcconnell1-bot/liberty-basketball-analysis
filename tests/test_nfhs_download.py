@@ -4,7 +4,41 @@ import os
 
 import pytest
 
-from nfhs import _yt_dlp_available, _yt_dlp_command, register_nfhs_download
+from nfhs import (
+    _yt_dlp_available,
+    _yt_dlp_command,
+    extract_nfhs_game_id,
+    parse_nfhs_input,
+    register_nfhs_download,
+)
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("gamfad8d650d0", "gamfad8d650d0"),
+    (
+        "https://www.nfhsnetwork.com/events/caldwell-high-school-caldwell-id/gamfad8d650d0",
+        "gamfad8d650d0",
+    ),
+    (
+        "https://www.nfhsnetwork.com/events/liberty-charter-school/gam12d9559efc?autoplay=true",
+        "gam12d9559efc",
+    ),
+    ("www.nfhsnetwork.com/events/some-school/gamabc1234567", "gamabc1234567"),
+    ("https://www.nfhsnetwork.com/game/gamabc1234567", "gamabc1234567"),
+])
+def test_extract_nfhs_game_id_supports_events_urls(raw, expected):
+    assert extract_nfhs_game_id(raw) == expected
+
+
+def test_parse_nfhs_input_preserves_watch_url():
+    url = "https://www.nfhsnetwork.com/events/caldwell-high-school-caldwell-id/gamfad8d650d0"
+    parsed = parse_nfhs_input(url)
+    assert parsed["game_id"] == "gamfad8d650d0"
+    assert parsed["watch_url"] == url
+
+
+def test_extract_nfhs_game_id_rejects_garbage():
+    assert extract_nfhs_game_id("https://example.com/not-nfhs") is None
 
 
 def test_register_nfhs_download_creates_video_record(app, tmp_path):

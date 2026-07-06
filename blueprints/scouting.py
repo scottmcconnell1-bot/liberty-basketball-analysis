@@ -39,8 +39,10 @@ from nfhs import (
     _decrypt_password,
     _encrypt_password,
     download_nfhs_vod,
+    extract_nfhs_game_id,
     lookup_game,
     login_nfhs,
+    parse_nfhs_input,
     register_nfhs_download,
 )
 
@@ -138,14 +140,14 @@ def api_nfhs_login():
 def api_nfhs_lookup():
     """Look up game metadata by GameID."""
     data = request.get_json() or request.form
-    game_id = data.get("game_id") or data.get("nfhs_game_id")
-    if not game_id:
+    raw_input = data.get("game_id") or data.get("nfhs_game_id") or data.get("nfhs_url")
+    if not raw_input:
         return jsonify({"error": "Missing game_id"}), 400
 
-    # Extract numeric ID
-    game_id = extract_nfhs_game_id(game_id)
+    parsed = parse_nfhs_input(raw_input)
+    game_id = parsed["game_id"]
     if not game_id:
-        return jsonify({"error": "Invalid NFHS GameID"}), 400
+        return jsonify({"error": "Invalid NFHS GameID or URL"}), 400
 
     # Get credentials
     email, password = _get_stored_credentials()
@@ -157,39 +159,6 @@ def api_nfhs_lookup():
 
 
 # ── NFHS VOD Downloader ──────────────────────────────────────
-
-def extract_nfhs_game_id(url_or_id):
-    """Extract NFHS GameID from a URL or return the raw ID.
-
-    Supports formats:
-    - Raw GameID: 'gam12d9559efc' or '12345678'
-    - Full URL: 'https://www.nfhsnetwork.com/game/12345678'
-    - Embed URL: 'https://www.nfhsnetwork.com/embed/12345678'
-    - Developer window GameID from network tab
-    """
-    if not url_or_id:
-        return None
-
-    url_or_id = url_or_id.strip()
-
-    # If it's already an alphanumeric GameID (NFHS uses formats like 'gam12d9559efc')
-    if re.match(r'^[a-zA-Z0-9]{6,20}$', url_or_id):
-        return url_or_id
-
-    # Extract from URL patterns
-    patterns = [
-        r'/game/([a-zA-Z0-9]+)',
-        r'/embed/([a-zA-Z0-9]+)',
-        r'[?&]gameId=([a-zA-Z0-9]+)',
-        r'[?&]game_id=([a-zA-Z0-9]+)',
-        r'/videos/([a-zA-Z0-9]+)',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, url_or_id)
-        if match:
-            return match.group(1)
-
-    return None
 
 
 def _get_stored_credentials():
@@ -517,31 +486,35 @@ def api_scouting_clips(report_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_scouting_nfhs_download():
     data = request.get_json() or request.form
-    game_id = data.get("game_id") or data.get("nfhs_game_id")
-    if not game_id:
+    raw_input = data.get("game_id") or data.get("nfhs_game_id") or data.get("nfhs_url")
+    if not raw_input:
         return jsonify({"error": "Missing game_id or nfhs_game_id"}), 400
 
-    game_id = extract_nfhs_game_id(game_id)
+    parsed = parse_nfhs_input(raw_input)
+    game_id = parsed["game_id"]
     if not game_id:
-        return jsonify({"error": f"Could not extract NFHS GameID from: {data.get('game_id')}"}), 400
+        return jsonify({"error": f"Could not extract NFHS GameID from: {raw_input}"}), 400
 
     # Get credentials
     email, password = _get_stored_credentials()
     if not email:
         return jsonify({"error": "No NFHS credentials stored. Please log in first.", "needs_login": True}), 401
 
+    lookup = lookup_game(game_id, email, password)
+    watch_url = parsed["watch_url"] or (lookup.get("site_url") if lookup.get("success") else None)
+
     output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
-    result = download_nfhs_vod(game_id, email, password, output_dir)
+    result = download_nfhs_vod(game_id, email, password, output_dir, watch_url=watch_url)
 
     if result["success"]:
         db = get_db()
-        lookup = lookup_game(game_id, email, password)
         saved = register_nfhs_download(
             db,
             result["file_path"],
             game_id,
             home_team=lookup.get("home_team") if lookup.get("success") else None,
             away_team=lookup.get("away_team") if lookup.get("success") else None,
+            nfhs_url=watch_url,
         )
         db.commit()
 

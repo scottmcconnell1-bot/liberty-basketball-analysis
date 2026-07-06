@@ -25,6 +25,54 @@ MEMBER_SERVICE_URL = "https://member.nfhsnetwork.com"
 SEARCH_API_URL = "https://search-api.nfhsnetwork.com/v3"
 LOGIN_URL = f"{MEMBER_SERVICE_URL}/oauth/token"
 
+_NFHS_GAME_ID_RE = re.compile(r"^(gam[a-zA-Z0-9]{8,}|g[a-zA-Z0-9]{5,19})$", re.IGNORECASE)
+_NFHS_URL_PATTERNS = [
+    re.compile(r"/events/[^/?#]+/(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"/game/(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"/embed/(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"/videos/(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"[?&]gameId=(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"[?&]game_id=(gam[a-zA-Z0-9]+)", re.IGNORECASE),
+    re.compile(r"/(gam[a-zA-Z0-9]{8,})(?:[/?#]|$)", re.IGNORECASE),
+]
+
+
+def extract_nfhs_game_id(url_or_id: str | None) -> str | None:
+    """Extract NFHS GameID from a URL or return a bare game ID."""
+    if not url_or_id:
+        return None
+
+    text = url_or_id.strip()
+    if not text:
+        return None
+
+    if not re.match(r"^https?://", text, re.IGNORECASE) and "nfhsnetwork.com" in text.lower():
+        text = "https://" + text.lstrip("/")
+
+    if _NFHS_GAME_ID_RE.match(text):
+        return text
+
+    for pattern in _NFHS_URL_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return match.group(1)
+
+    return None
+
+
+def parse_nfhs_input(url_or_id: str | None) -> dict:
+    """Parse pasted NFHS input into game_id and optional watch URL."""
+    text = (url_or_id or "").strip()
+    game_id = extract_nfhs_game_id(text)
+    if not game_id:
+        return {"game_id": None, "watch_url": None}
+
+    watch_url = None
+    if re.match(r"^https?://", text, re.IGNORECASE):
+        watch_url = text.split("?")[0].split("#")[0].rstrip("/")
+
+    return {"game_id": game_id, "watch_url": watch_url}
+
 
 def _get_token_path(email: str) -> str:
     """Get the path to the cached token file for a given email."""
@@ -261,7 +309,14 @@ def _yt_dlp_available() -> bool:
         return False
 
 
-def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) -> dict:
+def download_nfhs_vod(
+    game_id: str,
+    email: str,
+    password: str,
+    output_dir: str,
+    *,
+    watch_url: str | None = None,
+) -> dict:
     """
     Download NFHS VOD using yt-dlp with authenticated session cookies.
 
@@ -291,7 +346,7 @@ def download_nfhs_vod(game_id: str, email: str, password: str, output_dir: str) 
         f.write(f"Authorization: Bearer {token}\n")
         f.write(f"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\n")
 
-    nfhs_url = f"{NFHS_BASE_URL}/game/{game_id}"
+    nfhs_url = watch_url or f"{NFHS_BASE_URL}/game/{game_id}"
 
     if not _yt_dlp_available():
         _cleanup_files([header_file])
@@ -355,6 +410,7 @@ def register_nfhs_download(
     opponent_name: str | None = None,
     home_team: str | None = None,
     away_team: str | None = None,
+    nfhs_url: str | None = None,
 ) -> dict:
     """Register a downloaded NFHS VOD in the videos library for future review."""
     if not os.path.exists(file_path):
@@ -364,7 +420,7 @@ def register_nfhs_download(
     file_size = os.path.getsize(file_path)
     opponent = (opponent_name or away_team or home_team or nfhs_game_id).strip()
     original_filename = f"nfhs_{nfhs_game_id}.mp4"
-    nfhs_url = f"{NFHS_BASE_URL}/game/{nfhs_game_id}"
+    nfhs_url = nfhs_url or f"{NFHS_BASE_URL}/game/{nfhs_game_id}"
 
     existing = db.execute(
         "SELECT id, stored_filename, game_id FROM videos WHERE stored_filename=?",
