@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Assistant Workflow - Liberty Basketball{% endblock %}
+
+{% block content %}
+<style>
+  .workflow-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    margin-bottom: 20px;
+  }
+  .workflow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .workflow-note {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .clip-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+  .clip-table th,
+  .clip-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .workflow-empty {
+    padding: 16px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: var(--color-muted);
+  }
+</style>
+
+<div class="workflow-card">
+  <h1 style="margin-top:0;">Assistant Workflow</h1>
+  <p class="workflow-note">
+    Guided read-only flow over <strong>reviewed</strong> events and linked clips:
+    pick a game, then a player, then browse supporting film.
+  </p>
+  <p class="workflow-note" id="workflow-scope">Review scope: accepted and corrected events only.</p>
+</div>
+
+<div class="workflow-card">
+  <h2 style="margin-top:0;">1. Select game</h2>
+  <div class="workflow-grid">
+    <div class="form-group">
+      <label for="workflow-game">Game</label>
+      <select id="workflow-game" class="form-control">
+        <option value="">Loading games…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="workflow-player">Player</label>
+      <select id="workflow-player" class="form-control" disabled>
+        <option value="">Select a game first</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="workflow-card">
+  <h2 style="margin-top:0;">2. Clip list</h2>
+  <div id="workflow-clips">
+    <div class="workflow-empty">Choose a game to load clips. Optionally filter by player.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const gameSelect = document.getElementById('workflow-game');
+  const playerSelect = document.getElementById('workflow-player');
+  const clipsEl = document.getElementById('workflow-clips');
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatMs(ms) {
+    if (ms == null) return '—';
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  async function loadGames() {
+    const resp = await fetch('/api/assistant/workflow/games');
+    const data = await resp.json();
+    gameSelect.innerHTML = '<option value="">Select a game</option>';
+    (data.games || []).forEach((game) => {
+      const option = document.createElement('option');
+      option.value = game.id;
+      const count = game.trusted_event_count || 0;
+      option.textContent = `${game.label} (${count} reviewed events)`;
+      gameSelect.appendChild(option);
+    });
+    if (!(data.games || []).length) {
+      gameSelect.innerHTML = '<option value="">No games found</option>';
+    }
+  }
+
+  async function loadPlayers(gameId) {
+    playerSelect.disabled = true;
+    playerSelect.innerHTML = '<option value="">Loading players…</option>';
+    const resp = await fetch(`/api/assistant/workflow/games/${gameId}/players`);
+    const data = await resp.json();
+    playerSelect.innerHTML = '<option value="">All players</option>';
+    (data.players || []).forEach((player) => {
+      const option = document.createElement('option');
+      option.value = player.player;
+      option.textContent = `${player.player} — ${player.pts} pts`;
+      playerSelect.appendChild(option);
+    });
+    playerSelect.disabled = false;
+  }
+
+  function renderClips(clips, player) {
+    if (!clips.length) {
+      const scope = player ? ` for ${escapeHtml(player)}` : '';
+      clipsEl.innerHTML = `<div class="workflow-empty">No clips linked to reviewed events${scope}.</div>`;
+      return;
+    }
+
+    const rows = clips.map((clip) => `
+      <tr>
+        <td>${escapeHtml(clip.title || 'Untitled clip')}</td>
+        <td>${escapeHtml(clip.clip_type || '—')}</td>
+        <td>${formatMs(clip.start_timestamp_ms)} – ${formatMs(clip.end_timestamp_ms)}</td>
+        <td>${clip.event_id != null ? `#${clip.event_id}` : '—'}</td>
+      </tr>
+    `).join('');
+
+    clipsEl.innerHTML = `
+      <table class="clip-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Window</th>
+            <th>Event</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  async function loadClips(gameId, player) {
+    clipsEl.innerHTML = '<div class="workflow-empty">Loading clips…</div>';
+    const query = player ? `?player=${encodeURIComponent(player)}` : '';
+    const resp = await fetch(`/api/assistant/workflow/games/${gameId}/clips${query}`);
+    const data = await resp.json();
+    renderClips(data.clips || [], player);
+  }
+
+  gameSelect.addEventListener('change', async () => {
+    const gameId = gameSelect.value;
+    playerSelect.innerHTML = '<option value="">Select a game first</option>';
+    playerSelect.disabled = true;
+    if (!gameId) {
+      clipsEl.innerHTML = '<div class="workflow-empty">Choose a game to load clips.</div>';
+      return;
+    }
+    await loadPlayers(gameId);
+    await loadClips(gameId, '');
+  });
+
+  playerSelect.addEventListener('change', async () => {
+    const gameId = gameSelect.value;
+    if (!gameId) return;
+    await loadClips(gameId, playerSelect.value);
+  });
+
+  loadGames().catch(() => {
+    gameSelect.innerHTML = '<option value="">Failed to load games</option>';
+  });
+})();
+</script>
+{% endblock %}

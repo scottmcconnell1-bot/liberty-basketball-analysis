@@ -13,6 +13,10 @@ Routes:
   POST /api/admin/reset                - Admin reset
   POST /upload                         - Upload and analyze
   POST /api/assistant/query            - Read-only Q&A from reviewed data (Stage 10A)
+  GET  /api/assistant/workflow/games   - Guided workflow step: games (Stage 10B)
+  GET  /api/assistant/workflow/games/<game_id>/players - Players with trusted stats
+  GET  /api/assistant/workflow/games/<game_id>/clips   - Clips for optional player filter
+  GET  /assistant                      - Guided workflow UI
 """
 
 import os
@@ -756,5 +760,58 @@ def assistant_query_route():
 
     player = data.get("player")
     payload = answer_question(db, question=question, game_id=game_id, player=player)
+    return jsonify(payload)
+
+
+def _assistant_access(db):
+    from module_entitlements import enforce_module_access
+    from module_keys import AI_ASSIST
+
+    enforce_module_access(db, get_default_team_id(db), AI_ASSIST)
+
+
+@ai_bp.route("/assistant")
+@require_feature("ENABLE_ASSISTANT_READ_ONLY")
+def assistant_workflow_page():
+    """Dropdown-guided workflow: game → player → clip list."""
+    db = get_db()
+    _assistant_access(db)
+    return render_template("assistant_workflow.html")
+
+
+@ai_bp.route("/api/assistant/workflow/games")
+@require_feature("ENABLE_ASSISTANT_READ_ONLY")
+def assistant_workflow_games():
+    db = get_db()
+    _assistant_access(db)
+    from assistant_workflow import build_workflow_payload
+
+    return jsonify(build_workflow_payload("games", db))
+
+
+@ai_bp.route("/api/assistant/workflow/games/<int:game_id>/players")
+@require_feature("ENABLE_ASSISTANT_READ_ONLY")
+def assistant_workflow_players(game_id):
+    db = get_db()
+    _assistant_access(db)
+    from assistant_workflow import build_workflow_payload
+
+    payload = build_workflow_payload("players", db, game_id=game_id)
+    if payload.get("error"):
+        return jsonify(payload), 404
+    return jsonify(payload)
+
+
+@ai_bp.route("/api/assistant/workflow/games/<int:game_id>/clips")
+@require_feature("ENABLE_ASSISTANT_READ_ONLY")
+def assistant_workflow_clips(game_id):
+    db = get_db()
+    _assistant_access(db)
+    from assistant_workflow import build_workflow_payload
+
+    player = (request.args.get("player") or "").strip() or None
+    payload = build_workflow_payload("clips", db, game_id=game_id, player=player)
+    if payload.get("error"):
+        return jsonify(payload), 404
     return jsonify(payload)
 

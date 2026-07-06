@@ -1,6 +1,6 @@
 # Liberty Stage Index
 
-Updated: 2026-07-02
+Updated: 2026-07-06
 Branch: jason-5-may-updates
 Status: Source-of-truth stage numbering for Codex, Hermes/OWL/Rex, and future agents.
 
@@ -34,7 +34,12 @@ Repository history, GitHub issues, and verification reports already reference th
 | Stage 5F | Relational game_id cleanup for human_corrections | Implemented and committed | additive `relational_game_id` for `human_corrections`; review correction writes preserve relational game identity |
 | Stage 6A | Module entitlement helper and audit wiring | Implemented (#72) | read-only module key constants, entitlement helpers, audit tooling |
 | Stage 6C | Module entitlements on status page | Implemented (#73) | `/status` entitlement audit display |
-| Stage 6B | Module route soft gating | In progress | scouting + playbook `is_module_accessible` gates |
+| Stage 6B | Module route soft gating | Implemented | scouting + playbook `is_module_accessible` gates |
+| Stage 7B–7E | Coach-trust product proof | Implemented (#77–#81) | possessions, minutes, review counts, canonical clips |
+| Stage 8A–8C | Module packaging (soft) | Implemented (#79–#82) | preview entitlements, trusted stats |
+| Stage 9A–9D | Deploy-ready Liberty | Implemented (#83–#84) | secrets audit, Docker smoke script, transfer parity |
+| Stage 10A | Read-only assistant API | Implemented (#85) | `/api/assistant/query` over trusted data |
+| Stage 10B | Guided assistant workflow | In progress | `/assistant` game → player → clip list |
 
 ## Rules
 
@@ -54,4 +59,8 @@ Repository history, GitHub issues, and verification reports already reference th
 
 ## Current Next Gate
 
-Stage 6A is complete at commit `d0dccd0` (#72). Stage 6C adds entitlement visibility on `/status`. See `docs/COMPLETION_PATH.md` for the autonomous completion queue.
+Stages 6A–10A are complete. **Authoritative queue:** `docs/COMPLETION_PATH.md` and `docs/agent_handoffs/QUEUE.md`.
+
+Current work: **Stage 10B** guided assistant workflow (`/assistant`). Test baseline: **360 passed, 1 skipped** (Python 3.12).
+
+Hermes/Linux Docker smoke (`bash scripts/docker_production_smoke.sh`) remains a Scott gate before public production — not a blocker for ongoing bounded slices.

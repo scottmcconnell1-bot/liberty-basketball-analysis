@@ -70,6 +70,27 @@ def inject_feature_flags():
         "analysis_config": settings["analysis"],
     }
 
+
+@app.template_global()
+def nav_active(*names):
+    """Return True when the current Flask endpoint matches any candidate name.
+
+    Pass blueprint-qualified endpoints (e.g. ``core.film``). A trailing ``.*``
+    matches any function in that blueprint (e.g. ``playbook.*``).
+    """
+    from flask import request
+
+    endpoint = request.endpoint or ""
+    for name in names:
+        if name.endswith(".*"):
+            prefix = name[:-2]
+            if endpoint == prefix or endpoint.startswith(prefix + "."):
+                return True
+            continue
+        if endpoint == name:
+            return True
+    return False
+
 # ── CSP Header ───────────────────────────────────────────────
 @app.after_request
 def set_csp(response):

@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-07-05
+Updated: 2026-07-06
 Branch: jason-5-may-updates
 
 ## Proven
@@ -185,4 +185,10 @@ These need further evidence.
 
 ## Current Recommendation
 
-Do not deploy the current secondary classifier, feature-based filters, or temporal filters. Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Review Workflow Stage 3A is implemented and independently verified. Review UI Stage 3B is implemented and independently verified. Stage 3C Possessions and Canonical Clips Foundation is implemented and independently verified. Stage 4A Event Participants Foundation, Stage 4B Manual Event Write Upgrade, Stage 4C Relational Stats Derivation, and Stage 4D Player Minutes Foundation are complete. Stage 5A through Stage 5F are implemented in code, and the post-Stage-5 `review_items`, `detections`, `videos -> analysis_runs`, `videos -> video_assets`, `/api/videos`, compare-run alignment, and event read-path alignment slices are complete. The generated-event lifecycle cleanup is now also complete through commits `8a5a067` and `163b70d`, and the product status page exposes a clickable checklist/proof surface at `85b2120`. The next recommendation is a bounded post-cleanup product-proof or Stage 6A planning slice, with the leading candidate being module entitlement helper/audit wiring without auth enforcement or billing changes.
+Keep production ball detection at the verified fine-tuned detector default with ball_confidence=0.25. Platform core Stages 1–5, post-Stage-5 cleanup, module entitlements (6A/6C), coach-trust product proof (7B–7E), module packaging (8A–8C), deploy-prep (9A–9D), and read-only assistant API (10A) are implemented on `jason-5-may-updates`.
+
+**Authoritative next-work queue:** `docs/COMPLETION_PATH.md` and `docs/agent_handoffs/QUEUE.md` (currently Stage 10B guided workflow, then standing deferrals).
+
+`/preview` is a product-direction shell — not proof that every linked module is production-ready. Practices, scouting, auth re-enable, and public deploy remain partially verified or Scott-gated.
+
+Do not deploy secondary classifier, feature-based filters, or temporal filters. Auth middleware remains disabled for local/dev use; see `docs/AUTH_REENABLE_PLAN.md` before production.

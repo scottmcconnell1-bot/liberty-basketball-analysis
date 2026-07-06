@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-07-05
+Updated: 2026-07-06
 Branch: jason-5-may-updates
 
 ## Current Operating Mode
@@ -181,9 +181,10 @@ Current implementation:
 - Post-Stage-5 event read-path relational alignment is implemented at `d1a1b2c`.
 
 Next step:
-- Keep documentation and handoff artifacts synchronized with the actual bounded slices already implemented on `jason-5-may-updates`.
-- Event lifecycle cleanup for generated-event delete/replace paths is complete through commits `8a5a067` and `163b70d`.
-- Move next to a bounded post-cleanup product-proof slice or Stage 6A planning slice; the leading candidate is module entitlement helper/audit wiring without auth enforcement or billing changes.
+- **Authoritative queue:** `docs/COMPLETION_PATH.md` and `docs/agent_handoffs/QUEUE.md`.
+- Stage 10B guided assistant workflow (`/assistant`: game → player → clip list) is the current bounded slice.
+- Hermes/Linux Docker smoke is documented in `docs/DOCKER_PRODUCTION_SMOKE.md` — run before public production (Scott gate).
+- Keep doc header dates aligned when stages ship; `/preview` is narrative, not completion proof.
 
 ### 7. Data Governance
 

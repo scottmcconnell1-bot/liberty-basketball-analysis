@@ -1,13 +1,13 @@
 # Active Task
 
-Updated: 2026-07-05
+Updated: 2026-07-06
 Branch: `jason-5-may-updates`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | stage-10a-assistant-api |
+| **id** | nav-docs-stage-10b |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,12 +15,10 @@ Branch: `jason-5-may-updates`
 
 ### Proven
 
-- `POST /api/assistant/query` — read-only Q&A from trusted events, stats, clips
-- `assistant_query.py` heuristic intents: player stats, team stats, turnovers, minutes, four factors, clips
-- `ENABLE_ASSISTANT_READ_ONLY` feature flag + `AI_ASSIST` module gate
-- Citations include event/stat/clip IDs; `review_scope=accepted_and_corrected_only`
-- 360 passed, 1 skipped
+- Nav active-state fixed via `nav_active()` template global + blueprint-qualified endpoints
+- Doc freshness: `STAGE_INDEX.md`, `PROJECT_STATUS.md`, `ROADMAP.md` updated to 2026-07-06
+- Stage 10B: `/assistant` guided workflow + `/api/assistant/workflow/*` steps
 
 ### Next
 
-Stage 10B — guided workflow: game → player → clip list
+Standing deferrals (10C detector, auth flip, Hermes Docker smoke when Scott is ready)
