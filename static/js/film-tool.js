@@ -1349,6 +1349,14 @@ function initAnalysisStatus() {
                 if (typeof window.updateRunAnalysisBar === 'function') {
                     window.updateRunAnalysisBar('failed');
                 }
+                const runBar = document.getElementById('runAnalysisBar');
+                const detail = document.getElementById('runAnalysisDetail');
+                if (detail) {
+                    let msg = failStep;
+                    if (data.log_path) msg += ` Log: ${data.log_path}`;
+                    detail.textContent = msg;
+                }
+                if (runBar) runBar.style.display = 'flex';
             } else {
                 pollTimer = setTimeout(fetchAnalysisProgress, 5000);
             }
@@ -1379,8 +1387,10 @@ function initAnalysisStatus() {
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (!data) return;
-                if (data.status === 'running' || data.status === 'pending') {
+                if (data.status === 'running') {
                     window.startAnalysisProgressPolling(gameId);
+                } else if (data.status === 'failed' && typeof window.updateRunAnalysisBar === 'function') {
+                    window.updateRunAnalysisBar('failed');
                 }
             })
             .catch(() => {});
@@ -1413,11 +1423,23 @@ function initRunAnalysis() {
             }
             return;
         }
-        if (analysisStatus === 'running' || analysisStatus === 'pending') {
+        if (analysisStatus === 'running') {
             if (typeof window.startAnalysisProgressPolling === 'function') {
                 window.startAnalysisProgressPolling(window.FILM_TOOL_GAME_ID);
             } else {
-                showRunAnalysisProgress(0, 'AI analysis in progress…');
+                showRunAnalysisProgress(0, 'AI analysis in progress…', 'running', 0);
+            }
+            return;
+        }
+        if (analysisStatus === 'pending') {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = '';
+            btn.disabled = false;
+            btn.textContent = '🤖 Run AI Analysis';
+            if (statusEl) {
+                statusEl.textContent = 'Analysis is queued but has not started yet. Click Run AI Analysis to start.';
             }
             return;
         }

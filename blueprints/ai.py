@@ -40,6 +40,8 @@ from helpers import (
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
     validate_video_for_analysis,
+    reconcile_stuck_analysis_run,
+    ai_analysis_log_path,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -135,6 +137,7 @@ def get_stats(game_id):
 def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
     db = get_db()
+    reconcile_stuck_analysis_run(db, game_id)
     row = db.execute(
         """SELECT status, progress_pct, progress_step, started_at, completed_at, error_message,
                   analysis_key,
@@ -156,6 +159,7 @@ def get_analysis_progress(game_id):
         "progress_pct": row["progress_pct"] or 0,
         "progress_step": row["progress_step"] or "",
         "error_message": row["error_message"],
+        "log_path": ai_analysis_log_path(game_id),
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
         "detection_count": row["detection_count"],

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 import pytest
@@ -59,3 +60,37 @@ def test_validate_video_for_analysis_rejects_missing_file():
     ok, message = validate_video_for_analysis("/tmp/does-not-exist-liberty-test.mp4")
     assert ok is False
     assert "not found" in (message or "").lower()
+
+
+def test_reconcile_stuck_analysis_run_marks_failed_on_traceback(app, tmp_path):
+    from helpers import ai_analysis_log_path, reconcile_stuck_analysis_run
+
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """CREATE TABLE analysis_runs (
+            id INTEGER PRIMARY KEY,
+            analysis_key TEXT,
+            status TEXT,
+            error_message TEXT,
+            progress_step TEXT,
+            completed_at TEXT
+        )"""
+    )
+    conn.execute(
+        "INSERT INTO analysis_runs (analysis_key, status) VALUES (?, 'pending')",
+        ("nfhs_gam1_trim_20260101",),
+    )
+    conn.commit()
+    conn.close()
+
+    log_path = ai_analysis_log_path("nfhs_gam1_trim_20260101")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w", encoding="utf-8") as handle:
+        handle.write("[launcher] Started\nTraceback\nModuleNotFoundError: No module named 'cv2'\n")
+
+    conn = sqlite3.connect(db_path)
+    reconcile_stuck_analysis_run(conn, "nfhs_gam1_trim_20260101")
+    row = conn.execute("SELECT status, error_message FROM analysis_runs").fetchone()
+    assert row[0] == "failed"
+    assert "cv2" in row[1]

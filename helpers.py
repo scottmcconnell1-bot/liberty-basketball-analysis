@@ -12,6 +12,7 @@ import json
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 from datetime import datetime
 from functools import wraps
@@ -846,8 +847,8 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(
         """INSERT INTO analysis_runs
-           (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+           (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status, started_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,NULL)""",
         (
             video_row["relational_game_id"],
             analysis_key,
@@ -954,11 +955,69 @@ def ai_analysis_log_path(game_id: str) -> str:
     return os.path.join(logs_dir, f"ai-{safe_key}.log")
 
 
+def _read_log_tail(log_path: str, limit: int = 500) -> str:
+    try:
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
+            return handle.read()[-limit:]
+    except OSError:
+        return ""
+
+
+def reconcile_stuck_analysis_run(db, game_id: str) -> None:
+    """Mark orphaned pending runs failed so the UI can offer retry."""
+    row = db.execute(
+        """SELECT id, status
+           FROM analysis_runs
+           WHERE analysis_key=?
+           ORDER BY id DESC
+           LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if not row or row[1] != "pending":
+        return
+
+    log_path = ai_analysis_log_path(game_id)
+    if not os.path.exists(log_path):
+        return
+
+    content = _read_log_tail(log_path, 4000)
+    if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (_read_log_tail(log_path, 500), row[0]),
+        )
+        db.commit()
+        return
+
+    age_seconds = time.time() - os.path.getmtime(log_path)
+    if age_seconds > 45 and "[launcher] Started" in content:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (
+                "Analysis worker stopped before processing started. "
+                "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
+                row[0],
+            ),
+        )
+        db.commit()
+
+
 def start_analysis_subprocess(game_id, video_path):
     import sys
 
     log_path = ai_analysis_log_path(game_id)
     video_path = os.path.abspath(video_path)
+    db_path = current_app.config["DATABASE"]
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
 
@@ -972,13 +1031,35 @@ def start_analysis_subprocess(game_id, video_path):
         if os.name != "nt":
             popen_kwargs["start_new_session"] = True
         proc = subprocess.Popen(
-            [sys.executable, "ai_analyzer.py", current_app.config["DATABASE"], video_path, game_id],
+            [sys.executable, "analysis_launcher.py", db_path, video_path, game_id],
             **popen_kwargs,
         )
         if proc is not None:
-            log_file.write(f"[launcher] Started ai_analyzer.py PID={proc.pid} for {game_id}\n")
+            log_file.write(f"[launcher] Started analysis_launcher.py PID={proc.pid} for {game_id}\n")
+            log_file.write(f"[launcher] Python: {sys.executable}\n")
             log_file.write(f"[launcher] Log file: {log_path}\n")
             log_file.write(f"[launcher] Video: {video_path}\n")
+            log_file.flush()
+
+            def _watch_process() -> None:
+                code = proc.wait()
+                if code == 0:
+                    return
+                tail = _read_log_tail(log_path)
+                conn = sqlite3.connect(db_path)
+                conn.execute(
+                    """UPDATE analysis_runs
+                       SET status='failed',
+                           error_message=?,
+                           progress_step='Failed',
+                           completed_at=CURRENT_TIMESTAMP
+                       WHERE analysis_key=? AND status IN ('pending', 'running')""",
+                    (f"Analysis worker exited (code {code}). {tail}"[:500], game_id),
+                )
+                conn.commit()
+                conn.close()
+
+            threading.Thread(target=_watch_process, daemon=True, name=f"ai-watch-{game_id[:12]}").start()
         else:
             log_file.write(f"[launcher] Popen returned None for {game_id}\n")
         log_file.flush()
