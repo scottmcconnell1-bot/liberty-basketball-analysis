@@ -1507,7 +1507,8 @@ def review_page():
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def film(filename=None):
-    game_id = (request.args.get("game_id") or "").strip() or None
+    requested_game_id = (request.args.get("game_id") or "").strip() or None
+    game_id = requested_game_id
     shot_summary = []
     player_effect_data = []
     player_minutes_data = []
@@ -1543,6 +1544,13 @@ def film(filename=None):
             ).fetchone()
             if row:
                 game_id = row["analysis_key"]
+        if requested_game_id:
+            run_row = db.execute(
+                "SELECT status FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
+                (requested_game_id,),
+            ).fetchone()
+            if run_row:
+                analysis_status = run_row["status"]
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)

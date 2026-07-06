@@ -1248,7 +1248,7 @@ function undoLastRow() {
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
-function showRunAnalysisProgress(pct, step) {
+function showRunAnalysisProgress(pct, step, status, elapsedSec) {
     const runBar = document.getElementById('runAnalysisBar');
     const idleRow = document.getElementById('runAnalysisIdleRow');
     const progressBlock = document.getElementById('runAnalysisProgressBlock');
@@ -1258,22 +1258,45 @@ function showRunAnalysisProgress(pct, step) {
     const phase = document.getElementById('runAnalysisPhase');
     const detail = document.getElementById('runAnalysisDetail');
     const percent = Math.max(0, Math.min(100, pct || 0));
-    const indeterminate = percent === 0;
+    const jobStatus = status || 'running';
+    const waiting = percent === 0 && (jobStatus === 'pending' || jobStatus === 'running');
+    const gameId = window.FILM_TOOL_GAME_ID || '';
+    const isRerun = String(gameId).includes('__rerun_');
 
     if (runBar) {
         runBar.style.display = 'flex';
-        runBar.classList.toggle('ft-analysis-indeterminate', indeterminate);
+        runBar.classList.toggle('ft-analysis-indeterminate', waiting);
     }
     if (idleRow) idleRow.style.display = 'none';
     if (progressBlock) progressBlock.style.display = 'block';
     if (btn) btn.style.display = 'none';
-    if (bar) bar.style.width = indeterminate ? '40%' : `${percent}%`;
-    if (pctEl) pctEl.textContent = indeterminate ? '—' : `${Math.round(percent)}%`;
-    if (phase) phase.textContent = step || 'Analyzing…';
+    if (bar) bar.style.width = waiting ? '40%' : `${percent}%`;
+    if (pctEl) pctEl.textContent = waiting ? '—' : `${Math.round(percent)}%`;
+
+    let phaseText = step || 'Analyzing…';
+    if (jobStatus === 'pending') {
+        phaseText = step || 'Queued — starting AI worker…';
+    } else if (waiting) {
+        phaseText = step || 'Loading AI models…';
+    }
+    if (phase) phase.textContent = phaseText;
+
     if (detail) {
-        detail.textContent = indeterminate
-            ? 'Analysis is running on the server. Progress updates every few seconds.'
-            : '';
+        const parts = [];
+        if (jobStatus === 'pending') {
+            parts.push('Waiting for the analysis worker to start on the server.');
+        } else if (waiting) {
+            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes, then the number appears.');
+        }
+        if (elapsedSec != null && waiting) {
+            const mins = Math.floor(elapsedSec / 60);
+            const secs = elapsedSec % 60;
+            parts.push(mins ? `${mins}m ${secs}s elapsed` : `${secs}s elapsed`);
+        }
+        if (isRerun) {
+            parts.push('Comparison rerun opened from Compare AI.');
+        }
+        detail.textContent = parts.join(' • ');
     }
 }
 
@@ -1293,6 +1316,7 @@ function initAnalysisStatus() {
     let gameId = window.FILM_TOOL_GAME_ID || '';
 
     let pollTimer = null;
+    let pollStartedAt = null;
 
     async function fetchAnalysisProgress() {
         if (!gameId) return;
@@ -1301,14 +1325,15 @@ function initAnalysisStatus() {
             if (!response.ok) return;
             const data = await response.json();
             const pct = data.progress_pct || 0;
-            const step = data.progress_step || 'Analyzing…';
+            const step = data.progress_step || (data.status === 'pending' ? 'Queued — starting AI worker…' : 'Loading AI models…');
+            const elapsedSec = pollStartedAt ? Math.floor((Date.now() - pollStartedAt) / 1000) : null;
             if (data.status === 'running' || data.status === 'pending') {
-                showRunAnalysisProgress(pct, step);
+                showRunAnalysisProgress(pct, step, data.status, elapsedSec);
                 showUploadAnalysisProgress(pct, step);
                 pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
                 pollTimer = null;
-                showRunAnalysisProgress(100, 'Analysis complete!');
+                showRunAnalysisProgress(100, 'Analysis complete!', 'completed', elapsedSec);
                 showUploadAnalysisProgress(100, 'Analysis complete!');
                 setTimeout(() => {
                     const analysisShell = document.getElementById('analysisProgressShell');
@@ -1320,7 +1345,8 @@ function initAnalysisStatus() {
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
                 pollTimer = null;
-                showRunAnalysisProgress(0, 'Analysis failed');
+                const failStep = data.error_message || data.progress_step || 'Analysis failed';
+                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec);
                 if (typeof window.updateRunAnalysisBar === 'function') {
                     window.updateRunAnalysisBar('failed');
                 }
@@ -1343,7 +1369,8 @@ function initAnalysisStatus() {
             clearTimeout(pollTimer);
             pollTimer = null;
         }
-        showRunAnalysisProgress(0, 'Starting AI analysis…');
+        pollStartedAt = Date.now();
+        showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
         showUploadAnalysisProgress(0, 'Starting AI analysis…');
         fetchAnalysisProgress();
     };
@@ -1418,7 +1445,7 @@ function initRunAnalysis() {
 
     btn.addEventListener('click', async () => {
         btn.disabled = true;
-        showRunAnalysisProgress(0, 'Starting AI analysis…');
+        showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
         try {
             const resp = await fetch('/api/videos/' + encodeURIComponent(videoId) + '/analyze', { method: 'POST' });
             const data = await resp.json();

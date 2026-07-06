@@ -48,7 +48,7 @@
       </div>
       <button class="btn btn-primary" type="submit" {% if not ai_runtime_available %}disabled title="Install AI packages first"{% endif %}>Rerun AI with Current Settings</button>
     </div>
-    <p class="text-muted mt-2">Each rerun gets its own analysis key, so detections and events stay separate for side-by-side comparison.</p>
+    <p class="text-muted mt-2">Each rerun gets its own analysis key, so detections and events stay separate for side-by-side comparison. Opening a <strong>running</strong> rerun in Film Tool shows analysis progress (animated bar until the first percent appears).</p>
     <p class="text-muted">Detector and runtime settings affect the current video pipeline directly. Local LLM choices are captured in the snapshot so you can compare them as future AI-assisted steps are added.</p>
   </form>
 </div>
@@ -103,7 +103,7 @@
         </td>
         <td>{{ run.started_at or "—" }}</td>
         <td style="white-space:nowrap;">
-          <a class="btn btn-primary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=run.display_analysis_key) }}">Open in Film Tool</a>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('core.film', filename=video.stored_filename, game_id=run.display_analysis_key) }}" title="Opens this run in Film Tool. If status is running/pending, you'll see analysis progress.">Open in Film Tool</a>
         </td>
       </tr>
       {% endfor %}
