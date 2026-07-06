@@ -727,8 +727,19 @@ def ai_packages_install_hint() -> str:
 
 def ai_packages_install_commands() -> str:
     return (
-        "pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
-        "pip install -r requirements.docker.txt"
+        "Windows (PowerShell, from repo root):\n"
+        "  .\\.venv\\Scripts\\Activate.ps1\n"
+        "  python --version    # must be 3.12.x or 3.13.x\n"
+        "  .\\scripts\\install_ai_deps.ps1\n"
+        "\n"
+        "Or manually (after activating .venv with Python 3.12/3.13):\n"
+        "  python -m pip install --upgrade pip\n"
+        "  python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
+        "  python -m pip install -r requirements.docker.txt\n"
+        "\n"
+        "Linux:\n"
+        "  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
+        "  pip install -r requirements.docker.txt"
     )
 
 

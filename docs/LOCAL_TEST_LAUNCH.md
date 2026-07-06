@@ -62,3 +62,4 @@ See the coach walkthrough in chat or `docs/agent_handoffs/` for the full test ch
 - **Port busy:** `python scripts/launch_liberty.py --port 8081`
 - **Stale dependencies:** `python scripts/launch_liberty.py --reinstall-deps`
 - **winget blocked:** Install Python 3.12 from python.org, then re-run `Start Liberty.bat`
+- **`pip install torch` → "No matching distribution found":** Your Python is not 3.12/3.13. Run `python --version` and `py -0p`. Install 3.12 with `winget install Python.Python.3.12`, recreate `.venv` with `py -3.12 -m venv .venv`, then run `.\scripts\install_ai_deps.ps1`
