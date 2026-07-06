@@ -1248,25 +1248,51 @@ function undoLastRow() {
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
-function initAnalysisStatus() {
-    const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
+function showRunAnalysisProgress(pct, step) {
+    const runBar = document.getElementById('runAnalysisBar');
+    const idleRow = document.getElementById('runAnalysisIdleRow');
+    const progressBlock = document.getElementById('runAnalysisProgressBlock');
+    const btn = document.getElementById('runAnalysisBtn');
+    const bar = document.getElementById('runAnalysisProgressBar');
+    const pctEl = document.getElementById('runAnalysisPct');
+    const phase = document.getElementById('runAnalysisPhase');
+    const detail = document.getElementById('runAnalysisDetail');
+    const percent = Math.max(0, Math.min(100, pct || 0));
+    const indeterminate = percent === 0;
+
+    if (runBar) {
+        runBar.style.display = 'flex';
+        runBar.classList.toggle('ft-analysis-indeterminate', indeterminate);
+    }
+    if (idleRow) idleRow.style.display = 'none';
+    if (progressBlock) progressBlock.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+    if (bar) bar.style.width = indeterminate ? '40%' : `${percent}%`;
+    if (pctEl) pctEl.textContent = indeterminate ? '—' : `${Math.round(percent)}%`;
+    if (phase) phase.textContent = step || 'Analyzing…';
+    if (detail) {
+        detail.textContent = indeterminate
+            ? 'Analysis is running on the server. Progress updates every few seconds.'
+            : '';
+    }
+}
+
+function showUploadAnalysisProgress(pct, step) {
     const analysisShell = document.getElementById('analysisProgressShell');
     const analysisBar = document.getElementById('analysisProgressBar');
     const analysisPct = document.getElementById('analysisProgressPct');
     const analysisText = document.getElementById('analysisProgressText');
+    if (analysisShell) analysisShell.style.display = 'block';
+    if (analysisBar) analysisBar.style.width = `${pct || 0}%`;
+    if (analysisPct) analysisPct.textContent = `${Math.round(pct || 0)}%`;
+    if (analysisText) analysisText.textContent = step || '';
+}
+
+function initAnalysisStatus() {
+    const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
     let gameId = window.FILM_TOOL_GAME_ID || '';
 
-    function showAnalysisProgress(pct, step) {
-        if (analysisShell) analysisShell.style.display = 'block';
-        if (analysisBar) analysisBar.style.width = pct + '%';
-        if (analysisPct) analysisPct.textContent = pct + '%';
-        if (analysisText) analysisText.textContent = step || '';
-    }
-
-    function hideRunAnalysisBar() {
-        const bar = document.getElementById('runAnalysisBar');
-        if (bar) bar.style.display = 'none';
-    }
+    let pollTimer = null;
 
     async function fetchAnalysisProgress() {
         if (!gameId) return;
@@ -1274,24 +1300,36 @@ function initAnalysisStatus() {
             const response = await fetch('/api/analysis_progress/' + encodeURIComponent(gameId));
             if (!response.ok) return;
             const data = await response.json();
+            const pct = data.progress_pct || 0;
+            const step = data.progress_step || 'Analyzing…';
             if (data.status === 'running' || data.status === 'pending') {
-                hideRunAnalysisBar();
-                showAnalysisProgress(data.progress_pct || 0, data.progress_step || 'Analyzing…');
-                setTimeout(fetchAnalysisProgress, 3000);
+                showRunAnalysisProgress(pct, step);
+                showUploadAnalysisProgress(pct, step);
+                pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
-                showAnalysisProgress(100, 'Analysis complete!');
-                setTimeout(() => { if (analysisShell) analysisShell.style.display = 'none'; }, 3000);
-                hideRunAnalysisBar();
+                pollTimer = null;
+                showRunAnalysisProgress(100, 'Analysis complete!');
+                showUploadAnalysisProgress(100, 'Analysis complete!');
+                setTimeout(() => {
+                    const analysisShell = document.getElementById('analysisProgressShell');
+                    if (analysisShell) analysisShell.style.display = 'none';
+                    if (typeof window.updateRunAnalysisBar === 'function') {
+                        window.updateRunAnalysisBar('completed');
+                    }
+                }, 3000);
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
-                showAnalysisProgress(0, 'Analysis failed');
-                if (window.updateRunAnalysisBar) window.updateRunAnalysisBar('failed');
+                pollTimer = null;
+                showRunAnalysisProgress(0, 'Analysis failed');
+                if (typeof window.updateRunAnalysisBar === 'function') {
+                    window.updateRunAnalysisBar('failed');
+                }
             } else {
-                setTimeout(fetchAnalysisProgress, 5000);
+                pollTimer = setTimeout(fetchAnalysisProgress, 5000);
             }
         } catch (err) {
             console.error('Error fetching analysis progress:', err);
-            setTimeout(fetchAnalysisProgress, 10000);
+            pollTimer = setTimeout(fetchAnalysisProgress, 10000);
         }
     }
 
@@ -1301,7 +1339,12 @@ function initAnalysisStatus() {
             window.FILM_TOOL_GAME_ID = newGameId;
         }
         if (!autoStatsEnabled || !gameId) return;
-        showAnalysisProgress(0, 'Checking analysis status…');
+        if (pollTimer) {
+            clearTimeout(pollTimer);
+            pollTimer = null;
+        }
+        showRunAnalysisProgress(0, 'Starting AI analysis…');
+        showUploadAnalysisProgress(0, 'Starting AI analysis…');
         fetchAnalysisProgress();
     };
 
@@ -1324,6 +1367,8 @@ function initRunAnalysis() {
     const bar = document.getElementById('runAnalysisBar');
     const btn = document.getElementById('runAnalysisBtn');
     const statusEl = document.getElementById('runAnalysisStatus');
+    const idleRow = document.getElementById('runAnalysisIdleRow');
+    const progressBlock = document.getElementById('runAnalysisProgressBlock');
     if (!autoStatsEnabled || !videoId || !bar || !btn) return;
 
     const aiAvailable = window.FILM_TOOL_AI_AVAILABLE !== false && String(window.FILM_TOOL_AI_AVAILABLE) !== 'false';
@@ -1333,6 +1378,8 @@ function initRunAnalysis() {
         analysisStatus = status || analysisStatus;
         if (!aiAvailable) {
             bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
             btn.style.display = 'none';
             if (statusEl) {
                 statusEl.innerHTML = 'AI packages are not installed on this server (opencv-python, ultralytics). '
@@ -1341,9 +1388,11 @@ function initRunAnalysis() {
             return;
         }
         if (analysisStatus === 'running' || analysisStatus === 'pending') {
-            bar.style.display = 'flex';
-            btn.style.display = 'none';
-            if (statusEl) statusEl.textContent = 'AI analysis in progress…';
+            if (typeof window.startAnalysisProgressPolling === 'function') {
+                window.startAnalysisProgressPolling(window.FILM_TOOL_GAME_ID);
+            } else {
+                showRunAnalysisProgress(0, 'AI analysis in progress…');
+            }
             return;
         }
         if (analysisStatus === 'completed') {
@@ -1351,6 +1400,9 @@ function initRunAnalysis() {
             return;
         }
         bar.style.display = 'flex';
+        bar.classList.remove('ft-analysis-indeterminate');
+        if (idleRow) idleRow.style.display = 'flex';
+        if (progressBlock) progressBlock.style.display = 'none';
         btn.style.display = '';
         btn.disabled = false;
         btn.textContent = analysisStatus === 'failed' ? '🔄 Retry AI Analysis' : '🤖 Run AI Analysis';
@@ -1366,15 +1418,13 @@ function initRunAnalysis() {
 
     btn.addEventListener('click', async () => {
         btn.disabled = true;
-        if (statusEl) statusEl.textContent = 'Starting AI analysis…';
+        showRunAnalysisProgress(0, 'Starting AI analysis…');
         try {
             const resp = await fetch('/api/videos/' + encodeURIComponent(videoId) + '/analyze', { method: 'POST' });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
+            if (data.game_id) window.FILM_TOOL_GAME_ID = data.game_id;
             updateRunAnalysisBar('pending');
-            if (typeof window.startAnalysisProgressPolling === 'function') {
-                window.startAnalysisProgressPolling(data.game_id || window.FILM_TOOL_GAME_ID);
-            }
             setStatus(data.message || 'AI analysis started.');
         } catch (err) {
             if (statusEl) statusEl.textContent = err.message;

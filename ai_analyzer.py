@@ -387,7 +387,7 @@ if __name__ == '__main__':
 
     _conn = sqlite3.connect(db_path)
     _conn.execute(
-        "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP WHERE analysis_key=? AND status='pending'",
+        "UPDATE analysis_runs SET status='running', started_at=CURRENT_TIMESTAMP, progress_pct=0, progress_step='Loading AI models…' WHERE analysis_key=? AND status='pending'",
         (game_id,)
     )
 

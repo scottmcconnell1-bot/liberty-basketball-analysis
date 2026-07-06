@@ -629,6 +629,28 @@
     background: var(--color-primary);
     transition: width .15s ease;
 }
+#film-tool-root .ft-run-analysis-progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .35rem;
+}
+#film-tool-root .ft-run-analysis-pct {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+}
+#film-tool-root #runAnalysisBar.ft-analysis-indeterminate .upload-progress-bar > span {
+    width: 40% !important;
+    animation: ft-analysis-progress-slide 1.4s ease-in-out infinite;
+}
+@keyframes ft-analysis-progress-slide {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(320%); }
+}
 
 /* ── AI Events Timeline ───────────────────────────────────── */
 #film-tool-root .ai-events-summary {
