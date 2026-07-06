@@ -35,6 +35,14 @@ from flask import Blueprint, redirect, render_template, request, url_for, jsonif
 from helpers import get_db, require_feature, get_default_team_id
 from module_entitlements import enforce_module_access
 from module_keys import SCOUTING
+from nfhs import (
+    _decrypt_password,
+    _encrypt_password,
+    download_nfhs_vod,
+    lookup_game,
+    login_nfhs,
+    register_nfhs_download,
+)
 
 scouting_bp = Blueprint("scouting", __name__)
 
@@ -527,18 +535,33 @@ def api_scouting_nfhs_download():
 
     if result["success"]:
         db = get_db()
-        cur = db.execute("""
-            INSERT INTO games (source_type, source_key, nfhs_game_id)
-            VALUES ('nfhs_vod', ?, ?)
-        """, (result["file_path"], game_id))
+        lookup = lookup_game(game_id, email, password)
+        saved = register_nfhs_download(
+            db,
+            result["file_path"],
+            game_id,
+            home_team=lookup.get("home_team") if lookup.get("success") else None,
+            away_team=lookup.get("away_team") if lookup.get("success") else None,
+        )
         db.commit()
+
+        film_url = url_for(
+            "core.film",
+            filename=saved["stored_filename"],
+            game_id=saved["game_id"],
+        )
 
         return jsonify({
             "status": "downloaded",
             "file_path": result["file_path"],
             "file_size": result["file_size"],
-            "game_id": cur.lastrowid,
             "nfhs_game_id": game_id,
+            "video_id": saved["video_id"],
+            "stored_filename": saved["stored_filename"],
+            "game_id": saved["game_id"],
+            "already_saved": saved.get("already_saved", False),
+            "redirect_url": film_url,
+            "videos_url": url_for("core.videos_page"),
         })
     else:
         return jsonify({"error": result["error"], "nfhs_game_id": game_id}), 400

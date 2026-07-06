@@ -251,7 +251,12 @@ function downloadNFHS() {
         status.innerHTML = '<span class="text-error">❌ ' + result.error + '</span>';
       }
     } else {
-      status.innerHTML = '<span class="text-success">✅ Downloaded! Size: ' + (result.file_size / 1024 / 1024).toFixed(1) + ' MB</span>';
+      const sizeMB = (result.file_size / 1024 / 1024).toFixed(1);
+      const savedNote = result.already_saved ? ' (already in library)' : '';
+      status.innerHTML = '<span class="text-success">✅ Saved for review' + savedNote + '! Size: ' + sizeMB + ' MB</span>';
+      if (result.redirect_url) {
+        status.innerHTML += '<div style="margin-top:8px;"><a class="btn btn-sm btn-primary" href="' + result.redirect_url + '">Open in Film Tool</a> <a class="btn btn-sm btn-secondary" href="' + (result.videos_url || '/videos') + '">All Videos</a></div>';
+      }
     }
   })
   .catch(err => {

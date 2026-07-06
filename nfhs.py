@@ -307,3 +307,87 @@ def _cleanup_files(paths: list):
                 os.remove(path)
         except OSError:
             pass
+
+
+def register_nfhs_download(
+    db,
+    file_path: str,
+    nfhs_game_id: str,
+    *,
+    opponent_name: str | None = None,
+    home_team: str | None = None,
+    away_team: str | None = None,
+) -> dict:
+    """Register a downloaded NFHS VOD in the videos library for future review."""
+    if not os.path.exists(file_path):
+        raise ValueError(f"Downloaded file not found: {file_path}")
+
+    stored_filename = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+    opponent = (opponent_name or away_team or home_team or nfhs_game_id).strip()
+    original_filename = f"nfhs_{nfhs_game_id}.mp4"
+    nfhs_url = f"{NFHS_BASE_URL}/game/{nfhs_game_id}"
+
+    existing = db.execute(
+        "SELECT id, stored_filename, game_id FROM videos WHERE stored_filename=?",
+        (stored_filename,),
+    ).fetchone()
+    if existing:
+        return {
+            "video_id": existing["id"],
+            "stored_filename": existing["stored_filename"],
+            "game_id": existing["game_id"],
+            "already_saved": True,
+        }
+
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    analysis_game_id = f"nfhs_{nfhs_game_id}_{ts}"
+
+    game_row = db.execute(
+        "SELECT id FROM games WHERE nfhs_game_id=? ORDER BY id DESC LIMIT 1",
+        (nfhs_game_id,),
+    ).fetchone()
+    if game_row:
+        relational_game_id = game_row["id"]
+    else:
+        cur = db.execute(
+            """INSERT INTO games (source_type, source_key, nfhs_game_id, nfhs_url)
+               VALUES (?, ?, ?, ?)""",
+            ("nfhs_vod", file_path, nfhs_game_id, nfhs_url),
+        )
+        relational_game_id = cur.lastrowid
+
+    video_cur = db.execute(
+        """INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes,
+                               opponent, game_id, relational_game_id, is_duplicate, duplicate_of_id)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (
+            original_filename,
+            stored_filename,
+            file_path,
+            file_size,
+            opponent,
+            analysis_game_id,
+            relational_game_id,
+            0,
+            None,
+        ),
+    )
+
+    existing_source = db.execute(
+        "SELECT id FROM sources WHERE game_id=? AND source_type='nfhs_vod' AND source_path=?",
+        (relational_game_id, file_path),
+    ).fetchone()
+    if not existing_source:
+        db.execute(
+            "INSERT INTO sources (game_id, source_type, source_path) VALUES (?,?,?)",
+            (relational_game_id, "nfhs_vod", file_path),
+        )
+
+    return {
+        "video_id": video_cur.lastrowid,
+        "stored_filename": stored_filename,
+        "game_id": analysis_game_id,
+        "relational_game_id": relational_game_id,
+        "already_saved": False,
+    }

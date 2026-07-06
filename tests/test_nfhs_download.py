@@ -1,0 +1,95 @@
+"""Tests for NFHS download registration and upload behavior."""
+import io
+import os
+
+import pytest
+
+from nfhs import register_nfhs_download
+
+
+def test_register_nfhs_download_creates_video_record(app, tmp_path):
+    video_path = tmp_path / "nfhs_gam123.mp4"
+    video_path.write_bytes(b"fake video bytes")
+
+    with app.app_context():
+        from helpers import get_db
+
+        db = get_db()
+        saved = register_nfhs_download(
+            db,
+            str(video_path),
+            "gam123",
+            home_team="Liberty Charter",
+            away_team="Riverside",
+        )
+        db.commit()
+
+        row = db.execute(
+            "SELECT * FROM videos WHERE id=?",
+            (saved["video_id"],),
+        ).fetchone()
+        game_row = db.execute(
+            "SELECT * FROM games WHERE id=?",
+            (saved["relational_game_id"],),
+        ).fetchone()
+        source_row = db.execute(
+            "SELECT * FROM sources WHERE game_id=? AND source_type='nfhs_vod'",
+            (saved["relational_game_id"],),
+        ).fetchone()
+
+    assert saved["already_saved"] is False
+    assert row is not None
+    assert row["stored_filename"] == "nfhs_gam123.mp4"
+    assert row["opponent"] == "Riverside"
+    assert row["game_id"].startswith("nfhs_gam123_")
+    assert game_row is not None
+    assert game_row["nfhs_game_id"] == "gam123"
+    assert source_row is not None
+    assert source_row["source_path"] == str(video_path)
+
+
+def test_register_nfhs_download_is_idempotent(app, tmp_path):
+    video_path = tmp_path / "nfhs_gam456.mp4"
+    video_path.write_bytes(b"fake video bytes")
+
+    with app.app_context():
+        from helpers import get_db
+
+        db = get_db()
+        first = register_nfhs_download(db, str(video_path), "gam456", opponent_name="Opponent")
+        db.commit()
+        second = register_nfhs_download(db, str(video_path), "gam456", opponent_name="Opponent")
+
+    assert first["video_id"] == second["video_id"]
+    assert second["already_saved"] is True
+
+
+def test_upload_chunk_tag_only_skips_analysis(client, app):
+    """Chunked tag-only uploads should save the video without queueing AI analysis."""
+    import uuid
+
+    chunk = io.BytesIO(b"x" * 1024)
+    data = {
+        "upload_id": f"testupload{uuid.uuid4().hex}",
+        "chunk_index": 0,
+        "total_chunks": 1,
+        "filename": "game.mp4",
+        "opponent": "Riverside",
+        "upload_mode": "tag_only",
+        "file": (chunk, "chunk.bin"),
+    }
+    resp = client.post("/api/upload_chunk", data=data, content_type="multipart/form-data")
+    if resp.status_code != 200:
+        pytest.fail(resp.get_data(as_text=True))
+    payload = resp.get_json()
+    assert payload["status"] == "complete"
+    assert "redirect_url" in payload
+
+    with app.app_context():
+        from helpers import get_db
+
+        db = get_db()
+        video = db.execute("SELECT * FROM videos ORDER BY id DESC LIMIT 1").fetchone()
+        runs = db.execute("SELECT COUNT(*) AS c FROM analysis_runs").fetchone()["c"]
+    assert video is not None
+    assert runs == 0

@@ -283,6 +283,7 @@ def upload_chunk():
     total_chunks = request.form.get("total_chunks", type=int)
     filename = request.form.get("filename", "video.mp4")
     opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+    upload_mode = (request.form.get("upload_mode") or "analyze").strip().lower()
 
     if not upload_id:
         return jsonify({"error": "Missing upload_id"}), 400
@@ -348,6 +349,17 @@ def upload_chunk():
         video_row = db.execute(
             "SELECT * FROM videos WHERE id=?", (video_cur.lastrowid,),
         ).fetchone()
+        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
+
+        if upload_mode == "tag_only":
+            db.commit()
+            return jsonify({
+                "status": "complete",
+                "filename": stored_filename,
+                "game_id": game_id,
+                "redirect_url": film_url,
+            })
+
         runtime_settings = get_runtime_settings()
         run_payload = queue_analysis_run(
             db, video_row, runtime_settings,
@@ -357,7 +369,6 @@ def upload_chunk():
             start_analysis_subprocess(run_payload["analysis_key"], dest)
         db.commit()
 
-        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
         return jsonify({
             "status": "complete",
             "filename": stored_filename,

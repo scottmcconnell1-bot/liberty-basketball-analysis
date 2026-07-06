@@ -1458,87 +1458,19 @@ function initAiUpload() {
         const sizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2);
         let msg = `Selected: ${sizeMB} MB`;
         if (file.size > 1024 * 1024 * 1024) msg += ` (${sizeGB} GB)`;
-        if (file.size > 500 * 1024 * 1024) {
-            msg += ' — will be compressed before upload';
+        if (file.size > 40 * 1024 * 1024) {
+            msg += ' — will upload in chunks';
         }
         fileSizeInfo.textContent = msg;
     });
 
-    // Shared upload function
-    function uploadFile(url, useCompression) {
+    function uploadFile(url) {
         const file = fileInput?.files?.[0];
         if (!file) { uploadProgressText.textContent = 'Please select a video file first.'; return; }
 
         uploadProgressShell?.classList.add('active');
         if (uploadProgressBar) uploadProgressBar.style.width = '0%';
-
-        // Compress if file is > 500MB and compression is requested
-        if (useCompression && file.size > 500 * 1024 * 1024) {
-            compressAndUpload(file, url);
-            return;
-        }
-
         doUpload(file, url);
-    }
-
-    function compressAndUpload(originalFile, url) {
-        if (uploadProgressText) uploadProgressText.textContent = 'Compressing video… this may take a few minutes.';
-
-        // Use browser's video compression via canvas + MediaRecorder
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(originalFile);
-        video.muted = true;
-
-        video.onloadedmetadata = () => {
-            const canvas = document.createElement('canvas');
-            // Scale down to 720p max for compression
-            const maxW = 1280, maxH = 720;
-            let w = video.videoWidth, h = video.videoHeight;
-            if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-            if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-
-            const stream = canvas.captureStream(30);
-            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 2000000 });
-            const chunks = [];
-
-            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const compressedSizeMB = (blob.size / 1024 / 1024).toFixed(1);
-                const originalSizeMB = (originalFile.size / 1024 / 1024).toFixed(1);
-                if (uploadProgressText) uploadProgressText.textContent = `Compressed: ${originalSizeMB} MB → ${compressedSizeMB} MB. Uploading…`;
-                doUpload(blob, url, originalFile.name.replace(/\.[^.]+$/, '.webm'));
-            };
-
-            recorder.start();
-            video.play();
-
-            video.ontimeupdate = () => {
-                ctx.drawImage(video, 0, 0, w, h);
-                const progress = video.duration > 0 ? (video.currentTime / video.duration * 100) : 0;
-                if (uploadProgressBar) uploadProgressBar.style.width = `${progress}%`;
-                if (uploadProgressText) uploadProgressText.textContent = `Compressing… ${progress.toFixed(0)}%`;
-            };
-
-            video.onended = () => {
-                recorder.stop();
-                URL.revokeObjectURL(video.src);
-            };
-
-            video.onerror = () => {
-                // Compression failed, upload original
-                if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
-                doUpload(originalFile, url);
-            };
-        };
-
-        video.onerror = () => {
-            if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
-            doUpload(originalFile, url);
-        };
     }
 
     function doUpload(fileOrBlob, url, filename) {
@@ -1574,7 +1506,7 @@ function initAiUpload() {
             if (uploadProgressText) uploadProgressText.textContent = `Uploading… ${percent}% (${loadedMB} / ${totalMB} MB)`;
         });
         xhr.addEventListener('load', () => {
-            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large even after compression. Try a shorter clip.'; return; }
+            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large for server upload limit. Try a shorter clip or raise the server limit.'; return; }
             if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = `Upload failed (HTTP ${xhr.status}). Please try again.`; return; }
             const payload = JSON.parse(xhr.responseText);
             if (uploadProgressBar) uploadProgressBar.style.width = '100%';
@@ -1589,6 +1521,7 @@ function initAiUpload() {
     function doChunkedUpload(file, url, filename, opponent, chunkSize) {
         const totalChunks = Math.ceil(file.size / chunkSize);
         const uploadId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        const uploadMode = url.includes('upload_only') ? 'tag_only' : 'analyze';
         let bytesUploaded = 0;
         let failed = false;
 
@@ -1609,6 +1542,7 @@ function initAiUpload() {
             formData.append('total_chunks', totalChunks);
             formData.append('filename', filename);
             formData.append('opponent', opponent);
+            formData.append('upload_mode', uploadMode);
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/upload_chunk');
@@ -1659,10 +1593,10 @@ function initAiUpload() {
 
     // Button handlers
     document.getElementById('uploadTagBtn')?.addEventListener('click', () => {
-        uploadFile('/upload_only', true);
+        uploadFile('/upload_only');
     });
     document.getElementById('uploadAiBtn')?.addEventListener('click', () => {
-        uploadFile('/upload', true);
+        uploadFile('/upload');
     });
 }
 
