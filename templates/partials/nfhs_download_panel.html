@@ -63,14 +63,6 @@
     .nfhs-download-progress-phase { font-size: .8rem; color: var(--color-text-muted, #9ca3af); }
     .nfhs-download-progress .upload-progress-bar { height: 12px; background: var(--color-surface-offset, #e5e7eb); border: 1px solid var(--color-border, #d1d5db); border-radius: 999px; overflow: hidden; }
     .nfhs-download-progress .upload-progress-bar > span { display: block; height: 100%; width: 0; background: var(--color-primary, #0d9488); transition: width .2s ease; }
-    .nfhs-download-progress.nfhs-progress-indeterminate .upload-progress-bar > span {
-      width: 40% !important;
-      animation: nfhs-progress-slide 1.4s ease-in-out infinite;
-    }
-    @keyframes nfhs-progress-slide {
-      0% { transform: translateX(-120%); }
-      100% { transform: translateX(320%); }
-    }
     .nfhs-download-progress-meta { display: flex; gap: .5rem; align-items: center; margin-top: .35rem; flex-wrap: wrap; }
     .nfhs-download-progress-detail { font-size: .75rem; color: var(--color-text-muted, #9ca3af); flex: 1; }
   </style>

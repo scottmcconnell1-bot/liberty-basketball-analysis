@@ -1265,13 +1265,12 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
 
     if (runBar) {
         runBar.style.display = 'flex';
-        runBar.classList.toggle('ft-analysis-indeterminate', waiting);
     }
     if (idleRow) idleRow.style.display = 'none';
     if (progressBlock) progressBlock.style.display = 'block';
     if (btn) btn.style.display = 'none';
-    if (bar) bar.style.width = waiting ? '40%' : `${percent}%`;
-    if (pctEl) pctEl.textContent = waiting ? '—' : `${Math.round(percent)}%`;
+    if (bar) bar.style.width = `${percent}%`;
+    if (pctEl) pctEl.textContent = `${Math.round(percent)}%`;
 
     let phaseText = step || 'Analyzing…';
     if (jobStatus === 'pending') {
@@ -1427,7 +1426,6 @@ function initRunAnalysis() {
             return;
         }
         bar.style.display = 'flex';
-        bar.classList.remove('ft-analysis-indeterminate');
         if (idleRow) idleRow.style.display = 'flex';
         if (progressBlock) progressBlock.style.display = 'none';
         btn.style.display = '';

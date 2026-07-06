@@ -119,25 +119,21 @@
             const detail = el(ids.downloadProgressText);
             const cancelBtn = el(ids.downloadCancelBtn);
             const pct = Math.max(0, Math.min(100, percent || 0));
-            const indeterminate = pct === 0 && !!activeJobId;
             let phaseText = friendlyPhase(phase, pct);
-            if (indeterminate && segments > 0) {
+            if (pct === 0 && segments > 0) {
                 phaseText = `Downloading segments… (${segments} received)`;
             }
 
             setDownloadOptionsVisible(false);
-            if (shell) {
-                shell.style.display = 'block';
-                shell.classList.toggle('nfhs-progress-indeterminate', indeterminate);
-            }
-            if (bar) bar.style.width = indeterminate ? '40%' : `${pct}%`;
-            if (pctLabel) pctLabel.textContent = indeterminate ? '—' : `${Math.round(pct)}%`;
+            if (shell) shell.style.display = 'block';
+            if (bar) bar.style.width = `${pct}%`;
+            if (pctLabel) pctLabel.textContent = `${Math.round(pct)}%`;
             if (phaseLabel) phaseLabel.textContent = phaseText;
             if (detail) {
                 const parts = [];
                 if (speed) parts.push(speed);
                 if (eta) parts.push(`ETA ${eta}`);
-                if (indeterminate && elapsedSec != null) parts.push(formatElapsed(elapsedSec));
+                if (pct === 0 && elapsedSec != null) parts.push(formatElapsed(elapsedSec));
                 detail.textContent = parts.join(' • ');
             }
             if (cancelBtn) cancelBtn.style.display = activeJobId ? 'inline-block' : 'none';

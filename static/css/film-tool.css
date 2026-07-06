@@ -643,14 +643,6 @@
     color: var(--color-primary);
     font-variant-numeric: tabular-nums;
 }
-#film-tool-root #runAnalysisBar.ft-analysis-indeterminate .upload-progress-bar > span {
-    width: 40% !important;
-    animation: ft-analysis-progress-slide 1.4s ease-in-out infinite;
-}
-@keyframes ft-analysis-progress-slide {
-    0% { transform: translateX(-120%); }
-    100% { transform: translateX(320%); }
-}
 
 /* ── AI Events Timeline ───────────────────────────────────── */
 #film-tool-root .ai-events-summary {
