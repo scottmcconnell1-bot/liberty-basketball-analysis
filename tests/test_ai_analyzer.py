@@ -94,3 +94,9 @@ def test_reconcile_stuck_analysis_run_marks_failed_on_traceback(app, tmp_path):
     row = conn.execute("SELECT status, error_message FROM analysis_runs").fetchone()
     assert row[0] == "failed"
     assert "cv2" in row[1]
+
+
+def test_analysis_runs_has_progress_columns(db):
+    cols = {row[1] for row in db.execute("PRAGMA table_info(analysis_runs)").fetchall()}
+    assert "progress_pct" in cols
+    assert "progress_step" in cols

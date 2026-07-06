@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
     settings_json TEXT,
     run_kind     TEXT NOT NULL DEFAULT 'primary',
     status       TEXT NOT NULL DEFAULT 'pending',
+    progress_pct REAL DEFAULT 0,
+    progress_step TEXT,
     started_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
     error_message TEXT

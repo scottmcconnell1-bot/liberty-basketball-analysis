@@ -10,32 +10,51 @@ import traceback
 
 def _mark_failed(db_path: str, game_id: str, message: str) -> None:
     conn = sqlite3.connect(db_path)
-    conn.execute(
-        """UPDATE analysis_runs
-           SET status='failed',
-               error_message=?,
-               progress_step='Failed',
-               completed_at=CURRENT_TIMESTAMP
-           WHERE analysis_key=? AND status IN ('pending', 'running')""",
-        (message[:500], game_id),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE analysis_key=? AND status IN ('pending', 'running')""",
+            (message[:500], game_id),
+        )
+        try:
+            conn.execute(
+                """UPDATE analysis_runs
+                   SET progress_step='Failed'
+                   WHERE analysis_key=? AND status='failed'""",
+                (game_id,),
+            )
+        except sqlite3.OperationalError:
+            pass
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _mark_running(db_path: str, game_id: str) -> None:
     conn = sqlite3.connect(db_path)
-    conn.execute(
-        """UPDATE analysis_runs
-           SET status='running',
-               started_at=CURRENT_TIMESTAMP,
-               progress_pct=0,
-               progress_step='Loading AI models…'
-           WHERE analysis_key=? AND status='pending'""",
-        (game_id,),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            """UPDATE analysis_runs
+               SET status='running',
+               started_at=CURRENT_TIMESTAMP
+               WHERE analysis_key=? AND status='pending'""",
+            (game_id,),
+        )
+        try:
+            conn.execute(
+                """UPDATE analysis_runs
+                   SET progress_pct=0, progress_step='Loading AI models…'
+                   WHERE analysis_key=? AND status='running'""",
+                (game_id,),
+            )
+        except sqlite3.OperationalError:
+            pass
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def main() -> int:

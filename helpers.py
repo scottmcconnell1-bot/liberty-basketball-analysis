@@ -1030,6 +1030,8 @@ def start_analysis_subprocess(game_id, video_path):
         }
         if os.name != "nt":
             popen_kwargs["start_new_session"] = True
+        elif hasattr(subprocess, "CREATE_NO_WINDOW"):
+            popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         proc = subprocess.Popen(
             [sys.executable, "analysis_launcher.py", db_path, video_path, game_id],
             **popen_kwargs,
@@ -1039,37 +1041,43 @@ def start_analysis_subprocess(game_id, video_path):
             log_file.write(f"[launcher] Python: {sys.executable}\n")
             log_file.write(f"[launcher] Log file: {log_path}\n")
             log_file.write(f"[launcher] Video: {video_path}\n")
+            log_file.write(f"[launcher] Database: {db_path}\n")
             log_file.flush()
 
             def _watch_process() -> None:
-                code = proc.wait()
-                if code == 0:
-                    return
-                tail = _read_log_tail(log_path)
-                conn = sqlite3.connect(db_path)
-                conn.execute(
-                    """UPDATE analysis_runs
-                       SET status='failed',
-                           error_message=?,
-                           progress_step='Failed',
-                           completed_at=CURRENT_TIMESTAMP
-                       WHERE analysis_key=? AND status IN ('pending', 'running')""",
-                    (f"Analysis worker exited (code {code}). {tail}"[:500], game_id),
-                )
-                conn.commit()
-                conn.close()
+                try:
+                    code = proc.wait()
+                    if code != 0:
+                        tail = _read_log_tail(log_path)
+                        conn = sqlite3.connect(db_path)
+                        conn.execute(
+                            """UPDATE analysis_runs
+                               SET status='failed',
+                                   error_message=?,
+                                   progress_step='Failed',
+                                   completed_at=CURRENT_TIMESTAMP
+                               WHERE analysis_key=? AND status IN ('pending', 'running')""",
+                            (f"Analysis worker exited (code {code}). {tail}"[:500], game_id),
+                        )
+                        conn.commit()
+                        conn.close()
+                finally:
+                    try:
+                        log_file.close()
+                    except OSError:
+                        pass
 
             threading.Thread(target=_watch_process, daemon=True, name=f"ai-watch-{game_id[:12]}").start()
         else:
             log_file.write(f"[launcher] Popen returned None for {game_id}\n")
-        log_file.flush()
+            log_file.flush()
+            log_file.close()
         return log_path
     except Exception as e:
         log_file.write(f"[launcher] Failed to start: {e}\n")
         log_file.flush()
-        raise
-    finally:
         log_file.close()
+        raise
 
 
 def build_run_summary(run_row):
@@ -2104,6 +2112,8 @@ def _ensure_migration_columns(db):
         ("analysis_runs", "run_label", "ALTER TABLE analysis_runs ADD COLUMN run_label TEXT"),
         ("analysis_runs", "settings_json", "ALTER TABLE analysis_runs ADD COLUMN settings_json TEXT"),
         ("analysis_runs", "run_kind", "ALTER TABLE analysis_runs ADD COLUMN run_kind TEXT DEFAULT 'primary'"),
+        ("analysis_runs", "progress_pct", "ALTER TABLE analysis_runs ADD COLUMN progress_pct REAL DEFAULT 0"),
+        ("analysis_runs", "progress_step", "ALTER TABLE analysis_runs ADD COLUMN progress_step TEXT"),
         ("events", "source_video",   "ALTER TABLE events ADD COLUMN source_video TEXT"),
         ("events", "source_frame",   "ALTER TABLE events ADD COLUMN source_frame INTEGER"),
         ("events", "human_verified", "ALTER TABLE events ADD COLUMN human_verified INTEGER NOT NULL DEFAULT 0"),

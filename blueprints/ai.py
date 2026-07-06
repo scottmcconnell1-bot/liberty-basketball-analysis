@@ -42,6 +42,7 @@ from helpers import (
     validate_video_for_analysis,
     reconcile_stuck_analysis_run,
     ai_analysis_log_path,
+    _read_log_tail,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -553,6 +554,39 @@ def _start_video_analysis_run(video, *, run_label=None):
         "run_kind": run_kind,
         "message": message,
     }, None, None
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/analysis-debug")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_analysis_debug(vid_id):
+    """Return latest analysis run + log tail for troubleshooting."""
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    clause = _video_analysis_runs_clause()
+    row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    if not row:
+        return jsonify({"video_id": vid_id, "run": None, "log_tail": ""})
+
+    game_id = row["analysis_key"] or video["game_id"]
+    reconcile_stuck_analysis_run(db, game_id)
+    row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
+    log_path = ai_analysis_log_path(game_id)
+    return jsonify({
+        "video_id": vid_id,
+        "video_path": video["file_path"],
+        "video_exists": os.path.exists(video["file_path"]),
+        "run": dict(row),
+        "log_path": log_path,
+        "log_tail": _read_log_tail(log_path, 2000) if os.path.exists(log_path) else "",
+    })
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/analyze", methods=["POST"])
