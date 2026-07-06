@@ -309,6 +309,23 @@ def _yt_dlp_available() -> bool:
         return False
 
 
+def _parse_yt_dlp_progress(line: str) -> dict | None:
+    """Parse a yt-dlp progress line into percent/speed/eta."""
+    if "[download]" not in line or "%" not in line:
+        return None
+    percent_match = re.search(r"\[download\]\s+(\d+(?:\.\d+)?)%", line)
+    if not percent_match:
+        return None
+    speed_match = re.search(r"\bat\s+(\S+)", line)
+    eta_match = re.search(r"\bETA\s+(\S+)", line)
+    return {
+        "percent": float(percent_match.group(1)),
+        "speed": speed_match.group(1) if speed_match else None,
+        "eta": eta_match.group(1) if eta_match else None,
+        "message": line.strip()[-160:],
+    }
+
+
 def download_nfhs_vod(
     game_id: str,
     email: str,
@@ -316,6 +333,7 @@ def download_nfhs_vod(
     output_dir: str,
     *,
     watch_url: str | None = None,
+    progress_callback=None,
 ) -> dict:
     """
     Download NFHS VOD using yt-dlp with authenticated session cookies.
@@ -362,6 +380,8 @@ def download_nfhs_vod(
         cmd = [
             *_yt_dlp_command(),
             "--no-check-certificates",
+            "--newline",
+            "--progress",
             "--add-header", f"Authorization: Bearer {token}",
             "--add-header", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "-o", output_path,
@@ -370,15 +390,33 @@ def download_nfhs_vod(
             "--fragment-retries", "3",
             nfhs_url,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
-        if result.returncode == 0 and os.path.exists(output_path):
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        output_lines: list[str] = []
+        assert proc.stdout is not None
+        for line in iter(proc.stdout.readline, ""):
+            output_lines.append(line)
+            if progress_callback:
+                parsed = _parse_yt_dlp_progress(line)
+                if parsed:
+                    progress_callback(**parsed)
+        return_code = proc.wait(timeout=7200)
+        if return_code == 0 and os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             _cleanup_files([header_file])
+            if progress_callback:
+                progress_callback(percent=100.0, message="Download finished")
             return {"success": True, "file_path": output_path, "file_size": file_size, "error": None}
-        else:
-            error_msg = (result.stderr or result.stdout or "yt-dlp failed")[-500:]
-            _cleanup_files([header_file])
-            return {"success": False, "file_path": None, "file_size": 0, "error": f"yt-dlp error: {error_msg}"}
+
+        combined = "".join(output_lines)
+        error_msg = (combined or "yt-dlp failed")[-500:]
+        _cleanup_files([header_file])
+        return {"success": False, "file_path": None, "file_size": 0, "error": f"yt-dlp error: {error_msg}"}
     except FileNotFoundError:
         _cleanup_files([header_file])
         return {

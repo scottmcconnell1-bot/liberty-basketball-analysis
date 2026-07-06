@@ -142,3 +142,18 @@ def test_yt_dlp_available_after_install():
     except ImportError:
         pytest.skip("yt-dlp not installed in this environment yet")
     assert _yt_dlp_available() is True
+
+
+def test_parse_yt_dlp_progress_line():
+    from nfhs import _parse_yt_dlp_progress
+
+    parsed = _parse_yt_dlp_progress("[download]  45.2% of ~  2.50GiB at  5.00MiB/s ETA 05:30")
+    assert parsed is not None
+    assert parsed["percent"] == 45.2
+    assert parsed["speed"] == "5.00MiB/s"
+    assert parsed["eta"] == "05:30"
+
+
+def test_nfhs_download_status_missing_job(client):
+    resp = client.get("/api/scouting/nfhs/download/does-not-exist")
+    assert resp.status_code == 404

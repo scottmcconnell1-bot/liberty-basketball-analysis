@@ -38,12 +38,10 @@ from module_keys import SCOUTING
 from nfhs import (
     _decrypt_password,
     _encrypt_password,
-    download_nfhs_vod,
     extract_nfhs_game_id,
     lookup_game,
     login_nfhs,
     parse_nfhs_input,
-    register_nfhs_download,
 )
 
 scouting_bp = Blueprint("scouting", __name__)
@@ -485,6 +483,9 @@ def api_scouting_clips(report_id):
 @scouting_bp.route("/api/scouting/nfhs/download", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_scouting_nfhs_download():
+    """Start a background NFHS download and return a job id for progress polling."""
+    from nfhs_download_jobs import start_download_job
+
     data = request.get_json() or request.form
     raw_input = data.get("game_id") or data.get("nfhs_game_id") or data.get("nfhs_url")
     if not raw_input:
@@ -495,49 +496,40 @@ def api_scouting_nfhs_download():
     if not game_id:
         return jsonify({"error": f"Could not extract NFHS GameID from: {raw_input}"}), 400
 
-    # Get credentials
     email, password = _get_stored_credentials()
     if not email:
         return jsonify({"error": "No NFHS credentials stored. Please log in first.", "needs_login": True}), 401
 
     lookup = lookup_game(game_id, email, password)
     watch_url = parsed["watch_url"] or (lookup.get("site_url") if lookup.get("success") else None)
-
     output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
-    result = download_nfhs_vod(game_id, email, password, output_dir, watch_url=watch_url)
 
-    if result["success"]:
-        db = get_db()
-        saved = register_nfhs_download(
-            db,
-            result["file_path"],
-            game_id,
-            home_team=lookup.get("home_team") if lookup.get("success") else None,
-            away_team=lookup.get("away_team") if lookup.get("success") else None,
-            nfhs_url=watch_url,
-        )
-        db.commit()
+    job_id = start_download_job(
+        app=current_app._get_current_object(),
+        game_id=game_id,
+        email=email,
+        password=password,
+        output_dir=output_dir,
+        watch_url=watch_url,
+    )
+    return jsonify({
+        "status": "started",
+        "job_id": job_id,
+        "nfhs_game_id": game_id,
+        "message": "Download started. Progress updates automatically.",
+    })
 
-        film_url = url_for(
-            "core.film",
-            filename=saved["stored_filename"],
-            game_id=saved["game_id"],
-        )
 
-        return jsonify({
-            "status": "downloaded",
-            "file_path": result["file_path"],
-            "file_size": result["file_size"],
-            "nfhs_game_id": game_id,
-            "video_id": saved["video_id"],
-            "stored_filename": saved["stored_filename"],
-            "game_id": saved["game_id"],
-            "already_saved": saved.get("already_saved", False),
-            "redirect_url": film_url,
-            "videos_url": url_for("core.videos_page"),
-        })
-    else:
-        return jsonify({"error": result["error"], "nfhs_game_id": game_id}), 400
+@scouting_bp.route("/api/scouting/nfhs/download/<job_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_scouting_nfhs_download_status(job_id):
+    """Poll background NFHS download progress."""
+    from nfhs_download_jobs import get_download_job
+
+    job = get_download_job(job_id)
+    if not job:
+        return jsonify({"error": "Download job not found or expired"}), 404
+    return jsonify(job)
 
 
 # ── Auto-Generate from AI Events ────────────────────────────

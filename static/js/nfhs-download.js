@@ -20,7 +20,12 @@
             gameId: prefix + 'game-id',
             gameInfo: prefix + 'game-info',
             downloadStatus: prefix + 'download-status',
+            downloadProgress: prefix + 'download-progress',
+            downloadProgressBar: prefix + 'download-progress-bar',
+            downloadProgressText: prefix + 'download-progress-text',
+            downloadBtn: prefix + 'download-btn',
         };
+        let activePoll = null;
 
         function showLoggedIn(email) {
             const loggedIn = el(ids.loggedIn);
@@ -39,6 +44,47 @@
             if (loggedIn) loggedIn.style.display = 'none';
             if (loginForm) loginForm.style.display = 'block';
             if (lookupSection) lookupSection.style.display = 'none';
+        }
+
+        function setDownloadBusy(isBusy) {
+            const btn = el(ids.downloadBtn);
+            if (btn) {
+                btn.disabled = isBusy;
+                btn.textContent = isBusy ? '⏳ Downloading…' : '📥 Download Film';
+            }
+        }
+
+        function showProgress(percent, text) {
+            const shell = el(ids.downloadProgress);
+            const bar = el(ids.downloadProgressBar);
+            const label = el(ids.downloadProgressText);
+            if (shell) shell.style.display = 'block';
+            if (bar) bar.style.width = `${Math.max(0, Math.min(100, percent || 0))}%`;
+            if (label) label.textContent = text || 'Downloading…';
+        }
+
+        function hideProgress() {
+            const shell = el(ids.downloadProgress);
+            if (shell) shell.style.display = 'none';
+        }
+
+        function renderDownloadComplete(result) {
+            const status = el(ids.downloadStatus);
+            const sizeMB = result.file_size ? (result.file_size / 1024 / 1024).toFixed(1) : null;
+            const savedNote = result.already_saved ? ' (already in library)' : '';
+            let html = '<span class="text-success">✅ Saved for review' + savedNote;
+            if (sizeMB) html += '! Size: ' + sizeMB + ' MB';
+            html += '</span>';
+            if (result.redirect_url) {
+                html += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">';
+                html += '<a class="btn btn-sm btn-primary" href="' + result.redirect_url + '">Open in Film Tool</a>';
+                html += '<a class="btn btn-sm btn-secondary" href="' + (result.videos_url || '/videos') + '">All Videos</a>';
+                html += '</div>';
+            }
+            if (status) status.innerHTML = html;
+            if (typeof config.onDownloadComplete === 'function') {
+                config.onDownloadComplete(result);
+            }
         }
 
         function checkCredentials() {
@@ -135,6 +181,47 @@
                 });
         }
 
+        function pollDownloadJob(jobId) {
+            if (activePoll) clearInterval(activePoll);
+            activePoll = setInterval(() => {
+                fetch('/api/scouting/nfhs/download/' + encodeURIComponent(jobId))
+                    .then(r => r.json())
+                    .then(job => {
+                        if (job.error && !job.status) {
+                            throw new Error(job.error);
+                        }
+                        const pct = job.percent || 0;
+                        let text = job.message || 'Downloading…';
+                        if (job.speed) text += ` • ${job.speed}`;
+                        if (job.eta) text += ` • ETA ${job.eta}`;
+                        showProgress(pct, text);
+
+                        if (job.status === 'complete') {
+                            clearInterval(activePoll);
+                            activePoll = null;
+                            setDownloadBusy(false);
+                            hideProgress();
+                            renderDownloadComplete(job);
+                        } else if (job.status === 'error') {
+                            clearInterval(activePoll);
+                            activePoll = null;
+                            setDownloadBusy(false);
+                            hideProgress();
+                            const status = el(ids.downloadStatus);
+                            if (status) status.innerHTML = '<span class="text-error">❌ ' + (job.error || 'Download failed') + '</span>';
+                        }
+                    })
+                    .catch(err => {
+                        clearInterval(activePoll);
+                        activePoll = null;
+                        setDownloadBusy(false);
+                        hideProgress();
+                        const status = el(ids.downloadStatus);
+                        if (status) status.innerHTML = '<span class="text-error">❌ ' + err.message + '</span>';
+                    });
+            }, 1500);
+        }
+
         function downloadFilm() {
             const gameId = el(ids.gameId)?.value.trim();
             if (!gameId) {
@@ -142,7 +229,9 @@
                 return;
             }
             const status = el(ids.downloadStatus);
-            if (status) status.innerHTML = '⏳ Downloading… this may take several minutes.';
+            if (status) status.innerHTML = '<span class="text-muted">Download runs on the server. You can stay on this page for progress, or check Videos later.</span>';
+            setDownloadBusy(true);
+            showProgress(0, 'Starting download…');
 
             fetch('/api/scouting/nfhs/download', {
                 method: 'POST',
@@ -152,25 +241,20 @@
                 .then(r => r.json())
                 .then(result => {
                     if (result.error) {
+                        setDownloadBusy(false);
+                        hideProgress();
                         if (status) status.innerHTML = '<span class="text-error">❌ ' + result.error + '</span>';
                         if (result.needs_login) showLoginForm();
                         return;
                     }
-                    const sizeMB = (result.file_size / 1024 / 1024).toFixed(1);
-                    const savedNote = result.already_saved ? ' (already in library)' : '';
-                    let html = '<span class="text-success">✅ Saved for review' + savedNote + '! Size: ' + sizeMB + ' MB</span>';
-                    if (result.redirect_url) {
-                        html += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">';
-                        html += '<a class="btn btn-sm btn-primary" href="' + result.redirect_url + '">Open in Film Tool</a>';
-                        html += '<a class="btn btn-sm btn-secondary" href="' + (result.videos_url || '/videos') + '">All Videos</a>';
-                        html += '</div>';
+                    if (!result.job_id) {
+                        throw new Error('Download did not start');
                     }
-                    if (status) status.innerHTML = html;
-                    if (typeof config.onDownloadComplete === 'function') {
-                        config.onDownloadComplete(result);
-                    }
+                    pollDownloadJob(result.job_id);
                 })
                 .catch(err => {
+                    setDownloadBusy(false);
+                    hideProgress();
                     if (status) status.innerHTML = '<span class="text-error">❌ ' + err.message + '</span>';
                 });
         }
