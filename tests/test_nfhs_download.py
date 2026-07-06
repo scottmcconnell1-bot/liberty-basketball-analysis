@@ -162,14 +162,16 @@ def test_format_section_time():
     assert _format_section_time(3_705_000) == "1:01:45"
 
 
-def test_yt_dlp_status_message_surfaces_extractor_output():
-    from nfhs import _yt_dlp_status_message
+def test_friendly_download_phase_hides_technical_logs():
+    from nfhs import _friendly_download_phase, _parse_yt_dlp_progress
 
-    assert _yt_dlp_status_message("[NFHSNetwork] Extracting URL: https://example.com/game/gam123") is not None
-    assert _yt_dlp_status_message("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00") is None
-    assert "segments" in _yt_dlp_status_message(
+    assert _friendly_download_phase("[NFHSNetwork] Extracting URL: https://example.com/game/gam123") == "Connecting to NFHS…"
+    assert _friendly_download_phase("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00") is None
+    assert _friendly_download_phase(
         "[https @ 0000] Opening 'https://d1.cloudfront.net/hd116.ts' for reading"
-    )
+    ) is None
+    parsed = _parse_yt_dlp_progress("[download]  12.0% of 1.00GiB at 5.00MiB/s ETA 02:00")
+    assert parsed["message"] == "Downloading… 12.0%"
 
 
 def test_film_page_path_without_request_context():

@@ -22,6 +22,8 @@
             downloadStatus: prefix + 'download-status',
             downloadProgress: prefix + 'download-progress',
             downloadProgressBar: prefix + 'download-progress-bar',
+            downloadProgressPct: prefix + 'download-progress-pct',
+            downloadProgressPhase: prefix + 'download-progress-phase',
             downloadProgressText: prefix + 'download-progress-text',
             downloadCancelBtn: prefix + 'download-cancel-btn',
             downloadBtn: prefix + 'download-btn',
@@ -87,15 +89,46 @@
             }
         }
 
-        function showProgress(percent, text) {
+        function isTechnicalStatus(text) {
+            const value = (text || '').trim();
+            if (!value) return false;
+            if (value.startsWith('[')) return true;
+            const lowered = value.toLowerCase();
+            return lowered.includes('cloudfront') || lowered.includes('.ts') || lowered.includes('ffmpeg');
+        }
+
+        function friendlyPhase(text, percent) {
+            if (!isTechnicalStatus(text)) {
+                return text || (percent > 0 ? 'Downloading…' : 'Connecting to NFHS…');
+            }
+            return percent > 0 ? 'Downloading…' : 'Connecting to NFHS…';
+        }
+
+        function showProgress(percent, phase, speed, eta) {
             const shell = el(ids.downloadProgress);
             const bar = el(ids.downloadProgressBar);
-            const label = el(ids.downloadProgressText);
+            const pctLabel = el(ids.downloadProgressPct);
+            const phaseLabel = el(ids.downloadProgressPhase);
+            const detail = el(ids.downloadProgressText);
             const cancelBtn = el(ids.downloadCancelBtn);
+            const pct = Math.max(0, Math.min(100, percent || 0));
+            const indeterminate = pct === 0 && !!activeJobId;
+            const phaseText = friendlyPhase(phase, pct);
+
             setDownloadOptionsVisible(false);
-            if (shell) shell.style.display = 'block';
-            if (bar) bar.style.width = `${Math.max(0, Math.min(100, percent || 0))}%`;
-            if (label) label.textContent = text || 'Downloading…';
+            if (shell) {
+                shell.style.display = 'block';
+                shell.classList.toggle('nfhs-progress-indeterminate', indeterminate);
+            }
+            if (bar) bar.style.width = indeterminate ? '40%' : `${pct}%`;
+            if (pctLabel) pctLabel.textContent = indeterminate ? '—' : `${Math.round(pct)}%`;
+            if (phaseLabel) phaseLabel.textContent = phaseText;
+            if (detail) {
+                const parts = [];
+                if (speed) parts.push(speed);
+                if (eta) parts.push(`ETA ${eta}`);
+                detail.textContent = parts.join(' • ');
+            }
             if (cancelBtn) cancelBtn.style.display = activeJobId ? 'inline-block' : 'none';
         }
 
@@ -250,8 +283,6 @@
 
         function pollDownloadJob(jobId) {
             activeJobId = jobId;
-            let lastMessage = '';
-            let lastChangeAt = Date.now();
             if (activePoll) clearInterval(activePoll);
             activePoll = setInterval(() => {
                 fetch('/api/scouting/nfhs/download/' + encodeURIComponent(jobId))
@@ -261,16 +292,7 @@
                             throw new Error(job.error);
                         }
                         const pct = job.percent || 0;
-                        let text = job.message || 'Downloading…';
-                        if (job.speed) text += ` • ${job.speed}`;
-                        if (job.eta) text += ` • ETA ${job.eta}`;
-                        if (text !== lastMessage) {
-                            lastMessage = text;
-                            lastChangeAt = Date.now();
-                        } else if (pct === 0 && Date.now() - lastChangeAt > 90000) {
-                            text += ' — still working; yt-dlp can take a few minutes before progress appears';
-                        }
-                        showProgress(pct, text);
+                        showProgress(pct, job.message, job.speed, job.eta);
 
                         if (job.status === 'complete') {
                             clearInterval(activePoll);
@@ -360,7 +382,7 @@
             const status = el(ids.downloadStatus);
             if (status) status.innerHTML = '<span class="text-muted">Download runs on the server. You can stay on this page for progress, or check Videos later.</span>';
             setDownloadBusy(true);
-            showProgress(0, 'Starting download…');
+            showProgress(0, 'Starting download…', null, null);
 
             const payload = { game_id: gameId };
             if (startMs != null) payload.start_ms = startMs;

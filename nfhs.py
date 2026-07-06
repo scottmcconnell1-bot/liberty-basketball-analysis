@@ -317,31 +317,31 @@ def _parse_yt_dlp_progress(line: str) -> dict | None:
     percent_match = re.search(r"\[download\]\s+(\d+(?:\.\d+)?)%", line)
     if not percent_match:
         return None
+    percent = float(percent_match.group(1))
     speed_match = re.search(r"\bat\s+(\S+)", line)
     eta_match = re.search(r"\bETA\s+(\S+)", line)
     return {
-        "percent": float(percent_match.group(1)),
+        "percent": percent,
         "speed": speed_match.group(1) if speed_match else None,
         "eta": eta_match.group(1) if eta_match else None,
-        "message": line.strip()[-160:],
+        "message": f"Downloading… {percent:.1f}%",
     }
 
 
-def _yt_dlp_status_message(line: str) -> str | None:
-    """Turn yt-dlp log lines into user-visible status text."""
+def _friendly_download_phase(line: str) -> str | None:
+    """Map yt-dlp startup lines to short user-facing status text (never raw logs)."""
     text = re.sub(r"\x1b\[[0-9;]*m", "", (line or "").strip())
-    if not text:
-        return None
-    if _parse_yt_dlp_progress(text):
+    if not text or _parse_yt_dlp_progress(text):
         return None
     lowered = text.lower()
-    if text.startswith("[") or any(
-        token in lowered
-        for token in ("extracting", "downloading", "merging", "ffmpeg", "error", "warning", "nfhs", "format", "opening")
-    ):
-        if ".ts" in lowered or "cloudfront" in lowered:
-            return "Downloading video segments from NFHS stream…"
-        return text[-160:]
+    if any(token in lowered for token in ("cloudfront", ".ts", "opening 'http", "[https @", "[ffmpeg")):
+        return None
+    if "extracting" in lowered or "[nfhs" in lowered:
+        return "Connecting to NFHS…"
+    if "downloading" in lowered and "playlist" in lowered:
+        return "Finding video stream…"
+    if "merging" in lowered:
+        return "Merging video…"
     return None
 
 
@@ -459,7 +459,6 @@ def download_nfhs_vod(
             "--no-check-certificates",
             "--newline",
             "--progress",
-            "--verbose",
             "--socket-timeout", "30",
             "--add-header", f"Authorization: Bearer {token}",
             "--add-header", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -472,7 +471,7 @@ def download_nfhs_vod(
         if start_ms is not None and end_ms is not None and end_ms > start_ms:
             section = f"*{_format_section_time(start_ms)}-{_format_section_time(end_ms)}"
             cmd = cmd[:-1] + ["--download-sections", section, "--force-keyframes-at-cuts", cmd[-1]]
-        _emit_download_status(progress_callback, percent=0, message="Starting yt-dlp… this can take 1–2 minutes")
+        _emit_download_status(progress_callback, percent=0, message="Connecting to NFHS…")
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -501,9 +500,9 @@ def download_nfhs_vod(
                 if parsed:
                     progress_callback(**parsed)
                 else:
-                    status_message = _yt_dlp_status_message(line)
-                    if status_message:
-                        _emit_download_status(progress_callback, message=status_message)
+                    phase_message = _friendly_download_phase(line)
+                    if phase_message:
+                        _emit_download_status(progress_callback, percent=0, message=phase_message)
         return_code = proc.wait(timeout=7200)
         if download_control and download_control.cancelled:
             _cleanup_files([header_file])
