@@ -329,7 +329,8 @@ def test_start_video_analysis_supersedes_stale_pending(client, db, monkeypatch, 
     resp = client.post("/api/videos/1/analyze")
     assert resp.status_code == 200
 
-    rows = db.execute("SELECT status, error_message FROM analysis_runs ORDER BY id").fetchall()
-    assert rows[0]["status"] == "failed"
-    assert "never started" in (rows[0]["error_message"] or "").lower()
+    rows = db.execute("SELECT status, error_message, progress_step FROM analysis_runs ORDER BY id").fetchall()
+    assert rows[0]["status"] == "cancelled"
+    assert rows[0]["error_message"] is None
+    assert "superseded" in (rows[0]["progress_step"] or "").lower()
     assert rows[1]["status"] == "pending"

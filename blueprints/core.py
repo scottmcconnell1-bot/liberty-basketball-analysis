@@ -50,9 +50,11 @@ from helpers import (
     feature_enabled,
     get_db,
     get_runtime_settings,
+    latest_analysis_run_id_subquery,
     read_filtered_app_logs,
     render_schedule_page,
     require_feature,
+    resolve_analysis_run_for_progress,
     safe_return_path,
     append_query_params,
     save_settings,
@@ -1517,18 +1519,12 @@ def film(filename=None):
     analysis_status = None
     if filename:
         db = get_db()
+        latest_run = latest_analysis_run_id_subquery()
         video_row = db.execute(
-            """SELECT v.id, v.game_id,
+            f"""SELECT v.id, v.game_id,
                       ar.status AS analysis_status, ar.analysis_key
                FROM videos v
-               LEFT JOIN analysis_runs ar ON ar.id = (
-                   SELECT MAX(ar2.id)
-                   FROM analysis_runs ar2
-                   WHERE ar2.source_video_id = v.id
-                      OR ar2.base_analysis_key = v.game_id
-                      OR ar2.analysis_key = v.game_id
-                      OR ar2.video_path = v.file_path
-               )
+               LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
                WHERE v.stored_filename = ?""",
             (filename,),
         ).fetchone()
@@ -1545,12 +1541,11 @@ def film(filename=None):
             if row:
                 game_id = row["analysis_key"]
         if requested_game_id:
-            run_row = db.execute(
-                "SELECT status FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
-                (requested_game_id,),
-            ).fetchone()
+            run_row = resolve_analysis_run_for_progress(db, requested_game_id)
             if run_row:
                 analysis_status = run_row["status"]
+                if run_row["analysis_key"]:
+                    game_id = run_row["analysis_key"]
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)

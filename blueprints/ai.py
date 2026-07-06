@@ -34,9 +34,11 @@ from helpers import (
     AI_DEFAULTS, ai_runtime_available, append_query_params, build_analysis_settings_snapshot,
     build_resource_status, build_rerun_game_id, build_run_summary,
     build_settings_catalog, default_run_label, display_detector_model,
-    ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
-    get_runtime_settings, queue_analysis_run, require_feature,
-    resolve_detector_model, safe_return_path, start_analysis_subprocess,
+    ensure_db, ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
+    get_runtime_settings, is_superseded_analysis_run, latest_analysis_run_id_subquery,
+    queue_analysis_run, require_feature,
+    resolve_analysis_run_for_progress, resolve_detector_model, safe_return_path,
+    start_analysis_subprocess,
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
     validate_video_for_analysis,
@@ -158,32 +160,32 @@ def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
     db = get_db()
     reconcile_stuck_analysis_run(db, game_id)
-    row = db.execute(
-        """SELECT status, progress_pct, progress_step, started_at, completed_at, error_message,
-                  analysis_key,
-                  (SELECT COUNT(*)
-                     FROM detections d
-                    WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
-                       OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*)
-                     FROM events e
-                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
-                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
-           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
-        (game_id,),
-    ).fetchone()
+    row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({"status": "not_started", "progress_pct": 0, "progress_step": ""})
+    progress_game_id = row["analysis_key"] or game_id
+    error_message = row["error_message"]
+    if is_superseded_analysis_run(row):
+        error_message = None
     return jsonify({
         "status": row["status"],
+        "analysis_key": progress_game_id,
         "progress_pct": row["progress_pct"] or 0,
         "progress_step": row["progress_step"] or "",
-        "error_message": row["error_message"],
-        "log_path": ai_analysis_log_path(game_id),
+        "error_message": error_message,
+        "log_path": ai_analysis_log_path(progress_game_id),
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
-        "detection_count": row["detection_count"],
-        "event_count": row["event_count"],
+        "detection_count": db.execute(
+            """SELECT COUNT(*) AS c FROM detections d
+               WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+                  OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+            (row["game_id"], row["game_id"], progress_game_id),
+        ).fetchone()["c"],
+        "event_count": db.execute(
+            "SELECT COUNT(*) AS c FROM events e WHERE e.game_id = ?",
+            (progress_game_id,),
+        ).fetchone()["c"],
     })
 
 
@@ -415,7 +417,8 @@ def upload_chunk():
 def api_videos():
     """Return all videos from the DB with their analysis status."""
     db = get_db()
-    rows = db.execute("""
+    latest_run = latest_analysis_run_id_subquery()
+    rows = db.execute(f"""
         SELECT v.*, ar.status as analysis_status, ar.error_message,
                (SELECT COUNT(*)
                   FROM detections d
@@ -426,14 +429,7 @@ def api_videos():
                      OR (e.relational_game_id IS NULL AND e.game_id = COALESCE(ar.analysis_key, v.game_id))) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.id = (
-            SELECT MAX(ar_latest.id)
-            FROM analysis_runs ar_latest
-            WHERE ar_latest.source_video_id = v.id
-               OR ar_latest.base_analysis_key = v.game_id
-               OR ar_latest.analysis_key = v.game_id
-               OR ar_latest.video_path = v.file_path
-        )
+        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
         ORDER BY v.id DESC
     """).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -492,13 +488,10 @@ def _start_video_analysis_run(video, *, run_label=None):
     if not ai_runtime_available():
         return None, ai_packages_install_hint(), "ai_packages_unavailable"
 
+    ensure_db()
     db = get_db()
     clause = _video_analysis_runs_clause()
-    supersede_pending_analysis_runs(
-        db,
-        video,
-        reason="Previous pending run never started; replaced by new request",
-    )
+    supersede_pending_analysis_runs(db, video)
     running = db.execute(
         f"""SELECT id FROM analysis_runs
             WHERE {clause} AND status='running'

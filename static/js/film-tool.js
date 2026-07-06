@@ -1299,6 +1299,20 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
     }
 }
 
+function isSupersededAnalysisError(message) {
+    if (!message) return false;
+    const lower = String(message).toLowerCase();
+    return lower.includes('replaced by new request') || lower.includes('superseded by new analysis request');
+}
+
+function applyAnalysisProgressGameId(data, currentGameId) {
+    if (data && data.analysis_key && data.analysis_key !== currentGameId) {
+        window.FILM_TOOL_GAME_ID = data.analysis_key;
+        return data.analysis_key;
+    }
+    return currentGameId;
+}
+
 function showUploadAnalysisProgress(pct, step) {
     const analysisShell = document.getElementById('analysisProgressShell');
     const analysisBar = document.getElementById('analysisProgressBar');
@@ -1323,6 +1337,7 @@ function initAnalysisStatus() {
             const response = await fetch('/api/analysis_progress/' + encodeURIComponent(gameId));
             if (!response.ok) return;
             const data = await response.json();
+            gameId = applyAnalysisProgressGameId(data, gameId);
             const pct = data.progress_pct || 0;
             const step = data.progress_step || (data.status === 'pending' ? 'Queued — starting AI worker…' : 'Loading AI models…');
             const elapsedSec = pollStartedAt ? Math.floor((Date.now() - pollStartedAt) / 1000) : null;
@@ -1344,6 +1359,10 @@ function initAnalysisStatus() {
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
                 pollTimer = null;
+                if (isSupersededAnalysisError(data.error_message)) {
+                    window.startAnalysisProgressPolling(gameId);
+                    return;
+                }
                 const failStep = data.error_message || data.progress_step || 'Analysis failed';
                 showRunAnalysisProgress(0, failStep, 'failed', elapsedSec);
                 if (typeof window.updateRunAnalysisBar === 'function') {
@@ -1357,6 +1376,8 @@ function initAnalysisStatus() {
                     detail.textContent = msg;
                 }
                 if (runBar) runBar.style.display = 'flex';
+            } else if (data.status === 'cancelled') {
+                pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else {
                 pollTimer = setTimeout(fetchAnalysisProgress, 5000);
             }
@@ -1387,9 +1408,10 @@ function initAnalysisStatus() {
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (!data) return;
-                if (data.status === 'running') {
-                    window.startAnalysisProgressPolling(gameId);
-                } else if (data.status === 'failed' && typeof window.updateRunAnalysisBar === 'function') {
+                const resolvedGameId = applyAnalysisProgressGameId(data, gameId);
+                if (data.status === 'running' || data.status === 'pending') {
+                    window.startAnalysisProgressPolling(resolvedGameId);
+                } else if (data.status === 'failed' && !isSupersededAnalysisError(data.error_message) && typeof window.updateRunAnalysisBar === 'function') {
                     window.updateRunAnalysisBar('failed');
                 }
             })
@@ -1456,9 +1478,10 @@ function initRunAnalysis() {
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (!data) return;
-                    if (data.status === 'running' && typeof window.startAnalysisProgressPolling === 'function') {
-                        window.startAnalysisProgressPolling(window.FILM_TOOL_GAME_ID);
-                    } else if (data.status === 'failed') {
+                    const resolvedGameId = applyAnalysisProgressGameId(data, window.FILM_TOOL_GAME_ID || '');
+                    if (data.status === 'running' || data.status === 'pending') {
+                        window.startAnalysisProgressPolling(resolvedGameId);
+                    } else if (data.status === 'failed' && !isSupersededAnalysisError(data.error_message)) {
                         updateRunAnalysisBar('failed');
                         if (statusEl && data.error_message) {
                             statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
@@ -1483,7 +1506,7 @@ function initRunAnalysis() {
             fetch('/api/analysis_progress/' + encodeURIComponent(window.FILM_TOOL_GAME_ID || ''))
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
-                    if (data && data.error_message && statusEl) {
+                    if (data && data.error_message && !isSupersededAnalysisError(data.error_message) && statusEl) {
                         statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
                     }
                 })

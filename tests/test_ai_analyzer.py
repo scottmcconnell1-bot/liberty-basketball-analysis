@@ -100,3 +100,25 @@ def test_analysis_runs_has_progress_columns(db):
     cols = {row[1] for row in db.execute("PRAGMA table_info(analysis_runs)").fetchall()}
     assert "progress_pct" in cols
     assert "progress_step" in cols
+
+
+def test_resolve_analysis_run_for_progress_follows_replacement(db):
+    from helpers import resolve_analysis_run_for_progress
+
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, status, error_message)
+           VALUES (?, ?, ?, ?)""",
+        ("old_rerun", "uploads/game.mp4", "failed", "Previous pending run never started; replaced by new request"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, status, base_analysis_key)
+           VALUES (?, ?, ?, ?)""",
+        ("new_rerun", "uploads/game.mp4", "pending", "game_primary"),
+    )
+    db.commit()
+
+    row = resolve_analysis_run_for_progress(db, "old_rerun")
+    assert row["analysis_key"] == "new_rerun"
+    assert row["status"] == "pending"

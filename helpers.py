@@ -872,14 +872,122 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     }
 
 
+INTERNAL_SUPERSEDE_MARKERS = (
+    "replaced by new request",
+    "superseded by new analysis request",
+)
+
+
+def _analysis_run_video_clause(alias=None):
+    prefix = f"{alias}." if alias else ""
+    return (
+        f"({prefix}source_video_id=? OR {prefix}base_analysis_key=? "
+        f"OR {prefix}analysis_key=? OR {prefix}video_path=?)"
+    )
+
+
+def _analysis_run_priority_order(alias=None):
+    prefix = f"{alias}." if alias else ""
+    return f"""CASE {prefix}status
+        WHEN 'running' THEN 0
+        WHEN 'pending' THEN 1
+        WHEN 'completed' THEN 2
+        WHEN 'failed' THEN 3
+        WHEN 'cancelled' THEN 4
+        ELSE 5
+    END"""
+
+
+def latest_analysis_run_id_subquery(video_alias="v", run_alias="ar_latest"):
+    clause = (
+        f"({run_alias}.source_video_id = {video_alias}.id "
+        f"OR {run_alias}.base_analysis_key = {video_alias}.game_id "
+        f"OR {run_alias}.analysis_key = {video_alias}.game_id "
+        f"OR {run_alias}.video_path = {video_alias}.file_path)"
+    )
+    return f"""(
+        SELECT {run_alias}.id
+        FROM analysis_runs {run_alias}
+        WHERE {clause}
+        ORDER BY {_analysis_run_priority_order(run_alias)}, {run_alias}.id DESC
+        LIMIT 1
+    )"""
+
+
+def is_superseded_analysis_run(run_row) -> bool:
+    if not run_row:
+        return False
+    status = run_row["status"] if hasattr(run_row, "keys") else run_row[1]
+    if status == "cancelled":
+        return True
+    if status != "failed":
+        return False
+    message = (run_row["error_message"] or "").lower()
+    return any(marker in message for marker in INTERNAL_SUPERSEDE_MARKERS)
+
+
+def _analysis_run_video_params(video_row):
+    return (
+        video_row["id"],
+        video_row["game_id"],
+        video_row["game_id"],
+        video_row["file_path"],
+    )
+
+
+def _analysis_run_row_video_params(run_row):
+    return (
+        run_row["source_video_id"],
+        run_row["base_analysis_key"] or run_row["analysis_key"],
+        run_row["base_analysis_key"] or run_row["analysis_key"],
+        run_row["video_path"],
+    )
+
+
+def resolve_analysis_run_for_progress(db, game_id: str):
+    """Return the analysis run row the progress UI should display."""
+    row = db.execute(
+        "SELECT * FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
+        (game_id,),
+    ).fetchone()
+    if not row or not is_superseded_analysis_run(row):
+        return row
+
+    params = _analysis_run_row_video_params(row)
+    replacement = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {_analysis_run_video_clause()}
+              AND id > ?
+              AND status != 'cancelled'
+            ORDER BY id DESC
+            LIMIT 1""",
+        (*params, row["id"]),
+    ).fetchone()
+    if replacement and not is_superseded_analysis_run(replacement):
+        return replacement
+
+    active = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {_analysis_run_video_clause()}
+              AND status IN ('running', 'pending')
+            ORDER BY {_analysis_run_priority_order()}, id DESC
+            LIMIT 1""",
+        params,
+    ).fetchone()
+    return active or row
+
+
 def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new analysis request"):
-    """Mark stuck pending runs failed so a new analysis can start."""
-    clause = "(source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?)"
+    """Cancel stuck pending runs so a new analysis can start."""
+    clause = _analysis_run_video_clause()
     db.execute(
         f"""UPDATE analysis_runs
-               SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP
+               SET status='cancelled',
+                   progress_step=?,
+                   error_message=NULL,
+                   completed_at=CURRENT_TIMESTAMP
              WHERE {clause} AND status='pending'""",
-        (reason, video_row["id"], video_row["game_id"], video_row["game_id"], video_row["file_path"]),
+        (reason, *_analysis_run_video_params(video_row)),
     )
     db.commit()
 
