@@ -15,11 +15,12 @@
 
 <!-- PDF Import Team Selector Modal -->
 <div id="pdf-team-modal" class="modal-backdrop" data-frame="2.2">
-  <div class="modal" style="max-width:400px;">
+  <div class="modal pdf-modal pdf-modal--narrow">
     <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
-    <p class="text-muted" style="margin-bottom:16px;">Which team is this schedule for?</p>
+    <p class="text-muted" style="margin-bottom:8px;">Which program is this schedule for?</p>
+    <p class="pdf-help-text">Choose <strong>Jr High Boys</strong> or <strong>Jr High Girls</strong> for A/B team schedules. Choose <strong>Boys/Girls High School</strong> for varsity/JV/frosh times.</p>
     <div class="form-group">
-      <label for="pdf-team-select">Team</label>
+      <label for="pdf-team-select">Program</label>
       <select class="form-control" id="pdf-team-select">
         {% for value, label in team_options %}
         <option value="{{ value }}">{{ label }}</option>
@@ -35,11 +36,11 @@
 
 <!-- PDF Import Preview Modal -->
 <div id="pdf-import-modal" class="modal-backdrop" data-frame="2.3">
-  <div class="modal" style="max-width:700px;">
-    <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
-    <p class="text-muted" style="margin-bottom:16px;">Review the extracted games below. Edit any fields, then click "Import All Games".</p>
+  <div class="modal pdf-modal pdf-modal--wide">
+    <h3 style="margin-bottom:12px;">Review Imported Games</h3>
+    <p class="text-muted" style="margin-bottom:16px;">Edit any field, then click Import All Games. Jr High uses <strong>B Team</strong> and <strong>A Team</strong> times (not varsity/JV).</p>
     <div id="pdf-season-info" style="margin-bottom:12px;"></div>
-    <div id="pdf-preview-area" style="max-height:400px;overflow-y:auto;"></div>
+    <div id="pdf-preview-area" class="pdf-preview-scroll"></div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="closePdfImportModal()">Cancel</button>
       <button class="btn btn-primary" id="pdf-import-btn" onclick="submitPdfImport()">Import All Games</button>
@@ -386,7 +387,11 @@
   .badge-cancelled { background: #fee2e2; color: #991b1b; }
   .badge-rescheduled { background: #fef3c7; color: #92400e; }
   .badge-completed { background: #dbeafe; color: #1d4ed8; }
-  .pdf-preview-table { width:100%; font-size:0.82rem; }
+  .pdf-modal--wide { max-width: min(1100px, 96vw); width: 100%; }
+  .pdf-modal--narrow { max-width: 480px; width: 100%; }
+  .pdf-help-text { font-size: 0.85rem; color: #6b7280; margin-bottom: 16px; line-height: 1.5; }
+  .pdf-preview-scroll { max-height: 55vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+  .pdf-preview-table { width: 100%; min-width: 920px; font-size: 0.875rem; border-collapse: collapse; }
   .schedule-table { font-size:0.875rem; }
   .schedule-table th {
     background:#f8fafc;
@@ -404,13 +409,46 @@
   }
   .schedule-table tr:hover { background:#fafbfc; }
   .schedule-table tr:last-child td { border-bottom:none; }
-  .pdf-preview-table td { padding:4px 8px; }
-  .pdf-preview-table input, .pdf-preview-table select { padding:4px 6px; font-size:0.8rem; width:100%; }
+  .pdf-preview-table th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    color: #374151;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 8px;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .pdf-preview-table td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
+  .pdf-preview-table input,
+  .pdf-preview-table select { min-width: 0; }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+const scheduleTeamOptions = {{ team_options | tojson }};
+const scheduleLevelOptions = {{ level_options | tojson }};
+const scheduleGenderOptions = {{ gender_options | tojson }};
+const scheduleLocationOptions = {{ location_options | tojson }};
+
+function escapeHtml(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildSelectOptions(options, selectedValue) {
+  return options.map(([value, label]) =>
+    '<option value="' + escapeHtml(value) + '"' + (value === selectedValue ? ' selected' : '') + '>' + escapeHtml(label) + '</option>'
+  ).join('');
+}
+
 // ── PDF Import ──────────────────────────────────────────
 let pdfExtractedGames = [];
 let pdfSelectedTeam = 'boys_hs';
@@ -461,48 +499,59 @@ function uploadPdfWithTeam() {
 function renderPdfPreview() {
   const area = document.getElementById('pdf-preview-area');
   if (!pdfExtractedGames.length) {
-    area.innerHTML = '<p class="text-muted">No games found in PDF.</p>';
+    area.innerHTML = '<p class="text-muted" style="padding:16px;">No games found in PDF.</p>';
     return;
   }
-  // Store original dates so server can detect user edits
-  pdfExtractedGames.forEach(g => { if (!g._original_date) g._original_date = g.game_date; });
-  // Dynamic headers based on team type
-  const isJrHigh = pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_');
-  const time1Label = isJrHigh ? 'B Team Time' : 'JV Time';
-  const time2Label = isJrHigh ? 'A Team Time' : 'Frosh Time';
-  const time3Label = isJrHigh ? '' : 'Var Time';
-  let html = '<table class="pdf-preview-table"><thead><tr>' +
-    '<th>Date</th><th>' + time1Label + '</th><th>' + time2Label + '</th>' + (time3Label ? '<th>' + time3Label + '</th>' : '') + '<th>Opponent</th><th>Team</th><th>Level</th><th>Gender</th><th>Location</th>' +
-    '</tr></thead><tbody>';
   pdfExtractedGames.forEach((g, i) => {
+    if (!g._original_date) g._original_date = g.game_date;
+    if (pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_')) {
+      g.level = 'jr_high';
+      g.team = pdfSelectedTeam;
+      // Legacy misparsed rows may have A team in frosh_game_time — promote to game_time.
+      if (!g.game_time && g.frosh_game_time) {
+        g.game_time = g.frosh_game_time;
+        g.frosh_game_time = '';
+      }
+    }
+  });
+
+  const isJrHigh = pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_');
+  const time1Label = isJrHigh ? 'B Team' : 'JV';
+  const time2Label = isJrHigh ? 'A Team' : 'Frosh';
+  const time3Label = isJrHigh ? '' : 'Varsity';
+
+  let html = '<table class="pdf-preview-table"><thead><tr>' +
+    '<th>Date</th><th>' + time1Label + '</th><th>' + time2Label + '</th>' +
+    (time3Label ? '<th>' + time3Label + '</th>' : '') +
+    '<th>Opponent</th><th>Program</th>' + (isJrHigh ? '' : '<th>Level</th>') +
+    '<th>Gender</th><th>Location</th></tr></thead><tbody>';
+
+  pdfExtractedGames.forEach((g, i) => {
+    const aTeamValue = isJrHigh ? (g.game_time || '') : (g.frosh_game_time || '');
+    const aTeamField = isJrHigh ? 'game_time' : 'frosh_game_time';
     html += '<tr>' +
-      '<td><input type="date" value="' + (g.game_date||'') + '" onchange="pdfExtractedGames['+i+'].game_date=this.value"></td>' +
-      '<td><input type="time" value="' + (g.jv_game_time||'') + '" onchange="pdfExtractedGames['+i+'].jv_game_time=this.value"></td>' +
-      '<td><input type="time" value="' + (g.frosh_game_time||'') + '" onchange="pdfExtractedGames['+i+'].frosh_game_time=this.value"></td>';
-  if (!isJrHigh) {
-    html += '<td><input type="time" value="' + (g.game_time||'') + '" onchange="pdfExtractedGames['+i+'].game_time=this.value"></td>';
-  }
-  html +=
-      '<td><input type="text" value="' + (g.opponent_name||'') + '" onchange="pdfExtractedGames['+i+'].opponent_name=this.value"></td>' +
-      '<td><select onchange="pdfExtractedGames['+i+'].team=this.value">' +
-        '<option value="boys_hs"' + (g.team==='boys_hs'?' selected':'') + '>Boys HS</option>' +
-        '<option value="girls_hs"' + (g.team==='girls_hs'?' selected':'') + '>Girls HS</option>' +
-        '<option value="jr_boys"' + (g.team==='jr_boys'?' selected':'') + '>Jr High Boys</option>' +
-        '<option value="jr_girls"' + (g.team==='jr_girls'?' selected':'') + '>Jr High Girls</option>' +
+      '<td><input type="date" class="form-control" value="' + escapeHtml(g.game_date || '') + '" onchange="pdfExtractedGames[' + i + '].game_date=this.value"></td>' +
+      '<td><input type="time" class="form-control" value="' + escapeHtml(g.jv_game_time || '') + '" onchange="pdfExtractedGames[' + i + '].jv_game_time=this.value"></td>' +
+      '<td><input type="time" class="form-control" value="' + escapeHtml(aTeamValue) + '" onchange="pdfExtractedGames[' + i + '].' + aTeamField + '=this.value"></td>';
+    if (!isJrHigh) {
+      html += '<td><input type="time" class="form-control" value="' + escapeHtml(g.game_time || '') + '" onchange="pdfExtractedGames[' + i + '].game_time=this.value"></td>';
+    }
+    html +=
+      '<td><input type="text" class="form-control" value="' + escapeHtml(g.opponent_name || '') + '" onchange="pdfExtractedGames[' + i + '].opponent_name=this.value"></td>' +
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].team=this.value">' +
+        buildSelectOptions(scheduleTeamOptions, g.team || pdfSelectedTeam) +
+      '</select></td>';
+    if (!isJrHigh) {
+      html += '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].level=this.value">' +
+        buildSelectOptions(scheduleLevelOptions, g.level || 'varsity') +
+      '</select></td>';
+    }
+    html +=
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].gender=this.value">' +
+        buildSelectOptions(scheduleGenderOptions, g.gender || 'boys') +
       '</select></td>' +
-      '<td><select onchange="pdfExtractedGames['+i+'].level=this.value">' +
-        '<option value="jr_high"' + (g.level==='jr_high'?' selected':'') + '>Jr High</option>' +
-        '<option value="jv"' + (g.level==='jv'?' selected':'') + '>JV</option>' +
-        '<option value="varsity"' + (g.level==='varsity'?' selected':'') + '>Varsity</option>' +
-      '</select></td>' +
-      '<td><select onchange="pdfExtractedGames['+i+'].gender=this.value">' +
-        '<option value="boys"' + (g.gender==='boys'?' selected':'') + '>Boys</option>' +
-        '<option value="girls"' + (g.gender==='girls'?' selected':'') + '>Girls</option>' +
-      '</select></td>' +
-      '<td><select onchange="pdfExtractedGames['+i+'].location_type=this.value">' +
-        '<option value="home"' + (g.location_type==='home'?' selected':'') + '>Home</option>' +
-        '<option value="away"' + (g.location_type==='away'?' selected':'') + '>Away</option>' +
-        '<option value="neutral"' + (g.location_type==='neutral'?' selected':'') + '>Neutral</option>' +
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].location_type=this.value">' +
+        buildSelectOptions(scheduleLocationOptions, g.location_type || 'home') +
       '</select></td>' +
     '</tr>';
   });
@@ -524,19 +573,19 @@ function renderPdfSeasonInfo() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div>
           <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Name</label>
-          <input type="text" id="pdf-season-name" value="${seasonName}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+          <input type="text" id="pdf-season-name" value="${seasonName}" class="form-control">
         </div>
         <div>
-          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Team</label>
-          <input type="text" id="pdf-team-display" value="${pdfSelectedTeam}" disabled style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:#f9fafb;">
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Program</label>
+          <input type="text" id="pdf-team-display" value="${pdfSelectedTeam}" disabled class="form-control" style="background:#f9fafb;">
         </div>
         <div>
           <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Start Date</label>
-          <input type="date" id="pdf-season-start" value="${startDate}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+          <input type="date" id="pdf-season-start" value="${startDate}" class="form-control">
         </div>
         <div>
           <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season End Date</label>
-          <input type="date" id="pdf-season-end" value="${endDate}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
+          <input type="date" id="pdf-season-end" value="${endDate}" class="form-control">
         </div>
       </div>
       <div style="font-size:0.72rem;color:#9ca3af;">Detected: ${detected ? detected.name + ' (' + detected.start_date + ' → ' + detected.end_date + ')' : 'none — please set manually'}</div>

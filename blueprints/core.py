@@ -706,6 +706,12 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
                 i += 1
                 continue
 
+            # Don't merge Jr High A/B team continuation lines onto the previous row.
+            if re.match(r'^[AaBb]\s*(?:team)?\s*\d{1,2}:\d{2}', line, re.IGNORECASE):
+                joined_lines.append(line)
+                i += 1
+                continue
+
             # Check if this line is a continuation of the previous
             if joined_lines and not re.search(
                 r'\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2}|\w+\s+\d{1,2},?\s+\d{4}',
@@ -721,17 +727,22 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
             i += 1
 
     for line in joined_lines:
-        if len(line) < 10:
+        line = line.strip()
+        if not line:
             continue
-        # Jr High: detect "A team" / "B team" continuation lines
-        # e.g. "B 4:30" or "B team 4:30" on a line after the opponent
-        ab_continuation = re.match(r'^[AaBb]\s*(?:team)?\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$', line.strip())
+        # Jr High A/B team continuation lines are short but valid.
+        ab_continuation = re.match(
+            r'^[AaBb]\s*(?:team)?\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$',
+            line,
+        )
         if ab_continuation and games and games[-1].get('level') == 'jr_high':
             time_val = _normalize_time(ab_continuation.group(1))
-            if line.strip().upper().startswith('B'):
+            if line.upper().startswith('B'):
                 games[-1]['jv_game_time'] = time_val  # B team
             else:
                 games[-1]['game_time'] = time_val  # A team
+            continue
+        if len(line) < 10:
             continue
         game = _parse_schedule_line(line, pdf_team=pdf_team, month_year_map=month_year_map)
         if game:
@@ -914,6 +925,13 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
                     remainder = remainder[:ab_time_match3.start()] + remainder[ab_time_match3.end():]
                     remainder = remainder.strip()
 
+    # Jr High inline "A 6:00" after B time on the same row.
+    if _team_level == 'jr_high' and not varsity_time:
+        a_inline = re.search(r'\b[Aa]\s*(?:team)?\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm)?)?)\s*$', remainder)
+        if a_inline:
+            varsity_time = _normalize_time(a_inline.group(1))
+            remainder = remainder[:a_inline.start()].strip()
+
     # Detect inline multi-time pattern at end of remainder: "4:30/6:00/7:30" or "4:30/7:30"
     # This handles the PDF column layout where times appear after (H)/(A)
     if not varsity_time:
@@ -1004,6 +1022,12 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
 
     if not opponent:
         return None
+
+    # Jr High: a single extracted time on the main row is usually the B team.
+    # The A team often appears on the following line ("A 6:00") or after a slash.
+    if _team_level == 'jr_high' and jv_time is None and varsity_time and not frosh_time:
+        jv_time = varsity_time
+        varsity_time = None
 
     return {
         "game_date": game_date,
