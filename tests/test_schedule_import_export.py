@@ -179,7 +179,20 @@ def test_parse_schedule_line_jr_high_compact_pm_suffix():
     result = _parse_schedule_line("TUES, JAN 27 NOTUS (H) 3:30p/5:00p", pdf_team="jr_boys")
     assert result["jv_game_time"] == "15:30"
     assert result["game_time"] == "17:00"
-    assert result["opponent_name"] == "NOTUS"
+    assert result["opponent_name"] == "Notus"
+
+
+def test_parse_schedule_line_normalizes_opponent_title_case():
+    from blueprints.core import _parse_schedule_line
+
+    result = _parse_schedule_line("JAN 29 RIVERSTONE (A) 4:00/6:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Riverstone"
+
+    result = _parse_schedule_line("FEB 2 Rimrock (H) 3:30", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Rimrock"
+
+    result = _parse_schedule_line("FEB 10 IDAHO CITY (A) 4:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Idaho City"
 
 
 def test_detect_season_jr_boys_uses_title_year():

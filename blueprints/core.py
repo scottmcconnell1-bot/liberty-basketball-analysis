@@ -454,7 +454,7 @@ def schedule_save_game():
     game_id = form.get("game_id", "").strip()
     season_id = form.get("season_id", "").strip()
     game_date = (form.get("game_date") or "").strip()
-    opponent_name = (form.get("opponent_name") or "").strip()
+    opponent_name = _normalize_opponent_name((form.get("opponent_name") or "").strip())
 
     if not season_id or not game_date or not opponent_name:
         return render_schedule_page(
@@ -788,6 +788,17 @@ def _normalize_time(time_str):
     return _normalize_schedule_time(time_str)
 
 
+def _normalize_opponent_name(name):
+    """Normalize school/opponent names to title case (e.g. NOTUS -> Notus)."""
+    text = (name or "").strip()
+    if not text:
+        return text
+    return " ".join(
+        word[:1].upper() + word[1:].lower() if word else ""
+        for word in text.split()
+    )
+
+
 def _canonicalize_schedule_time_text(text):
     """Normalize compact meridiem markers before regex time extraction."""
     import re
@@ -1067,6 +1078,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
     opponent = re.sub(r'\(H\)|\(A\)|\(N\)', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\s+', ' ', opponent).strip()
+    opponent = _normalize_opponent_name(opponent)
 
     if not opponent:
         return None
@@ -1127,7 +1139,7 @@ def schedule_import_pdf_confirm():
 
     for i, g in enumerate(games):
         game_date = (g.get("game_date") or "").strip()
-        opponent = (g.get("opponent_name") or "").strip()
+        opponent = _normalize_opponent_name((g.get("opponent_name") or "").strip())
 
         # Re-parse date from raw string only if user didn't edit it.
         # Compare submitted game_date to original_date — if they differ, user edited it.
