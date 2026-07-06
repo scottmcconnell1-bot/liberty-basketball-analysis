@@ -389,6 +389,11 @@
   .badge-cancelled { background: #fee2e2; color: #991b1b; }
   .badge-rescheduled { background: #fef3c7; color: #92400e; }
   .badge-completed { background: #dbeafe; color: #1d4ed8; }
+  .pdf-import-backdrop {
+    align-items: flex-start;
+    padding: 2vh 1vw;
+    overflow-y: auto;
+  }
   .pdf-modal--wide {
     max-width: min(1400px, 98vw) !important;
     width: min(1400px, 98vw);
@@ -453,6 +458,8 @@
   .pdf-preview-table .col-level { min-width: 118px; }
   .pdf-preview-table .col-gender { min-width: 98px; }
   .pdf-preview-table .col-location { min-width: 118px; }
+  .pdf-preview-table .col-result { min-width: 98px; }
+  .pdf-preview-table .col-score { min-width: 74px; }
   .pdf-preview-table input.form-control,
   .pdf-preview-table select.form-control {
     width: 100%;
@@ -557,12 +564,15 @@ function renderPdfPreview() {
   const time1Label = isJrHigh ? 'B Team' : 'JV';
   const time2Label = isJrHigh ? 'A Team' : 'Frosh';
   const time3Label = isJrHigh ? '' : 'Varsity';
+  const hasResults = pdfExtractedGames.some(g => g.result || g.liberty_score || g.opponent_score);
 
   let html = '<table class="pdf-preview-table"><thead><tr>' +
     '<th class="col-date">Date</th><th class="col-time">' + time1Label + '</th><th class="col-time">' + time2Label + '</th>' +
     (time3Label ? '<th class="col-time">' + time3Label + '</th>' : '') +
     '<th class="col-opponent">Opponent</th><th class="col-program">Program</th>' + (isJrHigh ? '' : '<th class="col-level">Level</th>') +
-    '<th class="col-gender">Gender</th><th class="col-location">Location</th></tr></thead><tbody>';
+    '<th class="col-gender">Gender</th><th class="col-location">Location</th>' +
+    (hasResults ? '<th class="col-result">Result</th><th class="col-score">Lib</th><th class="col-score">Opp</th>' : '') +
+    '</tr></thead><tbody>';
 
   pdfExtractedGames.forEach((g, i) => {
     const aTeamValue = isJrHigh ? (g.game_time || '') : (g.frosh_game_time || '');
@@ -590,7 +600,19 @@ function renderPdfPreview() {
       '</select></td>' +
       '<td class="col-location"><select class="form-control" onchange="pdfExtractedGames[' + i + '].location_type=this.value">' +
         buildSelectOptions(scheduleLocationOptions, g.location_type || 'home') +
-      '</select></td>' +
+      '</select></td>';
+    if (hasResults) {
+      html +=
+        '<td class="col-result"><select class="form-control" onchange="pdfExtractedGames[' + i + '].result=this.value">' +
+          '<option value=""' + (!g.result ? ' selected' : '') + '>—</option>' +
+          '<option value="win"' + (g.result === 'win' ? ' selected' : '') + '>Win</option>' +
+          '<option value="loss"' + (g.result === 'loss' ? ' selected' : '') + '>Loss</option>' +
+          '<option value="tie"' + (g.result === 'tie' ? ' selected' : '') + '>Tie</option>' +
+        '</select></td>' +
+        '<td class="col-score"><input type="number" min="0" class="form-control" value="' + escapeHtml(g.liberty_score ?? '') + '" onchange="pdfExtractedGames[' + i + '].liberty_score=this.value ? parseInt(this.value, 10) : \'\'"></td>' +
+        '<td class="col-score"><input type="number" min="0" class="form-control" value="' + escapeHtml(g.opponent_score ?? '') + '" onchange="pdfExtractedGames[' + i + '].opponent_score=this.value ? parseInt(this.value, 10) : \'\'"></td>';
+    }
+    html +=
     '</tr>';
   });
   html += '</tbody></table>';

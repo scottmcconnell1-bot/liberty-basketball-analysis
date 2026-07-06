@@ -242,20 +242,86 @@ Date Opponent Result
 7:30p Location: Glenns Ferry High School
 12/4 Council (Council, ID) (W) 50 - 30
 2:30p Location: Liberty Charter
+12/15 @ Cole Valley Christian (Meridian, ID) (L) 47 - 33
+7:30p Location: Cole Valley Christian High School
 1/8 @ Murtaugh (Murtaugh, ID) (W) 51 - 32
 5:00p Location: Murtaugh High School
 """
     season = {"name": "2021-22 Boys", "start_date": "2021-11-01", "end_date": "2022-03-31"}
     games = _parse_schedule_text(text, pdf_team="boys_hs", season_info=season)
-    assert len(games) == 3
+    assert len(games) == 4
     assert games[0]["opponent_name"] == "Glenns Ferry"
     assert games[0]["game_date"] == "2021-12-01"
     assert games[0]["game_time"] == "19:30"
     assert games[0]["location_type"] == "away"
+    assert games[0]["status"] == "completed"
+    assert games[0]["result"] == "win"
+    assert games[0]["liberty_score"] == 44
+    assert games[0]["opponent_score"] == 40
     assert games[1]["opponent_name"] == "Council"
     assert games[1]["location_type"] == "home"
-    assert games[2]["opponent_name"] == "Murtaugh"
-    assert games[2]["game_time"] == "17:00"
+    assert games[1]["result"] == "win"
+    assert games[1]["liberty_score"] == 50
+    assert games[2]["result"] == "loss"
+    assert games[2]["liberty_score"] == 33
+    assert games[2]["opponent_score"] == 47
+    assert games[3]["opponent_name"] == "Murtaugh"
+    assert games[3]["game_time"] == "17:00"
+
+
+def test_schedule_import_pdf_confirm_with_scores(client, app):
+    with app.app_context():
+        from helpers import get_db
+        db = get_db()
+        db.execute(
+            "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
+            ("2021-22 Test", "2021-11-01", "2022-03-31"),
+        )
+        db.commit()
+
+    games = [{
+        "game_date": "2021-12-01",
+        "game_time": "19:30",
+        "opponent_name": "Glenns Ferry",
+        "level": "varsity",
+        "gender": "boys",
+        "location_type": "away",
+        "status": "completed",
+        "result": "win",
+        "liberty_score": 44,
+        "opponent_score": 40,
+        "is_conference": False,
+        "notes": "",
+    }]
+    resp = client.post(
+        "/api/schedule/import-pdf/confirm",
+        json={
+            "games": games,
+            "team": "boys_hs",
+            "season": {
+                "name": "2021-22 Test",
+                "start_date": "2021-11-01",
+                "end_date": "2022-03-31",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["imported"] == 1
+
+    with app.app_context():
+        from helpers import get_db
+        db = get_db()
+        scheduled = db.execute("SELECT status FROM scheduled_games WHERE opponent_name='Glenns Ferry'").fetchone()
+        game = db.execute(
+            """SELECT home_score, away_score, result
+               FROM games g
+               JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+               WHERE sg.opponent_name='Glenns Ferry'"""
+        ).fetchone()
+    assert scheduled["status"] == "completed"
+    assert game["home_score"] == 40
+    assert game["away_score"] == 44
+    assert game["result"] == "win"
 
 
 def test_parse_maxpreps_ranking_html():

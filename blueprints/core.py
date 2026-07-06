@@ -625,6 +625,26 @@ def _is_maxpreps_printable_schedule(text):
     ))
 
 
+def _maxpreps_result_to_app_result(result_code):
+    """Map MaxPreps W/L/T codes to app result values."""
+    return {"W": "win", "L": "loss", "T": "tie"}.get((result_code or "").upper(), "")
+
+
+def _liberty_scores_to_venue_scores(location_type, liberty_score, opponent_score):
+    """Convert Liberty/opponent points to home/away score columns."""
+    if location_type == "away":
+        return opponent_score, liberty_score
+    return liberty_score, opponent_score
+
+
+def _opponent_raw_is_conference(opponent_raw):
+    """Conference games are marked with a single trailing * in MaxPreps exports."""
+    import re
+
+    text = opponent_raw or ""
+    return bool(re.search(r"\*", text)) and not bool(re.search(r"\*\*", text))
+
+
 def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
     """Parse MaxPreps printable schedule PDF text into game dicts."""
     import re
@@ -645,7 +665,7 @@ def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
         r'maxpreps\.com',
     ]
     game_line_re = re.compile(
-        r'^(\d{1,2}/\d{1,2})\s+(@\s*)?(.+?)\s+\([WLT]\)',
+        r'^(\d{1,2}/\d{1,2})\s+(@\s*)?(.+?)\s+\(([WLT])\)(?:\s+(\d+)\s*-\s*(\d+))?',
         re.IGNORECASE,
     )
     time_line_re = re.compile(r'^(\d{1,2}:\d{2}p?)\b', re.IGNORECASE)
@@ -667,6 +687,17 @@ def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
             date_str = game_match.group(1)
             is_away = bool(game_match.group(2))
             opponent_raw = game_match.group(3).strip()
+            result_code = game_match.group(4).upper()
+            score_a = int(game_match.group(5)) if game_match.group(5) else None
+            score_b = int(game_match.group(6)) if game_match.group(6) else None
+            if score_a is not None and score_b is not None:
+                if result_code == "L":
+                    liberty_score, opponent_score = score_b, score_a
+                else:
+                    liberty_score, opponent_score = score_a, score_b
+            else:
+                liberty_score, opponent_score = None, None
+            is_conference = _opponent_raw_is_conference(opponent_raw)
             opponent = re.sub(r'\s*\*+\s*$', '', opponent_raw).strip()
             opponent = re.sub(r'\s*\([^)]+\)\s*$', '', opponent).strip()
             opponent = re.sub(
@@ -679,6 +710,8 @@ def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
             if not game_date:
                 pending = None
                 continue
+            result = _maxpreps_result_to_app_result(result_code)
+            has_result = bool(result and liberty_score is not None and opponent_score is not None)
             pending = {
                 "game_date": game_date,
                 "raw_date": date_str,
@@ -691,7 +724,11 @@ def _parse_maxpreps_printable_text(text, pdf_team="boys_hs", season_info=None):
                 "gender": team_gender,
                 "location_type": "away" if is_away else "home",
                 "tournament_name": "",
-                "status": "scheduled",
+                "status": "completed" if has_result else "scheduled",
+                "result": result if has_result else "",
+                "liberty_score": liberty_score if has_result else "",
+                "opponent_score": opponent_score if has_result else "",
+                "is_conference": is_conference,
                 "notes": "",
             }
             continue
@@ -1284,7 +1321,14 @@ def schedule_import_pdf_confirm():
             errors.append(f"Row {i+1}: date and opponent required")
             continue
         try:
-            db.execute(
+            result = (g.get("result") or "").strip().lower()
+            liberty_score = g.get("liberty_score")
+            opponent_score = g.get("opponent_score")
+            has_result = result in ("win", "loss", "tie") and liberty_score not in (None, "") and opponent_score not in (None, "")
+            status = "completed" if has_result else (g.get("status") or "scheduled").strip() or "scheduled"
+            location_type = _normalize_location_type(g.get("location_type"))
+
+            cur = db.execute(
                 """INSERT INTO scheduled_games
                    (season_id, program_name, team, gender, level, game_date, game_time,
                     jv_game_time, frosh_game_time,
@@ -1300,13 +1344,35 @@ def schedule_import_pdf_confirm():
                     (g.get("game_time") or "").strip() or None,
                     (g.get("jv_game_time") or "").strip() or None,
                     (g.get("frosh_game_time") or "").strip() or None,
-                    _normalize_location_type(g.get("location_type")),
+                    location_type,
                     opponent,
                     (g.get("tournament_name") or "").strip() or None,
-                    "scheduled",
+                    status,
                     (g.get("notes") or "").strip() or None,
                 ),
             )
+            if has_result:
+                home_score, away_score = _liberty_scores_to_venue_scores(
+                    location_type,
+                    int(liberty_score),
+                    int(opponent_score),
+                )
+                source_key = f"pdf-import-{game_date}-{opponent.lower().replace(' ', '-')}"
+                db.execute(
+                    """INSERT INTO games
+                       (scheduled_game_id, source_type, source_key,
+                        home_score, away_score, result, is_conference)
+                       VALUES (?,?,?,?,?,?,?)""",
+                    (
+                        cur.lastrowid,
+                        "manual",
+                        source_key,
+                        home_score,
+                        away_score,
+                        result,
+                        int(bool(g.get("is_conference"))),
+                    ),
+                )
             imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)}")
