@@ -235,6 +235,7 @@ def test_start_video_analysis_for_library_video(client, db, monkeypatch, tmp_pat
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _settings=None: (True, None))
     started = []
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: started.append(args))
 
@@ -270,6 +271,7 @@ def test_start_video_analysis_rejects_duplicate_running_job(client, db, monkeypa
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _settings=None: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     resp = client.post("/api/videos/1/analyze")
@@ -324,6 +326,7 @@ def test_start_video_analysis_supersedes_stale_pending(client, db, monkeypatch, 
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _settings=None: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     resp = client.post("/api/videos/1/analyze")

@@ -82,5 +82,24 @@ Write-Step "Verifying imports..."
 & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; print('OK: torch', torch.__version__, 'cv2', cv2.__version__)"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    Write-Step "Pulling Git LFS model weights (models/*.pt)..."
+    git lfs pull --include="models/*.pt"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[liberty-ai] git lfs pull failed. Install Git LFS, then run: git lfs pull" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[liberty-ai] git not found; skip LFS model pull. Ball detector may fail until you run: git lfs pull" -ForegroundColor Yellow
+}
+
+$ballModel = Join-Path $Root "models\ball_detector.pt"
+if (Test-Path $ballModel) {
+    $firstLine = Get-Content $ballModel -TotalCount 1 -ErrorAction SilentlyContinue
+    if ($firstLine -like "version https://git-lfs.github.com/spec/v1*") {
+        Write-Host "[liberty-ai] WARNING: models/ball_detector.pt is still a Git LFS pointer." -ForegroundColor Yellow
+        Write-Host "  Run: git lfs install   then   git lfs pull" -ForegroundColor Yellow
+    }
+}
+
 Write-Host ""
 Write-Host "AI packages installed. Restart the Liberty app, then check Settings -> Runtime." -ForegroundColor Green

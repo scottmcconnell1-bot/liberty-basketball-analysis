@@ -84,6 +84,17 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         person_model_path = resolve_detector_model(ai_settings)
         ball_model_path, ball_class_id, ball_confidence = ball_detector_settings(ai_settings)
         person_confidence = person_detector_settings(ai_settings)
+
+        from helpers import validate_model_weights
+
+        for label, path in (
+            ("Person detector", person_model_path),
+            ("Ball detector", ball_model_path),
+        ):
+            ok, message = validate_model_weights(path)
+            if not ok:
+                raise RuntimeError(f"{label}: {message}")
+
         model = YOLO(person_model_path)
         ball_model = model if ball_model_path == person_model_path else YOLO(ball_model_path)
         inference_device = ai_settings["inference_device"]
@@ -333,6 +344,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             _pconn.close()
         except Exception:
             pass
+        raise
     else:
         # Only run post-processing if no exception occurred
         print(f"[AI] Finished detection for {game_id}. Processed {frame_number} frames.")
@@ -427,7 +439,7 @@ if __name__ == '__main__':
         run_ai_analysis(db_path, video_path, game_id, relational_game_id=_relational_game_id)
         _conn = sqlite3.connect(db_path)
         _conn.execute(
-            "UPDATE analysis_runs SET status='completed', progress_pct=100, progress_step='Done', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
+            "UPDATE analysis_runs SET status='completed', progress_pct=100, progress_step='Done', completed_at=CURRENT_TIMESTAMP WHERE analysis_key=? AND status='running'",
             (game_id,),
         )
         _conn.commit()

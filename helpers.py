@@ -1055,6 +1055,56 @@ def validate_video_for_analysis(video_path: str) -> tuple[bool, str | None]:
     return True, None
 
 
+def is_git_lfs_pointer_file(path: str) -> bool:
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            header = handle.read(120)
+        return header.startswith("version https://git-lfs.github.com/spec/v1")
+    except OSError:
+        return False
+
+
+def validate_model_weights(model_path: str) -> tuple[bool, str | None]:
+    """Return (ok, error_message) for a local model weights file."""
+    model_path = (model_path or "").strip()
+    if not model_path:
+        return True, None
+
+    root = os.path.dirname(os.path.abspath(__file__))
+    abs_path = model_path if os.path.isabs(model_path) else os.path.join(root, model_path)
+    is_repo_model = model_path.replace("\\", "/").startswith("models/")
+
+    if not os.path.exists(abs_path):
+        if is_repo_model:
+            return False, f"Model file not found: {model_path}"
+        return True, None
+
+    if is_git_lfs_pointer_file(abs_path):
+        return False, (
+            f"Model file {model_path} is a Git LFS pointer, not the real weights. "
+            "Run: git lfs pull"
+        )
+
+    if model_path.endswith((".pt", ".pth")) and os.path.getsize(abs_path) < 10_000:
+        return False, f"Model file looks too small or corrupt ({os.path.getsize(abs_path)} bytes): {model_path}"
+    return True, None
+
+
+def validate_ai_models_for_analysis(ai_settings=None) -> tuple[bool, str | None]:
+    """Validate configured person/ball detector weights before launching analysis."""
+    settings = dict(AI_DEFAULTS)
+    if ai_settings:
+        settings.update(ai_settings)
+    for label, path in (
+        ("Person detector", resolve_detector_model(settings)),
+        ("Ball detector", resolve_ball_detector_model(settings)),
+    ):
+        ok, message = validate_model_weights(path)
+        if not ok:
+            return False, f"{label}: {message}"
+    return True, None
+
+
 def ai_analysis_log_path(game_id: str) -> str:
     root = os.path.dirname(os.path.abspath(__file__))
     logs_dir = os.path.join(root, "logs")

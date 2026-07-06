@@ -62,6 +62,20 @@ def test_validate_video_for_analysis_rejects_missing_file():
     assert "not found" in (message or "").lower()
 
 
+def test_validate_model_weights_rejects_git_lfs_pointer(tmp_path):
+    from helpers import validate_model_weights
+
+    pointer = tmp_path / "models" / "ball_detector.pt"
+    pointer.parent.mkdir(parents=True)
+    pointer.write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 123\n",
+        encoding="utf-8",
+    )
+    ok, message = validate_model_weights(str(pointer))
+    assert ok is False
+    assert "git lfs" in (message or "").lower()
+
+
 def test_reconcile_stuck_analysis_run_marks_failed_on_traceback(app, tmp_path):
     from helpers import ai_analysis_log_path, reconcile_stuck_analysis_run
 

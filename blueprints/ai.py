@@ -42,6 +42,7 @@ from helpers import (
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
     validate_video_for_analysis,
+    validate_ai_models_for_analysis,
     reconcile_stuck_analysis_run,
     ai_analysis_log_path,
     _read_log_tail,
@@ -506,6 +507,10 @@ def _start_video_analysis_run(video, *, run_label=None):
         return None, video_error, "invalid_video"
 
     runtime_settings = get_runtime_settings()
+    models_ok, models_error = validate_ai_models_for_analysis(runtime_settings["ai"])
+    if not models_ok:
+        return None, models_error, "invalid_models"
+
     existing_runs = db.execute(
         f"SELECT COUNT(*) AS c FROM analysis_runs WHERE {clause}",
         (video["id"], video["game_id"], video["game_id"], video["file_path"]),
