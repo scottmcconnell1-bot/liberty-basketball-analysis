@@ -1417,10 +1417,21 @@ function initRunAnalysis() {
             if (idleRow) idleRow.style.display = 'flex';
             if (progressBlock) progressBlock.style.display = 'none';
             btn.style.display = 'none';
-            if (statusEl) {
-                statusEl.innerHTML = 'AI packages are not installed on this server (opencv-python, ultralytics). '
-                    + 'Install the AI stack and restart — see Settings → Runtime or Compare AI page for commands.';
-            }
+            fetch('/api/ai/runtime')
+                .then(r => r.ok ? r.json() : null)
+                .then(info => {
+                    if (!statusEl || !info) return;
+                    let html = '<span style="color:#dc2626;">❌ AI is not available in the Python that runs this server.</span><br>';
+                    html += '<span class="tiny">Python: <code>' + (info.python_executable || '?') + '</code> (' + (info.python_version || '?') + ')</span><br>';
+                    html += '<span class="tiny">cv2=' + info.cv2 + ', ultralytics=' + info.ultralytics + ', torch=' + info.torch + '</span><br>';
+                    html += '<span class="tiny">Activate .venv with Python 3.12, run <code>scripts\\install_ai_deps.ps1</code>, restart the app.</span>';
+                    statusEl.innerHTML = html;
+                })
+                .catch(() => {
+                    if (statusEl) {
+                        statusEl.textContent = 'AI packages are not installed. See Settings → Runtime.';
+                    }
+                });
             return;
         }
         if (analysisStatus === 'running') {
@@ -1439,12 +1450,44 @@ function initRunAnalysis() {
             btn.disabled = false;
             btn.textContent = '🤖 Run AI Analysis';
             if (statusEl) {
-                statusEl.textContent = 'Analysis is queued but has not started yet. Click Run AI Analysis to start.';
+                statusEl.textContent = 'Click Run AI Analysis below to start. (A previous attempt was queued but never started.)';
             }
+            fetch('/api/analysis_progress/' + encodeURIComponent(window.FILM_TOOL_GAME_ID || ''))
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    if (data.status === 'running' && typeof window.startAnalysisProgressPolling === 'function') {
+                        window.startAnalysisProgressPolling(window.FILM_TOOL_GAME_ID);
+                    } else if (data.status === 'failed') {
+                        updateRunAnalysisBar('failed');
+                        if (statusEl && data.error_message) {
+                            statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
+                        }
+                    }
+                })
+                .catch(() => {});
             return;
         }
         if (analysisStatus === 'completed') {
             bar.style.display = 'none';
+            return;
+        }
+        if (analysisStatus === 'failed') {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = '';
+            btn.disabled = false;
+            btn.textContent = '🔄 Retry AI Analysis';
+            if (statusEl) statusEl.textContent = 'Previous analysis failed. Click Retry below.';
+            fetch('/api/analysis_progress/' + encodeURIComponent(window.FILM_TOOL_GAME_ID || ''))
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.error_message && statusEl) {
+                        statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
+                    }
+                })
+                .catch(() => {});
             return;
         }
         bar.style.display = 'flex';
@@ -1471,11 +1514,17 @@ function initRunAnalysis() {
             const data = await resp.json();
             if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
             if (data.game_id) window.FILM_TOOL_GAME_ID = data.game_id;
-            updateRunAnalysisBar('pending');
             setStatus(data.message || 'AI analysis started.');
+            if (typeof window.startAnalysisProgressPolling === 'function') {
+                window.startAnalysisProgressPolling(data.game_id || window.FILM_TOOL_GAME_ID);
+            }
         } catch (err) {
-            if (statusEl) statusEl.textContent = err.message;
+            if (progressBlock) progressBlock.style.display = 'none';
+            if (idleRow) idleRow.style.display = 'flex';
+            btn.style.display = '';
             btn.disabled = false;
+            if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + err.message + '</span>';
+            setStatus('Analysis did not start: ' + err.message);
         }
     });
 }

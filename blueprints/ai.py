@@ -132,6 +132,25 @@ def get_stats(game_id):
 
 # ── API: Analysis Progress ──────────────────────────────────
 
+@ai_bp.route("/api/ai/runtime")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_ai_runtime():
+    """Return whether the server's Python environment can run AI analysis."""
+    import sys
+    from helpers import module_available
+
+    return jsonify({
+        "python_executable": sys.executable,
+        "python_version": sys.version.split()[0],
+        "cv2": module_available("cv2"),
+        "ultralytics": module_available("ultralytics"),
+        "torch": module_available("torch"),
+        "ai_runtime_available": ai_runtime_available(),
+        "install_hint": ai_packages_install_hint(),
+        "install_commands": ai_packages_install_commands(),
+    })
+
+
 @ai_bp.route("/api/analysis_progress/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_progress(game_id):
