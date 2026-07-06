@@ -7,8 +7,6 @@ import time
 import uuid
 from copy import deepcopy
 
-from flask import url_for
-
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 _JOB_TTL_SECONDS = 60 * 60
@@ -70,6 +68,8 @@ def start_download_job(
     password: str,
     output_dir: str,
     watch_url: str | None = None,
+    start_ms: int | None = None,
+    end_ms: int | None = None,
 ) -> str:
     job_id = uuid.uuid4().hex
     with _jobs_lock:
@@ -89,7 +89,7 @@ def start_download_job(
 
     thread = threading.Thread(
         target=_run_download_job,
-        args=(job_id, app, game_id, email, password, output_dir, watch_url),
+        args=(job_id, app, game_id, email, password, output_dir, watch_url, start_ms, end_ms),
         daemon=True,
         name=f"nfhs-download-{job_id[:8]}",
     )
@@ -105,6 +105,8 @@ def _run_download_job(
     password: str,
     output_dir: str,
     watch_url: str | None,
+    start_ms: int | None,
+    end_ms: int | None,
 ) -> None:
     from nfhs import download_nfhs_vod, lookup_game, register_nfhs_download
 
@@ -129,13 +131,15 @@ def _run_download_job(
                 output_dir,
                 watch_url=watch_url,
                 progress_callback=on_progress,
+                start_ms=start_ms,
+                end_ms=end_ms,
             )
             if not result["success"]:
                 _update_job(job_id, status="error", error=result["error"], message=result["error"])
                 return
 
             lookup = lookup_game(game_id, email, password)
-            from helpers import get_db
+            from helpers import film_page_path, get_db, videos_page_path
 
             db = get_db()
             saved = register_nfhs_download(
@@ -148,11 +152,7 @@ def _run_download_job(
             )
             db.commit()
 
-            film_url = url_for(
-                "core.film",
-                filename=saved["stored_filename"],
-                game_id=saved["game_id"],
-            )
+            film_url = film_page_path(saved["stored_filename"], saved["game_id"])
             _update_job(
                 job_id,
                 status="complete",
@@ -163,7 +163,7 @@ def _run_download_job(
                 game_id=saved["game_id"],
                 already_saved=saved.get("already_saved", False),
                 redirect_url=film_url,
-                videos_url=url_for("core.videos_page"),
+                videos_url=videos_page_path(),
             )
     except Exception as exc:
         _update_job(job_id, status="error", error=str(exc), message=str(exc))

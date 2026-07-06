@@ -15,7 +15,7 @@ import subprocess
 import time
 from datetime import datetime
 from functools import wraps
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from flask import g, current_app, request, render_template, abort, redirect, url_for, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -996,6 +996,18 @@ def append_query_params(path, **params):
         urlencode(current_params, doseq=True),
         split_path.fragment,
     ))
+
+
+def film_page_path(stored_filename: str, game_id: str) -> str:
+    """Build a Film Tool path without Flask request context (safe in background jobs)."""
+    return append_query_params(
+        f"/film/{quote(stored_filename, safe='')}",
+        game_id=game_id,
+    )
+
+
+def videos_page_path() -> str:
+    return "/videos"
 
 
 def read_filtered_app_logs(query="", limit=200):

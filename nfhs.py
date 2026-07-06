@@ -326,6 +326,16 @@ def _parse_yt_dlp_progress(line: str) -> dict | None:
     }
 
 
+def _format_section_time(ms: int) -> str:
+    total_sec = max(0, int(ms // 1000))
+    hrs = total_sec // 3600
+    mins = (total_sec % 3600) // 60
+    secs = total_sec % 60
+    if hrs:
+        return f"{hrs}:{mins:02d}:{secs:02d}"
+    return f"{mins}:{secs:02d}"
+
+
 def download_nfhs_vod(
     game_id: str,
     email: str,
@@ -334,6 +344,8 @@ def download_nfhs_vod(
     *,
     watch_url: str | None = None,
     progress_callback=None,
+    start_ms: int | None = None,
+    end_ms: int | None = None,
 ) -> dict:
     """
     Download NFHS VOD using yt-dlp with authenticated session cookies.
@@ -390,6 +402,9 @@ def download_nfhs_vod(
             "--fragment-retries", "3",
             nfhs_url,
         ]
+        if start_ms is not None and end_ms is not None and end_ms > start_ms:
+            section = f"*{_format_section_time(start_ms)}-{_format_section_time(end_ms)}"
+            cmd = cmd[:-1] + ["--download-sections", section, "--force-keyframes-at-cuts", cmd[-1]]
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,

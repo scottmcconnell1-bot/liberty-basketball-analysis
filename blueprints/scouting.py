@@ -504,6 +504,23 @@ def api_scouting_nfhs_download():
     watch_url = parsed["watch_url"] or (lookup.get("site_url") if lookup.get("success") else None)
     output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
 
+    start_ms = data.get("start_ms")
+    end_ms = data.get("end_ms")
+    if start_ms is not None or end_ms is not None:
+        from video_trim import parse_time_input
+
+        if start_ms is None and data.get("start"):
+            start_ms = parse_time_input(data.get("start"))
+        if end_ms is None and data.get("end"):
+            end_ms = parse_time_input(data.get("end"))
+        try:
+            start_ms = int(start_ms)
+            end_ms = int(end_ms)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid start/end times for partial download"}), 400
+        if start_ms < 0 or end_ms <= start_ms:
+            return jsonify({"error": "Download end must be after start"}), 400
+
     job_id = start_download_job(
         app=current_app._get_current_object(),
         game_id=game_id,
@@ -511,6 +528,8 @@ def api_scouting_nfhs_download():
         password=password,
         output_dir=output_dir,
         watch_url=watch_url,
+        start_ms=start_ms,
+        end_ms=end_ms,
     )
     return jsonify({
         "status": "started",

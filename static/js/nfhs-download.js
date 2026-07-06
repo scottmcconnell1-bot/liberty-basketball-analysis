@@ -24,6 +24,8 @@
             downloadProgressBar: prefix + 'download-progress-bar',
             downloadProgressText: prefix + 'download-progress-text',
             downloadBtn: prefix + 'download-btn',
+            downloadStart: prefix + 'download-start',
+            downloadEnd: prefix + 'download-end',
         };
         let activePoll = null;
 
@@ -173,7 +175,11 @@
                     if (result.date) html += '<tr><td><strong>Date:</strong></td><td>' + result.date + '</td></tr>';
                     if (result.status) html += '<tr><td><strong>Status:</strong></td><td>' + result.status + '</td></tr>';
                     html += '<tr><td><strong>VOD:</strong></td><td>' + (result.vod_available ? '✅ Available' : '❌ Not available') + '</td></tr>';
-                    html += '</table></div>';
+                    html += '</table>';
+                    if (result.site_url) {
+                        html += '<div style="margin-top:8px;"><a class="btn btn-sm btn-secondary" href="' + result.site_url + '" target="_blank" rel="noopener">▶ Preview on NFHS</a></div>';
+                    }
+                    html += '</div>';
                     info.innerHTML = html;
                 })
                 .catch(err => {
@@ -222,6 +228,17 @@
             }, 1500);
         }
 
+        function parseTimeInput(value) {
+            const raw = (value || '').trim();
+            if (!raw) return null;
+            if (/^\d+(\.\d+)?$/.test(raw)) return Math.round(parseFloat(raw) * 1000);
+            const parts = raw.split(':').map((p) => parseFloat(p));
+            if (parts.some((n) => Number.isNaN(n))) return null;
+            if (parts.length === 2) return Math.round((parts[0] * 60 + parts[1]) * 1000);
+            if (parts.length === 3) return Math.round((parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000);
+            return null;
+        }
+
         function downloadFilm() {
             const gameId = el(ids.gameId)?.value.trim();
             if (!gameId) {
@@ -233,10 +250,22 @@
             setDownloadBusy(true);
             showProgress(0, 'Starting download…');
 
+            const payload = { game_id: gameId };
+            const startMs = parseTimeInput(el(ids.downloadStart)?.value);
+            const endMs = parseTimeInput(el(ids.downloadEnd)?.value);
+            if (startMs != null) payload.start_ms = startMs;
+            if (endMs != null) payload.end_ms = endMs;
+            if ((startMs != null) !== (endMs != null)) {
+                alert('Enter both start and end times for a partial download, or leave both blank for the full file.');
+                setDownloadBusy(false);
+                hideProgress();
+                return;
+            }
+
             fetch('/api/scouting/nfhs/download', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ game_id: gameId }),
+                body: JSON.stringify(payload),
             })
                 .then(r => r.json())
                 .then(result => {

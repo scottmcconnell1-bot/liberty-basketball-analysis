@@ -12,8 +12,6 @@ import uuid
 from copy import deepcopy
 from datetime import datetime
 
-from flask import url_for
-
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 _JOB_TTL_SECONDS = 60 * 60
@@ -178,7 +176,7 @@ def _run_trim_job(
 ) -> None:
     try:
         with app.app_context():
-            from helpers import get_db
+            from helpers import film_page_path, get_db, videos_page_path
 
             input_path = os.path.abspath(video_row["file_path"])
             if not os.path.exists(input_path):
@@ -223,11 +221,7 @@ def _run_trim_job(
             )
             db.commit()
 
-            film_url = url_for(
-                "core.film",
-                filename=stored_filename,
-                game_id=game_id,
-            )
+            film_url = film_page_path(stored_filename, game_id)
             _update_job(
                 job_id,
                 status="complete",
@@ -237,7 +231,7 @@ def _run_trim_job(
                 game_id=game_id,
                 file_size=file_size,
                 redirect_url=film_url,
-                videos_url=url_for("core.videos_page"),
+                videos_url=videos_page_path(),
             )
     except Exception as exc:
         _update_job(job_id, status="error", error=str(exc), message=str(exc))

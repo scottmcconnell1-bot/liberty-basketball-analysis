@@ -154,6 +154,20 @@ def test_parse_yt_dlp_progress_line():
     assert parsed["eta"] == "05:30"
 
 
+def test_format_section_time():
+    from nfhs import _format_section_time
+
+    assert _format_section_time(0) == "0:00"
+    assert _format_section_time(90_000) == "1:30"
+    assert _format_section_time(3_705_000) == "1:01:45"
+
+
+def test_film_page_path_without_request_context():
+    from helpers import film_page_path
+
+    assert film_page_path("nfhs_gam1.mp4", "nfhs_gam1_abc") == "/film/nfhs_gam1.mp4?game_id=nfhs_gam1_abc"
+
+
 def test_nfhs_download_status_missing_job(client):
     resp = client.get("/api/scouting/nfhs/download/does-not-exist")
     assert resp.status_code == 404

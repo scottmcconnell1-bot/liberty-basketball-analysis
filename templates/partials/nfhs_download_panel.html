@@ -33,6 +33,17 @@
     <button class="btn btn-primary btn-sm" type="button" id="{{ p }}download-btn">📥 Download Film</button>
   </div>
   <div id="{{ p }}game-info" class="tiny" style="margin-top:.5rem;"></div>
+  <div class="field" style="margin-top:.75rem;">
+    <label>Optional: download only part of the film (smaller file)</label>
+    <p class="tiny" style="margin:0 0 .5rem;color:var(--color-text-muted);">
+      Preview on NFHS first (link appears after Look Up). Note when the real game starts and ends,
+      then enter times here to skip pregame/postgame padding and stay under upload limits.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;">
+      <input type="text" id="{{ p }}download-start" class="form-control" placeholder="Start e.g. 0:15:00">
+      <input type="text" id="{{ p }}download-end" class="form-control" placeholder="End e.g. 2:00:00">
+    </div>
+  </div>
   <div id="{{ p }}download-progress" style="display:none;margin-top:.75rem;">
     <div class="upload-progress-bar"><span id="{{ p }}download-progress-bar" style="width:0%"></span></div>
     <div id="{{ p }}download-progress-text" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);">Starting…</div>
