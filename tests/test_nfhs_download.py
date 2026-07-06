@@ -231,3 +231,41 @@ def test_start_video_analysis_requires_ai_packages(client, db, tmp_path):
     assert payload["code"] == "ai_packages_unavailable"
     assert "opencv" in payload["error"].lower() or "ultralytics" in payload["error"].lower()
     assert db.execute("SELECT COUNT(*) AS c FROM analysis_runs").fetchone()["c"] == 0
+
+
+def test_ai_analysis_log_path_uses_project_logs_dir():
+    from helpers import ai_analysis_log_path
+
+    path = ai_analysis_log_path("nfhs_gam123_test")
+    assert os.path.basename(path).startswith("ai-nfhs_gam123_test")
+    assert os.path.basename(os.path.dirname(path)) == "logs"
+    assert os.path.isdir(os.path.dirname(path))
+
+
+def test_start_video_analysis_supersedes_stale_pending(client, db, monkeypatch, tmp_path):
+    import blueprints.ai as ai_module
+
+    video_path = tmp_path / "nfhs_gam555.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam555.mp4", "nfhs_gam555.mp4", str(video_path), 16, "Opponent", "nfhs_gam555_20260101"),
+    )
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
+        ("nfhs_gam555_20260101", str(video_path), "pending"),
+    )
+    db.commit()
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+
+    resp = client.post("/api/videos/1/analyze")
+    assert resp.status_code == 200
+
+    rows = db.execute("SELECT status, error_message FROM analysis_runs ORDER BY id").fetchall()
+    assert rows[0]["status"] == "failed"
+    assert "never started" in (rows[0]["error_message"] or "").lower()
+    assert rows[1]["status"] == "pending"

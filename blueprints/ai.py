@@ -36,6 +36,7 @@ from helpers import (
     get_runtime_settings, queue_analysis_run, require_feature,
     resolve_detector_model, safe_return_path, start_analysis_subprocess,
     ai_packages_install_commands, ai_packages_install_hint,
+    supersede_pending_analysis_runs,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -463,9 +464,14 @@ def _start_video_analysis_run(video, *, run_label=None):
 
     db = get_db()
     clause = _video_analysis_runs_clause()
+    supersede_pending_analysis_runs(
+        db,
+        video,
+        reason="Previous pending run never started; replaced by new request",
+    )
     running = db.execute(
         f"""SELECT id FROM analysis_runs
-            WHERE {clause} AND status IN ('pending', 'running')
+            WHERE {clause} AND status='running'
             LIMIT 1""",
         (video["id"], video["game_id"], video["game_id"], video["file_path"]),
     ).fetchone()
@@ -489,7 +495,18 @@ def _start_video_analysis_run(video, *, run_label=None):
         run_label=run_label or default_label,
     )
 
-    start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
+    try:
+        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
+    except Exception as exc:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (f"Failed to start analysis worker: {exc}", run_payload["id"]),
+        )
+        db.commit()
+        return None, f"Failed to start analysis worker: {exc}", "worker_start_failed"
+
     if run_kind == "rerun":
         message = f"Queued rerun '{run_payload['run_label']}'."
     else:

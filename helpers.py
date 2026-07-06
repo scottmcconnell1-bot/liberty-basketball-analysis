@@ -871,24 +871,55 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     }
 
 
+def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new analysis request"):
+    """Mark stuck pending runs failed so a new analysis can start."""
+    clause = "(source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?)"
+    db.execute(
+        f"""UPDATE analysis_runs
+               SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP
+             WHERE {clause} AND status='pending'""",
+        (reason, video_row["id"], video_row["game_id"], video_row["game_id"], video_row["file_path"]),
+    )
+    db.commit()
+
+
+def ai_analysis_log_path(game_id: str) -> str:
+    root = os.path.dirname(os.path.abspath(__file__))
+    logs_dir = os.path.join(root, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    safe_key = re.sub(r"[^\w.\-]+", "_", game_id)[:120]
+    return os.path.join(logs_dir, f"ai-{safe_key}.log")
+
+
 def start_analysis_subprocess(game_id, video_path):
     import sys
 
-    log_path = f"/home/monk-admin/liberty-basketball-ai-{game_id}.log"
-    log_file = open(log_path, "w")
+    log_path = ai_analysis_log_path(game_id)
+    video_path = os.path.abspath(video_path)
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+
+    log_file = open(log_path, "w", encoding="utf-8")
     try:
+        popen_kwargs = {
+            "stdout": log_file,
+            "stderr": subprocess.STDOUT,
+            "cwd": os.path.dirname(os.path.abspath(__file__)),
+        }
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
         proc = subprocess.Popen(
             [sys.executable, "ai_analyzer.py", current_app.config["DATABASE"], video_path, game_id],
-            cwd=os.path.dirname(os.path.abspath(__file__)),
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+            **popen_kwargs,
         )
         if proc is not None:
             log_file.write(f"[launcher] Started ai_analyzer.py PID={proc.pid} for {game_id}\n")
+            log_file.write(f"[launcher] Log file: {log_path}\n")
+            log_file.write(f"[launcher] Video: {video_path}\n")
         else:
             log_file.write(f"[launcher] Popen returned None for {game_id}\n")
         log_file.flush()
+        return log_path
     except Exception as e:
         log_file.write(f"[launcher] Failed to start: {e}\n")
         log_file.flush()
