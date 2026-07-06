@@ -2,7 +2,7 @@
 {% set p = nfhs_prefix|default('nfhs-') %}
 <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">
   Download <strong>your Liberty games</strong> or <strong>opponent film</strong> from NFHS Network.
-  Paste a Game ID or full NFHS URL.
+  Paste a Game ID or full NFHS URL, preview on NFHS, then set start/end before downloading.
 </p>
 
 <div id="{{ p }}logged-in" style="display:none;margin-bottom:.75rem;">
@@ -28,22 +28,34 @@
     <label for="{{ p }}game-id">NFHS Game ID or URL</label>
     <input type="text" id="{{ p }}game-id" class="form-control" placeholder="e.g. gam12d9559efc or https://www.nfhsnetwork.com/events/.../gam...">
   </div>
-  <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;">
-    <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}lookup-btn">🔍 Look Up Game</button>
-    <button class="btn btn-primary btn-sm" type="button" id="{{ p }}download-btn">📥 Download Film</button>
+  <div style="margin-top:.5rem;">
+    <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}lookup-btn">🔍 Step 1: Look Up Game</button>
   </div>
   <div id="{{ p }}game-info" class="tiny" style="margin-top:.5rem;"></div>
-  <div class="field" style="margin-top:.75rem;">
-    <label>Optional: download only part of the film (smaller file)</label>
-    <p class="tiny" style="margin:0 0 .5rem;color:var(--color-text-muted);">
-      Preview on NFHS first (link appears after Look Up). Note when the real game starts and ends,
-      then enter times here to skip pregame/postgame padding and stay under upload limits.
+
+  <div id="{{ p }}download-options" style="display:none;margin-top:1rem;padding:12px;border:1px solid var(--color-border,#333);border-radius:8px;background:var(--color-surface,#1a1a2e);">
+    <p class="tiny" style="margin:0 0 .75rem;font-weight:600;">Step 2: Preview on NFHS, then set game start/end</p>
+    <p class="tiny" style="margin:0 0 .75rem;color:var(--color-text-muted);">
+      Open <strong>Preview on NFHS</strong> above, scrub to tip-off and final buzzer, then enter those times below.
+      This avoids downloading 2–3 hours of warmups and empty gym.
     </p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;">
-      <input type="text" id="{{ p }}download-start" class="form-control" placeholder="Start e.g. 0:15:00">
-      <input type="text" id="{{ p }}download-end" class="form-control" placeholder="End e.g. 2:00:00">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;margin-bottom:.75rem;">
+      <div class="field" style="margin:0;">
+        <label for="{{ p }}download-start">Game start</label>
+        <input type="text" id="{{ p }}download-start" class="form-control" placeholder="e.g. 0:15:00">
+      </div>
+      <div class="field" style="margin:0;">
+        <label for="{{ p }}download-end">Game end</label>
+        <input type="text" id="{{ p }}download-end" class="form-control" placeholder="e.g. 1:48:00">
+      </div>
     </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" type="button" id="{{ p }}download-btn" disabled>📥 Step 3: Download Game Clip</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}download-full-btn" disabled>Download Full File…</button>
+    </div>
+    <p class="tiny text-muted" style="margin:.5rem 0 0;">Both start and end are required for <em>Download Game Clip</em>.</p>
   </div>
+
   <div id="{{ p }}download-progress" style="display:none;margin-top:.75rem;">
     <div class="upload-progress-bar"><span id="{{ p }}download-progress-bar" style="width:0%"></span></div>
     <div id="{{ p }}download-progress-text" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);">Starting…</div>

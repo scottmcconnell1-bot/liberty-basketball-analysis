@@ -24,10 +24,14 @@
             downloadProgressBar: prefix + 'download-progress-bar',
             downloadProgressText: prefix + 'download-progress-text',
             downloadBtn: prefix + 'download-btn',
+            downloadFullBtn: prefix + 'download-full-btn',
+            downloadOptions: prefix + 'download-options',
             downloadStart: prefix + 'download-start',
             downloadEnd: prefix + 'download-end',
         };
         let activePoll = null;
+        let lookupReady = false;
+        let lastSiteUrl = null;
 
         function showLoggedIn(email) {
             const loggedIn = el(ids.loggedIn);
@@ -50,9 +54,25 @@
 
         function setDownloadBusy(isBusy) {
             const btn = el(ids.downloadBtn);
+            const fullBtn = el(ids.downloadFullBtn);
             if (btn) {
-                btn.disabled = isBusy;
-                btn.textContent = isBusy ? '⏳ Downloading…' : '📥 Download Film';
+                btn.disabled = isBusy || !lookupReady;
+                btn.textContent = isBusy ? '⏳ Downloading…' : '📥 Step 3: Download Game Clip';
+            }
+            if (fullBtn) {
+                fullBtn.disabled = isBusy || !lookupReady;
+            }
+        }
+
+        function setLookupReady(ready, siteUrl) {
+            lookupReady = !!ready;
+            lastSiteUrl = siteUrl || null;
+            const options = el(ids.downloadOptions);
+            if (options) options.style.display = ready ? 'block' : 'none';
+            setDownloadBusy(false);
+            if (ready) {
+                const startInput = el(ids.downloadStart);
+                if (startInput) startInput.focus();
             }
         }
 
@@ -147,6 +167,7 @@
             }
             const info = el(ids.gameInfo);
             const status = el(ids.downloadStatus);
+            setLookupReady(false);
             if (info) info.innerHTML = '🔍 Looking up game...';
             if (status) status.textContent = '';
 
@@ -161,6 +182,7 @@
                         if (info) {
                             info.innerHTML = '<span class="text-error">❌ ' + result.error + '</span>';
                         }
+                        setLookupReady(false);
                         if (result.needs_login) showLoginForm();
                         return;
                     }
@@ -181,6 +203,7 @@
                     }
                     html += '</div>';
                     info.innerHTML = html;
+                    setLookupReady(true, result.site_url);
                 })
                 .catch(err => {
                     if (info) info.innerHTML = '<span class="text-error">❌ ' + err.message + '</span>';
@@ -239,28 +262,51 @@
             return null;
         }
 
-        function downloadFilm() {
+        function downloadFilm(requireTimes) {
             const gameId = el(ids.gameId)?.value.trim();
             if (!gameId) {
                 alert('Enter an NFHS GameID or URL');
                 return;
             }
+            if (!lookupReady) {
+                alert('Click "Step 1: Look Up Game" first, preview on NFHS, then enter start/end times.');
+                return;
+            }
+
+            const startMs = parseTimeInput(el(ids.downloadStart)?.value);
+            const endMs = parseTimeInput(el(ids.downloadEnd)?.value);
+            if (requireTimes) {
+                if (startMs == null || endMs == null) {
+                    alert('Enter both game start and game end times before downloading.\n\nUse Preview on NFHS to find tip-off and final buzzer.');
+                    el(ids.downloadStart)?.focus();
+                    return;
+                }
+                if (endMs <= startMs) {
+                    alert('Game end must be after game start.');
+                    return;
+                }
+            } else if (startMs != null || endMs != null) {
+                alert('Enter both start and end times, or clear both fields to download the full file.');
+                return;
+            } else {
+                const ok = confirm(
+                    'Download the FULL NFHS file?\n\n' +
+                    'This is often 2–3 hours and several GB. For a smaller game-only file, click Cancel and enter Start/End times instead.'
+                );
+                if (!ok) {
+                    el(ids.downloadStart)?.focus();
+                    return;
+                }
+            }
+
             const status = el(ids.downloadStatus);
             if (status) status.innerHTML = '<span class="text-muted">Download runs on the server. You can stay on this page for progress, or check Videos later.</span>';
             setDownloadBusy(true);
             showProgress(0, 'Starting download…');
 
             const payload = { game_id: gameId };
-            const startMs = parseTimeInput(el(ids.downloadStart)?.value);
-            const endMs = parseTimeInput(el(ids.downloadEnd)?.value);
             if (startMs != null) payload.start_ms = startMs;
             if (endMs != null) payload.end_ms = endMs;
-            if ((startMs != null) !== (endMs != null)) {
-                alert('Enter both start and end times for a partial download, or leave both blank for the full file.');
-                setDownloadBusy(false);
-                hideProgress();
-                return;
-            }
 
             fetch('/api/scouting/nfhs/download', {
                 method: 'POST',
@@ -291,7 +337,8 @@
         el(prefix + 'login-btn')?.addEventListener('click', login);
         el(prefix + 'logout-btn')?.addEventListener('click', logout);
         el(prefix + 'lookup-btn')?.addEventListener('click', lookupGame);
-        el(prefix + 'download-btn')?.addEventListener('click', downloadFilm);
+        el(prefix + 'download-btn')?.addEventListener('click', () => downloadFilm(true));
+        el(prefix + 'download-full-btn')?.addEventListener('click', () => downloadFilm(false));
 
         checkCredentials();
 
