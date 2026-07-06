@@ -195,6 +195,22 @@ def test_parse_schedule_line_normalizes_opponent_title_case():
     assert result["opponent_name"] == "Idaho City"
 
 
+def test_parse_schedule_line_tbd_opponent_and_location():
+    from blueprints.core import _normalize_opponent_name, _normalize_location_type, _parse_schedule_line
+
+    assert _normalize_opponent_name("tbd") == "TBD"
+    assert _normalize_location_type("TBD") == "tbd"
+
+    result = _parse_schedule_line("JAN 15 TBD (TBD) 3:30/5:00", pdf_team="jr_boys")
+    assert result is not None
+    assert result["opponent_name"] == "TBD"
+    assert result["location_type"] == "tbd"
+
+    result = _parse_schedule_line("FEB 5 tbd (tbd) 4:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "TBD"
+    assert result["location_type"] == "tbd"
+
+
 def test_detect_season_jr_boys_uses_title_year():
     from blueprints.core import _detect_season_from_text
 

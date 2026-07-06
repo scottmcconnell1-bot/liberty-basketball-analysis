@@ -472,7 +472,7 @@ def schedule_save_game():
                 "game_time": (form.get("game_time") or "").strip(),
                 "jv_game_time": (form.get("jv_game_time") or "").strip(),
                 "frosh_game_time": (form.get("frosh_game_time") or "").strip(),
-                "location_type": (form.get("location_type") or "home").strip(),
+                "location_type": _normalize_location_type(form.get("location_type")),
                 "opponent_name": opponent_name,
                 "tournament_name": (form.get("tournament_name") or "").strip(),
                 "status": (form.get("status") or "scheduled").strip(),
@@ -491,7 +491,7 @@ def schedule_save_game():
         (form.get("game_time") or "").strip() or None,
         (form.get("jv_game_time") or "").strip() or None,
         (form.get("frosh_game_time") or "").strip() or None,
-        (form.get("location_type") or "home").strip() or "home",
+        _normalize_location_type(form.get("location_type")),
         opponent_name,
         (form.get("tournament_name") or "").strip() or None,
         (form.get("status") or "scheduled").strip() or "scheduled",
@@ -793,10 +793,22 @@ def _normalize_opponent_name(name):
     text = (name or "").strip()
     if not text:
         return text
+    if text.upper() == "TBD":
+        return "TBD"
     return " ".join(
         word[:1].upper() + word[1:].lower() if word else ""
         for word in text.split()
     )
+
+
+def _normalize_location_type(value):
+    """Normalize schedule location values; TBD is stored as ``tbd``."""
+    text = (value or "").strip().lower()
+    if text == "tbd":
+        return "tbd"
+    if text in ("home", "away", "neutral"):
+        return text
+    return text or "home"
 
 
 def _canonicalize_schedule_time_text(text):
@@ -915,12 +927,12 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     remainder = line[line.index(date_str) + len(date_str):].strip()
     remainder = re.sub(r'^\s*[:\\\-–—]\s*', '', remainder)
 
-    # Detect location: (H), (A), (N) or @/at prefix
+    # Detect location: (H), (A), (N), (TBD) or @/at prefix
     location_type = 'home'
-    loc_h = re.search(r'\((H|A|N)\)', remainder, re.IGNORECASE)
+    loc_h = re.search(r'\((H|A|N|TBD)\)', remainder, re.IGNORECASE)
     if loc_h:
         loc_code = loc_h.group(1).upper()
-        location_type = {'H': 'home', 'A': 'away', 'N': 'neutral'}.get(loc_code, 'home')
+        location_type = {'H': 'home', 'A': 'away', 'N': 'neutral', 'TBD': 'tbd'}.get(loc_code, 'home')
         remainder = remainder[:loc_h.start()] + remainder[loc_h.end():]
         remainder = remainder.strip()
     else:
@@ -1070,7 +1082,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     # Clean up opponent name
     opponent = remainder
     opponent = re.sub(r'\*+', '', opponent).strip()  # Remove conference markers like *
-    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman|tbd)\b', '', opponent, flags=re.IGNORECASE).strip()
+    opponent = re.sub(r'\b(varsity|jv|junior varsity|boys|girls|freshman)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\b(vs\.?|versus)\b', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'^\s*vs\.?\s*', '', opponent, flags=re.IGNORECASE).strip()  # Remove leading "vs."
     opponent = re.sub(r'^\.\s*', '', opponent).strip()  # Remove leading orphaned period
@@ -1171,7 +1183,7 @@ def schedule_import_pdf_confirm():
                     (g.get("game_time") or "").strip() or None,
                     (g.get("jv_game_time") or "").strip() or None,
                     (g.get("frosh_game_time") or "").strip() or None,
-                    (g.get("location_type") or "home").strip(),
+                    _normalize_location_type(g.get("location_type")),
                     opponent,
                     (g.get("tournament_name") or "").strip() or None,
                     "scheduled",
@@ -1500,7 +1512,14 @@ def schedule_export_maxpreps():
         "Team", "Level", "Gender", "Tournament", "Conference", "Season"
     ])
     for g in games:
-        location = "Away" if g["location_type"] == "away" else "Home"
+        if g["location_type"] == "away":
+            location = "Away"
+        elif g["location_type"] == "tbd":
+            location = "TBD"
+        elif g["location_type"] == "neutral":
+            location = "Neutral"
+        else:
+            location = "Home"
         writer.writerow([
             g["game_date"],
             g["jv_game_time"] or "",
