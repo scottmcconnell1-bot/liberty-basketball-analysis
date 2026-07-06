@@ -258,6 +258,18 @@ Date Opponent Result
     assert games[2]["game_time"] == "17:00"
 
 
+def test_parse_maxpreps_ranking_html():
+    from blueprints.core import _parse_maxpreps_ranking_html
+
+    html = """
+    <table>
+      <tr><td class="rank">16</td><td class="team">Other School</td></tr>
+      <tr><td class="rank">17</td><td class="team">Liberty Charter Patriots</td></tr>
+    </table>
+    """
+    assert _parse_maxpreps_ranking_html(html) == 17
+
+
 def test_rankings_post_without_playwright(client):
     """Ranking refresh should not 500 when Playwright is unavailable."""
     resp = client.post("/api/teams/rankings", data={"state": "Idaho"})

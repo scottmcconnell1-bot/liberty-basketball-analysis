@@ -2241,14 +2241,60 @@ def _maxpreps_ranking_url(state, gender):
     return f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
 
 
+def _parse_maxpreps_ranking_html(html):
+    """Extract Liberty's state rank from a MaxPreps rankings HTML page."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html or "", "html.parser")
+    for row in soup.select("tr"):
+        if "liberty" not in row.get_text(" ", strip=True).lower():
+            continue
+        rank_cell = row.select_one("td.rank")
+        if not rank_cell:
+            continue
+        try:
+            ranking = int(rank_cell.get_text(strip=True))
+        except ValueError:
+            continue
+        if 1 <= ranking <= 100:
+            return ranking
+    return None
+
+
+def _scrape_maxpreps_ranking_http(state, gender):
+    """Fetch MaxPreps rankings with requests (no browser required)."""
+    import requests
+
+    url = _maxpreps_ranking_url(state, gender)
+    try:
+        response = requests.get(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+    except Exception:
+        return None, url
+    return _parse_maxpreps_ranking_html(response.text), url
+
+
 def _scrape_maxpreps_ranking(state, gender):
     """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
     Returns (ranking_int, url_str) or (None, url_str) if not found/unavailable.
-    Uses Playwright when installed; otherwise returns cached-null gracefully.
+    Tries lightweight HTTP fetch first, then Playwright as a fallback.
     """
+    ranking, url = _scrape_maxpreps_ranking_http(state, gender)
+    if ranking is not None:
+        return ranking, url
+
     import os
 
-    url = _maxpreps_ranking_url(state, gender)
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
