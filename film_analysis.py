@@ -41,10 +41,33 @@ def _resolve_relational_game_id(conn, game_id):
     try:
         game_id_int = int(game_id)
     except (TypeError, ValueError):
-        return None
+        game_id_int = None
 
-    row = conn.execute("SELECT id FROM games WHERE id = ?", (game_id_int,)).fetchone()
-    return row["id"] if row else None
+    if game_id_int is not None:
+        row = conn.execute("SELECT id FROM games WHERE id = ?", (game_id_int,)).fetchone()
+        if row:
+            return row["id"]
+
+    try:
+        row = conn.execute(
+            "SELECT game_id FROM analysis_runs WHERE analysis_key=? AND game_id IS NOT NULL ORDER BY id DESC LIMIT 1",
+            (str(game_id),),
+        ).fetchone()
+        if row and row[0] is not None:
+            return row[0]
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        row = conn.execute(
+            "SELECT relational_game_id FROM videos WHERE game_id = ? ORDER BY id DESC LIMIT 1",
+            (str(game_id),),
+        ).fetchone()
+        if row and row[0] is not None:
+            return row[0]
+    except sqlite3.OperationalError:
+        pass
+    return None
 
 
 def _detections_game_filter(game_id, relational_game_id, alias=None):
@@ -193,6 +216,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
         return []
 
     relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
 
     # Estimate basket position from existing 2pt makes (or use defaults)
     basket_x, basket_y, three_pt_threshold = _estimate_basket_position(conn, game_id)
