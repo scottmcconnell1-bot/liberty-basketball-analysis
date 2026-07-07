@@ -10,6 +10,7 @@
     <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pdf-upload-input').click()">📄 Import PDF</button>
     <input type="file" id="pdf-upload-input" accept=".pdf" style="display:none" onchange="importPdf(this)">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule_export_maxpreps') }}" target="_blank">📤 Export MaxPreps</a>
+    <span id="pdf-import-health" class="tiny" style="color:#6b7280;"></span>
   </div>
 </div>
 
@@ -29,7 +30,7 @@
     </div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="closePdfTeamModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="uploadPdfWithTeam()">Upload PDF</button>
+      <button class="btn btn-primary" id="pdf-upload-btn" type="button" onclick="uploadPdfWithTeam()">Upload PDF</button>
     </div>
   </div>
 </div>
@@ -483,11 +484,17 @@ function uploadPdfWithTeam() {
   pdfSelectedTeam = teamSelect.value;
   closePdfTeamModal();
 
-  // Now upload the PDF with the team
   const input = pdfUploadInput;
-  if (!input) return;
+  const uploadBtn = document.getElementById('pdf-upload-btn');
+  if (!input) { alert('No file input — pick the PDF again.'); return; }
   const file = input.files[0];
-  if (!file) { alert('No file selected. Please try again.'); return; }
+  if (!file) { alert('No file selected. Please choose the PDF again.'); return; }
+
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Parsing PDF…';
+  }
+
   const formData = new FormData();
   formData.append('pdf', file);
   formData.append('team', pdfSelectedTeam);
@@ -495,7 +502,17 @@ function uploadPdfWithTeam() {
     method: 'POST',
     body: formData,
   })
-  .then(r => r.json())
+  .then(async (r) => {
+    const data = await r.json();
+    if (!r.ok) {
+      let msg = data.error || ('Import failed (HTTP ' + r.status + ')');
+      if (data.health && !data.health.ready) {
+        msg += '\n\nServer status: ' + (data.health.message || 'parser not ready');
+      }
+      throw new Error(msg);
+    }
+    return data;
+  })
   .then(data => {
     if (data.error) { alert('Error: ' + data.error); return; }
     pdfExtractedGames = data.games || [];
@@ -505,8 +522,12 @@ function uploadPdfWithTeam() {
     );
     if (looksLikeFooterJunk || (pdfExtractedGames.length > 0 && pdfExtractedGames.length < 5 && data.parser !== 'maxpreps')) {
       alert(
-        'Schedule import failed — the server parsed PDF footer junk instead of games. '
-        + 'On the AI workstation run: git pull origin jason-5-may-updates then restart the app, and try again.'
+        'Schedule import failed — the server parsed PDF footer junk instead of games.\n\n'
+        + 'On the AI workstation run:\n'
+        + '  git pull origin jason-5-may-updates\n'
+        + '  pip install pdfplumber\n'
+        + 'Then restart the app and try again.\n\n'
+        + 'Check status: /api/schedule/import-health'
       );
       return;
     }
@@ -522,8 +543,38 @@ function uploadPdfWithTeam() {
     document.getElementById('pdf-import-modal').classList.add('open');
   })
   .catch(err => alert('Import failed: ' + err.message))
-  .finally(() => { input.value = ''; pdfUploadInput = null; });
+  .finally(() => {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload PDF';
+    }
+    input.value = '';
+    pdfUploadInput = null;
+  });
 }
+
+function refreshPdfImportHealth() {
+  const el = document.getElementById('pdf-import-health');
+  if (!el) return;
+  fetch('/api/schedule/import-health')
+    .then(r => r.json())
+    .then(data => {
+      if (data.ready) {
+        el.textContent = '✓ MaxPreps PDF import ready';
+        el.style.color = '#166534';
+      } else {
+        el.textContent = '⚠ PDF import needs update — pull code + restart app';
+        el.style.color = '#b45309';
+        el.title = data.message || '';
+      }
+    })
+    .catch(() => {
+      el.textContent = '⚠ Could not check PDF import status';
+      el.style.color = '#b45309';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', refreshPdfImportHealth);
 
 function renderPdfPreview() {
   const area = document.getElementById('pdf-preview-area');

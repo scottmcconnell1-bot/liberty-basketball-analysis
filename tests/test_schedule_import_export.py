@@ -209,6 +209,43 @@ def test_api_schedule_import_maxpreps_pdf(client, monkeypatch):
     assert payload["games"][0]["opponent_name"] == "Marsing"
 
 
+def test_schedule_import_health_endpoint(client):
+    resp = client.get("/api/schedule/import-health")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ready"] is True
+    assert data["maxpreps_parser"] is True
+    assert data["pdf_backend"] in ("pdfplumber", "PyPDF2")
+
+
+def test_api_schedule_import_rejects_footer_junk(client, monkeypatch):
+    junk_text = "7/6/26, 9:52 PM Printable Liberty Charter High School Basketball Schedule\n"
+
+    class _FakePage:
+        def extract_text(self):
+            return junk_text
+
+    class _FakePdf:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        @property
+        def pages(self):
+            return [_FakePage()]
+
+    monkeypatch.setattr("pdfplumber.open", lambda _file: _FakePdf())
+
+    data = {"pdf": (io.BytesIO(b"%PDF-1.4"), "schedule.pdf"), "team": "boys_hs"}
+    resp = client.post("/api/schedule/import-pdf", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 400
+    payload = resp.get_json()
+    assert "not parsed correctly" in payload["error"]
+    assert payload.get("health") is not None
+
+
 def test_schedule_table_column_widths(client):
     """Verify schedule table has correct column headers."""
     resp = client.get("/schedule")

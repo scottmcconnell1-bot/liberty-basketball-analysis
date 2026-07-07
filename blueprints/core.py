@@ -567,6 +567,64 @@ def schedule_delete_game(game_id):
 
 # ── PDF Import ──────────────────────────────────────────
 
+def _schedule_import_health_payload():
+    """Report whether MaxPreps schedule PDF import is available on this server."""
+    try:
+        from schedule_import import is_maxpreps_printable_schedule, parse_maxpreps_schedule_text
+        sample = """Date Opponent Result
+12/2 Marsing (Marsing, ID) (W) 67 - 56
+7:30p Location: Liberty Charter
+"""
+        games = parse_maxpreps_schedule_text(
+            sample,
+            pdf_team="boys_hs",
+            season_info={"start_date": "2025-11-01", "end_date": "2026-03-31"},
+        )
+        ready = is_maxpreps_printable_schedule(sample) and len(games) == 1 and games[0]["opponent_name"] == "Marsing"
+        pdf_backend = "pdfplumber"
+        try:
+            import pdfplumber  # noqa: F401
+        except ImportError:
+            pdf_backend = "PyPDF2" if _import_optional("PyPDF2") else "none"
+        return {
+            "ready": ready,
+            "maxpreps_parser": ready,
+            "pdf_backend": pdf_backend,
+            "message": "MaxPreps PDF import ready" if ready else "MaxPreps parser self-test failed",
+        }
+    except Exception as exc:
+        return {
+            "ready": False,
+            "maxpreps_parser": False,
+            "pdf_backend": "unknown",
+            "message": f"MaxPreps parser unavailable: {exc}",
+        }
+
+
+def _import_optional(module_name: str) -> bool:
+    try:
+        __import__(module_name)
+        return True
+    except ImportError:
+        return False
+
+
+def _looks_like_footer_junk_games(games: list[dict]) -> bool:
+    if not games:
+        return True
+    if any("printable" in (g.get("opponent_name") or "").lower() for g in games):
+        return True
+    if len(games) < 5:
+        return True
+    return False
+
+
+@core.route("/api/schedule/import-health", methods=["GET"])
+@require_feature("ENABLE_SEASONS_SCHEDULE")
+def schedule_import_health():
+    return _schedule_import_health_payload()
+
+
 @core.route("/api/schedule/import-pdf", methods=["POST"])
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def schedule_import_pdf():
@@ -602,6 +660,18 @@ def schedule_import_pdf():
 
         parser = "maxpreps" if is_maxpreps_printable_schedule(text) else "legacy"
         games = _parse_schedule_text(text, pdf_team=pdf_team, season_info=season_info)
+        if is_maxpreps_printable_schedule(text) and _looks_like_footer_junk_games(games):
+            health = _schedule_import_health_payload()
+            return {
+                "error": (
+                    "MaxPreps schedule PDF was not parsed correctly on this server. "
+                    f"{health.get('message', '')} "
+                    "Run: git pull origin jason-5-may-updates, pip install pdfplumber, then restart the app."
+                ),
+                "parser": parser,
+                "count": len(games),
+                "health": health,
+            }, 400
         return {"games": games, "season": season_info, "parser": parser, "count": len(games)}
     except Exception as e:
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
