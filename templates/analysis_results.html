@@ -230,10 +230,19 @@ async function loadResults() {
       const det = data.detection_count ?? 0;
       const evt = data.event_count ?? 0;
       summary.style.display = 'block';
-      summary.innerHTML = '<strong>Analysis summary:</strong> '
+      let html = '<strong>Analysis summary:</strong> '
         + det.toLocaleString() + ' detections, '
-        + evt.toLocaleString() + ' events. '
-        + (evt > 0 ? 'Box score below includes unreviewed AI events. Accept events in Review to lock stats.' : '');
+        + evt.toLocaleString() + ' events. ';
+      html += 'Players are court-position clusters (Pos 0–9), not jersey numbers. ';
+      html += 'Treat AI stats as rough estimates — review events before trusting box score.';
+      if (Array.isArray(data.quality_notes) && data.quality_notes.length) {
+        html += '<ul style="margin:.5rem 0 0 1rem;padding:0;">';
+        data.quality_notes.forEach(function(note) {
+          html += '<li style="margin:.25rem 0;">' + escapeHtml(note) + '</li>';
+        });
+        html += '</ul>';
+      }
+      summary.innerHTML = html;
     }
 
     setStep('step-fetch', 'done');
@@ -399,15 +408,15 @@ function renderBoxScore(basic, enhanced) {
     var row = basic[i];
     var pid = row.player || row.tracker_id;
     var name = row.name || ('Player ' + pid);
-    var min = minutes[pid] || '0';
+    var min = minutes[pid] || row.minutes || '0';
     var s = shots[pid] || {};
-    var fgm = (s['2pt_make'] || 0) + (s['3pt_make'] || 0);
-    var fga = fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0);
-    var tpm = s['3pt_make'] || 0;
-    var tpa = tpm + (s['3pt_miss'] || 0);
+    var fgm = row.fgm != null ? row.fgm : ((s['2pt_make'] || 0) + (s['3pt_make'] || 0));
+    var fga = row.fga != null ? row.fga : (fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0));
+    var tpm = row.threes_made != null ? row.threes_made : (s['3pt_make'] || 0);
+    var tpa = row.threes_att != null ? row.threes_att : (tpm + (s['3pt_miss'] || 0));
     var ftm = s['ft_make'] || 0;
     var fta = ftm + (s['ft_miss'] || 0);
-    var pts = (s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0);
+    var pts = row.pts != null ? row.pts : ((s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0));
 
     html += '<tr><td><strong>' + name + '</strong></td>';
     html += '<td class="num">' + min + '</td>';
@@ -415,11 +424,11 @@ function renderBoxScore(basic, enhanced) {
     html += '<td class="num">' + fgm + '/' + fga + '</td>';
     html += '<td class="num">' + tpm + '/' + tpa + '</td>';
     html += '<td class="num">' + ftm + '/' + fta + '</td>';
-    html += '<td class="num">' + (row.rebounds || 0) + '</td>';
-    html += '<td class="num">' + (row.assists || 0) + '</td>';
-    html += '<td class="num">' + (row.steals || 0) + '</td>';
-    html += '<td class="num">' + (row.blocks || 0) + '</td>';
-    html += '<td class="num">' + (row.turnovers || 0) + '</td>';
+    html += '<td class="num">' + (row.reb != null ? row.reb : (row.rebounds || 0)) + '</td>';
+    html += '<td class="num">' + (row.ast != null ? row.ast : (row.assists || 0)) + '</td>';
+    html += '<td class="num">' + (row.stl != null ? row.stl : (row.steals || 0)) + '</td>';
+    html += '<td class="num">' + (row.blk != null ? row.blk : (row.blocks || 0)) + '</td>';
+    html += '<td class="num">' + (row.tov != null ? row.tov : (row.turnovers || 0)) + '</td>';
     html += '<td class="num">' + (row.fouls || 0) + '</td></tr>';
   }
   tbody.innerHTML = html;

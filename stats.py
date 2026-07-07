@@ -116,6 +116,25 @@ def _eligible_event_rows(db, game_id):
     ).fetchall()
 
 
+def _shot_attempt_already_counted(et, sr):
+    """Expanded AI emits shot+make/miss pairs; count attempts once."""
+    return et == "shot" and sr in ("make", "miss", "made", "missed")
+
+
+def _scoring_points_for_event(et, sr):
+    if et == "make":
+        return 2
+    if et in ("made_two", "2pt", "two_attempt"):
+        return 2
+    if et in ("made_three", "3pt", "three_attempt"):
+        return 3
+    if et == "made_free_throw":
+        return 1
+    if et == "shot" and sr in ("make", "made"):
+        return 2
+    return 0
+
+
 def _aggregate_rows(rows):
     players = {}
     for row in rows:
@@ -130,12 +149,15 @@ def _aggregate_rows(rows):
             }
         s = players[p]
         s["events"] += 1
-        et = (row["code"] or "").lower()
-        sr = (row["shot_result"] or "").lower()
+        et = (row.get("code") or row.get("event_type") or "").lower()
+        sr = (row.get("shot_result") or "").lower()
+
+        if _shot_attempt_already_counted(et, sr):
+            continue
 
         if et in ("made_two", "two_attempt", "2pt", "shot"):
             s["fga"] += 1
-            if sr == "made":
+            if sr == "made" or sr == "make":
                 s["fgm"] += 1
                 s["pts"] += 2
         elif et in ("missed_two",):
@@ -143,7 +165,7 @@ def _aggregate_rows(rows):
         elif et in ("made_three", "three_attempt", "3pt"):
             s["fga"] += 1
             s["threes_att"] += 1
-            if sr == "made":
+            if sr == "made" or sr == "make":
                 s["fgm"] += 1
                 s["threes_made"] += 1
                 s["pts"] += 3
@@ -152,10 +174,16 @@ def _aggregate_rows(rows):
             s["threes_att"] += 1
         elif et == "made_free_throw":
             s["fga"] += 1
-            if sr == "made":
+            if sr == "made" or sr == "make":
                 s["fgm"] += 1
                 s["pts"] += 1
         elif et == "missed_free_throw":
+            s["fga"] += 1
+        elif et == "make":
+            s["fga"] += 1
+            s["fgm"] += 1
+            s["pts"] += 2
+        elif et == "miss":
             s["fga"] += 1
         elif et == "assist":
             s["ast"] += 1
@@ -307,6 +335,34 @@ def _enhance_stats_from_analysis(db, game_id):
             if shot_result == "make":
                 db.execute("UPDATE stats SET fgm=fgm+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
             db.execute("UPDATE stats SET fga=fga+? WHERE game_id=? AND player_id=?", (cnt, game_id, player_id))
+
+
+def get_shot_breakdown_preview(db, game_id):
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    return _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
+        SELECT tracker_id, shot_type, shot_result, COUNT(*) as cnt
+        FROM shot_classifications
+        WHERE relational_game_id = ?
+           OR (relational_game_id IS NULL AND game_id = ?)
+        GROUP BY tracker_id, shot_type, shot_result
+        ORDER BY tracker_id, shot_type
+        """,
+    ) if relational_game_id is not None else _fetch_shot_rows(
+        db,
+        relational_game_id,
+        game_id,
+        """
+        SELECT tracker_id, shot_type, shot_result, COUNT(*) as cnt
+        FROM shot_classifications
+        WHERE game_id = ?
+        GROUP BY tracker_id, shot_type, shot_result
+        ORDER BY tracker_id, shot_type
+        """,
+    )
 
 
 def get_enhanced_stats(db, game_id):
@@ -588,6 +644,57 @@ def _compute_fgm(db, game_id):
     return row["cnt"] if row else 0
 
 
+def _possessions_game_id(db, game_id):
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    return relational_game_id if relational_game_id is not None else game_id
+
+
+def score_possessions_for_game(db, game_id):
+    """Derive points_for and outcome on possession rows from linked events."""
+    possessions_gid = _possessions_game_id(db, game_id)
+    possessions = db.execute(
+        "SELECT id FROM possessions WHERE game_id = ?",
+        (possessions_gid,),
+    ).fetchall()
+
+    for poss in possessions:
+        events = db.execute(
+            """SELECT e.event_type, e.shot_result, et.code
+               FROM events e
+               LEFT JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.possession_id = ?
+               ORDER BY e.timestamp_ms ASC, e.id ASC""",
+            (poss["id"],),
+        ).fetchall()
+
+        points = 0
+        outcome = None
+        for ev in events:
+            et = (ev["code"] or ev["event_type"] or "").lower()
+            sr = (ev["shot_result"] or "").lower()
+            if _shot_attempt_already_counted(et, sr):
+                continue
+
+            pts = _scoring_points_for_event(et, sr)
+            if pts > 0:
+                points += pts
+                outcome = "score"
+            elif et == "turnover":
+                outcome = "turnover"
+            elif et in ("miss", "missed_two", "missed_three", "missed_free_throw"):
+                if outcome is None:
+                    outcome = "miss"
+            elif et == "block" and outcome is None:
+                outcome = "block"
+
+        db.execute(
+            "UPDATE possessions SET points_for = ?, outcome = ? WHERE id = ?",
+            (points, outcome, poss["id"]),
+        )
+
+    db.commit()
+
+
 def get_possession_summary(db, game_id):
     """Return possession summary for a game.
 
@@ -596,18 +703,12 @@ def get_possession_summary(db, game_id):
     turnover_rate, top_outcomes.
     """
     relational_game_id = _resolve_relational_game_id(db, game_id)
+    possessions_gid = _possessions_game_id(db, game_id)
 
-    # Count total possessions
-    if relational_game_id is not None:
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
-            (relational_game_id,),
-        ).fetchone()["cnt"]
-    else:
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
-            (game_id,),
-        ).fetchone()["cnt"]
+    total = db.execute(
+        "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
+        (possessions_gid,),
+    ).fetchone()["cnt"]
 
     if total == 0:
         return {
@@ -621,13 +722,13 @@ def get_possession_summary(db, game_id):
     # Scoring possessions (points_for > 0)
     scoring = db.execute(
         "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ? AND points_for > 0",
-        (game_id,),
+        (possessions_gid,),
     ).fetchone()["cnt"]
 
     # Total points
     total_points = db.execute(
         "SELECT COALESCE(SUM(points_for), 0) as pts FROM possessions WHERE game_id = ?",
-        (game_id,),
+        (possessions_gid,),
     ).fetchone()["pts"]
 
     # Turnover events (trusted review status only)
@@ -652,20 +753,12 @@ def get_possession_summary(db, game_id):
         ).fetchone()["cnt"]
 
     # Top 3 possession outcomes by count
-    if relational_game_id is not None:
-        top = db.execute(
-            """SELECT outcome, COUNT(*) as cnt FROM possessions
-               WHERE game_id = ? AND outcome IS NOT NULL
-               GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
-            (game_id,),
-        ).fetchall()
-    else:
-        top = db.execute(
-            """SELECT outcome, COUNT(*) as cnt FROM possessions
-               WHERE game_id = ? AND outcome IS NOT NULL
-               GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
-            (game_id,),
-        ).fetchall()
+    top = db.execute(
+        """SELECT outcome, COUNT(*) as cnt FROM possessions
+           WHERE game_id = ? AND outcome IS NOT NULL
+           GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
+        (possessions_gid,),
+    ).fetchall()
 
     return {
         "total_possessions": total,

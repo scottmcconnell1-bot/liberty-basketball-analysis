@@ -201,7 +201,7 @@ def get_analysis_progress(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_results(game_id):
     """Return full analysis results: box score, shots, plays, player effect."""
-    from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview
+    from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview, get_shot_breakdown_preview
     db = get_db()
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
@@ -238,6 +238,30 @@ def get_analysis_results(game_id):
     basic = aggregate_stats_preview(db, game_id)
     refresh_stats(db, game_id)
     enhanced = get_enhanced_stats(db, game_id)
+    enhanced["shot_breakdown"] = [dict(row) for row in get_shot_breakdown_preview(db, game_id)]
+    enhanced["basic_stats"] = basic
+
+    quality_notes = []
+    if detection_count > 250_000:
+        quality_notes.append(
+            "Very high detection count — the clip may include extra footage beyond one game, "
+            "or detection_stride may be too low for a long video."
+        )
+    if event_count > 3000:
+        quality_notes.append(
+            "Event count is high for a single game. Expanded AI heuristics often over-tag "
+            "shots and possession changes; treat counts as directional, not official stats."
+        )
+    if event_count > 0 and not enhanced["shot_breakdown"] and not any(row.get("pts") for row in basic):
+        quality_notes.append(
+            "Events were generated but the box score could not be derived. "
+            "Try Rebuild Events on Video Library after pulling the latest update."
+        )
+    if any((row.get("minutes_played") or 0) > 42 for row in enhanced.get("minutes", [])):
+        quality_notes.append(
+            "Some position clusters show more than 42 minutes — the trimmed video may still "
+            "be longer than one regulation game."
+        )
 
     # Wire possession inference after stats refresh
     from helpers import assign_possessions_for_game
@@ -291,6 +315,7 @@ def get_analysis_results(game_id):
         "game_id": game_id,
         "detection_count": detection_count,
         "event_count": event_count,
+        "quality_notes": quality_notes,
         "basic_stats": basic,
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],

@@ -69,6 +69,9 @@ EVENT_TYPE_SEEDS = [
     ("2pt", "Legacy 2PT", "shot", 1, 1, 0),
     ("3pt", "Legacy 3PT", "shot", 1, 1, 0),
     ("rebound", "Legacy rebound", "rebound", 1, 0, 0),
+    ("make", "Made field goal (AI)", "shot", 1, 1, 0),
+    ("miss", "Missed field goal (AI)", "shot", 1, 0, 0),
+    ("possession_change", "Possession change (AI)", "possession", 0, 0, 1),
 ]
 
 BASE_MODULE_ENTITLEMENT = {
@@ -1629,7 +1632,8 @@ def assign_possessions_for_game(db, game_id):
 
         prev_was_boundary = is_boundary
 
-    db.commit()
+    from stats import score_possessions_for_game
+    score_possessions_for_game(db, game_id)
 
 
 def _seed_base_module_entitlement(db, team_id):
