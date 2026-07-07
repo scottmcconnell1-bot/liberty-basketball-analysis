@@ -281,7 +281,7 @@ async function regenerateEvents(videoId) {
     const data = await resp.json();
     if (!resp.ok) {
       const extra = data.code === 'sklearn_missing'
-        ? '\n\nInstall on the AI workstation:\n  pip install scikit-learn'
+        ? '\n\nPull latest code and retry Rebuild (numpy fallback). For full AI stack use Python 3.12 or 3.13.'
         : '';
       throw new Error((data.error || 'Failed to regenerate events') + extra);
     }

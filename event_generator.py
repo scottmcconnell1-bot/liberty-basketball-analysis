@@ -143,6 +143,70 @@ def build_ball_track(detections_df):
     return ball_df.groupby("frame_number", as_index=False).first()
 
 
+def _numpy_kmeans_fit(coords, n_clusters, max_iter=20, seed=42):
+    """Lightweight KMeans for spatial clustering when scikit-learn is unavailable."""
+    import numpy as np
+
+    coords = np.asarray(coords, dtype=float)
+    n_samples = coords.shape[0]
+    n_clusters = min(int(n_clusters), n_samples)
+    if n_clusters <= 0:
+        return np.empty((0, coords.shape[1]), dtype=float)
+
+    rng = np.random.default_rng(seed)
+    center_idx = rng.choice(n_samples, size=n_clusters, replace=False)
+    centers = coords[center_idx].copy()
+    labels = np.zeros(n_samples, dtype=int)
+
+    for _ in range(max_iter):
+        dists = ((coords[:, None, :] - centers[None, :, :]) ** 2).sum(axis=2)
+        new_labels = dists.argmin(axis=1)
+        if np.array_equal(new_labels, labels):
+            break
+        labels = new_labels
+        for cluster_id in range(n_clusters):
+            mask = labels == cluster_id
+            if mask.any():
+                centers[cluster_id] = coords[mask].mean(axis=0)
+            else:
+                centers[cluster_id] = coords[rng.integers(0, n_samples)]
+    return centers
+
+
+def _numpy_kmeans_predict(coords, centers):
+    import numpy as np
+
+    coords = np.asarray(coords, dtype=float)
+    if centers.size == 0 or len(coords) == 0:
+        return np.full(len(coords), -1, dtype=int)
+    dists = ((coords[:, None, :] - centers[None, :, :]) ** 2).sum(axis=2)
+    return dists.argmin(axis=1)
+
+
+def _fit_spatial_clusters(sample_coords, n_clusters):
+    """Fit KMeans on sample coordinates, preferring scikit-learn with numpy fallback."""
+    import numpy as np
+
+    coords = np.asarray(sample_coords, dtype=float)
+    n_clusters = min(int(n_clusters), len(coords))
+    if n_clusters <= 0:
+        return np.empty((0, coords.shape[1]), dtype=float), "none"
+
+    try:
+        from sklearn.cluster import KMeans
+
+        model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        model.fit(coords)
+        return model.cluster_centers_, "sklearn"
+    except ImportError:
+        print("INFO: scikit-learn not installed; using built-in numpy clustering fallback.")
+        return _numpy_kmeans_fit(coords, n_clusters), "numpy"
+
+
+def _predict_spatial_clusters(coords, centers, backend="sklearn"):
+    return _numpy_kmeans_predict(coords, centers)
+
+
 def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=None):
     """
     Cluster person detections into stable player slots by spatial position.
@@ -158,7 +222,6 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     Returns: DataFrame with added 'cluster_id' column.
     """
     import numpy as np
-    from sklearn.cluster import KMeans
 
     persons = detections_df[detections_df['class_name'] == 'person'].copy()
     if persons.empty:
@@ -170,9 +233,9 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     if len(sample) > 50000:
         sample = sample.sample(50000, random_state=42)
 
-    # KMeans clustering on spatial positions
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-    kmeans.fit(sample.values)
+    centers, backend = _fit_spatial_clusters(sample.values, n_clusters)
+    if backend != "none":
+        print(f"INFO: Player clustering backend: {backend}")
 
     # Assign ALL person detections to nearest cluster
     person_mask = detections_df['class_name'] == 'person'
@@ -180,7 +243,9 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     valid_coords = ~np.isnan(person_coords).any(axis=1)
     clusters = np.full(len(person_coords), -1)
     if valid_coords.any():
-        clusters[valid_coords] = kmeans.predict(person_coords[valid_coords])
+        clusters[valid_coords] = _predict_spatial_clusters(
+            person_coords[valid_coords], centers, backend=backend
+        )
     detections_df.loc[person_mask, 'cluster_id'] = clusters
 
     # Write cluster assignments to DB for enhanced analysis
@@ -764,7 +829,7 @@ def main(game_id, db_path, relational_game_id=None):
 
         return True
 
-    except (sqlite3.Error, ImportError) as e:
+    except (sqlite3.Error, ValueError) as e:
         print(f"ERROR: An error occurred in event_generator: {e}")
         return False
     finally:

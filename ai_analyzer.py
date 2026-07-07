@@ -423,8 +423,8 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
         if generate_events(game_id, db_path, relational_game_id=relational_game_id) is False:
             raise RuntimeError(
-                "Event generation failed. Install scikit-learn (pip install scikit-learn) "
-                "and regenerate events without re-running detection."
+                "Event generation failed. Check logs for details, then regenerate events "
+                "without re-running detection."
             )
 
         detection_count = db.execute(
