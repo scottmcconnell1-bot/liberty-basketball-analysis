@@ -59,15 +59,7 @@ from helpers import (
     append_query_params,
     save_settings,
 )
-from module_entitlements import audit_team_entitlements, build_preview_entitlements_view
-from module_keys import (
-    BASE_PLATFORM,
-    FILM_ROOM,
-    MINUTES_LINEUPS,
-    PLAYBOOK_RECOGNITION,
-    SCOUTING,
-    STATS,
-)
+from module_entitlements import audit_team_entitlements
 from stats import _resolve_relational_game_id
 
 core = Blueprint("core", __name__)
@@ -258,7 +250,6 @@ PRODUCT_CHECKLIST = [
 
 PRODUCT_SURFACE_LINKS = [
     {"label": "Dashboard", "href": "/"},
-    {"label": "Preview", "href": "/preview"},
     {"label": "Schedule", "href": "/schedule"},
     {"label": "Film Upload", "href": "/film"},
     {"label": "Videos", "href": "/videos"},
@@ -270,50 +261,6 @@ PRODUCT_SURFACE_LINKS = [
     {"label": "Status", "href": "/status"},
 ]
 
-PRODUCT_PREVIEW_MODULES = [
-    {
-        "title": "Team Operations",
-        "summary": "Run the season schedule, game planning, and practice workflow from one place.",
-        "href": "/schedule",
-        "accent": "teal",
-        "items": ["Season schedule", "Completed games", "Practice planning"],
-        "module_keys": [BASE_PLATFORM],
-    },
-    {
-        "title": "Film Room",
-        "summary": "Upload video, review AI output, and correct plays inside the same workflow.",
-        "href": "/film",
-        "accent": "amber",
-        "items": ["Upload and tag film", "Review queue", "Compare reruns"],
-        "module_keys": [FILM_ROOM],
-    },
-    {
-        "title": "Analysis & Trust",
-        "summary": "Track analysis runs, live status, and reviewed event quality with proof.",
-        "href": "/status",
-        "accent": "slate",
-        "items": ["Run status", "Event trust layer", "Canonical identity tracking"],
-        "module_keys": [STATS],
-    },
-    {
-        "title": "Player Development",
-        "summary": "Turn reviewed clips and tagged events into player-facing improvement work.",
-        "href": "/player-development",
-        "accent": "green",
-        "items": ["Development playlists", "Minutes foundation", "Clip workflows"],
-        "module_keys": [MINUTES_LINEUPS],
-    },
-    {
-        "title": "Scouting & Playbook",
-        "summary": "Keep opponent prep, play organization, and coach communication in one shell.",
-        "href": "/scouting",
-        "accent": "red",
-        "items": ["Scouting notes", "Playbook", "Coach messaging"],
-        "module_keys": [SCOUTING, PLAYBOOK_RECOGNITION],
-    },
-]
-
-
 def _build_product_checklist():
     summary = {"complete": 0, "in_progress": 0, "planned": 0}
     for phase in PRODUCT_CHECKLIST:
@@ -321,55 +268,9 @@ def _build_product_checklist():
     return PRODUCT_CHECKLIST, summary
 
 
-def _build_product_preview(db):
-    review_summary = build_review_workflow_summary(db)
-    minutes_summary = build_player_minutes_summary(db)
-    entitlements_view = build_preview_entitlements_view(db, PRODUCT_PREVIEW_MODULES)
-    counts = {
-        "scheduled_games": db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0],
-        "videos": db.execute("SELECT COUNT(*) FROM videos").fetchone()[0],
-        "analysis_runs": db.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0],
-        "pending_review": review_summary["review_items_open"],
-        "events_pending": review_summary["events_pending"],
-        "events_accepted": review_summary["events_accepted"],
-        "events_corrected": review_summary["events_corrected"],
-        "events_rejected": review_summary["events_rejected"],
-        "events_total": review_summary["events_total"],
-        "games_with_minutes": minutes_summary["games_with_minutes"],
-        "players_tracked": minutes_summary["players_tracked"],
-        "total_minutes": minutes_summary["total_minutes"],
-        "enabled_modules": entitlements_view["enabled_module_count"],
-        "disabled_modules": entitlements_view["disabled_module_count"],
-        "practices": db.execute("SELECT COUNT(*) FROM practices").fetchone()[0],
-    }
-    return (
-        entitlements_view["preview_modules"],
-        counts,
-        review_summary,
-        minutes_summary,
-        entitlements_view["module_entitlement_report"],
-        entitlements_view,
-    )
-
-
 @core.route("/")
 def index():
     return render_template("index.html")
-
-
-@core.route("/preview")
-def product_preview_page():
-    db = get_db()
-    modules, counts, review_summary, minutes_summary, module_entitlement_report, entitlements_view = _build_product_preview(db)
-    return render_template(
-        "product_preview.html",
-        preview_modules=modules,
-        preview_counts=counts,
-        review_summary=review_summary,
-        minutes_summary=minutes_summary,
-        module_entitlement_report=module_entitlement_report,
-        entitlements_view=entitlements_view,
-    )
 
 
 @core.route("/schedule")

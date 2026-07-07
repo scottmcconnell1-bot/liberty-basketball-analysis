@@ -1215,57 +1215,6 @@ def test_status_page_shows_product_progress_checklist(client):
     assert 'href="/practices"' in html
 
 
-def test_product_preview_page_renders_final_product_surface(client):
-    r = client.get("/preview")
-    assert r.status_code == 200
-    html = r.get_data(as_text=True)
-    assert "Final Product Preview" in html
-    assert "Accepted events" in html
-    assert "Games with minutes" in html
-    assert "Total minutes logged" in html
-    assert "Modules enabled" in html
-    assert "Module packaging per team" in html
-    assert "Included" in html
-    assert "base platform enabled" in html
-    assert "Pending events" in html
-    assert "Coach command center" in html
-    assert "What the finished platform feels like" in html
-    assert 'href="/film"' in html
-    assert 'href="/review"' in html
-    assert 'href="/practices"' in html
-
-
-def test_product_preview_shows_disabled_module_state(client, db):
-    """Preview reflects disabled scouting entitlement on module cards."""
-    from helpers import DEFAULT_TEAM_SEED
-
-    team_row = db.execute(
-        """SELECT id FROM teams
-           WHERE organization_name=? AND team_name=? AND program_name=?
-             AND gender=? AND level=?""",
-        (
-            DEFAULT_TEAM_SEED["organization_name"],
-            DEFAULT_TEAM_SEED["team_name"],
-            DEFAULT_TEAM_SEED["program_name"],
-            DEFAULT_TEAM_SEED["gender"],
-            DEFAULT_TEAM_SEED["level"],
-        ),
-    ).fetchone()
-    team_id = team_row["id"]
-    db.execute(
-        """INSERT OR REPLACE INTO module_entitlements
-           (team_id, module_key, enabled, notes)
-           VALUES (?, ?, ?, ?)""",
-        (team_id, "scouting", 0, "disabled in test"),
-    )
-    db.commit()
-
-    html = client.get("/preview").get_data(as_text=True)
-    assert "Not included" in html
-    assert "Scouting" in html
-    assert "Disabled" in html
-
-
 def test_status_page_groups_detection_and_event_counts_by_canonical_game_id(client, db):
     game_id = "status-canonical-game"
     game_row = db.execute(

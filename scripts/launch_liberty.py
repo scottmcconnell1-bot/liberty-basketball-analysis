@@ -267,7 +267,6 @@ def main() -> int:
         print("-" * 60)
         print("  Liberty is running. Begin testing:")
         print(f"    Dashboard : {base_url}")
-        print(f"    Preview   : {base_url}preview")
         print(f"    Status    : {base_url}status")
         print(f"    Film      : {base_url}film")
         print(f"    Review    : {base_url}review")

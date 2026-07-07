@@ -40,7 +40,6 @@ def _save_and_accept(client, game_id, player, event_type, shot_result="made", ti
     "path,pattern",
     [
         ("/", r'href="/"[^>]*class="active"[^>]*>Dashboard'),
-        ("/preview", r'href="/preview"[^>]*class="active"'),
         ("/schedule", r'href="/schedule"[^>]*class="active"'),
         ("/games", r'href="/games"[^>]*class="active"'),
         ("/film", r'href="/film"[^>]*class="active"'),
