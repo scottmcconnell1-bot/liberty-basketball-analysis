@@ -2491,6 +2491,7 @@ def _ensure_migration_columns(db):
         ("detections", "jersey_read", "ALTER TABLE detections ADD COLUMN jersey_read INTEGER"),
         ("detections", "jersey_confidence", "ALTER TABLE detections ADD COLUMN jersey_confidence REAL"),
         ("plays", "category_id", "ALTER TABLE plays ADD COLUMN category_id INTEGER REFERENCES play_categories(id)"),
+        ("plays", "share_token", "ALTER TABLE plays ADD COLUMN share_token TEXT UNIQUE"),
         ("play_steps", "source_image", "ALTER TABLE play_steps ADD COLUMN source_image TEXT"),
     ]
     existing = {

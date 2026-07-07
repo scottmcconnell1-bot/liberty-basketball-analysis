@@ -28,9 +28,15 @@ from module_keys import PLAYBOOK_RECOGNITION
 
 playbook_bp = Blueprint("playbook", __name__)
 
+_PUBLIC_ENDPOINTS = frozenset({
+    "playbook.playbook_share",
+})
+
 
 @playbook_bp.before_request
 def _playbook_module_gate():
+    if request.endpoint in _PUBLIC_ENDPOINTS:
+        return
     db = get_db()
     enforce_module_access(db, get_default_team_id(db), PLAYBOOK_RECOGNITION)
 
@@ -79,6 +85,13 @@ def _default_category_id(db):
     from playbook_taxonomy import resolve_category_id_by_path
 
     return resolve_category_id_by_path(db, "offense/man/plays")
+
+
+def _share_url_for_play(play):
+    token = play["share_token"] if play else None
+    if not token:
+        return None
+    return url_for("playbook.playbook_share", token=token, _external=True)
 
 
 @playbook_bp.route("/playbook")
@@ -147,6 +160,40 @@ def playbook_view(play_id):
         editing_steps=[dict(s) for s in steps],
         view_mode="view",
         selected_category_id=play["category_id"],
+        share_url=_share_url_for_play(play),
+    )
+
+
+@playbook_bp.route("/play/share/<token>")
+def playbook_share(token):
+    """Public read-only view of a play via share link."""
+    db = get_db()
+    from playbook_sharing import get_play_by_share_token
+
+    play = get_play_by_share_token(db, token)
+    if not play:
+        return (
+            "<!DOCTYPE html><html><body style='font-family:sans-serif;padding:40px;'>"
+            "<h2>Play not found</h2><p>This share link is invalid or has been revoked.</p>"
+            "</body></html>",
+            404,
+            {"Content-Type": "text/html"},
+        )
+    steps = db.execute(
+        "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
+    ).fetchall()
+    category_tree = _load_playbook_taxonomy(db)
+    return render_template(
+        "playbook.html",
+        plays=[],
+        playbooks=[],
+        categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
+        editing_play=dict(play),
+        editing_steps=[dict(s) for s in steps],
+        view_mode="share",
+        selected_category_id=play["category_id"],
+        share_url=url_for("playbook.playbook_share", token=token, _external=True),
     )
 
 
@@ -174,6 +221,7 @@ def playbook_edit(play_id):
         editing_steps=[dict(s) for s in steps],
         view_mode="editor",
         selected_category_id=play["category_id"],
+        share_url=_share_url_for_play(play),
     )
 
 
@@ -312,6 +360,24 @@ def playbook_save():
     db.commit()
     flash("Play saved.", "success")
     return redirect(url_for("playbook.playbook_view", play_id=play_db_id))
+
+
+@playbook_bp.route("/api/playbook/play/<int:play_id>/share", methods=["POST"])
+def playbook_share_api(play_id):
+    """Create or return a shareable public link for a play."""
+    from playbook_sharing import ensure_share_token
+
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    try:
+        token = ensure_share_token(db, play_id)
+        db.commit()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    share_url = url_for("playbook.playbook_share", token=token, _external=True)
+    return jsonify({"token": token, "url": share_url})
 
 
 @playbook_bp.route("/api/playbook/play/<int:play_id>")

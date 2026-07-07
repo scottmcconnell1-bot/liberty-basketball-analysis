@@ -79,8 +79,13 @@
 {% endif %}
 
 <!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
-{% if view_mode in ("editor", "view") %}
-{% set is_readonly = view_mode == "view" %}
+{% if view_mode in ("editor", "view", "share") %}
+{% set is_readonly = view_mode in ("view", "share") %}
+{% if view_mode == "share" %}
+<div class="alert" style="background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;margin-bottom:16px;">
+  Shared play — view and animate only. Use the video button to export a clip for players.
+</div>
+{% endif %}
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <!-- Left: Court Canvas -->
@@ -101,6 +106,10 @@
           <option value="run">Run</option>
           <option value="screen">Screen</option>
         </select>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="actionTimingSelect" title="Timing for next action drawn">
+          <option value="sync">Sync</option>
+          <option value="optional">Optional</option>
+        </select>
         <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
           <option value="offense">Offense (O)</option>
           <option value="defense">Defense (X)</option>
@@ -111,6 +120,7 @@
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="btn btn-secondary btn-sm" onclick="toggleCourt()" title="Toggle half/full court">🏀 Court</button>
         <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
         <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
         <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
         <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
@@ -204,9 +214,16 @@
         {% endfor %}
       </div>
       {% endif %}
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        {% if editing_play and editing_play.id and view_mode != "share" %}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
+        {% endif %}
+        {% if view_mode != "share" %}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_list') }}">Back to Library</a>
+        {% endif %}
+        {% if editing_play and editing_play.id %}
+        <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -216,6 +233,11 @@
       <h4 style="margin-bottom:12px;">Steps <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
       <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
         <!-- Populated by JS -->
+      </div>
+      <div id="movementListWrap" style="margin-top:12px;">
+        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
+        <div id="movementList" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs with other actions · Optional = reads/decisions</p>
       </div>
     </div>
   </div>
@@ -273,6 +295,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
+<script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
 <script>
 // ── Playbook Canvas State ────────────────────────────────
 const COURT_W = 500, COURT_H = 470;
@@ -300,7 +323,47 @@ const MAX_UNDO = 50;
 // Initialize from server data if editing
 const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
 const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
-const isReadOnly = {{ 'true' if view_mode == 'view' else 'false' }};
+const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
+const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
+let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
+let isExportingVideo = false;
+
+function movementQuadControl(from, to, bend = 0.12) {
+  return {
+    mx: (from.x + to.x) / 2 + (to.y - from.y) * bend,
+    my: (from.y + to.y) / 2 - (to.x - from.x) * bend,
+  };
+}
+
+function quadPointAt(from, ctrl, to, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * from.x + 2 * u * t * ctrl.mx + t * t * to.x,
+    y: u * u * from.y + 2 * u * t * ctrl.my + t * t * to.y,
+  };
+}
+
+function appendBallAlongPath(parent, from, ctrl, to, count = 3) {
+  for (let i = 1; i <= count; i++) {
+    const t = i / (count + 1);
+    const pt = quadPointAt(from, ctrl, to, t);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${pt.x}, ${pt.y})`);
+    g.appendChild(makeCircle(0, 0, 5, '#f97316', '#9a3412', 1.5));
+    parent.appendChild(g);
+  }
+}
+
+function movementLabel(m) {
+  const names = { pass: 'Pass', dribble: 'Dribble', cut: 'Cut', run: 'Run', screen: 'Screen' };
+  return names[m.type] || m.type;
+}
+
+function playerShortId(pid) {
+  if (!pid) return '?';
+  const type = pid.startsWith('d') ? 'X' : 'O';
+  return `${type}${pid.replace(/^[od]/, '')}`;
+}
 
 // ── Court Rendering ──────────────────────────────────────
 function renderCourt() {
@@ -436,6 +499,7 @@ function renderStep() {
 
   // Show/hide step images
   renderStepImages();
+  updateMovementList();
 }
 
 // ── Step Image Rendering (for imported plays) ─────────────
@@ -568,7 +632,7 @@ function renderArrows(step) {
   arrowLayer.innerHTML = '';
   if (!step.movements) return;
 
-  step.movements.forEach((m, idx) => {
+  step.movements.forEach((m) => {
     if (m && m._meta) return;
     const from = step.positions[m.from];
     const to = step.positions[m.to];
@@ -576,41 +640,70 @@ function renderArrows(step) {
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     let d = '';
+    let ctrl = null;
+    const isOptional = m.timing === 'optional';
 
     if (m.type === 'pass') {
       d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
       path.setAttribute('stroke', '#3b82f6');
       path.setAttribute('stroke-width', '2.5');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', '8,4');
+      path.setAttribute('stroke-dasharray', isOptional ? '6,4' : '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
     } else if (m.type === 'dribble') {
-      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      ctrl = movementQuadControl(from, to, 0.18);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
       path.setAttribute('stroke', '#111827');
       path.setAttribute('stroke-width', '3');
       path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '0');
       path.setAttribute('marker-end', 'url(#arrowhead-black)');
     } else if (m.type === 'cut' || m.type === 'run') {
-      const mx = (from.x + to.x) / 2 + (to.y - from.y) * 0.12;
-      const my = (from.y + to.y) / 2 - (to.x - from.x) * 0.12;
-      d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      ctrl = movementQuadControl(from, to, 0.12);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
       path.setAttribute('stroke', m.type === 'cut' ? '#ef4444' : '#16a34a');
       path.setAttribute('stroke-width', '2.5');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', m.type === 'cut' ? '6,4' : '0');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : (m.type === 'cut' ? '6,4' : '0'));
       path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
     } else if (m.type === 'screen') {
-      const mx = (from.x + to.x) / 2 + (to.y - from.y) * 0.15;
-      const my = (from.y + to.y) / 2 - (to.x - from.x) * 0.15;
-      d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      ctrl = movementQuadControl(from, to, 0.15);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
       path.setAttribute('stroke', '#f59e0b');
       path.setAttribute('stroke-width', '2.5');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', '4,4');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '4,4');
     }
 
+    if (isOptional) path.setAttribute('opacity', '0.6');
     path.setAttribute('d', d);
     arrowLayer.appendChild(path);
+
+    if (m.type === 'dribble' && ctrl) {
+      appendBallAlongPath(arrowLayer, from, ctrl, to, 3);
+    }
+
+    if (isOptional && ctrl) {
+      const mid = quadPointAt(from, ctrl, to, 0.5);
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    } else if (isOptional && m.type === 'pass') {
+      const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    }
   });
 
   addArrowheadMarkers();
@@ -731,11 +824,13 @@ function handleToolClick(e, pid) {
     saveUndoState();
     const type = currentTool;
     if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
-      steps[currentStep].movements.push({ from: arrowStart, to: pid, type });
+      const timing = document.getElementById('actionTimingSelect')?.value || 'sync';
+      steps[currentStep].movements.push({ from: arrowStart, to: pid, type, timing });
     }
     highlightPlayer(arrowStart, false);
     arrowStart = null;
     renderStep();
+    updateMovementList();
   }
 }
 
@@ -850,13 +945,79 @@ function saveCurrentStepNotes() {
   steps[currentStep].notes = document.getElementById('stepNotes').value;
 }
 
+function updateMovementList() {
+  const list = document.getElementById('movementList');
+  const wrap = document.getElementById('movementListWrap');
+  if (!list || !wrap) return;
+  const step = steps[currentStep];
+  const movements = (step?.movements || []).filter((m) => !(m && m._meta));
+  if (!movements.length) {
+    wrap.style.display = isReadOnly ? 'none' : 'block';
+    list.innerHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool and click two players.</div>';
+    return;
+  }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  movements.forEach((m, idx) => {
+    const row = document.createElement('div');
+    row.className = 'movement-item';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#f9fafb;';
+
+    const label = document.createElement('span');
+    label.style.flex = '1';
+    label.textContent = `${playerShortId(m.from)} → ${playerShortId(m.to)} · ${movementLabel(m)}`;
+
+    if (isReadOnly) {
+      const badge = document.createElement('span');
+      badge.textContent = m.timing === 'optional' ? 'Optional' : 'Sync';
+      badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
+      row.appendChild(label);
+      row.appendChild(badge);
+    } else {
+      const timingSelect = document.createElement('select');
+      timingSelect.className = 'form-control';
+      timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+      ['sync', 'optional'].forEach((value) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
+        if ((m.timing || 'sync') === value) opt.selected = true;
+        timingSelect.appendChild(opt);
+      });
+      timingSelect.onchange = () => {
+        saveUndoState();
+        m.timing = timingSelect.value;
+        renderStep();
+      };
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-danger btn-sm';
+      removeBtn.textContent = '×';
+      removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
+      removeBtn.onclick = () => {
+        saveUndoState();
+        step.movements.splice(idx, 1);
+        renderStep();
+        updateMovementList();
+      };
+
+      row.appendChild(label);
+      row.appendChild(timingSelect);
+      row.appendChild(removeBtn);
+    }
+    list.appendChild(row);
+  });
+}
+
 function updateStepList() {
   const list = document.getElementById('stepList');
+  if (!list) return;
   list.innerHTML = '';
   steps.forEach((s, i) => {
     const div = document.createElement('div');
     div.className = 'step-item' + (i === currentStep ? ' active' : '');
-    div.onclick = () => { saveCurrentStepNotes(); currentStep = i; renderStep(); updateStepList(); };
+    div.onclick = () => { saveCurrentStepNotes(); currentStep = i; renderStep(); updateStepList(); updateMovementList(); };
 
     const num = document.createElement('span');
     num.textContent = `${i + 1}.`;
@@ -886,11 +1047,12 @@ function lerpPosition(a, b, t) {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function animateToStep(targetIndex, durationMs = 700) {
+function animateToStep(targetIndex, durationMs = 700, onFrame) {
   if (targetIndex <= 0 || targetIndex >= steps.length) {
     currentStep = targetIndex;
     renderStep();
     updateStepList();
+    updateMovementList();
     return Promise.resolve();
   }
   const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions));
@@ -906,6 +1068,7 @@ function animateToStep(targetIndex, durationMs = 700) {
       });
       steps[targetIndex].positions = blended;
       renderStep();
+      if (onFrame) onFrame();
       if (t < 1) {
         animFrame = requestAnimationFrame(frame);
       } else {
@@ -913,6 +1076,7 @@ function animateToStep(targetIndex, durationMs = 700) {
         currentStep = targetIndex;
         renderStep();
         updateStepList();
+        updateMovementList();
         resolve();
       }
     }
@@ -960,6 +1124,48 @@ function exportPng() {
     link.click();
   };
   img.src = url;
+}
+
+async function exportVideo() {
+  if (isExportingVideo || !window.PlaybookExport) {
+    if (!window.PlaybookExport) alert('Video export is not available.');
+    return;
+  }
+  isExportingVideo = true;
+  const btn = document.querySelector('[onclick="exportVideo()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recording…'; }
+  try {
+    await window.PlaybookExport.recordPlayAnimation({
+      svg: document.getElementById('courtSvg'),
+      steps,
+      isFullCourt,
+      playName: document.getElementById('playName')?.value || editingPlay?.name || 'play',
+      animateToStep,
+      renderStep,
+      updateStepList,
+      setCurrentStep: (index) => { currentStep = index; },
+      getCurrentStep: () => currentStep,
+      restorePositions: () => {
+        const snapshot = steps.map((s) => JSON.parse(JSON.stringify(s.positions)));
+        return () => steps.forEach((s, i) => { s.positions = snapshot[i]; });
+      },
+    });
+  } catch (err) {
+    alert(err.message || 'Video export failed.');
+  } finally {
+    isExportingVideo = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🎬 Video'; }
+  }
+}
+
+async function copyPlayShareLink() {
+  if (!playId || !window.PlaybookExport) return;
+  try {
+    shareUrl = await window.PlaybookExport.copyShareLink(playId, shareUrl);
+    alert('Share link copied to clipboard.');
+  } catch (err) {
+    alert(err.message || 'Could not copy share link.');
+  }
 }
 
 // ── Save to hidden form fields ───────────────────────────

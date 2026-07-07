@@ -529,6 +529,7 @@ CREATE TABLE IF NOT EXISTS plays (
     description     TEXT,
     category        TEXT NOT NULL DEFAULT 'offense',
     category_id     INTEGER REFERENCES play_categories(id),
+    share_token     TEXT UNIQUE,
     tags            TEXT,
     diagram_json    TEXT,
     created_by      TEXT,
