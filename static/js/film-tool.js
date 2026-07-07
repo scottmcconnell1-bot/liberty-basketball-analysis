@@ -189,17 +189,76 @@ function parsePlayerText(text) {
     return { num: NaN, base: value };
 }
 
-function sortPlayers(list) {
-    return [...new Set(list.map(normalize).filter(Boolean))]
-        .map(parsePlayerText)
-        .sort((a, b) => {
-            if (Number.isNaN(a.num) && Number.isNaN(b.num)) return a.base.localeCompare(b.base);
-            if (Number.isNaN(a.num)) return 1;
-            if (Number.isNaN(b.num)) return -1;
-            if (a.num !== b.num) return a.num - b.num;
-            return a.base.localeCompare(b.base);
+function buildPlayerLabel({ jersey_number: num, name, grade } = {}) {
+    const jersey = normalize(num);
+    const playerName = normalize(name);
+    const playerGrade = normalize(grade);
+    let label = '';
+    if (jersey && playerName) label = `${jersey} - ${playerName}`;
+    else if (jersey) label = jersey;
+    else label = playerName;
+    if (playerGrade) label += `, ${playerGrade}`;
+    return label;
+}
+
+function normalizeRosterPlayer(item) {
+    if (!item) return null;
+    if (typeof item === 'string') {
+        const value = normalize(item);
+        if (!value) return null;
+        const commaParts = value.split(',');
+        const head = normalize(commaParts[0]);
+        const grade = normalize(commaParts.slice(1).join(',')) || null;
+        const dashMatch = head.match(/^(\d+)\s*-\s*(.+)$/);
+        if (dashMatch) {
+            return {
+                jersey_number: dashMatch[1],
+                name: dashMatch[2].trim(),
+                grade,
+                position: null,
+                label: value,
+            };
+        }
+        if (/^\d+$/.test(head)) {
+            return { jersey_number: head, name: null, grade, position: null, label: value };
+        }
+        return { jersey_number: null, name: head, grade, position: null, label: value };
+    }
+    const jersey_number = normalize(item.jersey_number) || null;
+    const name = normalize(item.name) || null;
+    const grade = normalize(item.grade) || null;
+    const position = normalize(item.position).toUpperCase() || null;
+    const label = normalize(item.label || item.player_label) || buildPlayerLabel({ jersey_number, name, grade });
+    if (!label) return null;
+    return { jersey_number, name, grade, position, label };
+}
+
+function playerLabel(item) {
+    return normalizeRosterPlayer(item)?.label || '';
+}
+
+function sortRosterPlayers(list) {
+    const seen = new Set();
+    return (list || [])
+        .map(normalizeRosterPlayer)
+        .filter(player => {
+            if (!player || seen.has(player.label)) return false;
+            seen.add(player.label);
+            return true;
         })
-        .map(x => x.base);
+        .sort((a, b) => {
+            const an = parseInt(a.jersey_number, 10);
+            const bn = parseInt(b.jersey_number, 10);
+            if (Number.isNaN(an) && Number.isNaN(bn)) return a.label.localeCompare(b.label);
+            if (Number.isNaN(an)) return 1;
+            if (Number.isNaN(bn)) return -1;
+            if (an !== bn) return an - bn;
+            return a.label.localeCompare(b.label);
+        });
+}
+
+function sortPlayers(list) {
+    return sortRosterPlayers(list).map(playerLabel);
 }
 
 function getTeamChoices() {
@@ -227,7 +286,11 @@ function loadStores() {
     const vv = loadJson(VOCAB_STORAGE_KEY, null);
     if (vv) Object.keys(vocabulary).forEach(k => { if (Array.isArray(vv[k])) vocabulary[k] = vv[k]; });
     activeRosterSeasonId = String(loadJson(ROSTER_SEASON_STORAGE_KEY, '') || '');
-    rosters = { ...defaultRosters, ...loadJson(ROSTER_STORAGE_KEY, {}) };
+    const rawRosters = loadJson(ROSTER_STORAGE_KEY, {});
+    rosters = { ...defaultRosters };
+    Object.keys(rawRosters).forEach(key => {
+        rosters[key] = sortRosterPlayers(rawRosters[key] || []);
+    });
     savedGames = loadJson(GAMES_STORAGE_KEY, []);
 }
 function persistVocab() { saveJson(VOCAB_STORAGE_KEY, vocabulary); }
@@ -236,7 +299,7 @@ async function persistRosters() {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) return;
     const key = getRosterKey();
-    const players = (rosters[key] || []).map(label => ({ label }));
+    const players = sortRosterPlayers(rosters[key] || []);
     try {
         await fetch('/api/film-rosters', {
             method: 'PUT',
@@ -500,7 +563,7 @@ function showPlayerSelection(def, team) {
         const name = prompt('New player name/number (e.g. 24 - Smith):', '');
         if (!name) return;
         const key = mapTeamToRosterKey(team);
-        rosters[key] = sortPlayers([...(rosters[key] || []), name]);
+        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
         persistRosters();
         showPlayerSelection(def, team);
     });
@@ -531,7 +594,7 @@ function showStealPlayers(def, stealTeam) {
         const name = prompt('New player name/number (e.g. 24 - Smith):', '');
         if (!name) return;
         const key = mapTeamToRosterKey(stealTeam);
-        rosters[key] = sortPlayers([...(rosters[key] || []), name]);
+        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
         persistRosters();
         showStealPlayers(def, stealTeam);
     });
@@ -564,7 +627,7 @@ function showTurnoverChooser(def, stealTeam, stealer) {
         const name = prompt('New player name/number (e.g. 24 - Smith):', '');
         if (!name) return;
         const key = mapTeamToRosterKey(turnoverTeam);
-        rosters[key] = sortPlayers([...(rosters[key] || []), name]);
+        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
         persistRosters();
         showTurnoverChooser(def, stealTeam, stealer);
     });
@@ -1060,7 +1123,7 @@ async function migrateLegacyRosterIfNeeded() {
     );
     if (!ok) return false;
 
-    rosters[key] = sortPlayers(legacyPlayers);
+    rosters[key] = sortRosterPlayers(legacyPlayers);
     await persistRosters();
     return true;
 }
@@ -1082,10 +1145,9 @@ async function loadRosterFromServer() {
         const resp = await fetch(`/api/film-rosters?${params.toString()}`);
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not load roster');
-        const labels = (data.players || []).map(player => player.label || player.player_label).filter(Boolean);
-        rosters[key] = sortPlayers(labels);
+        rosters[key] = sortRosterPlayers(data.players || []);
         saveJson(ROSTER_STORAGE_KEY, rosters);
-        if (!labels.length) await migrateLegacyRosterIfNeeded();
+        if (!data.players?.length) await migrateLegacyRosterIfNeeded();
     } catch (err) {
         console.warn(err);
     }
@@ -1094,24 +1156,54 @@ async function loadRosterFromServer() {
 
 function showRoster() {
     const key = getRosterKey();
-    const list = sortPlayers(rosters[key] || []);
+    const list = sortRosterPlayers(rosters[key] || []);
     playerList.innerHTML = '';
     if (!getSelectedSeasonId()) {
         playerList.innerHTML = '<div class="empty-state tiny">Select a season to view or import a roster.</div>';
         return;
     }
     if (!list.length) { playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>'; return; }
+
+    const table = document.createElement('div');
+    table.className = 'roster-table';
+    const head = document.createElement('div');
+    head.className = 'roster-table-row roster-table-head';
+    ['POS', '#', 'Name', 'Grade', ''].forEach(text => {
+        const cell = document.createElement('span');
+        cell.textContent = text;
+        head.appendChild(cell);
+    });
+    table.appendChild(head);
+
     list.forEach(player => {
-        const row = document.createElement('div'); row.className = 'term-item';
-        const label = document.createElement('div'); label.textContent = player;
-        const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove';
+        const row = document.createElement('div');
+        row.className = 'roster-table-row';
+        const cells = [
+            player.position || '',
+            player.jersey_number || '',
+            player.name || '',
+            player.grade || '',
+        ];
+        cells.forEach(text => {
+            const cell = document.createElement('span');
+            cell.textContent = text;
+            row.appendChild(cell);
+        });
+        const actions = document.createElement('span');
+        actions.className = 'roster-table-actions';
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = 'Remove';
         del.addEventListener('click', async () => {
-            rosters[key] = (rosters[key] || []).filter(p => p !== player);
+            rosters[key] = (rosters[key] || []).filter(p => playerLabel(p) !== player.label);
             await persistRosters();
             showRoster();
         });
-        row.appendChild(label); row.appendChild(del); playerList.appendChild(row);
+        actions.appendChild(del);
+        row.appendChild(actions);
+        table.appendChild(row);
     });
+    playerList.appendChild(table);
 }
 
 async function openRosterDialog() {
@@ -1216,10 +1308,14 @@ function openAddPlayerDialog() {
 async function savePlayerFromDialog() {
     const pos = normalize(playerPosInput.value), num = normalize(playerNumInput.value), name = normalize(playerNameInput.value), grade = normalize(playerGradeInput.value);
     if (!num && !name) { alert('At least a jersey number or a name is required.'); return; }
-    let label = ''; if (num && name) label = `${num} - ${name}`; else if (num) label = num; else label = name;
-    if (grade) label += `, ${grade}`;
+    const player = normalizeRosterPlayer({
+        position: pos || null,
+        jersey_number: num || null,
+        name: name || null,
+        grade: grade || null,
+    });
     const key = getRosterKey();
-    rosters[key] = sortPlayers([...(rosters[key] || []), label]);
+    rosters[key] = sortRosterPlayers([...(rosters[key] || []), player]);
     await persistRosters(); showRoster(); playerDialog.close();
 }
 
@@ -1243,7 +1339,7 @@ function renderStarterChoices(listEl, team, selectedSet) {
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = 'Add';
     addBtn.addEventListener('click', () => {
         const name = prompt('New player name/number e.g. 24 - Smith'); if (!name) return;
-        const key = mapTeamToRosterKey(team); rosters[key] = sortPlayers([...(rosters[key] || []), name]); persistRosters();
+        const key = mapTeamToRosterKey(team); rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]); persistRosters();
         renderStarterChoices(listEl, team, selectedSet);
     });
     addRowEl.appendChild(addLabel); addRowEl.appendChild(addBtn); listEl.appendChild(addRowEl);
