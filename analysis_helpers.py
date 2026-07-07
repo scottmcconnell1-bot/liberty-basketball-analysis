@@ -33,6 +33,131 @@ def _resolve_relational_game_id(db, game_id):
     return _resolve_relational_game_id(db, game_id)
 
 
+def _film_roster_sides_to_try(side: str | None) -> list[str]:
+    primary = (side or "our").strip().lower()
+    order = []
+    for candidate in (primary, "our", "home", "away", "opp"):
+        if candidate not in order:
+            order.append(candidate)
+    return order
+
+
+def _film_levels_to_try(level: str | None) -> list[str]:
+    primary = _normalize_film_level(level)
+    order = []
+    for candidate in (primary, "varsity", "jv", "jrhigh"):
+        if candidate not in order:
+            order.append(candidate)
+    return order
+
+
+def _load_film_roster_players(db, *, season_id, level, gender, side):
+    try:
+        return list_film_roster_players(
+            db,
+            season_id=season_id,
+            level=level,
+            gender=gender,
+            side=side,
+        )
+    except ValueError:
+        return []
+
+
+def _find_film_roster_players(db, *, season_id=None, level="varsity", gender="boys", side="our", opponent_name=None, game_date=None):
+    """Find Film Tool roster players even when the analysis game lacks a season link."""
+    gender = (gender or "boys").strip().lower()
+    sides = _film_roster_sides_to_try(side)
+    levels = _film_levels_to_try(level)
+
+    def try_season(candidate_season_id):
+        if not candidate_season_id:
+            return None
+        for roster_level in levels:
+            for roster_side in sides:
+                players = _load_film_roster_players(
+                    db,
+                    season_id=candidate_season_id,
+                    level=roster_level,
+                    gender=gender,
+                    side=roster_side,
+                )
+                if players:
+                    return {
+                        "players": players,
+                        "season_id": candidate_season_id,
+                        "level": roster_level,
+                        "gender": gender,
+                        "side": roster_side,
+                    }
+        return None
+
+    if season_id:
+        hit = try_season(season_id)
+        if hit:
+            hit["source"] = "film_roster"
+            return hit
+
+    opponent = (opponent_name or "").strip()
+    if opponent:
+        row = db.execute(
+            """
+            SELECT sg.season_id
+              FROM scheduled_games sg
+             WHERE lower(trim(sg.opponent_name)) = lower(trim(?))
+             ORDER BY CASE
+                        WHEN ? IS NOT NULL AND sg.game_date = ? THEN 0
+                        ELSE 1
+                      END,
+                      sg.game_date DESC
+             LIMIT 1
+            """,
+            (opponent, game_date, game_date),
+        ).fetchone()
+        if row and row["season_id"]:
+            hit = try_season(row["season_id"])
+            if hit:
+                hit["source"] = "film_roster_opponent_match"
+                return hit
+
+    active_rows = db.execute(
+        """
+        SELECT frp.season_id, COUNT(*) AS roster_count, s.start_date
+          FROM film_roster_players frp
+          JOIN seasons s ON s.id = frp.season_id
+         WHERE frp.gender = ?
+           AND date('now') BETWEEN s.start_date AND s.end_date
+         GROUP BY frp.season_id
+         ORDER BY roster_count DESC, s.start_date DESC
+        """,
+        (gender,),
+    ).fetchall()
+    for row in active_rows:
+        hit = try_season(row["season_id"])
+        if hit:
+            hit["source"] = "film_roster_active_season"
+            return hit
+
+    any_rows = db.execute(
+        """
+        SELECT frp.season_id, COUNT(*) AS roster_count, s.start_date
+          FROM film_roster_players frp
+          JOIN seasons s ON s.id = frp.season_id
+         WHERE frp.gender = ?
+         GROUP BY frp.season_id
+         ORDER BY s.start_date DESC, roster_count DESC
+        """,
+        (gender,),
+    ).fetchall()
+    for row in any_rows:
+        hit = try_season(row["season_id"])
+        if hit:
+            hit["source"] = "film_roster_inferred"
+            return hit
+
+    return None
+
+
 def resolve_analysis_game_context(db, game_id):
     """Resolve season, level, gender, opponent, and video metadata for an analysis key."""
     from helpers import resolve_analysis_run_for_progress
@@ -49,6 +174,7 @@ def resolve_analysis_game_context(db, game_id):
         "gender": "boys",
         "side": "our",
         "opponent_name": None,
+        "game_date": None,
         "stored_filename": None,
         "video_id": None,
         "our_team_id": None,
@@ -59,7 +185,8 @@ def resolve_analysis_game_context(db, game_id):
     if relational_game_id is not None:
         game_row = db.execute(
             """
-            SELECT g.id, sg.season_id, sg.level, sg.gender, sg.opponent_name, sg.program_name
+            SELECT g.id, sg.season_id, sg.level, sg.gender, sg.opponent_name,
+                   sg.program_name, sg.game_date
               FROM games g
               LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
              WHERE g.id = ?
@@ -74,10 +201,36 @@ def resolve_analysis_game_context(db, game_id):
             if game_row["gender"]:
                 context["gender"] = str(game_row["gender"]).lower()
             context["opponent_name"] = game_row["opponent_name"]
+            context["game_date"] = game_row["game_date"]
             if game_row["opponent_name"]:
                 context["opponent_team_name"] = game_row["opponent_name"]
             if game_row["program_name"]:
                 context["our_team_name"] = game_row["program_name"]
+
+    if not context["season_id"] and context["opponent_name"]:
+        row = db.execute(
+            """
+            SELECT sg.season_id, sg.level, sg.gender, sg.game_date
+              FROM scheduled_games sg
+             WHERE lower(trim(sg.opponent_name)) = lower(trim(?))
+             ORDER BY CASE
+                        WHEN ? IS NOT NULL AND sg.game_date = ? THEN 0
+                        ELSE 1
+                      END,
+                      sg.game_date DESC
+             LIMIT 1
+            """,
+            (context["opponent_name"], context["game_date"], context["game_date"]),
+        ).fetchone()
+        if row:
+            if row["season_id"]:
+                context["season_id"] = row["season_id"]
+            if row["level"]:
+                context["level"] = _normalize_film_level(row["level"])
+            if row["gender"]:
+                context["gender"] = str(row["gender"]).lower()
+            if not context["game_date"]:
+                context["game_date"] = row["game_date"]
 
     video_row = db.execute(
         """
@@ -159,33 +312,44 @@ def get_analysis_roster_players(db, game_id):
     context = resolve_analysis_game_context(db, game_id)
     players = []
     source = "empty"
+    resolved_context = {
+        "season_id": context["season_id"],
+        "level": context["level"],
+        "gender": context["gender"],
+        "side": context["side"],
+        "opponent_name": context["opponent_name"],
+    }
 
-    if context["season_id"]:
-        try:
-            film_players = list_film_roster_players(
-                db,
-                season_id=context["season_id"],
-                level=context["level"],
-                gender=context["gender"],
-                side=context["side"],
-            )
-        except ValueError:
-            film_players = []
-        if film_players:
-            source = "film_roster"
-            for index, player in enumerate(film_players):
-                jersey = player.get("jersey_number")
-                name = (player.get("name") or "").strip()
-                label = player.get("label") or player.get("player_label") or ""
-                players.append({
-                    "id": None,
-                    "jersey_number": int(jersey) if jersey not in (None, "") else None,
-                    "name": name or label,
-                    "label": label,
-                    "position": player.get("position"),
-                    "grade": player.get("grade"),
-                    "sort_order": index,
-                })
+    roster_hit = _find_film_roster_players(
+        db,
+        season_id=context["season_id"],
+        level=context["level"],
+        gender=context["gender"],
+        side=context["side"],
+        opponent_name=context["opponent_name"],
+        game_date=context.get("game_date"),
+    )
+    if roster_hit:
+        source = roster_hit["source"]
+        resolved_context.update({
+            "season_id": roster_hit["season_id"],
+            "level": roster_hit["level"],
+            "gender": roster_hit["gender"],
+            "side": roster_hit["side"],
+        })
+        for index, player in enumerate(roster_hit["players"]):
+            jersey = player.get("jersey_number")
+            name = (player.get("name") or "").strip()
+            label = player.get("label") or player.get("player_label") or ""
+            players.append({
+                "id": None,
+                "jersey_number": int(jersey) if jersey not in (None, "") else None,
+                "name": name or label,
+                "label": label,
+                "position": player.get("position"),
+                "grade": player.get("grade"),
+                "sort_order": index,
+            })
 
     if not players:
         rows = db.execute(
@@ -202,13 +366,7 @@ def get_analysis_roster_players(db, game_id):
     return {
         "players": players,
         "source": source,
-        "roster_context": {
-            "season_id": context["season_id"],
-            "level": context["level"],
-            "gender": context["gender"],
-            "side": context["side"],
-            "opponent_name": context["opponent_name"],
-        },
+        "roster_context": resolved_context,
     }
 
 

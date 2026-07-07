@@ -92,6 +92,81 @@ def test_analysis_roster_api_endpoint(client, db):
     assert data["players"][0]["name"] == "Alex Player"
 
 
+def test_get_analysis_roster_players_falls_back_to_active_season(db):
+    """Analysis without a scheduled-game season link should still find Film Tool rosters."""
+    season_id = _create_season(db, "2025-26")
+    relational_game_id = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES ('manual', 'no-season-link')"
+    ).lastrowid
+    analysis_key = "nfhs_no_season_link"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (relational_game_id, analysis_key, "uploads/unlinked.mp4"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, relational_game_id, opponent)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder.mp4", "wilder.mp4", "uploads/wilder.mp4", 1000, analysis_key, relational_game_id, "Wilder"),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="our",
+        players=[{"label": "5 Sam Example", "jersey_number": 5, "name": "Sam Example"}],
+        replace=True,
+    )
+    db.commit()
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    assert payload["source"].startswith("film_roster")
+    assert len(payload["players"]) == 1
+    assert payload["players"][0]["jersey_number"] == 5
+
+
+def test_get_analysis_roster_players_matches_opponent_scheduled_game(db):
+    season_id = _create_season(db, "2025-26")
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'boys_hs', 'boys', 'varsity', '2026-01-15', 'Wilder', 'scheduled')""",
+        (season_id,),
+    )
+    relational_game_id = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES ('manual', 'opponent-match')"
+    ).lastrowid
+    analysis_key = "nfhs_opponent_match"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (relational_game_id, analysis_key, "uploads/opponent.mp4"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, relational_game_id, opponent)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder.mp4", "wilder.mp4", "uploads/wilder.mp4", 1000, analysis_key, relational_game_id, "Wilder"),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="our",
+        players=[{"label": "12 Alex Player", "jersey_number": 12, "name": "Alex Player"}],
+        replace=True,
+    )
+    db.commit()
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    assert payload["source"].startswith("film_roster")
+    assert payload["roster_context"]["season_id"] == season_id
+    assert payload["players"][0]["name"] == "Alex Player"
+
+
 def test_infer_period_labels_splits_video_into_quarters():
     duration = 40 * 60 * 1000
     assert infer_period_labels(5 * 60 * 1000, duration)["quarter"] == 1

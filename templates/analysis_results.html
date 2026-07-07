@@ -834,11 +834,21 @@ function renderSlotMappingTable() {
     const tr = tbody.querySelector('tr[data-tracker-id="' + slot.tracker_id + '"]');
     if (!tr) return;
     const select = tr.querySelector('.slot-roster');
-    if (!select || !slot.jersey_number) return;
-    for (const opt of select.options) {
-      if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
-        select.value = opt.value;
-        break;
+    if (!select) return;
+    if (slot.jersey_number != null && slot.jersey_number !== '') {
+      for (const opt of select.options) {
+        if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
+          select.value = opt.value;
+          break;
+        }
+      }
+    } else if (slot.player_name) {
+      const target = slot.player_name.trim().toLowerCase();
+      for (const opt of select.options) {
+        if ((opt.dataset.name || '').trim().toLowerCase() === target) {
+          select.value = opt.value;
+          break;
+        }
       }
     }
   });
@@ -876,10 +886,22 @@ async function loadSlotMappingUI() {
         status.style.display = 'block';
         status.style.color = 'var(--green)';
         status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from your Film Tool roster.';
+      } else if (status && rosterData.source && rosterData.source.indexOf('film_roster') === 0) {
+        status.style.display = 'block';
+        status.style.color = 'var(--green)';
+        const ctx = rosterData.roster_context || {};
+        status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from Film Tool roster'
+          + (ctx.season_id ? ' (matched season ' + ctx.season_id + ')' : '')
+          + (ctx.level ? ', ' + ctx.level : '')
+          + (ctx.gender ? ' ' + ctx.gender : '') + '.';
+      } else if (status && rosterData.source === 'global_players') {
+        status.style.display = 'block';
+        status.style.color = 'var(--green)';
+        status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from the global roster table.';
       } else if (status && rosterData.source === 'empty') {
         status.style.display = 'block';
         status.style.color = 'var(--orange)';
-        status.textContent = 'No roster found. Import a roster in Film Tool (Manage Rosters), then refresh.';
+        status.textContent = 'No roster found. In Film Tool open Manage Rosters, import your team for the correct season/level, then refresh this page.';
       }
     }
     renderSlotMappingTable();
