@@ -204,7 +204,7 @@ async function loadVideos() {
       <td style="white-space:nowrap;">
         <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
         <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm" style="margin-left:6px;">📊 Results</a>
-        ${(v.detection_count ?? 0) > 0 && (v.event_count ?? 0) === 0 ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="regenerateEvents(${v.id})">🔄 Rebuild Events</button>` : ''}
+        ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">🔄 Rebuild Events</button>` : ''}
         <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm" style="margin-left:6px;">✂️ Trim</a>
         <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm" style="margin-left:6px;">Compare AI</a>
         <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" style="margin-left:6px;" target="_blank" rel="noopener">🔍 Debug</a>

@@ -64,6 +64,24 @@ def _resolve_analysis_relational_game_id(db, game_id):
     return _resolve_relational_game_id(db, game_id)
 
 
+def _resolve_video_id_for_analysis(db, game_id):
+    row = db.execute(
+        """SELECT v.id
+             FROM videos v
+             LEFT JOIN analysis_runs ar
+               ON ar.source_video_id = v.id
+               OR ar.analysis_key = v.game_id
+               OR ar.base_analysis_key = v.game_id
+               OR ar.video_path = v.file_path
+            WHERE v.game_id = ?
+               OR ar.analysis_key = ?
+            ORDER BY v.id DESC
+            LIMIT 1""",
+        (game_id, game_id),
+    ).fetchone()
+    return row["id"] if row else None
+
+
 @ai_bp.route("/api/analysis_status/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_status(game_id):
@@ -254,8 +272,8 @@ def get_analysis_results(game_id):
         )
     if event_count > 0 and not enhanced["shot_breakdown"] and not any(row.get("pts") for row in basic):
         quality_notes.append(
-            "Events were generated but the box score could not be derived. "
-            "Try Rebuild Events on Video Library after pulling the latest update."
+            "Events were generated but shot classifications are empty. "
+            "Try Rebuild Events on Video Library, then refresh this page."
         )
     if any((row.get("minutes_played") or 0) > 42 for row in enhanced.get("minutes", [])):
         quality_notes.append(
@@ -313,6 +331,7 @@ def get_analysis_results(game_id):
 
     return jsonify({
         "game_id": game_id,
+        "video_id": _resolve_video_id_for_analysis(db, game_id),
         "detection_count": detection_count,
         "event_count": event_count,
         "quality_notes": quality_notes,
