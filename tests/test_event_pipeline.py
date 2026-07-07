@@ -470,3 +470,79 @@ def test_classify_all_shots_uses_detection_filter(tmp_path):
     assert results[0]["shot_type"] in {"2pt", "3pt", "ft"}
     conn.close()
 
+
+def test_get_detections_matches_base_analysis_key(tmp_path):
+    """Rebuild must find detections stored under base_analysis_key, not only rerun key."""
+    from event_generator import get_detections, get_db_connection
+
+    db_path = tmp_path / "detections.db"
+    conn = get_db_connection(str(db_path))
+    conn.execute(
+        """CREATE TABLE detections (
+            id INTEGER PRIMARY KEY,
+            game_id TEXT,
+            relational_game_id INTEGER,
+            frame_number INTEGER,
+            timestamp_ms INTEGER,
+            object_class TEXT,
+            confidence REAL,
+            x_center REAL,
+            y_center REAL,
+            width REAL,
+            height REAL,
+            tracker_id INTEGER
+        )"""
+    )
+    conn.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence,
+            x_center, y_center, width, height, tracker_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("nfhs_primary", None, 1, 0, "person", 0.9, 100, 200, 10, 10, 1),
+    )
+    conn.commit()
+
+    narrow = get_detections(conn, "nfhs_primary__rerun_1")
+    assert len(narrow) == 0
+
+    broad = get_detections(
+        conn,
+        "nfhs_primary__rerun_1",
+        base_analysis_key="nfhs_primary",
+    )
+    assert len(broad) == 1
+    conn.close()
+
+
+def test_event_generator_main_returns_false_when_no_detections(tmp_path):
+    from event_generator import main
+
+    db_path = tmp_path / "empty.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        """CREATE TABLE detections (
+            id INTEGER PRIMARY KEY,
+            game_id TEXT,
+            relational_game_id INTEGER,
+            frame_number INTEGER,
+            timestamp_ms INTEGER,
+            object_class TEXT,
+            confidence REAL,
+            x_center REAL,
+            y_center REAL,
+            width REAL,
+            height REAL,
+            tracker_id INTEGER
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )"""
+    )
+    conn.commit()
+    conn.close()
+
+    assert main("missing_game", str(db_path)) is False
+
