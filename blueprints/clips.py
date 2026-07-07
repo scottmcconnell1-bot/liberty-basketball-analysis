@@ -699,6 +699,113 @@ def api_rosters_import():
         return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
 
 
+@clips_bp.route("/api/film-rosters", methods=["GET"])
+def api_film_rosters_get():
+    """List players for a season-scoped Film Tool roster slot."""
+    from film_roster import list_film_roster_players
+
+    try:
+        players = list_film_roster_players(
+            get_db(),
+            season_id=request.args.get("season_id"),
+            level=request.args.get("level"),
+            gender=request.args.get("gender"),
+            side=request.args.get("side"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"players": players, "count": len(players)})
+
+
+@clips_bp.route("/api/film-rosters", methods=["PUT"])
+def api_film_rosters_put():
+    """Replace or merge players for a season-scoped Film Tool roster slot."""
+    from film_roster import save_film_roster
+
+    data = request.get_json(force=True) or {}
+    replace = str(data.get("replace", True)).lower() not in {"0", "false", "no"}
+    try:
+        result = save_film_roster(
+            get_db(),
+            season_id=data.get("season_id"),
+            level=data.get("level"),
+            gender=data.get("gender"),
+            side=data.get("side"),
+            players=data.get("players") or [],
+            replace=replace,
+        )
+        get_db().commit()
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@clips_bp.route("/api/film-rosters", methods=["DELETE"])
+def api_film_rosters_delete():
+    """Mass-delete all players in a season-scoped Film Tool roster slot."""
+    from film_roster import delete_film_roster
+
+    try:
+        deleted = delete_film_roster(
+            get_db(),
+            season_id=request.args.get("season_id"),
+            level=request.args.get("level"),
+            gender=request.args.get("gender"),
+            side=request.args.get("side"),
+        )
+        get_db().commit()
+        return jsonify({"deleted": deleted})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@clips_bp.route("/api/film-rosters/import", methods=["POST"])
+def api_film_rosters_import():
+    """Parse and save a roster upload for a specific season and team slot."""
+    from film_roster import save_film_roster
+    from roster_import import parse_roster_upload
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    roster_file = request.files["file"]
+    if not roster_file or not roster_file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    file_type = (request.form.get("file_type") or "auto").strip().lower()
+    replace = str(request.form.get("replace", "true")).lower() not in {"0", "false", "no"}
+    try:
+        parsed = parse_roster_upload(roster_file, file_type=file_type)
+        players = parsed.get("players") or []
+        if not players:
+            raise ValueError("No players found in file. Check the file type and format.")
+
+        saved = save_film_roster(
+            get_db(),
+            season_id=request.form.get("season_id"),
+            level=request.form.get("level"),
+            gender=request.form.get("gender"),
+            side=request.form.get("side"),
+            players=players,
+            replace=replace,
+        )
+        get_db().commit()
+        return jsonify({
+            "detected_type": parsed.get("detected_type"),
+            "count": saved["count"],
+            "players": saved["players"],
+            "season_id": saved["season_id"],
+            "level": saved["level"],
+            "gender": saved["gender"],
+            "side": saved["side"],
+            "replaced": replace,
+        })
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Failed to import roster: {exc}"}), 500
+
+
 # ── API: Clips ────────────────────────────────────────────
 
 @clips_bp.route("/api/clips")
