@@ -1626,6 +1626,44 @@ def test_api_videos_includes_game_display_fields(client, db):
     assert payload[0]["game_date"] == "2026-01-15"
 
 
+def test_api_videos_counts_detections_via_relational_game_id(client, db):
+    game_row = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("manual", "nfhs_gam30"),
+    )
+    relational_game_id = game_row.lastrowid
+    analysis_key = "nfhs_gam30_trim_long_key"
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder.mp4", "wilder.mp4", "uploads/wilder.mp4", 1000, "Wilder", "nfhs_gam30", relational_game_id),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (game_id, analysis_key, video_path, source_video_id, status)
+           VALUES (?, ?, ?, ?, ?)""",
+        (relational_game_id, analysis_key, "uploads/wilder.mp4", 1, "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("legacy_detection_key", relational_game_id, 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.execute(
+        """INSERT INTO events (game_id, relational_game_id, event_type, timestamp_ms)
+           VALUES (?, ?, ?, ?)""",
+        (analysis_key, relational_game_id, "possession_change", 100),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos").get_json()
+    assert payload[0]["detection_count"] == 1
+    assert payload[0]["event_count"] == 1
+    assert payload[0]["analysis_status"] == "completed"
+
+
 def test_compare_video_analysis_keeps_run_specific_counts(client, db):
     db.execute(
         """INSERT INTO videos

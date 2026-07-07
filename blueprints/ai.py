@@ -46,6 +46,7 @@ from helpers import (
     validate_ai_models_for_analysis,
     reconcile_stuck_analysis_run,
     ai_analysis_log_path,
+    count_detections_for_analysis, count_events_for_analysis,
     _read_log_tail,
 )
 
@@ -116,6 +117,36 @@ def _enrich_video_list_row(db, row):
         payload["team_label"] = None
 
     payload["display_game"] = f"Liberty vs {opponent}" if opponent else "Liberty"
+
+    clause = _video_analysis_runs_clause()
+    run_row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (payload["id"], payload.get("game_id"), payload.get("game_id"), payload.get("file_path")),
+    ).fetchone()
+    if run_row:
+        analysis_key = run_row["analysis_key"] or payload.get("game_id")
+        run_row = resolve_analysis_run_for_progress(db, analysis_key) or run_row
+        payload["analysis_status"] = run_row["status"]
+        payload["error_message"] = run_row["error_message"]
+        payload["analysis_key"] = run_row["analysis_key"]
+        count_kwargs = dict(
+            analysis_key=run_row["analysis_key"],
+            relational_game_id=run_row["game_id"],
+            video_game_id=payload.get("game_id"),
+            video_relational_game_id=payload.get("relational_game_id"),
+            base_analysis_key=run_row["base_analysis_key"],
+        )
+        payload["detection_count"] = count_detections_for_analysis(db, **count_kwargs)
+        payload["event_count"] = count_events_for_analysis(
+            db,
+            analysis_key=count_kwargs["analysis_key"],
+            relational_game_id=count_kwargs["relational_game_id"],
+            video_game_id=count_kwargs["video_game_id"],
+            base_analysis_key=count_kwargs["base_analysis_key"],
+        )
+
     return payload
 
 
@@ -640,13 +671,6 @@ def api_videos():
     latest_run = latest_analysis_run_id_subquery()
     rows = db.execute(f"""
         SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-               (SELECT COUNT(*)
-                  FROM detections d
-                  WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
-                    OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
-               (SELECT COUNT(*) FROM events e
-                  WHERE (ar.game_id IS NOT NULL AND e.relational_game_id = ar.game_id)
-                     OR (e.relational_game_id IS NULL AND e.game_id = COALESCE(ar.analysis_key, v.game_id))) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
         LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
@@ -663,13 +687,6 @@ def api_videos():
     if running_keys:
         rows = db.execute(f"""
             SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-                   (SELECT COUNT(*)
-                      FROM detections d
-                      WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
-                        OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
-                   (SELECT COUNT(*) FROM events e
-                      WHERE (ar.game_id IS NOT NULL AND e.relational_game_id = ar.game_id)
-                         OR (e.relational_game_id IS NULL AND e.game_id = COALESCE(ar.analysis_key, v.game_id))) as event_count,
                    (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
             FROM videos v
             LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
@@ -832,18 +849,21 @@ def api_video_analysis_debug(vid_id):
     reconcile_stuck_analysis_run(db, game_id)
     row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
     log_path = ai_analysis_log_path(game_id)
-    detection_count = db.execute(
-        """SELECT COUNT(*) AS c FROM detections d
-           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
-              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
-        (row["game_id"], row["game_id"], game_id),
-    ).fetchone()["c"]
-    event_count = db.execute(
-        """SELECT COUNT(*) AS c FROM events e
-           WHERE e.game_id = ?
-              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
-        (game_id, row["game_id"], row["game_id"]),
-    ).fetchone()["c"]
+    count_kwargs = dict(
+        analysis_key=row["analysis_key"],
+        relational_game_id=row["game_id"],
+        video_game_id=video["game_id"],
+        video_relational_game_id=video["relational_game_id"],
+        base_analysis_key=row["base_analysis_key"],
+    )
+    detection_count = count_detections_for_analysis(db, **count_kwargs)
+    event_count = count_events_for_analysis(
+        db,
+        analysis_key=count_kwargs["analysis_key"],
+        relational_game_id=count_kwargs["relational_game_id"],
+        video_game_id=count_kwargs["video_game_id"],
+        base_analysis_key=count_kwargs["base_analysis_key"],
+    )
     return jsonify({
         "video_id": vid_id,
         "video_path": video["file_path"],

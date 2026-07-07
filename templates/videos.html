@@ -128,8 +128,8 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
-function statusBadge(status, detectionCount, errorMessage) {
-  if (status === 'completed' && (detectionCount ?? 0) === 0) {
+function statusBadge(status, detectionCount, errorMessage, eventCount) {
+  if (status === 'completed' && (detectionCount ?? 0) === 0 && (eventCount ?? 0) === 0) {
     const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
     return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
   }
@@ -246,7 +246,7 @@ async function loadVideos() {
       <td class="col-team" data-label="Team">${teamLabel}</td>
       <td class="col-date" data-label="Game Date">${gameDate}</td>
       <td class="col-size" data-label="Size">${formatBytes(v.file_size_bytes)}</td>
-      <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message)}</td>
+      <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count)}</td>
       <td class="col-count" data-label="Detections">${v.detection_count ?? 0}</td>
       <td class="col-count" data-label="Events">${v.event_count ?? 0}</td>
       <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
@@ -254,7 +254,7 @@ async function loadVideos() {
         <div class="video-actions">
           <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
           <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
-          ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
+          ${((v.detection_count ?? 0) > 0 || (v.event_count ?? 0) > 0) ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
           <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
           <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
           <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
