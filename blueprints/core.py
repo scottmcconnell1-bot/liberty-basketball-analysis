@@ -618,11 +618,14 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     season_info: optional dict with {start_date, end_date} used to infer
     the correct year for dates that lack a year (e.g. "DEC 2" → "2025-12-02").
 
-    Handles two main PDF layouts:
-    1. Column-based: 'DATE OPPONENT TIMES' headers with data in columns
-       (times appear on same line or next line after opponent)
-    2. Row-based: '12/2 Marsing 7:30p' all on one line
+    MaxPreps printable PDFs use a multi-line block format and are handled
+    by schedule_import.parse_maxpreps_schedule_text().
     """
+    from schedule_import import is_maxpreps_printable_schedule, parse_maxpreps_schedule_text
+
+    if is_maxpreps_printable_schedule(text):
+        return parse_maxpreps_schedule_text(text, pdf_team=pdf_team, season_info=season_info)
+
     import re, datetime
     games = []
     lines = text.splitlines()
