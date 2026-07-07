@@ -274,14 +274,24 @@ setInterval(loadVideos, 10000);
 
 async function regenerateEvents(videoId) {
   if (!confirm('Rebuild events from existing detections? This is much faster than re-running full AI.')) return;
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Rebuilding…'; }
   try {
     const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
+    if (!resp.ok) {
+      const extra = data.code === 'sklearn_missing'
+        ? '\n\nInstall on the AI workstation:\n  pip install scikit-learn'
+        : '';
+      throw new Error((data.error || 'Failed to regenerate events') + extra);
+    }
     alert(data.message || 'Events regenerated.');
     loadVideos();
   } catch (err) {
     alert('Could not regenerate events: ' + err.message);
+    loadVideos();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Rebuild'; }
   }
 }
 </script>
