@@ -534,6 +534,16 @@
     background: var(--color-surface);
     color: var(--color-text);
     box-shadow: var(--shadow-md);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+}
+#film-tool-root dialog[open] {
+    display: flex;
+    flex-direction: column;
+    max-height: min(90vh, 900px);
 }
 #film-tool-root dialog::backdrop {
     background: rgba(0, 0, 0, .45);
