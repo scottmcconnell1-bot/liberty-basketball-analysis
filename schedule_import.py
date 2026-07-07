@@ -117,16 +117,63 @@ def _is_result_line(line: str) -> bool:
     return bool(re.match(r"^\([WLT]\)\s+\d+", line.strip(), re.IGNORECASE))
 
 
+RESULT_RE = re.compile(r"\(([WLT])\)\s*(\d+)\s*-\s*(\d+)", re.IGNORECASE)
+
+
+def _parse_result_text(text: str) -> dict | None:
+    match = RESULT_RE.search(text or "")
+    if not match:
+        return None
+    letter = match.group(1).upper()
+    score_a = int(match.group(2))
+    score_b = int(match.group(3))
+    # MaxPreps printable schedules list Liberty-Opp on wins and Opp-Liberty on losses.
+    if letter == "W":
+        liberty_score, opponent_score = score_a, score_b
+    elif letter == "L":
+        liberty_score, opponent_score = score_b, score_a
+    else:
+        liberty_score, opponent_score = score_a, score_b
+    return {
+        "result": {"W": "win", "L": "loss", "T": "tie"}[letter],
+        "liberty_score": liberty_score,
+        "opponent_score": opponent_score,
+    }
+
+
+def _is_conference_opponent(raw: str) -> bool:
+    without_result = RESULT_RE.sub("", raw or "").strip()
+    return bool(re.search(r"\*+", without_result))
+
+
+def _split_opponent_and_result(text: str) -> tuple[str, dict | None, bool]:
+    raw = (text or "").strip()
+    is_conference = _is_conference_opponent(raw)
+    result_info = _parse_result_text(raw)
+    opponent_raw = RESULT_RE.sub("", raw).strip()
+    opponent_raw = re.sub(r"\*+\s*$", "", opponent_raw).strip()
+    if opponent_raw.startswith("@"):
+        opponent_raw = opponent_raw[1:].strip()
+    return _clean_opponent_name(opponent_raw), result_info, is_conference
+
+
+def home_away_scores(location_type: str, liberty_score: int, opponent_score: int) -> tuple[int, int]:
+    if location_type == "away":
+        return opponent_score, liberty_score
+    return liberty_score, opponent_score
+
+
 def _parse_opponent_from_combined_rest(rest: str) -> str:
-    cleaned = re.sub(r"\s*\([WLT]\)\s+.*$", "", rest, flags=re.IGNORECASE).strip()
-    return _clean_opponent_name(cleaned)
+    opponent, _, _ = _split_opponent_and_result(rest)
+    return opponent
 
 
-def _consume_detail_lines(lines: list[str], start_index: int) -> tuple[int, str, str, list[str]]:
-    """Return (next_index, game_time, tournament_name, notes_parts)."""
+def _consume_detail_lines(lines: list[str], start_index: int) -> tuple[int, str, str, list[str], dict | None]:
+    """Return (next_index, game_time, tournament_name, notes_parts, result_info)."""
     game_time = ""
     tournament_name = ""
     notes_parts: list[str] = []
+    result_info = None
     i = start_index
 
     while i < len(lines):
@@ -165,12 +212,15 @@ def _consume_detail_lines(lines: list[str], start_index: int) -> tuple[int, str,
                     notes_parts.append(detail)
             i += 1
             continue
-        if _is_result_line(next_line):
+        if _is_result_line(next_line) or RESULT_RE.search(next_line):
+            parsed = _parse_result_text(next_line)
+            if parsed:
+                result_info = parsed
             i += 1
             continue
         break
 
-    return i, game_time, tournament_name, notes_parts
+    return i, game_time, tournament_name, notes_parts, result_info
 
 
 def _is_combined_game_line(line: str) -> bool:
@@ -199,11 +249,13 @@ def parse_maxpreps_schedule_text(
             continue
 
         game_date = None
-        opponent_raw = ""
+        opponent_name = ""
         location_type = "home"
         tournament_name = ""
         notes_parts: list[str] = []
         game_time = ""
+        result_info = None
+        is_conference = False
 
         combined = re.match(r"^(\d{1,2}/\d{1,2})\s+(.+)$", line)
         if combined and not _is_game_date_line(line):
@@ -212,8 +264,11 @@ def parse_maxpreps_schedule_text(
                 continue
             if combined.group(2).strip().startswith("@"):
                 location_type = "away"
-            opponent_raw = _parse_opponent_from_combined_rest(combined.group(2))
-            i, game_time, tournament_name, notes_parts = _consume_detail_lines(lines, i)
+            opponent_name, inline_result, is_conference = _split_opponent_and_result(combined.group(2))
+            result_info = inline_result
+            i, game_time, tournament_name, notes_parts, detail_result = _consume_detail_lines(lines, i)
+            if detail_result:
+                result_info = detail_result
         elif _is_game_date_line(line):
             game_date = _parse_md_date(line, month_year_map)
             if not game_date:
@@ -233,9 +288,12 @@ def parse_maxpreps_schedule_text(
 
             if opponent_line.startswith("@"):
                 location_type = "away"
-            opponent_raw = re.sub(r"\s*\([WLT]\)\s+.*$", "", opponent_line, flags=re.IGNORECASE).strip()
+            opponent_name, inline_result, is_conference = _split_opponent_and_result(opponent_line)
+            result_info = inline_result
 
-            i, extra_time, extra_tournament, extra_notes = _consume_detail_lines(lines, i)
+            i, extra_time, extra_tournament, extra_notes, detail_result = _consume_detail_lines(lines, i)
+            if detail_result:
+                result_info = detail_result
             if not game_time and extra_time:
                 game_time = extra_time
             if extra_tournament:
@@ -244,11 +302,10 @@ def parse_maxpreps_schedule_text(
         else:
             continue
 
-        opponent_name = _clean_opponent_name(opponent_raw)
         if not opponent_name:
             continue
 
-        games.append({
+        game_record = {
             "game_date": game_date,
             "raw_date": line.split()[0] if combined else line,
             "game_time": game_time,
@@ -260,9 +317,21 @@ def parse_maxpreps_schedule_text(
             "gender": gender,
             "location_type": location_type,
             "tournament_name": tournament_name,
-            "status": "scheduled",
             "notes": "; ".join(notes_parts),
-        })
+            "is_conference": is_conference,
+            "liberty_score": None,
+            "opponent_score": None,
+            "result": None,
+            "status": "scheduled",
+        }
+        if result_info:
+            game_record.update({
+                "liberty_score": result_info["liberty_score"],
+                "opponent_score": result_info["opponent_score"],
+                "result": result_info["result"],
+                "status": "completed",
+            })
+        games.append(game_record)
 
     return games
 
