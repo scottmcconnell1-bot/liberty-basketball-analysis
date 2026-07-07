@@ -677,6 +677,28 @@ def api_players_delete(player_id):
     return jsonify({"status": "deleted"}), 200
 
 
+@clips_bp.route("/api/rosters/import", methods=["POST"])
+def api_rosters_import():
+    """Parse a roster upload (CSV, PDF, or MaxPreps printable PDF)."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    roster_file = request.files["file"]
+    if not roster_file or not roster_file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    file_type = (request.form.get("file_type") or "auto").strip().lower()
+    try:
+        from roster_import import parse_roster_upload
+
+        result = parse_roster_upload(roster_file, file_type=file_type)
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
+
+
 # ── API: Clips ────────────────────────────────────────────
 
 @clips_bp.route("/api/clips")
