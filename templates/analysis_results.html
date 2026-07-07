@@ -1015,10 +1015,15 @@ document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlo
 
 function buildFilmLink(timestampMs, label) {
   if (!STORED_FILENAME || timestampMs == null) return '';
-  const seconds = Math.max(0, Math.floor(Number(timestampMs) / 1000));
+  const CLIP_BEFORE_MS = 3000;
+  const CLIP_AFTER_MS = 5000;
+  const eventMs = Number(timestampMs);
+  const startSec = Math.max(0, (eventMs - CLIP_BEFORE_MS) / 1000);
+  const endSec = (eventMs + CLIP_AFTER_MS) / 1000;
   const href = '/film/' + encodeURIComponent(STORED_FILENAME)
     + '?game_id=' + encodeURIComponent(GAME_ID)
-    + '&t=' + seconds;
+    + '&t=' + startSec.toFixed(2)
+    + '&t_end=' + endSec.toFixed(2);
   return '<a class="film-link" href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || 'Film') + '</a>';
 }
 
