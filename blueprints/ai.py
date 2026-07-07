@@ -342,6 +342,60 @@ def get_analysis_results(game_id):
     })
 
 
+# ── API: Court slot → jersey mapping ─────────────────────────
+
+@ai_bp.route("/api/court-slots/<game_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_court_slots_api(game_id):
+    from court_slot_mapping import get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    return jsonify({
+        "game_id": game_id,
+        "slots": get_court_slots(db, game_id),
+    })
+
+
+@ai_bp.route("/api/court-slots/<game_id>", methods=["PUT"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def save_court_slots_api(game_id):
+    from court_slot_mapping import save_court_slot_mappings, get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    data = request.get_json(force=True) or {}
+    mappings = data.get("mappings") or []
+    apply_to_events = bool(data.get("apply_to_events", True))
+    if not mappings:
+        return jsonify({"error": "mappings required"}), 400
+
+    applied = save_court_slot_mappings(db, game_id, mappings, apply_to_events=apply_to_events)
+    return jsonify({
+        "game_id": game_id,
+        "applied": applied,
+        "slots": get_court_slots(db, game_id),
+    })
+
+
+@ai_bp.route("/api/court-slots/<game_id>/apply", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def apply_court_slots_api(game_id):
+    from court_slot_mapping import apply_court_slot_mappings, get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    result = apply_court_slot_mappings(db, game_id)
+    result["game_id"] = game_id
+    result["slots"] = get_court_slots(db, game_id)
+    return jsonify(result)
+
+
 # ── API: Possessions ─────────────────────────────────────────
 
 @ai_bp.route("/api/possessions/<game_id>")

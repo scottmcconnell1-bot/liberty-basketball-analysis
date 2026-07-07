@@ -91,7 +91,8 @@
       <strong>Pos 0–9 are court-area clusters</strong> — the AI groups detections by where people appear on the camera view.
       They are <strong>not</strong> roster numbers, and they are <strong>not</strong> in jersey order.
       Minutes = time someone was detected in that court area (any player who stood there).
-      To get real names/stats, map events to your roster manually in <a href="/film">Film Tool</a> or import a roster under Teams.
+      To get real names and stats, use <strong>Map court slots to jersey numbers</strong> below.
+      Match each Pos to a roster player once — the box score will update to show jersey # and name.
     </p>
   </div>
   <div id="resultsSummary" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;"></div>
@@ -113,6 +114,30 @@
   <div id="error" class="error" style="display:none"></div>
 
   <div id="results" style="display:none">
+    <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
+      <h2>👕 Map court slots to jersey numbers</h2>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
+        Match each <strong>Pos</strong> (court area) to a real player from your roster.
+        After you save, stats and the box score will show jersey numbers and names instead of Pos labels.
+      </p>
+      <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
+      <div style="overflow-x:auto;">
+        <table id="slot-mapping-table" style="margin-bottom:12px;">
+          <thead>
+            <tr>
+              <th>Court slot</th>
+              <th class="num">Min</th>
+              <th>Roster player</th>
+              <th>Jersey #</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="saveSlotMappingsBtn">Save mapping &amp; update stats</button>
+    </div>
+
     <div class="grid">
       <div class="card">
         <h2>📈 Event Summary</h2>
@@ -136,7 +161,7 @@
       <h2>📋 Box Score</h2>
       <div style="overflow-x:auto">
         <table id="box-score">
-          <thead><tr><th>Court slot</th><th class="num">MIN</th><th class="num">PTS</th><th class="num">FGM/A</th><th class="num">3PM/A</th><th class="num">FTM/A</th><th class="num">REB</th><th class="num">AST</th><th class="num">STL</th><th class="num">BLK</th><th class="num">TO</th><th class="num">PF</th></tr></thead>
+          <thead><tr><th>Player</th><th class="num">MIN</th><th class="num">PTS</th><th class="num">FGM/A</th><th class="num">3PM/A</th><th class="num">FTM/A</th><th class="num">REB</th><th class="num">AST</th><th class="num">STL</th><th class="num">BLK</th><th class="num">TO</th><th class="num">PF</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -147,7 +172,7 @@
         <h2>🎯 Shot Breakdown by Player</h2>
         <div style="overflow-x:auto">
           <table id="shot-breakdown">
-            <thead><tr><th>Court slot</th><th class="num">2PT</th><th class="num">3PT</th><th class="num">FT</th><th class="num">Total</th><th class="num">FG%</th></tr></thead>
+            <thead><tr><th>Player</th><th class="num">2PT</th><th class="num">3PT</th><th class="num">FT</th><th class="num">Total</th><th class="num">FG%</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -156,7 +181,7 @@
         <h2>⚡ Player Effect (Possessions & Scoring)</h2>
         <div style="overflow-x:auto">
           <table id="player-effect">
-            <thead><tr><th>Court slot</th><th class="num">Poss</th><th class="num">Pts</th><th class="num">P/Poss</th><th class="num">ORTG</th><th class="num">Min</th></tr></thead>
+            <thead><tr><th>Player</th><th class="num">Poss</th><th class="num">Pts</th><th class="num">P/Poss</th><th class="num">ORTG</th><th class="num">Min</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -175,10 +200,19 @@ let GAME_ID = {{ game_id|tojson }};
 let CURRENT_VIDEO_ID = null;
 
 function slotLabel(id, row) {
+  if (row && row.mapped_label) return row.mapped_label;
+  if (row && row.player_name && row.jersey_number != null) return '#' + row.jersey_number + ' ' + row.player_name;
   if (row && row.name) return row.name;
-  if (row && row.jersey_number) return '#' + row.jersey_number;
+  if (row && row.jersey_number != null) return '#' + row.jersey_number;
+  if (row && row.player_name) return row.player_name;
   if (id === null || id === undefined || id === '') return 'Unknown';
   return 'Pos ' + id;
+}
+
+function playerDisplayName(row, pid, meta) {
+  if (row && row.player && String(row.player).charAt(0) === '#') return row.player;
+  if (row && row.player && isNaN(Number(row.player)) && !String(row.player).match(/^Pos /)) return row.player;
+  return slotLabel(pid, meta || row);
 }
 
 function slotKey(id) {
@@ -342,6 +376,8 @@ async function loadResults() {
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('results').style.display = 'block';
+
+    await loadSlotMappingUI();
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
@@ -477,7 +513,7 @@ function renderBoxScore(basic, enhanced) {
     var row = rows[i].row;
     var pid = rows[i].pid;
     var meta = namesBySlot[pid] || row;
-    var name = slotLabel(pid, meta);
+    var name = playerDisplayName(row, pid, meta);
     var min = minutesBySlot[pid] || row.minutes || '0';
     var s = shots[pid] || {};
     var fgm = row.fgm != null ? row.fgm : ((s['2pt_make'] || 0) + (s['3pt_make'] || 0));
@@ -585,6 +621,113 @@ function formatTime(ms) {
   return m + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
+let ROSTER_PLAYERS = [];
+let COURT_SLOTS = [];
+
+function renderSlotMappingTable() {
+  const tbody = document.querySelector('#slot-mapping-table tbody');
+  if (!tbody) return;
+  if (!COURT_SLOTS.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No court slots found for this game.</td></tr>';
+    return;
+  }
+
+  let rosterOptions = '<option value="">— Select roster player —</option>';
+  ROSTER_PLAYERS.forEach(function(p) {
+    const label = (p.jersey_number != null ? '#' + p.jersey_number + ' ' : '') + (p.name || 'Player');
+    rosterOptions += '<option value="' + p.id + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + escapeHtml(p.name || '') + '">' + escapeHtml(label) + '</option>';
+  });
+
+  let html = '';
+  COURT_SLOTS.forEach(function(slot) {
+    html += '<tr data-tracker-id="' + slot.tracker_id + '">';
+    html += '<td><strong>Pos ' + slot.tracker_id + '</strong></td>';
+    html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
+    html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
+    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + (slot.jersey_number ?? '') + '"></td>';
+    html += '<td><input class="slot-name" type="text" style="min-width:140px" value="' + escapeHtml(slot.player_name || '') + '"></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+
+  tbody.querySelectorAll('.slot-roster').forEach(function(select) {
+    select.addEventListener('change', function() {
+      const opt = select.selectedOptions[0];
+      if (!opt || !opt.value) return;
+      const tr = select.closest('tr');
+      tr.querySelector('.slot-jersey').value = opt.dataset.jersey || '';
+      tr.querySelector('.slot-name').value = opt.dataset.name || '';
+    });
+  });
+}
+
+async function loadSlotMappingUI() {
+  try {
+    const [slotsResp, rosterResp] = await Promise.all([
+      fetch('/api/court-slots/' + encodeURIComponent(GAME_ID)),
+      fetch('/api/players'),
+    ]);
+    if (!slotsResp.ok) return;
+    const slotsData = await slotsResp.json();
+    COURT_SLOTS = slotsData.slots || [];
+    if (rosterResp.ok) ROSTER_PLAYERS = await rosterResp.json();
+    renderSlotMappingTable();
+  } catch (err) {
+    console.warn('Slot mapping load failed', err);
+  }
+}
+
+async function saveSlotMappings() {
+  const status = document.getElementById('slot-mapping-status');
+  const mappings = [];
+  document.querySelectorAll('#slot-mapping-table tbody tr[data-tracker-id]').forEach(function(tr) {
+    const jersey = tr.querySelector('.slot-jersey').value;
+    const name = tr.querySelector('.slot-name').value.trim();
+    const playerId = tr.querySelector('.slot-roster').value;
+    if (!jersey && !name && !playerId) return;
+    mappings.push({
+      tracker_id: parseInt(tr.dataset.trackerId, 10),
+      jersey_number: jersey ? parseInt(jersey, 10) : null,
+      player_name: name || null,
+      player_id: playerId ? parseInt(playerId, 10) : null,
+    });
+  });
+
+  if (!mappings.length) {
+    alert('Assign at least one court slot to a jersey number or player name.');
+    return;
+  }
+
+  try {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--muted)';
+      status.textContent = 'Saving mapping and updating stats…';
+    }
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings: mappings, apply_to_events: true }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Save failed');
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.textContent = 'Mapping saved. Refreshing stats…';
+    }
+    await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not save mapping: ' + err.message;
+    } else {
+      alert('Could not save mapping: ' + err.message);
+    }
+  }
+}
+
+document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlotMappings);
 loadResults();
 </script>
 {% endblock %}

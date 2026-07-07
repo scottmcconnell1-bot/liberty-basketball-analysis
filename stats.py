@@ -381,7 +381,7 @@ def get_enhanced_stats(db, game_id):
 
     # Minutes
     minutes = db.execute("""
-        SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, p.name
+        SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
         FROM player_minutes pm
         LEFT JOIN players p ON p.tracker_id = pm.tracker_id
         WHERE pm.game_id = ?
