@@ -566,6 +566,46 @@
     flex-wrap: wrap;
 }
 
+/* Manage rosters — use nearly the full viewport */
+#film-tool-root #rosterDialog {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    transform: none;
+    top: auto;
+    left: auto;
+}
+#film-tool-root #rosterDialog[open] {
+    max-height: none;
+}
+#film-tool-root #rosterDialog > form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+#film-tool-root #rosterDialog .modal-head,
+#film-tool-root #rosterDialog .modal-foot {
+    flex: 0 0 auto;
+}
+#film-tool-root #rosterDialog .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}
+#film-tool-root #rosterDialog #playerList {
+    flex: 1 1 auto;
+    min-height: 14rem;
+    max-height: none;
+}
+
 /* ── Term / Vocabulary / Roster Lists ─────────────────────── */
 #film-tool-root .term-list {
     display: grid;
