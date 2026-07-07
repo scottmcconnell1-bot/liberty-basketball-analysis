@@ -1441,10 +1441,18 @@ function tagSubstitution() { openStartersDialog('adjust'); }
 function loadTheme() {
     const stored = localStorage.getItem('filmToolThemeV1');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = stored || (prefersDark ? 'dark' : 'light');
+    let theme = stored || 'system';
+    if (theme === 'system') {
+        theme = prefersDark ? 'dark' : 'light';
+    }
+    document.documentElement.dataset.theme = theme;
 }
 function toggleTheme() {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    const current = localStorage.getItem('filmToolThemeV1') || 'system';
+    const resolved = current === 'system'
+        ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : current;
+    const next = resolved === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     localStorage.setItem('filmToolThemeV1', next);
 }
@@ -1473,7 +1481,19 @@ function setActiveTab(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
     if (btn) btn.classList.add('active');
-    document.getElementById(id).classList.add('active');
+    const view = document.getElementById(id);
+    if (view) view.classList.add('active');
+}
+
+function applyFilmToolDeepLinks() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'games') setActiveTab('gamesView');
+    else if (tab === 'reports') setActiveTab('reportsView');
+    if (params.get('open') === 'terms') {
+        loadVocabulary();
+        termDialog?.showModal();
+    }
 }
 
 // ── Focus Mode ──────────────────────────────────────────────
@@ -2269,10 +2289,7 @@ function initAiUpload() {
 // ── Event Handlers ──────────────────────────────────────────
 function attachEventHandlers() {
     document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)); });
-    const themeToggle = document.querySelector('[data-theme-toggle]');
-    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
-    document.getElementById('manageTermsBtn')?.addEventListener('click', () => { loadVocabulary(); termDialog.showModal(); });
     document.getElementById('saveNewTermBtn')?.addEventListener('click', addTerm);
     termFieldSelect?.addEventListener('change', renderTermList);
 
@@ -2408,6 +2425,7 @@ function init() {
     renderEventButtons();
     renderGames();
     attachEventHandlers();
+    applyFilmToolDeepLinks();
     updateScoreLabels();
     renderScore();
     initFromAutosave();

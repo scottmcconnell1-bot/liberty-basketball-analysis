@@ -316,17 +316,15 @@
        ═══════════════════════════════════════════════════════ -->
   <div class="ft-topbar">
     <div class="ft-tabs">
-      <button class="btn active" data-tab="taggerView" type="button">🎬 Tagger</button>
-      <button class="btn" data-tab="gamesView" type="button">📋 Games</button>
-      <button class="btn" data-tab="reportsView" type="button">📊 Reports</button>
+      <button class="btn tab-btn active" data-tab="taggerView" type="button">🎬 Tagger</button>
+      <button class="btn tab-btn" data-tab="gamesView" type="button">📋 Games</button>
+      <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
     <div class="ft-topbar-actions">
       <button class="btn" id="resumeLastBtn" type="button">↩ Resume</button>
       <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
-      <button class="btn" id="manageTermsBtn" type="button">Terms</button>
       <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
-      <button class="btn" data-theme-toggle type="button">◐</button>
-      <button class="btn btn-primary" id="exportBtn" type="button">Export</button>
+      <a class="btn" href="{{ url_for('core.settings_page') }}#film-tool">⚙ Setup</a>
     </div>
   </div>
 
@@ -795,7 +793,10 @@
   <section id="gamesView" class="view" data-frame="5.8">
     <div class="split">
       <section class="panel">
-        <div class="panel-head"><div><h2>📋 My Games</h2><p>Saved games for Liberty.</p></div></div>
+        <div class="panel-head">
+          <div><h2>📋 My Games</h2><p>Saved games for Liberty.</p></div>
+          <button class="btn btn-primary" id="exportBtn" type="button">Export tags</button>
+        </div>
         <div class="panel-body"><div class="games-grid" id="myGamesList"></div></div>
       </section>
       <section class="panel">
