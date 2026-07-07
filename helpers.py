@@ -1127,6 +1127,53 @@ def _read_log_tail(log_path: str, limit: int = 500) -> str:
         return ""
 
 
+def count_detections_for_analysis(
+    db,
+    *,
+    analysis_key=None,
+    relational_game_id=None,
+    video_game_id=None,
+    video_relational_game_id=None,
+    base_analysis_key=None,
+) -> int:
+    """Count detections for a video/analysis run across legacy and relational keys."""
+    conditions = []
+    params = []
+    for rel_id in {relational_game_id, video_relational_game_id} - {None}:
+        conditions.append("d.relational_game_id = ?")
+        params.append(rel_id)
+    for game_id in {analysis_key, video_game_id, base_analysis_key} - {None}:
+        conditions.append("d.game_id = ?")
+        params.append(game_id)
+    if not conditions:
+        return 0
+    query = f"SELECT COUNT(*) AS c FROM detections d WHERE {' OR '.join(conditions)}"
+    return db.execute(query, params).fetchone()["c"]
+
+
+def count_events_for_analysis(
+    db,
+    *,
+    analysis_key=None,
+    relational_game_id=None,
+    video_game_id=None,
+    base_analysis_key=None,
+) -> int:
+    """Count events for a video/analysis run across legacy and relational keys."""
+    conditions = []
+    params = []
+    if relational_game_id is not None:
+        conditions.append("e.relational_game_id = ?")
+        params.append(relational_game_id)
+    for game_id in {analysis_key, video_game_id, base_analysis_key} - {None}:
+        conditions.append("e.game_id = ?")
+        params.append(game_id)
+    if not conditions:
+        return 0
+    query = f"SELECT COUNT(*) AS c FROM events e WHERE {' OR '.join(conditions)}"
+    return db.execute(query, params).fetchone()["c"]
+
+
 def _analysis_log_error_message(content: str) -> str | None:
     if not content:
         return None
