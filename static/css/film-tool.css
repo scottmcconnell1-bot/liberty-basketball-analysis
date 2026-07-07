@@ -616,35 +616,53 @@
     min-height: 10rem;
     max-height: none;
     margin-top: 0;
+    overflow: auto;
+    padding-right: .15rem;
 }
-#film-tool-root .roster-table {
-    display: grid;
-    gap: .35rem;
+#film-tool-root table.roster-table {
     width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0 .35rem;
 }
-#film-tool-root .roster-table-row {
-    display: grid;
-    grid-template-columns: 3.5rem 3rem minmax(8rem, 1fr) 4rem auto;
-    gap: .5rem;
-    align-items: center;
-    padding: .5rem .65rem;
-    border-radius: .75rem;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface-2);
-    font-size: .92rem;
-}
-#film-tool-root .roster-table-head {
-    background: transparent;
-    border: none;
-    padding: 0 .65rem .15rem;
+#film-tool-root table.roster-table th {
+    padding: 0 .55rem .2rem;
     color: var(--color-muted, #6b7280);
-    font-size: .78rem;
+    font-size: .76rem;
     font-weight: 600;
     letter-spacing: .03em;
     text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
 }
-#film-tool-root .roster-table-actions {
-    justify-self: end;
+#film-tool-root table.roster-table td {
+    padding: .5rem .55rem;
+    border-radius: .65rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    font-size: .9rem;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#film-tool-root table.roster-table .col-pos { width: 3.25rem; }
+#film-tool-root table.roster-table .col-num { width: 2.5rem; }
+#film-tool-root table.roster-table .col-grade { width: 4.25rem; }
+#film-tool-root table.roster-table .col-actions {
+    width: 5.75rem;
+    text-align: right;
+    border: none;
+    background: transparent;
+    overflow: visible;
+    white-space: nowrap;
+}
+#film-tool-root table.roster-table .col-name {
+    width: auto;
+}
+#film-tool-root table.roster-table .col-actions .btn {
+    padding: .3rem .55rem;
+    font-size: .78rem;
 }
 #film-tool-root #rosterImportDialog {
     width: min(520px, calc(100vw - 2rem));

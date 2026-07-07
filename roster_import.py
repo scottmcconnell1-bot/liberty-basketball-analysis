@@ -103,7 +103,95 @@ def _cell_str(value) -> str:
     return str(value).strip()
 
 
+def _clean_grade(grade: str | None) -> str | None:
+    if not grade:
+        return None
+    cleaned = grade.strip().rstrip(".")
+    return cleaned or None
+
+
+_GRADE_TOKEN = r"(?:Sr|Jr|So|Fr\.?|\d{1,2})"
+_POS_TOKEN = r"[A-Z]{1,3}(?:\s*/\s*[A-Z]{1,3})?"
+
+
+def _score_maxpreps_candidate(name: str, grade: str | None, position: str | None) -> int:
+    score = 0
+    if len(name) < 2:
+        score -= 10
+    tail = name.split()[-1].upper() if name.split() else ""
+    if tail in {"G", "F", "C", "PG", "SG", "SF", "PF"}:
+        score -= 8
+    if position and position.isdigit():
+        score -= 8
+    if grade and not re.match(r"^(?:Sr|Jr|So|Fr|\d{1,2})$", grade, re.IGNORECASE):
+        score -= 5
+    if position and position.upper() in {"PG", "SG", "SF", "PF", "C", "G", "F"}:
+        score += 3
+    if grade and re.match(r"^(?:Sr|Jr|So|Fr|\d{1,2})$", grade, re.IGNORECASE):
+        score += 2
+    return score
+
+
+def _parse_maxpreps_player_line(line: str) -> dict | None:
+    """Parse a single MaxPreps roster line in either column order."""
+    line = line.strip()
+    if not line:
+        return None
+
+    patterns = [
+        (
+            re.compile(
+                rf"^(?:#\s*)?(\d{{1,2}})\s+"
+                rf"([A-Za-z][A-Za-z'\-\.\s]+?)\s+"
+                rf"({_GRADE_TOKEN})\s+"
+                rf"({_POS_TOKEN})?\b",
+                re.IGNORECASE,
+            ),
+            "grade_first",
+        ),
+        (
+            re.compile(
+                rf"^(?:#\s*)?(\d{{1,2}})\s+"
+                rf"([A-Za-z][A-Za-z'\-\.\s]+?)\s+"
+                rf"({_POS_TOKEN})\s+"
+                rf"({_GRADE_TOKEN})\b",
+                re.IGNORECASE,
+            ),
+            "pos_first",
+        ),
+    ]
+
+    best: dict | None = None
+    best_score = -999
+    for pattern, mode in patterns:
+        match = pattern.match(line)
+        if not match:
+            continue
+        jersey_number, name, first, second = match.groups()
+        if mode == "grade_first":
+            grade, position = first, second
+        else:
+            position, grade = first, second
+        cleaned_grade = _clean_grade(grade)
+        cleaned_position = (position or "").upper() or None
+        score = _score_maxpreps_candidate(name.strip(), cleaned_grade, cleaned_position)
+        if score > best_score:
+            best_score = score
+            best = _normalize_player(
+                jersey_number=jersey_number,
+                name=name.strip(),
+                grade=cleaned_grade,
+                position=cleaned_position,
+            )
+    return best
+
+
 def _parse_roster_row_parts(parts: list[str]) -> dict | None:
+    if len(parts) == 1:
+        parsed = _parse_maxpreps_player_line(parts[0])
+        if parsed:
+            return parsed
+
     jersey_number = None
     name = None
     grade = None
@@ -120,6 +208,10 @@ def _parse_roster_row_parts(parts: list[str]) -> dict | None:
         else:
             position = parts[2]
     else:
+        joined = " ".join(parts)
+        parsed = _parse_maxpreps_player_line(joined)
+        if parsed:
+            return parsed
         for part in parts:
             if part.isdigit() and jersey_number is None and len(part) <= 2:
                 jersey_number = part
@@ -209,7 +301,7 @@ def parse_maxpreps_roster_text(text: str) -> list[dict]:
     player_line_re = re.compile(
         r"^(?:#\s*)?(\d{1,2})\s+"
         r"([A-Za-z][A-Za-z'\-\.\s]+?)\s+"
-        r"(Sr|Jr|So|Fr|\d{1,2})\s*"
+        r"(Sr|Jr|So|Fr\.?|\d{1,2})\s*"
         r"([A-Z]{1,3}(?:\s*/\s*[A-Z]{1,3})?)?",
         re.IGNORECASE,
     )
@@ -233,16 +325,16 @@ def parse_maxpreps_roster_text(text: str) -> list[dict]:
             players.append(csv_player)
             continue
 
-        match = player_line_re.match(line)
-        if not match:
-            continue
-        jersey_number, name, grade, position = match.groups()
-        player = _normalize_player(
-            jersey_number=jersey_number,
-            name=name.strip(),
-            grade=grade,
-            position=(position or "").upper() or None,
-        )
+        player = _parse_maxpreps_player_line(line)
+        if not player and player_line_re.match(line):
+            match = player_line_re.match(line)
+            jersey_number, name, grade, position = match.groups()
+            player = _normalize_player(
+                jersey_number=jersey_number,
+                name=name.strip(),
+                grade=_clean_grade(grade),
+                position=(position or "").upper() or None,
+            )
         if player:
             players.append(player)
     return players

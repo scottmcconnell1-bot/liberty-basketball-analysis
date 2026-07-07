@@ -201,11 +201,46 @@ function buildPlayerLabel({ jersey_number: num, name, grade } = {}) {
     return label;
 }
 
+function parseFreeformRosterLine(value) {
+    const line = normalize(value);
+    if (!line) return null;
+    const patterns = [
+        {
+            re: /^(\d{1,2})\s+([A-Za-z][A-Za-z'\-.\s]+?)\s+([A-Z]{1,3}(?:\s*\/\s*[A-Z]{1,3})?)\s+(Sr|Jr|So|Fr\.?|\d{1,2})\b/i,
+            map: m => ({
+                jersey_number: m[1],
+                name: m[2].trim(),
+                position: m[3].toUpperCase(),
+                grade: m[4].replace(/\.$/, ''),
+            }),
+        },
+        {
+            re: /^(\d{1,2})\s+([A-Za-z][A-Za-z'\-.\s]+?)\s+(\d{1,2}|Sr|Jr|So|Fr\.?)\s+([A-Z]{1,3}(?:\s*\/\s*[A-Z]{1,3})?)?\b/i,
+            map: m => ({
+                jersey_number: m[1],
+                name: m[2].trim(),
+                grade: m[3].replace(/\.$/, ''),
+                position: (m[4] || '').toUpperCase() || null,
+            }),
+        },
+    ];
+    for (const { re, map } of patterns) {
+        const match = line.match(re);
+        if (!match) continue;
+        const parsed = map(match);
+        if (parsed.name.split(' ').pop().toUpperCase() === parsed.position) continue;
+        return normalizeRosterPlayer(parsed);
+    }
+    return null;
+}
+
 function normalizeRosterPlayer(item) {
     if (!item) return null;
     if (typeof item === 'string') {
         const value = normalize(item);
         if (!value) return null;
+        const freeform = parseFreeformRosterLine(value);
+        if (freeform) return freeform;
         const commaParts = value.split(',');
         const head = normalize(commaParts[0]);
         const grade = normalize(commaParts.slice(1).join(',')) || null;
@@ -228,6 +263,10 @@ function normalizeRosterPlayer(item) {
     const name = normalize(item.name) || null;
     const grade = normalize(item.grade) || null;
     const position = normalize(item.position).toUpperCase() || null;
+    if (!jersey_number && !position && !grade && name) {
+        const freeform = parseFreeformRosterLine(name);
+        if (freeform) return freeform;
+    }
     const label = normalize(item.label || item.player_label) || buildPlayerLabel({ jersey_number, name, grade });
     if (!label) return null;
     return { jersey_number, name, grade, position, label };
@@ -1164,35 +1203,46 @@ function showRoster() {
     }
     if (!list.length) { playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>'; return; }
 
-    const table = document.createElement('div');
+    const table = document.createElement('table');
     table.className = 'roster-table';
-    const head = document.createElement('div');
-    head.className = 'roster-table-row roster-table-head';
-    ['POS', '#', 'Name', 'Grade', ''].forEach(text => {
-        const cell = document.createElement('span');
-        cell.textContent = text;
-        head.appendChild(cell);
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    [
+        ['POS', 'col-pos'],
+        ['#', 'col-num'],
+        ['Name', 'col-name'],
+        ['Grade', 'col-grade'],
+        ['', 'col-actions'],
+    ].forEach(([text, className]) => {
+        const th = document.createElement('th');
+        th.className = className;
+        th.textContent = text;
+        headRow.appendChild(th);
     });
-    table.appendChild(head);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
 
+    const tbody = document.createElement('tbody');
     list.forEach(player => {
-        const row = document.createElement('div');
-        row.className = 'roster-table-row';
-        const cells = [
-            player.position || '',
-            player.jersey_number || '',
-            player.name || '',
-            player.grade || '',
+        const row = document.createElement('tr');
+        const fields = [
+            ['col-pos', player.position || ''],
+            ['col-num', player.jersey_number || ''],
+            ['col-name', player.name || ''],
+            ['col-grade', player.grade || ''],
         ];
-        cells.forEach(text => {
-            const cell = document.createElement('span');
-            cell.textContent = text;
-            row.appendChild(cell);
+        fields.forEach(([className, text]) => {
+            const td = document.createElement('td');
+            td.className = className;
+            td.textContent = text;
+            td.title = text;
+            row.appendChild(td);
         });
-        const actions = document.createElement('span');
-        actions.className = 'roster-table-actions';
+        const actions = document.createElement('td');
+        actions.className = 'col-actions';
         const del = document.createElement('button');
         del.type = 'button';
+        del.className = 'btn btn-sm';
         del.textContent = 'Remove';
         del.addEventListener('click', async () => {
             rosters[key] = (rosters[key] || []).filter(p => playerLabel(p) !== player.label);
@@ -1201,8 +1251,9 @@ function showRoster() {
         });
         actions.appendChild(del);
         row.appendChild(actions);
-        table.appendChild(row);
+        tbody.appendChild(row);
     });
+    table.appendChild(tbody);
     playerList.appendChild(table);
 }
 
