@@ -1210,6 +1210,8 @@ function initPlaybookTaxonomy() {
   const categorySelect = document.getElementById('playCategoryId');
 
   window.PlaybookTaxonomy.fillCategorySelect(categorySelect, categoryTree, selectedCategoryId);
+  if (!treeEl) return;
+
   function onCategorySelect(categoryId, node) {
     activeCategoryId = categoryId;
     if (breadcrumb) {
@@ -1318,7 +1320,7 @@ function initSteps() {
 if (document.getElementById('courtSvg')) {
   initSteps();
 }
-if (document.getElementById('playbookCategoryTree')) {
+if (document.getElementById('playCategoryId') || document.getElementById('playbookCategoryTree')) {
   initPlaybookTaxonomy();
 }
 

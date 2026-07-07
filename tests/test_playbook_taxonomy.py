@@ -64,3 +64,15 @@ def test_play_save_with_category_id(client, db):
     assert response.status_code == 200
     row = db.execute("SELECT category_id FROM plays WHERE name = ?", ("Zone BLOB Special",)).fetchone()
     assert row["category_id"] == category_id
+
+
+def test_create_page_initializes_category_select(client, db):
+    """Category dropdown is filled by JS on create/edit, not only on the list page."""
+    ensure_playbook_taxonomy(db)
+    db.commit()
+    response = client.get("/playbook/create")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'id="playCategoryId"' in html
+    assert "getElementById('playCategoryId')" in html
+    assert "initPlaybookTaxonomy()" in html
