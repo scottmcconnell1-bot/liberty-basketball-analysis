@@ -12,6 +12,7 @@ pytest>=8.0,<9
 requests>=2.31,<3
 beautifulsoup4>=4.12,<5
 pdfplumber>=0.11,<1
+pymupdf>=1.24,<2
 openpyxl>=3.1,<4
 yt-dlp>=2024.1,<2026
 numpy>=1.26,<3

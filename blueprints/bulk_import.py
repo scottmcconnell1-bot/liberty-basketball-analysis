@@ -267,7 +267,13 @@ def bulk_import_parse():
     uploaded.save(pdf_path)
 
     try:
+        from playbook_pdf import require_pymupdf
+        require_pymupdf()
         plays = _extract_pages_with_categories(pdf_path)
+    except ImportError:
+        return jsonify({
+            "error": "PyMuPDF is required for bulk playbook import. Install with: pip install pymupdf",
+        }), 400
     except Exception as e:
         return jsonify({"error": f"Failed to parse PDF: {str(e)}"}), 400
 
@@ -316,7 +322,13 @@ def bulk_import_split():
     uploaded.save(pdf_path)
 
     try:
+        from playbook_pdf import require_pymupdf
+        require_pymupdf()
         plays = _extract_pages_with_categories(pdf_path)
+    except ImportError:
+        return jsonify({
+            "error": "PyMuPDF is required for bulk playbook import. Install with: pip install pymupdf",
+        }), 400
     except Exception as e:
         return jsonify({"error": f"Failed to parse PDF: {str(e)}"}), 400
 
