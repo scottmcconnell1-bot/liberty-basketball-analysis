@@ -438,7 +438,91 @@ def get_analysis_results(game_id):
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
+        **_analysis_film_payload(db, game_id),
     })
+
+
+def _analysis_film_payload(db, game_id):
+    from analysis_helpers import resolve_analysis_game_context, resolve_video_duration_ms
+
+    context = resolve_analysis_game_context(db, game_id)
+    stored_filename = context.get("stored_filename")
+    film_url = None
+    if stored_filename:
+        film_url = url_for("core.film", filename=stored_filename, game_id=context["analysis_key"])
+    return {
+        "analysis_key": context["analysis_key"],
+        "stored_filename": stored_filename,
+        "film_url": film_url,
+        "duration_ms": resolve_video_duration_ms(
+            db,
+            context["analysis_key"],
+            relational_game_id=context["relational_game_id"],
+            analysis_key=context["analysis_key"],
+        ),
+        "roster_context": {
+            "season_id": context["season_id"],
+            "level": context["level"],
+            "gender": context["gender"],
+            "side": context["side"],
+            "opponent_name": context["opponent_name"],
+        },
+        "teams": {
+            "our_team_id": context["our_team_id"],
+            "our_team_name": context["our_team_name"],
+            "opponent_team_name": context["opponent_team_name"],
+        },
+    }
+
+
+@ai_bp.route("/api/analysis/<game_id>/roster")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_roster_api(game_id):
+    from analysis_helpers import get_analysis_roster_players
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    return jsonify(get_analysis_roster_players(db, game_id))
+
+
+@ai_bp.route("/api/analysis/<game_id>/events")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_events_api(game_id):
+    from analysis_helpers import list_analysis_events
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    payload = list_analysis_events(
+        db,
+        game_id,
+        event_type=request.args.get("event_type"),
+        stat=request.args.get("stat"),
+        player=request.args.get("player"),
+        tracker_id=request.args.get("tracker_id"),
+        team=request.args.get("team"),
+        quarter=request.args.get("quarter"),
+        half=request.args.get("half"),
+        limit=request.args.get("limit", 500),
+    )
+    stored_filename = payload.get("stored_filename")
+    if stored_filename:
+        payload["film_url"] = url_for("core.film", filename=stored_filename, game_id=payload["game_id"])
+    for event in payload.get("events", []):
+        ts = event.get("timestamp_ms") or 0
+        event["film_url"] = None
+        if stored_filename:
+            event["film_url"] = url_for(
+                "core.film",
+                filename=stored_filename,
+                game_id=payload["game_id"],
+                t=max(0, int(ts / 1000)),
+            )
+    return jsonify(payload)
 
 
 @ai_bp.route("/api/track-identity/<game_id>")
