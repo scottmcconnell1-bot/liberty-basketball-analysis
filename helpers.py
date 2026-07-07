@@ -2355,6 +2355,16 @@ def _ensure_migration_columns(db):
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS play_categories (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_id       INTEGER REFERENCES play_categories(id) ON DELETE CASCADE,
+            name            TEXT NOT NULL,
+            slug            TEXT NOT NULL,
+            slug_path       TEXT NOT NULL UNIQUE,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            is_system       INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS plays (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             playbook_id     INTEGER REFERENCES playbooks(id) ON DELETE SET NULL,
@@ -2480,6 +2490,8 @@ def _ensure_migration_columns(db):
         ("detections", "player_cluster", "ALTER TABLE detections ADD COLUMN player_cluster INTEGER"),
         ("detections", "jersey_read", "ALTER TABLE detections ADD COLUMN jersey_read INTEGER"),
         ("detections", "jersey_confidence", "ALTER TABLE detections ADD COLUMN jersey_confidence REAL"),
+        ("plays", "category_id", "ALTER TABLE plays ADD COLUMN category_id INTEGER REFERENCES play_categories(id)"),
+        ("play_steps", "source_image", "ALTER TABLE play_steps ADD COLUMN source_image TEXT"),
     ]
     existing = {
         (row[1], row[2]): True
@@ -2498,6 +2510,12 @@ def _ensure_migration_columns(db):
     _backfill_demo_module_entitlements_stage8a(db)
     _backfill_review_workflow_stage3a(db)
     _backfill_event_participants_stage4a(db)
+    try:
+        from playbook_taxonomy import ensure_playbook_taxonomy
+
+        ensure_playbook_taxonomy(db)
+    except Exception:
+        pass
     db.commit()
 
 

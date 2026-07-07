@@ -1,0 +1,66 @@
+.playbook-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.playbook-sidebar {
+  position: sticky;
+  top: 12px;
+}
+.playbook-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 70vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+.playbook-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  border: 1px solid transparent;
+}
+.playbook-tree-item:hover {
+  background: #f3f4f6;
+}
+.playbook-tree-item.active {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+.playbook-tree-item .count {
+  margin-left: auto;
+  color: #6b7280;
+  font-size: 0.72rem;
+}
+.playbook-tree-children {
+  margin-left: 14px;
+  border-left: 1px solid #e5e7eb;
+  padding-left: 6px;
+}
+.playbook-category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.playbook-breadcrumb {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+@media (max-width: 900px) {
+  .playbook-layout {
+    grid-template-columns: 1fr;
+  }
+  .playbook-sidebar {
+    position: static;
+  }
+}

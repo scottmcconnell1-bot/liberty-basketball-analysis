@@ -5,15 +5,9 @@
 <div class="page-header" data-frame="6.1">
   <h2>Playbook</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">📥 Bulk Import</a>
-    <select class="form-control" style="width:auto" onchange="filterByCategory(this)">
-      <option value="">All Categories</option>
-      {% for value, label in categories %}
-      <option value="{{ value }}">{{ label }}</option>
-      {% endfor %}
-    </select>
     <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
            id="playSearch" oninput="filterPlays(this.value)">
   </div>
@@ -28,43 +22,59 @@
 
 <!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
 {% if view_mode == "list" %}
-<div class="card" data-frame="6.2">
-  <h3 style="margin-bottom:16px;">Plays</h3>
-  {% if plays %}
-  <div class="table-responsive">
-  <table>
-    <thead><tr>
-      <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
-    </tr></thead>
-    <tbody id="playsTableBody" data-frame="6.2t">
-      {% for play in plays %}
-      <tr class="play-row" data-category="{{ play.category }}" data-name="{{ play.name.lower() }}">
-        <td><strong>{{ play.name }}</strong></td>
-        <td><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem;">
-          {{ play.category or 'offense' }}
-        </span></td>
-        <td class="text-muted">{{ play.playbook_name or '—' }}</td>
-        <td class="text-muted">{{ play.step_count or '—' }}</td>
-        <td class="text-muted" style="font-size:0.75rem;">{{ play.updated_at[:16] if play.updated_at else '' }}</td>
-        <td style="white-space:nowrap;">
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
-          <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}" style="display:inline;">
-            <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">⧉ Copy</button>
-          </form>
-          <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}" style="display:inline;">
-            <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="playbook-layout" data-frame="6.2">
+  <div class="card playbook-sidebar">
+    <h3 style="margin-bottom:12px;">Categories</h3>
+    <div id="playbookCategoryTree" class="playbook-tree"></div>
+    <div class="playbook-category-actions">
+      <button class="btn btn-secondary btn-sm" type="button" id="addCategoryBtn">+ Add</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="renameCategoryBtn">Rename</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="moveCategoryBtn">Move</button>
+      <button class="btn btn-danger btn-sm" type="button" id="deleteCategoryBtn">Delete</button>
+    </div>
   </div>
-  {% else %}
-  <p class="text-muted">No plays yet. <a href="{{ url_for('playbook.playbook_create') }}">Create your first play</a>.</p>
-  {% endif %}
+  <div class="card">
+    <div class="playbook-breadcrumb" id="playbookBreadcrumb">All plays</div>
+    <h3 style="margin-bottom:16px;">Plays</h3>
+    {% if plays %}
+    <div class="table-responsive">
+    <table>
+      <thead><tr>
+        <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
+      </tr></thead>
+      <tbody id="playsTableBody" data-frame="6.2t">
+        {% for play in plays %}
+        <tr class="play-row"
+            data-category-id="{{ play.category_id or '' }}"
+            data-category-path="{{ play.category_path or '' }}"
+            data-name="{{ play.name.lower() }}">
+          <td><strong>{{ play.name }}</strong></td>
+          <td><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem;">
+            {{ play.category_path.replace('/', ' · ').replace('_', ' ') if play.category_path else (play.category or 'offense') }}
+          </span></td>
+          <td class="text-muted">{{ play.playbook_name or '—' }}</td>
+          <td class="text-muted">{{ play.step_count or '—' }}</td>
+          <td class="text-muted" style="font-size:0.75rem;">{{ play.updated_at[:16] if play.updated_at else '' }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
+            <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}" style="display:inline;">
+              <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">⧉ Copy</button>
+            </form>
+            <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}" style="display:inline;">
+              <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No plays yet. Pick a category and <a href="{{ url_for('playbook.playbook_create') }}">create your first play</a>.</p>
+    {% endif %}
+  </div>
 </div>
 {% endif %}
 
@@ -85,13 +95,17 @@
         <button class="btn btn-secondary btn-sm" onclick="redoStep()" title="Redo (Ctrl+Y)">↪ Redo</button>
         <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
           <option value="select">Select / Move</option>
-          <option value="pass">Pass Arrow</option>
-          <option value="screen">Screen Arrow</option>
+          <option value="dribble">Dribble</option>
+          <option value="pass">Pass</option>
+          <option value="cut">Cut</option>
+          <option value="run">Run</option>
+          <option value="screen">Screen</option>
         </select>
         <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
           <option value="offense">Offense (O)</option>
           <option value="defense">Defense (X)</option>
         </select>
+        <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span>
         {% endif %}
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -150,12 +164,13 @@
                  value="{{ editing_play.name if editing_play else '' }}" placeholder="e.g. Box Zone Entry">
         </div>
         <div class="form-group">
-          <label for="playCategory">Category</label>
-          <select class="form-control" id="playCategory" name="category">
-            {% for value, label in categories %}
-            <option value="{{ value }}" {% if editing_play and editing_play.category == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
+          <label for="playCategoryId">Category</label>
+          <select class="form-control" id="playCategoryId" name="category_id">
+            {% if category_tree %}
+            {# populated by JS for full tree #}
+            {% endif %}
           </select>
+          <input type="hidden" name="category" id="playCategoryLegacy" value="{{ editing_play.category if editing_play else 'offense' }}">
         </div>
         <div class="form-group">
           <label for="playDescription">Description</label>
@@ -210,6 +225,7 @@
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 <style>
   .player-token {
     cursor: grab;
@@ -256,6 +272,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script>
 // ── Playbook Canvas State ────────────────────────────────
 const COURT_W = 500, COURT_H = 470;
@@ -402,6 +419,12 @@ function renderStep() {
   // Render arrows for this step
   renderArrows(step);
 
+  // Ball handler indicator (Hoops Geek style)
+  if (step.ball) {
+    const ballPos = step.positions[step.ball];
+    if (ballPos) renderBallIndicator(playerLayer, ballPos);
+  }
+
   // Update step label
   document.getElementById('stepLabel').textContent =
     `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
@@ -510,8 +533,29 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   if (!isReadOnly) {
     g.addEventListener('mousedown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
+    if (type === 'offense') {
+      g.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        saveUndoState();
+        steps[currentStep].ball = pid;
+        renderStep();
+      });
+    }
   }
 
+  parent.appendChild(g);
+}
+
+function renderBallIndicator(parent, pos) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'ball-indicator');
+  g.setAttribute('transform', `translate(${pos.x + 14}, ${pos.y - 14})`);
+  const ball = makeCircle(0, 0, 9, '#f97316', '#9a3412', 2);
+  g.appendChild(ball);
+  const seam1 = makeLine(-6, 0, 6, 0, '#9a3412', 1.2);
+  const seam2 = makeLine(0, -6, 0, 6, '#9a3412', 1.2);
+  g.appendChild(seam1);
+  g.appendChild(seam2);
   parent.appendChild(g);
 }
 
@@ -522,6 +566,7 @@ function renderArrows(step) {
   if (!step.movements) return;
 
   step.movements.forEach((m, idx) => {
+    if (m && m._meta) return;
     const from = step.positions[m.from];
     const to = step.positions[m.to];
     if (!from || !to) return;
@@ -536,6 +581,21 @@ function renderArrows(step) {
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke-dasharray', '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (m.type === 'dribble') {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else if (m.type === 'cut' || m.type === 'run') {
+      const mx = (from.x + to.x) / 2 + (to.y - from.y) * 0.12;
+      const my = (from.y + to.y) / 2 - (to.x - from.x) * 0.12;
+      d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', m.type === 'cut' ? '#ef4444' : '#16a34a');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', m.type === 'cut' ? '6,4' : '0');
+      path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
     } else if (m.type === 'screen') {
       const mx = (from.x + to.x) / 2 + (to.y - from.y) * 0.15;
       const my = (from.y + to.y) / 2 - (to.x - from.x) * 0.15;
@@ -560,8 +620,12 @@ function addArrowheadMarkers() {
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   const mkRed = makeArrowhead('arrowhead-red', '#ef4444');
   const mkBlue = makeArrowhead('arrowhead-blue', '#3b82f6');
+  const mkGreen = makeArrowhead('arrowhead-green', '#16a34a');
+  const mkBlack = makeArrowhead('arrowhead-black', '#111827');
   defs.appendChild(mkRed);
   defs.appendChild(mkBlue);
+  defs.appendChild(mkGreen);
+  defs.appendChild(mkBlack);
   svg.insertBefore(defs, svg.firstChild);
 }
 
@@ -663,7 +727,7 @@ function handleToolClick(e, pid) {
   } else {
     saveUndoState();
     const type = currentTool;
-    if (['pass', 'screen'].includes(type)) {
+    if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
       steps[currentStep].movements.push({ from: arrowStart, to: pid, type });
     }
     highlightPlayer(arrowStart, false);
@@ -740,6 +804,7 @@ function addStep() {
     movements: [],
     label: '',
     notes: '',
+    ball: prevStep.ball || 'o1',
   });
   currentStep = steps.length - 1;
   renderStep();
@@ -754,6 +819,7 @@ function duplicateStep() {
     movements: JSON.parse(JSON.stringify(src.movements)),
     label: src.label ? src.label + ' (copy)' : '',
     notes: src.notes || '',
+    ball: src.ball || 'o1',
   });
   currentStep++;
   renderStep();
@@ -811,21 +877,60 @@ function updateStepList() {
 
 // ── Playback animation ───────────────────────────────────
 let animInterval = null;
-function playAnimation() {
-  if (animInterval) { clearInterval(animInterval); animInterval = null; return; }
+let animFrame = null;
+
+function lerpPosition(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+function animateToStep(targetIndex, durationMs = 700) {
+  if (targetIndex <= 0 || targetIndex >= steps.length) {
+    currentStep = targetIndex;
+    renderStep();
+    updateStepList();
+    return Promise.resolve();
+  }
+  const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions));
+  const toPositions = steps[targetIndex].positions;
+  const start = performance.now();
+  return new Promise((resolve) => {
+    function frame(now) {
+      const t = Math.min(1, (now - start) / durationMs);
+      const blended = {};
+      Object.keys(toPositions).forEach((pid) => {
+        const from = fromPositions[pid] || toPositions[pid];
+        blended[pid] = lerpPosition(from, toPositions[pid], t);
+      });
+      steps[targetIndex].positions = blended;
+      renderStep();
+      if (t < 1) {
+        animFrame = requestAnimationFrame(frame);
+      } else {
+        steps[targetIndex].positions = JSON.parse(JSON.stringify(toPositions));
+        currentStep = targetIndex;
+        renderStep();
+        updateStepList();
+        resolve();
+      }
+    }
+    animFrame = requestAnimationFrame(frame);
+  });
+}
+
+async function playAnimation() {
+  if (animInterval) {
+    clearInterval(animInterval);
+    animInterval = null;
+    if (animFrame) cancelAnimationFrame(animFrame);
+    return;
+  }
   currentStep = 0;
   renderStep();
   updateStepList();
-  animInterval = setInterval(() => {
-    if (currentStep < steps.length - 1) {
-      currentStep++;
-      renderStep();
-      updateStepList();
-    } else {
-      clearInterval(animInterval);
-      animInterval = null;
-    }
-  }, 1500);
+  for (let i = 1; i < steps.length; i++) {
+    await animateToStep(i, 800);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 }
 
 // ── Export as PNG ────────────────────────────────────────
@@ -855,30 +960,118 @@ function exportPng() {
 }
 
 // ── Save to hidden form fields ───────────────────────────
-document.getElementById('playForm')?.addEventListener('submit', function(e) {
+document.getElementById('playForm')?.addEventListener('submit', function() {
   saveCurrentStepNotes();
   const playData = {
     name: document.getElementById('playName').value,
-    category: document.getElementById('playCategory').value,
+    category_id: document.getElementById('playCategoryId')?.value || '',
   };
   document.getElementById('diagramJsonInput').value = JSON.stringify(playData);
   document.getElementById('stepsJsonInput').value = JSON.stringify(steps);
 });
 
-// ── Filtering ────────────────────────────────────────────
-function filterByCategory(sel) {
-  const cat = sel.value;
-  document.querySelectorAll('.play-row').forEach(row => {
-    row.style.display = (!cat || row.dataset.category === cat) ? '' : 'none';
+const categoryTree = {{ category_tree|tojson if category_tree else '[]' }};
+const selectedCategoryId = {{ selected_category_id|tojson if selected_category_id else 'null' }};
+let activeCategoryId = selectedCategoryId;
+
+function applyPlayFilters() {
+  const q = (document.getElementById('playSearch')?.value || '').toLowerCase();
+  const allowedIds = window.PlaybookTaxonomy
+    ? window.PlaybookTaxonomy.collectDescendantIds(categoryTree, activeCategoryId)
+    : null;
+  document.querySelectorAll('.play-row').forEach((row) => {
+    const matchesSearch = !q || row.dataset.name.includes(q);
+    const matchesCategory = !allowedIds || allowedIds.map(String).includes(String(row.dataset.categoryId));
+    row.style.display = matchesSearch && matchesCategory ? '' : 'none';
   });
 }
 
 function filterPlays(q) {
-  q = q.toLowerCase();
-  document.querySelectorAll('.play-row').forEach(row => {
-    const match = !q || row.dataset.name.includes(q);
-    row.style.display = match ? '' : 'none';
+  if (q != null && document.getElementById('playSearch')) {
+    document.getElementById('playSearch').value = q;
+  }
+  applyPlayFilters();
+}
+
+function initPlaybookTaxonomy() {
+  if (!window.PlaybookTaxonomy) return;
+  const treeEl = document.getElementById('playbookCategoryTree');
+  const breadcrumb = document.getElementById('playbookBreadcrumb');
+  const newPlayBtn = document.getElementById('newPlayBtn');
+  const categorySelect = document.getElementById('playCategoryId');
+
+  window.PlaybookTaxonomy.fillCategorySelect(categorySelect, categoryTree, selectedCategoryId);
+  function onCategorySelect(categoryId, node) {
+    activeCategoryId = categoryId;
+    if (breadcrumb) {
+      breadcrumb.textContent = categoryId && node
+        ? node.slug_path.replace(/\//g, ' · ').replace(/_/g, ' ')
+        : 'All plays';
+    }
+    if (newPlayBtn && categoryId) {
+      newPlayBtn.href = `/playbook/create?category_id=${categoryId}`;
+    }
+    window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+    applyPlayFilters();
+  }
+  window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+
+  document.getElementById('addCategoryBtn')?.addEventListener('click', async () => {
+    const name = prompt('New category name');
+    if (!name) return;
+    const parentId = activeCategoryId || null;
+    try {
+      const data = await window.PlaybookTaxonomy.createCategory(parentId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
   });
+  document.getElementById('renameCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const name = prompt('Rename category');
+    if (!name) return;
+    try {
+      await window.PlaybookTaxonomy.renameCategory(activeCategoryId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('moveCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const parentId = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move category under…',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— Top level —',
+    });
+    if (parentId === undefined) return;
+    try {
+      await window.PlaybookTaxonomy.moveCategory(activeCategoryId, parentId);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('deleteCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const reassignTo = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move plays to… (leave blank only if empty)',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— None —',
+    });
+    if (reassignTo === undefined) return;
+    if (!confirm('Delete this category?')) return;
+    try {
+      await window.PlaybookTaxonomy.deleteCategory(activeCategoryId, reassignTo);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  applyPlayFilters();
 }
 
 // ── Init ─────────────────────────────────────────────────
@@ -886,10 +1079,17 @@ function initSteps() {
   if (editingSteps && editingSteps.length > 0) {
     steps = editingSteps.map(s => ({
       positions: JSON.parse(s.positions_json || '{}'),
-      movements: JSON.parse(s.movements_json || '[]'),
+      movements: JSON.parse(s.movements_json || '[]').filter((m) => !(m && m._meta)),
       label: s.label || '',
       notes: s.notes || '',
       source_image: s.source_image || '',
+      ball: (() => {
+        try {
+          const movements = JSON.parse(s.movements_json || '[]');
+          const meta = movements.find(m => m && m._meta);
+          return meta ? meta._ball : 'o1';
+        } catch (e) { return 'o1'; }
+      })(),
     }));
   } else {
     // Default: single step with 5 offensive + 5 defensive players
@@ -898,7 +1098,7 @@ function initSteps() {
     [{ x: 250, y: 420 }, { x: 120, y: 350 }, { x: 380, y: 350 }, { x: 140, y: 250 }, { x: 360, y: 250 }].forEach((p, i) => { positions['o' + (i + 1)] = p; });
     // Defense
     [{ x: 250, y: 380 }, { x: 150, y: 310 }, { x: 350, y: 310 }, { x: 170, y: 220 }, { x: 330, y: 220 }].forEach((p, i) => { positions['d' + (i + 1)] = p; });
-    steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '' }];
+    steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '', ball: 'o1' }];
   }
   renderCourt();
   renderStep();
@@ -907,6 +1107,9 @@ function initSteps() {
 }
 
 initSteps();
+if (document.getElementById('playbookCategoryTree')) {
+  initPlaybookTaxonomy();
+}
 
 // Ctrl+Enter to save
 document.getElementById('stepNotes')?.addEventListener('keydown', function(e) {
