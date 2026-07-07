@@ -470,7 +470,8 @@ async function loadResults() {
     setStep('step-boxscore', 'active');
 
     await sleep(100);
-    renderBoxScore(data.basic_stats || [], data.enhanced || {});
+    BASIC_STATS_ROWS = data.basic_stats || [];
+    renderBoxScore(BASIC_STATS_ROWS, data.enhanced || {});
 
     setStep('step-boxscore', 'done');
     setProgress(70, 'Analyzing shots…');
@@ -783,6 +784,23 @@ function formatTime(ms) {
 
 let ROSTER_PLAYERS = [];
 let COURT_SLOTS = [];
+let BASIC_STATS_ROWS = [];
+
+function rosterPlayerOptionValue(player, index) {
+  if (player.id != null && player.id !== '') return String(player.id);
+  if (player.jersey_number != null && player.jersey_number !== '') {
+    return 'jersey:' + player.jersey_number;
+  }
+  const label = (player.name || player.label || '').trim();
+  if (label) return 'name:' + encodeURIComponent(label);
+  return 'idx:' + index;
+}
+
+function parseRosterPlayerId(rawValue) {
+  if (!rawValue || /^(jersey:|name:|idx:)/.test(rawValue)) return null;
+  const parsed = parseInt(rawValue, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 function renderSlotMappingTable() {
   const tbody = document.querySelector('#slot-mapping-table tbody');
@@ -793,10 +811,11 @@ function renderSlotMappingTable() {
   }
 
   let rosterOptions = '<option value="">— Select roster player —</option>';
-  ROSTER_PLAYERS.forEach(function(p) {
+  ROSTER_PLAYERS.forEach(function(p, index) {
     const label = (p.jersey_number != null ? '#' + p.jersey_number + ' ' : '') + (p.name || p.label || 'Player');
-    const value = p.id != null ? String(p.id) : '';
-    rosterOptions += '<option value="' + value + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + escapeHtml(p.name || p.label || '') + '">' + escapeHtml(label) + '</option>';
+    const value = rosterPlayerOptionValue(p, index);
+    const safeName = (p.name || p.label || '').replace(/"/g, '&quot;');
+    rosterOptions += '<option value="' + escapeHtml(value) + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + safeName + '">' + escapeHtml(label) + '</option>';
   });
 
   let html = '';
@@ -829,8 +848,12 @@ function renderSlotMappingTable() {
       const opt = select.selectedOptions[0];
       if (!opt || !opt.value) return;
       const tr = select.closest('tr');
-      tr.querySelector('.slot-jersey').value = opt.dataset.jersey || '';
-      tr.querySelector('.slot-name').value = opt.dataset.name || '';
+      if (opt.dataset.jersey !== undefined && opt.dataset.jersey !== '') {
+        tr.querySelector('.slot-jersey').value = opt.dataset.jersey;
+      }
+      if (opt.dataset.name) {
+        tr.querySelector('.slot-name').value = opt.dataset.name;
+      }
     });
   });
 }
@@ -848,7 +871,6 @@ async function loadSlotMappingUI() {
       const rosterData = await rosterResp.json();
       ROSTER_PLAYERS = rosterData.players || [];
       EXPLORER_PLAYERS = ROSTER_PLAYERS.slice();
-      populateExplorerPlayerFilter();
       const status = document.getElementById('slot-mapping-status');
       if (status && rosterData.source === 'film_roster') {
         status.style.display = 'block';
@@ -861,6 +883,7 @@ async function loadSlotMappingUI() {
       }
     }
     renderSlotMappingTable();
+    populateExplorerPlayerFilter();
   } catch (err) {
     console.warn('Slot mapping load failed', err);
   }
@@ -872,13 +895,14 @@ async function saveSlotMappings() {
   document.querySelectorAll('#slot-mapping-table tbody tr[data-tracker-id]').forEach(function(tr) {
     const jersey = tr.querySelector('.slot-jersey').value;
     const name = tr.querySelector('.slot-name').value.trim();
-    const playerId = tr.querySelector('.slot-roster').value;
-    if (!jersey && !name && !playerId) return;
+    const rosterValue = tr.querySelector('.slot-roster').value;
+    const playerId = parseRosterPlayerId(rosterValue);
+    if (!jersey && !name && !rosterValue) return;
     mappings.push({
       tracker_id: parseInt(tr.dataset.trackerId, 10),
       jersey_number: jersey ? parseInt(jersey, 10) : null,
       player_name: name || null,
-      player_id: playerId ? parseInt(playerId, 10) : null,
+      player_id: playerId,
     });
   });
 
@@ -945,6 +969,14 @@ function populateExplorerPlayerFilter() {
     if (label && !seen.has(label)) {
       seen.add(label);
       html += '<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</option>';
+    }
+  });
+  BASIC_STATS_ROWS.forEach(function(row) {
+    const label = playerDisplayName(row, slotKey(row.player || row.tracker_id), row);
+    if (label && !seen.has(label)) {
+      seen.add(label);
+      const tracker = row.player != null ? String(row.player) : (row.tracker_id != null ? String(row.tracker_id) : '');
+      html += '<option value="' + escapeHtml(label) + '"' + (tracker ? ' data-tracker="' + escapeHtml(tracker) + '"' : '') + '>' + escapeHtml(label) + '</option>';
     }
   });
   select.innerHTML = html;

@@ -1559,7 +1559,8 @@ function syncAiEventsToPlayback() {
     let nearest = null, nearestDistance = Infinity;
     aiEventsCache.forEach(event => { const distance = Math.abs(Number(event.timestamp_ms || 0) - currentMs); if (distance < nearestDistance) { nearestDistance = distance; nearest = event; } });
     if (!nearest || nearestDistance > 5000) { setActiveAiEvent(null); return; }
-    setActiveAiEvent(nearest.id, String(nearest.id) !== String(activeAiEventId));
+    const shouldScroll = String(nearest.id) !== String(activeAiEventId) && video && !video.paused;
+    setActiveAiEvent(nearest.id, shouldScroll);
 }
 
 function reviewStatusLabel(status) {

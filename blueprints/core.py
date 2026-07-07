@@ -260,7 +260,6 @@ PRODUCT_CHECKLIST = [
 
 PRODUCT_SURFACE_LINKS = [
     {"label": "Dashboard", "href": "/"},
-    {"label": "Preview", "href": "/preview"},
     {"label": "Schedule", "href": "/schedule"},
     {"label": "Film Tool", "href": "/film"},
     {"label": "Videos", "href": "/videos"},
