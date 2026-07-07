@@ -306,6 +306,7 @@ const isReadOnly = {{ 'true' if view_mode == 'view' else 'false' }};
 function renderCourt() {
   const layer = document.getElementById('courtSvg');
   const courtLayer = document.getElementById('courtLayer');
+  if (!layer || !courtLayer) return;
   courtLayer.innerHTML = '';
 
   if (!isFullCourt) {
@@ -396,13 +397,11 @@ function toggleCourt() {
 // ── Player Rendering ─────────────────────────────────────
 function renderStep() {
   const step = steps[currentStep];
-  if (!step) return;
-
-  // Render players
   const playerLayer = document.getElementById('playerLayer');
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!step || !playerLayer || !arrowLayer) return;
   playerLayer.innerHTML = '';
-
-  // Render offensive players (1-5)
+  // Render players
   for (let i = 0; i < 5; i++) {
     const pid = 'o' + (i + 1);
     const pos = step.positions[pid] || defaultOffensePos(i);
@@ -426,10 +425,14 @@ function renderStep() {
   }
 
   // Update step label
-  document.getElementById('stepLabel').textContent =
-    `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
-  document.getElementById('stepNotes').value = step.notes || '';
-  document.getElementById('stepCount').textContent = `(${steps.length})`;
+  const stepLabel = document.getElementById('stepLabel');
+  const stepNotes = document.getElementById('stepNotes');
+  const stepCount = document.getElementById('stepCount');
+  if (stepLabel) {
+    stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  if (stepNotes) stepNotes.value = step.notes || '';
+  if (stepCount) stepCount.textContent = `(${steps.length})`;
 
   // Show/hide step images
   renderStepImages();
@@ -615,7 +618,7 @@ function renderArrows(step) {
 
 function addArrowheadMarkers() {
   const svg = document.getElementById('courtSvg');
-  if (svg.querySelector('#arrowhead-red')) return;
+  if (!svg || svg.querySelector('#arrowhead-red')) return;
 
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   const mkRed = makeArrowhead('arrowhead-red', '#ef4444');
@@ -1106,7 +1109,9 @@ function initSteps() {
   updateStepList();
 }
 
-initSteps();
+if (document.getElementById('courtSvg')) {
+  initSteps();
+}
 if (document.getElementById('playbookCategoryTree')) {
   initPlaybookTaxonomy();
 }
