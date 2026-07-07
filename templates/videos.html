@@ -63,6 +63,7 @@
   Each upload gets a unique timestamped filename so you can re-upload the same game multiple times.
   Duplicates are flagged automatically. Click <em>Open in Film Tool</em> to tag events or view AI detections.
   Use <em>✂️ Trim</em> to cut NFHS padding (previous game, warmups, empty gym) before analysis.
+  <strong>Rebuild</strong> only works when detections are already saved — if Dets is 0, open <em>Film Tool</em> and click <em>Run AI Analysis</em> (or use <em>Re-run AI</em>).
   Use the 🗑 button on any row to permanently delete a video and its analysis data.
 </div>
 
@@ -129,9 +130,15 @@ const STATUS_COLORS = {
 };
 
 function statusBadge(status, detectionCount, errorMessage, eventCount) {
-  if (status === 'completed' && (detectionCount ?? 0) === 0 && (eventCount ?? 0) === 0) {
+  const dets = detectionCount ?? 0;
+  const evts = eventCount ?? 0;
+  if (status === 'completed' && dets === 0 && evts === 0) {
     const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
     return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
+  }
+  if (status === 'completed' && dets === 0 && evts > 0) {
+    const hint = 'Events exist but no saved detections — Rebuild cannot run. Use Re-run AI or Film Tool → Run AI Analysis.';
+    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
   }
   const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
   const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
@@ -254,7 +261,8 @@ async function loadVideos() {
         <div class="video-actions">
           <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
           <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
-          ${((v.detection_count ?? 0) > 0 || (v.event_count ?? 0) > 0) ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
+          ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
+          ${(v.detection_count ?? 0) === 0 && v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>` : ''}
           <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
           <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
           <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
@@ -296,6 +304,23 @@ async function regenerateEvents(videoId) {
     loadVideos();
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Rebuild'; }
+  }
+}
+
+async function startVideoAnalysis(videoId) {
+  if (!confirm('Run full AI analysis on this video? This runs YOLO detection and may take a while.')) return;
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/analyze', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
+    alert(data.message || 'AI analysis started. Refresh this page to watch progress.');
+    loadVideos();
+  } catch (err) {
+    alert('Could not start analysis: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-run AI'; }
   }
 }
 </script>

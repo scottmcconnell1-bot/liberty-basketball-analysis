@@ -374,3 +374,30 @@ def test_regenerate_video_events(client, db, monkeypatch, tmp_path):
     assert resp.status_code == 200
     payload = resp.get_json()
     assert payload["status"] == "events_regenerated"
+
+
+def test_regenerate_video_events_requires_detections(client, db, tmp_path):
+    video_path = tmp_path / "nfhs_empty.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_empty.mp4", "nfhs_empty.mp4", str(video_path), 16, "Opponent", "nfhs_empty_20260101"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, video_path, status)
+           VALUES (?, ?, ?)""",
+        ("nfhs_empty_20260101", str(video_path), "completed"),
+    )
+    db.execute(
+        """INSERT INTO events (game_id, event_type, timestamp_ms)
+           VALUES (?, ?, ?)""",
+        ("nfhs_empty_20260101", "possession_change", 100),
+    )
+    db.commit()
+
+    resp = client.post("/api/videos/1/regenerate-events")
+    assert resp.status_code == 400
+    payload = resp.get_json()
+    assert payload["code"] == "no_detections"
