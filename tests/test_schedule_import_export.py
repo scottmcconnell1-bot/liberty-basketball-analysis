@@ -180,6 +180,35 @@ def test_parse_schedule_text_jr_high_ab_continuation_line():
     assert games[0]["game_time"] == "06:00"
 
 
+def test_api_schedule_import_maxpreps_pdf(client, monkeypatch):
+    from tests.test_maxpreps_schedule_import import MAXPREPS_SCHEDULE_TEXT
+
+    class _FakePage:
+        def extract_text(self):
+            return MAXPREPS_SCHEDULE_TEXT
+
+    class _FakePdf:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        @property
+        def pages(self):
+            return [_FakePage()]
+
+    monkeypatch.setattr("pdfplumber.open", lambda _file: _FakePdf())
+
+    data = {"pdf": (io.BytesIO(b"%PDF-1.4"), "schedule.pdf"), "team": "boys_hs"}
+    resp = client.post("/api/schedule/import-pdf", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload.get("parser") == "maxpreps"
+    assert payload.get("count", 0) >= 5
+    assert payload["games"][0]["opponent_name"] == "Marsing"
+
+
 def test_schedule_table_column_widths(client):
     """Verify schedule table has correct column headers."""
     resp = client.get("/schedule")
