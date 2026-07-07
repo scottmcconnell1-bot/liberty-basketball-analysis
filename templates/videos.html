@@ -3,16 +3,45 @@
 
 {% block content %}
 <style>
-  #videos-card .video-table { table-layout: fixed; width: 100%; }
+  #videos-card {
+    padding: 1.25rem 1.5rem;
+  }
+  #videos-card .table-responsive {
+    margin: 0 -0.25rem;
+  }
+  #videos-card .video-table {
+    table-layout: auto;
+    width: 100%;
+  }
   #videos-card .video-table th,
-  #videos-card .video-table td { vertical-align: top; }
-  #videos-card .video-table .col-game { width: 18%; word-break: break-word; }
-  #videos-card .video-table .col-team { width: 12%; white-space: nowrap; }
-  #videos-card .video-table .col-date { width: 10%; white-space: nowrap; }
-  #videos-card .video-table .col-size { width: 7%; white-space: nowrap; }
-  #videos-card .video-table .col-status { width: 10%; }
-  #videos-card .video-table .col-count { width: 6%; text-align: center; white-space: nowrap; }
-  #videos-card .video-table .col-actions { width: 31%; }
+  #videos-card .video-table td {
+    vertical-align: middle;
+    padding: 12px 14px;
+  }
+  #videos-card .video-table .col-game {
+    min-width: 12rem;
+    max-width: 18rem;
+    word-break: break-word;
+  }
+  #videos-card .video-table .col-team { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-date { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-size { min-width: 4.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-status { min-width: 7rem; }
+  #videos-card .video-table .col-status span {
+    white-space: nowrap;
+    display: inline-block;
+  }
+  #videos-card .video-table .col-count {
+    min-width: 3.75rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+  #videos-card .video-table thead .col-count {
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+  }
+  #videos-card .video-table .col-actions { min-width: 17rem; }
   #videos-card .video-actions {
     display: flex;
     flex-wrap: wrap;
@@ -48,9 +77,9 @@
         <th class="col-date">Game Date</th>
         <th class="col-size">Size</th>
         <th class="col-status">AI Status</th>
-        <th class="col-count">Detections</th>
-        <th class="col-count">Events</th>
-        <th class="col-count">Runs</th>
+        <th class="col-count" title="Detections">Dets</th>
+        <th class="col-count" title="Events">Evts</th>
+        <th class="col-count" title="Analysis runs">Runs</th>
         <th class="col-actions">Actions</th>
       </tr>
     </thead>
