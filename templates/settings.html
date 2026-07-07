@@ -155,6 +155,12 @@
       </div>
 
       <div class="form-group">
+        <label for="ai_auto_accept_event_confidence">Auto-Accept Event Confidence</label>
+        <input class="form-control" id="ai_auto_accept_event_confidence" name="ai_auto_accept_event_confidence" type="number" min="0" max="0.99" step="0.01" value="{{ runtime_settings.ai.auto_accept_event_confidence }}">
+        <div class="text-muted mt-2">AI events at or above this confidence are auto-accepted after analysis. Set to <code>0</code> to disable.</div>
+      </div>
+
+      <div class="form-group">
         <label for="ai_event_generator_mode">Event Generator</label>
         <select class="form-control" id="ai_event_generator_mode" name="ai_event_generator_mode">
           {% for option in catalog.event_generator_mode_options %}

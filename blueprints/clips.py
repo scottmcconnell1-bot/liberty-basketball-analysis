@@ -33,6 +33,7 @@ from flask import (
 import player_development as pd_helpers
 
 from helpers import get_db, refresh_game_stats, require_feature
+from review_actions import accept_event, reject_event
 from stats import _resolve_relational_game_id
 
 clips_bp = Blueprint("clips", __name__)
@@ -351,59 +352,24 @@ def _stringify_review_value(value):
 
 
 def _insert_review_provenance(db, event_id, action, user_id, details):
-    db.execute(
-        """INSERT INTO provenance_records
-              (entity_type, entity_id, source_type, source_id, confidence,
-               created_by_user_id, details_json)
-           VALUES ('event', ?, 'review', ?, 1.0, ?, ?)""",
-        (event_id, action, user_id, json.dumps(details or {}, sort_keys=True)),
-    )
+    from review_actions import _insert_review_provenance as _insert
+
+    return _insert(db, event_id, action, user_id, details)
 
 
 def _record_human_correction(db, row, correction_type, field_changed,
                              original_value, corrected_value, notes=None):
-    db.execute(
-        """INSERT INTO human_corrections
-              (game_id, relational_game_id, event_id, correction_type, original_value,
-               corrected_value, field_changed, timestamp_ms, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            row["game_id"],
-            row["relational_game_id"],
-            row["id"],
-            correction_type,
-            _stringify_review_value(original_value),
-            _stringify_review_value(corrected_value),
-            field_changed,
-            row["timestamp_ms"],
-            notes,
-        ),
+    from review_actions import _record_human_correction as _record
+
+    return _record(
+        db, row, correction_type, field_changed, original_value, corrected_value, notes
     )
 
+
 def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
-    row = db.execute("SELECT id, game_id, relational_game_id FROM events WHERE id=?",
-                     (event_id,)).fetchone()
-    if not row:
-        return
-    db.execute(
-        """INSERT OR IGNORE INTO review_items
-              (entity_type, entity_id, game_id, relational_game_id, review_status, reason)
-           VALUES ('event', ?, ?, ?, ?, 'Event needs coach review')""",
-        (event_id, row["game_id"], row["relational_game_id"], status),
-    )
-    db.execute(
-        """UPDATE review_items
-              SET review_status=?,
-                  reviewed_by_user_id=?,
-                  reviewed_at=CASE
-                      WHEN ? IN ('accepted', 'corrected', 'rejected') THEN CURRENT_TIMESTAMP
-                      ELSE reviewed_at
-                  END,
-                  notes=COALESCE(?, notes),
-                  updated_at=CURRENT_TIMESTAMP
-            WHERE entity_type='event' AND entity_id=?""",
-        (status, user_id, status, notes, event_id),
-    )
+    from review_actions import _sync_event_review_item as _sync
+
+    return _sync(db, event_id, status, user_id=user_id, notes=notes)
 
 
 @clips_bp.route("/api/review/events", methods=["GET"])
@@ -461,27 +427,8 @@ def review_event_accept(event_id):
         return jsonify({"error": "Not found"}), 404
 
     user_id = _current_review_user_id()
-    db.execute(
-        """UPDATE events
-              SET review_status='accepted',
-                  human_verified=1,
-                  reviewed_by_user_id=?,
-                  reviewed_at=CURRENT_TIMESTAMP,
-                  review_notes=COALESCE(?, review_notes)
-            WHERE id=?""",
-        (user_id, notes, event_id),
-    )
-    _sync_event_review_item(db, event_id, "accepted", user_id, notes)
-    _insert_review_provenance(
-        db,
-        event_id,
-        "accept_event",
-        user_id,
-        {"previous_review_status": row["review_status"], "notes": notes},
-    )
-    db.commit()
-    refresh_game_stats(db, row["game_id"])
-    return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
+    updated = accept_event(db, event_id, user_id=user_id, notes=notes, commit=True)
+    return jsonify(updated)
 
 
 @clips_bp.route("/api/review/events/<int:event_id>/reject", methods=["POST"])
@@ -495,36 +442,8 @@ def review_event_reject(event_id):
         return jsonify({"error": "Not found"}), 404
 
     user_id = _current_review_user_id()
-    db.execute(
-        """UPDATE events
-              SET review_status='rejected',
-                  human_verified=0,
-                  reviewed_by_user_id=?,
-                  reviewed_at=CURRENT_TIMESTAMP,
-                  review_notes=COALESCE(?, review_notes)
-            WHERE id=?""",
-        (user_id, notes, event_id),
-    )
-    _record_human_correction(
-        db,
-        row,
-        "remove_event",
-        "review_status",
-        row["review_status"],
-        "rejected",
-        notes,
-    )
-    _sync_event_review_item(db, event_id, "rejected", user_id, notes)
-    _insert_review_provenance(
-        db,
-        event_id,
-        "reject_event",
-        user_id,
-        {"previous_review_status": row["review_status"], "notes": notes},
-    )
-    db.commit()
-    refresh_game_stats(db, row["game_id"])
-    return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
+    updated = reject_event(db, event_id, user_id=user_id, notes=notes, commit=True)
+    return jsonify(updated)
 
 
 @clips_bp.route("/api/review/events/<int:event_id>/correct", methods=["POST"])

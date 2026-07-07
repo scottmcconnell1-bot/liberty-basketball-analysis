@@ -770,6 +770,14 @@ def persist_events(conn, game_id, events, relational_game_id=None):
         )
     conn.commit()
 
+    from review_actions import auto_accept_high_confidence_events
+
+    auto_accept_high_confidence_events(
+        conn,
+        game_id,
+        relational_game_id=relational_game_id,
+    )
+
 
 def main(game_id, db_path, relational_game_id=None):
     """
