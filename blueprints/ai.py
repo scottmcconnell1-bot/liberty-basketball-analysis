@@ -332,8 +332,9 @@ def get_analysis_results(game_id):
 
         ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
         identity_status = ensure_identity_applied(db, game_id, ai_settings)
-    except Exception:
-        identity_status = None
+    except Exception as exc:
+        current_app.logger.exception("Identity auto-apply failed for %s", game_id)
+        identity_status = {"skipped": True, "reason": "error", "error": str(exc)[:200]}
 
     db.execute(
         """UPDATE events
@@ -363,12 +364,16 @@ def get_analysis_results(game_id):
     ).fetchone()["c"]
 
     basic = aggregate_stats_preview(db, game_id)
-    refresh_stats(db, game_id)
+    quality_notes = []
+    try:
+        refresh_stats(db, game_id)
+    except Exception as exc:
+        current_app.logger.exception("refresh_stats failed for %s", game_id)
+        quality_notes.append(f"Persisted stats refresh failed: {str(exc)[:200]}")
     enhanced = get_enhanced_stats(db, game_id)
     enhanced["shot_breakdown"] = [dict(row) for row in get_shot_breakdown_preview(db, game_id)]
     enhanced["basic_stats"] = basic
 
-    quality_notes = []
     if detection_count > 250_000:
         quality_notes.append(
             "Very high detection count — the clip may include extra footage beyond one game, "
@@ -449,6 +454,7 @@ def get_analysis_results(game_id):
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
         "identity_status": identity_status,
+        "analysis_version": "2026-07-07-analysis-v2",
         **_analysis_film_payload(db, game_id),
     })
 

@@ -41,12 +41,52 @@ def _fetch_shot_rows(db, relational_game_id, game_id, query):
     return db.execute(query, (game_id,)).fetchall()
 
 
+def _row_val(row, key, default=None):
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return default
+
+
+def _normalize_stat_rows(rows):
+    normalized = []
+    for row in rows:
+        normalized.append({
+            "player": _row_val(row, "player"),
+            "event_type": _row_val(row, "event_type"),
+            "shot_result": _row_val(row, "shot_result"),
+            "code": _row_val(row, "code") or _row_val(row, "event_type"),
+            "counts_for_stats": _row_val(row, "counts_for_stats"),
+            "is_scoring_event": _row_val(row, "is_scoring_event"),
+            "timestamp_ms": _row_val(row, "timestamp_ms"),
+        })
+    return normalized
+
+
+def _dedupe_stat_events(rows):
+    """Collapse burst duplicate AI events that share player/type within ~2 seconds."""
+    seen = set()
+    deduped = []
+    for row in rows:
+        ts = int(_row_val(row, "timestamp_ms") or 0)
+        bucket = ts // 2000
+        event_code = (_row_val(row, "code") or _row_val(row, "event_type") or "").lower()
+        key = (_row_val(row, "player"), event_code, _row_val(row, "shot_result"), bucket)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
 def _preview_event_rows(db, game_id):
     """Return AI/pending events for the analysis results preview (no review filter)."""
     relational_game_id = _resolve_relational_game_id(db, game_id)
     if relational_game_id is not None:
         return db.execute(
-            """SELECT e.player, e.event_type, e.shot_result, et.code,
+            """SELECT e.player, e.event_type, e.shot_result, e.timestamp_ms, et.code,
                       et.counts_for_stats, et.is_scoring_event
                FROM events e
                LEFT JOIN event_types et ON et.id = e.event_type_id
@@ -56,7 +96,7 @@ def _preview_event_rows(db, game_id):
         ).fetchall()
 
     return db.execute(
-        """SELECT e.player, e.event_type, e.shot_result, et.code,
+        """SELECT e.player, e.event_type, e.shot_result, e.timestamp_ms, et.code,
                   et.counts_for_stats, et.is_scoring_event
            FROM events e
            LEFT JOIN event_types et ON et.id = e.event_type_id
@@ -70,16 +110,19 @@ def aggregate_stats_preview(db, game_id):
     rows = _preview_event_rows(db, game_id)
     normalized = []
     for row in rows:
-        code = row["code"] or row["event_type"]
+        code = _row_val(row, "code") or _row_val(row, "event_type")
+        counts_for_stats = _row_val(row, "counts_for_stats")
         normalized.append({
-            "player": row["player"],
-            "event_type": row["event_type"],
-            "shot_result": row["shot_result"],
+            "player": _row_val(row, "player"),
+            "event_type": _row_val(row, "event_type"),
+            "shot_result": _row_val(row, "shot_result"),
+            "timestamp_ms": _row_val(row, "timestamp_ms"),
             "code": code,
-            "counts_for_stats": row["counts_for_stats"] if row["counts_for_stats"] is not None else 1,
-            "is_scoring_event": row["is_scoring_event"],
+            "counts_for_stats": counts_for_stats if counts_for_stats is not None else 1,
+            "is_scoring_event": _row_val(row, "is_scoring_event"),
         })
     filtered = [row for row in normalized if row["counts_for_stats"]]
+    filtered = _dedupe_stat_events(filtered)
     return _aggregate_rows(filtered)
 
 
@@ -138,7 +181,7 @@ def _scoring_points_for_event(et, sr):
 def _aggregate_rows(rows):
     players = {}
     for row in rows:
-        p = row["player"] or "Unknown"
+        p = _row_val(row, "player") or "Unknown"
         if p not in players:
             players[p] = {
                 "player": p,
@@ -149,23 +192,33 @@ def _aggregate_rows(rows):
             }
         s = players[p]
         s["events"] += 1
-        et = (row.get("code") or row.get("event_type") or "").lower()
-        sr = (row.get("shot_result") or "").lower()
+        et = (_row_val(row, "code") or _row_val(row, "event_type") or "").lower()
+        sr = (_row_val(row, "shot_result") or "").lower()
 
         if _shot_attempt_already_counted(et, sr):
             continue
 
-        if et in ("made_two", "two_attempt", "2pt", "shot"):
+        if et == "made_two":
             s["fga"] += 1
-            if sr == "made" or sr == "make":
+            s["fgm"] += 1
+            s["pts"] += 2
+        elif et in ("two_attempt", "2pt", "shot"):
+            s["fga"] += 1
+            if sr in ("made", "make"):
                 s["fgm"] += 1
                 s["pts"] += 2
         elif et in ("missed_two",):
             s["fga"] += 1
-        elif et in ("made_three", "three_attempt", "3pt"):
+        elif et == "made_three":
             s["fga"] += 1
             s["threes_att"] += 1
-            if sr == "made" or sr == "make":
+            s["fgm"] += 1
+            s["threes_made"] += 1
+            s["pts"] += 3
+        elif et in ("three_attempt", "3pt"):
+            s["fga"] += 1
+            s["threes_att"] += 1
+            if sr in ("made", "make"):
                 s["fgm"] += 1
                 s["threes_made"] += 1
                 s["pts"] += 3
@@ -174,9 +227,8 @@ def _aggregate_rows(rows):
             s["threes_att"] += 1
         elif et == "made_free_throw":
             s["fga"] += 1
-            if sr == "made" or sr == "make":
-                s["fgm"] += 1
-                s["pts"] += 1
+            s["fgm"] += 1
+            s["pts"] += 1
         elif et == "missed_free_throw":
             s["fga"] += 1
         elif et == "make":
@@ -210,7 +262,7 @@ def aggregate_stats(db, game_id):
     while still recognizing legacy free-text event_type strings.
     """
     rows = _eligible_event_rows(db, game_id)
-    return _aggregate_rows(rows)
+    return _aggregate_rows(_normalize_stat_rows(rows))
 
 
 def refresh_stats(db, game_id):
@@ -380,13 +432,23 @@ def get_enhanced_stats(db, game_id):
     relational_game_id = _resolve_relational_game_id(db, game_id)
 
     # Minutes
-    minutes = db.execute("""
-        SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
-        FROM player_minutes pm
-        LEFT JOIN players p ON p.tracker_id = pm.tracker_id
-        WHERE pm.game_id = ?
-        ORDER BY pm.minutes_played DESC
-    """, (game_id,)).fetchall()
+    if relational_game_id is not None:
+        minutes = db.execute("""
+            SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
+            FROM player_minutes pm
+            LEFT JOIN players p ON p.tracker_id = pm.tracker_id
+            WHERE pm.relational_game_id = ?
+               OR (pm.relational_game_id IS NULL AND pm.game_id = ?)
+            ORDER BY pm.minutes_played DESC
+        """, (relational_game_id, str(game_id))).fetchall()
+    else:
+        minutes = db.execute("""
+            SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
+            FROM player_minutes pm
+            LEFT JOIN players p ON p.tracker_id = pm.tracker_id
+            WHERE pm.game_id = ?
+            ORDER BY pm.minutes_played DESC
+        """, (game_id,)).fetchall()
 
     # Shot breakdown (trusted events only)
     review_clause = _trusted_event_review_clause()

@@ -39,6 +39,66 @@ def test_aggregate_stats_preview_counts_make_miss_events(db):
     assert by_player["5"]["reb"] == 1
 
 
+def test_aggregate_stats_preview_dedupes_burst_events(db):
+    """Repeated AI events in the same second should not inflate preview stats."""
+    from stats import aggregate_stats_preview
+
+    db.execute(
+        """INSERT INTO games (source_type, source_key) VALUES ('manual', 'preview-burst')"""
+    )
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_preview_burst"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/preview-burst.mp4"),
+    )
+    for offset in range(8):
+        db.execute(
+            """INSERT INTO events
+                  (game_id, relational_game_id, player, event_type, shot_result,
+                   timestamp_ms, review_status)
+               VALUES (?, ?, '5', 'rebound', NULL, ?, 'pending')""",
+            (analysis_key, game_id, 10_000 + offset * 100),
+        )
+    db.commit()
+
+    stats = aggregate_stats_preview(db, analysis_key)
+    player = next(row for row in stats if row["player"] == "5")
+    assert player["reb"] == 1
+
+
+def test_aggregate_stats_handles_sqlite_rows(db):
+    """Trusted stats aggregation must accept sqlite3.Row objects."""
+    from stats import aggregate_stats
+
+    db.execute(
+        """INSERT INTO games (source_type, source_key) VALUES ('manual', 'trusted-stats')"""
+    )
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_trusted_stats"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/trusted.mp4"),
+    )
+    made_two_id = db.execute(
+        "SELECT id FROM event_types WHERE code='made_two'"
+    ).fetchone()["id"]
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, player, event_type, event_type_id,
+               timestamp_ms, review_status)
+           VALUES (?, ?, 'Alice', 'made_two', ?, 1000, 'accepted')""",
+        (analysis_key, game_id, made_two_id),
+    )
+    db.commit()
+
+    stats = aggregate_stats(db, analysis_key)
+    assert stats[0]["player"] == "Alice"
+    assert stats[0]["pts"] == 2
+
+
 def test_aggregate_stats_preview_dedupes_shot_and_make(db):
     """Expanded generator shot+make pairs must not double-count FGA/FGM."""
     from stats import aggregate_stats_preview

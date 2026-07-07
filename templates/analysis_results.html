@@ -395,6 +395,10 @@ async function loadResults() {
       if (subtitle) subtitle.textContent = GAME_ID;
     }
 
+    if (data.analysis_version) {
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID + ' · analysis ' + data.analysis_version;
+    }
     if (data.video_id) CURRENT_VIDEO_ID = data.video_id;
     FILM_URL = data.film_url || null;
     STORED_FILENAME = data.stored_filename || null;
