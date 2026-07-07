@@ -325,6 +325,16 @@ def get_analysis_results(game_id):
         game_id = row["analysis_key"]
 
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    identity_status = None
+    try:
+        from settings_store import load_all_settings, AI_DEFAULTS
+        from track_identity import ensure_identity_applied
+
+        ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+        identity_status = ensure_identity_applied(db, game_id, ai_settings)
+    except Exception:
+        identity_status = None
+
     db.execute(
         """UPDATE events
               SET event_type_id = (
@@ -438,6 +448,7 @@ def get_analysis_results(game_id):
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
+        "identity_status": identity_status,
         **_analysis_film_payload(db, game_id),
     })
 
@@ -1018,6 +1029,17 @@ def api_regenerate_video_events(vid_id):
         except Exception as exc:
             enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
 
+        identity_applied = 0
+        try:
+            from settings_store import load_all_settings, AI_DEFAULTS
+            from track_identity import run_identity_postprocess
+
+            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            identity_result = run_identity_postprocess(db, analysis_key, ai_settings)
+            identity_applied = identity_result.get("slots_mapped", 0)
+        except Exception as exc:
+            current_app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
+
         db.execute(
             """UPDATE analysis_runs
                SET status='completed', progress_pct=100, progress_step=?,
@@ -1042,6 +1064,8 @@ def api_regenerate_video_events(vid_id):
             (analysis_key, relational_game_id, relational_game_id),
         ).fetchone()["c"]
         message = f"Regenerated {event_count} events from {detection_count:,} detections."
+        if identity_applied:
+            message += f" Auto-mapped {identity_applied} players from jersey OCR."
         if enhanced_warning:
             message += f" {enhanced_warning}"
         return jsonify({

@@ -98,15 +98,12 @@
   <h1>📊 Analysis Results</h1>
   <p class="subtitle" id="resultsSubtitle">{{ game_id }}</p>
   <div id="resultsActions" style="display:none;margin-bottom:12px;"></div>
-  <div id="identityExplainer" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;border-color:#3b2f1a;background:#1a1710;">
-    <strong>About player labels (Pos 0, Pos 3, …)</strong>
-    <p style="margin:.5rem 0 0;font-size:.9rem;color:var(--muted);line-height:1.5;">
-      Automated analysis does <em>not</em> read jersey numbers from the video.
-      <strong>Pos 0–9 are court-area clusters</strong> — the AI groups detections by where people appear on the camera view.
-      They are <strong>not</strong> roster numbers, and they are <strong>not</strong> in jersey order.
-      Minutes = time someone was detected in that court area (any player who stood there).
-      To get real names and stats, use <strong>Map court slots to jersey numbers</strong> below.
-      Match each Pos to a roster player once — the box score will update to show jersey # and name.
+  <div id="identityExplainer" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;border-color:#1a3b2f;background:#101a14;">
+    <strong>Automated AI player identity</strong>
+    <p id="identityExplainerText" style="margin:.5rem 0 0;font-size:.9rem;color:var(--muted);line-height:1.5;">
+      Jersey numbers are read from the video automatically and matched to your roster.
+      Click any stat to see every play on film and verify it.
+      Use the optional mapping table below only if the AI mis-identified a player.
     </p>
   </div>
   <div id="resultsSummary" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;"></div>
@@ -129,10 +126,10 @@
 
   <div id="results" style="display:none">
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
-      <h2>👕 Map court slots to jersey numbers</h2>
+      <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
-        Match each <strong>Pos</strong> (court area) to a real player from your roster.
-        After you save, stats and the box score will show jersey numbers and names instead of Pos labels.
+        The AI auto-maps jersey numbers from the video to your roster.
+        Only edit a row here if a player was mis-identified — otherwise just click stats above to verify on film.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
@@ -149,7 +146,7 @@
           <tbody></tbody>
         </table>
       </div>
-      <button type="button" class="btn btn-primary btn-sm" id="saveSlotMappingsBtn">Save mapping &amp; update stats</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
     </div>
 
     <div class="grid">
@@ -419,11 +416,24 @@ async function loadResults() {
       const det = data.detection_count ?? 0;
       const evt = data.event_count ?? 0;
       summary.style.display = 'block';
+      const identity = data.identity_status || {};
+      const mapped = identity.applied || identity.slots_mapped || 0;
+      const ocrReads = identity.ocr_read_count || 0;
       let html = '<strong>Analysis summary:</strong> '
         + det.toLocaleString() + ' detections, '
         + evt.toLocaleString() + ' events. ';
-      html += 'Stats below are grouped by court slot (Pos 0–9), not jersey number. ';
-      html += 'Treat as rough estimates until you review events in Film Tool.';
+      if (mapped > 0) {
+        html += 'AI auto-mapped <strong>' + mapped + '</strong> players from jersey OCR'
+          + (ocrReads ? ' (' + ocrReads.toLocaleString() + ' jersey reads)' : '') + '. ';
+        html += 'Click any stat to verify each play on film.';
+      } else if (identity.reason === 'no_cluster_suggestions') {
+        html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
+        html += 'Try <strong>Rebuild events</strong> on Video Library, or verify the roster is imported in Film Tool.';
+      } else {
+        html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
+        html += 'Click stats to verify events on film.';
+      }
+      html += ' Treat counts as directional until you spot-check a few plays.';
       if (Array.isArray(data.quality_notes) && data.quality_notes.length) {
         html += '<ul style="margin:.5rem 0 0 1rem;padding:0;">';
         data.quality_notes.forEach(function(note) {
@@ -639,7 +649,7 @@ function renderBoxScore(basic, enhanced) {
 
     html += '<tr><td><strong>' + escapeHtml(name) + '</strong></td>';
     html += '<td class="num">' + min + '</td>';
-    html += '<td class="num"><strong>' + pts + '</strong></td>';
+    html += '<td class="num">' + renderClickableStat('pts', pts, pid, name) + '</td>';
     html += '<td class="num">' + renderClickableStat('fgm', fgm + '/' + fga, pid, name) + '</td>';
     html += '<td class="num">' + tpm + '/' + tpa + '</td>';
     html += '<td class="num">' + ftm + '/' + fta + '</td>';
@@ -789,6 +799,19 @@ function renderSlotMappingTable() {
     html += '</tr>';
   });
   tbody.innerHTML = html;
+
+  COURT_SLOTS.forEach(function(slot) {
+    const tr = tbody.querySelector('tr[data-tracker-id="' + slot.tracker_id + '"]');
+    if (!tr) return;
+    const select = tr.querySelector('.slot-roster');
+    if (!select || !slot.jersey_number) return;
+    for (const opt of select.options) {
+      if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
+        select.value = opt.value;
+        break;
+      }
+    }
+  });
 
   tbody.querySelectorAll('.slot-roster').forEach(function(select) {
     select.addEventListener('change', function() {

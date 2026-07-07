@@ -472,19 +472,14 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             print(f"[AI] Enhanced analysis failed: {e}")
 
         try:
-            from track_identity import build_identity_report, auto_apply_cluster_jerseys
+            from track_identity import run_identity_postprocess
 
-            identity_report = build_identity_report(db, game_id, ai_settings)
+            identity_report = run_identity_postprocess(db, game_id, ai_settings)
             print(
                 f"[AI] Jersey identity: {identity_report['ocr_read_count']} OCR reads, "
-                f"{len(identity_report['cluster_suggestions'])} cluster suggestions"
+                f"{len(identity_report['cluster_suggestions'])} cluster suggestions, "
+                f"auto-applied {identity_report.get('slots_mapped', 0)} mappings"
             )
-            if ai_settings.get("auto_apply_jersey_mapping", True):
-                applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
-                print(
-                    f"[AI] Auto-applied {applied.get('applied', 0)} jersey mappings, "
-                    f"{applied.get('events_updated', 0)} events updated"
-                )
         except Exception as e:
             print(f"[AI] Jersey identity step failed: {e}")
     finally:

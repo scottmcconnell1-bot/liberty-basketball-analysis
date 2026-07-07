@@ -119,6 +119,41 @@ def resolve_analysis_game_context(db, game_id):
     return context
 
 
+def lookup_film_roster_player(db, game_id, *, jersey_number=None, player_name=None):
+    """Resolve a jersey or name against the game's Film Tool roster."""
+    try:
+        jersey_int = int(jersey_number) if jersey_number is not None else None
+    except (TypeError, ValueError):
+        jersey_int = None
+
+    payload = get_analysis_roster_players(db, game_id)
+    name_query = (player_name or "").strip().lower()
+    for player in payload["players"]:
+        player_jersey = player.get("jersey_number")
+        try:
+            player_jersey = int(player_jersey) if player_jersey is not None else None
+        except (TypeError, ValueError):
+            player_jersey = None
+        player_name_value = (player.get("name") or player.get("label") or "").strip()
+        if jersey_int is not None and player_jersey == jersey_int:
+            return {
+                "player_id": None,
+                "name": player_name_value or None,
+                "jersey_number": player_jersey,
+                "roster_membership_id": None,
+                "team_id": None,
+            }
+        if name_query and player_name_value.lower() == name_query:
+            return {
+                "player_id": None,
+                "name": player_name_value,
+                "jersey_number": player_jersey,
+                "roster_membership_id": None,
+                "team_id": None,
+            }
+    return None
+
+
 def get_analysis_roster_players(db, game_id):
     """Return roster players for court-slot mapping, preferring Film Tool rosters."""
     context = resolve_analysis_game_context(db, game_id)

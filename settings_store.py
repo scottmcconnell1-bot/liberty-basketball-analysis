@@ -20,8 +20,8 @@ AI_DEFAULTS = {
     "jersey_ocr_stride": 5,
     "jersey_ocr_min_confidence": 0.55,
     "auto_apply_jersey_mapping": True,
-    "identity_auto_apply_min_confidence": 0.70,
-    "identity_auto_apply_min_samples": 8,
+    "identity_auto_apply_min_confidence": 0.60,
+    "identity_auto_apply_min_samples": 4,
     "llm_provider": "ollama",
     "llm_model": ""
 }
