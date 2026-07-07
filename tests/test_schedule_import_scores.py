@@ -58,6 +58,10 @@ def test_schedule_import_confirm_creates_game_records_with_scores(client, app):
         from helpers import get_db
 
         db = get_db()
+        season_id = db.execute(
+            "SELECT id FROM seasons WHERE name = ?",
+            (season["name"],),
+        ).fetchone()["id"]
         scheduled = db.execute(
             """SELECT sg.opponent_name, sg.status, g.home_score, g.away_score, g.result
                FROM scheduled_games sg
@@ -73,7 +77,7 @@ def test_schedule_import_confirm_creates_game_records_with_scores(client, app):
     assert scheduled[0]["result"] == "win"
     assert scheduled[1]["result"] == "loss"
 
-    dashboard = client.get("/api/teams/schedule")
+    dashboard = client.get(f"/api/teams/schedule?varsity_boys={season_id}")
     boys = next(t for t in dashboard.get_json()["teams"] if t["key"] == "varsity_boys")
     assert boys["wins"] == 1
     assert boys["losses"] == 1
