@@ -76,3 +76,14 @@ def test_create_page_initializes_category_select(client, db):
     assert 'id="playCategoryId"' in html
     assert "getElementById('playCategoryId')" in html
     assert "initPlaybookTaxonomy()" in html
+
+
+def test_playbook_list_survives_missing_categories_table(client, db):
+    """Older databases without play_categories should migrate on first visit."""
+    db.execute("DROP TABLE IF EXISTS play_categories")
+    db.commit()
+    response = client.get("/playbook")
+    assert response.status_code == 200
+    assert db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='play_categories'"
+    ).fetchone() is not None

@@ -65,6 +65,7 @@ def _load_playbook_taxonomy(db):
     from playbook_taxonomy import build_category_tree, ensure_playbook_taxonomy
 
     ensure_playbook_taxonomy(db)
+    db.commit()
     return build_category_tree(db)
 
 

@@ -126,8 +126,32 @@ def _insert_taxonomy_node(db, node, parent_id=None, parent_path="", sort_order=0
     return category_id
 
 
+def ensure_play_categories_table(db):
+    """Create taxonomy table on older databases that predate playbook categories."""
+    db.execute(
+        """CREATE TABLE IF NOT EXISTS play_categories (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_id       INTEGER REFERENCES play_categories(id) ON DELETE CASCADE,
+            name            TEXT NOT NULL,
+            slug            TEXT NOT NULL,
+            slug_path       TEXT NOT NULL UNIQUE,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            is_system       INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )"""
+    )
+    cols = {row[1] for row in db.execute("PRAGMA table_info(plays)").fetchall()}
+    if "category_id" not in cols:
+        db.execute(
+            "ALTER TABLE plays ADD COLUMN category_id INTEGER REFERENCES play_categories(id)"
+        )
+    if "share_token" not in cols:
+        db.execute("ALTER TABLE plays ADD COLUMN share_token TEXT UNIQUE")
+
+
 def ensure_playbook_taxonomy(db):
     """Seed default taxonomy and backfill play.category_id from legacy category text."""
+    ensure_play_categories_table(db)
     row = db.execute("SELECT COUNT(*) AS c FROM play_categories").fetchone()
     if not row or row["c"] == 0:
         for index, node in enumerate(DEFAULT_TAXONOMY):
