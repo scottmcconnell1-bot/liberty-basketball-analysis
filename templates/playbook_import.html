@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
   <h2>📥 Import Plays</h2>
-  <p class="text-muted">Upload a PDF or image of a play diagram to import into your playbook.</p>
+  <p class="text-muted">Upload a single play diagram (image or 1-page PDF). For a full scout playbook PDF like Fast Scout, use <a href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a> instead.</p>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
@@ -90,6 +90,14 @@
 <script>
 let importData = null;
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function handleImportFile(input) {
   const file = input.files[0];
   if (!file) return;
@@ -112,6 +120,11 @@ function handleImportFile(input) {
     }
     importData = data;
     status.innerHTML = '<span style="color:#16a34a;">✅ ' + data.filename + ' uploaded</span>';
+    if (data.message) {
+      status.innerHTML += '<div style="margin-top:8px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;color:#92400e;">'
+        + escapeHtml(data.message)
+        + ' <a href="{{ url_for('bulk_import.bulk_import_page') }}" style="font-weight:600;">Open Bulk Import</a></div>';
+    }
 
     // Show preview
     document.getElementById('preview-card').style.display = 'block';

@@ -323,11 +323,14 @@ def playbook_import():
 def playbook_import_parse():
     """Extract diagram from uploaded PDF/image and return preview data.
 
-    For PDFs: extracts embedded images using pdfplumber/PyMuPDF.
+    For PDFs: extracts embedded images or renders page images with PyMuPDF.
     For images: returns the uploaded image for preview.
     Returns JSON with extracted image path and suggested player positions.
     """
-    import os, uuid, tempfile
+    import os
+    import uuid
+
+    from playbook_pdf import pdf_page_count, pymupdf_available, render_pdf_pages
 
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
@@ -340,7 +343,6 @@ def playbook_import_parse():
     upload_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), "play_imports")
     os.makedirs(upload_dir, exist_ok=True)
 
-    # Save with unique name
     ext = os.path.splitext(filename)[1]
     safe_name = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join(upload_dir, safe_name)
@@ -353,14 +355,34 @@ def playbook_import_parse():
         "is_pdf": filename.endswith(".pdf"),
         "extracted_images": [],
         "suggested_positions": _default_positions(),
+        "page_count": 0,
+        "recommend_bulk_import": False,
+        "message": None,
     }
 
     if filename.endswith(".pdf"):
-        # Extract images from PDF
-        extracted = _extract_images_from_pdf(save_path, upload_dir)
+        if not pymupdf_available():
+            return jsonify({
+                "error": "PyMuPDF is required to import playbook PDFs. Install with: pip install pymupdf",
+            }), 400
+
+        try:
+            result["page_count"] = pdf_page_count(save_path)
+        except Exception as exc:
+            return jsonify({"error": f"Could not read PDF: {exc}"}), 400
+
+        max_preview_pages = 1 if result["page_count"] > 1 else None
+        extracted = _extract_images_from_pdf(save_path, upload_dir, max_pages=max_preview_pages)
         result["extracted_images"] = extracted
         if extracted:
             result["file_url"] = extracted[0]["url"]
+
+        if result["page_count"] > 1:
+            result["recommend_bulk_import"] = True
+            result["message"] = (
+                f"This PDF has {result['page_count']} pages. "
+                "Use Playbook → Bulk Import to bring in the full scout playbook at once."
+            )
 
     return jsonify(result)
 
@@ -420,15 +442,18 @@ def playbook_import_save():
     })
 
 
-def _extract_images_from_pdf(pdf_path, output_dir):
-    """Extract embedded images from a PDF file.
+def _extract_images_from_pdf(pdf_path, output_dir, max_pages=None):
+    """Extract diagram images from a PDF file.
 
-    Returns list of dicts with file_path and url for each extracted image.
+    Tries embedded images first, then renders each page with PyMuPDF.
     """
-    import os, uuid
+    import os
+    import uuid
+
+    from playbook_pdf import render_pdf_pages
+
     images = []
 
-    # Try pdfplumber first (good for embedded images)
     try:
         import pdfplumber
         with pdfplumber.open(pdf_path) as pdf:
@@ -436,14 +461,10 @@ def _extract_images_from_pdf(pdf_path, output_dir):
                 if hasattr(page, 'images') and page.images:
                     for img_idx, img in enumerate(page.images):
                         try:
-                            # Extract image bytes from the PDF
                             x0, y0, x1, y1 = img['x0'], img['top'], img['x1'], img['bottom']
-                            # Crop the page to the image area and extract
                             cropped = page.within_bbox((x0, y0, x1, y1))
-                            # Save as PNG
                             img_name = f"{uuid.uuid4().hex}.png"
                             img_path = os.path.join(output_dir, img_name)
-                            # Use page to_image for the cropped area
                             im = cropped.to_image(resolution=150)
                             im.save(img_path)
                             images.append({
@@ -457,10 +478,9 @@ def _extract_images_from_pdf(pdf_path, output_dir):
     except (ImportError, Exception):
         pass
 
-    # Fallback: try PyMuPDF (fitz) for image extraction
     if not images:
         try:
-            import fitz  # PyMuPDF
+            import fitz
             doc = fitz.open(pdf_path)
             for page_num in range(len(doc)):
                 page = doc[page_num]
@@ -486,23 +506,13 @@ def _extract_images_from_pdf(pdf_path, output_dir):
         except (ImportError, Exception):
             pass
 
-    # Last resort: convert entire PDF page to image
     if not images:
-        try:
-            from pdf2image import convert_from_path
-            pages = convert_from_path(pdf_path, dpi=150, first_page=1, last_page=1)
-            if pages:
-                img_name = f"{uuid.uuid4().hex}.png"
-                img_path = os.path.join(output_dir, img_name)
-                pages[0].save(img_path, "PNG")
-                images.append({
-                    "file_path": img_path,
-                    "url": f"/uploads/play_imports/{img_name}",
-                    "page": 1,
-                    "index": 0,
-                })
-        except (ImportError, Exception):
-            pass
+        images = render_pdf_pages(
+            pdf_path,
+            output_dir,
+            url_prefix="/uploads/play_imports",
+            max_pages=max_pages,
+        )
 
     return images
 
