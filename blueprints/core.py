@@ -1235,7 +1235,8 @@ def schedule_import_pdf_confirm():
             errors.append(f"Row {i+1}: date and opponent required")
             continue
         try:
-            db.execute(
+            status = (g.get("status") or "scheduled").strip() or "scheduled"
+            cur = db.execute(
                 """INSERT INTO scheduled_games
                    (season_id, program_name, team, gender, level, game_date, game_time,
                     jv_game_time, frosh_game_time,
@@ -1254,10 +1255,36 @@ def schedule_import_pdf_confirm():
                     (g.get("location_type") or "home").strip(),
                     opponent,
                     (g.get("tournament_name") or "").strip() or None,
-                    "scheduled",
+                    status,
                     (g.get("notes") or "").strip() or None,
                 ),
             )
+            scheduled_game_id = cur.lastrowid
+            liberty_score = g.get("liberty_score")
+            opponent_score = g.get("opponent_score")
+            if liberty_score is not None and opponent_score is not None:
+                from schedule_import import home_away_scores
+
+                location_type = (g.get("location_type") or "home").strip()
+                home_score, away_score = home_away_scores(
+                    location_type,
+                    int(liberty_score),
+                    int(opponent_score),
+                )
+                db.execute(
+                    """INSERT INTO games
+                       (scheduled_game_id, source_type, source_key,
+                        home_score, away_score, result, is_conference)
+                       VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
+                    (
+                        scheduled_game_id,
+                        f"schedule-import-{scheduled_game_id}",
+                        home_score,
+                        away_score,
+                        (g.get("result") or "").strip() or None,
+                        int(bool(g.get("is_conference"))),
+                    ),
+                )
             imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)}")

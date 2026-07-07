@@ -60,6 +60,10 @@ def test_parse_maxpreps_schedule_text():
     assert games[0]["game_time"] == "19:30"
     assert games[0]["opponent_name"] == "Marsing"
     assert games[0]["location_type"] == "home"
+    assert games[0]["liberty_score"] == 67
+    assert games[0]["opponent_score"] == 56
+    assert games[0]["result"] == "win"
+    assert games[0]["status"] == "completed"
 
     idaho_city = next(g for g in games if g["opponent_name"] == "Idaho City")
     assert idaho_city["game_date"] == "2026-01-05"
@@ -71,9 +75,16 @@ def test_parse_maxpreps_schedule_text():
     rimrock = next(g for g in games if g["opponent_name"] == "Rimrock")
     assert rimrock["game_date"] == "2026-02-21"
     assert rimrock["game_time"] == "19:30"
+    assert rimrock["result"] == "loss"
+    assert rimrock["liberty_score"] == 38
+    assert rimrock["opponent_score"] == 51
+    assert rimrock["is_conference"] is True
 
     nyssa = next(g for g in games if g["opponent_name"] == "Nyssa")
     assert nyssa["tournament_name"] == "Nyssa Tournament"
+    assert nyssa["result"] == "loss"
+    assert nyssa["liberty_score"] == 51
+    assert nyssa["opponent_score"] == 70
 
 
 def test_parse_maxpreps_schedule_combined_pdfplumber_layout():
@@ -88,8 +99,10 @@ def test_parse_maxpreps_schedule_combined_pdfplumber_layout():
     assert len(games) == 2
     assert games[0]["opponent_name"] == "Marsing"
     assert games[0]["game_time"] == "19:30"
+    assert games[0]["result"] == "win"
     assert games[1]["opponent_name"] == "Melba"
     assert games[1]["location_type"] == "away"
+    assert games[1]["result"] == "loss"
 
 
 def test_parse_schedule_text_uses_maxpreps_parser():
