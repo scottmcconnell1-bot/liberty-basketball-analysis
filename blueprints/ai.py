@@ -153,6 +153,7 @@ def api_ai_runtime():
         "cv2": module_available("cv2"),
         "ultralytics": module_available("ultralytics"),
         "torch": module_available("torch"),
+        "sklearn": module_available("sklearn"),
         "ai_runtime_available": ai_runtime_available(),
         "install_hint": ai_packages_install_hint(),
         "install_commands": ai_packages_install_commands(),
@@ -628,13 +629,146 @@ def api_video_analysis_debug(vid_id):
     reconcile_stuck_analysis_run(db, game_id)
     row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
     log_path = ai_analysis_log_path(game_id)
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (row["game_id"], row["game_id"], game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE e.game_id = ?
+              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
+        (game_id, row["game_id"], row["game_id"]),
+    ).fetchone()["c"]
     return jsonify({
         "video_id": vid_id,
         "video_path": video["file_path"],
         "video_exists": os.path.exists(video["file_path"]),
         "run": dict(row),
+        "detection_count": detection_count,
+        "event_count": event_count,
+        "needs_event_regeneration": detection_count > 0 and event_count == 0,
         "log_path": log_path,
         "log_tail": _read_log_tail(log_path, 2000) if os.path.exists(log_path) else "",
+    })
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/regenerate-events", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_regenerate_video_events(vid_id):
+    """Rebuild events from existing detections without re-running YOLO."""
+    from helpers import module_available
+
+    if not module_available("sklearn"):
+        return jsonify({
+            "error": "scikit-learn is not installed. Run: pip install scikit-learn",
+            "code": "sklearn_missing",
+        }), 503
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    clause = _video_analysis_runs_clause()
+    row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "No analysis run found for this video"}), 404
+
+    analysis_key = row["analysis_key"] or video["game_id"]
+    relational_game_id = row["game_id"]
+    db_path = current_app.config["DATABASE"]
+
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='running', progress_pct=50, progress_step='Regenerating events…',
+               error_message=NULL, completed_at=NULL
+           WHERE id=?""",
+        (row["id"],),
+    )
+    db.commit()
+
+    from event_generator import main as generate_events
+
+    if generate_events(analysis_key, db_path, relational_game_id=relational_game_id) is False:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Event generation failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            ("Event generation failed. Check logs and ensure scikit-learn is installed.", row["id"]),
+        )
+        db.commit()
+        return jsonify({"error": "Event generation failed", "analysis_key": analysis_key}), 500
+
+    from helpers import assign_possessions_for_game
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+
+    try:
+        import cv2
+        from film_analysis import run_enhanced_analysis
+
+        cap = cv2.VideoCapture(video["file_path"], cv2.CAP_FFMPEG)
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        cap.release()
+        run_enhanced_analysis(db_path, analysis_key, fps)
+    except Exception as exc:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='completed',
+                   progress_pct=100,
+                   progress_step='Events regenerated (enhanced analysis skipped)',
+                   completed_at=CURRENT_TIMESTAMP,
+                   error_message=?
+               WHERE id=?""",
+            (f"Enhanced analysis skipped: {exc}"[:500], row["id"]),
+        )
+        db.commit()
+        event_count = db.execute(
+            "SELECT COUNT(*) AS c FROM events WHERE game_id=?",
+            (analysis_key,),
+        ).fetchone()["c"]
+        return jsonify({
+            "status": "events_regenerated",
+            "analysis_key": analysis_key,
+            "event_count": event_count,
+            "message": f"Regenerated {event_count} events. Enhanced analysis was skipped: {exc}",
+        })
+
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='completed', progress_pct=100, progress_step='Done',
+               completed_at=CURRENT_TIMESTAMP, error_message=NULL
+           WHERE id=?""",
+        (row["id"],),
+    )
+    db.commit()
+
+    event_count = db.execute(
+        "SELECT COUNT(*) AS c FROM events WHERE game_id=?",
+        (analysis_key,),
+    ).fetchone()["c"]
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE d.game_id = ?
+              OR (? IS NOT NULL AND d.relational_game_id = ?)""",
+        (analysis_key, relational_game_id, relational_game_id),
+    ).fetchone()["c"]
+    return jsonify({
+        "status": "events_regenerated",
+        "analysis_key": analysis_key,
+        "detection_count": detection_count,
+        "event_count": event_count,
+        "message": f"Regenerated {event_count} events from {detection_count:,} detections.",
     })
 
 

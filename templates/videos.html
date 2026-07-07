@@ -202,8 +202,9 @@ async function loadVideos() {
       <td style="text-align:center;">${v.event_count ?? 0}</td>
       <td style="text-align:center;">${v.analysis_run_count ?? 0}</td>
       <td style="white-space:nowrap;">
-        <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
+        <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
         <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm" style="margin-left:6px;">📊 Results</a>
+        ${(v.detection_count ?? 0) > 0 && (v.event_count ?? 0) === 0 ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="regenerateEvents(${v.id})">🔄 Rebuild Events</button>` : ''}
         <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm" style="margin-left:6px;">✂️ Trim</a>
         <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm" style="margin-left:6px;">Compare AI</a>
         <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" style="margin-left:6px;" target="_blank" rel="noopener">🔍 Debug</a>
@@ -219,5 +220,18 @@ async function loadVideos() {
 
 loadVideos();
 setInterval(loadVideos, 10000);
+
+async function regenerateEvents(videoId) {
+  if (!confirm('Rebuild events from existing detections? This is much faster than re-running full AI.')) return;
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
+    alert(data.message || 'Events regenerated.');
+    loadVideos();
+  } catch (err) {
+    alert('Could not regenerate events: ' + err.message);
+  }
+}
 </script>
 {% endblock %}

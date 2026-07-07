@@ -74,12 +74,12 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-Write-Step "Installing OpenCV, Ultralytics, and container AI deps..."
+Write-Step "Installing OpenCV, Ultralytics, scikit-learn, and container AI deps..."
 & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install -r requirements.docker.txt
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Step "Verifying imports..."
-& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; print('OK: torch', torch.__version__, 'cv2', cv2.__version__)"
+& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; import sklearn; print('OK: torch', torch.__version__, 'cv2', cv2.__version__, 'sklearn', sklearn.__version__)"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (Get-Command git -ErrorAction SilentlyContinue) {

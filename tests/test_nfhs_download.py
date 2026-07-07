@@ -337,3 +337,40 @@ def test_start_video_analysis_supersedes_stale_pending(client, db, monkeypatch, 
     assert rows[0]["error_message"] is None
     assert "superseded" in (rows[0]["progress_step"] or "").lower()
     assert rows[1]["status"] == "pending"
+
+
+def test_regenerate_video_events(client, db, monkeypatch, tmp_path):
+    video_path = tmp_path / "nfhs_gam444.mp4"
+    video_path.write_bytes(b"fake video")
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam444.mp4", "nfhs_gam444.mp4", str(video_path), 16, "Opponent", "nfhs_gam444_20260101"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, video_path, status)
+           VALUES (?, ?, ?)""",
+        ("nfhs_gam444_20260101", str(video_path), "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("nfhs_gam444_20260101", 1, 0, "person", 0.9, 10, 10, 5, 5),
+    )
+    db.execute(
+        """INSERT INTO events (game_id, event_type, timestamp_ms)
+           VALUES (?, ?, ?)""",
+        ("nfhs_gam444_20260101", "possession_change", 100),
+    )
+    db.commit()
+
+    monkeypatch.setattr("helpers.module_available", lambda name: name == "sklearn")
+    monkeypatch.setattr("event_generator.main", lambda *args, **kwargs: True)
+    monkeypatch.setattr("film_analysis.run_enhanced_analysis", lambda *args, **kwargs: None)
+
+    resp = client.post("/api/videos/1/regenerate-events")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload["status"] == "events_regenerated"

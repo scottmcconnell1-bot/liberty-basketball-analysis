@@ -716,12 +716,16 @@ def build_settings_catalog():
 
 
 def ai_runtime_available():
-    return module_available("cv2") and module_available("ultralytics")
+    return (
+        module_available("cv2")
+        and module_available("ultralytics")
+        and module_available("sklearn")
+    )
 
 
 def ai_packages_install_hint() -> str:
     return (
-        "AI packages are not installed on this server (opencv-python and ultralytics). "
+        "AI packages are not installed on this server (opencv-python, ultralytics, scikit-learn). "
         "Install the AI stack, then restart the app. Check Settings → Runtime for status."
     )
 
