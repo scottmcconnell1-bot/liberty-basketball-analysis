@@ -362,6 +362,18 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
         generate_events(game_id, db_path, relational_game_id=relational_game_id)
 
+        detection_count = db.execute(
+            """SELECT COUNT(*) FROM detections
+               WHERE game_id = ?
+                  OR (? IS NOT NULL AND relational_game_id = ?)""",
+            (game_id, relational_game_id, relational_game_id),
+        ).fetchone()[0]
+        if frame_number > 0 and detection_count == 0:
+            raise RuntimeError(
+                f"Processed {frame_number} frames but wrote 0 detections for {game_id}. "
+                "Check AI model weights and video playback."
+            )
+
         # Assign possessions after events are generated
         if relational_game_id:
             try:

@@ -82,7 +82,8 @@
   </div>
 
   <h1>📊 Analysis Results</h1>
-  <p class="subtitle">{{ game_id }}</p>
+  <p class="subtitle" id="resultsSubtitle">{{ game_id }}</p>
+  <div id="resultsSummary" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;"></div>
 
   <!-- Loading state with progress -->
   <div id="loading" class="progress-wrap">
@@ -179,6 +180,11 @@ async function loadResults() {
     setProgress(10, 'Checking analysis status…');
     const statusResp = await fetch('/api/analysis_status/' + encodeURIComponent(GAME_ID));
     const statusData = statusResp.ok ? await statusResp.json() : null;
+    if (statusData && statusData.analysis_key && statusData.analysis_key !== GAME_ID) {
+      GAME_ID = statusData.analysis_key;
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID;
+    }
     if (statusData && (statusData.status === 'running' || statusData.status === 'pending')) {
       document.getElementById('loading').style.display = 'block';
       document.getElementById('results').style.display = 'none';
@@ -193,10 +199,17 @@ async function loadResults() {
       const el = document.getElementById('error');
       el.style.display = 'block';
       el.innerHTML = 'AI analysis finished but found <strong>no detections</strong>. '
-        + 'The video may not have opened correctly, or the file may be corrupt. '
         + 'Open the video in <a href="/film">Film Tool</a> to confirm it plays, then click '
-        + '<strong>Run AI Analysis</strong> again. '
+        + '<strong>Run AI Analysis</strong> again on the trimmed clip. '
         + (statusData.error_message ? '<br><br>Server message: ' + escapeHtml(statusData.error_message) : '');
+      return;
+    }
+    if (statusData && statusData.status === 'completed' && (statusData.event_count ?? 0) === 0 && (statusData.detection_count ?? 0) > 0) {
+      document.getElementById('loading').style.display = 'none';
+      const el = document.getElementById('error');
+      el.style.display = 'block';
+      el.innerHTML = 'AI found <strong>' + (statusData.detection_count || 0).toLocaleString() + ' detections</strong> '
+        + 'but generated <strong>0 events</strong>. Try running analysis again, or open Film Tool to tag manually.';
       return;
     }
 
@@ -206,6 +219,22 @@ async function loadResults() {
     const resp = await fetch('/api/analysis/' + GAME_ID);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (data.analysis_key && data.analysis_key !== GAME_ID) {
+      GAME_ID = data.analysis_key;
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID;
+    }
+
+    const summary = document.getElementById('resultsSummary');
+    if (summary) {
+      const det = data.detection_count ?? 0;
+      const evt = data.event_count ?? 0;
+      summary.style.display = 'block';
+      summary.innerHTML = '<strong>Analysis summary:</strong> '
+        + det.toLocaleString() + ' detections, '
+        + evt.toLocaleString() + ' events. '
+        + (evt > 0 ? 'Box score below includes unreviewed AI events. Accept events in Review to lock stats.' : '');
+    }
 
     setStep('step-fetch', 'done');
     setProgress(40, 'Processing events…');

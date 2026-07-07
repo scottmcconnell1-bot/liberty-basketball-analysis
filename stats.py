@@ -12,16 +12,75 @@ def _resolve_relational_game_id(db, game_id):
     try:
         game_id_int = int(game_id)
     except (TypeError, ValueError):
-        return None
+        game_id_int = None
 
-    row = db.execute("SELECT id FROM games WHERE id=?", (game_id_int,)).fetchone()
-    return row["id"] if row else None
+    if game_id_int is not None:
+        row = db.execute("SELECT id FROM games WHERE id=?", (game_id_int,)).fetchone()
+        if row:
+            return row["id"]
+
+    row = db.execute(
+        "SELECT game_id FROM analysis_runs WHERE analysis_key=? AND game_id IS NOT NULL ORDER BY id DESC LIMIT 1",
+        (str(game_id),),
+    ).fetchone()
+    if row and row["game_id"] is not None:
+        return row["game_id"]
+
+    row = db.execute(
+        "SELECT relational_game_id FROM videos WHERE game_id = ? ORDER BY id DESC LIMIT 1",
+        (str(game_id),),
+    ).fetchone()
+    if row and row["relational_game_id"] is not None:
+        return row["relational_game_id"]
+    return None
 
 
 def _fetch_shot_rows(db, relational_game_id, game_id, query):
     if relational_game_id is not None:
         return db.execute(query, (relational_game_id, str(game_id))).fetchall()
     return db.execute(query, (game_id,)).fetchall()
+
+
+def _preview_event_rows(db, game_id):
+    """Return AI/pending events for the analysis results preview (no review filter)."""
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        return db.execute(
+            """SELECT e.player, e.event_type, e.shot_result, et.code,
+                      et.counts_for_stats, et.is_scoring_event
+               FROM events e
+               LEFT JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.relational_game_id = ?
+                  OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
+            (relational_game_id, str(game_id)),
+        ).fetchall()
+
+    return db.execute(
+        """SELECT e.player, e.event_type, e.shot_result, et.code,
+                  et.counts_for_stats, et.is_scoring_event
+           FROM events e
+           LEFT JOIN event_types et ON et.id = e.event_type_id
+           WHERE e.game_id = ?""",
+        (str(game_id),),
+    ).fetchall()
+
+
+def aggregate_stats_preview(db, game_id):
+    """Aggregate stats for analysis results, including unreviewed AI events."""
+    rows = _preview_event_rows(db, game_id)
+    normalized = []
+    for row in rows:
+        code = row["code"] or row["event_type"]
+        normalized.append({
+            "player": row["player"],
+            "event_type": row["event_type"],
+            "shot_result": row["shot_result"],
+            "code": code,
+            "counts_for_stats": row["counts_for_stats"] if row["counts_for_stats"] is not None else 1,
+            "is_scoring_event": row["is_scoring_event"],
+        })
+    filtered = [row for row in normalized if row["counts_for_stats"]]
+    return _aggregate_rows(filtered)
 
 
 def _eligible_event_rows(db, game_id):

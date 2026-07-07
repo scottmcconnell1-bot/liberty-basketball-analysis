@@ -68,20 +68,7 @@ def _resolve_analysis_relational_game_id(db, game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_status(game_id):
     db = get_db()
-    row = db.execute(
-        """SELECT status, started_at, completed_at, error_message, settings_json,
-                  analysis_key,
-                  (SELECT COUNT(*)
-                     FROM detections d
-                    WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
-                       OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*)
-                     FROM events e
-                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
-                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
-           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
-        (game_id,),
-    ).fetchone()
+    row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({
             "status": "not_started",
@@ -90,7 +77,24 @@ def get_analysis_status(game_id):
             "event_generation_summary": "AI analysis has not started yet.",
         })
 
+    progress_game_id = row["analysis_key"] or game_id
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (row["game_id"], row["game_id"], progress_game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE e.game_id = ?
+              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
+        (progress_game_id, row["game_id"], row["game_id"]),
+    ).fetchone()["c"]
+
     payload = dict(row)
+    payload["analysis_key"] = progress_game_id
+    payload["detection_count"] = detection_count
+    payload["event_count"] = event_count
     settings_snapshot = {}
     if payload.get("settings_json"):
         try:
@@ -196,9 +200,42 @@ def get_analysis_progress(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_results(game_id):
     """Return full analysis results: box score, shots, plays, player effect."""
-    from stats import refresh_stats, get_enhanced_stats
+    from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview
     db = get_db()
-    basic = refresh_stats(db, game_id)
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    db.execute(
+        """UPDATE events
+              SET event_type_id = (
+                  SELECT id FROM event_types WHERE lower(code) = lower(events.event_type)
+              )
+            WHERE event_type_id IS NULL
+              AND (
+                    game_id = ?
+                 OR (relational_game_id IS NOT NULL AND relational_game_id = ?)
+              )""",
+        (game_id, relational_game_id),
+    )
+    db.commit()
+
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (relational_game_id, relational_game_id, game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE (e.relational_game_id = ? AND ? IS NOT NULL)
+              OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
+        (relational_game_id, relational_game_id, game_id),
+    ).fetchone()["c"]
+
+    basic = aggregate_stats_preview(db, game_id)
+    refresh_stats(db, game_id)
     enhanced = get_enhanced_stats(db, game_id)
 
     # Wire possession inference after stats refresh
@@ -251,6 +288,8 @@ def get_analysis_results(game_id):
 
     return jsonify({
         "game_id": game_id,
+        "detection_count": detection_count,
+        "event_count": event_count,
         "basic_stats": basic,
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],
@@ -420,7 +459,7 @@ def api_videos():
     db = get_db()
     latest_run = latest_analysis_run_id_subquery()
     rows = db.execute(f"""
-        SELECT v.*, ar.status as analysis_status, ar.error_message,
+        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
                (SELECT COUNT(*)
                   FROM detections d
                   WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
