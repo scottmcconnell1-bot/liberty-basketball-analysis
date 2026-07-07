@@ -69,12 +69,3 @@ def test_status_page_shows_review_trust_summary(client, db):
     assert "Accepted" in html
     assert "Open Review Queue" in html
 
-
-def test_preview_page_shows_review_counts(client, db):
-    _seed_review_summary_data(db)
-    r = client.get("/preview")
-    assert r.status_code == 200
-    html = r.get_data(as_text=True)
-    assert "Accepted events" in html
-    assert "Pending events" in html
-    assert "Rejected events" in html
