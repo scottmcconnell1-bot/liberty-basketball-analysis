@@ -8,8 +8,11 @@ Routes:
   GET  /api/videos                     - List all videos
   GET  /videos/<int:vid_id>/compare    - Compare video analysis
   POST /videos/<int:vid_id>/rerun      - Re-run video analysis
+  POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
   DELETE /api/videos/<int:vid_id>      - Delete a video
+  POST /api/videos/<int:vid_id>/trim   - Trim video to start/end range
+  GET  /api/videos/trim/<job_id>       - Poll trim job status
   POST /api/admin/reset                - Admin reset
   POST /upload                         - Upload and analyze
   POST /api/assistant/query            - Read-only Q&A from reviewed data (Stage 10A)
@@ -31,9 +34,19 @@ from helpers import (
     AI_DEFAULTS, ai_runtime_available, append_query_params, build_analysis_settings_snapshot,
     build_resource_status, build_rerun_game_id, build_run_summary,
     build_settings_catalog, default_run_label, display_detector_model,
-    ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
-    get_runtime_settings, queue_analysis_run, require_feature,
-    resolve_detector_model, safe_return_path, start_analysis_subprocess
+    ensure_db, ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
+    get_runtime_settings, is_superseded_analysis_run, latest_analysis_run_id_subquery,
+    load_all_settings,
+    queue_analysis_run, require_feature,
+    resolve_analysis_run_for_progress, resolve_detector_model, safe_return_path,
+    start_analysis_subprocess,
+    ai_packages_install_commands, ai_packages_install_hint,
+    supersede_pending_analysis_runs,
+    validate_video_for_analysis,
+    validate_ai_models_for_analysis,
+    reconcile_stuck_analysis_run,
+    ai_analysis_log_path,
+    _read_log_tail,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -52,24 +65,29 @@ def _resolve_analysis_relational_game_id(db, game_id):
     return _resolve_relational_game_id(db, game_id)
 
 
+def _resolve_video_id_for_analysis(db, game_id):
+    row = db.execute(
+        """SELECT v.id
+             FROM videos v
+             LEFT JOIN analysis_runs ar
+               ON ar.source_video_id = v.id
+               OR ar.analysis_key = v.game_id
+               OR ar.base_analysis_key = v.game_id
+               OR ar.video_path = v.file_path
+            WHERE v.game_id = ?
+               OR ar.analysis_key = ?
+            ORDER BY v.id DESC
+            LIMIT 1""",
+        (game_id, game_id),
+    ).fetchone()
+    return row["id"] if row else None
+
+
 @ai_bp.route("/api/analysis_status/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_status(game_id):
     db = get_db()
-    row = db.execute(
-        """SELECT status, started_at, completed_at, error_message, settings_json,
-                  analysis_key,
-                  (SELECT COUNT(*)
-                     FROM detections d
-                    WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
-                       OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*)
-                     FROM events e
-                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
-                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
-           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
-        (game_id,),
-    ).fetchone()
+    row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({
             "status": "not_started",
@@ -78,7 +96,24 @@ def get_analysis_status(game_id):
             "event_generation_summary": "AI analysis has not started yet.",
         })
 
+    progress_game_id = row["analysis_key"] or game_id
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (row["game_id"], row["game_id"], progress_game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE e.game_id = ?
+              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
+        (progress_game_id, row["game_id"], row["game_id"]),
+    ).fetchone()["c"]
+
     payload = dict(row)
+    payload["analysis_key"] = progress_game_id
+    payload["detection_count"] = detection_count
+    payload["event_count"] = event_count
     settings_snapshot = {}
     if payload.get("settings_json"):
         try:
@@ -124,35 +159,58 @@ def get_stats(game_id):
 
 # ── API: Analysis Progress ──────────────────────────────────
 
+@ai_bp.route("/api/ai/runtime")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_ai_runtime():
+    """Return whether the server's Python environment can run AI analysis."""
+    import sys
+    from helpers import module_available
+
+    return jsonify({
+        "python_executable": sys.executable,
+        "python_version": sys.version.split()[0],
+        "cv2": module_available("cv2"),
+        "ultralytics": module_available("ultralytics"),
+        "torch": module_available("torch"),
+        "sklearn": module_available("sklearn"),
+        "ai_runtime_available": ai_runtime_available(),
+        "install_hint": ai_packages_install_hint(),
+        "install_commands": ai_packages_install_commands(),
+    })
+
+
 @ai_bp.route("/api/analysis_progress/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
     db = get_db()
-    row = db.execute(
-        """SELECT status, progress_pct, progress_step, started_at, completed_at,
-                  analysis_key,
-                  (SELECT COUNT(*)
-                     FROM detections d
-                    WHERE (analysis_runs.game_id IS NOT NULL AND d.relational_game_id = analysis_runs.game_id)
-                       OR (d.relational_game_id IS NULL AND d.game_id = analysis_runs.analysis_key)) AS detection_count,
-                  (SELECT COUNT(*)
-                     FROM events e
-                    WHERE (analysis_runs.game_id IS NOT NULL AND e.relational_game_id = analysis_runs.game_id)
-                       OR (e.relational_game_id IS NULL AND e.game_id = analysis_runs.analysis_key)) AS event_count
-           FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1""",
-        (game_id,),
-    ).fetchone()
+    reconcile_stuck_analysis_run(db, game_id)
+    row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({"status": "not_started", "progress_pct": 0, "progress_step": ""})
+    progress_game_id = row["analysis_key"] or game_id
+    error_message = row["error_message"]
+    if is_superseded_analysis_run(row):
+        error_message = None
     return jsonify({
         "status": row["status"],
+        "analysis_key": progress_game_id,
         "progress_pct": row["progress_pct"] or 0,
         "progress_step": row["progress_step"] or "",
+        "error_message": error_message,
+        "log_path": ai_analysis_log_path(progress_game_id),
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
-        "detection_count": row["detection_count"],
-        "event_count": row["event_count"],
+        "detection_count": db.execute(
+            """SELECT COUNT(*) AS c FROM detections d
+               WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+                  OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+            (row["game_id"], row["game_id"], progress_game_id),
+        ).fetchone()["c"],
+        "event_count": db.execute(
+            "SELECT COUNT(*) AS c FROM events e WHERE e.game_id = ?",
+            (progress_game_id,),
+        ).fetchone()["c"],
     })
 
 
@@ -162,10 +220,67 @@ def get_analysis_progress(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_results(game_id):
     """Return full analysis results: box score, shots, plays, player effect."""
-    from stats import refresh_stats, get_enhanced_stats
+    from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview, get_shot_breakdown_preview
     db = get_db()
-    basic = refresh_stats(db, game_id)
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    db.execute(
+        """UPDATE events
+              SET event_type_id = (
+                  SELECT id FROM event_types WHERE lower(code) = lower(events.event_type)
+              )
+            WHERE event_type_id IS NULL
+              AND (
+                    game_id = ?
+                 OR (relational_game_id IS NOT NULL AND relational_game_id = ?)
+              )""",
+        (game_id, relational_game_id),
+    )
+    db.commit()
+
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (relational_game_id, relational_game_id, game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE (e.relational_game_id = ? AND ? IS NOT NULL)
+              OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
+        (relational_game_id, relational_game_id, game_id),
+    ).fetchone()["c"]
+
+    basic = aggregate_stats_preview(db, game_id)
+    refresh_stats(db, game_id)
     enhanced = get_enhanced_stats(db, game_id)
+    enhanced["shot_breakdown"] = [dict(row) for row in get_shot_breakdown_preview(db, game_id)]
+    enhanced["basic_stats"] = basic
+
+    quality_notes = []
+    if detection_count > 250_000:
+        quality_notes.append(
+            "Very high detection count — the clip may include extra footage beyond one game, "
+            "or detection_stride may be too low for a long video."
+        )
+    if event_count > 3000:
+        quality_notes.append(
+            "Event count is high for a single game. Expanded AI heuristics often over-tag "
+            "shots and possession changes; treat counts as directional, not official stats."
+        )
+    if event_count > 0 and not enhanced["shot_breakdown"] and not any(row.get("pts") for row in basic):
+        quality_notes.append(
+            "Events were generated but shot classifications are empty. "
+            "Try Rebuild Events on Video Library, then refresh this page."
+        )
+    if any((row.get("minutes_played") or 0) > 42 for row in enhanced.get("minutes", [])):
+        quality_notes.append(
+            "Some position clusters show more than 42 minutes — the trimmed video may still "
+            "be longer than one regulation game."
+        )
 
     # Wire possession inference after stats refresh
     from helpers import assign_possessions_for_game
@@ -217,11 +332,82 @@ def get_analysis_results(game_id):
 
     return jsonify({
         "game_id": game_id,
+        "video_id": _resolve_video_id_for_analysis(db, game_id),
+        "detection_count": detection_count,
+        "event_count": event_count,
+        "quality_notes": quality_notes,
         "basic_stats": basic,
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
     })
+
+
+@ai_bp.route("/api/track-identity/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_track_identity_api(game_id):
+    from track_identity import build_identity_report
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    settings = load_all_settings({}, {}, AI_DEFAULTS, db=db)
+    report = build_identity_report(db, game_id, settings["ai"])
+    return jsonify({"game_id": game_id, **report})
+
+
+# ── API: Court slot → jersey mapping ─────────────────────────
+
+@ai_bp.route("/api/court-slots/<game_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_court_slots_api(game_id):
+    from court_slot_mapping import get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    return jsonify({
+        "game_id": game_id,
+        "slots": get_court_slots(db, game_id),
+    })
+
+
+@ai_bp.route("/api/court-slots/<game_id>", methods=["PUT"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def save_court_slots_api(game_id):
+    from court_slot_mapping import save_court_slot_mappings, get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    data = request.get_json(force=True) or {}
+    mappings = data.get("mappings") or []
+    apply_to_events = bool(data.get("apply_to_events", True))
+    if not mappings:
+        return jsonify({"error": "mappings required"}), 400
+
+    applied = save_court_slot_mappings(db, game_id, mappings, apply_to_events=apply_to_events)
+    return jsonify({
+        "game_id": game_id,
+        "applied": applied,
+        "slots": get_court_slots(db, game_id),
+    })
+
+
+@ai_bp.route("/api/court-slots/<game_id>/apply", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def apply_court_slots_api(game_id):
+    from court_slot_mapping import apply_court_slot_mappings, get_court_slots
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    result = apply_court_slot_mappings(db, game_id)
+    result["game_id"] = game_id
+    result["slots"] = get_court_slots(db, game_id)
+    return jsonify(result)
 
 
 # ── API: Possessions ─────────────────────────────────────────
@@ -283,6 +469,7 @@ def upload_chunk():
     total_chunks = request.form.get("total_chunks", type=int)
     filename = request.form.get("filename", "video.mp4")
     opponent = request.form.get("opponent", "unknown").strip() or "unknown"
+    upload_mode = (request.form.get("upload_mode") or "analyze").strip().lower()
 
     if not upload_id:
         return jsonify({"error": "Missing upload_id"}), 400
@@ -348,6 +535,17 @@ def upload_chunk():
         video_row = db.execute(
             "SELECT * FROM videos WHERE id=?", (video_cur.lastrowid,),
         ).fetchone()
+        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
+
+        if upload_mode == "tag_only":
+            db.commit()
+            return jsonify({
+                "status": "complete",
+                "filename": stored_filename,
+                "game_id": game_id,
+                "redirect_url": film_url,
+            })
+
         runtime_settings = get_runtime_settings()
         run_payload = queue_analysis_run(
             db, video_row, runtime_settings,
@@ -357,7 +555,6 @@ def upload_chunk():
             start_analysis_subprocess(run_payload["analysis_key"], dest)
         db.commit()
 
-        film_url = url_for("core.film", filename=stored_filename, game_id=game_id)
         return jsonify({
             "status": "complete",
             "filename": stored_filename,
@@ -373,23 +570,19 @@ def upload_chunk():
 def api_videos():
     """Return all videos from the DB with their analysis status."""
     db = get_db()
-    rows = db.execute("""
-        SELECT v.*, ar.status as analysis_status, ar.error_message,
+    latest_run = latest_analysis_run_id_subquery()
+    rows = db.execute(f"""
+        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
                (SELECT COUNT(*)
                   FROM detections d
                   WHERE (ar.game_id IS NOT NULL AND d.relational_game_id = ar.game_id)
                     OR (d.relational_game_id IS NULL AND d.game_id = COALESCE(ar.analysis_key, v.game_id))) as detection_count,
-               (SELECT COUNT(*) FROM events e WHERE e.game_id = COALESCE(ar.analysis_key, v.game_id)) as event_count,
+               (SELECT COUNT(*) FROM events e
+                  WHERE (ar.game_id IS NOT NULL AND e.relational_game_id = ar.game_id)
+                     OR (e.relational_game_id IS NULL AND e.game_id = COALESCE(ar.analysis_key, v.game_id))) as event_count,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.id = (
-            SELECT MAX(ar_latest.id)
-            FROM analysis_runs ar_latest
-            WHERE ar_latest.source_video_id = v.id
-               OR ar_latest.base_analysis_key = v.game_id
-               OR ar_latest.analysis_key = v.game_id
-               OR ar_latest.video_path = v.file_path
-        )
+        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
         ORDER BY v.id DESC
     """).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -433,7 +626,278 @@ def compare_video_analysis(vid_id):
         current_ai_settings=current_ai_settings,
         current_detector_model=display_detector_model(current_ai_settings),
         message=request.args.get("message"),
+        error=request.args.get("error"),
+        ai_runtime_available=ai_runtime_available(),
+        ai_install_commands=ai_packages_install_commands(),
     )
+
+
+def _video_analysis_runs_clause():
+    return """(source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?)"""
+
+
+def _start_video_analysis_run(video, *, run_label=None):
+    """Queue and optionally launch AI analysis for an existing video."""
+    if not ai_runtime_available():
+        return None, ai_packages_install_hint(), "ai_packages_unavailable"
+
+    ensure_db()
+    db = get_db()
+    clause = _video_analysis_runs_clause()
+    supersede_pending_analysis_runs(db, video)
+    running = db.execute(
+        f"""SELECT id FROM analysis_runs
+            WHERE {clause} AND status='running'
+            LIMIT 1""",
+        (video["id"], video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    if running:
+        return None, "Analysis already in progress", "already_running"
+
+    video_ok, video_error = validate_video_for_analysis(video["file_path"])
+    if not video_ok:
+        return None, video_error, "invalid_video"
+
+    runtime_settings = get_runtime_settings()
+    models_ok, models_error = validate_ai_models_for_analysis(runtime_settings["ai"])
+    if not models_ok:
+        return None, models_error, "invalid_models"
+
+    existing_runs = db.execute(
+        f"SELECT COUNT(*) AS c FROM analysis_runs WHERE {clause}",
+        (video["id"], video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()["c"]
+    run_kind = "primary" if existing_runs == 0 else "rerun"
+    if run_kind == "rerun":
+        ensure_primary_run_metadata(db, video, build_analysis_settings_snapshot(runtime_settings))
+    default_label = "NFHS / library video" if run_kind == "primary" else None
+    run_payload = queue_analysis_run(
+        db,
+        video,
+        runtime_settings,
+        run_kind=run_kind,
+        run_label=run_label or default_label,
+    )
+
+    try:
+        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
+    except Exception as exc:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (f"Failed to start analysis worker: {exc}", run_payload["id"]),
+        )
+        db.commit()
+        return None, f"Failed to start analysis worker: {exc}", "worker_start_failed"
+
+    if run_kind == "rerun":
+        message = f"Queued rerun '{run_payload['run_label']}'."
+    else:
+        message = f"AI analysis started ({run_payload['run_label']})."
+
+    return {
+        "status": "started",
+        "game_id": run_payload["analysis_key"],
+        "analysis_key": run_payload["analysis_key"],
+        "run_label": run_payload["run_label"],
+        "run_kind": run_kind,
+        "message": message,
+    }, None, None
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/analysis-debug")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_analysis_debug(vid_id):
+    """Return latest analysis run + log tail for troubleshooting."""
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    clause = _video_analysis_runs_clause()
+    row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    game_id = video["game_id"]
+    if row:
+        game_id = row["analysis_key"] or video["game_id"]
+        row = resolve_analysis_run_for_progress(db, game_id) or row
+
+    if not row:
+        return jsonify({
+            "video_id": vid_id,
+            "video_path": video["file_path"],
+            "video_exists": os.path.exists(video["file_path"]),
+            "run": None,
+            "log_path": ai_analysis_log_path(game_id) if game_id else None,
+            "log_tail": "",
+        })
+
+    game_id = row["analysis_key"] or game_id
+    reconcile_stuck_analysis_run(db, game_id)
+    row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
+    log_path = ai_analysis_log_path(game_id)
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
+              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
+        (row["game_id"], row["game_id"], game_id),
+    ).fetchone()["c"]
+    event_count = db.execute(
+        """SELECT COUNT(*) AS c FROM events e
+           WHERE e.game_id = ?
+              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
+        (game_id, row["game_id"], row["game_id"]),
+    ).fetchone()["c"]
+    return jsonify({
+        "video_id": vid_id,
+        "video_path": video["file_path"],
+        "video_exists": os.path.exists(video["file_path"]),
+        "run": dict(row),
+        "detection_count": detection_count,
+        "event_count": event_count,
+        "needs_event_regeneration": detection_count > 0 and event_count == 0,
+        "log_path": log_path,
+        "log_tail": _read_log_tail(log_path, 2000) if os.path.exists(log_path) else "",
+    })
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/regenerate-events", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_regenerate_video_events(vid_id):
+    """Rebuild events from existing detections without re-running YOLO."""
+    from helpers import module_available
+
+    if not module_available("sklearn"):
+        return jsonify({
+            "error": "scikit-learn is not installed. Run: pip install scikit-learn",
+            "code": "sklearn_missing",
+        }), 503
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    clause = _video_analysis_runs_clause()
+    row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "No analysis run found for this video"}), 404
+
+    analysis_key = row["analysis_key"] or video["game_id"]
+    relational_game_id = row["game_id"]
+    db_path = current_app.config["DATABASE"]
+
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='running', progress_pct=50, progress_step='Regenerating events…',
+               error_message=NULL, completed_at=NULL
+           WHERE id=?""",
+        (row["id"],),
+    )
+    db.commit()
+
+    from event_generator import main as generate_events
+
+    if generate_events(analysis_key, db_path, relational_game_id=relational_game_id) is False:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Event generation failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            ("Event generation failed. Check logs and ensure scikit-learn is installed.", row["id"]),
+        )
+        db.commit()
+        return jsonify({"error": "Event generation failed", "analysis_key": analysis_key}), 500
+
+    from helpers import assign_possessions_for_game
+    if relational_game_id is not None:
+        assign_possessions_for_game(db, relational_game_id)
+
+    try:
+        import cv2
+        from film_analysis import run_enhanced_analysis
+
+        cap = cv2.VideoCapture(video["file_path"], cv2.CAP_FFMPEG)
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        cap.release()
+        run_enhanced_analysis(db_path, analysis_key, fps)
+    except Exception as exc:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='completed',
+                   progress_pct=100,
+                   progress_step='Events regenerated (enhanced analysis skipped)',
+                   completed_at=CURRENT_TIMESTAMP,
+                   error_message=?
+               WHERE id=?""",
+            (f"Enhanced analysis skipped: {exc}"[:500], row["id"]),
+        )
+        db.commit()
+        event_count = db.execute(
+            "SELECT COUNT(*) AS c FROM events WHERE game_id=?",
+            (analysis_key,),
+        ).fetchone()["c"]
+        return jsonify({
+            "status": "events_regenerated",
+            "analysis_key": analysis_key,
+            "event_count": event_count,
+            "message": f"Regenerated {event_count} events. Enhanced analysis was skipped: {exc}",
+        })
+
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='completed', progress_pct=100, progress_step='Done',
+               completed_at=CURRENT_TIMESTAMP, error_message=NULL
+           WHERE id=?""",
+        (row["id"],),
+    )
+    db.commit()
+
+    event_count = db.execute(
+        "SELECT COUNT(*) AS c FROM events WHERE game_id=?",
+        (analysis_key,),
+    ).fetchone()["c"]
+    detection_count = db.execute(
+        """SELECT COUNT(*) AS c FROM detections d
+           WHERE d.game_id = ?
+              OR (? IS NOT NULL AND d.relational_game_id = ?)""",
+        (analysis_key, relational_game_id, relational_game_id),
+    ).fetchone()["c"]
+    return jsonify({
+        "status": "events_regenerated",
+        "analysis_key": analysis_key,
+        "detection_count": detection_count,
+        "event_count": event_count,
+        "message": f"Regenerated {event_count} events from {detection_count:,} detections.",
+    })
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/analyze", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_start_video_analysis(vid_id):
+    """Start AI analysis for a video already in the library (e.g. NFHS download)."""
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    payload, error, error_code = _start_video_analysis_run(video)
+    if error:
+        status = 503 if error_code == "ai_packages_unavailable" else 409
+        return jsonify({"error": error, "code": error_code}), status
+    return jsonify(payload)
 
 
 @ai_bp.route("/videos/<int:vid_id>/rerun", methods=["POST"])
@@ -444,28 +908,22 @@ def rerun_video_analysis(vid_id):
     if not video:
         abort(404)
 
-    runtime_settings = get_runtime_settings()
-    ensure_primary_run_metadata(db, video, build_analysis_settings_snapshot(runtime_settings))
-    run_payload = queue_analysis_run(
-        db,
+    run_payload, error, error_code = _start_video_analysis_run(
         video,
-        runtime_settings,
-        run_kind="rerun",
         run_label=request.form.get("run_label"),
     )
+    if error:
+        return redirect(url_for(
+            "ai.compare_video_analysis",
+            vid_id=vid_id,
+            error=error,
+        ))
 
-    if ai_runtime_available():
-        start_analysis_subprocess(run_payload["analysis_key"], video["file_path"])
-        message = f"Queued rerun '{run_payload['run_label']}'."
-    else:
-        db.execute(
-            "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
-            ("Missing AI packages (cv2/ultralytics)", run_payload["id"]),
-        )
-        db.commit()
-        message = "Rerun saved, but AI packages are unavailable in the current runtime."
-
-    return redirect(url_for("ai.compare_video_analysis", vid_id=vid_id, message=message))
+    return redirect(url_for(
+        "ai.compare_video_analysis",
+        vid_id=vid_id,
+        message=run_payload["message"],
+    ))
 
 
 @ai_bp.route("/api/check_duplicate")
@@ -534,6 +992,90 @@ def delete_video(vid_id):
     db.commit()
 
     return jsonify({"success": True, "deleted_game_id": game_id})
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/trim", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_trim_video(vid_id):
+    """Trim a saved video to a start/end range; writes a new library copy."""
+    from video_trim import ffmpeg_available, ffprobe_duration_ms, parse_time_input, start_trim_job
+
+    if not ffmpeg_available():
+        return jsonify({
+            "error": "ffmpeg is not installed. Install ffmpeg and restart the app.",
+            "code": "ffmpeg_missing",
+        }), 503
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    start_ms = data.get("start_ms")
+    end_ms = data.get("end_ms")
+    if start_ms is None and data.get("start"):
+        start_ms = parse_time_input(data.get("start"))
+    if end_ms is None and data.get("end"):
+        end_ms = parse_time_input(data.get("end"))
+    try:
+        start_ms = int(start_ms)
+        end_ms = int(end_ms)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid start_ms/end_ms"}), 400
+
+    if start_ms < 0 or end_ms <= start_ms:
+        return jsonify({"error": "End time must be after start time"}), 400
+
+    duration_ms = ffprobe_duration_ms(video["file_path"])
+    if duration_ms is not None and end_ms > duration_ms + 1000:
+        return jsonify({"error": "End time is past the end of the video"}), 400
+
+    label = (data.get("label") or "trimmed").strip() or "trimmed"
+    job_id = start_trim_job(
+        app=current_app._get_current_object(),
+        video_row=dict(video),
+        start_ms=start_ms,
+        end_ms=end_ms,
+        label=label,
+    )
+    return jsonify({
+        "status": "started",
+        "job_id": job_id,
+        "message": "Trim started. This may take a few minutes for long files.",
+    })
+
+
+@ai_bp.route("/api/videos/trim/<job_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_trim_video_status(job_id):
+    from video_trim import get_trim_job
+
+    job = get_trim_job(job_id)
+    if not job:
+        return jsonify({"error": "Trim job not found or expired"}), 404
+    return jsonify(job)
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/meta", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_meta(vid_id):
+    """Return duration and paths for the trim editor."""
+    from video_trim import ffprobe_duration_ms
+
+    video = get_db().execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+    duration_ms = ffprobe_duration_ms(video["file_path"])
+    return jsonify({
+        "id": video["id"],
+        "original_filename": video["original_filename"],
+        "stored_filename": video["stored_filename"],
+        "opponent": video["opponent"],
+        "file_size_bytes": video["file_size_bytes"],
+        "duration_ms": duration_ms,
+        "video_url": url_for("core.uploaded_file", filename=video["stored_filename"]),
+    })
 
 
 @ai_bp.route("/upload", methods=["POST"])

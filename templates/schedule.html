@@ -336,12 +336,13 @@
       {% endif %}
     </div>
     <table data-frame="2.7t" style="margin-bottom:18px;">
-      <thead><tr><th>Name</th><th>Start</th><th>End</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Type</th><th>Start</th><th>End</th><th></th></tr></thead>
       <tbody>
         {% if seasons %}
           {% for season in seasons %}
           <tr>
             <td>{{ season.name }}</td>
+            <td>{{ 'Summer' if season.season_type == 'summer' else 'Regular' }}</td>
             <td>{{ season.start_date }}</td>
             <td>{{ season.end_date }}</td>
             <td style="white-space:nowrap;">
@@ -353,7 +354,7 @@
           </tr>
           {% endfor %}
         {% else %}
-        <tr><td colspan="4" class="text-muted">No seasons yet.</td></tr>
+        <tr><td colspan="5" class="text-muted">No seasons yet.</td></tr>
         {% endif %}
       </tbody>
     </table>
@@ -362,7 +363,18 @@
       <input type="hidden" name="season_id" value="{{ season_form.id }}">
       <div class="form-group">
         <label for="season-name">Season Name</label>
-        <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys Jr High" value="{{ season_form.name }}" required>
+        <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys HS or Summer 2026" value="{{ season_form.name }}" required>
+      </div>
+      <div class="form-group">
+        <label for="season-type">Program Type</label>
+        <select class="form-control" id="season-type" name="season_type" onchange="applySeasonTypeDefaults()">
+          {% for value, label in season_type_options %}
+          <option value="{{ value }}" {% if season_form.season_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px;">
+          Summer program is for out-of-season tournaments (typically Jun–Aug).
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="form-group">
@@ -640,6 +652,20 @@ function submitPdfImport() {
   })
   .catch(err => alert('Import failed: ' + err.message))
   .finally(() => { btn.disabled = false; btn.textContent = 'Import All Games'; });
+}
+
+function applySeasonTypeDefaults() {
+  const typeEl = document.getElementById('season-type');
+  const nameEl = document.getElementById('season-name');
+  const startEl = document.getElementById('season-start');
+  const endEl = document.getElementById('season-end');
+  if (!typeEl || !startEl || !endEl) return;
+  const year = new Date().getFullYear();
+  if (typeEl.value === 'summer') {
+    if (nameEl && !nameEl.value.trim()) nameEl.value = `Summer ${year}`;
+    if (!startEl.value) startEl.value = `${year}-06-01`;
+    if (!endEl.value) endEl.value = `${year}-08-31`;
+  }
 }
 </script>
 {% endblock %}

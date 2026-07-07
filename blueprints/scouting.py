@@ -35,6 +35,14 @@ from flask import Blueprint, redirect, render_template, request, url_for, jsonif
 from helpers import get_db, require_feature, get_default_team_id
 from module_entitlements import enforce_module_access
 from module_keys import SCOUTING
+from nfhs import (
+    _decrypt_password,
+    _encrypt_password,
+    extract_nfhs_game_id,
+    lookup_game,
+    login_nfhs,
+    parse_nfhs_input,
+)
 
 scouting_bp = Blueprint("scouting", __name__)
 
@@ -130,14 +138,14 @@ def api_nfhs_login():
 def api_nfhs_lookup():
     """Look up game metadata by GameID."""
     data = request.get_json() or request.form
-    game_id = data.get("game_id") or data.get("nfhs_game_id")
-    if not game_id:
+    raw_input = data.get("game_id") or data.get("nfhs_game_id") or data.get("nfhs_url")
+    if not raw_input:
         return jsonify({"error": "Missing game_id"}), 400
 
-    # Extract numeric ID
-    game_id = extract_nfhs_game_id(game_id)
+    parsed = parse_nfhs_input(raw_input)
+    game_id = parsed["game_id"]
     if not game_id:
-        return jsonify({"error": "Invalid NFHS GameID"}), 400
+        return jsonify({"error": "Invalid NFHS GameID or URL"}), 400
 
     # Get credentials
     email, password = _get_stored_credentials()
@@ -149,39 +157,6 @@ def api_nfhs_lookup():
 
 
 # ── NFHS VOD Downloader ──────────────────────────────────────
-
-def extract_nfhs_game_id(url_or_id):
-    """Extract NFHS GameID from a URL or return the raw ID.
-
-    Supports formats:
-    - Raw GameID: 'gam12d9559efc' or '12345678'
-    - Full URL: 'https://www.nfhsnetwork.com/game/12345678'
-    - Embed URL: 'https://www.nfhsnetwork.com/embed/12345678'
-    - Developer window GameID from network tab
-    """
-    if not url_or_id:
-        return None
-
-    url_or_id = url_or_id.strip()
-
-    # If it's already an alphanumeric GameID (NFHS uses formats like 'gam12d9559efc')
-    if re.match(r'^[a-zA-Z0-9]{6,20}$', url_or_id):
-        return url_or_id
-
-    # Extract from URL patterns
-    patterns = [
-        r'/game/([a-zA-Z0-9]+)',
-        r'/embed/([a-zA-Z0-9]+)',
-        r'[?&]gameId=([a-zA-Z0-9]+)',
-        r'[?&]game_id=([a-zA-Z0-9]+)',
-        r'/videos/([a-zA-Z0-9]+)',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, url_or_id)
-        if match:
-            return match.group(1)
-
-    return None
 
 
 def _get_stored_credentials():
@@ -508,40 +483,84 @@ def api_scouting_clips(report_id):
 @scouting_bp.route("/api/scouting/nfhs/download", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_scouting_nfhs_download():
+    """Start a background NFHS download and return a job id for progress polling."""
+    from nfhs_download_jobs import start_download_job
+
     data = request.get_json() or request.form
-    game_id = data.get("game_id") or data.get("nfhs_game_id")
-    if not game_id:
+    raw_input = data.get("game_id") or data.get("nfhs_game_id") or data.get("nfhs_url")
+    if not raw_input:
         return jsonify({"error": "Missing game_id or nfhs_game_id"}), 400
 
-    game_id = extract_nfhs_game_id(game_id)
+    parsed = parse_nfhs_input(raw_input)
+    game_id = parsed["game_id"]
     if not game_id:
-        return jsonify({"error": f"Could not extract NFHS GameID from: {data.get('game_id')}"}), 400
+        return jsonify({"error": f"Could not extract NFHS GameID from: {raw_input}"}), 400
 
-    # Get credentials
     email, password = _get_stored_credentials()
     if not email:
         return jsonify({"error": "No NFHS credentials stored. Please log in first.", "needs_login": True}), 401
 
+    lookup = lookup_game(game_id, email, password)
+    watch_url = parsed["watch_url"] or (lookup.get("site_url") if lookup.get("success") else None)
     output_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
-    result = download_nfhs_vod(game_id, email, password, output_dir)
 
-    if result["success"]:
-        db = get_db()
-        cur = db.execute("""
-            INSERT INTO games (source_type, source_key, nfhs_game_id)
-            VALUES ('nfhs_vod', ?, ?)
-        """, (result["file_path"], game_id))
-        db.commit()
+    start_ms = data.get("start_ms")
+    end_ms = data.get("end_ms")
+    if start_ms is not None or end_ms is not None:
+        from video_trim import parse_time_input
 
-        return jsonify({
-            "status": "downloaded",
-            "file_path": result["file_path"],
-            "file_size": result["file_size"],
-            "game_id": cur.lastrowid,
-            "nfhs_game_id": game_id,
-        })
-    else:
-        return jsonify({"error": result["error"], "nfhs_game_id": game_id}), 400
+        if start_ms is None and data.get("start"):
+            start_ms = parse_time_input(data.get("start"))
+        if end_ms is None and data.get("end"):
+            end_ms = parse_time_input(data.get("end"))
+        try:
+            start_ms = int(start_ms)
+            end_ms = int(end_ms)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid start/end times for partial download"}), 400
+        if start_ms < 0 or end_ms <= start_ms:
+            return jsonify({"error": "Download end must be after start"}), 400
+
+    job_id = start_download_job(
+        app=current_app._get_current_object(),
+        game_id=game_id,
+        email=email,
+        password=password,
+        output_dir=output_dir,
+        watch_url=watch_url,
+        start_ms=start_ms,
+        end_ms=end_ms,
+    )
+    return jsonify({
+        "status": "started",
+        "job_id": job_id,
+        "nfhs_game_id": game_id,
+        "message": "Download started. Progress updates automatically.",
+    })
+
+
+@scouting_bp.route("/api/scouting/nfhs/download/<job_id>/cancel", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_scouting_nfhs_download_cancel(job_id):
+    """Cancel a background NFHS download in progress."""
+    from nfhs_download_jobs import cancel_download_job
+
+    ok, message = cancel_download_job(job_id)
+    if not ok:
+        return jsonify({"error": message}), 409
+    return jsonify({"status": "cancelled", "message": message})
+
+
+@scouting_bp.route("/api/scouting/nfhs/download/<job_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_scouting_nfhs_download_status(job_id):
+    """Poll background NFHS download progress."""
+    from nfhs_download_jobs import get_download_job
+
+    job = get_download_job(job_id)
+    if not job:
+        return jsonify({"error": "Download job not found or expired"}), 404
+    return jsonify(job)
 
 
 # ── Auto-Generate from AI Events ────────────────────────────

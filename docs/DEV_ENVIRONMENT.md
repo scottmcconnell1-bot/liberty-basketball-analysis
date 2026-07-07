@@ -30,6 +30,27 @@ docker compose up -d --build
 
 Or install `requirements.docker.txt` on a Linux host with Python 3.12 after installing torch per `Dockerfile`.
 
+### Windows (manual AI install)
+
+PyTorch only publishes wheels for **Python 3.12 or 3.13 (64-bit)**. If `pip install torch` says `from versions: none`, your active `python` is probably 3.14+, 3.11, or 32-bit.
+
+```powershell
+cd C:\Users\scott\Projects\liberty-basketball-analysis
+python --version
+py -0p
+
+# If needed, install Python 3.12 and recreate the venv:
+winget install Python.Python.3.12
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Recommended one-shot installer:
+.\scripts\install_ai_deps.ps1
+```
+
+Then restart the app and confirm **Settings → Runtime** shows OpenCV and Ultralytics as **Yes**.
+
+
 ## Files
 
 | File | Purpose |

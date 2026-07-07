@@ -629,6 +629,20 @@
     background: var(--color-primary);
     transition: width .15s ease;
 }
+#film-tool-root .ft-run-analysis-progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .35rem;
+}
+#film-tool-root .ft-run-analysis-pct {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+}
 
 /* ── AI Events Timeline ───────────────────────────────────── */
 #film-tool-root .ai-events-summary {

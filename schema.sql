@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
     settings_json TEXT,
     run_kind     TEXT NOT NULL DEFAULT 'primary',
     status       TEXT NOT NULL DEFAULT 'pending',
+    progress_pct REAL DEFAULT 0,
+    progress_step TEXT,
     started_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
     error_message TEXT
@@ -36,7 +38,26 @@ CREATE TABLE IF NOT EXISTS detections (
     width        INTEGER NOT NULL,
     height       INTEGER NOT NULL,
     tracker_id   INTEGER,
+    jersey_read  INTEGER,
+    jersey_confidence REAL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS track_identity_labels (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id            TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
+    tracker_id         INTEGER NOT NULL,
+    identity_type      TEXT NOT NULL DEFAULT 'cluster',
+    jersey_number      INTEGER,
+    player_name        TEXT,
+    player_id          INTEGER,
+    confidence         REAL,
+    sample_count       INTEGER,
+    source             TEXT DEFAULT 'ocr_votes',
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, identity_type, tracker_id)
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -74,6 +95,7 @@ CREATE TABLE IF NOT EXISTS seasons (
     name       TEXT NOT NULL UNIQUE,
     start_date DATE NOT NULL,
     end_date   DATE NOT NULL,
+    season_type TEXT NOT NULL DEFAULT 'regular',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

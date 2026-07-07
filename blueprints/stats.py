@@ -33,13 +33,16 @@ def api_seasons_create():
     name = (data.get("name") or "").strip()
     start = data.get("start_date", "")
     end   = data.get("end_date", "")
+    season_type = (data.get("season_type") or "regular").strip() or "regular"
+    if season_type not in ("regular", "summer"):
+        season_type = "regular"
     if not name or not start or not end:
         return jsonify({"error": "name, start_date, end_date required"}), 400
     db = get_db()
     try:
         cur = db.execute(
-            "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
-            (name, start, end),
+            "INSERT INTO seasons (name, start_date, end_date, season_type) VALUES (?,?,?,?)",
+            (name, start, end, season_type),
         )
         db.commit()
         row = db.execute("SELECT * FROM seasons WHERE id=?", (cur.lastrowid,)).fetchone()

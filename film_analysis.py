@@ -41,10 +41,33 @@ def _resolve_relational_game_id(conn, game_id):
     try:
         game_id_int = int(game_id)
     except (TypeError, ValueError):
-        return None
+        game_id_int = None
 
-    row = conn.execute("SELECT id FROM games WHERE id = ?", (game_id_int,)).fetchone()
-    return row["id"] if row else None
+    if game_id_int is not None:
+        row = conn.execute("SELECT id FROM games WHERE id = ?", (game_id_int,)).fetchone()
+        if row:
+            return row["id"]
+
+    try:
+        row = conn.execute(
+            "SELECT game_id FROM analysis_runs WHERE analysis_key=? AND game_id IS NOT NULL ORDER BY id DESC LIMIT 1",
+            (str(game_id),),
+        ).fetchone()
+        if row and row[0] is not None:
+            return row[0]
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        row = conn.execute(
+            "SELECT relational_game_id FROM videos WHERE game_id = ? ORDER BY id DESC LIMIT 1",
+            (str(game_id),),
+        ).fetchone()
+        if row and row[0] is not None:
+            return row[0]
+    except sqlite3.OperationalError:
+        pass
+    return None
 
 
 def _detections_game_filter(game_id, relational_game_id, alias=None):
@@ -88,25 +111,53 @@ def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
     """, game_filter_params).fetchall()
 
     results = []
+    existing_labels = {}
+    if relational_game_id is not None:
+        label_rows = conn.execute(
+            """SELECT tracker_id, jersey_number, player_name
+                 FROM player_minutes
+                WHERE relational_game_id = ? OR game_id = ?""",
+            (relational_game_id, str(game_id)),
+        ).fetchall()
+    else:
+        label_rows = conn.execute(
+            """SELECT tracker_id, jersey_number, player_name
+                 FROM player_minutes
+                WHERE game_id = ?""",
+            (str(game_id),),
+        ).fetchall()
+    for label_row in label_rows:
+        existing_labels[int(label_row["tracker_id"])] = (
+            label_row["jersey_number"],
+            label_row["player_name"],
+        )
+
     for i, row in enumerate(rows):
         first_frame = row["first_frame"]
         last_frame = row["last_frame"]
         total_frames = row["total_frames"]
         minutes = total_frames / effective_fps / 60.0
+        cluster_id = int(row["cluster_id"])
+        jersey_number, player_name = existing_labels.get(cluster_id, (None, None))
 
         results.append({
             "game_id": game_id,
-            "tracker_id": row["cluster_id"],
+            "relational_game_id": relational_game_id,
+            "tracker_id": cluster_id,
             "first_frame": first_frame,
             "last_frame": last_frame,
             "total_frames": total_frames,
             "minutes_played": round(minutes, 2),
+            "jersey_number": jersey_number,
+            "player_name": player_name,
         })
 
     conn.executemany("""
         INSERT OR REPLACE INTO player_minutes
-            (game_id, tracker_id, first_frame, last_frame, total_frames, minutes_played, jersey_number, player_name)
-        VALUES (:game_id, :tracker_id, :first_frame, :last_frame, :total_frames, :minutes_played, NULL, NULL)
+            (game_id, relational_game_id, tracker_id, first_frame, last_frame, total_frames,
+             minutes_played, jersey_number, player_name)
+        VALUES (:game_id, :relational_game_id, :tracker_id, :first_frame, :last_frame,
+                :total_frames, :minutes_played, :jersey_number, :player_name)
     """, results)
     conn.commit()
 
@@ -193,6 +244,7 @@ def classify_all_shots(conn, game_id, video_width=1920, video_height=1080):
         return []
 
     relational_game_id = _resolve_relational_game_id(conn, game_id)
+    game_filter_sql, game_filter_params = _detections_game_filter(game_id, relational_game_id)
 
     # Estimate basket position from existing 2pt makes (or use defaults)
     basket_x, basket_y, three_pt_threshold = _estimate_basket_position(conn, game_id)

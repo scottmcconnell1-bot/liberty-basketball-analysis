@@ -12,10 +12,11 @@ import json
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 from datetime import datetime
 from functools import wraps
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from flask import g, current_app, request, render_template, abort, redirect, url_for, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -68,6 +69,9 @@ EVENT_TYPE_SEEDS = [
     ("2pt", "Legacy 2PT", "shot", 1, 1, 0),
     ("3pt", "Legacy 3PT", "shot", 1, 1, 0),
     ("rebound", "Legacy rebound", "rebound", 1, 0, 0),
+    ("make", "Made field goal (AI)", "shot", 1, 1, 0),
+    ("miss", "Missed field goal (AI)", "shot", 1, 0, 0),
+    ("possession_change", "Possession change (AI)", "possession", 0, 0, 1),
 ]
 
 BASE_MODULE_ENTITLEMENT = {
@@ -715,7 +719,36 @@ def build_settings_catalog():
 
 
 def ai_runtime_available():
-    return module_available("cv2") and module_available("ultralytics")
+    return (
+        module_available("cv2")
+        and module_available("ultralytics")
+        and module_available("sklearn")
+    )
+
+
+def ai_packages_install_hint() -> str:
+    return (
+        "AI packages are not installed on this server (opencv-python, ultralytics, scikit-learn). "
+        "Install the AI stack, then restart the app. Check Settings → Runtime for status."
+    )
+
+
+def ai_packages_install_commands() -> str:
+    return (
+        "Windows (PowerShell, from repo root):\n"
+        "  .\\.venv\\Scripts\\Activate.ps1\n"
+        "  python --version    # must be 3.12.x or 3.13.x\n"
+        "  .\\scripts\\install_ai_deps.ps1\n"
+        "\n"
+        "Or manually (after activating .venv with Python 3.12/3.13):\n"
+        "  python -m pip install --upgrade pip\n"
+        "  python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
+        "  python -m pip install -r requirements.docker.txt\n"
+        "\n"
+        "Linux:\n"
+        "  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu\n"
+        "  pip install -r requirements.docker.txt"
+    )
 
 
 def resolve_detector_model(ai_settings):
@@ -821,8 +854,8 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(
         """INSERT INTO analysis_runs
-           (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+           (game_id, analysis_key, video_path, source_video_id, base_game_id, base_analysis_key, run_label, settings_json, run_kind, status, started_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,NULL)""",
         (
             video_row["relational_game_id"],
             analysis_key,
@@ -846,30 +879,370 @@ def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_la
     }
 
 
+INTERNAL_SUPERSEDE_MARKERS = (
+    "replaced by new request",
+    "superseded by new analysis request",
+)
+
+
+def _analysis_run_video_clause(alias=None):
+    prefix = f"{alias}." if alias else ""
+    return (
+        f"({prefix}source_video_id=? OR {prefix}base_analysis_key=? "
+        f"OR {prefix}analysis_key=? OR {prefix}video_path=?)"
+    )
+
+
+def _analysis_run_priority_order(alias=None):
+    prefix = f"{alias}." if alias else ""
+    return f"""CASE {prefix}status
+        WHEN 'running' THEN 0
+        WHEN 'pending' THEN 1
+        WHEN 'completed' THEN 2
+        WHEN 'failed' THEN 3
+        WHEN 'cancelled' THEN 4
+        ELSE 5
+    END"""
+
+
+def latest_analysis_run_id_subquery(video_alias="v", run_alias="ar_latest"):
+    clause = (
+        f"({run_alias}.source_video_id = {video_alias}.id "
+        f"OR {run_alias}.base_analysis_key = {video_alias}.game_id "
+        f"OR {run_alias}.analysis_key = {video_alias}.game_id "
+        f"OR {run_alias}.video_path = {video_alias}.file_path)"
+    )
+    return f"""(
+        SELECT {run_alias}.id
+        FROM analysis_runs {run_alias}
+        WHERE {clause}
+        ORDER BY {_analysis_run_priority_order(run_alias)}, {run_alias}.id DESC
+        LIMIT 1
+    )"""
+
+
+def is_superseded_analysis_run(run_row) -> bool:
+    if not run_row:
+        return False
+    status = run_row["status"] if hasattr(run_row, "keys") else run_row[1]
+    if status == "cancelled":
+        return True
+    if status != "failed":
+        return False
+    message = (run_row["error_message"] or "").lower()
+    return any(marker in message for marker in INTERNAL_SUPERSEDE_MARKERS)
+
+
+def _analysis_run_video_params(video_row):
+    return (
+        video_row["id"],
+        video_row["game_id"],
+        video_row["game_id"],
+        video_row["file_path"],
+    )
+
+
+def _analysis_run_row_video_params(run_row):
+    return (
+        run_row["source_video_id"],
+        run_row["base_analysis_key"] or run_row["analysis_key"],
+        run_row["base_analysis_key"] or run_row["analysis_key"],
+        run_row["video_path"],
+    )
+
+
+def resolve_analysis_run_for_progress(db, game_id: str):
+    """Return the analysis run row the progress UI should display."""
+    row = db.execute(
+        "SELECT * FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
+        (game_id,),
+    ).fetchone()
+    if not row or not is_superseded_analysis_run(row):
+        return row
+
+    params = _analysis_run_row_video_params(row)
+    replacement = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {_analysis_run_video_clause()}
+              AND id > ?
+              AND status != 'cancelled'
+            ORDER BY id DESC
+            LIMIT 1""",
+        (*params, row["id"]),
+    ).fetchone()
+    if replacement and not is_superseded_analysis_run(replacement):
+        return replacement
+
+    active = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {_analysis_run_video_clause()}
+              AND status IN ('running', 'pending')
+            ORDER BY {_analysis_run_priority_order()}, id DESC
+            LIMIT 1""",
+        params,
+    ).fetchone()
+    return active or row
+
+
+def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new analysis request"):
+    """Cancel stuck pending runs so a new analysis can start."""
+    clause = _analysis_run_video_clause()
+    db.execute(
+        f"""UPDATE analysis_runs
+               SET status='cancelled',
+                   progress_step=?,
+                   error_message=NULL,
+                   completed_at=CURRENT_TIMESTAMP
+             WHERE {clause} AND status='pending'""",
+        (reason, *_analysis_run_video_params(video_row)),
+    )
+    db.commit()
+
+
+def resolve_relational_game_id_for_analysis(db_path: str, game_id: str) -> int | None:
+    """Resolve the relational games.id for an analysis key or legacy numeric id."""
+    conn = sqlite3.connect(db_path)
+    try:
+        try:
+            gid_int = int(game_id)
+        except (TypeError, ValueError):
+            gid_int = None
+        if gid_int is not None:
+            row = conn.execute("SELECT id FROM games WHERE id = ?", (gid_int,)).fetchone()
+            if row:
+                return row[0]
+
+        row = conn.execute(
+            """SELECT ar.game_id, v.relational_game_id
+               FROM analysis_runs ar
+               LEFT JOIN videos v ON v.id = ar.source_video_id
+               WHERE ar.analysis_key = ?
+               ORDER BY ar.id DESC
+               LIMIT 1""",
+            (game_id,),
+        ).fetchone()
+        if row:
+            if row[0]:
+                return row[0]
+            if row[1]:
+                return row[1]
+
+        row = conn.execute(
+            "SELECT relational_game_id FROM videos WHERE game_id = ? ORDER BY id DESC LIMIT 1",
+            (game_id,),
+        ).fetchone()
+        if row and row[0]:
+            return row[0]
+    finally:
+        conn.close()
+    return None
+
+
+def validate_video_for_analysis(video_path: str) -> tuple[bool, str | None]:
+    """Return (ok, error_message) for a video before launching AI analysis."""
+    video_path = os.path.abspath(video_path)
+    if not os.path.exists(video_path):
+        return False, f"Video file not found: {video_path}"
+    size = os.path.getsize(video_path)
+    if size < 1024:
+        return False, f"Video file is too small to analyze ({size} bytes): {video_path}"
+    try:
+        import cv2
+    except ImportError:
+        return True, None
+    cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+    if not cap.isOpened():
+        return False, f"Could not open video for analysis: {video_path}"
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    cap.release()
+    if frame_count <= 0 and width <= 0 and height <= 0:
+        return False, f"Video has no readable frames: {video_path}"
+    return True, None
+
+
+def is_git_lfs_pointer_file(path: str) -> bool:
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            header = handle.read(120)
+        return header.startswith("version https://git-lfs.github.com/spec/v1")
+    except OSError:
+        return False
+
+
+def validate_model_weights(model_path: str) -> tuple[bool, str | None]:
+    """Return (ok, error_message) for a local model weights file."""
+    model_path = (model_path or "").strip()
+    if not model_path:
+        return True, None
+
+    root = os.path.dirname(os.path.abspath(__file__))
+    abs_path = model_path if os.path.isabs(model_path) else os.path.join(root, model_path)
+    is_repo_model = model_path.replace("\\", "/").startswith("models/")
+
+    if not os.path.exists(abs_path):
+        if is_repo_model:
+            return False, f"Model file not found: {model_path}"
+        return True, None
+
+    if is_git_lfs_pointer_file(abs_path):
+        return False, (
+            f"Model file {model_path} is a Git LFS pointer, not the real weights. "
+            "Run: git lfs pull"
+        )
+
+    if model_path.endswith((".pt", ".pth")) and os.path.getsize(abs_path) < 10_000:
+        return False, f"Model file looks too small or corrupt ({os.path.getsize(abs_path)} bytes): {model_path}"
+    return True, None
+
+
+def validate_ai_models_for_analysis(ai_settings=None) -> tuple[bool, str | None]:
+    """Validate configured person/ball detector weights before launching analysis."""
+    settings = dict(AI_DEFAULTS)
+    if ai_settings:
+        settings.update(ai_settings)
+    for label, path in (
+        ("Person detector", resolve_detector_model(settings)),
+        ("Ball detector", resolve_ball_detector_model(settings)),
+    ):
+        ok, message = validate_model_weights(path)
+        if not ok:
+            return False, f"{label}: {message}"
+    return True, None
+
+
+def ai_analysis_log_path(game_id: str) -> str:
+    root = os.path.dirname(os.path.abspath(__file__))
+    logs_dir = os.path.join(root, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    safe_key = re.sub(r"[^\w.\-]+", "_", game_id)[:120]
+    return os.path.join(logs_dir, f"ai-{safe_key}.log")
+
+
+def _read_log_tail(log_path: str, limit: int = 500) -> str:
+    try:
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
+            return handle.read()[-limit:]
+    except OSError:
+        return ""
+
+
+def reconcile_stuck_analysis_run(db, game_id: str) -> None:
+    """Mark orphaned pending runs failed so the UI can offer retry."""
+    row = db.execute(
+        """SELECT id, status
+           FROM analysis_runs
+           WHERE analysis_key=?
+           ORDER BY id DESC
+           LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if not row or row[1] != "pending":
+        return
+
+    log_path = ai_analysis_log_path(game_id)
+    if not os.path.exists(log_path):
+        return
+
+    content = _read_log_tail(log_path, 4000)
+    if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (_read_log_tail(log_path, 500), row[0]),
+        )
+        db.commit()
+        return
+
+    age_seconds = time.time() - os.path.getmtime(log_path)
+    if age_seconds > 45 and "[launcher] Started" in content:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='failed',
+                   error_message=?,
+                   progress_step='Failed',
+                   completed_at=CURRENT_TIMESTAMP
+               WHERE id=?""",
+            (
+                "Analysis worker stopped before processing started. "
+                "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
+                row[0],
+            ),
+        )
+        db.commit()
+
+
 def start_analysis_subprocess(game_id, video_path):
     import sys
 
-    log_path = f"/home/monk-admin/liberty-basketball-ai-{game_id}.log"
-    log_file = open(log_path, "w")
+    log_path = ai_analysis_log_path(game_id)
+    video_path = os.path.abspath(video_path)
+    db_path = current_app.config["DATABASE"]
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+
+    log_file = open(log_path, "w", encoding="utf-8")
     try:
+        popen_kwargs = {
+            "stdout": log_file,
+            "stderr": subprocess.STDOUT,
+            "cwd": os.path.dirname(os.path.abspath(__file__)),
+        }
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
+        elif hasattr(subprocess, "CREATE_NO_WINDOW"):
+            popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         proc = subprocess.Popen(
-            [sys.executable, "ai_analyzer.py", current_app.config["DATABASE"], video_path, game_id],
-            cwd=os.path.dirname(os.path.abspath(__file__)),
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+            [sys.executable, "analysis_launcher.py", db_path, video_path, game_id],
+            **popen_kwargs,
         )
         if proc is not None:
-            log_file.write(f"[launcher] Started ai_analyzer.py PID={proc.pid} for {game_id}\n")
+            log_file.write(f"[launcher] Started analysis_launcher.py PID={proc.pid} for {game_id}\n")
+            log_file.write(f"[launcher] Python: {sys.executable}\n")
+            log_file.write(f"[launcher] Log file: {log_path}\n")
+            log_file.write(f"[launcher] Video: {video_path}\n")
+            log_file.write(f"[launcher] Database: {db_path}\n")
+            log_file.flush()
+
+            def _watch_process() -> None:
+                try:
+                    code = proc.wait()
+                    if code != 0:
+                        tail = _read_log_tail(log_path)
+                        conn = sqlite3.connect(db_path)
+                        conn.execute(
+                            """UPDATE analysis_runs
+                               SET status='failed',
+                                   error_message=?,
+                                   progress_step='Failed',
+                                   completed_at=CURRENT_TIMESTAMP
+                               WHERE analysis_key=? AND status IN ('pending', 'running')""",
+                            (f"Analysis worker exited (code {code}). {tail}"[:500], game_id),
+                        )
+                        conn.commit()
+                        conn.close()
+                finally:
+                    try:
+                        log_file.close()
+                    except OSError:
+                        pass
+
+            threading.Thread(target=_watch_process, daemon=True, name=f"ai-watch-{game_id[:12]}").start()
         else:
             log_file.write(f"[launcher] Popen returned None for {game_id}\n")
-        log_file.flush()
+            log_file.flush()
+            log_file.close()
+        return log_path
     except Exception as e:
         log_file.write(f"[launcher] Failed to start: {e}\n")
         log_file.flush()
-        raise
-    finally:
         log_file.close()
+        raise
 
 
 def build_run_summary(run_row):
@@ -940,6 +1313,18 @@ def append_query_params(path, **params):
         urlencode(current_params, doseq=True),
         split_path.fragment,
     ))
+
+
+def film_page_path(stored_filename: str, game_id: str) -> str:
+    """Build a Film Tool path without Flask request context (safe in background jobs)."""
+    return append_query_params(
+        f"/film/{quote(stored_filename, safe='')}",
+        game_id=game_id,
+    )
+
+
+def videos_page_path() -> str:
+    return "/videos"
 
 
 def read_filtered_app_logs(query="", limit=200):
@@ -1247,7 +1632,8 @@ def assign_possessions_for_game(db, game_id):
 
         prev_was_boundary = is_boundary
 
-    db.commit()
+    from stats import score_possessions_for_game
+    score_possessions_for_game(db, game_id)
 
 
 def _seed_base_module_entitlement(db, team_id):
@@ -1664,6 +2050,22 @@ def _ensure_migration_columns(db):
             created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS track_identity_labels (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id            TEXT NOT NULL,
+            relational_game_id INTEGER REFERENCES games(id),
+            tracker_id         INTEGER NOT NULL,
+            identity_type      TEXT NOT NULL DEFAULT 'cluster',
+            jersey_number      INTEGER,
+            player_name        TEXT,
+            player_id          INTEGER,
+            confidence         REAL,
+            sample_count       INTEGER,
+            source             TEXT DEFAULT 'ocr_votes',
+            created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(game_id, identity_type, tracker_id)
+        );
         CREATE TABLE IF NOT EXISTS app_settings (
             key        TEXT PRIMARY KEY,
             value      TEXT NOT NULL,
@@ -1892,6 +2294,8 @@ def _ensure_migration_columns(db):
         ("analysis_runs", "run_label", "ALTER TABLE analysis_runs ADD COLUMN run_label TEXT"),
         ("analysis_runs", "settings_json", "ALTER TABLE analysis_runs ADD COLUMN settings_json TEXT"),
         ("analysis_runs", "run_kind", "ALTER TABLE analysis_runs ADD COLUMN run_kind TEXT DEFAULT 'primary'"),
+        ("analysis_runs", "progress_pct", "ALTER TABLE analysis_runs ADD COLUMN progress_pct REAL DEFAULT 0"),
+        ("analysis_runs", "progress_step", "ALTER TABLE analysis_runs ADD COLUMN progress_step TEXT"),
         ("events", "source_video",   "ALTER TABLE events ADD COLUMN source_video TEXT"),
         ("events", "source_frame",   "ALTER TABLE events ADD COLUMN source_frame INTEGER"),
         ("events", "human_verified", "ALTER TABLE events ADD COLUMN human_verified INTEGER NOT NULL DEFAULT 0"),
@@ -1922,6 +2326,7 @@ def _ensure_migration_columns(db):
         ("scheduled_games", "jv_game_time", "ALTER TABLE scheduled_games ADD COLUMN jv_game_time TIME"),
         ("scheduled_games", "frosh_game_time", "ALTER TABLE scheduled_games ADD COLUMN frosh_game_time TIME"),
         ("scheduled_games", "team", "ALTER TABLE scheduled_games ADD COLUMN team TEXT NOT NULL DEFAULT 'boys_hs'"),
+        ("seasons", "season_type", "ALTER TABLE seasons ADD COLUMN season_type TEXT NOT NULL DEFAULT 'regular'"),
         ("practice_plan_items", "sort_order", "ALTER TABLE practice_plan_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"),
         ("player_development_clips", "canonical_clip_id", "ALTER TABLE player_development_clips ADD COLUMN canonical_clip_id INTEGER REFERENCES clips(id)"),
         ("player_development_clips", "relational_game_id", "ALTER TABLE player_development_clips ADD COLUMN relational_game_id INTEGER REFERENCES games(id)"),
@@ -1934,6 +2339,8 @@ def _ensure_migration_columns(db):
         ("users", "updated_at", "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP"),
         ("users", "last_login_at", "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"),
         ("detections", "player_cluster", "ALTER TABLE detections ADD COLUMN player_cluster INTEGER"),
+        ("detections", "jersey_read", "ALTER TABLE detections ADD COLUMN jersey_read INTEGER"),
+        ("detections", "jersey_confidence", "ALTER TABLE detections ADD COLUMN jersey_confidence REAL"),
     ]
     existing = {
         (row[1], row[2]): True
@@ -1978,6 +2385,10 @@ SCHEDULE_STATUS_OPTIONS = [
     ("cancelled", "Cancelled"),
     ("rescheduled", "Rescheduled"),
     ("completed", "Completed"),
+]
+SEASON_TYPE_OPTIONS = [
+    ("regular", "Regular Season"),
+    ("summer", "Summer Program"),
 ]
 SCHEDULE_TEAM_OPTIONS = [
     ("boys_hs", "Boys High School"),
@@ -2114,6 +2525,7 @@ def render_schedule_page(
         "name": edit_season["name"] if edit_season else "",
         "start_date": edit_season["start_date"] if edit_season else "",
         "end_date": edit_season["end_date"] if edit_season else "",
+        "season_type": (edit_season["season_type"] if edit_season else "regular") or "regular",
     }
 
     return render_template(
@@ -2132,6 +2544,7 @@ def render_schedule_page(
         location_options=SCHEDULE_LOCATION_OPTIONS,
         status_options=SCHEDULE_STATUS_OPTIONS,
         team_options=SCHEDULE_TEAM_OPTIONS,
+        season_type_options=SEASON_TYPE_OPTIONS,
     )
 
 

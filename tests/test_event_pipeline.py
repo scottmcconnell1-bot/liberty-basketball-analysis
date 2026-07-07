@@ -378,3 +378,61 @@ def test_persist_events_legacy_fallback_works_when_relational_game_id_absent():
     finally:
         os.unlink(db_path)
 
+
+def test_classify_all_shots_uses_detection_filter(tmp_path):
+    import film_analysis
+
+    db_path = tmp_path / "shots.db"
+    conn = sqlite3.connect(db_path)
+    conn.executescript("""
+        CREATE TABLE events (
+            id INTEGER PRIMARY KEY,
+            game_id TEXT,
+            player TEXT,
+            event_type TEXT,
+            shot_result TEXT,
+            timestamp_ms INTEGER,
+            details_json TEXT
+        );
+        CREATE TABLE detections (
+            id INTEGER PRIMARY KEY,
+            game_id TEXT,
+            relational_game_id INTEGER,
+            frame_number INTEGER,
+            timestamp_ms INTEGER,
+            object_class TEXT,
+            x_center REAL,
+            y_center REAL,
+            player_cluster INTEGER
+        );
+        CREATE TABLE shot_classifications (
+            event_id INTEGER,
+            game_id TEXT,
+            relational_game_id INTEGER,
+            tracker_id TEXT,
+            shot_type TEXT,
+            shot_result TEXT,
+            court_x REAL,
+            court_y REAL,
+            confidence REAL,
+            timestamp_ms INTEGER
+        );
+    """)
+    conn.execute(
+        """INSERT INTO events (game_id, player, event_type, shot_result, timestamp_ms, details_json)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("game1", "3", "make", "made", 1000, '{"peak_frame": 10}'),
+    )
+    conn.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, x_center, y_center, player_cluster)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("game1", 10, 1000, "person", 960, 540, 3),
+    )
+    conn.commit()
+
+    results = film_analysis.classify_all_shots(conn, "game1", video_width=1920, video_height=1080)
+    assert len(results) == 1
+    assert results[0]["shot_type"] in {"2pt", "3pt", "ft"}
+    conn.close()
+

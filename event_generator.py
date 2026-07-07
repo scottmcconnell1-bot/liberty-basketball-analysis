@@ -647,6 +647,16 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     return events
 
 
+def _lookup_event_type_id(conn, event_type):
+    if not event_type:
+        return None
+    row = conn.execute(
+        "SELECT id FROM event_types WHERE lower(code) = lower(?)",
+        (event_type,),
+    ).fetchone()
+    return row["id"] if row else None
+
+
 def persist_events(conn, game_id, events, relational_game_id=None):
     if relational_game_id is not None:
         # Delete unverified events that are either linked to the relational game_id
@@ -674,17 +684,19 @@ def persist_events(conn, game_id, events, relational_game_id=None):
 
     cur = conn.cursor()
     for ev in events:
+        event_type_id = _lookup_event_type_id(conn, ev["event_type"])
         cur.execute(
             """
             INSERT INTO events
-               (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               (game_id, relational_game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json, confidence, source_type)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai')
             """,
             (
                 ev["game_id"],
                 relational_game_id,
                 ev.get("player"),
                 ev["event_type"],
+                event_type_id,
                 ev.get("shot_result"),
                 ev["timestamp_ms"],
                 ev.get("details_json"),

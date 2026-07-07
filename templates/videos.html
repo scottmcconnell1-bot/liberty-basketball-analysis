@@ -14,6 +14,7 @@
   <strong>ℹ️ How it works:</strong>
   Each upload gets a unique timestamped filename so you can re-upload the same game multiple times.
   Duplicates are flagged automatically. Click <em>Open in Film Tool</em> to tag events or view AI detections.
+  Use <em>✂️ Trim</em> to cut NFHS padding (previous game, warmups, empty gym) before analysis.
   Use the 🗑 button on any row to permanently delete a video and its analysis data.
 </div>
 
@@ -79,9 +80,14 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
-function statusBadge(status) {
+function statusBadge(status, detectionCount, errorMessage) {
+  if (status === 'completed' && (detectionCount ?? 0) === 0) {
+    const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
+    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
+  }
   const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
-  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;">${s.label}</span>`;
+  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
 }
 
 function formatBytes(b) {
@@ -191,14 +197,17 @@ async function loadVideos() {
       <td>${escHtml(v.opponent || '—')}</td>
       <td style="white-space:nowrap;">${formatDate(v.upload_timestamp)}</td>
       <td>${formatBytes(v.file_size_bytes)}</td>
-      <td>${statusBadge(v.analysis_status || 'not_started')}</td>
+      <td>${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message)}</td>
       <td style="text-align:center;">${v.detection_count ?? 0}</td>
       <td style="text-align:center;">${v.event_count ?? 0}</td>
       <td style="text-align:center;">${v.analysis_run_count ?? 0}</td>
       <td style="white-space:nowrap;">
-        <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
-        <a href="/analysis/${encodeURIComponent(v.game_id || '')}" class="btn btn-secondary btn-sm" style="margin-left:6px;">📊 Results</a>
+        <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Open in Film Tool</a>
+        <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm" style="margin-left:6px;">📊 Results</a>
+        ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">🔄 Rebuild Events</button>` : ''}
+        <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm" style="margin-left:6px;">✂️ Trim</a>
         <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm" style="margin-left:6px;">Compare AI</a>
+        <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" style="margin-left:6px;" target="_blank" rel="noopener">🔍 Debug</a>
         <button class="btn btn-danger btn-sm" style="margin-left:6px;"
           onclick="confirmDelete(${v.id}, '${escHtml(v.original_filename).replace(/'/g,"\\'")}')">🗑</button>
       </td>
@@ -211,5 +220,18 @@ async function loadVideos() {
 
 loadVideos();
 setInterval(loadVideos, 10000);
+
+async function regenerateEvents(videoId) {
+  if (!confirm('Rebuild events from existing detections? This is much faster than re-running full AI.')) return;
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
+    alert(data.message || 'Events regenerated.');
+    loadVideos();
+  } catch (err) {
+    alert('Could not regenerate events: ' + err.message);
+  }
+}
 </script>
 {% endblock %}

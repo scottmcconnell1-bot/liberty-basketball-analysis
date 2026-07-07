@@ -15,6 +15,13 @@ AI_DEFAULTS = {
     "detection_stride": 1,
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
+    "tracker_backend": "bytetrack",
+    "jersey_ocr_enabled": True,
+    "jersey_ocr_stride": 5,
+    "jersey_ocr_min_confidence": 0.55,
+    "auto_apply_jersey_mapping": True,
+    "identity_auto_apply_min_confidence": 0.70,
+    "identity_auto_apply_min_samples": 8,
     "llm_provider": "ollama",
     "llm_model": ""
 }
@@ -26,17 +33,29 @@ INT_SETTING_KEYS = {
     "ai.tracker_max_distance",
     "ai.tracker_max_frame_gap",
     "ai.ball_class_id",
+    "ai.jersey_ocr_stride",
+    "ai.identity_auto_apply_min_samples",
+}
+
+
+BOOL_SETTING_KEYS = {
+    "ai.jersey_ocr_enabled",
+    "ai.auto_apply_jersey_mapping",
 }
 
 
 FLOAT_SETTING_KEYS = {
     "ai.ball_confidence",
     "ai.person_confidence",
+    "ai.jersey_ocr_min_confidence",
+    "ai.identity_auto_apply_min_confidence",
 }
 
 
 def _parse_value(key, value):
     if key.startswith(("feature.", "analysis.")):
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+    if key in BOOL_SETTING_KEYS:
         return str(value).strip().lower() in {"1", "true", "yes", "on"}
     if key in INT_SETTING_KEYS:
         try:

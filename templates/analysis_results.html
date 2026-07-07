@@ -82,7 +82,20 @@
   </div>
 
   <h1>📊 Analysis Results</h1>
-  <p class="subtitle">{{ game_id }}</p>
+  <p class="subtitle" id="resultsSubtitle">{{ game_id }}</p>
+  <div id="resultsActions" style="display:none;margin-bottom:12px;"></div>
+  <div id="identityExplainer" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;border-color:#3b2f1a;background:#1a1710;">
+    <strong>About player labels (Pos 0, Pos 3, …)</strong>
+    <p style="margin:.5rem 0 0;font-size:.9rem;color:var(--muted);line-height:1.5;">
+      Automated analysis does <em>not</em> read jersey numbers from the video.
+      <strong>Pos 0–9 are court-area clusters</strong> — the AI groups detections by where people appear on the camera view.
+      They are <strong>not</strong> roster numbers, and they are <strong>not</strong> in jersey order.
+      Minutes = time someone was detected in that court area (any player who stood there).
+      To get real names and stats, use <strong>Map court slots to jersey numbers</strong> below.
+      Match each Pos to a roster player once — the box score will update to show jersey # and name.
+    </p>
+  </div>
+  <div id="resultsSummary" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;"></div>
 
   <!-- Loading state with progress -->
   <div id="loading" class="progress-wrap">
@@ -101,6 +114,30 @@
   <div id="error" class="error" style="display:none"></div>
 
   <div id="results" style="display:none">
+    <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
+      <h2>👕 Map court slots to jersey numbers</h2>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
+        Match each <strong>Pos</strong> (court area) to a real player from your roster.
+        After you save, stats and the box score will show jersey numbers and names instead of Pos labels.
+      </p>
+      <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
+      <div style="overflow-x:auto;">
+        <table id="slot-mapping-table" style="margin-bottom:12px;">
+          <thead>
+            <tr>
+              <th>Court slot</th>
+              <th class="num">Min</th>
+              <th>Roster player</th>
+              <th>Jersey #</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="saveSlotMappingsBtn">Save mapping &amp; update stats</button>
+    </div>
+
     <div class="grid">
       <div class="card">
         <h2>📈 Event Summary</h2>
@@ -159,7 +196,53 @@
 </div>
 
 <script>
-const GAME_ID = {{ game_id|tojson }};
+let GAME_ID = {{ game_id|tojson }};
+let CURRENT_VIDEO_ID = null;
+
+function slotLabel(id, row) {
+  if (row && row.mapped_label) return row.mapped_label;
+  if (row && row.player_name && row.jersey_number != null) return '#' + row.jersey_number + ' ' + row.player_name;
+  if (row && row.name) return row.name;
+  if (row && row.jersey_number != null) return '#' + row.jersey_number;
+  if (row && row.player_name) return row.player_name;
+  if (id === null || id === undefined || id === '') return 'Unknown';
+  return 'Pos ' + id;
+}
+
+function playerDisplayName(row, pid, meta) {
+  if (row && row.player && String(row.player).charAt(0) === '#') return row.player;
+  if (row && row.player && isNaN(Number(row.player)) && !String(row.player).match(/^Pos /)) return row.player;
+  return slotLabel(pid, meta || row);
+}
+
+function slotKey(id) {
+  return String(id);
+}
+
+function renderResultsActions(videoId) {
+  const el = document.getElementById('resultsActions');
+  if (!el) return;
+  let html = '<button type="button" class="btn btn-secondary btn-sm" onclick="loadResults()">↻ Refresh results</button>';
+  if (videoId) {
+    html += ' <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateEventsFromResults(' + videoId + ')">🔄 Rebuild events</button>';
+    html += ' <a href="/videos" class="btn btn-secondary btn-sm" style="margin-left:6px;">📹 Video Library</a>';
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+async function regenerateEventsFromResults(videoId) {
+  if (!confirm('Rebuild events from saved detections? This is faster than a full AI re-run.')) return;
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
+    alert(data.message || 'Events regenerated. Refreshing results…');
+    loadResults();
+  } catch (err) {
+    alert('Could not regenerate events: ' + err.message);
+  }
+}
 
 function setStep(id, status) {
   const el = document.getElementById(id);
@@ -176,12 +259,79 @@ function setProgress(pct, text) {
 
 async function loadResults() {
   try {
+    setProgress(10, 'Checking analysis status…');
+    const statusResp = await fetch('/api/analysis_status/' + encodeURIComponent(GAME_ID));
+    const statusData = statusResp.ok ? await statusResp.json() : null;
+    if (statusData && statusData.analysis_key && statusData.analysis_key !== GAME_ID) {
+      GAME_ID = statusData.analysis_key;
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID;
+    }
+    if (statusData && (statusData.status === 'running' || statusData.status === 'pending')) {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('results').style.display = 'none';
+      pollAnalysisProgress();
+      return;
+    }
+    if (statusData && statusData.status === 'failed') {
+      throw new Error(statusData.error_message || 'AI analysis failed');
+    }
+    if (statusData && statusData.status === 'completed' && (statusData.detection_count ?? 0) === 0) {
+      document.getElementById('loading').style.display = 'none';
+      const el = document.getElementById('error');
+      el.style.display = 'block';
+      el.innerHTML = 'AI analysis finished but found <strong>no detections</strong>. '
+        + 'Open the video in <a href="/film">Film Tool</a> to confirm it plays, then click '
+        + '<strong>Run AI Analysis</strong> again on the trimmed clip. '
+        + (statusData.error_message ? '<br><br>Server message: ' + escapeHtml(statusData.error_message) : '');
+      return;
+    }
+    if (statusData && statusData.status === 'completed' && (statusData.event_count ?? 0) === 0 && (statusData.detection_count ?? 0) > 0) {
+      document.getElementById('loading').style.display = 'none';
+      const el = document.getElementById('error');
+      el.style.display = 'block';
+      el.innerHTML = 'AI found <strong>' + (statusData.detection_count || 0).toLocaleString() + ' detections</strong> '
+        + 'but generated <strong>0 events</strong>. Try running analysis again, or open Film Tool to tag manually.';
+      return;
+    }
+
     setProgress(20, 'Fetching analysis data…');
     setStep('step-fetch', 'active');
 
     const resp = await fetch('/api/analysis/' + GAME_ID);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (data.analysis_key && data.analysis_key !== GAME_ID) {
+      GAME_ID = data.analysis_key;
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID;
+    }
+
+    if (data.video_id) CURRENT_VIDEO_ID = data.video_id;
+    renderResultsActions(CURRENT_VIDEO_ID);
+
+    const explainer = document.getElementById('identityExplainer');
+    if (explainer) explainer.style.display = 'block';
+
+    const summary = document.getElementById('resultsSummary');
+    if (summary) {
+      const det = data.detection_count ?? 0;
+      const evt = data.event_count ?? 0;
+      summary.style.display = 'block';
+      let html = '<strong>Analysis summary:</strong> '
+        + det.toLocaleString() + ' detections, '
+        + evt.toLocaleString() + ' events. ';
+      html += 'Stats below are grouped by court slot (Pos 0–9), not jersey number. ';
+      html += 'Treat as rough estimates until you review events in Film Tool.';
+      if (Array.isArray(data.quality_notes) && data.quality_notes.length) {
+        html += '<ul style="margin:.5rem 0 0 1rem;padding:0;">';
+        data.quality_notes.forEach(function(note) {
+          html += '<li style="margin:.25rem 0;">' + escapeHtml(note) + '</li>';
+        });
+        html += '</ul>';
+      }
+      summary.innerHTML = html;
+    }
 
     setStep('step-fetch', 'done');
     setProgress(40, 'Processing events…');
@@ -226,6 +376,8 @@ async function loadResults() {
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('results').style.display = 'block';
+
+    await loadSlotMappingUI();
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
@@ -235,6 +387,30 @@ async function loadResults() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function pollAnalysisProgress() {
+  try {
+    const resp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const pct = data.progress_pct || 0;
+    const step = data.progress_step || 'Analyzing…';
+    setProgress(Math.max(5, pct), step + (pct ? ` (${Math.round(pct)}%)` : ''));
+    if (data.status === 'running' || data.status === 'pending') {
+      setTimeout(pollAnalysisProgress, 2000);
+      return;
+    }
+    if (data.status === 'failed') {
+      throw new Error(data.error_message || 'AI analysis failed');
+    }
+    loadResults();
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error');
+    el.style.display = 'block';
+    el.textContent = 'Error loading analysis: ' + err.message;
+  }
+}
 
 function renderEventSummary(events) {
   const el = document.getElementById('event-summary');
@@ -289,60 +465,76 @@ function renderMinutesSummary(minutes) {
     el.innerHTML = '<p style="color:var(--muted)">No minutes data yet</p>';
     return;
   }
-  let html = '<table><thead><tr><th>Player</th><th class="num">Min</th></tr></thead><tbody>';
-  minutes.slice(0, 8).forEach(function(row) {
-    const label = row.name || ('Pos ' + row.tracker_id);
+  const sorted = minutes.slice().sort(function(a, b) {
+    return (b.minutes_played || 0) - (a.minutes_played || 0);
+  });
+  let html = '<table><thead><tr><th>Court slot</th><th class="num">Min</th></tr></thead><tbody>';
+  sorted.slice(0, 8).forEach(function(row) {
+    const label = slotLabel(row.tracker_id, row);
     html += '<tr><td><strong>' + escapeHtml(label) + '</strong></td>';
     html += '<td class="num">' + (row.minutes_played != null ? row.minutes_played.toFixed(1) : '-') + '</td></tr>';
   });
   html += '</tbody></table>';
-  if (minutes.length > 8) {
-    html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:8px;">+' + (minutes.length - 8) + ' more players</p>';
+  if (sorted.length > 8) {
+    html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:8px;">+' + (sorted.length - 8) + ' more slots</p>';
   }
   el.innerHTML = html;
 }
 
 function renderBoxScore(basic, enhanced) {
   const tbody = document.querySelector('#box-score tbody');
-  const minutes = {};
-  (enhanced.minutes || []).forEach(function(m) { minutes[m.tracker_id] = (m.minutes_played || 0).toFixed(1); });
+  const minutesBySlot = {};
+  const namesBySlot = {};
+  (enhanced.minutes || []).forEach(function(m) {
+    const key = slotKey(m.tracker_id);
+    minutesBySlot[key] = (m.minutes_played || 0).toFixed(1);
+    namesBySlot[key] = m;
+  });
   const shots = {};
   (enhanced.shot_breakdown || []).forEach(function(s) {
-    if (!shots[s.tracker_id]) shots[s.tracker_id] = {};
-    shots[s.tracker_id][s.shot_type + '_' + s.shot_result] = s.cnt;
+    const key = slotKey(s.tracker_id);
+    if (!shots[key]) shots[key] = {};
+    shots[key][s.shot_type + '_' + s.shot_result] = s.cnt;
   });
 
   if (!basic.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No box score data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted)">No box score data</td></tr>';
     return;
   }
 
+  const rows = basic.slice().map(function(row) {
+    const pid = slotKey(row.player || row.tracker_id);
+    const minVal = parseFloat(minutesBySlot[pid] || row.minutes || 0) || 0;
+    return { row: row, pid: pid, minVal: minVal };
+  }).sort(function(a, b) { return b.minVal - a.minVal; });
+
   let html = '';
-  for (var i = 0; i < basic.length; i++) {
-    var row = basic[i];
-    var pid = row.player || row.tracker_id;
-    var name = row.name || ('Player ' + pid);
-    var min = minutes[pid] || '0';
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i].row;
+    var pid = rows[i].pid;
+    var meta = namesBySlot[pid] || row;
+    var name = playerDisplayName(row, pid, meta);
+    var min = minutesBySlot[pid] || row.minutes || '0';
     var s = shots[pid] || {};
-    var fgm = (s['2pt_make'] || 0) + (s['3pt_make'] || 0);
-    var fga = fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0);
-    var tpm = s['3pt_make'] || 0;
-    var tpa = tpm + (s['3pt_miss'] || 0);
+    var fgm = row.fgm != null ? row.fgm : ((s['2pt_make'] || 0) + (s['3pt_make'] || 0));
+    var fga = row.fga != null ? row.fga : (fgm + (s['2pt_miss'] || 0) + (s['3pt_miss'] || 0));
+    var tpm = row.threes_made != null ? row.threes_made : (s['3pt_make'] || 0);
+    var tpa = row.threes_att != null ? row.threes_att : (tpm + (s['3pt_miss'] || 0));
     var ftm = s['ft_make'] || 0;
     var fta = ftm + (s['ft_miss'] || 0);
-    var pts = (s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0);
+    var pts = row.pts != null ? row.pts : ((s['2pt_make'] || 0) * 2 + (s['3pt_make'] || 0) * 3 + (s['ft_make'] || 0));
 
-    html += '<tr><td><strong>' + name + '</strong></td>';
+    html += '<tr><td><strong>' + escapeHtml(name) + '</strong></td>';
     html += '<td class="num">' + min + '</td>';
     html += '<td class="num"><strong>' + pts + '</strong></td>';
     html += '<td class="num">' + fgm + '/' + fga + '</td>';
     html += '<td class="num">' + tpm + '/' + tpa + '</td>';
     html += '<td class="num">' + ftm + '/' + fta + '</td>';
-    html += '<td class="num">' + (row.rebounds || 0) + '</td>';
-    html += '<td class="num">' + (row.assists || 0) + '</td>';
-    html += '<td class="num">' + (row.steals || 0) + '</td>';
-    html += '<td class="num">' + (row.blocks || 0) + '</td>';
-    html += '<td class="num">' + (row.turnovers || 0) + '</td>';
+    html += '<td class="num">' + (row.reb != null ? row.reb : (row.rebounds || 0)) + '</td>';
+    html += '<td class="num">' + (row.ast != null ? row.ast : (row.assists || 0)) + '</td>';
+    html += '<td class="num">' + (row.stl != null ? row.stl : (row.steals || 0)) + '</td>';
+    html += '<td class="num">' + (row.blk != null ? row.blk : (row.blocks || 0)) + '</td>';
+    html += '<td class="num">' + (row.tov != null ? row.tov : (row.turnovers || 0)) + '</td>';
     html += '<td class="num">' + (row.fouls || 0) + '</td></tr>';
   }
   tbody.innerHTML = html;
@@ -354,14 +546,23 @@ function renderShotBreakdown(shots) {
 
   const players = {};
   shots.forEach(function(s) {
-    if (!players[s.tracker_id]) players[s.tracker_id] = { '2pt': { make: 0, miss: 0 }, '3pt': { make: 0, miss: 0 }, 'ft': { make: 0, miss: 0 } };
-    if (players[s.tracker_id][s.shot_type]) players[s.tracker_id][s.shot_type][s.shot_result] = s.cnt;
+    const key = slotKey(s.tracker_id);
+    if (!players[key]) {
+      players[key] = {
+        tracker_id: s.tracker_id,
+        '2pt': { make: 0, miss: 0 },
+        '3pt': { make: 0, miss: 0 },
+        'ft': { make: 0, miss: 0 },
+      };
+    }
+    if (players[key][s.shot_type]) players[key][s.shot_type][s.shot_result] = s.cnt;
   });
 
   const pids = Object.keys(players).sort(function(a, b) {
-    const totalA = Object.values(players[a]).reduce(function(s, v) { return s + v.make + v.miss; }, 0);
-    const totalB = Object.values(players[b]).reduce(function(s, v) { return s + v.make + v.miss; }, 0);
-    return totalB - totalA;
+    function shotTotal(data) {
+      return data['2pt'].make + data['2pt'].miss + data['3pt'].make + data['3pt'].miss + data['ft'].make + data['ft'].miss;
+    }
+    return shotTotal(players[b]) - shotTotal(players[a]);
   });
 
   let html = '';
@@ -374,7 +575,7 @@ function renderShotBreakdown(shots) {
     var fgm = data['2pt'].make + data['3pt'].make;
     var fga = t2 + t3;
     var pct = fga > 0 ? ((fgm / fga) * 100).toFixed(1) : '0.0';
-    html += '<tr><td>Player ' + pid + '</td>';
+    html += '<tr><td>' + escapeHtml(slotLabel(data.tracker_id, data)) + '</td>';
     html += '<td class="num"><span class="badge badge-2pt">' + data['2pt'].make + '/' + t2 + '</span></td>';
     html += '<td class="num"><span class="badge badge-3pt">' + data['3pt'].make + '/' + t3 + '</span></td>';
     html += '<td class="num"><span class="badge badge-ft">' + data['ft'].make + '/' + tft + '</span></td>';
@@ -390,7 +591,7 @@ function renderPlayerEffect(effects) {
   let html = '';
   effects.forEach(function(e) {
     var ortgClass = e.ortg && e.ortg > 100 ? 'pos' : e.ortg && e.ortg < 80 ? 'neg' : '';
-    html += '<tr><td>' + (e.name || ('Player ' + e.tracker_id)) + '</td>';
+    html += '<tr><td>' + escapeHtml(slotLabel(e.tracker_id, e)) + '</td>';
     html += '<td class="num">' + (e.possessions || 0) + '</td>';
     html += '<td class="num">' + (e.points_scored || 0) + '</td>';
     html += '<td class="num">' + (e.ortg != null && e.possessions >= 10 ? (e.points_scored / e.possessions).toFixed(2) : '-') + '</td>';
@@ -420,6 +621,113 @@ function formatTime(ms) {
   return m + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
+let ROSTER_PLAYERS = [];
+let COURT_SLOTS = [];
+
+function renderSlotMappingTable() {
+  const tbody = document.querySelector('#slot-mapping-table tbody');
+  if (!tbody) return;
+  if (!COURT_SLOTS.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No court slots found for this game.</td></tr>';
+    return;
+  }
+
+  let rosterOptions = '<option value="">— Select roster player —</option>';
+  ROSTER_PLAYERS.forEach(function(p) {
+    const label = (p.jersey_number != null ? '#' + p.jersey_number + ' ' : '') + (p.name || 'Player');
+    rosterOptions += '<option value="' + p.id + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + escapeHtml(p.name || '') + '">' + escapeHtml(label) + '</option>';
+  });
+
+  let html = '';
+  COURT_SLOTS.forEach(function(slot) {
+    html += '<tr data-tracker-id="' + slot.tracker_id + '">';
+    html += '<td><strong>Pos ' + slot.tracker_id + '</strong></td>';
+    html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
+    html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
+    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + (slot.jersey_number ?? '') + '"></td>';
+    html += '<td><input class="slot-name" type="text" style="min-width:140px" value="' + escapeHtml(slot.player_name || '') + '"></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+
+  tbody.querySelectorAll('.slot-roster').forEach(function(select) {
+    select.addEventListener('change', function() {
+      const opt = select.selectedOptions[0];
+      if (!opt || !opt.value) return;
+      const tr = select.closest('tr');
+      tr.querySelector('.slot-jersey').value = opt.dataset.jersey || '';
+      tr.querySelector('.slot-name').value = opt.dataset.name || '';
+    });
+  });
+}
+
+async function loadSlotMappingUI() {
+  try {
+    const [slotsResp, rosterResp] = await Promise.all([
+      fetch('/api/court-slots/' + encodeURIComponent(GAME_ID)),
+      fetch('/api/players'),
+    ]);
+    if (!slotsResp.ok) return;
+    const slotsData = await slotsResp.json();
+    COURT_SLOTS = slotsData.slots || [];
+    if (rosterResp.ok) ROSTER_PLAYERS = await rosterResp.json();
+    renderSlotMappingTable();
+  } catch (err) {
+    console.warn('Slot mapping load failed', err);
+  }
+}
+
+async function saveSlotMappings() {
+  const status = document.getElementById('slot-mapping-status');
+  const mappings = [];
+  document.querySelectorAll('#slot-mapping-table tbody tr[data-tracker-id]').forEach(function(tr) {
+    const jersey = tr.querySelector('.slot-jersey').value;
+    const name = tr.querySelector('.slot-name').value.trim();
+    const playerId = tr.querySelector('.slot-roster').value;
+    if (!jersey && !name && !playerId) return;
+    mappings.push({
+      tracker_id: parseInt(tr.dataset.trackerId, 10),
+      jersey_number: jersey ? parseInt(jersey, 10) : null,
+      player_name: name || null,
+      player_id: playerId ? parseInt(playerId, 10) : null,
+    });
+  });
+
+  if (!mappings.length) {
+    alert('Assign at least one court slot to a jersey number or player name.');
+    return;
+  }
+
+  try {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--muted)';
+      status.textContent = 'Saving mapping and updating stats…';
+    }
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings: mappings, apply_to_events: true }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Save failed');
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.textContent = 'Mapping saved. Refreshing stats…';
+    }
+    await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not save mapping: ' + err.message;
+    } else {
+      alert('Could not save mapping: ' + err.message);
+    }
+  }
+}
+
+document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlotMappings);
 loadResults();
 </script>
 {% endblock %}

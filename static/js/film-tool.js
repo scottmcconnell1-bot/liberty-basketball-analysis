@@ -1248,20 +1248,88 @@ function undoLastRow() {
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
-function initAnalysisStatus() {
+function showRunAnalysisProgress(pct, step, status, elapsedSec) {
+    const runBar = document.getElementById('runAnalysisBar');
+    const idleRow = document.getElementById('runAnalysisIdleRow');
+    const progressBlock = document.getElementById('runAnalysisProgressBlock');
+    const btn = document.getElementById('runAnalysisBtn');
+    const bar = document.getElementById('runAnalysisProgressBar');
+    const pctEl = document.getElementById('runAnalysisPct');
+    const phase = document.getElementById('runAnalysisPhase');
+    const detail = document.getElementById('runAnalysisDetail');
+    const percent = Math.max(0, Math.min(100, pct || 0));
+    const jobStatus = status || 'running';
+    const waiting = percent === 0 && (jobStatus === 'pending' || jobStatus === 'running');
     const gameId = window.FILM_TOOL_GAME_ID || '';
-    const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
+    const isRerun = String(gameId).includes('__rerun_');
+
+    if (runBar) {
+        runBar.style.display = 'flex';
+    }
+    if (idleRow) idleRow.style.display = 'none';
+    if (progressBlock) progressBlock.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+    if (bar) bar.style.width = `${percent}%`;
+    if (pctEl) pctEl.textContent = `${Math.round(percent)}%`;
+
+    let phaseText = step || 'Analyzing…';
+    if (jobStatus === 'pending') {
+        phaseText = step || 'Queued — starting AI worker…';
+    } else if (waiting) {
+        phaseText = step || 'Loading AI models…';
+    }
+    if (phase) phase.textContent = phaseText;
+
+    if (detail) {
+        const parts = [];
+        if (jobStatus === 'pending') {
+            parts.push('Waiting for the analysis worker to start on the server.');
+        } else if (waiting) {
+            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes, then the number appears.');
+        }
+        if (elapsedSec != null && waiting) {
+            const mins = Math.floor(elapsedSec / 60);
+            const secs = elapsedSec % 60;
+            parts.push(mins ? `${mins}m ${secs}s elapsed` : `${secs}s elapsed`);
+        }
+        if (isRerun) {
+            parts.push('Comparison rerun opened from Compare AI.');
+        }
+        detail.textContent = parts.join(' • ');
+    }
+}
+
+function isSupersededAnalysisError(message) {
+    if (!message) return false;
+    const lower = String(message).toLowerCase();
+    return lower.includes('replaced by new request') || lower.includes('superseded by new analysis request');
+}
+
+function applyAnalysisProgressGameId(data, currentGameId) {
+    if (data && data.analysis_key && data.analysis_key !== currentGameId) {
+        window.FILM_TOOL_GAME_ID = data.analysis_key;
+        return data.analysis_key;
+    }
+    return currentGameId;
+}
+
+function showUploadAnalysisProgress(pct, step) {
     const analysisShell = document.getElementById('analysisProgressShell');
     const analysisBar = document.getElementById('analysisProgressBar');
     const analysisPct = document.getElementById('analysisProgressPct');
     const analysisText = document.getElementById('analysisProgressText');
+    if (analysisShell) analysisShell.style.display = 'block';
+    if (analysisBar) analysisBar.style.width = `${pct || 0}%`;
+    if (analysisPct) analysisPct.textContent = `${Math.round(pct || 0)}%`;
+    if (analysisText) analysisText.textContent = step || '';
+}
 
-    function showAnalysisProgress(pct, step) {
-        if (analysisShell) analysisShell.style.display = 'block';
-        if (analysisBar) analysisBar.style.width = pct + '%';
-        if (analysisPct) analysisPct.textContent = pct + '%';
-        if (analysisText) analysisText.textContent = step || '';
-    }
+function initAnalysisStatus() {
+    const autoStatsEnabled = typeof ENABLE_AUTO_STATS_M1 !== 'undefined' ? ENABLE_AUTO_STATS_M1 : false;
+    let gameId = window.FILM_TOOL_GAME_ID || '';
+
+    let pollTimer = null;
+    let pollStartedAt = null;
 
     async function fetchAnalysisProgress() {
         if (!gameId) return;
@@ -1269,31 +1337,229 @@ function initAnalysisStatus() {
             const response = await fetch('/api/analysis_progress/' + encodeURIComponent(gameId));
             if (!response.ok) return;
             const data = await response.json();
-            if (data.status === 'running') {
-                showAnalysisProgress(data.progress_pct || 0, data.progress_step || 'Analyzing…');
-                setTimeout(fetchAnalysisProgress, 3000);
+            gameId = applyAnalysisProgressGameId(data, gameId);
+            const pct = data.progress_pct || 0;
+            const step = data.progress_step || (data.status === 'pending' ? 'Queued — starting AI worker…' : 'Loading AI models…');
+            const elapsedSec = pollStartedAt ? Math.floor((Date.now() - pollStartedAt) / 1000) : null;
+            if (data.status === 'running' || data.status === 'pending') {
+                showRunAnalysisProgress(pct, step, data.status, elapsedSec);
+                showUploadAnalysisProgress(pct, step);
+                pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
-                showAnalysisProgress(100, 'Analysis complete!');
-                setTimeout(() => { if (analysisShell) analysisShell.style.display = 'none'; }, 3000);
+                pollTimer = null;
+                const detCount = data.detection_count ?? 0;
+                const evtCount = data.event_count ?? 0;
+                const completeStep = detCount === 0
+                    ? `Analysis finished but found 0 detections (${evtCount} events). Check Debug on Video Library or run again on the trimmed clip.`
+                    : 'Analysis complete!';
+                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec);
+                showUploadAnalysisProgress(100, completeStep);
+                const runDetail = document.getElementById('runAnalysisDetail');
+                if (runDetail && window.FILM_TOOL_VIDEO_ID) {
+                    const debugUrl = `/api/videos/${window.FILM_TOOL_VIDEO_ID}/analysis-debug`;
+                    runDetail.innerHTML = detCount === 0
+                        ? `No detections written. <a href="${debugUrl}" target="_blank" rel="noopener">Open debug info</a>`
+                        : `${detCount} detections, ${evtCount} events. <a href="${debugUrl}" target="_blank" rel="noopener">Debug</a>`;
+                }
+                setTimeout(() => {
+                    const analysisShell = document.getElementById('analysisProgressShell');
+                    if (analysisShell) analysisShell.style.display = 'none';
+                    if (typeof window.updateRunAnalysisBar === 'function') {
+                        window.updateRunAnalysisBar('completed');
+                    }
+                }, 3000);
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
-                showAnalysisProgress(0, 'Analysis failed');
+                pollTimer = null;
+                if (isSupersededAnalysisError(data.error_message)) {
+                    window.startAnalysisProgressPolling(gameId);
+                    return;
+                }
+                const failStep = data.error_message || data.progress_step || 'Analysis failed';
+                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec);
+                if (typeof window.updateRunAnalysisBar === 'function') {
+                    window.updateRunAnalysisBar('failed');
+                }
+                const runBar = document.getElementById('runAnalysisBar');
+                const detail = document.getElementById('runAnalysisDetail');
+                if (detail) {
+                    let msg = failStep;
+                    if (data.log_path) msg += ` Log: ${data.log_path}`;
+                    detail.textContent = msg;
+                }
+                if (runBar) runBar.style.display = 'flex';
+            } else if (data.status === 'cancelled') {
+                pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else {
-                // pending or not_started — keep polling
-                if (data.status === 'pending') showAnalysisProgress(0, 'Waiting to start…');
-                setTimeout(fetchAnalysisProgress, 5000);
+                pollTimer = setTimeout(fetchAnalysisProgress, 5000);
             }
         } catch (err) {
             console.error('Error fetching analysis progress:', err);
-            setTimeout(fetchAnalysisProgress, 10000);
+            pollTimer = setTimeout(fetchAnalysisProgress, 10000);
         }
     }
 
-    window.addEventListener('load', () => {
-        if (!autoStatsEnabled) return;
-        if (gameId) {
-            showAnalysisProgress(0, 'Checking analysis status…');
-            fetchAnalysisProgress();
+    window.startAnalysisProgressPolling = function (newGameId) {
+        if (newGameId) {
+            gameId = newGameId;
+            window.FILM_TOOL_GAME_ID = newGameId;
+        }
+        if (!autoStatsEnabled || !gameId) return;
+        if (pollTimer) {
+            clearTimeout(pollTimer);
+            pollTimer = null;
+        }
+        pollStartedAt = Date.now();
+        showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
+        showUploadAnalysisProgress(0, 'Starting AI analysis…');
+        fetchAnalysisProgress();
+    };
+
+    if (autoStatsEnabled && gameId) {
+        fetch('/api/analysis_progress/' + encodeURIComponent(gameId))
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const resolvedGameId = applyAnalysisProgressGameId(data, gameId);
+                if (data.status === 'running' || data.status === 'pending') {
+                    window.startAnalysisProgressPolling(resolvedGameId);
+                } else if (data.status === 'failed' && !isSupersededAnalysisError(data.error_message) && typeof window.updateRunAnalysisBar === 'function') {
+                    window.updateRunAnalysisBar('failed');
+                }
+            })
+            .catch(() => {});
+    }
+}
+
+function initRunAnalysis() {
+    const videoId = window.FILM_TOOL_VIDEO_ID;
+    const autoStatsEnabled = window.ENABLE_AUTO_STATS_M1;
+    const bar = document.getElementById('runAnalysisBar');
+    const btn = document.getElementById('runAnalysisBtn');
+    const statusEl = document.getElementById('runAnalysisStatus');
+    const idleRow = document.getElementById('runAnalysisIdleRow');
+    const progressBlock = document.getElementById('runAnalysisProgressBlock');
+    if (!autoStatsEnabled || !videoId || !bar || !btn) return;
+
+    const aiAvailable = window.FILM_TOOL_AI_AVAILABLE !== false && String(window.FILM_TOOL_AI_AVAILABLE) !== 'false';
+    let analysisStatus = window.FILM_TOOL_ANALYSIS_STATUS || 'not_started';
+
+    function updateRunAnalysisBar(status) {
+        analysisStatus = status || analysisStatus;
+        if (!aiAvailable) {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = 'none';
+            fetch('/api/ai/runtime')
+                .then(r => r.ok ? r.json() : null)
+                .then(info => {
+                    if (!statusEl || !info) return;
+                    let html = '<span style="color:#dc2626;">❌ AI is not available in the Python that runs this server.</span><br>';
+                    html += '<span class="tiny">Python: <code>' + (info.python_executable || '?') + '</code> (' + (info.python_version || '?') + ')</span><br>';
+                    html += '<span class="tiny">cv2=' + info.cv2 + ', ultralytics=' + info.ultralytics + ', torch=' + info.torch + '</span><br>';
+                    html += '<span class="tiny">Activate .venv with Python 3.12, run <code>scripts\\install_ai_deps.ps1</code>, restart the app.</span>';
+                    statusEl.innerHTML = html;
+                })
+                .catch(() => {
+                    if (statusEl) {
+                        statusEl.textContent = 'AI packages are not installed. See Settings → Runtime.';
+                    }
+                });
+            return;
+        }
+        if (analysisStatus === 'running') {
+            if (typeof window.startAnalysisProgressPolling === 'function') {
+                window.startAnalysisProgressPolling(window.FILM_TOOL_GAME_ID);
+            } else {
+                showRunAnalysisProgress(0, 'AI analysis in progress…', 'running', 0);
+            }
+            return;
+        }
+        if (analysisStatus === 'pending') {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = '';
+            btn.disabled = false;
+            btn.textContent = '🤖 Run AI Analysis';
+            if (statusEl) {
+                statusEl.textContent = 'Click Run AI Analysis below to start. (A previous attempt was queued but never started.)';
+            }
+            fetch('/api/analysis_progress/' + encodeURIComponent(window.FILM_TOOL_GAME_ID || ''))
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    const resolvedGameId = applyAnalysisProgressGameId(data, window.FILM_TOOL_GAME_ID || '');
+                    if (data.status === 'running' || data.status === 'pending') {
+                        window.startAnalysisProgressPolling(resolvedGameId);
+                    } else if (data.status === 'failed' && !isSupersededAnalysisError(data.error_message)) {
+                        updateRunAnalysisBar('failed');
+                        if (statusEl && data.error_message) {
+                            statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
+                        }
+                    }
+                })
+                .catch(() => {});
+            return;
+        }
+        if (analysisStatus === 'completed') {
+            bar.style.display = 'none';
+            return;
+        }
+        if (analysisStatus === 'failed') {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = '';
+            btn.disabled = false;
+            btn.textContent = '🔄 Retry AI Analysis';
+            if (statusEl) statusEl.textContent = 'Previous analysis failed. Click Retry below.';
+            fetch('/api/analysis_progress/' + encodeURIComponent(window.FILM_TOOL_GAME_ID || ''))
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.error_message && !isSupersededAnalysisError(data.error_message) && statusEl) {
+                        statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + data.error_message + '</span>';
+                    }
+                })
+                .catch(() => {});
+            return;
+        }
+        bar.style.display = 'flex';
+        if (idleRow) idleRow.style.display = 'flex';
+        if (progressBlock) progressBlock.style.display = 'none';
+        btn.style.display = '';
+        btn.disabled = false;
+        btn.textContent = analysisStatus === 'failed' ? '🔄 Retry AI Analysis' : '🤖 Run AI Analysis';
+        if (statusEl) {
+            statusEl.textContent = analysisStatus === 'failed'
+                ? 'Previous analysis failed. You can try again.'
+                : 'AI analysis has not been run for this video yet.';
+        }
+    }
+
+    window.updateRunAnalysisBar = updateRunAnalysisBar;
+    updateRunAnalysisBar(analysisStatus);
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
+        try {
+            const resp = await fetch('/api/videos/' + encodeURIComponent(videoId) + '/analyze', { method: 'POST' });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
+            if (data.game_id) window.FILM_TOOL_GAME_ID = data.game_id;
+            setStatus(data.message || 'AI analysis started.');
+            if (typeof window.startAnalysisProgressPolling === 'function') {
+                window.startAnalysisProgressPolling(data.game_id || window.FILM_TOOL_GAME_ID);
+            }
+        } catch (err) {
+            if (progressBlock) progressBlock.style.display = 'none';
+            if (idleRow) idleRow.style.display = 'flex';
+            btn.style.display = '';
+            btn.disabled = false;
+            if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + err.message + '</span>';
+            setStatus('Analysis did not start: ' + err.message);
         }
     });
 }
@@ -1458,87 +1724,19 @@ function initAiUpload() {
         const sizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2);
         let msg = `Selected: ${sizeMB} MB`;
         if (file.size > 1024 * 1024 * 1024) msg += ` (${sizeGB} GB)`;
-        if (file.size > 500 * 1024 * 1024) {
-            msg += ' — will be compressed before upload';
+        if (file.size > 40 * 1024 * 1024) {
+            msg += ' — will upload in chunks';
         }
         fileSizeInfo.textContent = msg;
     });
 
-    // Shared upload function
-    function uploadFile(url, useCompression) {
+    function uploadFile(url) {
         const file = fileInput?.files?.[0];
         if (!file) { uploadProgressText.textContent = 'Please select a video file first.'; return; }
 
         uploadProgressShell?.classList.add('active');
         if (uploadProgressBar) uploadProgressBar.style.width = '0%';
-
-        // Compress if file is > 500MB and compression is requested
-        if (useCompression && file.size > 500 * 1024 * 1024) {
-            compressAndUpload(file, url);
-            return;
-        }
-
         doUpload(file, url);
-    }
-
-    function compressAndUpload(originalFile, url) {
-        if (uploadProgressText) uploadProgressText.textContent = 'Compressing video… this may take a few minutes.';
-
-        // Use browser's video compression via canvas + MediaRecorder
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(originalFile);
-        video.muted = true;
-
-        video.onloadedmetadata = () => {
-            const canvas = document.createElement('canvas');
-            // Scale down to 720p max for compression
-            const maxW = 1280, maxH = 720;
-            let w = video.videoWidth, h = video.videoHeight;
-            if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-            if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-
-            const stream = canvas.captureStream(30);
-            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 2000000 });
-            const chunks = [];
-
-            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const compressedSizeMB = (blob.size / 1024 / 1024).toFixed(1);
-                const originalSizeMB = (originalFile.size / 1024 / 1024).toFixed(1);
-                if (uploadProgressText) uploadProgressText.textContent = `Compressed: ${originalSizeMB} MB → ${compressedSizeMB} MB. Uploading…`;
-                doUpload(blob, url, originalFile.name.replace(/\.[^.]+$/, '.webm'));
-            };
-
-            recorder.start();
-            video.play();
-
-            video.ontimeupdate = () => {
-                ctx.drawImage(video, 0, 0, w, h);
-                const progress = video.duration > 0 ? (video.currentTime / video.duration * 100) : 0;
-                if (uploadProgressBar) uploadProgressBar.style.width = `${progress}%`;
-                if (uploadProgressText) uploadProgressText.textContent = `Compressing… ${progress.toFixed(0)}%`;
-            };
-
-            video.onended = () => {
-                recorder.stop();
-                URL.revokeObjectURL(video.src);
-            };
-
-            video.onerror = () => {
-                // Compression failed, upload original
-                if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
-                doUpload(originalFile, url);
-            };
-        };
-
-        video.onerror = () => {
-            if (uploadProgressText) uploadProgressText.textContent = 'Compression failed, uploading original…';
-            doUpload(originalFile, url);
-        };
     }
 
     function doUpload(fileOrBlob, url, filename) {
@@ -1574,7 +1772,7 @@ function initAiUpload() {
             if (uploadProgressText) uploadProgressText.textContent = `Uploading… ${percent}% (${loadedMB} / ${totalMB} MB)`;
         });
         xhr.addEventListener('load', () => {
-            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large even after compression. Try a shorter clip.'; return; }
+            if (xhr.status === 413) { if (uploadProgressText) uploadProgressText.textContent = 'File too large for server upload limit. Try a shorter clip or raise the server limit.'; return; }
             if (xhr.status < 200 || xhr.status >= 300) { if (uploadProgressText) uploadProgressText.textContent = `Upload failed (HTTP ${xhr.status}). Please try again.`; return; }
             const payload = JSON.parse(xhr.responseText);
             if (uploadProgressBar) uploadProgressBar.style.width = '100%';
@@ -1589,6 +1787,7 @@ function initAiUpload() {
     function doChunkedUpload(file, url, filename, opponent, chunkSize) {
         const totalChunks = Math.ceil(file.size / chunkSize);
         const uploadId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        const uploadMode = url.includes('upload_only') ? 'tag_only' : 'analyze';
         let bytesUploaded = 0;
         let failed = false;
 
@@ -1609,6 +1808,7 @@ function initAiUpload() {
             formData.append('total_chunks', totalChunks);
             formData.append('filename', filename);
             formData.append('opponent', opponent);
+            formData.append('upload_mode', uploadMode);
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/upload_chunk');
@@ -1659,10 +1859,10 @@ function initAiUpload() {
 
     // Button handlers
     document.getElementById('uploadTagBtn')?.addEventListener('click', () => {
-        uploadFile('/upload_only', true);
+        uploadFile('/upload_only');
     });
     document.getElementById('uploadAiBtn')?.addEventListener('click', () => {
-        uploadFile('/upload', true);
+        uploadFile('/upload');
     });
 }
 
@@ -1808,6 +2008,10 @@ function init() {
       this.classList.toggle('open');
       document.getElementById('ftAiUploadBody').classList.toggle('open');
     });
+    document.getElementById('ftNfhsToggle')?.addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('ftNfhsBody').classList.toggle('open');
+    });
     document.getElementById('ftGameInfoToggle')?.addEventListener('click', function() {
       this.classList.toggle('open');
       document.getElementById('ftGameInfoBody').classList.toggle('open');
@@ -1826,6 +2030,18 @@ function init() {
     initResourceMonitor();
     initReportDrawer();
     initAiUpload();
+    initAnalysisStatus();
+    initRunAnalysis();
+    if (window.ENABLE_AUTO_STATS_M1 && typeof initNfhsDownload === 'function') {
+      initNfhsDownload({
+        prefix: 'ft-nfhs-',
+        onDownloadComplete(result) {
+          if (result.redirect_url && !result.already_saved) {
+            setStatus('NFHS film saved. Open it from the link below or reload when ready.');
+          }
+        },
+      });
+    }
     } catch (err) { console.error('Film tool init error:', err); }
 }
 

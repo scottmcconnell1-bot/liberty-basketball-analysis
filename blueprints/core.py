@@ -36,10 +36,11 @@ import sqlite3
 import subprocess
 import tempfile
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory
+from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort
 
 from helpers import (
     AI_DEFAULTS,
+    ai_runtime_available,
     build_possession_workflow_summary,
     build_player_minutes_summary,
     build_resource_status,
@@ -49,9 +50,11 @@ from helpers import (
     feature_enabled,
     get_db,
     get_runtime_settings,
+    latest_analysis_run_id_subquery,
     read_filtered_app_logs,
     render_schedule_page,
     require_feature,
+    resolve_analysis_run_for_progress,
     safe_return_path,
     append_query_params,
     save_settings,
@@ -388,6 +391,9 @@ def schedule_save_season():
     name = (form.get("name") or "").strip()
     start_date = (form.get("start_date") or "").strip()
     end_date = (form.get("end_date") or "").strip()
+    season_type = (form.get("season_type") or "regular").strip() or "regular"
+    if season_type not in ("regular", "summer"):
+        season_type = "regular"
 
     if not name or not start_date or not end_date:
         return render_schedule_page(
@@ -398,6 +404,7 @@ def schedule_save_season():
                 "name": name,
                 "start_date": start_date,
                 "end_date": end_date,
+                "season_type": season_type,
             },
         ), 400
 
@@ -405,14 +412,14 @@ def schedule_save_season():
     try:
         if season_id:
             db.execute(
-                "UPDATE seasons SET name=?, start_date=?, end_date=? WHERE id=?",
-                (name, start_date, end_date, int(season_id)),
+                "UPDATE seasons SET name=?, start_date=?, end_date=?, season_type=? WHERE id=?",
+                (name, start_date, end_date, season_type, int(season_id)),
             )
             message = "Season updated."
         else:
             db.execute(
-                "INSERT INTO seasons (name, start_date, end_date) VALUES (?,?,?)",
-                (name, start_date, end_date),
+                "INSERT INTO seasons (name, start_date, end_date, season_type) VALUES (?,?,?,?)",
+                (name, start_date, end_date, season_type),
             )
             message = "Season created."
         db.commit()
@@ -425,6 +432,7 @@ def schedule_save_season():
                 "name": name,
                 "start_date": start_date,
                 "end_date": end_date,
+                "season_type": season_type,
             },
         ), 409
 
@@ -1479,6 +1487,23 @@ def videos_page():
     return render_template("videos.html")
 
 
+@core.route("/videos/<int:vid_id>/trim")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def video_trim_page(vid_id):
+    from video_trim import ffmpeg_available
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        abort(404)
+    return render_template(
+        "video_trim.html",
+        video=dict(video),
+        video_url=url_for("core.uploaded_file", filename=video["stored_filename"]),
+        ffmpeg_available=ffmpeg_available(),
+    )
+
+
 @core.route("/review")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def review_page():
@@ -1489,20 +1514,43 @@ def review_page():
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def film(filename=None):
-    game_id = (request.args.get("game_id") or "").strip() or None
+    requested_game_id = (request.args.get("game_id") or "").strip() or None
+    game_id = requested_game_id
     shot_summary = []
     player_effect_data = []
     player_minutes_data = []
     possession_summary = None
-    if filename and not game_id:
+    video_id = None
+    analysis_status = None
+    if filename:
         db = get_db()
-        # Find the most recent analysis run for this video file
-        row = db.execute(
-            "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
-            (f"%{filename}",),
+        latest_run = latest_analysis_run_id_subquery()
+        video_row = db.execute(
+            f"""SELECT v.id, v.game_id,
+                      ar.status AS analysis_status, ar.analysis_key
+               FROM videos v
+               LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+               WHERE v.stored_filename = ?""",
+            (filename,),
         ).fetchone()
-        if row:
-            game_id = row["analysis_key"]
+        if video_row:
+            video_id = video_row["id"]
+            analysis_status = video_row["analysis_status"] or "not_started"
+            if not game_id:
+                game_id = video_row["analysis_key"] or video_row["game_id"]
+        elif not game_id:
+            row = db.execute(
+                "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
+                (f"%{filename}",),
+            ).fetchone()
+            if row:
+                game_id = row["analysis_key"]
+        if requested_game_id:
+            run_row = resolve_analysis_run_for_progress(db, requested_game_id)
+            if run_row:
+                analysis_status = run_row["status"]
+                if run_row["analysis_key"]:
+                    game_id = run_row["analysis_key"]
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)
@@ -1573,6 +1621,9 @@ def film(filename=None):
         "film_tool.html",
         filename=filename,
         game_id=game_id,
+        video_id=video_id,
+        analysis_status=analysis_status,
+        ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
         shot_summary=shot_summary,
         player_effect_data=player_effect_data,
@@ -1944,74 +1995,158 @@ TEAM_SECTIONS = [
 
 @core.route("/api/teams/schedule")
 def api_teams_schedule():
+    """Dashboard team cards: records, last game, upcoming — optionally filtered by season."""
+    import datetime as _dt
+
     db = get_db()
-    result = []
+    today = _dt.date.today().isoformat()
+    all_seasons = [
+        dict(row) for row in db.execute(
+            "SELECT id, name, start_date, end_date, season_type FROM seasons ORDER BY start_date DESC"
+        ).fetchall()
+    ]
+    active_seasons = [s for s in all_seasons if s["start_date"] <= today <= s["end_date"]]
+
+    teams = []
     for sec in TEAM_SECTIONS:
-        # Build WHERE clause for team + optional level
-        where = "WHERE sg.team = ?"
-        params = [sec["team"]]
-        if sec["level"]:
-            where += " AND sg.level = ?"
-            params.append(sec["level"])
-
-        # Overall record: count wins/losses from completed games
-        record_rows = db.execute(
-            f"""SELECT g.result, COUNT(*) as cnt
-                FROM games g
-                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-                {where} AND g.result IS NOT NULL AND g.result != ''
-                GROUP BY g.result""",
-            params,
-        ).fetchall()
-        wins = sum(r["cnt"] for r in record_rows if r["result"] == "win")
-        losses = sum(r["cnt"] for r in record_rows if r["result"] == "loss")
-
-        # Conference record: only is_conference=1
-        conf_record_rows = db.execute(
-            f"""SELECT g.result, COUNT(*) as cnt
-                FROM games g
-                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-                {where} AND g.is_conference = 1 AND g.result IS NOT NULL AND g.result != ''
-                GROUP BY g.result""",
-            params,
-        ).fetchall()
-        conf_wins = sum(r["cnt"] for r in conf_record_rows if r["result"] == "win")
-        conf_losses = sum(r["cnt"] for r in conf_record_rows if r["result"] == "loss")
-
-        # Upcoming schedule (next 5 games)
-        upcoming = db.execute(
-            f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
-                       sg.location_type, sg.status, sg.tournament_name
-                FROM scheduled_games sg
-                {where} AND sg.game_date >= date('now') AND sg.status != 'cancelled'
-                ORDER BY sg.game_date, sg.game_time
-                LIMIT 5""",
-            params,
-        ).fetchall()
-
-        # Last game played (most recent completed)
-        last_game = db.execute(
-            f"""SELECT sg.game_date, sg.opponent_name, sg.location_type,
-                       g.home_score, g.away_score, g.result
-                FROM games g
-                JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-                {where} AND g.result IS NOT NULL AND g.result != ''
-                ORDER BY sg.game_date DESC
-                LIMIT 1""",
-            params,
-        ).fetchone()
-
-        result.append({
+        team_seasons = _seasons_for_team_section(db, sec)
+        allowed_ids = {s["id"] for s in team_seasons}
+        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, allowed_ids)
+        season_id = _resolve_dashboard_season_id(
+            request, sec["key"], default_season_id, allowed_ids
+        )
+        summary = _fetch_team_dashboard_summary(db, sec, season_id)
+        selected_season = next((s for s in team_seasons if s["id"] == season_id), None) if season_id else None
+        teams.append({
             "key": sec["key"],
             "label": sec["label"],
-            "wins": wins,
-            "losses": losses,
-            "conf_wins": conf_wins,
-            "conf_losses": conf_losses,
-            "upcoming": [dict(r) for r in upcoming],
-            "last_game": dict(last_game) if last_game else None,
+            "season_id": season_id,
+            "default_season_id": default_season_id,
+            "season_name": selected_season["name"] if selected_season else None,
+            "seasons": team_seasons,
+            **summary,
         })
-    return jsonify(result)
+
+    return jsonify({
+        "active_season_count": len(active_seasons),
+        "teams": teams,
+    })
+
+
+def _seasons_for_team_section(db, sec):
+    """Seasons that have at least one scheduled game for this dashboard team card."""
+    clauses = ["sg.team = ?"]
+    params = [sec["team"]]
+    if sec["level"]:
+        clauses.append("sg.level = ?")
+        params.append(sec["level"])
+    where = " AND ".join(clauses)
+    rows = db.execute(
+        f"""SELECT DISTINCT s.id, s.name, s.start_date, s.end_date, s.season_type
+            FROM seasons s
+            JOIN scheduled_games sg ON sg.season_id = s.id
+            WHERE {where}
+            ORDER BY s.start_date DESC""",
+        params,
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _team_section_where(sec, season_id=None):
+    """Build WHERE clause and params for a dashboard team section."""
+    where = "WHERE sg.team = ?"
+    params = [sec["team"]]
+    if sec["level"]:
+        where += " AND sg.level = ?"
+        params.append(sec["level"])
+    if season_id:
+        where += " AND sg.season_id = ?"
+        params.append(season_id)
+    return where, params
+
+
+def _resolve_dashboard_season_id(request, team_key, default_season_id, allowed_season_ids=None):
+    """Read per-team season override from query string."""
+    if team_key not in request.args:
+        return default_season_id
+    raw = request.args.get(team_key)
+    if raw is None or raw == "":
+        return None
+    try:
+        season_id = int(raw)
+    except (TypeError, ValueError):
+        return default_season_id
+    if allowed_season_ids is not None and season_id not in allowed_season_ids:
+        return default_season_id
+    return season_id
+
+
+def _default_dashboard_season_id(db, sec, active_seasons, allowed_season_ids):
+    """Pick the active season for a team, or None between seasons."""
+    if not active_seasons or not allowed_season_ids:
+        return None
+    team_active = [s for s in active_seasons if s["id"] in allowed_season_ids]
+    if not team_active:
+        return None
+    team_active.sort(key=lambda s: (s["season_type"] != "regular", s["start_date"]))
+    return team_active[0]["id"]
+
+
+def _fetch_team_dashboard_summary(db, sec, season_id=None):
+    """Return wins/losses, conference record, upcoming, and last game for one team card."""
+    where, params = _team_section_where(sec, season_id)
+
+    record_rows = db.execute(
+        f"""SELECT g.result, COUNT(*) as cnt
+            FROM games g
+            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+            {where} AND g.result IS NOT NULL AND g.result != ''
+            GROUP BY g.result""",
+        params,
+    ).fetchall()
+    wins = sum(r["cnt"] for r in record_rows if r["result"] == "win")
+    losses = sum(r["cnt"] for r in record_rows if r["result"] == "loss")
+
+    conf_record_rows = db.execute(
+        f"""SELECT g.result, COUNT(*) as cnt
+            FROM games g
+            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+            {where} AND g.is_conference = 1 AND g.result IS NOT NULL AND g.result != ''
+            GROUP BY g.result""",
+        params,
+    ).fetchall()
+    conf_wins = sum(r["cnt"] for r in conf_record_rows if r["result"] == "win")
+    conf_losses = sum(r["cnt"] for r in conf_record_rows if r["result"] == "loss")
+
+    upcoming = db.execute(
+        f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
+                   sg.location_type, sg.status, sg.tournament_name
+            FROM scheduled_games sg
+            {where} AND sg.game_date >= date('now') AND sg.status != 'cancelled'
+            ORDER BY sg.game_date, sg.game_time
+            LIMIT 5""",
+        params,
+    ).fetchall()
+
+    last_game = db.execute(
+        f"""SELECT sg.game_date, sg.opponent_name, sg.location_type,
+                   g.home_score, g.away_score, g.result
+            FROM games g
+            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+            {where} AND g.result IS NOT NULL AND g.result != ''
+            ORDER BY sg.game_date DESC
+            LIMIT 1""",
+        params,
+    ).fetchone()
+
+    return {
+        "wins": wins,
+        "losses": losses,
+        "conf_wins": conf_wins,
+        "conf_losses": conf_losses,
+        "upcoming": [dict(r) for r in upcoming],
+        "last_game": dict(last_game) if last_game else None,
+    }
 
 
 def _scrape_maxpreps_ranking(state, gender):

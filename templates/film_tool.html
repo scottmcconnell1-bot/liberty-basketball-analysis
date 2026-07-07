@@ -361,7 +361,7 @@
         </div>
         <div class="ft-ai-upload-body" id="ftAiUploadBody">
           <form enctype="multipart/form-data" method="post" id="aiUploadForm">
-            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Large files are compressed automatically before upload.</p>
+            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Original quality is preserved — large files upload in chunks automatically.</p>
             <div class="split ai-upload-fields">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
@@ -392,6 +392,15 @@
             </div>
           </form>
         </div>
+
+        <div class="ft-ai-upload-toggle" id="ftNfhsToggle">
+          <span class="ft-chevron">▶</span>
+          <span>📥 Download from NFHS — your games or opponents</span>
+        </div>
+        <div class="ft-ai-upload-body" id="ftNfhsBody">
+          {% set nfhs_prefix = 'ft-nfhs-' %}
+          {% include 'partials/nfhs_download_panel.html' %}
+        </div>
         {% endif %}
 
         <!-- Video Player -->
@@ -403,11 +412,30 @@
           <span style="flex:1"></span>
           <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
         </div>
+        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
+        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
+          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
+            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">🤖 Run AI Analysis</button>
+          </div>
+          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
+            <div class="ft-run-analysis-progress-head">
+              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
+              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
+            </div>
+            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
+            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
+          </div>
+        </div>
+        {% endif %}
         <div class="tiny" style="padding:.25rem 0 .5rem;">
           {% if uploaded_video_url %}
           Server video <code>{{ filename }}</code> will auto-load below.
+          {% if features.ENABLE_AUTO_STATS_M1 %}
+          Use <strong>Run AI Analysis</strong> above to detect events automatically, or tag manually.
+          {% endif %}
           {% else %}
-          For tagging only. This does not run AI analysis.
+          Load a video from your computer, or open a saved video from the Video Library.
           {% endif %}
         </div>
 
@@ -947,6 +975,10 @@
   window.FILM_TOOL_UPLOADED_VIDEO_URL = {{ uploaded_video_url|tojson|safe }};
   window.FILM_TOOL_UPLOADED_VIDEO_NAME = {{ filename|tojson|safe }};
   window.FILM_TOOL_GAME_ID = {{ game_id|tojson|safe }};
+  window.FILM_TOOL_VIDEO_ID = {{ video_id|tojson|safe }};
+  window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
+  window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
 {% endblock %}
