@@ -679,7 +679,7 @@ def api_players_delete(player_id):
 
 @clips_bp.route("/api/rosters/import", methods=["POST"])
 def api_rosters_import():
-    """Parse a roster upload (CSV, PDF, or MaxPreps printable PDF)."""
+    """Parse a roster upload (CSV, Excel, PDF, or MaxPreps printable PDF)."""
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 

@@ -906,14 +906,15 @@
           <select id="rosterFileTypeSelect">
             <option value="auto">Auto-detect</option>
             <option value="csv">CSV</option>
+            <option value="excel">Excel (.xlsx)</option>
             <option value="pdf">PDF</option>
             <option value="maxpreps_pdf">MaxPreps PDF</option>
           </select>
         </div>
         <div class="field">
           <label for="rosterFileInput">Import roster file</label>
-          <input id="rosterFileInput" type="file" accept=".csv,.pdf,text/csv,application/pdf">
-          <span class="tiny">CSV (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster.</span>
+          <input id="rosterFileInput" type="file" accept=".csv,.xlsx,.xlsm,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <span class="tiny">CSV or Excel (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster PDF.</span>
         </div>
         <div class="term-list" id="playerList"></div>
         <div class="field"><label>Add player</label><button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button></div>
