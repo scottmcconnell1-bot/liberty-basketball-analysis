@@ -454,9 +454,23 @@ def get_analysis_results(game_id):
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
         "identity_status": identity_status,
+        "player_labels": _analysis_player_labels(db, game_id),
         "analysis_version": "2026-07-07-analysis-v2",
         **_analysis_film_payload(db, game_id),
     })
+
+
+def _analysis_player_labels(db, game_id):
+    from court_slot_mapping import get_court_slots
+
+    labels = {}
+    for slot in get_court_slots(db, game_id):
+        tracker_id = slot.get("tracker_id")
+        label = slot.get("mapped_label")
+        if tracker_id is None or not label:
+            continue
+        labels[str(tracker_id)] = label
+    return labels
 
 
 def _analysis_film_payload(db, game_id):
@@ -607,6 +621,33 @@ def apply_court_slots_api(game_id):
     result["game_id"] = game_id
     result["slots"] = get_court_slots(db, game_id)
     return jsonify(result)
+
+
+@ai_bp.route("/api/court-slots/<game_id>/auto-apply", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def auto_apply_court_slots_api(game_id):
+    """Apply OCR jersey mapping and any saved court-slot corrections to events/stats."""
+    from court_slot_mapping import apply_court_slot_mappings, get_court_slots
+    from settings_store import load_all_settings, AI_DEFAULTS
+    from stats import refresh_stats
+    from track_identity import ensure_identity_applied
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+    identity_status = ensure_identity_applied(db, game_id, ai_settings)
+    slot_result = apply_court_slot_mappings(db, game_id)
+    refresh_stats(db, game_id)
+    return jsonify({
+        "game_id": game_id,
+        "identity_status": identity_status,
+        "slots_mapped": slot_result.get("slots_mapped", 0),
+        "events_updated": slot_result.get("events_updated", 0),
+        "slots": get_court_slots(db, game_id),
+    })
 
 
 # ── API: Possessions ─────────────────────────────────────────

@@ -258,6 +258,62 @@ def test_analysis_events_api_returns_film_links(client, db):
     assert "t=90" in data["events"][0]["film_url"]
 
 
+def test_auto_apply_court_slots_endpoint(client, db):
+    from film_roster import save_film_roster
+
+    season_id = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?, ?, ?)",
+        ("2025-26", "2025-11-01", "2026-03-01"),
+    ).lastrowid
+    scheduled_game_id = db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'boys_hs', 'boys', 'varsity', '2026-01-15', 'Wilder', 'scheduled')""",
+        (season_id,),
+    ).lastrowid
+    relational_game_id = db.execute(
+        "INSERT INTO games (scheduled_game_id, source_type, source_key) VALUES (?, 'manual', 'auto-apply-api')",
+        (scheduled_game_id,),
+    ).lastrowid
+    analysis_key = "nfhs_auto_apply_api"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, relational_game_id, "/tmp/auto-apply.mp4"),
+    )
+    db.execute(
+        """INSERT INTO player_minutes
+              (game_id, relational_game_id, tracker_id, first_frame, last_frame,
+               total_frames, minutes_played, jersey_number, player_name)
+           VALUES (?, ?, 4, 0, 1000, 500, 15.0, 12, 'Alex Player')""",
+        (analysis_key, relational_game_id),
+    )
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, player, event_type, timestamp_ms,
+               review_status, source_type)
+           VALUES (?, ?, '4', 'make', 1200, 'pending', 'ai')""",
+        (analysis_key, relational_game_id),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="our",
+        players=[{"label": "12 Alex Player", "jersey_number": 12, "name": "Alex Player"}],
+        replace=True,
+    )
+    db.commit()
+
+    resp = client.post(f"/api/court-slots/{analysis_key}/auto-apply")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    row = db.execute("SELECT player FROM events WHERE relational_game_id = ?", (relational_game_id,)).fetchone()
+    assert row["player"] == "#12 Alex Player"
+    assert (data.get("events_updated") or 0) >= 1 or (data.get("identity_status", {}).get("events_updated") or 0) >= 1
+
+
 def test_analysis_results_page_includes_event_explorer(client):
     resp = client.get("/analysis/test-game-key")
     assert resp.status_code == 200

@@ -900,7 +900,7 @@
           <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
         </div>
         <div class="split">
-          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh" checked> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label></div></div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity" checked> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
         </div>
         <div class="pill-buttons" style="margin:.5rem 0 1rem">
@@ -925,6 +925,7 @@
           <span class="tiny">CSV or Excel (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster PDF.</span>
         </div>
         <div class="term-list" id="playerList"></div>
+        <div id="rosterSlotHint" class="tiny" style="display:none;margin:.35rem 0 .75rem;color:var(--color-orange);"></div>
         <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button>
           <button class="btn btn-danger" id="clearRosterBtn" type="button">Clear roster</button>
@@ -943,6 +944,17 @@
           <label for="rosterImportSeasonSelect">Season</label>
           <select id="rosterImportSeasonSelect" required></select>
         </div>
+        <div class="split">
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importGender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="importGender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="importGender" value="coed"> Coed</label></div></div>
+        </div>
+        <div class="pill-buttons" style="margin:.35rem 0 .75rem">
+          <button class="btn roster-import-side-btn active" type="button" data-side="our">Our</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="opp">Opp</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="home">Home</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="away">Away</button>
+        </div>
+        <p class="tiny" id="rosterImportTargetLabel" style="margin-bottom:.5rem;color:var(--color-muted);"></p>
         <div class="field">
           <label class="tiny"><input type="checkbox" id="rosterImportReplace" checked> Replace existing players for this season / team</label>
         </div>

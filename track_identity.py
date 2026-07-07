@@ -354,6 +354,21 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
     if raw_cluster_events == 0:
         return {"skipped": True, "reason": "already_mapped", "raw_cluster_events": 0}
 
+    from court_slot_mapping import apply_court_slot_mappings, get_court_slots
+
+    slots = get_court_slots(db, game_id)
+    if any(slot.get("is_mapped") for slot in slots):
+        result = apply_court_slot_mappings(db, game_id)
+        if _events_use_raw_cluster_ids(db, game_id) == 0:
+            return {
+                "skipped": False,
+                "reason": "applied_saved_slots",
+                "raw_cluster_events": raw_cluster_events,
+                "events_updated": result.get("events_updated", 0),
+                "slots_mapped": result.get("slots_mapped", 0),
+                "applied": result.get("slots_mapped", 0),
+            }
+
     report = build_identity_report(db, game_id, ai_settings)
     if not report.get("cluster_suggestions"):
         return {

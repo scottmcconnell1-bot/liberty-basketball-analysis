@@ -153,6 +153,7 @@
         </table>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
+      <button type="button" class="btn btn-primary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Apply roster to stats</button>
     </div>
 
     <div class="grid">
@@ -283,6 +284,8 @@ let FILM_URL = null;
 let STORED_FILENAME = null;
 let ANALYSIS_TEAMS = null;
 let EXPLORER_PLAYERS = [];
+let PLAYER_LABELS = {};
+let autoApplyAttempted = false;
 const STAT_COLUMNS = {
   reb: 'reb',
   ast: 'ast',
@@ -305,6 +308,8 @@ function slotLabel(id, row) {
 }
 
 function playerDisplayName(row, pid, meta) {
+  if (PLAYER_LABELS[pid]) return PLAYER_LABELS[pid];
+  if (row && row.player && PLAYER_LABELS[String(row.player)]) return PLAYER_LABELS[String(row.player)];
   if (row && row.player && String(row.player).charAt(0) === '#') return row.player;
   if (row && row.player && isNaN(Number(row.player)) && !String(row.player).match(/^Pos /)) return row.player;
   return slotLabel(pid, meta || row);
@@ -409,6 +414,7 @@ async function loadResults() {
     if (data.video_id) CURRENT_VIDEO_ID = data.video_id;
     FILM_URL = data.film_url || null;
     STORED_FILENAME = data.stored_filename || null;
+    PLAYER_LABELS = data.player_labels || {};
     ANALYSIS_TEAMS = data.teams || null;
     if (ANALYSIS_TEAMS) {
       const teamSelect = document.getElementById('filter-team');
@@ -868,6 +874,45 @@ function renderSlotMappingTable() {
   });
 }
 
+function statsUsePositionClusters(rows) {
+  return (rows || []).some(function(row) {
+    const pid = String(row.player != null ? row.player : row.tracker_id || '');
+    return /^\d+$/.test(pid) && !PLAYER_LABELS[pid];
+  });
+}
+
+async function applyRosterNamesToStats() {
+  const status = document.getElementById('slot-mapping-status');
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Applying roster names to stats…';
+  }
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/auto-apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not apply roster names');
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.textContent = 'Applied roster mapping to ' + (data.events_updated || 0) + ' events. Refreshing stats…';
+    }
+    await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not apply roster names: ' + err.message;
+    } else {
+      alert(err.message || 'Could not apply roster names.');
+    }
+  }
+}
+
+document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
+
 async function loadSlotMappingUI() {
   try {
     const [slotsResp, rosterResp] = await Promise.all([
@@ -906,6 +951,10 @@ async function loadSlotMappingUI() {
     }
     renderSlotMappingTable();
     populateExplorerPlayerFilter();
+    if (ROSTER_PLAYERS.length && statsUsePositionClusters(BASIC_STATS_ROWS) && !autoApplyAttempted) {
+      autoApplyAttempted = true;
+      await applyRosterNamesToStats();
+    }
   } catch (err) {
     console.warn('Slot mapping load failed', err);
   }
