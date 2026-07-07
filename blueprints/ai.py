@@ -36,6 +36,7 @@ from helpers import (
     build_settings_catalog, default_run_label, display_detector_model,
     ensure_db, ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
     get_runtime_settings, is_superseded_analysis_run, latest_analysis_run_id_subquery,
+    load_all_settings,
     queue_analysis_run, require_feature,
     resolve_analysis_run_for_progress, resolve_detector_model, safe_return_path,
     start_analysis_subprocess,
@@ -340,6 +341,19 @@ def get_analysis_results(game_id):
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
     })
+
+
+@ai_bp.route("/api/track-identity/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_track_identity_api(game_id):
+    from track_identity import build_identity_report
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    settings = load_all_settings({}, {}, AI_DEFAULTS, db=db)
+    report = build_identity_report(db, game_id, settings["ai"])
+    return jsonify({"game_id": game_id, **report})
 
 
 # ── API: Court slot → jersey mapping ─────────────────────────

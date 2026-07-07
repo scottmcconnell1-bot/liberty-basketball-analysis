@@ -38,7 +38,26 @@ CREATE TABLE IF NOT EXISTS detections (
     width        INTEGER NOT NULL,
     height       INTEGER NOT NULL,
     tracker_id   INTEGER,
+    jersey_read  INTEGER,
+    jersey_confidence REAL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS track_identity_labels (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id            TEXT NOT NULL,
+    relational_game_id INTEGER REFERENCES games(id),
+    tracker_id         INTEGER NOT NULL,
+    identity_type      TEXT NOT NULL DEFAULT 'cluster',
+    jersey_number      INTEGER,
+    player_name        TEXT,
+    player_id          INTEGER,
+    confidence         REAL,
+    sample_count       INTEGER,
+    source             TEXT DEFAULT 'ocr_votes',
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, identity_type, tracker_id)
 );
 
 CREATE TABLE IF NOT EXISTS events (

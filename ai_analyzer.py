@@ -109,13 +109,16 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if total_frames <= 0 and orig_w <= 0 and orig_h <= 0:
             raise RuntimeError(f"Video has no readable frames: {video_path}")
-        detect_stride = int(ai_settings.get("detection_stride", 1))
+        detect_stride = int(ai_settings.get("detection_stride") or ai_settings.get("frame_stride") or 1)
         if detect_stride < 1:
             detect_stride = 1
+        tracker_backend = str(ai_settings.get("tracker_backend") or "bytetrack").lower()
+        jersey_ocr_enabled = bool(ai_settings.get("jersey_ocr_enabled", True))
+        jersey_ocr_stride = max(1, int(ai_settings.get("jersey_ocr_stride", 5)))
         infer_size = 640
         scale_x = orig_w / infer_size
         scale_y = orig_h / infer_size
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px")
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px, tracker={tracker_backend}")
 
         frame_number = 0
         db = get_db()
@@ -146,8 +149,10 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         tracks = {}
         next_tracker_id = 1
         ball_positions_all = []
-        MAX_MATCH_DIST = 200  # Max pixel distance to match a detection to a track
-        MAX_TRACK_GAP = max(30, 120 // detect_stride)  # Retire tracks not seen in this many detection cycles
+        MAX_MATCH_DIST = int(ai_settings.get("tracker_max_distance") or 200)
+        track_gap_setting = int(ai_settings.get("tracker_max_frame_gap") or 5)
+        MAX_TRACK_GAP = max(30, 120 // detect_stride) if track_gap_setting <= 5 else track_gap_setting
+        track_device = None if inference_device in (None, "", "auto") else inference_device
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -158,67 +163,120 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
             # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []
+            person_rows = []
             if frame_number % detect_stride == 0:
-                results = model(frame, classes=[0], conf=person_confidence, verbose=False, imgsz=640)
-                for result in results:
-                    for box in result.boxes:
-                        class_id = int(box.cls[0])
-                        if model.names[class_id] == 'person':
+                if tracker_backend == "bytetrack":
+                    track_kwargs = {
+                        "persist": True,
+                        "tracker": "bytetrack.yaml",
+                        "classes": [0],
+                        "conf": person_confidence,
+                        "verbose": False,
+                        "imgsz": infer_size,
+                    }
+                    if track_device:
+                        track_kwargs["device"] = track_device
+                    results = model.track(frame, **track_kwargs)
+                    for result in results:
+                        if result.boxes is None:
+                            continue
+                        for box in result.boxes:
                             confidence = float(box.conf[0])
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
-                            # Scale coordinates from inference size back to original frame size
                             x1 = int(x1 * scale_x)
                             y1 = int(y1 * scale_y)
                             x2 = int(x2 * scale_x)
                             y2 = int(y2 * scale_y)
-                            # Clamp to frame bounds (YOLO boxes can overflow at edges)
                             x1 = max(0, min(x1, orig_w - 1))
                             y1 = max(0, min(y1, orig_h - 1))
                             x2 = max(0, min(x2, orig_w - 1))
                             y2 = max(0, min(y2, orig_h - 1))
                             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
+                            w, h = x2 - x1, y2 - y1
+                            tid = None
+                            if box.id is not None:
+                                tid = int(box.id.item())
+                            if tid is None:
+                                tid = next_tracker_id
+                                next_tracker_id += 1
+                            jersey_read, jersey_conf = None, None
+                            if jersey_ocr_enabled and frame_number % jersey_ocr_stride == 0:
+                                from jersey_ocr import read_jersey_from_bbox
+                                jersey_read, jersey_conf = read_jersey_from_bbox(frame, x1, y1, x2, y2)
+                            person_rows.append((
+                                game_id, relational_game_id, frame_number, timestamp_ms,
+                                'person', confidence, cx, cy, w, h, tid, jersey_read, jersey_conf,
+                            ))
+                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, w, h))
+                else:
+                    results = model(frame, classes=[0], conf=person_confidence, verbose=False, imgsz=infer_size)
+                    for result in results:
+                        for box in result.boxes:
+                            class_id = int(box.cls[0])
+                            if model.names[class_id] == 'person':
+                                confidence = float(box.conf[0])
+                                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                                x1 = int(x1 * scale_x)
+                                y1 = int(y1 * scale_y)
+                                x2 = int(x2 * scale_x)
+                                y2 = int(y2 * scale_y)
+                                x1 = max(0, min(x1, orig_w - 1))
+                                y1 = max(0, min(y1, orig_h - 1))
+                                x2 = max(0, min(x2, orig_w - 1))
+                                y2 = max(0, min(y2, orig_h - 1))
+                                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                                new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
-            # --- Match detections to active tracks (greedy nearest-neighbor) ---
-            person_rows = []
-            used_tracks = set()
-            used_dets = set()
+            if tracker_backend != "bytetrack":
+                # --- Match detections to active tracks (greedy nearest-neighbor) ---
+                used_tracks = set()
+                used_dets = set()
 
-            # Build all (distance, det_idx, track_id) pairs for active tracks
-            match_pairs = []
-            for det_idx, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
-                for tid, (track_cx, track_cy, last_frame) in tracks.items():
-                    if frame_number - last_frame > MAX_TRACK_GAP:
+                match_pairs = []
+                for det_idx, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                    for tid, (track_cx, track_cy, last_frame) in tracks.items():
+                        if frame_number - last_frame > MAX_TRACK_GAP:
+                            continue
+                        dist = math.sqrt((cx - track_cx)**2 + (cy - track_cy)**2)
+                        if dist < MAX_MATCH_DIST:
+                            match_pairs.append((dist, det_idx, tid))
+
+                match_pairs.sort(key=lambda x: x[0])
+
+                for dist, det_idx, tid in match_pairs:
+                    if det_idx in used_dets or tid in used_tracks:
                         continue
-                    dist = math.sqrt((cx - track_cx)**2 + (cy - track_cy)**2)
-                    if dist < MAX_MATCH_DIST:
-                        match_pairs.append((dist, det_idx, tid))
-
-            # Sort by distance — assign closest pairs first
-            match_pairs.sort(key=lambda x: x[0])
-
-            for dist, det_idx, tid in match_pairs:
-                if det_idx in used_dets or tid in used_tracks:
-                    continue
-                cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[det_idx]
-                used_dets.add(det_idx)
-                used_tracks.add(tid)
-                tracks[tid] = (cx, cy, frame_number)
-                person_rows.append((game_id, relational_game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
-
-            # Create new tracks for unmatched detections
-            for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
-                if i not in used_dets:
-                    tid = next_tracker_id
-                    next_tracker_id += 1
+                    cx, cy, conf, x1, y1, x2, y2, w, h = new_detections[det_idx]
+                    used_dets.add(det_idx)
+                    used_tracks.add(tid)
                     tracks[tid] = (cx, cy, frame_number)
-                    person_rows.append((game_id, relational_game_id, frame_number, timestamp_ms, 'person', conf, cx, cy, w, h, tid))
+                    jersey_read, jersey_conf = None, None
+                    if jersey_ocr_enabled and frame_number % jersey_ocr_stride == 0:
+                        from jersey_ocr import read_jersey_from_bbox
+                        jersey_read, jersey_conf = read_jersey_from_bbox(frame, x1, y1, x2, y2)
+                    person_rows.append((
+                        game_id, relational_game_id, frame_number, timestamp_ms,
+                        'person', conf, cx, cy, w, h, tid, jersey_read, jersey_conf,
+                    ))
 
-            # Retire stale tracks
-            stale_tids = [tid for tid, (cx, cy, lf) in tracks.items()
-                          if frame_number - lf > MAX_TRACK_GAP]
-            for tid in stale_tids:
-                del tracks[tid]
+                for i, (cx, cy, conf, x1, y1, x2, y2, w, h) in enumerate(new_detections):
+                    if i not in used_dets:
+                        tid = next_tracker_id
+                        next_tracker_id += 1
+                        tracks[tid] = (cx, cy, frame_number)
+                        jersey_read, jersey_conf = None, None
+                        if jersey_ocr_enabled and frame_number % jersey_ocr_stride == 0:
+                            from jersey_ocr import read_jersey_from_bbox
+                            jersey_read, jersey_conf = read_jersey_from_bbox(frame, x1, y1, x2, y2)
+                        person_rows.append((
+                            game_id, relational_game_id, frame_number, timestamp_ms,
+                            'person', conf, cx, cy, w, h, tid, jersey_read, jersey_conf,
+                        ))
+
+                stale_tids = [tid for tid, (cx, cy, lf) in tracks.items()
+                              if frame_number - lf > MAX_TRACK_GAP]
+                for tid in stale_tids:
+                    del tracks[tid]
 
             # --- Ball detection (every 5th frame) ---
             ball_rows = []
@@ -293,7 +351,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 for (cx, cy, conf, x1, y1, x2, y2) in ball_positions:
                     ball_rows.append((
                         game_id, relational_game_id, frame_number, timestamp_ms, 'ball', max(conf, 0.05),
-                        cx, cy, max(x2-x1, 10), max(y2-y1, 10), None
+                        cx, cy, max(x2-x1, 10), max(y2-y1, 10), None, None, None,
                     ))
 
             # --- Write detections ---
@@ -301,8 +359,11 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             if all_detections:
                 cursor = db.cursor()
                 cursor.executemany(
-                    '''INSERT INTO detections (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height, tracker_id)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    '''INSERT INTO detections
+                       (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                        confidence, x_center, y_center, width, height, tracker_id,
+                        jersey_read, jersey_confidence)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     all_detections
                 )
                 db.commit()
@@ -409,6 +470,23 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             run_enhanced_analysis(db_path, game_id, fps, detect_stride=detect_stride)
         except Exception as e:
             print(f"[AI] Enhanced analysis failed: {e}")
+
+        try:
+            from track_identity import build_identity_report, auto_apply_cluster_jerseys
+
+            identity_report = build_identity_report(db, game_id, ai_settings)
+            print(
+                f"[AI] Jersey identity: {identity_report['ocr_read_count']} OCR reads, "
+                f"{len(identity_report['cluster_suggestions'])} cluster suggestions"
+            )
+            if ai_settings.get("auto_apply_jersey_mapping", True):
+                applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
+                print(
+                    f"[AI] Auto-applied {applied.get('applied', 0)} jersey mappings, "
+                    f"{applied.get('events_updated', 0)} events updated"
+                )
+        except Exception as e:
+            print(f"[AI] Jersey identity step failed: {e}")
     finally:
         if cap is not None and cap.isOpened():
             cap.release()

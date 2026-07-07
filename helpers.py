@@ -2050,6 +2050,22 @@ def _ensure_migration_columns(db):
             created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS track_identity_labels (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id            TEXT NOT NULL,
+            relational_game_id INTEGER REFERENCES games(id),
+            tracker_id         INTEGER NOT NULL,
+            identity_type      TEXT NOT NULL DEFAULT 'cluster',
+            jersey_number      INTEGER,
+            player_name        TEXT,
+            player_id          INTEGER,
+            confidence         REAL,
+            sample_count       INTEGER,
+            source             TEXT DEFAULT 'ocr_votes',
+            created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(game_id, identity_type, tracker_id)
+        );
         CREATE TABLE IF NOT EXISTS app_settings (
             key        TEXT PRIMARY KEY,
             value      TEXT NOT NULL,
@@ -2323,6 +2339,8 @@ def _ensure_migration_columns(db):
         ("users", "updated_at", "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP"),
         ("users", "last_login_at", "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"),
         ("detections", "player_cluster", "ALTER TABLE detections ADD COLUMN player_cluster INTEGER"),
+        ("detections", "jersey_read", "ALTER TABLE detections ADD COLUMN jersey_read INTEGER"),
+        ("detections", "jersey_confidence", "ALTER TABLE detections ADD COLUMN jersey_confidence REAL"),
     ]
     existing = {
         (row[1], row[2]): True
