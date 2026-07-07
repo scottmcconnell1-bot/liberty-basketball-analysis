@@ -500,6 +500,23 @@ function uploadPdfWithTeam() {
     if (data.error) { alert('Error: ' + data.error); return; }
     pdfExtractedGames = data.games || [];
     pdfDetectedSeason = data.season || null;
+    const looksLikeFooterJunk = pdfExtractedGames.some(g =>
+      (g.opponent_name || '').toLowerCase().includes('printable')
+    );
+    if (looksLikeFooterJunk || (pdfExtractedGames.length > 0 && pdfExtractedGames.length < 5 && data.parser !== 'maxpreps')) {
+      alert(
+        'Schedule import failed — the server parsed PDF footer junk instead of games. '
+        + 'On the AI workstation run: git pull origin jason-5-may-updates then restart the app, and try again.'
+      );
+      return;
+    }
+    if ((data.count || pdfExtractedGames.length) < 5) {
+      const proceed = confirm(
+        `Only ${data.count || pdfExtractedGames.length} games were found. `
+        + 'If this is a full varsity schedule, cancel and update/restart the server before importing.'
+      );
+      if (!proceed) return;
+    }
     renderPdfPreview();
     renderPdfSeasonInfo();
     document.getElementById('pdf-import-modal').classList.add('open');

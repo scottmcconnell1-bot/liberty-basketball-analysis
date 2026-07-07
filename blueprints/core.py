@@ -598,8 +598,11 @@ def schedule_import_pdf():
         if not text.strip():
             return {"error": "Could not extract text from PDF. Try a different file."}, 400
         season_info = _detect_season_from_text(text, pdf_team=pdf_team)
+        from schedule_import import is_maxpreps_printable_schedule
+
+        parser = "maxpreps" if is_maxpreps_printable_schedule(text) else "legacy"
         games = _parse_schedule_text(text, pdf_team=pdf_team, season_info=season_info)
-        return {"games": games, "season": season_info}
+        return {"games": games, "season": season_info, "parser": parser, "count": len(games)}
     except Exception as e:
         return {"error": f"Failed to parse PDF: {str(e)}"}, 500
 
@@ -842,7 +845,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     if not date_str:
         return None
 
-    # Normalize date
+    if re.search(r"Printable\s+.*Basketball\s+Schedule|maxpreps\.com/print/schedule", line, re.IGNORECASE):
+        return None
     game_date = None
     # Handle date ranges: "Thurs-Sat, Dec 4-6" → use first date "Dec 4"
     date_for_parse = re.sub(r'\w+\s*-\s*\w+,?\s+', '', date_str)  # "Dec 4-6" from "Thurs-Sat, Dec 4-6"
