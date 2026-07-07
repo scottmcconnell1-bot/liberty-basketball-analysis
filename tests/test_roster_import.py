@@ -46,6 +46,13 @@ Staff (2)
 Head Coach Smith
 """
 
+MAXPREPS_HS_ROSTER_TEXT = """Printable Opponent High School Basketball Roster
+# Player Grade Position Height Weight
+0 Caleb Henrickson G Fr. 5'8" 150
+1 Blake Baker G Jr. 5'11" 160
+10 Tyden Blacker G So. 6'0" 170
+"""
+
 
 def test_parse_roster_csv_liberty_format():
     players = parse_roster_csv(SAMPLE_CSV)
@@ -69,6 +76,26 @@ def test_parse_maxpreps_roster_text():
     assert players[0]["jersey_number"] == "45"
     assert players[0]["position"] == "C"
     assert players[1]["name"] == "Jonathan Kariuki"
+
+
+def test_parse_maxpreps_hs_roster_position_before_grade():
+    players = parse_maxpreps_roster_text(MAXPREPS_HS_ROSTER_TEXT)
+    assert len(players) == 3
+    assert players[0]["jersey_number"] == "0"
+    assert players[0]["name"] == "Caleb Henrickson"
+    assert players[0]["position"] == "G"
+    assert players[0]["grade"] == "Fr"
+    assert players[1]["name"] == "Blake Baker"
+    assert players[1]["grade"] == "Jr"
+
+
+def test_parse_roster_rows_single_column_maxpreps_line():
+    players = parse_roster_csv("0 Caleb Henrickson G Fr. 5'8\" 150\n")
+    assert len(players) == 1
+    assert players[0]["jersey_number"] == "0"
+    assert players[0]["name"] == "Caleb Henrickson"
+    assert players[0]["position"] == "G"
+    assert players[0]["grade"] == "Fr"
 
 
 def test_detect_roster_file_type():
