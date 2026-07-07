@@ -986,6 +986,7 @@ function rosterImportTypeLabel(detectedType) {
     return {
         auto: 'file',
         csv: 'CSV',
+        excel: 'Excel',
         pdf: 'PDF',
         maxpreps_pdf: 'MaxPreps PDF',
     }[detectedType] || detectedType;

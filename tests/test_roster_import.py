@@ -8,9 +8,25 @@ from roster_import import (
     is_maxpreps_printable_roster,
     parse_maxpreps_roster_text,
     parse_roster_csv,
+    parse_roster_excel,
     parse_roster_text,
     parse_roster_upload,
 )
+
+
+def _sample_excel_bytes():
+    import openpyxl
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(["POS", "#", "NAME", "GRADE"])
+    sheet.append(["PG", 0, "Carter Sullivan", 8])
+    sheet.append(["SG", 3, "Jonathan Kariuki", 8])
+    sheet.append(["C", 45, "Jasper Musgrave", 8])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 SAMPLE_CSV = """POS,#,NAME,GRADE
@@ -57,6 +73,7 @@ def test_parse_maxpreps_roster_text():
 
 def test_detect_roster_file_type():
     assert detect_roster_file_type("roster.csv") == "csv"
+    assert detect_roster_file_type("roster.xlsx") == "excel"
     assert detect_roster_file_type("roster.pdf", MAXPREPS_ROSTER_TEXT) == "maxpreps_pdf"
     assert detect_roster_file_type("roster.pdf", "Team Roster\n0 Carter Sullivan 8 PG") == "pdf"
 
@@ -83,6 +100,36 @@ def test_parse_roster_upload_csv():
     result = parse_roster_upload(file_obj, file_type="csv")
     assert result["detected_type"] == "csv"
     assert result["count"] == 3
+
+
+def test_parse_roster_excel_liberty_format():
+    file_obj = io.BytesIO(_sample_excel_bytes())
+    players = parse_roster_excel(file_obj)
+    assert len(players) == 3
+    assert players[0]["name"] == "Carter Sullivan"
+    assert players[0]["jersey_number"] == "0"
+    assert players[2]["label"] == "45 - Jasper Musgrave, 8"
+
+
+def test_parse_roster_upload_excel_auto():
+    file_obj = io.BytesIO(_sample_excel_bytes())
+    file_obj.filename = "2026 Liberty A Roster.xlsx"
+    result = parse_roster_upload(file_obj, file_type="auto")
+    assert result["detected_type"] == "excel"
+    assert result["count"] == 3
+
+
+def test_api_rosters_import_excel(client):
+    data = {
+        "file": (io.BytesIO(_sample_excel_bytes()), "roster.xlsx"),
+        "file_type": "excel",
+    }
+    resp = client.post("/api/rosters/import", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload["detected_type"] == "excel"
+    assert payload["count"] == 3
+    assert payload["players"][1]["name"] == "Jonathan Kariuki"
 
 
 def test_parse_roster_upload_invalid_type():

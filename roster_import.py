@@ -1,4 +1,4 @@
-"""Parse roster uploads from CSV, PDF, and MaxPreps printable PDF exports."""
+"""Parse roster uploads from CSV, Excel, PDF, and MaxPreps printable PDF exports."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import io
 import re
 from typing import BinaryIO
 
-ROSTER_FILE_TYPES = ("auto", "csv", "pdf", "maxpreps_pdf")
+ROSTER_FILE_TYPES = ("auto", "csv", "excel", "pdf", "maxpreps_pdf")
 
 _HEADER_WORDS = {
     "pos", "position", "#", "num", "number", "name", "grade", "class", "yr",
@@ -95,51 +95,90 @@ def _looks_like_header(parts: list[str]) -> bool:
     return any(part in _HEADER_WORDS for part in lower)
 
 
-def parse_roster_csv(text: str) -> list[dict]:
-    """Parse CSV roster text into player dicts."""
+def _cell_str(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def _parse_roster_row_parts(parts: list[str]) -> dict | None:
+    jersey_number = None
+    name = None
+    grade = None
+    position = None
+
+    if len(parts) >= 4 and parts[1].isdigit():
+        position, jersey_number, name, grade = parts[0], parts[1], parts[2], parts[3]
+    elif len(parts) >= 3 and parts[0].isdigit():
+        jersey_number, name = parts[0], parts[1]
+        if parts[2].isdigit() or parts[2].lower() in {"sr", "jr", "so", "fr"}:
+            grade = parts[2]
+            if len(parts) > 3:
+                position = parts[3]
+        else:
+            position = parts[2]
+    else:
+        for part in parts:
+            if part.isdigit() and jersey_number is None and len(part) <= 2:
+                jersey_number = part
+            elif part.lower() in {"sr", "jr", "so", "fr"} or (
+                part.isdigit() and len(part) == 1 and grade is None
+            ):
+                grade = part
+            elif part.upper() in {"PG", "SG", "SF", "PF", "C", "G", "F"} and position is None:
+                position = part.upper()
+            elif not name or len(part) > len(name):
+                name = part
+
+    return _normalize_player(
+        jersey_number=jersey_number,
+        name=name,
+        grade=grade,
+        position=position,
+    )
+
+
+def parse_roster_rows(rows: list[list]) -> list[dict]:
+    """Parse roster rows from CSV or Excel into player dicts."""
     players: list[dict] = []
-    reader = csv.reader(io.StringIO(text))
-    for row in reader:
-        parts = [cell.strip() for cell in row if cell and cell.strip()]
+    for row in rows:
+        parts = [_cell_str(cell) for cell in row if _cell_str(cell)]
         if not parts or _looks_like_header(parts):
             continue
-
-        jersey_number = None
-        name = None
-        grade = None
-        position = None
-
-        if len(parts) >= 4 and parts[1].isdigit():
-            position, jersey_number, name, grade = parts[0], parts[1], parts[2], parts[3]
-        elif len(parts) >= 3 and parts[0].isdigit():
-            jersey_number, name = parts[0], parts[1]
-            if parts[2].isdigit() or parts[2].lower() in {"sr", "jr", "so", "fr"}:
-                grade = parts[2]
-                if len(parts) > 3:
-                    position = parts[3]
-            else:
-                position = parts[2]
-        else:
-            for part in parts:
-                if part.isdigit() and jersey_number is None and len(part) <= 2:
-                    jersey_number = part
-                elif part.lower() in {"sr", "jr", "so", "fr"} or (
-                    part.isdigit() and len(part) == 1 and grade is None
-                ):
-                    grade = part
-                elif part.upper() in {"PG", "SG", "SF", "PF", "C", "G", "F"} and position is None:
-                    position = part.upper()
-                elif not name or len(part) > len(name):
-                    name = part
-
-        player = _normalize_player(
-            jersey_number=jersey_number,
-            name=name,
-            grade=grade,
-            position=position,
-        )
+        player = _parse_roster_row_parts(parts)
         if player:
             players.append(player)
+    return players
+
+
+def parse_roster_csv(text: str) -> list[dict]:
+    """Parse CSV roster text into player dicts."""
+    reader = csv.reader(io.StringIO(text))
+    return parse_roster_rows(list(reader))
+
+
+def parse_roster_excel(file: BinaryIO) -> list[dict]:
+    """Parse an Excel workbook (.xlsx) into player dicts."""
+    try:
+        import openpyxl
+    except ImportError as exc:
+        raise ValueError(
+            "Excel roster import requires openpyxl. Install with: pip install openpyxl"
+        ) from exc
+
+    file.seek(0)
+    workbook = openpyxl.load_workbook(file, read_only=True, data_only=True)
+    try:
+        sheet = workbook.active
+        rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+    finally:
+        workbook.close()
+
+    players = parse_roster_rows(rows)
+    if not players:
+        raise ValueError("No players found in Excel file. Check the sheet format.")
     return players
 
 
@@ -292,6 +331,10 @@ def detect_roster_file_type(filename: str, text: str | None = None) -> str:
     ext = (filename or "").rsplit(".", 1)[-1].lower() if filename else ""
     if ext == "csv":
         return "csv"
+    if ext in {"xlsx", "xlsm"}:
+        return "excel"
+    if ext == "xls":
+        return "excel"
     if ext != "pdf":
         return "csv" if "," in (text or "") else "pdf"
 
@@ -309,6 +352,8 @@ def parse_roster_text(text: str, file_type: str = "auto", filename: str = "") ->
 
     if resolved_type == "csv":
         players = parse_roster_csv(text)
+    elif resolved_type == "excel":
+        raise ValueError("Excel files must be parsed with parse_roster_excel(), not parse_roster_text().")
     elif resolved_type == "maxpreps_pdf":
         players = parse_maxpreps_roster_text(text)
     elif resolved_type == "pdf":
@@ -336,7 +381,14 @@ def parse_roster_upload(file, file_type: str = "auto") -> dict:
     filename = getattr(file, "filename", "") or ""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-    if file_type in ("auto", "csv") and ext == "csv":
+    if file_type in ("auto", "excel") and ext in {"xlsx", "xlsm", "xls"}:
+        if ext == "xls":
+            raise ValueError(
+                "Legacy .xls files are not supported. Open in Excel and Save As .xlsx, or export CSV."
+            )
+        players = parse_roster_excel(file)
+        detected_type = "excel"
+    elif file_type in ("auto", "csv") and ext == "csv":
         text = file.read().decode("utf-8-sig", errors="replace")
         players, detected_type = parse_roster_text(text, file_type=file_type, filename=filename)
     elif file_type in ("auto", "pdf", "maxpreps_pdf") or ext == "pdf":
@@ -344,6 +396,9 @@ def parse_roster_upload(file, file_type: str = "auto") -> dict:
         if not text.strip():
             raise ValueError("Could not extract text from PDF. Try a different file.")
         players, detected_type = parse_roster_text(text, file_type=file_type, filename=filename)
+    elif file_type == "excel":
+        players = parse_roster_excel(file)
+        detected_type = "excel"
     else:
         text = file.read().decode("utf-8-sig", errors="replace")
         players, detected_type = parse_roster_text(text, file_type=file_type, filename=filename)
