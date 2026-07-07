@@ -952,7 +952,13 @@ def test_schedule_page_renders_games_server_side(client):
     assert b"Server Render Opponent" in r.data
 
 
-def test_games_page_renders_server_side(client):
+def test_games_page_redirects_to_schedule(client):
+    r = client.get("/games")
+    assert r.status_code == 302
+    assert "/schedule" in r.headers["Location"]
+
+
+def test_schedule_page_shows_recorded_game_opponent(client):
     sid = _create_season(client)
     scheduled = post_json(client, "/api/scheduled_games", {
         "season_id": sid,
@@ -963,10 +969,14 @@ def test_games_page_renders_server_side(client):
         "scheduled_game_id": scheduled["id"],
         "source_type": "manual",
         "source_key": "rendered-game-key",
+        "home_score": 58,
+        "away_score": 52,
+        "result": "win",
     })
-    r = client.get("/games")
+    r = client.get(f"/schedule?season_id={sid}")
     assert r.status_code == 200
     assert b"Rendered Game Opponent" in r.data
+    assert b"58-52" in r.data
 
 
 def test_nfhs_matches_page_renders_server_side(client):

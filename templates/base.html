@@ -654,9 +654,6 @@
         {% if features.ENABLE_SEASONS_SCHEDULE %}
         <a href="/schedule" {% if nav_active('core.schedule') %}class="active"{% endif %}>Schedule</a>
         {% endif %}
-        {% if features.ENABLE_GAMES_SOURCES %}
-        <a href="/games" {% if nav_active('games.games_page') %}class="active"{% endif %}>Games</a>
-        {% endif %}
         {% if features.ENABLE_PRACTICES %}
         <a href="/practices" {% if nav_active('practice.practices_page', 'practice.practice_report_page', 'practice.practice_summary_page') %}class="active"{% endif %}>Practices</a>
         {% endif %}

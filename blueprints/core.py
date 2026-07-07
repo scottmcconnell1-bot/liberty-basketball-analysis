@@ -13,6 +13,7 @@ Routes included:
 - schedule_delete_season (/schedule/seasons/<int:season_id>/delete POST)
 - schedule_save_game (/schedule/games/save POST)
 - schedule_delete_game (/schedule/games/<int:game_id>/delete POST)
+- schedule_record_game (/schedule/games/<int:game_id>/record POST)
 - videos_page (/videos)              – Video listing page
 - film (/film, /film/<filename>)    – Film tool page
 - uploaded_file (/uploads/<filename>) – Serve uploaded files
@@ -58,6 +59,7 @@ from helpers import (
     safe_return_path,
     append_query_params,
     save_settings,
+    save_scheduled_game_record,
 )
 from module_entitlements import audit_team_entitlements, build_preview_entitlements_view
 from module_keys import (
@@ -561,6 +563,61 @@ def schedule_delete_game(game_id):
             gender=filters["gender"] or None,
             status=filters["status"] or None,
             message="Scheduled game deleted.",
+        )
+    )
+
+
+@core.route("/schedule/games/<int:game_id>/record", methods=["POST"])
+@require_feature("ENABLE_SEASONS_SCHEDULE")
+def schedule_record_game(game_id):
+    form = request.form
+    filters = {
+        "season_id": request.form.get("filter_season_id", type=int),
+        "level": (request.form.get("filter_level") or "").strip(),
+        "gender": (request.form.get("filter_gender") or "").strip(),
+        "status": (request.form.get("filter_status") or "").strip(),
+    }
+    liberty_score = (form.get("liberty_score") or "").strip()
+    opponent_score = (form.get("opponent_score") or "").strip()
+    is_conference = bool(form.get("is_conference"))
+
+    if not liberty_score or not opponent_score:
+        return render_schedule_page(
+            error="Liberty score and opponent score are required to record a result.",
+            filters=filters,
+            edit_game_id=game_id,
+        ), 400
+
+    try:
+        liberty_score_int = int(liberty_score)
+        opponent_score_int = int(opponent_score)
+    except ValueError:
+        return render_schedule_page(
+            error="Scores must be whole numbers.",
+            filters=filters,
+            edit_game_id=game_id,
+        ), 400
+
+    db = get_db()
+    _, error = save_scheduled_game_record(
+        db,
+        game_id,
+        liberty_score_int,
+        opponent_score_int,
+        is_conference=is_conference,
+        mark_completed=True,
+    )
+    if error:
+        return render_schedule_page(error=error, filters=filters, edit_game_id=game_id), 404
+
+    return redirect(
+        url_for(
+            "core.schedule",
+            season_id=filters["season_id"],
+            level=filters["level"] or None,
+            gender=filters["gender"] or None,
+            status=filters["status"] or None,
+            message="Game result saved.",
         )
     )
 

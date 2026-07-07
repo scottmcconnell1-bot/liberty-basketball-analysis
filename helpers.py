@@ -2564,6 +2564,100 @@ PRACTICE_PLAN_SOURCE_OPTIONS = [
 ]
 
 
+def _score_fields_from_liberty_opponent(location_type, liberty_score, opponent_score):
+    liberty_score = int(liberty_score)
+    opponent_score = int(opponent_score)
+    if liberty_score > opponent_score:
+        result = "win"
+    elif liberty_score < opponent_score:
+        result = "loss"
+    else:
+        result = "tie"
+
+    if location_type == "away":
+        home_score, away_score = opponent_score, liberty_score
+    else:
+        home_score, away_score = liberty_score, opponent_score
+    return home_score, away_score, result
+
+
+def save_scheduled_game_record(
+    db,
+    scheduled_game_id,
+    liberty_score,
+    opponent_score,
+    *,
+    is_conference=False,
+    mark_completed=True,
+):
+    scheduled_game = db.execute(
+        "SELECT * FROM scheduled_games WHERE id = ?",
+        (scheduled_game_id,),
+    ).fetchone()
+    if not scheduled_game:
+        return None, "Scheduled game not found."
+
+    home_score, away_score, result = _score_fields_from_liberty_opponent(
+        scheduled_game["location_type"],
+        liberty_score,
+        opponent_score,
+    )
+    source_key = f"schedule-{scheduled_game_id}"
+
+    existing = db.execute(
+        """
+        SELECT id FROM games
+        WHERE scheduled_game_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (scheduled_game_id,),
+    ).fetchone()
+
+    if existing:
+        db.execute(
+            """UPDATE games SET
+               home_score = ?, away_score = ?, result = ?, is_conference = ?,
+               updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (
+                home_score,
+                away_score,
+                result,
+                int(bool(is_conference)),
+                existing["id"],
+            ),
+        )
+        game_record_id = existing["id"]
+    else:
+        cur = db.execute(
+            """INSERT INTO games
+               (scheduled_game_id, source_type, source_key,
+                home_score, away_score, result, is_conference)
+               VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
+            (
+                scheduled_game_id,
+                source_key,
+                home_score,
+                away_score,
+                result,
+                int(bool(is_conference)),
+            ),
+        )
+        game_record_id = cur.lastrowid
+
+    if mark_completed:
+        db.execute(
+            """UPDATE scheduled_games
+               SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (scheduled_game_id,),
+        )
+
+    db.commit()
+    return game_record_id, None
+
+
 def fetch_scheduled_games(db, season_id=None, level=None, gender=None, status=None):
     clauses = []
     params = []
@@ -2582,9 +2676,47 @@ def fetch_scheduled_games(db, season_id=None, level=None, gender=None, status=No
         params.append(status)
 
     query = """
-        SELECT sg.*, s.name AS season_name
+        SELECT
+            sg.*,
+            s.name AS season_name,
+            g.id AS game_record_id,
+            g.home_score,
+            g.away_score,
+            g.result,
+            g.is_conference,
+            CASE
+                WHEN g.id IS NULL THEN NULL
+                WHEN sg.location_type = 'away' THEN g.away_score
+                ELSE g.home_score
+            END AS liberty_score,
+            CASE
+                WHEN g.id IS NULL THEN NULL
+                WHEN sg.location_type = 'away' THEN g.home_score
+                ELSE g.away_score
+            END AS opponent_score,
+            (
+                SELECT ar.analysis_key
+                FROM analysis_runs ar
+                WHERE ar.game_id = g.id
+                ORDER BY ar.id DESC
+                LIMIT 1
+            ) AS analysis_key,
+            (
+                SELECT v.stored_filename
+                FROM videos v
+                WHERE v.relational_game_id = g.id
+                ORDER BY v.id DESC
+                LIMIT 1
+            ) AS video_filename
         FROM scheduled_games sg
         JOIN seasons s ON s.id = sg.season_id
+        LEFT JOIN games g ON g.id = (
+            SELECT g2.id
+            FROM games g2
+            WHERE g2.scheduled_game_id = sg.id
+            ORDER BY g2.id DESC
+            LIMIT 1
+        )
     """
     if clauses:
         query += " WHERE " + " AND ".join(clauses)

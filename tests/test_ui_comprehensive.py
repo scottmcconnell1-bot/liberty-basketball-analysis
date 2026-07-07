@@ -190,7 +190,6 @@ def test_navigation_links():
     nav_links = [
         ("/", "Dashboard"),
         ("/schedule", "Schedule"),
-        ("/games", "Games"),
         ("/nfhs-matches", "NFHS Matches"),
         ("/practices", "Practices"),
         ("/practice-summary", "Practice Summary"),
@@ -266,19 +265,12 @@ def test_schedule_page():
 
 
 def test_games_page():
-    print("\n🏀 Games")
-    r = page_ok("/games", "Games page")
-    if r:
-        page_has_form("/games", "Games form")
-
-    # Create game via form (needs source_type and source_key)
-    form_submit("/games/save", {
-        "source_type": "manual",
-        "source_key": "ui-test-game",
-        "home_score": "65",
-        "away_score": "58",
-        "result": "win",
-    }, "Create game form", expect_status=200)
+    print("\n🏀 Games (redirects to Schedule)")
+    r = get("/games")
+    if r.status_code == 302 and "/schedule" in (r.headers.get("Location") or ""):
+        pass_("Games page redirects to Schedule")
+    else:
+        fail_(f"Games page expected redirect to schedule, got {r.status_code}")
 
     api_get("/api/games", name="List games")
 

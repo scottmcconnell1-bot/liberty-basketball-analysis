@@ -107,6 +107,7 @@
       <th style="min-width:120px;">DATE</th>
       <th>OPPONENT</th>
       <th style="min-width:130px;">TIMES</th>
+      <th style="min-width:150px;">RESULT</th>
       <th style="min-width:70px;"></th>
     </tr></thead>
     <tbody>
@@ -197,6 +198,56 @@
             <span style="color:#9ca3af;">TBD</span>
             {% endif %}
           </td>
+          <!-- Result column: score, record form, film/stats links -->
+          <td>
+            {% if game.liberty_score is not none and game.opponent_score is not none %}
+            <div style="font-weight:600;font-size:0.9rem;">
+              {% if game.result == 'win' %}
+              <span style="color:#059669;">W</span>
+              {% elif game.result == 'loss' %}
+              <span style="color:#dc2626;">L</span>
+              {% elif game.result == 'tie' %}
+              <span style="color:#6b7280;">T</span>
+              {% endif %}
+              {{ game.liberty_score }}-{{ game.opponent_score }}
+            </div>
+            {% if game.is_conference %}
+            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:0.62rem;margin-top:2px;display:inline-block;">Conf</span>
+            {% endif %}
+            {% else %}
+            <span style="color:#9ca3af;font-size:0.8rem;">No score</span>
+            {% endif %}
+            <form method="post" action="{{ url_for('core.schedule_record_game', game_id=game.id) }}" style="margin-top:6px;">
+              <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+              <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+              <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+              <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+              <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                <input type="number" name="liberty_score" class="form-control" style="width:52px;padding:4px 6px;font-size:0.8rem;" min="0" placeholder="Us" value="{{ game.liberty_score if game.liberty_score is not none else '' }}" title="Liberty score">
+                <span style="color:#9ca3af;font-size:0.75rem;">–</span>
+                <input type="number" name="opponent_score" class="form-control" style="width:52px;padding:4px 6px;font-size:0.8rem;" min="0" placeholder="Opp" value="{{ game.opponent_score if game.opponent_score is not none else '' }}" title="Opponent score">
+                <label style="display:flex;align-items:center;gap:3px;font-size:0.68rem;color:#6b7280;white-space:nowrap;">
+                  <input type="checkbox" name="is_conference" value="1" {% if game.is_conference %}checked{% endif %} style="width:auto;margin:0;">
+                  Conf
+                </label>
+                <button class="btn btn-primary btn-sm" type="submit" style="padding:3px 8px;font-size:0.72rem;">Save</button>
+              </div>
+            </form>
+            {% if game.analysis_key or game.video_filename %}
+            <div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">
+              {% if game.video_filename and game.analysis_key %}
+              <a class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:0.68rem;" href="{{ url_for('core.film', filename=game.video_filename, game_id=game.analysis_key) }}">Film</a>
+              {% endif %}
+              {% if game.analysis_key %}
+              <a class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:0.68rem;" href="/analysis/{{ game.analysis_key | urlencode }}">Stats</a>
+              {% endif %}
+            </div>
+            {% elif game.game_record_id %}
+            <div style="margin-top:4px;">
+              <a href="/videos" style="font-size:0.68rem;color:#6b7280;">Upload film →</a>
+            </div>
+            {% endif %}
+          </td>
           <!-- Actions -->
           <td style="white-space:nowrap;">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
@@ -211,7 +262,7 @@
         </tr>
         {% endfor %}
       {% else %}
-      <tr><td colspan="4" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
+      <tr><td colspan="5" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
       {% endif %}
     </tbody>
   </table>
