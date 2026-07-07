@@ -48,7 +48,10 @@ def test_teams_schedule_filters_by_season(client, app):
     blank_resp = client.get("/api/teams/schedule?varsity_boys=")
     boys_blank = next(t for t in blank_resp.get_json()["teams"] if t["key"] == "varsity_boys")
     assert boys_blank["season_id"] is None
-    assert boys_blank["wins"] == 1
+    assert boys_blank["wins"] == 0
+    assert boys_blank["losses"] == 0
+    assert boys_blank["last_game"] is None
+    assert boys_blank["upcoming"] == []
 
     winter_resp = client.get(f"/api/teams/schedule?varsity_boys={winter_id}")
     boys_winter = next(t for t in winter_resp.get_json()["teams"] if t["key"] == "varsity_boys")
@@ -72,6 +75,9 @@ def test_teams_schedule_filters_by_season(client, app):
     payload = payload_resp.get_json()
     assert "teams" in payload
     boys_default = next(t for t in payload["teams"] if t["key"] == "varsity_boys")
+    assert boys_default["season_id"] is None
+    assert boys_default["wins"] == 0
+    assert boys_default["default_season_id"] is None
     assert "seasons" in boys_default
     assert summer_id in {s["id"] for s in boys_default["seasons"]}
 

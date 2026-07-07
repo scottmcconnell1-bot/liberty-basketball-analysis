@@ -142,14 +142,10 @@
     ];
     let dashboardTeams = [];
 
-    function seasonStorageKey(teamKey) {
-      return `dashboard_season_${teamKey}`;
-    }
-
     function buildSeasonSelectOptions(seasons, selectedId) {
       const regular = seasons.filter(s => (s.season_type || 'regular') !== 'summer');
       const summer = seasons.filter(s => s.season_type === 'summer');
-      let html = '<option value="">All seasons / off-season</option>';
+      let html = '<option value="">Select season</option>';
       if (regular.length) {
         html += '<optgroup label="Regular Season">';
         html += regular.map(s =>
@@ -223,7 +219,7 @@
         scheduleHtml += '</div>';
       }
 
-      const seasonLabel = t.season_name ? t.season_name : 'All seasons';
+      const seasonLabel = t.season_name ? t.season_name : 'No season selected';
       return `<div class="team-card" data-frame="1.1-${t.key}" data-team-key="${t.key}">
         <div class="team-card-top">
           <div class="team-name">${t.label}</div>
@@ -250,22 +246,9 @@
     }
 
     async function loadTeamDashboard() {
-      const storedParams = new URLSearchParams();
-      TEAM_SECTION_KEYS.forEach(key => {
-        const stored = localStorage.getItem(seasonStorageKey(key));
-        if (stored !== null) storedParams.set(key, stored);
-      });
-      const qs = storedParams.toString();
-      const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
+      const tr = await fetch('/api/teams/schedule');
       const payload = await tr.json();
       dashboardTeams = payload.teams || [];
-
-      const label = document.getElementById('season-label');
-      if (payload.active_season_count > 0) {
-        label.textContent = 'In-season: cards default to the active season';
-      } else {
-        label.textContent = 'Off-season: cards default to all seasons';
-      }
 
       let rankings = {};
       try {
@@ -278,21 +261,20 @@
       window._rankingsLoaded = true;
     }
 
-    await loadTeamDashboard();
-
     window.onTeamSeasonChange = async function(teamKey, seasonId) {
-      localStorage.setItem(seasonStorageKey(teamKey), seasonId);
       const params = new URLSearchParams();
       TEAM_SECTION_KEYS.forEach(key => {
-        const stored = localStorage.getItem(seasonStorageKey(key));
-        if (stored !== null) params.set(key, stored);
-        else {
+        let sid = '';
+        if (key === teamKey) {
+          sid = seasonId;
+        } else {
           const team = dashboardTeams.find(t => t.key === key);
-          if (team && team.default_season_id) params.set(key, String(team.default_season_id));
+          if (team && team.season_id != null) sid = String(team.season_id);
         }
+        params.set(key, sid);
       });
       const qs = params.toString();
-      const tr = await fetch('/api/teams/schedule' + (qs ? `?${qs}` : ''));
+      const tr = await fetch('/api/teams/schedule?' + qs);
       const payload = await tr.json();
       dashboardTeams = payload.teams || [];
 

@@ -2159,18 +2159,22 @@ def _resolve_dashboard_season_id(request, team_key, default_season_id, allowed_s
 
 
 def _default_dashboard_season_id(db, sec, active_seasons, allowed_season_ids):
-    """Pick the active season for a team, or None between seasons."""
-    if not active_seasons or not allowed_season_ids:
-        return None
-    team_active = [s for s in active_seasons if s["id"] in allowed_season_ids]
-    if not team_active:
-        return None
-    team_active.sort(key=lambda s: (s["season_type"] != "regular", s["start_date"]))
-    return team_active[0]["id"]
+    """Dashboard cards default to no season until the user picks one."""
+    return None
 
 
 def _fetch_team_dashboard_summary(db, sec, season_id=None):
     """Return wins/losses, conference record, upcoming, and last game for one team card."""
+    if season_id is None:
+        return {
+            "wins": 0,
+            "losses": 0,
+            "conf_wins": 0,
+            "conf_losses": 0,
+            "upcoming": [],
+            "last_game": None,
+        }
+
     where, params = _team_section_where(sec, season_id)
 
     record_rows = db.execute(
