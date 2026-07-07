@@ -1128,8 +1128,30 @@ def _read_log_tail(log_path: str, limit: int = 500) -> str:
         return ""
 
 
+def _analysis_log_error_message(content: str) -> str | None:
+    if not content:
+        return None
+    if "No module named 'sklearn'" in content:
+        return (
+            "scikit-learn is not installed. Run: pip install scikit-learn "
+            "then click Rebuild again."
+        )
+    if "ERROR: An error occurred in event_generator" in content:
+        for line in content.splitlines():
+            if "event_generator:" in line:
+                return line.strip()[:500]
+        return "Event generation failed. See logs for details."
+    if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
+        return _read_log_tail_from_content(content, 500)
+    return None
+
+
+def _read_log_tail_from_content(content: str, limit: int = 500) -> str:
+    return content[-limit:] if content else ""
+
+
 def reconcile_stuck_analysis_run(db, game_id: str) -> None:
-    """Mark orphaned pending runs failed so the UI can offer retry."""
+    """Mark orphaned pending/running runs failed or completed based on logs."""
     row = db.execute(
         """SELECT id, status
            FROM analysis_runs
@@ -1138,15 +1160,69 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
            LIMIT 1""",
         (game_id,),
     ).fetchone()
-    if not row or row[1] != "pending":
+    if not row:
+        return
+
+    status = row[1]
+    if status not in {"pending", "running"}:
         return
 
     log_path = ai_analysis_log_path(game_id)
+    content = _read_log_tail(log_path, 8000) if os.path.exists(log_path) else ""
+
+    if status == "running":
+        if "analysis_runs updated to 'completed'" in content:
+            db.execute(
+                """UPDATE analysis_runs
+                   SET status='completed',
+                       progress_pct=100,
+                       progress_step='Done',
+                       completed_at=CURRENT_TIMESTAMP,
+                       error_message=NULL
+                   WHERE id=?""",
+                (row[0],),
+            )
+            db.commit()
+            return
+
+        error_message = _analysis_log_error_message(content)
+        if error_message:
+            db.execute(
+                """UPDATE analysis_runs
+                   SET status='failed',
+                       error_message=?,
+                       progress_step='Failed',
+                       completed_at=CURRENT_TIMESTAMP
+                   WHERE id=?""",
+                (error_message, row[0]),
+            )
+            db.commit()
+            return
+
+        if content and os.path.exists(log_path):
+            age_seconds = time.time() - os.path.getmtime(log_path)
+            if age_seconds > 1800:
+                db.execute(
+                    """UPDATE analysis_runs
+                       SET status='failed',
+                           error_message=?,
+                           progress_step='Failed',
+                           completed_at=CURRENT_TIMESTAMP
+                       WHERE id=?""",
+                    (
+                        "Analysis run stopped responding. Check logs, install missing "
+                        "packages (pip install scikit-learn), then click Rebuild again.",
+                        row[0],
+                    ),
+                )
+                db.commit()
+        return
+
     if not os.path.exists(log_path):
         return
 
-    content = _read_log_tail(log_path, 4000)
-    if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
+    error_message = _analysis_log_error_message(content)
+    if error_message:
         db.execute(
             """UPDATE analysis_runs
                SET status='failed',
@@ -1154,7 +1230,7 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
                    progress_step='Failed',
                    completed_at=CURRENT_TIMESTAMP
                WHERE id=?""",
-            (_read_log_tail(log_path, 500), row[0]),
+            (error_message, row[0]),
         )
         db.commit()
         return

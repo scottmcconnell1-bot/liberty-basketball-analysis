@@ -88,6 +88,7 @@ def test_reconcile_stuck_analysis_run_marks_failed_on_traceback(app, tmp_path):
             status TEXT,
             error_message TEXT,
             progress_step TEXT,
+            progress_pct REAL,
             completed_at TEXT
         )"""
     )
@@ -108,6 +109,77 @@ def test_reconcile_stuck_analysis_run_marks_failed_on_traceback(app, tmp_path):
     row = conn.execute("SELECT status, error_message FROM analysis_runs").fetchone()
     assert row[0] == "failed"
     assert "cv2" in row[1]
+
+
+def test_reconcile_stuck_running_run_marks_failed_on_sklearn_error(app, tmp_path):
+    from helpers import ai_analysis_log_path, reconcile_stuck_analysis_run
+
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """CREATE TABLE analysis_runs (
+            id INTEGER PRIMARY KEY,
+            analysis_key TEXT,
+            status TEXT,
+            error_message TEXT,
+            progress_step TEXT,
+            progress_pct REAL,
+            completed_at TEXT
+        )"""
+    )
+    conn.execute(
+        "INSERT INTO analysis_runs (analysis_key, status, progress_step) VALUES (?, 'running', 'Regenerating events…')",
+        ("nfhs_gam30_running",),
+    )
+    conn.commit()
+    conn.close()
+
+    log_path = ai_analysis_log_path("nfhs_gam30_running")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w", encoding="utf-8") as handle:
+        handle.write("INFO: Clustering players spatially...\n")
+        handle.write("ERROR: An error occurred in event_generator: No module named 'sklearn'\n")
+
+    conn = sqlite3.connect(db_path)
+    reconcile_stuck_analysis_run(conn, "nfhs_gam30_running")
+    row = conn.execute("SELECT status, error_message FROM analysis_runs").fetchone()
+    assert row[0] == "failed"
+    assert "scikit-learn" in row[1]
+
+
+def test_reconcile_stuck_running_run_marks_completed_from_log(app, tmp_path):
+    from helpers import ai_analysis_log_path, reconcile_stuck_analysis_run
+
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """CREATE TABLE analysis_runs (
+            id INTEGER PRIMARY KEY,
+            analysis_key TEXT,
+            status TEXT,
+            error_message TEXT,
+            progress_step TEXT,
+            progress_pct REAL,
+            completed_at TEXT
+        )"""
+    )
+    conn.execute(
+        "INSERT INTO analysis_runs (analysis_key, status, progress_step) VALUES (?, 'running', 'Regenerating events…')",
+        ("nfhs_gam30_done",),
+    )
+    conn.commit()
+    conn.close()
+
+    log_path = ai_analysis_log_path("nfhs_gam30_done")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w", encoding="utf-8") as handle:
+        handle.write("[AI] analysis_runs updated to 'completed' for nfhs_gam30_done\n")
+
+    conn = sqlite3.connect(db_path)
+    reconcile_stuck_analysis_run(conn, "nfhs_gam30_done")
+    row = conn.execute("SELECT status, progress_step FROM analysis_runs").fetchone()
+    assert row[0] == "completed"
+    assert row[1] == "Done"
 
 
 def test_analysis_runs_has_progress_columns(db):
