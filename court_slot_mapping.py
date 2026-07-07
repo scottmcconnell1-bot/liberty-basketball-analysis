@@ -19,7 +19,7 @@ def _player_label(jersey_number, player_name):
     return name or None
 
 
-def _resolve_roster_player(db, jersey_number=None, player_name=None, player_id=None):
+def _resolve_roster_player(db, jersey_number=None, player_name=None, player_id=None, game_id=None):
     if player_id is not None:
         row = db.execute(
             """SELECT p.id AS player_id, p.name, p.jersey_number,
@@ -34,6 +34,15 @@ def _resolve_roster_player(db, jersey_number=None, player_name=None, player_id=N
         ).fetchone()
         if row:
             return dict(row)
+
+    if game_id and jersey_number is not None:
+        from analysis_helpers import lookup_film_roster_player, resolve_analysis_game_context
+
+        context = resolve_analysis_game_context(db, game_id)
+        if context.get("season_id"):
+            film_player = lookup_film_roster_player(db, game_id, jersey_number=jersey_number)
+            if film_player:
+                return film_player
 
     if jersey_number is not None:
         row = db.execute(
@@ -124,6 +133,7 @@ def save_court_slot_mappings(db, game_id, mappings, apply_to_events=False):
             jersey_number=entry.get("jersey_number"),
             player_name=entry.get("player_name"),
             player_id=entry.get("player_id"),
+            game_id=game_id,
         )
         jersey_number = resolved.get("jersey_number") if resolved.get("jersey_number") is not None else entry.get("jersey_number")
         player_name = resolved.get("name") or entry.get("player_name")
@@ -175,6 +185,7 @@ def apply_court_slot_mappings(db, game_id):
             db,
             jersey_number=slot.get("jersey_number"),
             player_name=slot.get("player_name"),
+            game_id=game_id,
         )
         label = slot["mapped_label"]
         tracker_id = str(slot["tracker_id"])

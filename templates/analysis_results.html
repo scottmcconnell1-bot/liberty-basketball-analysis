@@ -70,6 +70,20 @@
   .event-block { background: #3f3f46; color: #d4d4d8; }
   .event-foul { background: #581c87; color: #d8b4fe; }
   .event-possession_change { background: #164e63; color: #67e8f9; }
+  .clickable-stat { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .clickable-stat:hover { color: var(--accent); }
+  .event-explorer { margin-top: 16px; }
+  .event-explorer-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .event-explorer-filters label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .event-explorer-filters select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 0.85rem; }
+  .event-explorer-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .event-explorer-list { max-height: 360px; overflow-y: auto; }
+  .event-explorer-row { display: grid; grid-template-columns: 110px 1fr 90px 90px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(42,45,58,0.5); font-size: 0.82rem; }
+  .event-explorer-row:hover { background: rgba(59,130,246,0.05); }
+  .event-explorer-empty { color: var(--muted); font-size: 0.85rem; padding: 12px 0; }
+  .film-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; }
+  .film-link:hover { text-decoration: underline; }
+  .roster-source-note { color: var(--muted); font-size: 0.8rem; margin-bottom: 10px; }
 </style>
 {% endblock %}
 
@@ -84,15 +98,12 @@
   <h1>📊 Analysis Results</h1>
   <p class="subtitle" id="resultsSubtitle">{{ game_id }}</p>
   <div id="resultsActions" style="display:none;margin-bottom:12px;"></div>
-  <div id="identityExplainer" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;border-color:#3b2f1a;background:#1a1710;">
-    <strong>About player labels (Pos 0, Pos 3, …)</strong>
-    <p style="margin:.5rem 0 0;font-size:.9rem;color:var(--muted);line-height:1.5;">
-      Automated analysis does <em>not</em> read jersey numbers from the video.
-      <strong>Pos 0–9 are court-area clusters</strong> — the AI groups detections by where people appear on the camera view.
-      They are <strong>not</strong> roster numbers, and they are <strong>not</strong> in jersey order.
-      Minutes = time someone was detected in that court area (any player who stood there).
-      To get real names and stats, use <strong>Map court slots to jersey numbers</strong> below.
-      Match each Pos to a roster player once — the box score will update to show jersey # and name.
+  <div id="identityExplainer" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;border-color:#1a3b2f;background:#101a14;">
+    <strong>Automated AI player identity</strong>
+    <p id="identityExplainerText" style="margin:.5rem 0 0;font-size:.9rem;color:var(--muted);line-height:1.5;">
+      Jersey numbers are read from the video automatically and matched to your roster.
+      Click any stat to see every play on film and verify it.
+      Use the optional mapping table below only if the AI mis-identified a player.
     </p>
   </div>
   <div id="resultsSummary" class="card" style="display:none;margin-bottom:16px;padding:14px 18px;"></div>
@@ -115,10 +126,10 @@
 
   <div id="results" style="display:none">
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
-      <h2>👕 Map court slots to jersey numbers</h2>
+      <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
-        Match each <strong>Pos</strong> (court area) to a real player from your roster.
-        After you save, stats and the box score will show jersey numbers and names instead of Pos labels.
+        The AI auto-maps jersey numbers from the video to your roster.
+        Only edit a row here if a player was mis-identified — otherwise just click stats above to verify on film.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
@@ -135,7 +146,7 @@
           <tbody></tbody>
         </table>
       </div>
-      <button type="button" class="btn btn-primary btn-sm" id="saveSlotMappingsBtn">Save mapping &amp; update stats</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
     </div>
 
     <div class="grid">
@@ -192,12 +203,89 @@
       <h2>📝 Recent Events</h2>
       <div id="recent-events" style="max-height:300px;overflow-y:auto"></div>
     </div>
+
+    <div class="card event-explorer" id="eventExplorerCard">
+      <div class="event-explorer-header">
+        <h2>🎬 Event Explorer — proof on film</h2>
+        <span id="event-explorer-count" style="color:var(--muted);font-size:0.85rem;"></span>
+      </div>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
+        Click any stat above (e.g. <strong>REB</strong>) to list every matching play here.
+        Use the filters to narrow by team, player, quarter, or half, then open film at that moment.
+      </p>
+      <div class="event-explorer-filters">
+        <div>
+          <label for="filter-stat">Stat / event</label>
+          <select id="filter-stat">
+            <option value="">All events</option>
+            <option value="reb">Rebounds</option>
+            <option value="ast">Assists</option>
+            <option value="stl">Steals</option>
+            <option value="blk">Blocks</option>
+            <option value="tov">Turnovers</option>
+            <option value="pts">Points (scoring)</option>
+            <option value="fgm">Field goals made</option>
+            <option value="foul">Fouls</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-team">Team</label>
+          <select id="filter-team">
+            <option value="all">All teams</option>
+            <option value="our">Our team</option>
+            <option value="opp">Opponent</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-player">Player</label>
+          <select id="filter-player">
+            <option value="">All players</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-quarter">Quarter</label>
+          <select id="filter-quarter">
+            <option value="all">All quarters</option>
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+            <option value="5">OT</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-half">Half</label>
+          <select id="filter-half">
+            <option value="all">Full game</option>
+            <option value="1">1st half</option>
+            <option value="2">2nd half</option>
+          </select>
+        </div>
+      </div>
+      <div id="event-explorer-list" class="event-explorer-list">
+        <div class="event-explorer-empty">Click a stat in the box score to load matching events.</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 let GAME_ID = {{ game_id|tojson }};
 let CURRENT_VIDEO_ID = null;
+let FILM_URL = null;
+let STORED_FILENAME = null;
+let ANALYSIS_TEAMS = null;
+let EXPLORER_PLAYERS = [];
+const STAT_COLUMNS = {
+  reb: 'reb',
+  ast: 'ast',
+  stl: 'stl',
+  blk: 'blk',
+  tov: 'tov',
+  pts: 'pts',
+  fgm: 'fgm',
+  fga: 'fga',
+};
 
 function slotLabel(id, row) {
   if (row && row.mapped_label) return row.mapped_label;
@@ -307,7 +395,21 @@ async function loadResults() {
       if (subtitle) subtitle.textContent = GAME_ID;
     }
 
+    if (data.analysis_version) {
+      const subtitle = document.getElementById('resultsSubtitle');
+      if (subtitle) subtitle.textContent = GAME_ID + ' · analysis ' + data.analysis_version;
+    }
     if (data.video_id) CURRENT_VIDEO_ID = data.video_id;
+    FILM_URL = data.film_url || null;
+    STORED_FILENAME = data.stored_filename || null;
+    ANALYSIS_TEAMS = data.teams || null;
+    if (ANALYSIS_TEAMS) {
+      const teamSelect = document.getElementById('filter-team');
+      if (teamSelect && ANALYSIS_TEAMS.our_team_name) {
+        teamSelect.options[1].textContent = ANALYSIS_TEAMS.our_team_name || 'Our team';
+        teamSelect.options[2].textContent = ANALYSIS_TEAMS.opponent_team_name || 'Opponent';
+      }
+    }
     renderResultsActions(CURRENT_VIDEO_ID);
 
     const explainer = document.getElementById('identityExplainer');
@@ -318,11 +420,24 @@ async function loadResults() {
       const det = data.detection_count ?? 0;
       const evt = data.event_count ?? 0;
       summary.style.display = 'block';
+      const identity = data.identity_status || {};
+      const mapped = identity.applied || identity.slots_mapped || 0;
+      const ocrReads = identity.ocr_read_count || 0;
       let html = '<strong>Analysis summary:</strong> '
         + det.toLocaleString() + ' detections, '
         + evt.toLocaleString() + ' events. ';
-      html += 'Stats below are grouped by court slot (Pos 0–9), not jersey number. ';
-      html += 'Treat as rough estimates until you review events in Film Tool.';
+      if (mapped > 0) {
+        html += 'AI auto-mapped <strong>' + mapped + '</strong> players from jersey OCR'
+          + (ocrReads ? ' (' + ocrReads.toLocaleString() + ' jersey reads)' : '') + '. ';
+        html += 'Click any stat to verify each play on film.';
+      } else if (identity.reason === 'no_cluster_suggestions') {
+        html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
+        html += 'Try <strong>Rebuild events</strong> on Video Library, or verify the roster is imported in Film Tool.';
+      } else {
+        html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
+        html += 'Click stats to verify events on film.';
+      }
+      html += ' Treat counts as directional until you spot-check a few plays.';
       if (Array.isArray(data.quality_notes) && data.quality_notes.length) {
         html += '<ul style="margin:.5rem 0 0 1rem;padding:0;">';
         data.quality_notes.forEach(function(note) {
@@ -418,10 +533,22 @@ function renderEventSummary(events) {
   const total = events.reduce((s, e) => s + e.cnt, 0);
   let html = '<div class="stat-grid">';
   for (const e of events.slice(0, 6)) {
-    html += '<div class="stat-box"><div class="val">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + escapeHtml(e.event_type) + '</div></div>';
+    html += '<div class="stat-box"><div class="val clickable-stat" data-explore-type="' + escapeHtml(e.event_type) + '" title="Show all ' + escapeHtml(e.event_type) + ' events">' + e.cnt.toLocaleString() + '</div><div class="lbl">' + escapeHtml(e.event_type) + '</div></div>';
   }
-  html += '</div><p style="color:var(--muted);font-size:0.8rem">Total: ' + total.toLocaleString() + ' events</p>';
+  html += '</div><p style="color:var(--muted);font-size:0.8rem">Total: <span class="clickable-stat" data-explore-type="" title="Show all events">' + total.toLocaleString() + '</span> events</p>';
   el.innerHTML = html;
+  el.querySelectorAll('[data-explore-type]').forEach(function(node) {
+    node.addEventListener('click', function() {
+      const eventType = node.getAttribute('data-explore-type');
+      if (eventType) {
+        document.getElementById('filter-stat').value = '';
+        openEventExplorer({ event_type: eventType });
+      } else {
+        document.getElementById('filter-stat').value = '';
+        openEventExplorer({});
+      }
+    });
+  });
 }
 
 function renderPossessionSummary(summary) {
@@ -526,18 +653,33 @@ function renderBoxScore(basic, enhanced) {
 
     html += '<tr><td><strong>' + escapeHtml(name) + '</strong></td>';
     html += '<td class="num">' + min + '</td>';
-    html += '<td class="num"><strong>' + pts + '</strong></td>';
-    html += '<td class="num">' + fgm + '/' + fga + '</td>';
+    html += '<td class="num">' + renderClickableStat('pts', pts, pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('fgm', fgm + '/' + fga, pid, name) + '</td>';
     html += '<td class="num">' + tpm + '/' + tpa + '</td>';
     html += '<td class="num">' + ftm + '/' + fta + '</td>';
-    html += '<td class="num">' + (row.reb != null ? row.reb : (row.rebounds || 0)) + '</td>';
-    html += '<td class="num">' + (row.ast != null ? row.ast : (row.assists || 0)) + '</td>';
-    html += '<td class="num">' + (row.stl != null ? row.stl : (row.steals || 0)) + '</td>';
-    html += '<td class="num">' + (row.blk != null ? row.blk : (row.blocks || 0)) + '</td>';
-    html += '<td class="num">' + (row.tov != null ? row.tov : (row.turnovers || 0)) + '</td>';
-    html += '<td class="num">' + (row.fouls || 0) + '</td></tr>';
+    html += '<td class="num">' + renderClickableStat('reb', row.reb != null ? row.reb : (row.rebounds || 0), pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('ast', row.ast != null ? row.ast : (row.assists || 0), pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('stl', row.stl != null ? row.stl : (row.steals || 0), pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('blk', row.blk != null ? row.blk : (row.blocks || 0), pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('tov', row.tov != null ? row.tov : (row.turnovers || 0), pid, name) + '</td>';
+    html += '<td class="num">' + renderClickableStat('pf', row.fouls || 0, pid, name) + '</td></tr>';
   }
   tbody.innerHTML = html;
+  tbody.querySelectorAll('[data-explore-stat]').forEach(function(node) {
+    node.addEventListener('click', function() {
+      openEventExplorer({
+        stat: node.getAttribute('data-explore-stat'),
+        tracker_id: node.getAttribute('data-explore-tracker') || '',
+        player: node.getAttribute('data-explore-player') || '',
+      });
+    });
+  });
+}
+
+function renderClickableStat(statKey, value, trackerId, playerName) {
+  const numeric = parseInt(String(value).split('/')[0], 10) || 0;
+  if (!numeric) return String(value);
+  return '<span class="clickable-stat" data-explore-stat="' + escapeHtml(statKey) + '" data-explore-tracker="' + escapeHtml(trackerId) + '" data-explore-player="' + escapeHtml(playerName) + '" title="Show every ' + escapeHtml(statKey.toUpperCase()) + ' on film">' + value + '</span>';
 }
 
 function renderShotBreakdown(shots) {
@@ -608,10 +750,21 @@ function renderRecentEvents(events) {
   events.forEach(function(e) {
     var cls = 'event-' + e.event_type;
     var time = e.timestamp_ms ? formatTime(e.timestamp_ms) : '-';
-    html += '<span class="event-pill ' + cls + '">' + e.event_type + (e.shot_result ? ' ' + e.shot_result : '') + '</span>';
-    html += ' <span style="color:var(--muted);font-size:0.75rem">' + (e.player || '') + ' @ ' + time + '</span><br>';
+    var filmLink = buildFilmLink(e.timestamp_ms, 'View film');
+    html += '<span class="event-pill ' + cls + ' clickable-stat" data-explore-type="' + escapeHtml(e.event_type) + '" data-explore-player="' + escapeHtml(e.player || '') + '">' + e.event_type + (e.shot_result ? ' ' + e.shot_result : '') + '</span>';
+    html += ' <span style="color:var(--muted);font-size:0.75rem">' + escapeHtml(e.player || '') + ' @ ' + time + '</span>';
+    if (filmLink) html += ' ' + filmLink;
+    html += '<br>';
   });
   el.innerHTML = html;
+  el.querySelectorAll('[data-explore-type]').forEach(function(node) {
+    node.addEventListener('click', function() {
+      openEventExplorer({
+        event_type: node.getAttribute('data-explore-type'),
+        player: node.getAttribute('data-explore-player') || '',
+      });
+    });
+  });
 }
 
 function formatTime(ms) {
@@ -634,8 +787,9 @@ function renderSlotMappingTable() {
 
   let rosterOptions = '<option value="">— Select roster player —</option>';
   ROSTER_PLAYERS.forEach(function(p) {
-    const label = (p.jersey_number != null ? '#' + p.jersey_number + ' ' : '') + (p.name || 'Player');
-    rosterOptions += '<option value="' + p.id + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + escapeHtml(p.name || '') + '">' + escapeHtml(label) + '</option>';
+    const label = (p.jersey_number != null ? '#' + p.jersey_number + ' ' : '') + (p.name || p.label || 'Player');
+    const value = p.id != null ? String(p.id) : '';
+    rosterOptions += '<option value="' + value + '" data-jersey="' + (p.jersey_number ?? '') + '" data-name="' + escapeHtml(p.name || p.label || '') + '">' + escapeHtml(label) + '</option>';
   });
 
   let html = '';
@@ -649,6 +803,19 @@ function renderSlotMappingTable() {
     html += '</tr>';
   });
   tbody.innerHTML = html;
+
+  COURT_SLOTS.forEach(function(slot) {
+    const tr = tbody.querySelector('tr[data-tracker-id="' + slot.tracker_id + '"]');
+    if (!tr) return;
+    const select = tr.querySelector('.slot-roster');
+    if (!select || !slot.jersey_number) return;
+    for (const opt of select.options) {
+      if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
+        select.value = opt.value;
+        break;
+      }
+    }
+  });
 
   tbody.querySelectorAll('.slot-roster').forEach(function(select) {
     select.addEventListener('change', function() {
@@ -665,12 +832,27 @@ async function loadSlotMappingUI() {
   try {
     const [slotsResp, rosterResp] = await Promise.all([
       fetch('/api/court-slots/' + encodeURIComponent(GAME_ID)),
-      fetch('/api/players'),
+      fetch('/api/analysis/' + encodeURIComponent(GAME_ID) + '/roster'),
     ]);
     if (!slotsResp.ok) return;
     const slotsData = await slotsResp.json();
     COURT_SLOTS = slotsData.slots || [];
-    if (rosterResp.ok) ROSTER_PLAYERS = await rosterResp.json();
+    if (rosterResp.ok) {
+      const rosterData = await rosterResp.json();
+      ROSTER_PLAYERS = rosterData.players || [];
+      EXPLORER_PLAYERS = ROSTER_PLAYERS.slice();
+      populateExplorerPlayerFilter();
+      const status = document.getElementById('slot-mapping-status');
+      if (status && rosterData.source === 'film_roster') {
+        status.style.display = 'block';
+        status.style.color = 'var(--green)';
+        status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from your Film Tool roster.';
+      } else if (status && rosterData.source === 'empty') {
+        status.style.display = 'block';
+        status.style.color = 'var(--orange)';
+        status.textContent = 'No roster found. Import a roster in Film Tool (Manage Rosters), then refresh.';
+      }
+    }
     renderSlotMappingTable();
   } catch (err) {
     console.warn('Slot mapping load failed', err);
@@ -728,6 +910,112 @@ async function saveSlotMappings() {
 }
 
 document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlotMappings);
+
+function buildFilmLink(timestampMs, label) {
+  if (!STORED_FILENAME || timestampMs == null) return '';
+  const seconds = Math.max(0, Math.floor(Number(timestampMs) / 1000));
+  const href = '/film/' + encodeURIComponent(STORED_FILENAME)
+    + '?game_id=' + encodeURIComponent(GAME_ID)
+    + '&t=' + seconds;
+  return '<a class="film-link" href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || 'Film') + '</a>';
+}
+
+function populateExplorerPlayerFilter() {
+  const select = document.getElementById('filter-player');
+  if (!select) return;
+  const current = select.value;
+  let html = '<option value="">All players</option>';
+  const seen = new Set();
+  COURT_SLOTS.forEach(function(slot) {
+    const label = slot.mapped_label || ('Pos ' + slot.tracker_id);
+    if (!seen.has(label)) {
+      seen.add(label);
+      html += '<option value="' + escapeHtml(label) + '" data-tracker="' + slot.tracker_id + '">' + escapeHtml(label) + '</option>';
+    }
+  });
+  EXPLORER_PLAYERS.forEach(function(player) {
+    const label = (player.jersey_number != null ? '#' + player.jersey_number + ' ' : '') + (player.name || player.label || '');
+    if (label && !seen.has(label)) {
+      seen.add(label);
+      html += '<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</option>';
+    }
+  });
+  select.innerHTML = html;
+  if (current) select.value = current;
+}
+
+function getExplorerFilters(overrides) {
+  const playerSelect = document.getElementById('filter-player');
+  const selected = playerSelect ? playerSelect.selectedOptions[0] : null;
+  return Object.assign({
+    stat: document.getElementById('filter-stat')?.value || '',
+    team: document.getElementById('filter-team')?.value || 'all',
+    player: playerSelect?.value || '',
+    tracker_id: selected?.dataset?.tracker || '',
+    quarter: document.getElementById('filter-quarter')?.value || 'all',
+    half: document.getElementById('filter-half')?.value || 'all',
+    event_type: '',
+  }, overrides || {});
+}
+
+async function openEventExplorer(overrides) {
+  const filters = getExplorerFilters(overrides || {});
+  if (filters.stat) document.getElementById('filter-stat').value = filters.stat;
+  if (filters.player) document.getElementById('filter-player').value = filters.player;
+  const card = document.getElementById('eventExplorerCard');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await loadExplorerEvents(filters);
+}
+
+async function loadExplorerEvents(filters) {
+  const list = document.getElementById('event-explorer-list');
+  const countEl = document.getElementById('event-explorer-count');
+  if (!list) return;
+  list.innerHTML = '<div class="event-explorer-empty">Loading events…</div>';
+  const params = new URLSearchParams();
+  if (filters.stat) params.set('stat', filters.stat);
+  if (filters.event_type) params.set('event_type', filters.event_type);
+  if (filters.player) params.set('player', filters.player);
+  if (filters.tracker_id) params.set('tracker_id', filters.tracker_id);
+  if (filters.team && filters.team !== 'all') params.set('team', filters.team);
+  if (filters.quarter && filters.quarter !== 'all') params.set('quarter', filters.quarter);
+  if (filters.half && filters.half !== 'all') params.set('half', filters.half);
+
+  try {
+    const resp = await fetch('/api/analysis/' + encodeURIComponent(GAME_ID) + '/events?' + params.toString());
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not load events');
+    if (data.stored_filename) STORED_FILENAME = data.stored_filename;
+    if (countEl) countEl.textContent = data.count + ' event' + (data.count === 1 ? '' : 's');
+    if (!data.events || !data.events.length) {
+      list.innerHTML = '<div class="event-explorer-empty">No events matched these filters. Try broadening team or quarter.</div>';
+      return;
+    }
+    let html = '<div class="event-explorer-row" style="color:var(--muted);font-size:0.75rem;font-weight:600;"><div>Time</div><div>Event / player</div><div>Period</div><div>Film</div></div>';
+    data.events.forEach(function(event) {
+      const time = formatTime(event.timestamp_ms || 0);
+      const label = event.event_type + (event.shot_result ? ' ' + event.shot_result : '');
+      const player = event.player || '—';
+      const period = (event.quarter_label || '') + ' · ' + (event.half_label || '');
+      const film = buildFilmLink(event.timestamp_ms, '▶ Play');
+      html += '<div class="event-explorer-row">';
+      html += '<div>' + time + '</div>';
+      html += '<div><span class="event-pill event-' + escapeHtml(event.event_type) + '">' + escapeHtml(label) + '</span> ' + escapeHtml(player) + '</div>';
+      html += '<div style="color:var(--muted)">' + escapeHtml(period) + '</div>';
+      html += '<div>' + (film || '<span style="color:var(--muted)">—</span>') + '</div>';
+      html += '</div>';
+    });
+    list.innerHTML = html;
+  } catch (err) {
+    list.innerHTML = '<div class="event-explorer-empty" style="color:var(--red)">Could not load events: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+['filter-stat', 'filter-team', 'filter-player', 'filter-quarter', 'filter-half'].forEach(function(id) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', function() { loadExplorerEvents(getExplorerFilters()); });
+});
+
 loadResults();
 </script>
 {% endblock %}

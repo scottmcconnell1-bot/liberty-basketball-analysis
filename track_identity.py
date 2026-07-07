@@ -189,7 +189,9 @@ def get_identity_labels(db, game_id):
 def build_identity_report(db, game_id, ai_settings=None):
     ai_settings = ai_settings or {}
     min_conf = float(ai_settings.get("jersey_ocr_min_confidence", 0.55))
-    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 8))
+    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 4))
+    relational_game_id, analysis_key = _game_scope(db, game_id)
+    scope_sql, scope_params = _detection_scope_sql(relational_game_id, analysis_key)
 
     cluster_suggestions = aggregate_cluster_jersey_votes(
         db, game_id, min_confidence=min_conf, min_samples=max(3, min_samples // 2)
@@ -201,11 +203,12 @@ def build_identity_report(db, game_id, ai_settings=None):
     persist_identity_labels(db, game_id, track_suggestions, source="ocr_track_votes")
 
     ocr_read_count = db.execute(
-        """
-        SELECT COUNT(*) AS c FROM detections
-         WHERE game_id = ? AND jersey_read IS NOT NULL
+        f"""
+        SELECT COUNT(*) AS c FROM detections d
+         WHERE {scope_sql}
+           AND d.jersey_read IS NOT NULL
         """,
-        (str(game_id),),
+        scope_params,
     ).fetchone()["c"]
 
     return {
@@ -216,13 +219,78 @@ def build_identity_report(db, game_id, ai_settings=None):
     }
 
 
+def _roster_jersey_index(db, game_id):
+    from analysis_helpers import get_analysis_roster_players
+
+    payload = get_analysis_roster_players(db, game_id)
+    by_jersey = {}
+    for player in payload["players"]:
+        jersey = player.get("jersey_number")
+        if jersey in (None, ""):
+            continue
+        try:
+            jersey_int = int(jersey)
+        except (TypeError, ValueError):
+            continue
+        by_jersey[jersey_int] = player
+    return by_jersey, payload["source"]
+
+
+def _events_use_raw_cluster_ids(db, game_id):
+    relational_game_id, analysis_key = _game_scope(db, game_id)
+    if relational_game_id is not None:
+        row = db.execute(
+            """
+            SELECT COUNT(*) AS c
+              FROM events
+             WHERE (relational_game_id = ? OR game_id = ?)
+               AND source_type = 'ai'
+               AND player GLOB '[0-9]'
+            """,
+            (relational_game_id, analysis_key),
+        ).fetchone()
+    else:
+        row = db.execute(
+            """
+            SELECT COUNT(*) AS c
+              FROM events
+             WHERE game_id = ?
+               AND source_type = 'ai'
+               AND player GLOB '[0-9]'
+            """,
+            (analysis_key,),
+        ).fetchone()
+    return int(row["c"] or 0)
+
+
+def _build_auto_apply_mappings(suggestions, *, roster_by_jersey, use_roster_whitelist, min_conf, min_samples):
+    mappings = []
+    used_jerseys = set()
+    for item in suggestions:
+        if item["confidence"] < min_conf or item["sample_count"] < min_samples:
+            continue
+        jersey = int(item["jersey_number"])
+        if use_roster_whitelist and jersey not in roster_by_jersey:
+            continue
+        if jersey in used_jerseys:
+            continue
+        used_jerseys.add(jersey)
+        roster_player = roster_by_jersey.get(jersey) if roster_by_jersey else None
+        mappings.append({
+            "tracker_id": item["tracker_id"],
+            "jersey_number": jersey,
+            "player_name": (roster_player or {}).get("name") or (roster_player or {}).get("label"),
+        })
+    return mappings
+
+
 def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     """Auto-map court clusters to jerseys when OCR confidence is high enough."""
     from court_slot_mapping import save_court_slot_mappings, apply_court_slot_mappings
 
     ai_settings = ai_settings or {}
-    min_conf = float(ai_settings.get("identity_auto_apply_min_confidence", 0.70))
-    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 8))
+    min_conf = float(ai_settings.get("identity_auto_apply_min_confidence", 0.60))
+    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 4))
 
     suggestions = aggregate_cluster_jersey_votes(
         db,
@@ -230,14 +298,24 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
         min_confidence=float(ai_settings.get("jersey_ocr_min_confidence", 0.55)),
         min_samples=min_samples,
     )
-    mappings = []
-    for item in suggestions:
-        if item["confidence"] < min_conf or item["sample_count"] < min_samples:
-            continue
-        mappings.append({
-            "tracker_id": item["tracker_id"],
-            "jersey_number": item["jersey_number"],
-        })
+    roster_by_jersey, roster_source = _roster_jersey_index(db, game_id)
+    use_roster_whitelist = roster_source == "film_roster" and bool(roster_by_jersey)
+
+    mappings = _build_auto_apply_mappings(
+        suggestions,
+        roster_by_jersey=roster_by_jersey,
+        use_roster_whitelist=use_roster_whitelist,
+        min_conf=min_conf,
+        min_samples=min_samples,
+    )
+    if not mappings and use_roster_whitelist and suggestions:
+        mappings = _build_auto_apply_mappings(
+            suggestions,
+            roster_by_jersey=roster_by_jersey,
+            use_roster_whitelist=False,
+            min_conf=min_conf,
+            min_samples=min_samples,
+        )
 
     if not mappings:
         return {"applied": 0, "mappings": [], "events_updated": 0}
@@ -248,4 +326,48 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
         "applied": len(mappings),
         "mappings": mappings,
         "events_updated": result.get("events_updated", 0),
+    }
+
+
+def run_identity_postprocess(db, game_id, ai_settings=None):
+    """Build OCR identity report and auto-apply jersey mappings when enabled."""
+    ai_settings = ai_settings or {}
+    report = build_identity_report(db, game_id, ai_settings)
+    applied = {"applied": 0, "mappings": [], "events_updated": 0}
+    if ai_settings.get("auto_apply_jersey_mapping", True):
+        applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
+    return {
+        **report,
+        "auto_apply": applied,
+        "slots_mapped": applied.get("applied", 0),
+        "events_updated": applied.get("events_updated", 0),
+    }
+
+
+def ensure_identity_applied(db, game_id, ai_settings=None):
+    """Auto-apply jersey mappings when AI events still use raw cluster ids."""
+    ai_settings = ai_settings or {}
+    if not ai_settings.get("auto_apply_jersey_mapping", True):
+        return {"skipped": True, "reason": "auto_apply_disabled"}
+
+    raw_cluster_events = _events_use_raw_cluster_ids(db, game_id)
+    if raw_cluster_events == 0:
+        return {"skipped": True, "reason": "already_mapped", "raw_cluster_events": 0}
+
+    report = build_identity_report(db, game_id, ai_settings)
+    if not report.get("cluster_suggestions"):
+        return {
+            "skipped": True,
+            "reason": "no_cluster_suggestions",
+            "raw_cluster_events": raw_cluster_events,
+            "ocr_read_count": report.get("ocr_read_count", 0),
+        }
+
+    applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
+    return {
+        "skipped": False,
+        "raw_cluster_events": raw_cluster_events,
+        "ocr_read_count": report.get("ocr_read_count", 0),
+        "cluster_suggestions": len(report.get("cluster_suggestions") or []),
+        **applied,
     }

@@ -325,6 +325,17 @@ def get_analysis_results(game_id):
         game_id = row["analysis_key"]
 
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    identity_status = None
+    try:
+        from settings_store import load_all_settings, AI_DEFAULTS
+        from track_identity import ensure_identity_applied
+
+        ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+        identity_status = ensure_identity_applied(db, game_id, ai_settings)
+    except Exception as exc:
+        current_app.logger.exception("Identity auto-apply failed for %s", game_id)
+        identity_status = {"skipped": True, "reason": "error", "error": str(exc)[:200]}
+
     db.execute(
         """UPDATE events
               SET event_type_id = (
@@ -353,12 +364,16 @@ def get_analysis_results(game_id):
     ).fetchone()["c"]
 
     basic = aggregate_stats_preview(db, game_id)
-    refresh_stats(db, game_id)
+    quality_notes = []
+    try:
+        refresh_stats(db, game_id)
+    except Exception as exc:
+        current_app.logger.exception("refresh_stats failed for %s", game_id)
+        quality_notes.append(f"Persisted stats refresh failed: {str(exc)[:200]}")
     enhanced = get_enhanced_stats(db, game_id)
     enhanced["shot_breakdown"] = [dict(row) for row in get_shot_breakdown_preview(db, game_id)]
     enhanced["basic_stats"] = basic
 
-    quality_notes = []
     if detection_count > 250_000:
         quality_notes.append(
             "Very high detection count — the clip may include extra footage beyond one game, "
@@ -438,7 +453,93 @@ def get_analysis_results(game_id):
         "enhanced": enhanced,
         "events_summary": [dict(e) for e in events_summary],
         "recent_events": [dict(e) for e in recent_events],
+        "identity_status": identity_status,
+        "analysis_version": "2026-07-07-analysis-v2",
+        **_analysis_film_payload(db, game_id),
     })
+
+
+def _analysis_film_payload(db, game_id):
+    from analysis_helpers import resolve_analysis_game_context, resolve_video_duration_ms
+
+    context = resolve_analysis_game_context(db, game_id)
+    stored_filename = context.get("stored_filename")
+    film_url = None
+    if stored_filename:
+        film_url = url_for("core.film", filename=stored_filename, game_id=context["analysis_key"])
+    return {
+        "analysis_key": context["analysis_key"],
+        "stored_filename": stored_filename,
+        "film_url": film_url,
+        "duration_ms": resolve_video_duration_ms(
+            db,
+            context["analysis_key"],
+            relational_game_id=context["relational_game_id"],
+            analysis_key=context["analysis_key"],
+        ),
+        "roster_context": {
+            "season_id": context["season_id"],
+            "level": context["level"],
+            "gender": context["gender"],
+            "side": context["side"],
+            "opponent_name": context["opponent_name"],
+        },
+        "teams": {
+            "our_team_id": context["our_team_id"],
+            "our_team_name": context["our_team_name"],
+            "opponent_team_name": context["opponent_team_name"],
+        },
+    }
+
+
+@ai_bp.route("/api/analysis/<game_id>/roster")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_roster_api(game_id):
+    from analysis_helpers import get_analysis_roster_players
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+    return jsonify(get_analysis_roster_players(db, game_id))
+
+
+@ai_bp.route("/api/analysis/<game_id>/events")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_analysis_events_api(game_id):
+    from analysis_helpers import list_analysis_events
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    payload = list_analysis_events(
+        db,
+        game_id,
+        event_type=request.args.get("event_type"),
+        stat=request.args.get("stat"),
+        player=request.args.get("player"),
+        tracker_id=request.args.get("tracker_id"),
+        team=request.args.get("team"),
+        quarter=request.args.get("quarter"),
+        half=request.args.get("half"),
+        limit=request.args.get("limit", 500),
+    )
+    stored_filename = payload.get("stored_filename")
+    if stored_filename:
+        payload["film_url"] = url_for("core.film", filename=stored_filename, game_id=payload["game_id"])
+    for event in payload.get("events", []):
+        ts = event.get("timestamp_ms") or 0
+        event["film_url"] = None
+        if stored_filename:
+            event["film_url"] = url_for(
+                "core.film",
+                filename=stored_filename,
+                game_id=payload["game_id"],
+                t=max(0, int(ts / 1000)),
+            )
+    return jsonify(payload)
 
 
 @ai_bp.route("/api/track-identity/<game_id>")
@@ -934,6 +1035,17 @@ def api_regenerate_video_events(vid_id):
         except Exception as exc:
             enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
 
+        identity_applied = 0
+        try:
+            from settings_store import load_all_settings, AI_DEFAULTS
+            from track_identity import run_identity_postprocess
+
+            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            identity_result = run_identity_postprocess(db, analysis_key, ai_settings)
+            identity_applied = identity_result.get("slots_mapped", 0)
+        except Exception as exc:
+            current_app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
+
         db.execute(
             """UPDATE analysis_runs
                SET status='completed', progress_pct=100, progress_step=?,
@@ -958,6 +1070,8 @@ def api_regenerate_video_events(vid_id):
             (analysis_key, relational_game_id, relational_game_id),
         ).fetchone()["c"]
         message = f"Regenerated {event_count} events from {detection_count:,} detections."
+        if identity_applied:
+            message += f" Auto-mapped {identity_applied} players from jersey OCR."
         if enhanced_warning:
             message += f" {enhanced_warning}"
         return jsonify({

@@ -2379,10 +2379,25 @@ function init() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game_id');
     const activeGameId = gameIdFromUrl || window.FILM_TOOL_GAME_ID || '';
+    const seekSeconds = Number(urlParams.get('t') || urlParams.get('timestamp_ms') || 0);
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
     setStatus('Ready.');
+
+    function seekFromUrlParam() {
+      const seconds = seekSeconds > 1000 ? seekSeconds / 1000 : seekSeconds;
+      if (!seconds || Number.isNaN(seconds)) return;
+      const applySeek = () => {
+        video.currentTime = Math.max(0, seconds);
+        if (typeof setStatus === 'function') {
+          setStatus(`Jumped to ${seconds.toFixed(1)}s from analysis link.`);
+        }
+      };
+      if (video.readyState >= 1) applySeek();
+      else video.addEventListener('loadedmetadata', applySeek, { once: true });
+    }
+    seekFromUrlParam();
 
     // Initialize sub-modules
     initBookmarks();
