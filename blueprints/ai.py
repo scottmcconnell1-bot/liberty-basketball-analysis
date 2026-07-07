@@ -52,6 +52,73 @@ from helpers import (
 ai_bp = Blueprint("ai", __name__)
 
 
+def _format_team_level_label(level, gender):
+    level_labels = {"varsity": "Varsity", "jv": "JV", "jr_high": "Jr High"}
+    gender_labels = {"boys": "Boys", "girls": "Girls", "coed": "Coed"}
+    parts = []
+    if gender:
+        parts.append(gender_labels.get(str(gender).lower(), str(gender).title()))
+    if level:
+        parts.append(level_labels.get(str(level).lower(), str(level).replace("_", " ").title()))
+    return " ".join(parts) if parts else None
+
+
+def _lookup_video_schedule_context(db, *, relational_game_id=None, game_id=None):
+    if relational_game_id:
+        row = db.execute(
+            """
+            SELECT sg.opponent_name, sg.game_date, sg.level, sg.gender
+              FROM games g
+              LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+             WHERE g.id = ?
+            """,
+            (relational_game_id,),
+        ).fetchone()
+        if row:
+            return row
+
+    if game_id:
+        row = db.execute(
+            """
+            SELECT sg.opponent_name, sg.game_date, sg.level, sg.gender
+              FROM games g
+              LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+             WHERE g.nfhs_game_id = ?
+                OR g.source_key = ?
+             ORDER BY g.id DESC
+             LIMIT 1
+            """,
+            (str(game_id), str(game_id)),
+        ).fetchone()
+        if row:
+            return row
+    return None
+
+
+def _enrich_video_list_row(db, row):
+    payload = dict(row)
+    opponent = (payload.get("opponent") or "").strip()
+    if not opponent or opponent.lower() == "unknown":
+        opponent = ""
+
+    schedule = _lookup_video_schedule_context(
+        db,
+        relational_game_id=payload.get("relational_game_id"),
+        game_id=payload.get("game_id"),
+    )
+    if schedule:
+        if not opponent and schedule["opponent_name"]:
+            opponent = schedule["opponent_name"]
+        payload["game_date"] = schedule["game_date"]
+        payload["team_label"] = _format_team_level_label(schedule["level"], schedule["gender"])
+    else:
+        payload["game_date"] = None
+        payload["team_label"] = None
+
+    payload["display_game"] = f"Liberty vs {opponent}" if opponent else "Liberty"
+    return payload
+
+
 def _resolve_analysis_relational_game_id(db, game_id):
     """Resolve the canonical game id for either an analysis key or a game key."""
     row = db.execute(
@@ -585,7 +652,7 @@ def api_videos():
         LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
         ORDER BY v.id DESC
     """).fetchall()
-    return jsonify([dict(r) for r in rows])
+    return jsonify([_enrich_video_list_row(db, r) for r in rows])
 
 
 @ai_bp.route("/videos/<int:vid_id>/compare")

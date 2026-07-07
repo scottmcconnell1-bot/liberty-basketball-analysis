@@ -1597,6 +1597,35 @@ def test_api_videos_uses_latest_linked_run_status_and_counts(client, db):
     assert payload[0]["event_count"] == 1
 
 
+def test_api_videos_includes_game_display_fields(client, db):
+    season_id = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?, ?, ?)",
+        ("2025-26", "2025-11-01", "2026-03-01"),
+    ).lastrowid
+    scheduled_game_id = db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'boys_hs', 'boys', 'varsity', '2026-01-15', 'Wilder', 'scheduled')""",
+        (season_id,),
+    ).lastrowid
+    relational_game_id = db.execute(
+        "INSERT INTO games (scheduled_game_id, source_type, source_key, nfhs_game_id) VALUES (?, 'nfhs_vod', 'gam123', 'gam123')",
+        (scheduled_game_id,),
+    ).lastrowid
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("nfhs_export.mp4", "stored.mp4", "uploads/stored.mp4", 1000, "wilder", "gam123", relational_game_id),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos").get_json()
+    assert payload[0]["display_game"] == "Liberty vs wilder"
+    assert payload[0]["team_label"] == "Boys Varsity"
+    assert payload[0]["game_date"] == "2026-01-15"
+
+
 def test_compare_video_analysis_keeps_run_specific_counts(client, db):
     db.execute(
         """INSERT INTO videos
