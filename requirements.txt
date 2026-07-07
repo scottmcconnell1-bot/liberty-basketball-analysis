@@ -3,11 +3,12 @@
 # Target: Python 3.12 or 3.13 (3.15+ is not supported for the pinned scientific stack).
 # Installs the web app, schema tooling, and unit-test dependencies.
 #
-# For full AI/video analysis (OpenCV, YOLO, event rebuild, etc.) use either:
+# For full AI/video analysis (OpenCV, YOLO, etc.) use either:
 #   - Docker: docker compose up -d --build
 #   - Manual: pip install -r requirements.docker.txt  (after torch; see Dockerfile)
+#   - Windows: scripts/install_ai_deps.ps1 with Python 3.12 or 3.13
 #
-# Event rebuild ("Rebuild" on Videos) requires scikit-learn:
-#   pip install scikit-learn
+# Event rebuild works without scikit-learn (numpy fallback). scikit-learn is optional
+# but recommended when pre-built wheels exist for your Python version.
 
 -r requirements-dev.txt

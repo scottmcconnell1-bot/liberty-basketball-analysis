@@ -861,14 +861,6 @@ def api_video_analysis_debug(vid_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_regenerate_video_events(vid_id):
     """Rebuild events from existing detections without re-running YOLO."""
-    from helpers import module_available
-
-    if not module_available("sklearn"):
-        return jsonify({
-            "error": "scikit-learn is not installed. Run: pip install scikit-learn",
-            "code": "sklearn_missing",
-        }), 503
-
     db = get_db()
     video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
     if not video:
@@ -903,8 +895,7 @@ def api_regenerate_video_events(vid_id):
 
         if generate_events(analysis_key, db_path, relational_game_id=relational_game_id) is False:
             raise RuntimeError(
-                "Event generation failed. Install scikit-learn (pip install scikit-learn) "
-                "and click Rebuild again."
+                "Event generation failed. Check logs for details, then click Rebuild again."
             )
 
         from helpers import assign_possessions_for_game

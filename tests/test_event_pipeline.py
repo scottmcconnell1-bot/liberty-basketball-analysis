@@ -101,6 +101,40 @@ def test_tracker_assigns_new_id_for_new_object():
     assert r0[0]["tracker_id"] != r1[0]["tracker_id"]
 
 
+def test_cluster_players_spatially_without_sklearn(monkeypatch):
+    import pandas as pd
+    from event_generator import _cluster_players_spatially
+
+    monkeypatch.setitem(__import__("sys").modules, "sklearn", None)
+
+    def _fail_import(name, *args, **kwargs):
+        if name == "sklearn.cluster":
+            raise ImportError("No module named 'sklearn'")
+        return __import__(name, *args, **kwargs)
+
+    import builtins
+    original_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "sklearn" or (fromlist and "sklearn" in str(fromlist)):
+            raise ImportError("No module named 'sklearn'")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    detections = pd.DataFrame([
+        {"class_name": "person", "x_center": 100.0, "y_center": 200.0},
+        {"class_name": "person", "x_center": 105.0, "y_center": 205.0},
+        {"class_name": "person", "x_center": 500.0, "y_center": 300.0},
+        {"class_name": "person", "x_center": 505.0, "y_center": 310.0},
+        {"class_name": "ball", "x_center": 320.0, "y_center": 240.0},
+    ])
+    result = _cluster_players_spatially(detections, n_clusters=2)
+    person_clusters = result.loc[result["class_name"] == "person", "cluster_id"].tolist()
+    assert len(set(person_clusters)) == 2
+    assert result.loc[result["class_name"] == "ball", "cluster_id"].iloc[0] == -1
+
+
 def test_event_generator_connection_uses_row_factory():
     from event_generator import get_db_connection
 

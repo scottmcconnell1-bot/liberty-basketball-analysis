@@ -722,7 +722,6 @@ def ai_runtime_available():
     return (
         module_available("cv2")
         and module_available("ultralytics")
-        and module_available("sklearn")
     )
 
 
@@ -1133,8 +1132,9 @@ def _analysis_log_error_message(content: str) -> str | None:
         return None
     if "No module named 'sklearn'" in content:
         return (
-            "scikit-learn is not installed. Run: pip install scikit-learn "
-            "then click Rebuild again."
+            "Event generation failed while clustering players. Pull the latest code and "
+            "click Rebuild again (numpy fallback is used when scikit-learn is unavailable). "
+            "For best results on Windows, use Python 3.12 or 3.13."
         )
     if "ERROR: An error occurred in event_generator" in content:
         for line in content.splitlines():

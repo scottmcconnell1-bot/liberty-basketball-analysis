@@ -144,7 +144,7 @@ def test_reconcile_stuck_running_run_marks_failed_on_sklearn_error(app, tmp_path
     reconcile_stuck_analysis_run(conn, "nfhs_gam30_running")
     row = conn.execute("SELECT status, error_message FROM analysis_runs").fetchone()
     assert row[0] == "failed"
-    assert "scikit-learn" in row[1]
+    assert "Rebuild" in row[1]
 
 
 def test_reconcile_stuck_running_run_marks_completed_from_log(app, tmp_path):
