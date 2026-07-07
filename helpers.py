@@ -1997,6 +1997,22 @@ def _ensure_migration_columns(db):
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS film_roster_players (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            season_id       INTEGER NOT NULL REFERENCES seasons(id),
+            level           TEXT NOT NULL,
+            gender          TEXT NOT NULL,
+            side            TEXT NOT NULL,
+            player_label    TEXT NOT NULL,
+            jersey_number   TEXT,
+            name            TEXT,
+            grade           TEXT,
+            position        TEXT,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(season_id, level, gender, side, player_label)
+        );
         CREATE TABLE IF NOT EXISTS videos (
             id                INTEGER PRIMARY KEY AUTOINCREMENT,
             original_filename TEXT NOT NULL,

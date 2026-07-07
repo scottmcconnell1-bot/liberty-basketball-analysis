@@ -891,6 +891,13 @@
     <form method="dialog">
       <div class="modal-head"><h2>Manage rosters</h2></div>
       <div class="modal-body">
+        <div class="field">
+          <label for="rosterSeasonSelect">Season</label>
+          <select id="rosterSeasonSelect" required>
+            <option value="">Loading seasons…</option>
+          </select>
+          <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
+        </div>
         <div class="split">
           <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh" checked> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
@@ -917,9 +924,33 @@
           <span class="tiny">CSV or Excel (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster PDF.</span>
         </div>
         <div class="term-list" id="playerList"></div>
-        <div class="field"><label>Add player</label><button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button></div>
+        <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button>
+          <button class="btn btn-danger" id="clearRosterBtn" type="button">Clear roster</button>
+        </div>
       </div>
       <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="rosterImportDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Import roster</h2></div>
+      <div class="modal-body">
+        <p class="tiny" id="rosterImportFileLabel"></p>
+        <div class="field">
+          <label for="rosterImportSeasonSelect">Season</label>
+          <select id="rosterImportSeasonSelect" required></select>
+        </div>
+        <div class="field">
+          <label class="tiny"><input type="checkbox" id="rosterImportReplace" checked> Replace existing players for this season / team</label>
+        </div>
+        <p class="tiny">Uncheck to add imported players without removing anyone already on this roster.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="rosterImportCancelBtn">Cancel</button>
+        <button class="btn btn-primary" type="button" id="rosterImportConfirmBtn">Import</button>
+      </div>
     </form>
   </dialog>
 
