@@ -901,7 +901,20 @@
           <button class="btn roster-side-btn" type="button" data-side="home">Home</button>
           <button class="btn roster-side-btn" type="button" data-side="away">Away</button>
         </div>
-        <div class="field"><label for="rosterCsvInput">Import roster file</label><input id="rosterCsvInput" type="file" accept=".csv,text/csv"><span class="tiny">Supports CSV rows like C,45,Jasper Musgrave,8.</span></div>
+        <div class="field">
+          <label for="rosterFileTypeSelect">Roster file type</label>
+          <select id="rosterFileTypeSelect">
+            <option value="auto">Auto-detect</option>
+            <option value="csv">CSV</option>
+            <option value="pdf">PDF</option>
+            <option value="maxpreps_pdf">MaxPreps PDF</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rosterFileInput">Import roster file</label>
+          <input id="rosterFileInput" type="file" accept=".csv,.pdf,text/csv,application/pdf">
+          <span class="tiny">CSV (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster.</span>
+        </div>
         <div class="term-list" id="playerList"></div>
         <div class="field"><label>Add player</label><button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button></div>
       </div>
