@@ -67,7 +67,7 @@ def test_status_page_shows_review_trust_summary(client, db):
     html = r.get_data(as_text=True)
     assert "Review &amp; Trust Summary" in html
     assert "Accepted" in html
-    assert "Open Review Queue" in html
+    assert "Open Videos" in html
 
 
 def test_preview_page_shows_review_counts(client, db):

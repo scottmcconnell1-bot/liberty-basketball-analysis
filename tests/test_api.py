@@ -1221,7 +1221,7 @@ def test_status_page_shows_product_progress_checklist(client):
     assert "Manual Tagging &amp; Bookmarks MVP" in html
     assert "Season Packets, Reviews &amp; Final Polish" in html
     assert 'href="/schedule"' in html
-    assert 'href="/review"' in html
+    assert 'href="/videos"' in html
     assert 'href="/practices"' in html
 
 
@@ -1241,7 +1241,7 @@ def test_product_preview_page_renders_final_product_surface(client):
     assert "Coach command center" in html
     assert "What the finished platform feels like" in html
     assert 'href="/film"' in html
-    assert 'href="/review"' in html
+    assert 'href="/videos"' in html
     assert 'href="/practices"' in html
 
 

@@ -1441,10 +1441,18 @@ function tagSubstitution() { openStartersDialog('adjust'); }
 function loadTheme() {
     const stored = localStorage.getItem('filmToolThemeV1');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = stored || (prefersDark ? 'dark' : 'light');
+    let theme = stored || 'system';
+    if (theme === 'system') {
+        theme = prefersDark ? 'dark' : 'light';
+    }
+    document.documentElement.dataset.theme = theme;
 }
 function toggleTheme() {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    const current = localStorage.getItem('filmToolThemeV1') || 'system';
+    const resolved = current === 'system'
+        ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : current;
+    const next = resolved === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     localStorage.setItem('filmToolThemeV1', next);
 }
@@ -1473,7 +1481,19 @@ function setActiveTab(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
     if (btn) btn.classList.add('active');
-    document.getElementById(id).classList.add('active');
+    const view = document.getElementById(id);
+    if (view) view.classList.add('active');
+}
+
+function applyFilmToolDeepLinks() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'games') setActiveTab('gamesView');
+    else if (tab === 'reports') setActiveTab('reportsView');
+    if (params.get('open') === 'terms') {
+        loadVocabulary();
+        termDialog?.showModal();
+    }
 }
 
 // ── Focus Mode ──────────────────────────────────────────────
@@ -1542,20 +1562,72 @@ function syncAiEventsToPlayback() {
     setActiveAiEvent(nearest.id, String(nearest.id) !== String(activeAiEventId));
 }
 
+function reviewStatusLabel(status) {
+    const labels = { pending: 'Pending', accepted: 'Accepted', corrected: 'Corrected', rejected: 'Rejected' };
+    return labels[status] || status || 'Unknown';
+}
+
+async function reviewAiEvent(eventId, action) {
+    const endpoint = action === 'accept' ? 'accept' : 'reject';
+    try {
+        const response = await fetch(`/api/review/events/${eventId}/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: action === 'accept' ? 'Accepted in Film Tool' : 'Rejected in Film Tool' }),
+        });
+        if (!response.ok) throw new Error('Review action failed');
+        const gameId = document.getElementById('gameId')?.value || new URLSearchParams(window.location.search).get('game_id');
+        if (gameId) await fetchAndRenderAIEvents(gameId);
+        setStatus(action === 'accept' ? 'Event accepted.' : 'Event rejected.');
+    } catch (_err) {
+        setStatus('Could not update event review status.');
+    }
+}
+
 function renderAiEvents(events) {
     if (!aiEventsList) return;
     aiEventsCache = events.filter(event => event.event_type !== 'bookmark');
     if (!aiEventsCache.length) { aiEventsList.innerHTML = '<div class="empty-state">No AI events found for this game.</div>'; setActiveAiEvent(null); return; }
-    aiEventsList.innerHTML = aiEventsCache.map(event => `
+    aiEventsList.innerHTML = aiEventsCache.map(event => {
+        const status = event.review_status || 'pending';
+        const statusClass = status === 'pending' ? 'pending' : (status === 'rejected' ? 'rejected' : 'trusted');
+        const reviewControls = status === 'pending'
+            ? `<div class="ai-event-review" data-no-seek="1">
+                <button class="btn btn-ghost btn-sm ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept event">✓</button>
+                <button class="btn btn-ghost btn-sm ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject event">✗</button>
+               </div>`
+            : '';
+        return `
         <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" aria-label="Jump to ${event.event_type} at ${formatTime(event.timestamp_ms / 1000)}">
-            <div class="ai-event-row"><strong>${event.event_type}</strong><span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span></div>
+            <div class="ai-event-row">
+                <strong>${event.event_type}</strong>
+                <span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span>
+            </div>
+            <div class="ai-event-meta">
+                <span class="ai-event-status ${statusClass}">${reviewStatusLabel(status)}</span>
+                ${reviewControls}
+            </div>
             <div class="tiny">${event.player || 'AI detected event'}</div>
             <div class="ai-event-details">${summarizeAiEvent(event)}</div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
     aiEventsList.querySelectorAll('[data-ai-event-id]').forEach(item => {
-        const seekToEvent = () => { const ms = Number(item.dataset.aiEventTs || '0'); video.currentTime = ms / 1000; setActiveAiEvent(item.dataset.aiEventId, true); setStatus(`Jumped to AI event at ${(ms / 1000).toFixed(1)}s.`); };
+        const seekToEvent = (clickEvent) => {
+            if (clickEvent && (clickEvent.target.closest('[data-no-seek]') || clickEvent.target.closest('.ai-review-btn'))) return;
+            const ms = Number(item.dataset.aiEventTs || '0');
+            video.currentTime = ms / 1000;
+            setActiveAiEvent(item.dataset.aiEventId, true);
+            setStatus(`Jumped to AI event at ${(ms / 1000).toFixed(1)}s.`);
+        };
         item.addEventListener('click', seekToEvent);
-        item.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); seekToEvent(); } });
+        item.addEventListener('keydown', keyEvent => { if (keyEvent.key === 'Enter' || keyEvent.key === ' ') { keyEvent.preventDefault(); seekToEvent(); } });
+    });
+    aiEventsList.querySelectorAll('[data-review-action]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            reviewAiEvent(button.dataset.eventId, button.dataset.reviewAction);
+        });
     });
     syncAiEventsToPlayback();
 }
@@ -2217,10 +2289,7 @@ function initAiUpload() {
 // ── Event Handlers ──────────────────────────────────────────
 function attachEventHandlers() {
     document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)); });
-    const themeToggle = document.querySelector('[data-theme-toggle]');
-    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
-    document.getElementById('manageTermsBtn')?.addEventListener('click', () => { loadVocabulary(); termDialog.showModal(); });
     document.getElementById('saveNewTermBtn')?.addEventListener('click', addTerm);
     termFieldSelect?.addEventListener('change', renderTermList);
 
@@ -2356,6 +2425,7 @@ function init() {
     renderEventButtons();
     renderGames();
     attachEventHandlers();
+    applyFilmToolDeepLinks();
     updateScoreLabels();
     renderScore();
     initFromAutosave();

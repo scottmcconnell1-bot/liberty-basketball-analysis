@@ -16,6 +16,31 @@
 {% set active_tab = 'settings' %}
 {% include "_settings_tabs.html" %}
 
+{% if features.ENABLE_MANUAL_TAG_MVP %}
+<div class="card" id="film-tool" data-frame="12.1b">
+  <h3 style="margin-bottom:8px;">Film Tool</h3>
+  <p class="text-muted" style="margin-bottom:16px;line-height:1.5;">
+    Setup for manual tagging lives here so the Film Tool top bar stays focused on watching and tagging.
+    Use <strong>Tagger</strong> for day-to-day work; open these when you need vocabulary, export, or appearance options.
+  </p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+    <a class="btn btn-secondary" href="{{ url_for('core.film') }}?open=terms">Tagging vocabulary</a>
+    <a class="btn btn-secondary" href="{{ url_for('core.film') }}?tab=games">Saved games &amp; export</a>
+    <a class="btn btn-secondary" href="{{ url_for('core.film') }}?tab=reports">Reports</a>
+    <a class="btn btn-primary" href="{{ url_for('core.film') }}">Open Film Tool</a>
+  </div>
+  <div class="form-group" style="max-width:280px;margin-bottom:0;">
+    <label for="filmToolThemeSetting">Film Tool appearance</label>
+    <select class="form-control" id="filmToolThemeSetting">
+      <option value="system">Match system</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+    <div class="text-muted mt-2">Saved in this browser only.</div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card" data-frame="12.2">
   <h3 style="margin-bottom:12px;">Current Hardware</h3>
   <div class="stat-grid">
@@ -155,6 +180,12 @@
       </div>
 
       <div class="form-group">
+        <label for="ai_auto_accept_event_confidence">Auto-Accept Event Confidence</label>
+        <input class="form-control" id="ai_auto_accept_event_confidence" name="ai_auto_accept_event_confidence" type="number" min="0" max="0.99" step="0.01" value="{{ runtime_settings.ai.auto_accept_event_confidence }}">
+        <div class="text-muted mt-2">AI events at or above this confidence are auto-accepted after analysis. Set to <code>0</code> to disable.</div>
+      </div>
+
+      <div class="form-group">
         <label for="ai_event_generator_mode">Event Generator</label>
         <select class="form-control" id="ai_event_generator_mode" name="ai_event_generator_mode">
           {% for option in catalog.event_generator_mode_options %}
@@ -284,6 +315,14 @@
     if (ballSelect) {
       toggleCustomBallDetectorInput();
       ballSelect.addEventListener('change', toggleCustomBallDetectorInput);
+    }
+
+    const filmTheme = document.getElementById('filmToolThemeSetting');
+    if (filmTheme) {
+      filmTheme.value = localStorage.getItem('filmToolThemeV1') || 'system';
+      filmTheme.addEventListener('change', () => {
+        localStorage.setItem('filmToolThemeV1', filmTheme.value);
+      });
     }
   });
 </script>

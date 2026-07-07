@@ -77,8 +77,14 @@
   .event-explorer-filters label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
   .event-explorer-filters select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 0.85rem; }
   .event-explorer-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-  .event-explorer-list { max-height: 360px; overflow-y: auto; }
-  .event-explorer-row { display: grid; grid-template-columns: 110px 1fr 90px 90px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(42,45,58,0.5); font-size: 0.82rem; }
+  .review-btn { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 4px; padding: 2px 8px; font-size: 0.72rem; cursor: pointer; }
+  .review-btn.accept { color: var(--green); border-color: rgba(34,197,94,0.35); }
+  .review-btn.reject { color: var(--red); border-color: rgba(239,68,68,0.35); }
+  .review-status { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .review-status.pending { color: var(--orange); }
+  .review-status.trusted { color: var(--green); }
+  .review-status.rejected { color: var(--red); }
+  .event-explorer-row { display: grid; grid-template-columns: 110px 1fr 90px 90px 110px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(42,45,58,0.5); font-size: 0.82rem; }
   .event-explorer-row:hover { background: rgba(59,130,246,0.05); }
   .event-explorer-empty { color: var(--muted); font-size: 0.85rem; padding: 12px 0; }
   .film-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; }
@@ -212,6 +218,7 @@
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
         Click any stat above (e.g. <strong>REB</strong>) to list every matching play here.
         Use the filters to narrow by team, player, quarter, or half, then open film at that moment.
+        Accept or reject pending AI events inline while you verify on film.
       </p>
       <div class="event-explorer-filters">
         <div>
@@ -967,6 +974,30 @@ async function openEventExplorer(overrides) {
   await loadExplorerEvents(filters);
 }
 
+async function reviewExplorerEvent(eventId, action) {
+  const endpoint = action === 'accept' ? 'accept' : 'reject';
+  const resp = await fetch('/api/review/events/' + eventId + '/' + endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: action === 'accept' ? 'Accepted on Analysis Results' : 'Rejected on Analysis Results' }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(function() { return {}; });
+    throw new Error(data.error || 'Review action failed');
+  }
+  await loadExplorerEvents(getExplorerFilters());
+}
+
+function renderReviewCell(event) {
+  const status = event.review_status || 'pending';
+  if (status === 'pending') {
+    return '<button class="review-btn accept" type="button" data-review-action="accept" data-event-id="' + event.id + '">✓</button>'
+      + ' <button class="review-btn reject" type="button" data-review-action="reject" data-event-id="' + event.id + '">✗</button>';
+  }
+  const statusClass = status === 'rejected' ? 'rejected' : 'trusted';
+  return '<span class="review-status ' + statusClass + '">' + escapeHtml(status) + '</span>';
+}
+
 async function loadExplorerEvents(filters) {
   const list = document.getElementById('event-explorer-list');
   const countEl = document.getElementById('event-explorer-count');
@@ -991,7 +1022,7 @@ async function loadExplorerEvents(filters) {
       list.innerHTML = '<div class="event-explorer-empty">No events matched these filters. Try broadening team or quarter.</div>';
       return;
     }
-    let html = '<div class="event-explorer-row" style="color:var(--muted);font-size:0.75rem;font-weight:600;"><div>Time</div><div>Event / player</div><div>Period</div><div>Film</div></div>';
+    let html = '<div class="event-explorer-row" style="color:var(--muted);font-size:0.75rem;font-weight:600;"><div>Time</div><div>Event / player</div><div>Period</div><div>Film</div><div>Review</div></div>';
     data.events.forEach(function(event) {
       const time = formatTime(event.timestamp_ms || 0);
       const label = event.event_type + (event.shot_result ? ' ' + event.shot_result : '');
@@ -1000,12 +1031,26 @@ async function loadExplorerEvents(filters) {
       const film = buildFilmLink(event.timestamp_ms, '▶ Play');
       html += '<div class="event-explorer-row">';
       html += '<div>' + time + '</div>';
-      html += '<div><span class="event-pill event-' + escapeHtml(event.event_type) + '">' + escapeHtml(label) + '</span> ' + escapeHtml(player) + '</div>';
+      html += '<div><span class="event-pill event-' + escapeHtml(event.event_type) + '">' + escapeHtml(label) + '</span> ' + escapeHtml(player);
+      if (event.confidence != null) {
+        html += ' <span style="color:var(--muted);font-size:0.72rem;">' + Math.round(Number(event.confidence) * 100) + '%</span>';
+      }
+      html += '</div>';
       html += '<div style="color:var(--muted)">' + escapeHtml(period) + '</div>';
       html += '<div>' + (film || '<span style="color:var(--muted)">—</span>') + '</div>';
+      html += '<div>' + renderReviewCell(event) + '</div>';
       html += '</div>';
     });
     list.innerHTML = html;
+    list.querySelectorAll('[data-review-action]').forEach(function(button) {
+      button.addEventListener('click', async function() {
+        try {
+          await reviewExplorerEvent(button.dataset.eventId, button.dataset.reviewAction);
+        } catch (err) {
+          alert(err.message || 'Could not update event.');
+        }
+      });
+    });
   } catch (err) {
     list.innerHTML = '<div class="event-explorer-empty" style="color:var(--red)">Could not load events: ' + escapeHtml(err.message) + '</div>';
   }

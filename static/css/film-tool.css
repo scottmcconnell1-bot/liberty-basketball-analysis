@@ -817,6 +817,27 @@
     color: var(--color-text-muted);
     line-height: 1.45;
 }
+#film-tool-root .ai-event-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+}
+#film-tool-root .ai-event-status {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+#film-tool-root .ai-event-status.pending { color: #d97706; }
+#film-tool-root .ai-event-status.trusted { color: #059669; }
+#film-tool-root .ai-event-status.rejected { color: #dc2626; }
+#film-tool-root .ai-event-review {
+    display: flex;
+    gap: .25rem;
+}
+#film-tool-root .ai-review-btn.accept { color: #059669; }
+#film-tool-root .ai-review-btn.reject { color: #dc2626; }
 
 /* ── Inline Action Rows ───────────────────────────────────── */
 #film-tool-root .inline-actions {

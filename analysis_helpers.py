@@ -365,7 +365,7 @@ def list_analysis_events(
         rows = db.execute(
             """
             SELECT e.id, e.player, e.event_type, e.shot_result, e.timestamp_ms,
-                   e.details_json, e.team_id, e.review_status, e.source_type,
+                   e.details_json, e.team_id, e.review_status, e.source_type, e.confidence,
                    t.team_name
               FROM events e
               LEFT JOIN teams t ON t.id = e.team_id
@@ -379,7 +379,7 @@ def list_analysis_events(
         rows = db.execute(
             """
             SELECT e.id, e.player, e.event_type, e.shot_result, e.timestamp_ms,
-                   e.details_json, e.team_id, e.review_status, e.source_type,
+                   e.details_json, e.team_id, e.review_status, e.source_type, e.confidence,
                    t.team_name
               FROM events e
               LEFT JOIN teams t ON t.id = e.team_id

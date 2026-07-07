@@ -673,11 +673,9 @@
       <div class="dropdown-menu">
         {% if features.ENABLE_MANUAL_TAG_MVP %}
         <a href="/film" {% if nav_active('core.film') %}class="active"{% endif %}>Film Tool</a>
-        <a href="/review" {% if nav_active('core.review_page') %}class="active"{% endif %}>Review Queue</a>
         {% endif %}
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <a href="/videos" {% if nav_active('core.videos_page') %}class="active"{% endif %}>Videos</a>
-        <a href="/status" {% if nav_active('core.status_page') %}class="active"{% endif %}>Status</a>
         {% endif %}
         {% if features.ENABLE_ASSISTANT_READ_ONLY %}
         <a href="/assistant" {% if nav_active('ai.assistant_workflow_page') %}class="active"{% endif %}>Assistant</a>

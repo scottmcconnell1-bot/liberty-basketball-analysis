@@ -12,12 +12,21 @@ def test_review_page_renders_required_controls(client):
     assert b"/api/review/events" in response.data
 
 
-def test_review_queue_navigation_visible_when_manual_tagging_enabled(client):
+def test_review_queue_not_in_main_navigation(client):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b'href="/review"' in response.data
-    assert b"Review Queue" in response.data
+    html = response.data.decode("utf-8")
+    assert 'href="/review"' not in html
+    assert "Review Queue" not in html
+
+
+def test_review_page_shows_in_context_guidance(client):
+    response = client.get("/review")
+
+    assert response.status_code == 200
+    assert b"Film Tool" in response.data
+    assert b"Analysis Results" in response.data
 
 
 def test_review_page_hidden_when_manual_tagging_disabled(app, client):

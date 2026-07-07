@@ -262,14 +262,12 @@ PRODUCT_SURFACE_LINKS = [
     {"label": "Dashboard", "href": "/"},
     {"label": "Preview", "href": "/preview"},
     {"label": "Schedule", "href": "/schedule"},
-    {"label": "Film Upload", "href": "/film"},
+    {"label": "Film Tool", "href": "/film"},
     {"label": "Videos", "href": "/videos"},
-    {"label": "Review Queue", "href": "/review"},
     {"label": "Practices", "href": "/practices"},
     {"label": "Scouting", "href": "/scouting"},
     {"label": "Playbook", "href": "/playbook"},
     {"label": "Messages", "href": "/messages"},
-    {"label": "Status", "href": "/status"},
 ]
 
 PRODUCT_PREVIEW_MODULES = [
@@ -286,7 +284,7 @@ PRODUCT_PREVIEW_MODULES = [
         "summary": "Upload video, review AI output, and correct plays inside the same workflow.",
         "href": "/film",
         "accent": "amber",
-        "items": ["Upload and tag film", "Review queue", "Compare reruns"],
+        "items": ["Watch and tag film", "Upload and analyze video", "Verify plays on film"],
         "module_keys": [FILM_ROOM],
     },
     {
@@ -1936,6 +1934,17 @@ def settings_page():
         except ValueError:
             tracker_gap = AI_DEFAULTS["tracker_max_frame_gap"]
         updates["ai.tracker_max_frame_gap"] = tracker_gap
+
+        try:
+            auto_accept_confidence = float(
+                request.form.get(
+                    "ai_auto_accept_event_confidence",
+                    AI_DEFAULTS["auto_accept_event_confidence"],
+                )
+            )
+        except ValueError:
+            auto_accept_confidence = AI_DEFAULTS["auto_accept_event_confidence"]
+        updates["ai.auto_accept_event_confidence"] = min(0.99, max(0.0, auto_accept_confidence))
 
         llm_provider = (request.form.get("ai_llm_provider") or "none").strip()
         if llm_provider not in llm_provider_values:

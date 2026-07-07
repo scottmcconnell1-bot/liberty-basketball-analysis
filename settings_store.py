@@ -22,6 +22,7 @@ AI_DEFAULTS = {
     "auto_apply_jersey_mapping": True,
     "identity_auto_apply_min_confidence": 0.60,
     "identity_auto_apply_min_samples": 4,
+    "auto_accept_event_confidence": 0.50,
     "llm_provider": "ollama",
     "llm_model": ""
 }
@@ -49,6 +50,7 @@ FLOAT_SETTING_KEYS = {
     "ai.person_confidence",
     "ai.jersey_ocr_min_confidence",
     "ai.identity_auto_apply_min_confidence",
+    "ai.auto_accept_event_confidence",
 }
 
 

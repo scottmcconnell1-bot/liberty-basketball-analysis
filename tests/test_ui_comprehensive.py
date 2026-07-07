@@ -195,11 +195,11 @@ def test_navigation_links():
         ("/practice-summary", "Practice Summary"),
         ("/player-development", "Player Development"),
         ("/practice-playlists", "Practice Playlists"),
+        ("/film", "Film Tool"),
         ("/videos", "Videos"),
         ("/settings", "Settings"),
         ("/settings/custom-weights", "Custom Weights"),
         ("/debug", "Debug"),
-        ("/status", "Status"),
         ("/dashboard", "Dashboard (alt)"),
         ("/users", "Users"),
     ]
