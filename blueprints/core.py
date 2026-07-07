@@ -260,14 +260,12 @@ PRODUCT_SURFACE_LINKS = [
     {"label": "Dashboard", "href": "/"},
     {"label": "Preview", "href": "/preview"},
     {"label": "Schedule", "href": "/schedule"},
-    {"label": "Film Upload", "href": "/film"},
+    {"label": "Film Tool", "href": "/film"},
     {"label": "Videos", "href": "/videos"},
-    {"label": "Review Queue", "href": "/review"},
     {"label": "Practices", "href": "/practices"},
     {"label": "Scouting", "href": "/scouting"},
     {"label": "Playbook", "href": "/playbook"},
     {"label": "Messages", "href": "/messages"},
-    {"label": "Status", "href": "/status"},
 ]
 
 PRODUCT_PREVIEW_MODULES = [
@@ -284,7 +282,7 @@ PRODUCT_PREVIEW_MODULES = [
         "summary": "Upload video, review AI output, and correct plays inside the same workflow.",
         "href": "/film",
         "accent": "amber",
-        "items": ["Upload and tag film", "Review queue", "Compare reruns"],
+        "items": ["Watch and tag film", "Upload and analyze video", "Verify plays on film"],
         "module_keys": [FILM_ROOM],
     },
     {

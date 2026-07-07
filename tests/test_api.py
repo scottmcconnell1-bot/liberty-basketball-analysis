@@ -952,7 +952,13 @@ def test_schedule_page_renders_games_server_side(client):
     assert b"Server Render Opponent" in r.data
 
 
-def test_games_page_renders_server_side(client):
+def test_games_page_redirects_to_schedule(client):
+    r = client.get("/games")
+    assert r.status_code == 302
+    assert "/schedule" in r.headers["Location"]
+
+
+def test_schedule_lists_linked_game_opponent(client):
     sid = _create_season(client)
     scheduled = post_json(client, "/api/scheduled_games", {
         "season_id": sid,
@@ -964,7 +970,7 @@ def test_games_page_renders_server_side(client):
         "source_type": "manual",
         "source_key": "rendered-game-key",
     })
-    r = client.get("/games")
+    r = client.get(f"/schedule?season_id={sid}")
     assert r.status_code == 200
     assert b"Rendered Game Opponent" in r.data
 
@@ -1211,7 +1217,7 @@ def test_status_page_shows_product_progress_checklist(client):
     assert "Manual Tagging &amp; Bookmarks MVP" in html
     assert "Season Packets, Reviews &amp; Final Polish" in html
     assert 'href="/schedule"' in html
-    assert 'href="/review"' in html
+    assert 'href="/videos"' in html
     assert 'href="/practices"' in html
 
 
@@ -1231,7 +1237,7 @@ def test_product_preview_page_renders_final_product_surface(client):
     assert "Coach command center" in html
     assert "What the finished platform feels like" in html
     assert 'href="/film"' in html
-    assert 'href="/review"' in html
+    assert 'href="/videos"' in html
     assert 'href="/practices"' in html
 
 
