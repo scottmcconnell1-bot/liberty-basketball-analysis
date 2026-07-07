@@ -352,10 +352,11 @@ def api_nfhs_matches_reject(match_id):
 @games_bp.route("/games")
 @require_feature("ENABLE_GAMES_SOURCES")
 def games_page():
-    return render_games_page(
-        message=request.args.get("message"),
-        error=request.args.get("error"),
-        edit_game_id=request.args.get("edit_game_id", type=int),
+    return redirect(
+        url_for(
+            "core.schedule",
+            message="Game scores and results are recorded on the schedule.",
+        )
     )
 
 

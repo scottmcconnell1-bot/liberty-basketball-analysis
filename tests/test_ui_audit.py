@@ -138,7 +138,6 @@ def audit_page(path, label):
 PAGES = [
     ("/", "Dashboard"),
     ("/schedule", "Schedule"),
-    ("/games", "Games"),
     ("/videos", "Videos"),
     ("/film", "Film Tool"),
     ("/playbook", "Playbook"),
