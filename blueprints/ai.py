@@ -137,6 +137,8 @@ def _enrich_video_list_row(db, row):
             video_game_id=payload.get("game_id"),
             video_relational_game_id=payload.get("relational_game_id"),
             base_analysis_key=run_row["base_analysis_key"],
+            source_video_id=payload.get("id"),
+            video_path=payload.get("file_path"),
         )
         payload["detection_count"] = count_detections_for_analysis(db, **count_kwargs)
         payload["event_count"] = count_events_for_analysis(
@@ -1050,6 +1052,8 @@ def api_regenerate_video_events(vid_id):
         video_game_id=video["game_id"],
         video_relational_game_id=video["relational_game_id"],
         base_analysis_key=row["base_analysis_key"],
+        source_video_id=vid_id,
+        video_path=video["file_path"],
     )
     expected_detections = count_detections_for_analysis(db, **lookup_kwargs)
     if expected_detections == 0:

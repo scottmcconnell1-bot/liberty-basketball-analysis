@@ -227,6 +227,21 @@ def require_feature(flag_name):
     return decorator
 
 
+def require_any_feature(*flag_names):
+    """Allow route when at least one feature flag is enabled."""
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(*args, **kwargs):
+            if not any(feature_enabled(name) for name in flag_names):
+                abort(404)
+            return view_func(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 
 
 def get_runtime_settings():
@@ -1136,14 +1151,34 @@ def count_detections_for_analysis(
     video_game_id=None,
     video_relational_game_id=None,
     base_analysis_key=None,
+    source_video_id=None,
+    video_path=None,
 ) -> int:
     """Count detections for a video/analysis run across legacy and relational keys."""
+    game_ids = set()
+    for gid in (analysis_key, video_game_id, base_analysis_key):
+        if gid:
+            game_ids.add(gid)
+    if source_video_id is not None or video_path:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE (? IS NOT NULL AND source_video_id = ?)
+                   OR (? IS NOT NULL AND video_path = ?)""",
+            (source_video_id, source_video_id, video_path, video_path),
+        ).fetchall()
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    game_ids.add(value)
+
     conditions = []
     params = []
     for rel_id in {relational_game_id, video_relational_game_id} - {None}:
         conditions.append("d.relational_game_id = ?")
         params.append(rel_id)
-    for game_id in {analysis_key, video_game_id, base_analysis_key} - {None}:
+    for game_id in game_ids:
         conditions.append("d.game_id = ?")
         params.append(game_id)
     if not conditions:
