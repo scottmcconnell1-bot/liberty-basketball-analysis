@@ -328,10 +328,10 @@ def get_analysis_results(game_id):
     identity_status = None
     try:
         from settings_store import load_all_settings, AI_DEFAULTS
-        from track_identity import ensure_identity_applied
+        from track_identity import ensure_analysis_player_slots
 
         ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-        identity_status = ensure_identity_applied(db, game_id, ai_settings)
+        identity_status = ensure_analysis_player_slots(db, game_id, ai_settings)
     except Exception as exc:
         current_app.logger.exception("Identity auto-apply failed for %s", game_id)
         identity_status = {"skipped": True, "reason": "error", "error": str(exc)[:200]}
@@ -547,11 +547,13 @@ def get_analysis_events_api(game_id):
         ts = event.get("timestamp_ms") or 0
         event["film_url"] = None
         if stored_filename:
+            from helpers import analysis_film_clip_query
+
             event["film_url"] = url_for(
                 "core.film",
                 filename=stored_filename,
                 game_id=payload["game_id"],
-                t=max(0, int(ts / 1000)),
+                **analysis_film_clip_query(ts),
             )
     return jsonify(payload)
 
@@ -630,7 +632,7 @@ def auto_apply_court_slots_api(game_id):
     from court_slot_mapping import apply_court_slot_mappings, get_court_slots
     from settings_store import load_all_settings, AI_DEFAULTS
     from stats import refresh_stats
-    from track_identity import ensure_identity_applied
+    from track_identity import ensure_analysis_player_slots
 
     db = get_db()
     row = resolve_analysis_run_for_progress(db, game_id)
@@ -638,7 +640,7 @@ def auto_apply_court_slots_api(game_id):
         game_id = row["analysis_key"]
 
     ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-    identity_status = ensure_identity_applied(db, game_id, ai_settings)
+    identity_status = ensure_analysis_player_slots(db, game_id, ai_settings)
     slot_result = apply_court_slot_mappings(db, game_id)
     refresh_stats(db, game_id)
     return jsonify({
@@ -1119,9 +1121,10 @@ def api_regenerate_video_events(vid_id):
         identity_applied = 0
         try:
             from settings_store import load_all_settings, AI_DEFAULTS
-            from track_identity import run_identity_postprocess
+            from track_identity import ensure_analysis_player_slots, run_identity_postprocess
 
             ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            ensure_analysis_player_slots(db, analysis_key, ai_settings)
             identity_result = run_identity_postprocess(db, analysis_key, ai_settings)
             identity_applied = identity_result.get("slots_mapped", 0)
         except Exception as exc:

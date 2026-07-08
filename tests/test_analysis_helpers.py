@@ -255,7 +255,17 @@ def test_analysis_events_api_returns_film_links(client, db):
     assert data["count"] == 1
     assert data["events"][0]["quarter_label"] == "Q4"
     assert "stored_events.mp4" in data["events"][0]["film_url"]
-    assert "t=90" in data["events"][0]["film_url"]
+    assert "t=87.50" in data["events"][0]["film_url"]
+    assert "t_end=95.50" in data["events"][0]["film_url"]
+
+
+def test_analysis_results_film_links_include_clip_window(client):
+    resp = client.get("/analysis/test-game-key")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "CLIP_BEFORE_MS = 3000" in html
+    assert "CLIP_AFTER_MS = 5000" in html
+    assert "t_end=" in html
 
 
 def test_auto_apply_court_slots_endpoint(client, db):
@@ -312,6 +322,39 @@ def test_auto_apply_court_slots_endpoint(client, db):
     row = db.execute("SELECT player FROM events WHERE relational_game_id = ?", (relational_game_id,)).fetchone()
     assert row["player"] == "#12 Alex Player"
     assert (data.get("events_updated") or 0) >= 1 or (data.get("identity_status", {}).get("events_updated") or 0) >= 1
+
+
+def test_ensure_analysis_player_slots_creates_minutes_rows(db):
+    from track_identity import ensure_analysis_player_slots
+
+    analysis_key = "nfhs_ensure_slots"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, video_path, status)
+           VALUES (?, 'uploads/test.mp4', 'completed')""",
+        (analysis_key,),
+    )
+    for cluster_id in (3, 7):
+        for frame in range(10):
+            db.execute(
+                """INSERT INTO detections
+                   (game_id, frame_number, timestamp_ms, object_class, confidence,
+                    x_center, y_center, width, height, player_cluster)
+                   VALUES (?, ?, ?, 'person', 0.9, 100, 100, 50, 100, ?)""",
+                (analysis_key, frame + cluster_id * 100, frame * 40, cluster_id),
+            )
+    db.commit()
+
+    result = ensure_analysis_player_slots(
+        db,
+        analysis_key,
+        {"auto_apply_jersey_mapping": True, "identity_auto_apply_min_samples": 1},
+    )
+    slots = db.execute(
+        "SELECT COUNT(*) AS c FROM player_minutes WHERE game_id = ?",
+        (analysis_key,),
+    ).fetchone()["c"]
+    assert slots >= 2
+    assert result is not None
 
 
 def test_analysis_results_page_includes_event_explorer(client):

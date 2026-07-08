@@ -140,20 +140,36 @@ def save_court_slot_mappings(db, game_id, mappings, apply_to_events=False):
         label = _player_label(jersey_number, player_name)
 
         if relational_game_id is not None:
-            db.execute(
+            cur = db.execute(
                 """UPDATE player_minutes
                       SET jersey_number = ?, player_name = ?
                     WHERE tracker_id = ?
                       AND (relational_game_id = ? OR game_id = ?)""",
                 (jersey_number, player_name, int(tracker_id), relational_game_id, analysis_key),
             )
+            if cur.rowcount == 0:
+                db.execute(
+                    """INSERT INTO player_minutes
+                           (game_id, relational_game_id, tracker_id, jersey_number, player_name,
+                            first_frame, last_frame, total_frames, minutes_played)
+                       VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0)""",
+                    (analysis_key, relational_game_id, int(tracker_id), jersey_number, player_name),
+                )
         else:
-            db.execute(
+            cur = db.execute(
                 """UPDATE player_minutes
                       SET jersey_number = ?, player_name = ?
                     WHERE tracker_id = ? AND game_id = ?""",
                 (jersey_number, player_name, int(tracker_id), analysis_key),
             )
+            if cur.rowcount == 0:
+                db.execute(
+                    """INSERT INTO player_minutes
+                           (game_id, tracker_id, jersey_number, player_name,
+                            first_frame, last_frame, total_frames, minutes_played)
+                       VALUES (?, ?, ?, ?, 0, 0, 0, 0)""",
+                    (analysis_key, int(tracker_id), jersey_number, player_name),
+                )
 
         applied.append({
             "tracker_id": int(tracker_id),

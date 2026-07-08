@@ -1514,11 +1514,43 @@ def append_query_params(path, **params):
     ))
 
 
-def film_page_path(stored_filename: str, game_id: str) -> str:
+def analysis_film_clip_query(
+    timestamp_ms,
+    *,
+    clip_before_ms: int = 3000,
+    clip_after_ms: int = 5000,
+) -> dict[str, str]:
+    """Return Film Tool query params for a bounded clip around an event."""
+    event_ms = max(0, int(timestamp_ms or 0))
+    start_sec = max(0.0, (event_ms - clip_before_ms) / 1000.0)
+    end_sec = (event_ms + clip_after_ms) / 1000.0
+    return {
+        "t": f"{start_sec:.2f}",
+        "t_end": f"{end_sec:.2f}",
+    }
+
+
+def film_page_path(
+    stored_filename: str,
+    game_id: str,
+    *,
+    timestamp_ms=None,
+    clip_before_ms: int = 3000,
+    clip_after_ms: int = 5000,
+) -> str:
     """Build a Film Tool path without Flask request context (safe in background jobs)."""
+    params = {"game_id": game_id}
+    if timestamp_ms is not None:
+        params.update(
+            analysis_film_clip_query(
+                timestamp_ms,
+                clip_before_ms=clip_before_ms,
+                clip_after_ms=clip_after_ms,
+            )
+        )
     return append_query_params(
         f"/film/{quote(stored_filename, safe='')}",
-        game_id=game_id,
+        **params,
     )
 
 

@@ -344,6 +344,43 @@ def run_identity_postprocess(db, game_id, ai_settings=None):
     }
 
 
+def _analysis_video_fps(db, game_id, ai_settings=None) -> float:
+    ai_settings = ai_settings or {}
+    detect_stride = max(1, int(ai_settings.get("detection_stride", 1)))
+    from analysis_helpers import resolve_analysis_game_context
+
+    context = resolve_analysis_game_context(db, game_id)
+    video_path = context.get("video_path")
+    if video_path:
+        try:
+            import cv2
+
+            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+            cap.release()
+            return float(fps), detect_stride
+        except Exception:
+            pass
+    return 25.0, detect_stride
+
+
+def ensure_analysis_player_slots(db, game_id, ai_settings=None):
+    """Ensure court slots exist, then auto-apply jersey labels to AI events."""
+    from court_slot_mapping import get_court_slots
+
+    ai_settings = ai_settings or {}
+    slots = get_court_slots(db, game_id)
+    if not slots:
+        try:
+            from film_analysis import calculate_player_minutes
+
+            fps, detect_stride = _analysis_video_fps(db, game_id, ai_settings)
+            calculate_player_minutes(db, game_id, fps=fps, detect_stride=detect_stride)
+        except Exception:
+            pass
+    return ensure_identity_applied(db, game_id, ai_settings)
+
+
 def ensure_identity_applied(db, game_id, ai_settings=None):
     """Auto-apply jersey mappings when AI events still use raw cluster ids."""
     ai_settings = ai_settings or {}
