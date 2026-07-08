@@ -618,6 +618,25 @@ def api_rosters_import():
         return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
 
 
+@clips_bp.route("/api/film-rosters/summary", methods=["GET"])
+def api_film_rosters_summary():
+    """List non-empty Film Tool roster slots (for recovery / diagnostics)."""
+    rows = get_db().execute(
+        """
+        SELECT frp.season_id, s.name AS season_name, frp.level, frp.gender, frp.side,
+               COUNT(*) AS count
+          FROM film_roster_players frp
+          LEFT JOIN seasons s ON s.id = frp.season_id
+         GROUP BY frp.season_id, frp.level, frp.gender, frp.side
+         ORDER BY count DESC, frp.season_id DESC
+        """
+    ).fetchall()
+    return jsonify({
+        "slots": [dict(row) for row in rows],
+        "total_players": sum(int(row["count"] or 0) for row in rows),
+    })
+
+
 @clips_bp.route("/api/film-rosters", methods=["GET"])
 def api_film_rosters_get():
     """List players for a season-scoped Film Tool roster slot."""

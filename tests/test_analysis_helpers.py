@@ -167,6 +167,30 @@ def test_get_analysis_roster_players_matches_opponent_scheduled_game(db):
     assert payload["players"][0]["name"] == "Alex Player"
 
 
+def test_get_analysis_roster_players_uses_any_saved_slot(db):
+    season_id = _create_season(db, "2025-26")
+    analysis_key = "nfhs_any_slot"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, video_path, status)
+           VALUES (?, ?, 'completed')""",
+        (analysis_key, "uploads/any-slot.mp4"),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="jv",
+        gender="girls",
+        side="our",
+        players=[{"label": "4 Sam Example", "jersey_number": 4, "name": "Sam Example"}],
+        replace=True,
+    )
+    db.commit()
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    assert payload["source"] == "film_roster_any_slot"
+    assert payload["players"][0]["jersey_number"] == 4
+
+
 def test_infer_period_labels_splits_video_into_quarters():
     duration = 40 * 60 * 1000
     assert infer_period_labels(5 * 60 * 1000, duration)["quarter"] == 1

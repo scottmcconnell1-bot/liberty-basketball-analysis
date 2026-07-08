@@ -155,6 +155,34 @@ def _find_film_roster_players(db, *, season_id=None, level="varsity", gender="bo
             hit["source"] = "film_roster_inferred"
             return hit
 
+    # Last resort: use any non-empty roster slot in the database.
+    row = db.execute(
+        """
+        SELECT season_id, level, gender, side, COUNT(*) AS roster_count
+          FROM film_roster_players
+         GROUP BY season_id, level, gender, side
+         ORDER BY roster_count DESC, season_id DESC
+         LIMIT 1
+        """
+    ).fetchone()
+    if row and int(row["roster_count"] or 0) > 0:
+        players = _load_film_roster_players(
+            db,
+            season_id=row["season_id"],
+            level=row["level"],
+            gender=row["gender"],
+            side=row["side"],
+        )
+        if players:
+            return {
+                "players": players,
+                "season_id": row["season_id"],
+                "level": row["level"],
+                "gender": row["gender"],
+                "side": row["side"],
+                "source": "film_roster_any_slot",
+            }
+
     return None
 
 

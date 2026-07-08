@@ -224,25 +224,42 @@ function rosterSlotDescription(level, gender, side) {
     return `${level} ${gender} · ${side}`;
 }
 async function findPopulatedRosterSlot(seasonId) {
-    if (!seasonId) return null;
-    const levels = ['varsity', 'jv', 'jrhigh'];
-    const genders = ['boys', 'girls', 'coed'];
-    const sides = ['our', 'home', 'away', 'opp'];
-    for (const level of levels) {
-        for (const gender of genders) {
-            for (const side of sides) {
-                const params = new URLSearchParams({ season_id: seasonId, level, gender, side });
-                try {
-                    const resp = await fetch(`/api/film-rosters?${params.toString()}`);
-                    const data = await resp.json();
-                    if (resp.ok && data.players?.length) {
-                        return { level, gender, side, count: data.players.length };
+    if (seasonId) {
+        const levels = ['varsity', 'jv', 'jrhigh'];
+        const genders = ['boys', 'girls', 'coed'];
+        const sides = ['our', 'home', 'away', 'opp'];
+        for (const level of levels) {
+            for (const gender of genders) {
+                for (const side of sides) {
+                    const params = new URLSearchParams({ season_id: seasonId, level, gender, side });
+                    try {
+                        const resp = await fetch(`/api/film-rosters?${params.toString()}`);
+                        const data = await resp.json();
+                        if (resp.ok && data.players?.length) {
+                            return { seasonId, level, gender, side, count: data.players.length };
+                        }
+                    } catch (_err) {
+                        /* keep scanning */
                     }
-                } catch (_err) {
-                    /* keep scanning */
                 }
             }
         }
+    }
+    try {
+        const resp = await fetch('/api/film-rosters/summary');
+        const data = await resp.json();
+        const first = (data.slots || []).find(slot => slot.count > 0);
+        if (first) {
+            return {
+                seasonId: String(first.season_id),
+                level: first.level,
+                gender: first.gender,
+                side: first.side,
+                count: first.count,
+            };
+        }
+    } catch (_err) {
+        /* ignore */
     }
     return null;
 }
@@ -1236,21 +1253,33 @@ function legacyRosterKey(side = currentRosterSide) {
     return `${getSelectedLevel()}|${getSelectedGender()}|${side}`;
 }
 
+function findLocalRosterCandidates(excludeKey = '') {
+    const raw = loadJson(ROSTER_STORAGE_KEY, {});
+    return Object.entries(raw)
+        .filter(([slotKey, players]) => slotKey !== excludeKey && Array.isArray(players) && players.length)
+        .map(([slotKey, players]) => ({ slotKey, players: sortRosterPlayers(players) }));
+}
+
 async function migrateLegacyRosterIfNeeded() {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) return false;
     const key = getRosterKey();
     if ((rosters[key] || []).length) return false;
 
+    const candidates = findLocalRosterCandidates(key);
     const legacyPlayers = loadJson(ROSTER_STORAGE_KEY, {})[legacyRosterKey()];
-    if (!legacyPlayers?.length) return false;
+    if (legacyPlayers?.length) {
+        candidates.unshift({ slotKey: legacyRosterKey(), players: sortRosterPlayers(legacyPlayers) });
+    }
+    if (!candidates.length) return false;
 
+    const best = candidates[0];
     const ok = confirm(
-        `Found ${legacyPlayers.length} players from your old browser-only roster. Import them into this season?`
+        `Found ${best.players.length} players saved in this browser from an earlier session. Restore them to this season's roster?`
     );
     if (!ok) return false;
 
-    rosters[key] = sortRosterPlayers(legacyPlayers);
+    rosters[key] = best.players;
     await persistRosters();
     return true;
 }
@@ -1258,6 +1287,7 @@ async function migrateLegacyRosterIfNeeded() {
 async function loadRosterFromServer() {
     const seasonId = getSelectedSeasonId();
     const key = getRosterKey();
+    const cachedBeforeFetch = sortRosterPlayers(rosters[key] || []);
     const hint = document.getElementById('rosterSlotHint');
     if (hint) {
         hint.style.display = 'none';
@@ -1277,26 +1307,44 @@ async function loadRosterFromServer() {
         const resp = await fetch(`/api/film-rosters?${params.toString()}`);
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not load roster');
-        rosters[key] = sortRosterPlayers(data.players || []);
-        saveJson(ROSTER_STORAGE_KEY, rosters);
-        if (!data.players?.length) await migrateLegacyRosterIfNeeded();
-        if (!data.players?.length && !(rosters[key] || []).length) {
-            const alternate = await findPopulatedRosterSlot(seasonId);
-            if (alternate) {
-                const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
-                const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
-                if (hint) {
-                    hint.style.display = 'block';
-                    hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
-                    document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
-                        setRosterFilters(alternate.level, alternate.gender, alternate.side);
-                        await loadRosterFromServer();
-                    }, { once: true });
+        const serverPlayers = sortRosterPlayers(data.players || []);
+        if (serverPlayers.length) {
+            rosters[key] = serverPlayers;
+        } else if (cachedBeforeFetch.length) {
+            // Keep browser copy and push it to the database — do not wipe local data.
+            rosters[key] = cachedBeforeFetch;
+            await persistRosters();
+            if (hint) {
+                hint.style.display = 'block';
+                hint.textContent = 'Restored roster from this browser and saved it to the database.';
+            }
+        } else {
+            rosters[key] = [];
+            const restored = await migrateLegacyRosterIfNeeded();
+            if (!restored && !(rosters[key] || []).length) {
+                const alternate = await findPopulatedRosterSlot(seasonId);
+                if (alternate) {
+                    const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
+                    const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
+                    if (hint) {
+                        hint.style.display = 'block';
+                        hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
+                        document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
+                            if (alternate.seasonId) setActiveRosterSeasonId(alternate.seasonId);
+                            setRosterFilters(alternate.level, alternate.gender, alternate.side);
+                            await loadRosterFromServer();
+                        }, { once: true });
+                    }
                 }
             }
         }
+        saveJson(ROSTER_STORAGE_KEY, rosters);
     } catch (err) {
         console.warn(err);
+        if (cachedBeforeFetch.length) {
+            rosters[key] = cachedBeforeFetch;
+            showRoster();
+        }
     }
     showRoster();
 }
