@@ -188,16 +188,16 @@ def get_identity_labels(db, game_id):
 
 def build_identity_report(db, game_id, ai_settings=None):
     ai_settings = ai_settings or {}
-    min_conf = float(ai_settings.get("jersey_ocr_min_confidence", 0.55))
-    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 4))
+    min_conf = float(ai_settings.get("jersey_ocr_min_confidence", 0.50))
+    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 2))
     relational_game_id, analysis_key = _game_scope(db, game_id)
     scope_sql, scope_params = _detection_scope_sql(relational_game_id, analysis_key)
 
     cluster_suggestions = aggregate_cluster_jersey_votes(
-        db, game_id, min_confidence=min_conf, min_samples=max(3, min_samples // 2)
+        db, game_id, min_confidence=min_conf, min_samples=max(2, min_samples)
     )
     track_suggestions = aggregate_track_jersey_votes(
-        db, game_id, min_confidence=min_conf, min_samples=max(3, min_samples // 2)
+        db, game_id, min_confidence=min_conf, min_samples=max(2, min_samples)
     )
     persist_identity_labels(db, game_id, cluster_suggestions, source="ocr_cluster_votes")
     persist_identity_labels(db, game_id, track_suggestions, source="ocr_track_votes")
@@ -289,8 +289,8 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     from court_slot_mapping import save_court_slot_mappings, apply_court_slot_mappings
 
     ai_settings = ai_settings or {}
-    min_conf = float(ai_settings.get("identity_auto_apply_min_confidence", 0.60))
-    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 4))
+    min_conf = float(ai_settings.get("identity_auto_apply_min_confidence", 0.55))
+    min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 2))
 
     suggestions = aggregate_cluster_jersey_votes(
         db,
@@ -329,15 +329,36 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     }
 
 
-def run_identity_postprocess(db, game_id, ai_settings=None):
+def _run_event_jersey_ocr(db, game_id, ai_settings=None, video_path=None):
+    ai_settings = ai_settings or {}
+    if not ai_settings.get("jersey_ocr_event_enabled", True):
+        return {"skipped": True, "reason": "event_ocr_disabled"}
+    if video_path is None:
+        try:
+            from analysis_helpers import resolve_analysis_game_context
+
+            context = resolve_analysis_game_context(db, game_id)
+            video_path = context.get("video_path")
+        except Exception:
+            video_path = None
+    if not video_path:
+        return {"skipped": True, "reason": "no_video"}
+    from jersey_ocr import ocr_jerseys_near_events
+
+    return ocr_jerseys_near_events(db, game_id, video_path, ai_settings)
+
+
+def run_identity_postprocess(db, game_id, ai_settings=None, video_path=None):
     """Build OCR identity report and auto-apply jersey mappings when enabled."""
     ai_settings = ai_settings or {}
+    event_ocr_result = _run_event_jersey_ocr(db, game_id, ai_settings, video_path=video_path)
     report = build_identity_report(db, game_id, ai_settings)
     applied = {"applied": 0, "mappings": [], "events_updated": 0}
     if ai_settings.get("auto_apply_jersey_mapping", True):
         applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
     return {
         **report,
+        "event_ocr": event_ocr_result,
         "auto_apply": applied,
         "slots_mapped": applied.get("applied", 0),
         "events_updated": applied.get("events_updated", 0),
@@ -406,6 +427,7 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
                 "applied": result.get("slots_mapped", 0),
             }
 
+    event_ocr_result = _run_event_jersey_ocr(db, game_id, ai_settings)
     report = build_identity_report(db, game_id, ai_settings)
     if not report.get("cluster_suggestions"):
         return {
@@ -413,6 +435,7 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
             "reason": "no_cluster_suggestions",
             "raw_cluster_events": raw_cluster_events,
             "ocr_read_count": report.get("ocr_read_count", 0),
+            "event_ocr": event_ocr_result,
         }
 
     applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
@@ -421,5 +444,6 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
         "raw_cluster_events": raw_cluster_events,
         "ocr_read_count": report.get("ocr_read_count", 0),
         "cluster_suggestions": len(report.get("cluster_suggestions") or []),
+        "event_ocr": event_ocr_result,
         **applied,
     }

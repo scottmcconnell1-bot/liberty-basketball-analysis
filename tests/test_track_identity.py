@@ -232,3 +232,85 @@ def test_auto_apply_cluster_jerseys_updates_events(db):
     assert result["applied"] >= 1
     row = db.execute("SELECT player FROM events WHERE player LIKE '#12%'").fetchone()
     assert row is not None
+
+
+def test_sample_event_timestamps_spreads_samples():
+    from jersey_ocr import _sample_event_timestamps
+
+    events = [
+        {"player": "3", "timestamp_ms": 1000},
+        {"player": "3", "timestamp_ms": 1100},
+        {"player": "3", "timestamp_ms": 5000},
+        {"player": "7", "timestamp_ms": 2000},
+    ]
+    sampled = _sample_event_timestamps(events, max_per_cluster=10)
+    assert sampled[3] == [1000, 5000]
+    assert sampled[7] == [2000]
+
+
+def test_ocr_jerseys_near_events_updates_detection(db, monkeypatch, tmp_path):
+    from jersey_ocr import ocr_jerseys_near_events
+
+    video_path = tmp_path / "event-ocr.mp4"
+    video_path.write_bytes(b"not-a-real-video")
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'event-ocr')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_event_ocr"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, str(video_path)),
+    )
+    db.execute(
+        """INSERT INTO events
+               (game_id, relational_game_id, player, event_type, timestamp_ms, source_type)
+           VALUES (?, ?, '3', 'shot', 5000, 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, tracker_id, player_cluster)
+           VALUES (?, ?, 150, 5000, 'person', 0.9, 200, 300, 80, 120, 1, 3)""",
+        (analysis_key, game_id),
+    )
+    db.commit()
+    det_id = db.execute("SELECT id FROM detections").fetchone()[0]
+
+    import sys
+
+    class FakeCap:
+        def __init__(self, path, *_args):
+            self.path = path
+
+        def isOpened(self):
+            return True
+
+        def set(self, *_args):
+            return True
+
+        def read(self):
+            import numpy as np
+
+            return True, np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        def release(self):
+            return None
+
+    fake_cv2 = type(sys)("cv2")
+    fake_cv2.VideoCapture = FakeCap
+    fake_cv2.CAP_FFMPEG = 0
+    fake_cv2.CAP_PROP_POS_MSEC = 0
+    monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
+    monkeypatch.setattr(
+        "jersey_ocr.read_jersey_from_detection",
+        lambda *_args, **_kwargs: (23, 0.88),
+    )
+
+    result = ocr_jerseys_near_events(db, analysis_key, str(video_path))
+    assert result["skipped"] is False
+    assert result["updated"] >= 1
+    row = db.execute("SELECT jersey_read, jersey_confidence FROM detections WHERE id=?", (det_id,)).fetchone()
+    assert row["jersey_read"] == 23
+    assert row["jersey_confidence"] == 0.88

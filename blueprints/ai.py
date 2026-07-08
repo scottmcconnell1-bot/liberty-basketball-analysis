@@ -1129,7 +1129,9 @@ def api_regenerate_video_events(vid_id):
 
             ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
             ensure_analysis_player_slots(db, analysis_key, ai_settings)
-            identity_result = run_identity_postprocess(db, analysis_key, ai_settings)
+            identity_result = run_identity_postprocess(
+                db, analysis_key, ai_settings, video_path=video["file_path"],
+            )
             identity_applied = identity_result.get("slots_mapped", 0)
         except Exception as exc:
             current_app.logger.warning("Identity postprocess after regenerate failed: %s", exc)

@@ -445,7 +445,8 @@ async function loadResults() {
         html += 'Click any stat to verify each play on film.';
       } else if (identity.reason === 'no_cluster_suggestions') {
         html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
-        html += 'Try <strong>Rebuild events</strong> on Video Library, or verify the roster is imported in Film Tool.';
+        html += 'Import your roster in Film Tool → Manage Rosters, then click <strong>Rebuild events</strong> on Video Library (event-focused OCR runs during Rebuild). ';
+        html += 'Unidentified players can still be fixed manually in the table below.';
       } else {
         html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
         html += 'Click stats to verify events on film.';
