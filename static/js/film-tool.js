@@ -1213,6 +1213,32 @@ function addTerm() {
     newTermInput.value = '';
 }
 
+function closeRosterDialog() {
+    rosterDialog?.close();
+}
+
+function closeRosterImportDialog() {
+    pendingRosterImportFile = null;
+    if (rosterFileInput) rosterFileInput.value = '';
+    rosterImportDialog?.close();
+}
+
+function updateRosterSeasonUi() {
+    const help = document.getElementById('rosterSeasonHelp');
+    const actions = document.getElementById('rosterSeasonActions');
+    if (!rosterSeasonOptions.length) {
+        if (help) {
+            help.textContent = 'No season found yet. Create one below, or add it on Schedule, then pick it here.';
+        }
+        if (actions) actions.style.display = 'block';
+    } else if (actions) {
+        actions.style.display = 'none';
+        if (help) {
+            help.textContent = 'Rosters are saved per season so you can keep last year’s players.';
+        }
+    }
+}
+
 // ── Roster Management ───────────────────────────────────────
 function fillRosterSeasonSelect(selectEl, selectedId = '') {
     if (!selectEl) return;
@@ -1231,14 +1257,47 @@ function fillRosterSeasonSelect(selectEl, selectedId = '') {
         if (String(season.id) === String(selectedId)) opt.selected = true;
         selectEl.appendChild(opt);
     });
+    updateRosterSeasonUi();
+}
+
+async function fetchRosterSeasonOptions() {
+    const endpoints = ['/api/film-rosters/seasons', '/api/seasons'];
+    for (const endpoint of endpoints) {
+        try {
+            const resp = await fetch(endpoint);
+            if (!resp.ok) continue;
+            const payload = await resp.json();
+            if (Array.isArray(payload) && payload.length) return payload;
+            if (Array.isArray(payload)) return payload;
+        } catch (_err) {
+            /* try next endpoint */
+        }
+    }
+    return [];
+}
+
+async function createDefaultSeason() {
+    const resp = await fetch('/api/film-rosters/seasons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: '2025-26',
+            start_date: '2025-11-01',
+            end_date: '2026-03-31',
+        }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not create season');
+    return data;
 }
 
 async function ensureRosterSeasonsLoaded() {
-    if (rosterSeasonOptions.length) return rosterSeasonOptions;
+    if (rosterSeasonOptions.length) {
+        fillRosterSeasonSelect(rosterSeasonSelect, activeRosterSeasonId || String(rosterSeasonOptions[0]?.id || ''));
+        return rosterSeasonOptions;
+    }
     try {
-        const resp = await fetch('/api/seasons');
-        if (!resp.ok) throw new Error('Could not load seasons');
-        rosterSeasonOptions = await resp.json();
+        rosterSeasonOptions = await fetchRosterSeasonOptions();
     } catch (err) {
         rosterSeasonOptions = [];
         console.warn(err);
@@ -1260,7 +1319,7 @@ function findLocalRosterCandidates(excludeKey = '') {
         .map(([slotKey, players]) => ({ slotKey, players: sortRosterPlayers(players) }));
 }
 
-async function migrateLegacyRosterIfNeeded() {
+async function migrateLegacyRosterIfNeeded(allowPrompt = true) {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) return false;
     const key = getRosterKey();
@@ -1272,6 +1331,7 @@ async function migrateLegacyRosterIfNeeded() {
         candidates.unshift({ slotKey: legacyRosterKey(), players: sortRosterPlayers(legacyPlayers) });
     }
     if (!candidates.length) return false;
+    if (!allowPrompt) return false;
 
     const best = candidates[0];
     const ok = confirm(
@@ -1284,7 +1344,8 @@ async function migrateLegacyRosterIfNeeded() {
     return true;
 }
 
-async function loadRosterFromServer() {
+async function loadRosterFromServer(options = {}) {
+    const allowLegacyPrompt = options.allowLegacyPrompt !== false;
     const seasonId = getSelectedSeasonId();
     const key = getRosterKey();
     const cachedBeforeFetch = sortRosterPlayers(rosters[key] || []);
@@ -1320,7 +1381,7 @@ async function loadRosterFromServer() {
             }
         } else {
             rosters[key] = [];
-            const restored = await migrateLegacyRosterIfNeeded();
+            const restored = await migrateLegacyRosterIfNeeded(allowLegacyPrompt);
             if (!restored && !(rosters[key] || []).length) {
                 const alternate = await findPopulatedRosterSlot(seasonId);
                 if (alternate) {
@@ -1420,9 +1481,15 @@ function showRoster() {
 }
 
 async function openRosterDialog() {
-    await ensureRosterSeasonsLoaded();
-    await loadRosterFromServer();
+    if (rosterDialog?.open) return;
     rosterDialog.showModal();
+    try {
+        await ensureRosterSeasonsLoaded();
+        await loadRosterFromServer({ allowLegacyPrompt: true });
+    } catch (err) {
+        console.warn(err);
+        showRoster();
+    }
 }
 
 function rosterImportTypeLabel(detectedType) {
@@ -2521,6 +2588,31 @@ function attachEventHandlers() {
     termFieldSelect?.addEventListener('change', renderTermList);
 
     document.getElementById('manageRostersBtn')?.addEventListener('click', () => { openRosterDialog(); });
+    document.getElementById('rosterDialogCloseBtn')?.addEventListener('click', closeRosterDialog);
+    document.getElementById('rosterDialogFooterCloseBtn')?.addEventListener('click', closeRosterDialog);
+    document.getElementById('rosterImportCloseBtn')?.addEventListener('click', closeRosterImportDialog);
+    document.getElementById('createDefaultSeasonBtn')?.addEventListener('click', async () => {
+        try {
+            const season = await createDefaultSeason();
+            rosterSeasonOptions = await fetchRosterSeasonOptions();
+            const selected = String(season.id || rosterSeasonOptions[0]?.id || '');
+            fillRosterSeasonSelect(rosterSeasonSelect, selected);
+            fillRosterSeasonSelect(rosterImportSeasonSelect, selected);
+            if (selected) setActiveRosterSeasonId(selected);
+            await loadRosterFromServer({ allowLegacyPrompt: true });
+            setStatus('Season created. You can import or add players now.');
+        } catch (err) {
+            alert(err.message || 'Could not create season.');
+        }
+    });
+    rosterDialog?.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeRosterDialog();
+    });
+    rosterImportDialog?.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeRosterImportDialog();
+    });
     document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
@@ -2539,7 +2631,7 @@ function attachEventHandlers() {
     });
     rosterFileInput?.addEventListener('change', e => { const file = e.target.files[0]; if (file) queueRosterImport(file); });
     document.getElementById('clearRosterBtn')?.addEventListener('click', clearCurrentRoster);
-    document.getElementById('rosterImportCancelBtn')?.addEventListener('click', () => { pendingRosterImportFile = null; if (rosterFileInput) rosterFileInput.value = ''; rosterImportDialog?.close(); });
+    document.getElementById('rosterImportCancelBtn')?.addEventListener('click', closeRosterImportDialog);
     document.getElementById('rosterImportConfirmBtn')?.addEventListener('click', confirmRosterImport);
     document.getElementById('addPlayerBtn')?.addEventListener('click', openAddPlayerDialog);
     document.getElementById('playerCancelBtn')?.addEventListener('click', () => playerDialog.close());
@@ -2666,7 +2758,7 @@ function init() {
     loadStores();
     ensureRosterSeasonsLoaded().then(() => {
         restoreRosterFilters();
-        return loadRosterFromServer();
+        return loadRosterFromServer({ allowLegacyPrompt: false });
     });
     renderEventButtons();
     renderGames();

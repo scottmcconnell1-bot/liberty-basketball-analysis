@@ -618,6 +618,34 @@ def api_rosters_import():
         return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
 
 
+@clips_bp.route("/api/film-rosters/seasons", methods=["GET", "POST"])
+def api_film_roster_seasons():
+    """Season list/create for Film Tool rosters (does not require Schedule feature flag)."""
+    db = get_db()
+    if request.method == "GET":
+        rows = db.execute("SELECT * FROM seasons ORDER BY start_date DESC").fetchall()
+        return jsonify([dict(r) for r in rows])
+
+    data = request.get_json(force=True) or {}
+    name = (data.get("name") or "").strip() or "2025-26"
+    start = (data.get("start_date") or "").strip() or "2025-11-01"
+    end = (data.get("end_date") or "").strip() or "2026-03-31"
+    season_type = (data.get("season_type") or "regular").strip() or "regular"
+    if season_type not in ("regular", "summer"):
+        season_type = "regular"
+    try:
+        cur = db.execute(
+            "INSERT INTO seasons (name, start_date, end_date, season_type) VALUES (?,?,?,?)",
+            (name, start, end, season_type),
+        )
+        db.commit()
+        row = db.execute("SELECT * FROM seasons WHERE id=?", (cur.lastrowid,)).fetchone()
+        return jsonify(dict(row)), 201
+    except Exception as exc:
+        db.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
 @clips_bp.route("/api/film-rosters/summary", methods=["GET"])
 def api_film_rosters_summary():
     """List non-empty Film Tool roster slots (for recovery / diagnostics)."""
