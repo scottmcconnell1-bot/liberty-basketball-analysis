@@ -158,6 +158,11 @@ function formatGameDate(value) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function filmToolHref(v) {
   const gameId = encodeURIComponent(v.analysis_key || v.game_id || '');
   if (v.stored_filename) {
@@ -227,22 +232,23 @@ async function doResetAll() {
 
 // ── Load video list ─────────────────────────────────────
 async function loadVideos() {
-  const resp = await fetch('/api/videos');
-  const videos = await resp.json();
+  try {
+    const resp = await fetch('/api/videos');
+    const videos = await resp.json();
 
-  document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
 
-  if (!videos.length) {
-    document.getElementById('video-table').style.display = 'none';
-    document.getElementById('empty-msg').style.display = 'block';
-    return;
-  }
+    if (!Array.isArray(videos) || !videos.length) {
+      document.getElementById('video-table').style.display = 'none';
+      document.getElementById('empty-msg').style.display = 'block';
+      return;
+    }
 
-  document.getElementById('empty-msg').style.display = 'none';
-  const tbody = document.getElementById('video-tbody');
-  tbody.innerHTML = '';
+    document.getElementById('empty-msg').style.display = 'none';
+    const tbody = document.getElementById('video-tbody');
+    tbody.innerHTML = '';
 
-  for (const v of videos) {
+    for (const v of videos) {
     const dupBadge = v.is_duplicate
       ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">Dup</span>`
       : '';
@@ -281,7 +287,14 @@ async function loadVideos() {
     tbody.appendChild(tr);
   }
 
-  document.getElementById('video-table').style.display = 'table';
+    document.getElementById('video-table').style.display = 'table';
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('video-table').style.display = 'none';
+    const empty = document.getElementById('empty-msg');
+    empty.style.display = 'block';
+    empty.textContent = 'Could not load videos: ' + err.message + '. Try a hard refresh (Ctrl+F5).';
+  }
 }
 
 loadVideos();
