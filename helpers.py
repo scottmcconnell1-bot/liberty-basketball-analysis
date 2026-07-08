@@ -98,6 +98,7 @@ def get_default_team_id(db):
     return _stage2_default_team_id(db)
 
 
+
 def build_review_workflow_summary(db):
     """Aggregate event and review_items counts for coach trust surfaces."""
     event_rows = db.execute(

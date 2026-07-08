@@ -1,23 +1,21 @@
 # Active Task
 
-Updated: 2026-07-06
+Updated: 2026-07-08
 Branch: `jason-5-may-updates`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | nav-docs-stage-10b |
+| **id** | fix-rebuild-events |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
 ## Report
 
-### Proven
-
-- Nav active-state fixed via `nav_active()` template global + blueprint-qualified endpoints
-- Doc freshness: `STAGE_INDEX.md`, `PROJECT_STATUS.md`, `ROADMAP.md` updated to 2026-07-06
-- Stage 10B: `/assistant` guided workflow + `/api/assistant/workflow/*` steps
+- Rebuild events fix: detection lookup, no-detections guard, Re-run AI on Video Library
+- Film Tool shows Re-run AI Analysis when completed with 0 detections
+- Merge conflicts resolved with stage-6b module gating
 
 ### Next
 
