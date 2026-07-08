@@ -1198,10 +1198,77 @@ def _read_log_tail_from_content(content: str, limit: int = 500) -> str:
     return content[-limit:] if content else ""
 
 
+def _is_sync_event_rebuild_step(progress_step: str | None) -> bool:
+    """True when an in-process Video Library Rebuild is running (not a subprocess)."""
+    step = (progress_step or "").lower()
+    return any(
+        phrase in step
+        for phrase in (
+            "regenerating events",
+            "clustering players",
+            "loading detections",
+        )
+    )
+
+
+def heal_failed_analysis_run_with_events(db, game_id: str) -> bool:
+    """Upgrade failed runs that already produced events (stale watchdog false positive)."""
+    columns = {row[1] for row in db.execute("PRAGMA table_info(analysis_runs)").fetchall()}
+    select_cols = ["id", "status", "analysis_key"]
+    if "game_id" in columns:
+        select_cols.append("game_id AS relational_game_id")
+    else:
+        select_cols.append("NULL AS relational_game_id")
+    if "base_analysis_key" in columns:
+        select_cols.append("base_analysis_key")
+    else:
+        select_cols.append("NULL AS base_analysis_key")
+
+    row = db.execute(
+        f"""SELECT {", ".join(select_cols)}
+           FROM analysis_runs
+           WHERE analysis_key=?
+           ORDER BY id DESC
+           LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if not row:
+        return False
+    status = row["status"] if hasattr(row, "keys") else row[1]
+    if status != "failed":
+        return False
+    analysis_key = row["analysis_key"] if hasattr(row, "keys") else row[2]
+    relational_game_id = row["relational_game_id"] if hasattr(row, "keys") else row[3]
+    base_analysis_key = row["base_analysis_key"] if hasattr(row, "keys") else row[4]
+    row_id = row["id"] if hasattr(row, "keys") else row[0]
+    event_count = count_events_for_analysis(
+        db,
+        analysis_key=analysis_key,
+        relational_game_id=relational_game_id,
+        base_analysis_key=base_analysis_key,
+    )
+    if event_count <= 0:
+        return False
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='completed',
+               progress_pct=100,
+               progress_step='Done',
+               error_message=NULL,
+               completed_at=COALESCE(completed_at, CURRENT_TIMESTAMP)
+           WHERE id=?""",
+        (row_id,),
+    )
+    db.commit()
+    return True
+
+
 def reconcile_stuck_analysis_run(db, game_id: str) -> None:
     """Mark orphaned pending/running runs failed or completed based on logs."""
+    heal_failed_analysis_run_with_events(db, game_id)
+
     row = db.execute(
-        """SELECT id, status
+        """SELECT id, status, progress_step
            FROM analysis_runs
            WHERE analysis_key=?
            ORDER BY id DESC
@@ -1211,7 +1278,12 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
     if not row:
         return
 
-    status = row[1]
+    if hasattr(row, "keys"):
+        status = row["status"]
+        progress_step = row["progress_step"]
+        row_id = row["id"]
+    else:
+        row_id, status, progress_step = row[0], row[1], row[2]
     if status not in {"pending", "running"}:
         return
 
@@ -1228,7 +1300,7 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
                        completed_at=CURRENT_TIMESTAMP,
                        error_message=NULL
                    WHERE id=?""",
-                (row[0],),
+                (row_id,),
             )
             db.commit()
             return
@@ -1242,9 +1314,12 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
                        progress_step='Failed',
                        completed_at=CURRENT_TIMESTAMP
                    WHERE id=?""",
-                (error_message, row[0]),
+                (error_message, row_id),
             )
             db.commit()
+            return
+
+        if _is_sync_event_rebuild_step(progress_step):
             return
 
         if content and os.path.exists(log_path):
@@ -1260,7 +1335,7 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
                     (
                         "Analysis run stopped responding. Check logs, install missing "
                         "packages (pip install scikit-learn), then click Rebuild again.",
-                        row[0],
+                        row["id"] if hasattr(row, "keys") else row_id,
                     ),
                 )
                 db.commit()
@@ -1278,7 +1353,7 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
                    progress_step='Failed',
                    completed_at=CURRENT_TIMESTAMP
                WHERE id=?""",
-            (error_message, row[0]),
+            (error_message, row_id),
         )
         db.commit()
         return
@@ -1295,7 +1370,7 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
             (
                 "Analysis worker stopped before processing started. "
                 "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
-                row[0],
+                row_id,
             ),
         )
         db.commit()

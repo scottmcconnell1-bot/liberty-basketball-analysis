@@ -1068,6 +1068,14 @@ def api_regenerate_video_events(vid_id):
     )
     db.commit()
 
+    log_path = ai_analysis_log_path(analysis_key)
+    try:
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as handle:
+            handle.write(f"\n[{datetime.utcnow().isoformat()}Z] Rebuild events started in web worker.\n")
+    except OSError:
+        pass
+
     try:
         from event_generator import main as generate_events
 

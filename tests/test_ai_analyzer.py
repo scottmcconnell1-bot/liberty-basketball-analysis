@@ -208,3 +208,62 @@ def test_resolve_analysis_run_for_progress_follows_replacement(db):
     row = resolve_analysis_run_for_progress(db, "old_rerun")
     assert row["analysis_key"] == "new_rerun"
     assert row["status"] == "pending"
+
+
+def test_reconcile_skips_stale_log_while_sync_rebuild_running(app, tmp_path):
+    import time
+
+    from helpers import ai_analysis_log_path, reconcile_stuck_analysis_run
+
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """CREATE TABLE analysis_runs (
+            id INTEGER PRIMARY KEY,
+            analysis_key TEXT,
+            status TEXT,
+            error_message TEXT,
+            progress_step TEXT,
+            progress_pct REAL,
+            completed_at TEXT,
+            game_id INTEGER,
+            base_analysis_key TEXT
+        )"""
+    )
+    conn.execute(
+        """INSERT INTO analysis_runs (analysis_key, status, progress_step, progress_pct)
+           VALUES (?, 'running', ?, 35)""",
+        ("nfhs_sync_rebuild", "Clustering players and rebuilding events…"),
+    )
+    conn.commit()
+
+    log_path = ai_analysis_log_path("nfhs_sync_rebuild")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w", encoding="utf-8") as handle:
+        handle.write("old log\n")
+    old = time.time() - 7200
+    os.utime(log_path, (old, old))
+
+    reconcile_stuck_analysis_run(conn, "nfhs_sync_rebuild")
+    row = conn.execute("SELECT status FROM analysis_runs").fetchone()
+    assert row[0] == "running"
+
+
+def test_heal_failed_analysis_run_with_events(app, db):
+    from helpers import heal_failed_analysis_run_with_events
+
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, video_path, status, progress_step, progress_pct, game_id)
+           VALUES (?, 'uploads/test.mp4', 'failed', 'Failed', 35, NULL)""",
+        ("heal_game_key",),
+    )
+    db.execute(
+        """INSERT INTO events (game_id, event_type, timestamp_ms)
+           VALUES (?, 'shot', 1000)""",
+        ("heal_game_key",),
+    )
+    db.commit()
+    assert heal_failed_analysis_run_with_events(db, "heal_game_key") is True
+    row = db.execute("SELECT status, progress_step FROM analysis_runs").fetchone()
+    assert row["status"] == "completed"
+    assert row["progress_step"] == "Done"
