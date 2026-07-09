@@ -1176,20 +1176,18 @@ def _run_regenerate_events_worker(
     db_path: str,
 ) -> None:
     """Background worker: rebuild events, enhanced analysis, and jersey OCR."""
-    from helpers import open_sqlite_connection
-
-    conn = open_sqlite_connection(db_path)
-    try:
+    with app.app_context():
+        db = get_db()
         try:
             from event_generator import main as generate_events
 
-            conn.execute(
+            db.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=35, progress_step='Clustering players and rebuilding events…'
                    WHERE id=?""",
                 (run_id,),
             )
-            conn.commit()
+            db.commit()
 
             if generate_events(
                 analysis_key,
@@ -1206,15 +1204,15 @@ def _run_regenerate_events_worker(
 
             from helpers import assign_possessions_for_game
             if relational_game_id is not None:
-                assign_possessions_for_game(conn, relational_game_id)
+                assign_possessions_for_game(db, relational_game_id)
 
-            conn.execute(
+            db.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=70, progress_step='Running enhanced analysis…'
                    WHERE id=?""",
                 (run_id,),
             )
-            conn.commit()
+            db.commit()
 
             enhanced_warning = None
             try:
@@ -1228,26 +1226,26 @@ def _run_regenerate_events_worker(
             except Exception as exc:
                 enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
 
-            conn.execute(
+            db.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=85, progress_step='Scanning jersey numbers (OCR)…'
                    WHERE id=?""",
                 (run_id,),
             )
-            conn.commit()
+            db.commit()
 
             try:
                 from settings_store import load_all_settings, AI_DEFAULTS
                 from track_identity import run_identity_postprocess
 
-                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=conn).get("ai", AI_DEFAULTS)
+                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
                 run_identity_postprocess(
-                    conn, analysis_key, ai_settings, video_path=video_path,
+                    db, analysis_key, ai_settings, video_path=video_path,
                 )
             except Exception as exc:
                 app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
 
-            conn.execute(
+            db.execute(
                 """UPDATE analysis_runs
                    SET status='completed', progress_pct=100, progress_step=?,
                        completed_at=CURRENT_TIMESTAMP, error_message=?
@@ -1258,12 +1256,12 @@ def _run_regenerate_events_worker(
                     run_id,
                 ),
             )
-            conn.commit()
+            db.commit()
         except Exception as exc:
             app.logger.exception("Rebuild events failed for %s", analysis_key)
             from helpers import format_exception_message
 
-            conn.execute(
+            db.execute(
                 """UPDATE analysis_runs
                    SET status='failed',
                        error_message=?,
@@ -1272,9 +1270,9 @@ def _run_regenerate_events_worker(
                    WHERE id=?""",
                 (format_exception_message(exc), run_id),
             )
-            conn.commit()
-    finally:
-        conn.close()
+            db.commit()
+        finally:
+            db.close()
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/regenerate-events", methods=["POST"])

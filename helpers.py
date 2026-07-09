@@ -207,7 +207,13 @@ def build_player_minutes_summary(db):
 
 
 def feature_enabled(flag_name):
-    return bool(get_runtime_settings()["features"].get(flag_name, False))
+    from flask import has_app_context
+
+    if has_app_context():
+        return bool(get_runtime_settings()["features"].get(flag_name, False))
+    from config import Features
+
+    return bool(getattr(Features, flag_name, False))
 
 
 def analysis_option_enabled(option_name):
