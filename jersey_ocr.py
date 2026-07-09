@@ -91,6 +91,29 @@ def crop_torso(frame, x1: int, y1: int, x2: int, y2: int):
     return crop
 
 
+def crop_jersey_regions(frame, x1: int, y1: int, x2: int, y2: int):
+    """Return multiple likely jersey-number crops (front chest + back/lower)."""
+    import cv2  # noqa: WPS433
+
+    h, w = frame.shape[:2]
+    x1 = max(0, min(x1, w - 1))
+    x2 = max(0, min(x2, w))
+    y1 = max(0, min(y1, h - 1))
+    y2 = max(0, min(y2, h))
+    if x2 <= x1 or y2 <= y1:
+        return []
+
+    box_h = y2 - y1
+    regions = []
+    for start_pct, end_pct in ((0.0, 0.45), (0.30, 0.72), (0.55, 0.95)):
+        ry1 = y1 + int(box_h * start_pct)
+        ry2 = y1 + max(ry1 + 8, int(box_h * end_pct))
+        crop = frame[ry1:ry2, x1:x2]
+        if crop is not None and crop.size > 0:
+            regions.append(crop)
+    return regions
+
+
 def _preprocess_variants(crop):
     """Return several preprocessed crops to improve digit readability."""
     import cv2  # noqa: WPS433
@@ -181,30 +204,205 @@ def _read_with_paddle(crop) -> tuple[int | None, float]:
     return best_number, best_conf
 
 
-def read_jersey_from_bbox(frame, x1: int, y1: int, x2: int, y2: int) -> tuple[int | None, float]:
-    """Return (jersey_number, confidence) from a person bounding box."""
-    crop = crop_torso(frame, x1, y1, x2, y2)
-    if crop is None:
-        return None, 0.0
-
-    candidates = []
-    easy_number, easy_conf = _read_with_easyocr(crop)
-    if easy_number is not None:
-        candidates.append((easy_number, easy_conf))
-    paddle_number, paddle_conf = _read_with_paddle(crop)
-    if paddle_number is not None:
-        candidates.append((paddle_number, paddle_conf))
-
+def _pick_best_candidate(candidates, allowed_jerseys=None):
     if not candidates:
         return None, 0.0
+    if allowed_jerseys:
+        roster_matches = [
+            (num, conf * 1.15)
+            for num, conf in candidates
+            if num in allowed_jerseys
+        ]
+        if roster_matches:
+            return max(roster_matches, key=lambda item: item[1])
+    return max(candidates, key=lambda item: item[1])
 
-    best_number, best_conf = max(candidates, key=lambda item: item[1])
+
+def read_jersey_from_bbox(
+    frame,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    *,
+    allowed_jerseys: set[int] | None = None,
+) -> tuple[int | None, float]:
+    """Return (jersey_number, confidence) from a person bounding box."""
+    candidates = []
+    regions = crop_jersey_regions(frame, x1, y1, x2, y2)
+    if not regions:
+        torso = crop_torso(frame, x1, y1, x2, y2)
+        if torso is not None:
+            regions = [torso]
+
+    for crop in regions:
+        easy_number, easy_conf = _read_with_easyocr(crop)
+        if easy_number is not None:
+            candidates.append((easy_number, easy_conf))
+        paddle_number, paddle_conf = _read_with_paddle(crop)
+        if paddle_number is not None:
+            candidates.append((paddle_number, paddle_conf))
+
+    best_number, best_conf = _pick_best_candidate(candidates, allowed_jerseys)
+    if best_number is None:
+        return None, 0.0
     return best_number, round(min(best_conf, 0.99), 3)
 
 
-def read_jersey_from_detection(frame, cx: int, cy: int, width: int, height: int) -> tuple[int | None, float]:
+def read_jersey_from_detection(
+    frame,
+    cx: int,
+    cy: int,
+    width: int,
+    height: int,
+    *,
+    allowed_jerseys: set[int] | None = None,
+) -> tuple[int | None, float]:
     x1, y1, x2, y2 = bbox_xyxy_from_center(cx, cy, width, height)
-    return read_jersey_from_bbox(frame, x1, y1, x2, y2)
+    return read_jersey_from_bbox(frame, x1, y1, x2, y2, allowed_jerseys=allowed_jerseys)
+
+
+def _detection_scope(db, game_id):
+    from helpers import detection_scope_for_analysis
+
+    return detection_scope_for_analysis(db, game_id)
+
+
+def _roster_jersey_allowlist(db, game_id) -> set[int]:
+    try:
+        from analysis_helpers import get_analysis_roster_players
+
+        payload = get_analysis_roster_players(db, game_id)
+        allowed = set()
+        for player in payload.get("players") or []:
+            jersey = player.get("jersey_number")
+            if jersey in (None, ""):
+                continue
+            allowed.add(int(jersey))
+        return allowed
+    except Exception:
+        return set()
+
+
+def _ocr_detection_targets(db, game_id, ai_settings=None) -> list[dict]:
+    ai_settings = ai_settings or {}
+    scope_sql, scope_params = _detection_scope(db, game_id)
+    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 30))
+    cluster_rows = db.execute(
+        f"""
+        SELECT DISTINCT player_cluster AS cluster_id
+          FROM detections d
+         WHERE {scope_sql}
+           AND d.object_class = 'person'
+           AND d.player_cluster IS NOT NULL
+           AND d.player_cluster >= 0
+         ORDER BY player_cluster
+        """,
+        scope_params,
+    ).fetchall()
+
+    targets = []
+    seen = set()
+    for cluster_row in cluster_rows:
+        cluster_id = int(cluster_row["cluster_id"])
+        rows = db.execute(
+            f"""
+            SELECT id, timestamp_ms, x_center, y_center, width, height
+              FROM detections d
+             WHERE {scope_sql}
+               AND d.object_class = 'person'
+               AND d.player_cluster = ?
+             ORDER BY (d.width * d.height) DESC, d.confidence DESC
+             LIMIT ?
+            """,
+            scope_params + (cluster_id, max_per_cluster),
+        ).fetchall()
+        for row in rows:
+            key = (int(row["id"]), int(row["timestamp_ms"]))
+            if key in seen:
+                continue
+            seen.add(key)
+            targets.append({
+                "detection_id": int(row["id"]),
+                "timestamp_ms": int(row["timestamp_ms"]),
+                "cluster_id": cluster_id,
+                "x_center": int(row["x_center"]),
+                "y_center": int(row["y_center"]),
+                "width": int(row["width"]),
+                "height": int(row["height"]),
+            })
+    return targets
+
+
+def _run_ocr_targets(db, video_path, targets, allowed_jerseys=None) -> dict:
+    import cv2  # noqa: WPS433
+
+    if not targets:
+        return {"ocr_attempts": 0, "updated": 0, "reads": 0}
+
+    cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+    if not cap.isOpened():
+        return {"skipped": True, "reason": "video_unreadable", "targets": len(targets)}
+
+    frame_cache: dict[int, object] = {}
+    reads = 0
+    updated = 0
+    try:
+        print(f"[JerseyOCR] Scanning {len(targets)} player crops from video…")
+        for index, target in enumerate(sorted(targets, key=lambda item: item["timestamp_ms"]), start=1):
+            ts = target["timestamp_ms"]
+            if ts not in frame_cache:
+                cap.set(cv2.CAP_PROP_POS_MSEC, ts)
+                ok, frame = cap.read()
+                frame_cache[ts] = frame if ok else None
+            frame = frame_cache.get(ts)
+            if frame is None:
+                continue
+
+            jersey, conf = read_jersey_from_detection(
+                frame,
+                target["x_center"],
+                target["y_center"],
+                target["width"],
+                target["height"],
+                allowed_jerseys=allowed_jerseys,
+            )
+            reads += 1
+            if jersey is None:
+                continue
+
+            db.execute(
+                """
+                UPDATE detections
+                   SET jersey_read = ?, jersey_confidence = ?
+                 WHERE id = ?
+                """,
+                (jersey, conf, target["detection_id"]),
+            )
+            updated += 1
+            if index % 25 == 0:
+                print(f"[JerseyOCR] Progress {index}/{len(targets)} — {updated} reads saved")
+                db.commit()
+        db.commit()
+    finally:
+        cap.release()
+
+    print(f"[JerseyOCR] Finished — {updated} jersey reads saved from {reads} OCR attempts")
+    return {"ocr_attempts": reads, "updated": updated, "targets": len(targets)}
+
+
+def ocr_jerseys_on_cluster_samples(db, game_id, video_path, ai_settings=None) -> dict:
+    """OCR the largest, clearest player bbox per court cluster."""
+    ai_settings = ai_settings or {}
+    if not video_path or not os.path.exists(video_path):
+        return {"skipped": True, "reason": "no_video", "video_path": video_path}
+
+    allowed = _roster_jersey_allowlist(db, game_id)
+    targets = _ocr_detection_targets(db, game_id, ai_settings)
+    result = _run_ocr_targets(db, video_path, targets, allowed_jerseys=allowed or None)
+    result["skipped"] = False
+    result["allowed_jerseys"] = sorted(allowed)
+    return result
 
 
 def _parse_cluster_id(player_value) -> int | None:
@@ -261,24 +459,24 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
     if not ai_settings.get("jersey_ocr_event_enabled", True):
         return {"skipped": True, "reason": "event_ocr_disabled"}
     if not video_path or not os.path.exists(video_path):
-        return {"skipped": True, "reason": "no_video"}
+        return {"skipped": True, "reason": "no_video", "video_path": video_path}
 
+    scope_sql, scope_params = _detection_scope(db, game_id)
+    window_ms = int(ai_settings.get("jersey_ocr_event_window_ms", 3000))
+    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 40))
+    offsets_ms = ai_settings.get("jersey_ocr_event_offsets_ms") or [-2000, 0, 2000]
+
+    from helpers import count_events_for_analysis
     from stats import _resolve_relational_game_id
 
     relational_game_id = _resolve_relational_game_id(db, game_id)
-    analysis_key = str(game_id)
-    if relational_game_id is not None:
-        scope_sql = "(d.relational_game_id = ? OR (d.relational_game_id IS NULL AND d.game_id = ?))"
-        scope_params = (relational_game_id, analysis_key)
-    else:
-        scope_sql = "d.game_id = ?"
-        scope_params = (analysis_key,)
-
-    window_ms = int(ai_settings.get("jersey_ocr_event_window_ms", 3000))
-    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 40))
-    offsets_ms = ai_settings.get("jersey_ocr_event_offsets_ms")
-    if not offsets_ms:
-        offsets_ms = [-2000, 0, 2000]
+    event_count = count_events_for_analysis(
+        db,
+        analysis_key=str(game_id),
+        relational_game_id=relational_game_id,
+    )
+    if event_count <= 0:
+        return {"skipped": True, "reason": "no_events"}
 
     if relational_game_id is not None:
         events = db.execute(
@@ -290,7 +488,7 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
                AND player IS NOT NULL
              ORDER BY timestamp_ms
             """,
-            (relational_game_id, analysis_key),
+            (relational_game_id, str(game_id)),
         ).fetchall()
     else:
         events = db.execute(
@@ -302,11 +500,8 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
                AND player IS NOT NULL
              ORDER BY timestamp_ms
             """,
-            (analysis_key,),
+            (str(game_id),),
         ).fetchall()
-
-    if not events:
-        return {"skipped": True, "reason": "no_events"}
 
     samples_by_cluster = _sample_event_timestamps(events, max_per_cluster)
     if not samples_by_cluster:
@@ -340,55 +535,37 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
     if not targets:
         return {"skipped": True, "reason": "no_detection_targets", "events_sampled": len(events)}
 
-    import cv2  # noqa: WPS433
+    allowed = _roster_jersey_allowlist(db, game_id)
+    result = _run_ocr_targets(db, video_path, targets, allowed_jerseys=allowed or None)
+    result.update({
+        "skipped": False,
+        "events_sampled": sum(len(v) for v in samples_by_cluster.values()),
+        "clusters": len(samples_by_cluster),
+        "allowed_jerseys": sorted(allowed),
+    })
+    return result
 
-    cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
-    if not cap.isOpened():
-        return {"skipped": True, "reason": "video_unreadable"}
 
-    frame_cache: dict[int, object] = {}
-    reads = 0
-    updated = 0
-    try:
-        for target in sorted(targets, key=lambda item: item["timestamp_ms"]):
-            ts = target["timestamp_ms"]
-            if ts not in frame_cache:
-                cap.set(cv2.CAP_PROP_POS_MSEC, ts)
-                ok, frame = cap.read()
-                frame_cache[ts] = frame if ok else None
-            frame = frame_cache.get(ts)
-            if frame is None:
-                continue
+def ocr_jerseys_for_game(db, game_id, video_path, ai_settings=None) -> dict:
+    """Run full jersey OCR scan: largest cluster crops, then event-window crops."""
+    ai_settings = ai_settings or {}
+    if not video_path or not os.path.exists(video_path):
+        from analysis_helpers import resolve_analysis_game_context
 
-            jersey, conf = read_jersey_from_detection(
-                frame,
-                target["x_center"],
-                target["y_center"],
-                target["width"],
-                target["height"],
-            )
-            reads += 1
-            if jersey is None:
-                continue
+        context = resolve_analysis_game_context(db, game_id)
+        video_path = context.get("video_path")
+    if not video_path or not os.path.exists(video_path):
+        return {"skipped": True, "reason": "no_video", "video_path": video_path}
 
-            db.execute(
-                """
-                UPDATE detections
-                   SET jersey_read = ?, jersey_confidence = ?
-                 WHERE id = ?
-                """,
-                (jersey, conf, target["detection_id"]),
-            )
-            updated += 1
-        db.commit()
-    finally:
-        cap.release()
+    print(f"[JerseyOCR] Starting full jersey scan for {game_id}")
+    cluster_result = ocr_jerseys_on_cluster_samples(db, game_id, video_path, ai_settings)
+    event_result = ocr_jerseys_near_events(db, game_id, video_path, ai_settings)
+    from helpers import count_jersey_reads_for_analysis
 
     return {
         "skipped": False,
-        "events_sampled": sum(len(v) for v in samples_by_cluster.values()),
-        "targets": len(targets),
-        "ocr_attempts": reads,
-        "updated": updated,
-        "clusters": len(samples_by_cluster),
+        "video_path": video_path,
+        "cluster_scan": cluster_result,
+        "event_scan": event_result,
+        "ocr_read_count": count_jersey_reads_for_analysis(db, game_id),
     }

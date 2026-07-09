@@ -1210,6 +1210,77 @@ def count_events_for_analysis(
     return db.execute(query, params).fetchone()["c"]
 
 
+def detection_scope_for_analysis(db, game_id, alias="d"):
+    """Build SQL scope matching all detection rows linked to an analysis/video."""
+    from analysis_helpers import resolve_analysis_game_context
+
+    context = resolve_analysis_game_context(db, game_id)
+    analysis_key = context.get("analysis_key") or str(game_id)
+    game_ids = {str(game_id), str(analysis_key)}
+    for key in ("video_game_id", "base_analysis_key"):
+        value = context.get(key)
+        if value:
+            game_ids.add(str(value))
+
+    video_id = context.get("video_id")
+    video_path = context.get("video_path") or context.get("stored_filename")
+    if video_id is not None or video_path:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE (? IS NOT NULL AND source_video_id = ?)
+                   OR (? IS NOT NULL AND video_path = ?)
+                   OR analysis_key = ?
+                   OR base_analysis_key = ?""",
+            (video_id, video_id, video_path, video_path, analysis_key, analysis_key),
+        ).fetchall()
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    game_ids.add(str(value))
+
+    relational_ids = set()
+    for rel_key in ("relational_game_id", "video_relational_game_id"):
+        rel_id = context.get(rel_key)
+        if rel_id is not None:
+            relational_ids.add(int(rel_id))
+    resolved = _resolve_relational_game_id_for_count(db, analysis_key)
+    if resolved is not None:
+        relational_ids.add(int(resolved))
+
+    prefix = f"{alias}."
+    conditions = []
+    params = []
+    for rel_id in relational_ids:
+        conditions.append(f"{prefix}relational_game_id = ?")
+        params.append(rel_id)
+    for gid in sorted(game_ids):
+        conditions.append(f"{prefix}game_id = ?")
+        params.append(gid)
+    if not conditions:
+        return "1=0", ()
+    return "(" + " OR ".join(conditions) + ")", tuple(params)
+
+
+def _resolve_relational_game_id_for_count(db, game_id):
+    from stats import _resolve_relational_game_id
+
+    try:
+        return _resolve_relational_game_id(db, game_id)
+    except Exception:
+        return None
+
+
+def count_jersey_reads_for_analysis(db, game_id) -> int:
+    scope_sql, scope_params = detection_scope_for_analysis(db, game_id)
+    row = db.execute(
+        f"SELECT COUNT(*) AS c FROM detections d WHERE {scope_sql} AND d.jersey_read IS NOT NULL",
+        scope_params,
+    ).fetchone()
+    return int(row["c"] or 0)
+
+
 def _analysis_log_error_message(content: str) -> str | None:
     if not content:
         return None

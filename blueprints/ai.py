@@ -646,6 +646,48 @@ def apply_court_slots_api(game_id):
     return jsonify(result)
 
 
+@ai_bp.route("/api/court-slots/<game_id>/scan-jerseys", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def scan_jerseys_api(game_id):
+    """Run full jersey OCR on the video and auto-apply roster mappings."""
+    from settings_store import load_all_settings, AI_DEFAULTS
+    from stats import refresh_stats
+    from track_identity import scan_and_apply_jerseys
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+    result = scan_and_apply_jerseys(db, game_id, ai_settings)
+    status_code = result.pop("status_code", None)
+    if status_code:
+        return jsonify(result), status_code
+    refresh_stats(db, game_id)
+    return jsonify(result)
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/scan-jerseys", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def scan_video_jerseys_api(vid_id):
+    """Run full jersey OCR for a video's linked analysis."""
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    clause = _video_analysis_runs_clause()
+    row = db.execute(
+        f"""SELECT * FROM analysis_runs
+            WHERE {clause}
+            ORDER BY id DESC LIMIT 1""",
+        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+    ).fetchone()
+    analysis_key = (row["analysis_key"] if row else None) or video["game_id"]
+    return scan_jerseys_api(analysis_key)
+
+
 @ai_bp.route("/api/court-slots/<game_id>/apply-ocr-hints", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def apply_ocr_hints_api(game_id):

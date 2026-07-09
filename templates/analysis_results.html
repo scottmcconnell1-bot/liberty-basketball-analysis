@@ -134,8 +134,8 @@
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
       <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
-        The AI auto-maps jersey numbers from the video to your roster.
-        Only edit a row here if a player was mis-identified — otherwise just click stats above to verify on film.
+        Jersey numbers are read automatically from the video via OCR and matched to your roster.
+        Only edit a row here if the AI mis-identified a player.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
@@ -153,8 +153,8 @@
         </table>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
-      <button type="button" class="btn btn-secondary btn-sm" id="applyOcrHintsBtn" style="margin-left:8px;">Apply OCR hints</button>
-      <button type="button" class="btn btn-primary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Apply roster to stats</button>
+      <button type="button" class="btn btn-primary btn-sm" id="scanJerseysBtn" style="margin-left:8px;">Scan jerseys (OCR)</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Re-apply roster to stats</button>
     </div>
 
     <div class="grid">
@@ -451,11 +451,11 @@ async function loadResults() {
         if (!engines.easyocr && !engines.paddleocr) {
           html += ' — <strong>EasyOCR is not installed</strong> on this PC (`py -3.12 -m pip install easyocr`). ';
         } else if (reads === 0) {
-          html += ' — no jersey reads were saved from the video yet. ';
+          html += ' — scanning jerseys from the video now (this may take a few minutes). ';
         } else {
           html += ' (' + reads.toLocaleString() + ' reads, not confident enough). ';
         }
-        html += 'Use <strong>Apply OCR hints</strong> below, or match each Pos to a roster player manually, then <strong>Apply roster to stats</strong>.';
+        html += 'Click <strong>Scan jerseys (OCR)</strong> below to retry, or wait for the automatic scan to finish.';
       } else {
         html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
         html += 'Click stats to verify events on film.';
@@ -517,6 +517,7 @@ async function loadResults() {
     document.getElementById('results').style.display = 'block';
 
     await loadSlotMappingUI();
+    maybeAutoScanJerseys(data.identity_status || {});
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
@@ -939,41 +940,56 @@ async function applyRosterNamesToStats() {
 
 document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
 
-async function applyOcrHintsToSlots() {
+async function scanJerseysFromVideo() {
   const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('scanJerseysBtn');
   if (status) {
     status.style.display = 'block';
     status.style.color = 'var(--muted)';
-    status.textContent = 'Applying OCR jersey hints…';
+    status.textContent = 'Scanning jersey numbers from video (OCR)… this may take several minutes.';
   }
+  if (btn) btn.disabled = true;
   try {
-    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/apply-ocr-hints', {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/scan-jerseys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Could not apply OCR hints');
+    if (!resp.ok) throw new Error(data.error || 'Jersey scan failed');
+    const mapped = data.slots_mapped || data.auto_apply?.applied || 0;
+    const reads = data.ocr_read_count || 0;
     if (status) {
-      status.style.color = data.applied ? 'var(--green)' : 'var(--orange)';
-      status.textContent = data.applied
-        ? ('Applied OCR hints for ' + data.applied + ' players (' + (data.events_updated || 0) + ' events updated).')
-        : ('No OCR hints matched your roster yet' + (data.hint_count ? ' (' + data.hint_count + ' raw hints).' : '.') + ' Match players manually below.');
+      status.style.color = mapped > 0 ? 'var(--green)' : 'var(--orange)';
+      status.textContent = mapped > 0
+        ? ('OCR mapped ' + mapped + ' players (' + reads.toLocaleString() + ' jersey reads). Refreshing stats…')
+        : ('OCR finished with ' + reads.toLocaleString() + ' reads but could not auto-map players yet.');
     }
-    COURT_SLOTS = data.slots || COURT_SLOTS;
-    renderSlotMappingTable();
-    if (data.applied) await loadResults();
+    await loadSlotMappingUI();
+    if (mapped > 0) await loadResults();
   } catch (err) {
     if (status) {
       status.style.display = 'block';
       status.style.color = 'var(--red)';
-      status.textContent = 'Could not apply OCR hints: ' + err.message;
+      status.textContent = 'Jersey scan failed: ' + err.message;
     } else {
-      alert(err.message || 'Could not apply OCR hints.');
+      alert(err.message || 'Jersey scan failed.');
     }
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
-document.getElementById('applyOcrHintsBtn')?.addEventListener('click', applyOcrHintsToSlots);
+document.getElementById('scanJerseysBtn')?.addEventListener('click', scanJerseysFromVideo);
+
+async function maybeAutoScanJerseys(identity) {
+  if (!identity || identity.reason !== 'no_cluster_suggestions') return;
+  const reads = identity.ocr_read_count || 0;
+  const engines = identity.ocr_engines || {};
+  if (reads > 0 || (!engines.easyocr && !engines.paddleocr)) return;
+  if (window.__jerseyScanStarted) return;
+  window.__jerseyScanStarted = true;
+  await scanJerseysFromVideo();
+}
 
 async function loadSlotMappingUI() {
   try {

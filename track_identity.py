@@ -20,6 +20,12 @@ def _detection_scope_sql(relational_game_id, analysis_key, alias="d"):
     return f"{prefix}game_id = ?", (analysis_key,)
 
 
+def _broad_detection_scope(db, game_id, alias="d"):
+    from helpers import detection_scope_for_analysis
+
+    return detection_scope_for_analysis(db, game_id, alias=alias)
+
+
 def jersey_ocr_engine_status() -> dict:
     """Report whether OCR backends are available in this Python environment."""
     from jersey_ocr import _get_ocr_engine, _get_paddle_engine
@@ -97,8 +103,7 @@ def aggregate_cluster_jersey_votes(
     min_samples: int = 3,
 ):
     """Majority vote jersey per court cluster from co-located OCR reads."""
-    relational_game_id, analysis_key = _game_scope(db, game_id)
-    scope_sql, scope_params = _detection_scope_sql(relational_game_id, analysis_key)
+    scope_sql, scope_params = _broad_detection_scope(db, game_id)
 
     rows = db.execute(
         f"""
@@ -154,8 +159,7 @@ def aggregate_track_jersey_votes(
     min_samples: int = 3,
 ):
     """Majority vote jersey per ByteTrack tracker_id."""
-    relational_game_id, analysis_key = _game_scope(db, game_id)
-    scope_sql, scope_params = _detection_scope_sql(relational_game_id, analysis_key)
+    scope_sql, scope_params = _broad_detection_scope(db, game_id)
 
     rows = db.execute(
         f"""
@@ -259,26 +263,19 @@ def build_identity_report(db, game_id, ai_settings=None):
     ai_settings = ai_settings or {}
     min_conf = float(ai_settings.get("jersey_ocr_min_confidence", 0.50))
     min_samples = int(ai_settings.get("identity_auto_apply_min_samples", 2))
-    relational_game_id, analysis_key = _game_scope(db, game_id)
-    scope_sql, scope_params = _detection_scope_sql(relational_game_id, analysis_key)
 
     cluster_suggestions = aggregate_cluster_jersey_votes(
-        db, game_id, min_confidence=min_conf, min_samples=max(2, min_samples)
+        db, game_id, min_confidence=min_conf, min_samples=max(1, min_samples)
     )
     track_suggestions = aggregate_track_jersey_votes(
-        db, game_id, min_confidence=min_conf, min_samples=max(2, min_samples)
+        db, game_id, min_confidence=min_conf, min_samples=max(1, min_samples)
     )
     persist_identity_labels(db, game_id, cluster_suggestions, source="ocr_cluster_votes")
     persist_identity_labels(db, game_id, track_suggestions, source="ocr_track_votes")
 
-    ocr_read_count = db.execute(
-        f"""
-        SELECT COUNT(*) AS c FROM detections d
-         WHERE {scope_sql}
-           AND d.jersey_read IS NOT NULL
-        """,
-        scope_params,
-    ).fetchone()["c"]
+    from helpers import count_jersey_reads_for_analysis
+
+    ocr_read_count = count_jersey_reads_for_analysis(db, game_id)
 
     return {
         "ocr_read_count": ocr_read_count,
@@ -401,10 +398,11 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     }
 
 
-def _run_event_jersey_ocr(db, game_id, ai_settings=None, video_path=None):
+def _run_jersey_ocr_scan(db, game_id, ai_settings=None, video_path=None):
+    """Run full jersey OCR: cluster samples + event-window crops."""
     ai_settings = ai_settings or {}
-    if not ai_settings.get("jersey_ocr_event_enabled", True):
-        return {"skipped": True, "reason": "event_ocr_disabled"}
+    if not ai_settings.get("jersey_ocr_enabled", True):
+        return {"skipped": True, "reason": "jersey_ocr_disabled"}
     if video_path is None:
         try:
             from analysis_helpers import resolve_analysis_game_context
@@ -415,22 +413,27 @@ def _run_event_jersey_ocr(db, game_id, ai_settings=None, video_path=None):
             video_path = None
     if not video_path:
         return {"skipped": True, "reason": "no_video"}
-    from jersey_ocr import ocr_jerseys_near_events
+    from jersey_ocr import ocr_jerseys_for_game
 
-    return ocr_jerseys_near_events(db, game_id, video_path, ai_settings)
+    return ocr_jerseys_for_game(db, game_id, video_path, ai_settings)
+
+
+def _run_event_jersey_ocr(db, game_id, ai_settings=None, video_path=None):
+    return _run_jersey_ocr_scan(db, game_id, ai_settings, video_path=video_path)
 
 
 def run_identity_postprocess(db, game_id, ai_settings=None, video_path=None):
     """Build OCR identity report and auto-apply jersey mappings when enabled."""
     ai_settings = ai_settings or {}
-    event_ocr_result = _run_event_jersey_ocr(db, game_id, ai_settings, video_path=video_path)
+    ocr_result = _run_jersey_ocr_scan(db, game_id, ai_settings, video_path=video_path)
     report = build_identity_report(db, game_id, ai_settings)
     applied = {"applied": 0, "mappings": [], "events_updated": 0}
     if ai_settings.get("auto_apply_jersey_mapping", True):
         applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
     return {
         **report,
-        "event_ocr": event_ocr_result,
+        "ocr_scan": ocr_result,
+        "event_ocr": ocr_result.get("event_scan") if isinstance(ocr_result, dict) else ocr_result,
         "auto_apply": applied,
         "slots_mapped": applied.get("applied", 0),
         "events_updated": applied.get("events_updated", 0),
@@ -455,6 +458,38 @@ def _analysis_video_fps(db, game_id, ai_settings=None) -> float:
         except Exception:
             pass
     return 25.0, detect_stride
+
+
+def scan_and_apply_jerseys(db, game_id, ai_settings=None, video_path=None) -> dict:
+    """Run full OCR scan and auto-apply jersey mappings. Returns result dict."""
+    from analysis_helpers import resolve_analysis_game_context
+
+    ai_settings = ai_settings or {}
+    engines = jersey_ocr_engine_status()
+    if not engines.get("easyocr") and not engines.get("paddleocr"):
+        return {
+            "error": "No OCR engine installed. Run: py -3.12 -m pip install easyocr",
+            "ocr_engines": engines,
+            "status_code": 400,
+        }
+
+    if video_path is None:
+        context = resolve_analysis_game_context(db, game_id)
+        video_path = context.get("video_path")
+    if not video_path:
+        return {
+            "error": "Video file path not found for this analysis. Re-link the video or re-run AI.",
+            "game_id": game_id,
+            "status_code": 400,
+        }
+
+    result = run_identity_postprocess(db, game_id, ai_settings, video_path=video_path)
+    return {
+        "game_id": game_id,
+        "video_path": video_path,
+        "ocr_engines": engines,
+        **result,
+    }
 
 
 def ensure_analysis_player_slots(db, game_id, ai_settings=None):
@@ -499,7 +534,12 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
                 "applied": result.get("slots_mapped", 0),
             }
 
-    event_ocr_result = _run_event_jersey_ocr(db, game_id, ai_settings)
+    from helpers import count_jersey_reads_for_analysis
+
+    existing_reads = count_jersey_reads_for_analysis(db, game_id)
+    ocr_result = None
+    if existing_reads == 0:
+        ocr_result = _run_jersey_ocr_scan(db, game_id, ai_settings)
     report = build_identity_report(db, game_id, ai_settings)
     ocr_status = jersey_ocr_engine_status()
     if not report.get("cluster_suggestions"):
@@ -508,7 +548,8 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
             "reason": "no_cluster_suggestions",
             "raw_cluster_events": raw_cluster_events,
             "ocr_read_count": report.get("ocr_read_count", 0),
-            "event_ocr": event_ocr_result,
+            "ocr_scan": ocr_result,
+            "event_ocr": (ocr_result or {}).get("event_scan") if isinstance(ocr_result, dict) else ocr_result,
             "ocr_engines": ocr_status,
             "ocr_hints": suggest_cluster_jerseys(db, game_id, ai_settings),
         }
@@ -519,7 +560,8 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
         "raw_cluster_events": raw_cluster_events,
         "ocr_read_count": report.get("ocr_read_count", 0),
         "cluster_suggestions": len(report.get("cluster_suggestions") or []),
-        "event_ocr": event_ocr_result,
+        "ocr_scan": ocr_result,
+        "event_ocr": (ocr_result or {}).get("event_scan") if isinstance(ocr_result, dict) else ocr_result,
         "ocr_engines": ocr_status,
         "ocr_hints": suggest_cluster_jerseys(db, game_id, ai_settings),
         **applied,

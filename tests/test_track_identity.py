@@ -314,3 +314,82 @@ def test_ocr_jerseys_near_events_updates_detection(db, monkeypatch, tmp_path):
     row = db.execute("SELECT jersey_read, jersey_confidence FROM detections WHERE id=?", (det_id,)).fetchone()
     assert row["jersey_read"] == 23
     assert row["jersey_confidence"] == 0.88
+
+
+def test_detection_scope_includes_parent_analysis_key(db):
+    from helpers import count_jersey_reads_for_analysis, detection_scope_for_analysis
+
+    parent_key = "nfhs_parent_detections"
+    child_key = "nfhs_child_analysis"
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'scope-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, game_id, video_path, base_analysis_key, base_game_id, status)
+           VALUES (?, ?, '/tmp/child.mp4', ?, ?, 'completed')""",
+        (child_key, game_id, parent_key, parent_key),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, jersey_read, jersey_confidence)
+           VALUES (?, ?, 1, 1000, 'person', 0.9, 100, 200, 40, 80, 23, 0.9)""",
+        (parent_key, game_id),
+    )
+    db.commit()
+
+    scope_sql, scope_params = detection_scope_for_analysis(db, child_key)
+    row = db.execute(
+        f"SELECT COUNT(*) AS c FROM detections d WHERE {scope_sql} AND d.jersey_read IS NOT NULL",
+        scope_params,
+    ).fetchone()
+    assert row["c"] == 1
+    assert count_jersey_reads_for_analysis(db, child_key) == 1
+
+
+def test_ocr_jerseys_for_game_runs_cluster_and_event_scans(db, monkeypatch, tmp_path):
+    from jersey_ocr import ocr_jerseys_for_game
+
+    video_path = tmp_path / "full-scan.mp4"
+    video_path.write_bytes(b"fake")
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'full-scan')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_full_scan"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, str(video_path)),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, tracker_id, player_cluster)
+           VALUES (?, ?, 10, 1000, 'person', 0.9, 200, 300, 80, 120, 1, 3)""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO events
+               (game_id, relational_game_id, player, event_type, timestamp_ms, source_type)
+           VALUES (?, ?, '3', 'shot', 1000, 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.commit()
+
+    calls = {"cluster": 0, "event": 0}
+
+    def fake_cluster(*_args, **_kwargs):
+        calls["cluster"] += 1
+        return {"skipped": False, "updated": 1, "ocr_attempts": 1}
+
+    def fake_event(*_args, **_kwargs):
+        calls["event"] += 1
+        return {"skipped": False, "updated": 1, "ocr_attempts": 1}
+
+    monkeypatch.setattr("jersey_ocr.ocr_jerseys_on_cluster_samples", fake_cluster)
+    monkeypatch.setattr("jersey_ocr.ocr_jerseys_near_events", fake_event)
+
+    result = ocr_jerseys_for_game(db, analysis_key, str(video_path))
+    assert result["skipped"] is False
+    assert calls["cluster"] == 1
+    assert calls["event"] == 1
