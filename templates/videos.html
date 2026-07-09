@@ -301,6 +301,19 @@ async function loadVideos() {
 loadVideos();
 setInterval(loadVideos, 10000);
 
+async function parseJsonResponse(resp) {
+  const contentType = resp.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return resp.json();
+  }
+  const text = await resp.text();
+  const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 180);
+  throw new Error(
+    'Server returned HTML instead of JSON (HTTP ' + resp.status + '). '
+    + (snippet || 'Empty response')
+  );
+}
+
 async function regenerateEvents(videoId) {
   if (!confirm('Rebuild events from saved detections? This re-clusters players and regenerates events from existing YOLO data (no full video re-run).')) return;
   const btn = event?.target;
@@ -308,7 +321,7 @@ async function regenerateEvents(videoId) {
   const started = Date.now();
   try {
     const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) {
       const extra = data.code === 'sklearn_missing'
         ? '\n\nPull latest code and retry Rebuild (numpy fallback). For full AI stack use Python 3.12 or 3.13.'
@@ -316,6 +329,11 @@ async function regenerateEvents(videoId) {
           ? '\n\nRun full AI analysis on this video first — Rebuild only works when detections are already saved.'
           : '');
       throw new Error((data.error || 'Failed to regenerate events') + extra);
+    }
+    if (resp.status === 202 || data.status === 'rebuild_started') {
+      alert(data.message || 'Rebuild started in background. Watch AI Status — may take several minutes.');
+      loadVideos();
+      return;
     }
     const elapsed = Math.round((Date.now() - started) / 1000);
     alert((data.message || 'Events regenerated.') + (elapsed ? ` (${elapsed}s)` : ''));

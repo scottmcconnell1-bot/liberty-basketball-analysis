@@ -24,6 +24,7 @@ Routes:
 
 import json
 import os
+import threading
 from datetime import datetime
 from flask import (
     Blueprint, current_app, jsonify, redirect, render_template,
@@ -46,6 +47,7 @@ from helpers import (
     validate_video_for_analysis,
     validate_ai_models_for_analysis,
     reconcile_stuck_analysis_run,
+    heal_failed_analysis_run_with_events,
     ai_analysis_log_path,
     count_detections_for_analysis, count_events_for_analysis,
     _read_log_tail,
@@ -905,14 +907,21 @@ def api_videos():
         ORDER BY v.id DESC
     """).fetchall()
 
-    running_keys = {
-        (r["analysis_key"] or r["game_id"])
-        for r in rows
-        if r["analysis_status"] == "running" and (r["analysis_key"] or r["game_id"])
-    }
+    running_keys = set()
+    healed_keys = set()
+    for r in rows:
+        game_id = r["analysis_key"] or r["game_id"]
+        if not game_id:
+            continue
+        status = r["analysis_status"]
+        if status == "failed":
+            if heal_failed_analysis_run_with_events(db, game_id):
+                healed_keys.add(game_id)
+        elif status == "running":
+            running_keys.add(game_id)
     for game_id in running_keys:
         reconcile_stuck_analysis_run(db, game_id)
-    if running_keys:
+    if running_keys or healed_keys:
         rows = db.execute(f"""
             SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
                    (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
@@ -1105,172 +1114,211 @@ def api_video_analysis_debug(vid_id):
     })
 
 
+def _run_regenerate_events_worker(
+    app,
+    *,
+    run_id: int,
+    analysis_key: str,
+    relational_game_id,
+    lookup_kwargs: dict,
+    video_path: str,
+    db_path: str,
+) -> None:
+    """Background worker: rebuild events, enhanced analysis, and jersey OCR."""
+    with app.app_context():
+        db = get_db()
+        try:
+            from event_generator import main as generate_events
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_pct=35, progress_step='Clustering players and rebuilding events…'
+                   WHERE id=?""",
+                (run_id,),
+            )
+            db.commit()
+
+            if generate_events(
+                analysis_key,
+                db_path,
+                relational_game_id=relational_game_id,
+                video_game_id=lookup_kwargs["video_game_id"],
+                base_analysis_key=lookup_kwargs["base_analysis_key"],
+                video_relational_game_id=lookup_kwargs["video_relational_game_id"],
+                force_expanded=True,
+            ) is False:
+                raise RuntimeError(
+                    "Event generation failed. Check logs for details, then click Rebuild again."
+                )
+
+            from helpers import assign_possessions_for_game
+            if relational_game_id is not None:
+                assign_possessions_for_game(db, relational_game_id)
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_pct=70, progress_step='Running enhanced analysis…'
+                   WHERE id=?""",
+                (run_id,),
+            )
+            db.commit()
+
+            enhanced_warning = None
+            try:
+                import cv2
+                from film_analysis import run_enhanced_analysis
+
+                cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+                fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+                cap.release()
+                run_enhanced_analysis(db_path, analysis_key, fps)
+            except Exception as exc:
+                enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_pct=85, progress_step='Scanning jersey numbers (OCR)…'
+                   WHERE id=?""",
+                (run_id,),
+            )
+            db.commit()
+
+            try:
+                from settings_store import load_all_settings, AI_DEFAULTS
+                from track_identity import ensure_analysis_player_slots, run_identity_postprocess
+
+                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+                ensure_analysis_player_slots(db, analysis_key, ai_settings)
+                run_identity_postprocess(
+                    db, analysis_key, ai_settings, video_path=video_path,
+                )
+            except Exception as exc:
+                app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET status='completed', progress_pct=100, progress_step=?,
+                       completed_at=CURRENT_TIMESTAMP, error_message=?
+                   WHERE id=?""",
+                (
+                    "Done" if not enhanced_warning else "Events regenerated (enhanced analysis skipped)",
+                    enhanced_warning,
+                    run_id,
+                ),
+            )
+            db.commit()
+        except Exception as exc:
+            app.logger.exception("Rebuild events failed for %s", analysis_key)
+            db.execute(
+                """UPDATE analysis_runs
+                   SET status='failed',
+                       error_message=?,
+                       progress_step='Event generation failed',
+                       completed_at=CURRENT_TIMESTAMP
+                   WHERE id=?""",
+                (str(exc)[:500], run_id),
+            )
+            db.commit()
+
+
 @ai_bp.route("/api/videos/<int:vid_id>/regenerate-events", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_regenerate_video_events(vid_id):
     """Rebuild events from existing detections without re-running YOLO."""
-    db = get_db()
-    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
-    if not video:
-        return jsonify({"error": "Video not found"}), 404
-
-    clause = _video_analysis_runs_clause()
-    row = db.execute(
-        f"""SELECT * FROM analysis_runs
-            WHERE {clause}
-            ORDER BY id DESC LIMIT 1""",
-        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
-    ).fetchone()
-    if not row:
-        return jsonify({"error": "No analysis run found for this video"}), 404
-
-    analysis_key = row["analysis_key"] or video["game_id"]
-    relational_game_id = row["game_id"]
-    run_id = row["id"]
-    db_path = current_app.config["DATABASE"]
-    lookup_kwargs = dict(
-        analysis_key=analysis_key,
-        relational_game_id=relational_game_id,
-        video_game_id=video["game_id"],
-        video_relational_game_id=video["relational_game_id"],
-        base_analysis_key=row["base_analysis_key"],
-        source_video_id=vid_id,
-        video_path=video["file_path"],
-    )
-    expected_detections = count_detections_for_analysis(db, **lookup_kwargs)
-    if expected_detections == 0:
-        return jsonify({
-            "error": (
-                "No saved detections found for this video. "
-                "Run full AI analysis first, then use Rebuild."
-            ),
-            "code": "no_detections",
-        }), 400
-
-    db.execute(
-        """UPDATE analysis_runs
-           SET status='running', progress_pct=10, progress_step='Loading detections…',
-               error_message=NULL, completed_at=NULL
-           WHERE id=?""",
-        (run_id,),
-    )
-    db.commit()
-
-    log_path = ai_analysis_log_path(analysis_key)
     try:
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        with open(log_path, "a", encoding="utf-8") as handle:
-            handle.write(f"\n[{datetime.utcnow().isoformat()}Z] Rebuild events started in web worker.\n")
-    except OSError:
-        pass
+        db = get_db()
+        video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+        if not video:
+            return jsonify({"error": "Video not found"}), 404
 
-    try:
-        from event_generator import main as generate_events
+        clause = _video_analysis_runs_clause()
+        row = db.execute(
+            f"""SELECT * FROM analysis_runs
+                WHERE {clause}
+                ORDER BY id DESC LIMIT 1""",
+            (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+        ).fetchone()
+        if not row:
+            return jsonify({"error": "No analysis run found for this video"}), 404
+
+        if row["status"] in {"running", "pending"}:
+            return jsonify({
+                "error": "Analysis is already running for this video.",
+                "code": "already_running",
+                "analysis_key": row["analysis_key"] or video["game_id"],
+            }), 409
+
+        analysis_key = row["analysis_key"] or video["game_id"]
+        relational_game_id = row["game_id"]
+        run_id = row["id"]
+        db_path = current_app.config["DATABASE"]
+        lookup_kwargs = dict(
+            analysis_key=analysis_key,
+            relational_game_id=relational_game_id,
+            video_game_id=video["game_id"],
+            video_relational_game_id=video["relational_game_id"],
+            base_analysis_key=row["base_analysis_key"],
+            source_video_id=vid_id,
+            video_path=video["file_path"],
+        )
+        expected_detections = count_detections_for_analysis(db, **lookup_kwargs)
+        if expected_detections == 0:
+            return jsonify({
+                "error": (
+                    "No saved detections found for this video. "
+                    "Run full AI analysis first, then use Rebuild."
+                ),
+                "code": "no_detections",
+            }), 400
 
         db.execute(
             """UPDATE analysis_runs
-               SET progress_pct=35, progress_step='Clustering players and rebuilding events…'
+               SET status='running', progress_pct=10, progress_step='Loading detections…',
+                   error_message=NULL, completed_at=NULL
                WHERE id=?""",
             (run_id,),
         )
         db.commit()
 
-        if generate_events(
-            analysis_key,
-            db_path,
-            relational_game_id=relational_game_id,
-            video_game_id=lookup_kwargs["video_game_id"],
-            base_analysis_key=lookup_kwargs["base_analysis_key"],
-            video_relational_game_id=lookup_kwargs["video_relational_game_id"],
-            force_expanded=True,
-        ) is False:
-            raise RuntimeError(
-                "Event generation failed. Check logs for details, then click Rebuild again."
-            )
-
-        from helpers import assign_possessions_for_game
-        if relational_game_id is not None:
-            assign_possessions_for_game(db, relational_game_id)
-
-        enhanced_warning = None
+        log_path = ai_analysis_log_path(analysis_key)
         try:
-            import cv2
-            from film_analysis import run_enhanced_analysis
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "a", encoding="utf-8") as handle:
+                handle.write(f"\n[{datetime.utcnow().isoformat()}Z] Rebuild events started in background.\n")
+        except OSError:
+            pass
 
-            cap = cv2.VideoCapture(video["file_path"], cv2.CAP_FFMPEG)
-            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-            cap.release()
-            run_enhanced_analysis(db_path, analysis_key, fps)
-        except Exception as exc:
-            enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
-
-        identity_applied = 0
-        try:
-            from settings_store import load_all_settings, AI_DEFAULTS
-            from track_identity import ensure_analysis_player_slots, run_identity_postprocess
-
-            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-            ensure_analysis_player_slots(db, analysis_key, ai_settings)
-            identity_result = run_identity_postprocess(
-                db, analysis_key, ai_settings, video_path=video["file_path"],
-            )
-            identity_applied = identity_result.get("slots_mapped", 0)
-        except Exception as exc:
-            current_app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
-
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='completed', progress_pct=100, progress_step=?,
-                   completed_at=CURRENT_TIMESTAMP, error_message=?
-               WHERE id=?""",
-            (
-                "Done" if not enhanced_warning else "Events regenerated (enhanced analysis skipped)",
-                enhanced_warning,
-                run_id,
-            ),
+        app = current_app._get_current_object()
+        thread = threading.Thread(
+            target=_run_regenerate_events_worker,
+            kwargs={
+                "app": app,
+                "run_id": run_id,
+                "analysis_key": analysis_key,
+                "relational_game_id": relational_game_id,
+                "lookup_kwargs": lookup_kwargs,
+                "video_path": video["file_path"],
+                "db_path": db_path,
+            },
+            daemon=True,
+            name=f"rebuild-events-{vid_id}",
         )
-        db.commit()
+        thread.start()
 
-        event_count = count_events_for_analysis(
-            db,
-            analysis_key=lookup_kwargs["analysis_key"],
-            relational_game_id=lookup_kwargs["relational_game_id"],
-            video_game_id=lookup_kwargs["video_game_id"],
-            base_analysis_key=lookup_kwargs["base_analysis_key"],
-        )
-        detection_count = count_detections_for_analysis(db, **lookup_kwargs)
-        message = f"Regenerated {event_count} events from {detection_count:,} detections."
-        if detection_count > 0 and event_count == 0:
-            message += (
-                " Warning: detections were found but no events were generated. "
-                "Check Settings → Event Generator is set to Expanded, then Rebuild again."
-            )
-        if identity_applied:
-            message += f" Auto-mapped {identity_applied} players from jersey OCR."
-        if enhanced_warning:
-            message += f" {enhanced_warning}"
         return jsonify({
-            "status": "events_regenerated",
+            "status": "rebuild_started",
             "analysis_key": analysis_key,
-            "detection_count": detection_count,
-            "event_count": event_count,
-            "message": message,
-        })
+            "detection_count": expected_detections,
+            "message": (
+                f"Rebuild started in background from {expected_detections:,} saved detections. "
+                "Watch AI Status on this page — may take several minutes on long games."
+            ),
+        }), 202
     except Exception as exc:
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='failed',
-                   error_message=?,
-                   progress_step='Event generation failed',
-                   completed_at=CURRENT_TIMESTAMP
-               WHERE id=?""",
-            (str(exc)[:500], run_id),
-        )
-        db.commit()
+        current_app.logger.exception("Could not start rebuild for video %s", vid_id)
         return jsonify({
             "error": str(exc),
-            "analysis_key": analysis_key,
-            "code": "event_generation_failed",
+            "code": "rebuild_start_failed",
         }), 500
 
 
