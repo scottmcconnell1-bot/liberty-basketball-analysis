@@ -1209,6 +1209,8 @@ def _run_regenerate_events_worker(
             db.commit()
         except Exception as exc:
             app.logger.exception("Rebuild events failed for %s", analysis_key)
+            from helpers import format_exception_message
+
             db.execute(
                 """UPDATE analysis_runs
                    SET status='failed',
@@ -1216,7 +1218,7 @@ def _run_regenerate_events_worker(
                        progress_step='Event generation failed',
                        completed_at=CURRENT_TIMESTAMP
                    WHERE id=?""",
-                (str(exc)[:500], run_id),
+                (format_exception_message(exc), run_id),
             )
             db.commit()
 

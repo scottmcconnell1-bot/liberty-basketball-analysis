@@ -76,8 +76,10 @@ def main() -> int:
             _mark_failed(db_path, game_id, f"Analysis worker exited with code {code}")
         raise
     except Exception as exc:
+        from helpers import format_exception_message
+
         detail = traceback.format_exc()
-        _mark_failed(db_path, game_id, f"{exc}\n{detail[-400:]}")
+        _mark_failed(db_path, game_id, format_exception_message(exc))
         print(detail, file=sys.stderr)
         return 1
 

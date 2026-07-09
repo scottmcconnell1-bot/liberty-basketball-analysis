@@ -130,6 +130,12 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
+function errorHint(message) {
+  if (!message) return '';
+  const firstLine = String(message).split('\n').find(line => line.trim()) || message;
+  return firstLine.trim();
+}
+
 function statusBadge(status, detectionCount, errorMessage, eventCount) {
   const dets = detectionCount ?? 0;
   const evts = eventCount ?? 0;
@@ -142,7 +148,9 @@ function statusBadge(status, detectionCount, errorMessage, eventCount) {
     return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
   }
   const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
-  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+  const title = errorMessage && status === 'failed'
+    ? ` title="${escHtml(errorHint(errorMessage))}"`
+    : '';
   return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
 }
 

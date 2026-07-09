@@ -1281,6 +1281,25 @@ def count_jersey_reads_for_analysis(db, game_id) -> int:
     return int(row["c"] or 0)
 
 
+def format_exception_message(exc: BaseException, *, limit: int = 500) -> str:
+    """Store the exception headline plus the start of the traceback (not the tail)."""
+    import traceback
+
+    detail = traceback.format_exc()
+    headline = f"{type(exc).__name__}: {exc}".strip()
+    for line in detail.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("Traceback"):
+            continue
+        if stripped.startswith("File "):
+            continue
+        if any(token in stripped for token in ("Error", "Exception", "exit")):
+            headline = stripped
+    body = detail[: max(0, limit - len(headline) - 1)].strip()
+    message = headline if not body else f"{headline}\n{body}"
+    return message[:limit]
+
+
 def _analysis_log_error_message(content: str) -> str | None:
     if not content:
         return None
@@ -1296,7 +1315,15 @@ def _analysis_log_error_message(content: str) -> str | None:
                 return line.strip()[:500]
         return "Event generation failed. See logs for details."
     if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
-        return _read_log_tail_from_content(content, 500)
+        lines = [line.strip() for line in content.splitlines() if line.strip()]
+        for line in reversed(lines):
+            if line.startswith("Traceback"):
+                continue
+            if line.startswith("File "):
+                continue
+            if "Error" in line or "Exception" in line:
+                return line[:500]
+        return content[:500]
     return None
 
 
