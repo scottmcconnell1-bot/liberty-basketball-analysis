@@ -1146,6 +1146,27 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
+def test_analysis_status_parses_settings_json(client, db):
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, video_path, status, settings_json)
+           VALUES (?, ?, ?, ?)""",
+        (
+            "analysis_settings_json",
+            "uploads/demo.mp4",
+            "completed",
+            '{"ai": {"event_generator_mode": "expanded"}}',
+        ),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_status/analysis_settings_json")
+    assert r.status_code == 200
+    payload = r.get_json()
+    assert payload["status"] == "completed"
+    assert "expanded heuristic generator" in payload["event_generation_summary"]
+
+
 def test_analysis_status_counts_detections_via_relational_game_id(client, db):
     game_row = db.execute(
         "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
