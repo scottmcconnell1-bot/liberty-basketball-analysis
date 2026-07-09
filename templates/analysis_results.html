@@ -153,6 +153,7 @@
         </table>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="applyOcrHintsBtn" style="margin-left:8px;">Apply OCR hints</button>
       <button type="button" class="btn btn-primary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Apply roster to stats</button>
     </div>
 
@@ -444,9 +445,17 @@ async function loadResults() {
           + (ocrReads ? ' (' + ocrReads.toLocaleString() + ' jersey reads)' : '') + '. ';
         html += 'Click any stat to verify each play on film.';
       } else if (identity.reason === 'no_cluster_suggestions') {
-        html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
-        html += 'Import your roster in Film Tool → Manage Rosters, then click <strong>Rebuild events</strong> on Video Library (event-focused OCR runs during Rebuild). ';
-        html += 'Unidentified players can still be fixed manually in the table below.';
+        const engines = identity.ocr_engines || {};
+        const reads = identity.ocr_read_count || 0;
+        html += 'Jersey OCR could not auto-name players';
+        if (!engines.easyocr && !engines.paddleocr) {
+          html += ' — <strong>EasyOCR is not installed</strong> on this PC (`py -3.12 -m pip install easyocr`). ';
+        } else if (reads === 0) {
+          html += ' — no jersey reads were saved from the video yet. ';
+        } else {
+          html += ' (' + reads.toLocaleString() + ' reads, not confident enough). ';
+        }
+        html += 'Use <strong>Apply OCR hints</strong> below, or match each Pos to a roster player manually, then <strong>Apply roster to stats</strong>.';
       } else {
         html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
         html += 'Click stats to verify events on film.';
@@ -827,11 +836,16 @@ function renderSlotMappingTable() {
 
   let html = '';
   COURT_SLOTS.forEach(function(slot) {
+    const suggestedJersey = slot.ocr_suggested_jersey ?? '';
+    const jerseyValue = slot.jersey_number ?? suggestedJersey ?? '';
+    const hintLabel = suggestedJersey && !slot.jersey_number
+      ? ' <span style="color:var(--orange);font-size:.75rem;">OCR hint: #' + suggestedJersey + '</span>'
+      : '';
     html += '<tr data-tracker-id="' + slot.tracker_id + '">';
-    html += '<td><strong>Pos ' + slot.tracker_id + '</strong></td>';
+    html += '<td><strong>Pos ' + slot.tracker_id + '</strong>' + hintLabel + '</td>';
     html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
     html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
-    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + (slot.jersey_number ?? '') + '"></td>';
+    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + jerseyValue + '"></td>';
     html += '<td><input class="slot-name" type="text" style="min-width:140px" value="' + escapeHtml(slot.player_name || '') + '"></td>';
     html += '</tr>';
   });
@@ -846,6 +860,17 @@ function renderSlotMappingTable() {
       for (const opt of select.options) {
         if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
           select.value = opt.value;
+          break;
+        }
+      }
+    } else if (slot.ocr_suggested_jersey != null && slot.ocr_suggested_jersey !== '') {
+      for (const opt of select.options) {
+        if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.ocr_suggested_jersey)) {
+          select.value = opt.value;
+          const tr = select.closest('tr');
+          if (tr && !tr.querySelector('.slot-name').value && opt.dataset.name) {
+            tr.querySelector('.slot-name').value = opt.dataset.name;
+          }
           break;
         }
       }
@@ -913,6 +938,42 @@ async function applyRosterNamesToStats() {
 }
 
 document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
+
+async function applyOcrHintsToSlots() {
+  const status = document.getElementById('slot-mapping-status');
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Applying OCR jersey hints…';
+  }
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/apply-ocr-hints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not apply OCR hints');
+    if (status) {
+      status.style.color = data.applied ? 'var(--green)' : 'var(--orange)';
+      status.textContent = data.applied
+        ? ('Applied OCR hints for ' + data.applied + ' players (' + (data.events_updated || 0) + ' events updated).')
+        : ('No OCR hints matched your roster yet' + (data.hint_count ? ' (' + data.hint_count + ' raw hints).' : '.') + ' Match players manually below.');
+    }
+    COURT_SLOTS = data.slots || COURT_SLOTS;
+    renderSlotMappingTable();
+    if (data.applied) await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not apply OCR hints: ' + err.message;
+    } else {
+      alert(err.message || 'Could not apply OCR hints.');
+    }
+  }
+}
+
+document.getElementById('applyOcrHintsBtn')?.addEventListener('click', applyOcrHintsToSlots);
 
 async function loadSlotMappingUI() {
   try {

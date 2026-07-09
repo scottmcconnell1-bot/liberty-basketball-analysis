@@ -20,6 +20,75 @@ def _detection_scope_sql(relational_game_id, analysis_key, alias="d"):
     return f"{prefix}game_id = ?", (analysis_key,)
 
 
+def jersey_ocr_engine_status() -> dict:
+    """Report whether OCR backends are available in this Python environment."""
+    from jersey_ocr import _get_ocr_engine, _get_paddle_engine
+
+    return {
+        "easyocr": _get_ocr_engine() is not None,
+        "paddleocr": _get_paddle_engine() is not None,
+    }
+
+
+def suggest_cluster_jerseys(db, game_id, ai_settings=None):
+    """Low-threshold OCR hints for coach review (not auto-applied)."""
+    ai_settings = ai_settings or {}
+    min_conf = float(ai_settings.get("jersey_ocr_suggest_min_confidence", 0.35))
+    return aggregate_cluster_jersey_votes(
+        db,
+        game_id,
+        min_confidence=min_conf,
+        min_samples=1,
+    )
+
+
+def apply_ocr_hints_to_slots(db, game_id, ai_settings=None):
+    """Apply best OCR hint per court slot when it matches the loaded roster."""
+    from court_slot_mapping import apply_court_slot_mappings, get_court_slots, save_court_slot_mappings
+
+    ai_settings = ai_settings or {}
+    hints = suggest_cluster_jerseys(db, game_id, ai_settings)
+    roster_by_jersey, roster_source = _roster_jersey_index(db, game_id)
+    if not hints:
+        return {"applied": 0, "mappings": [], "events_updated": 0, "reason": "no_hints"}
+
+    mappings = []
+    used_jerseys = set()
+    for item in hints:
+        jersey = int(item["jersey_number"])
+        if jersey in used_jerseys:
+            continue
+        if roster_by_jersey and jersey not in roster_by_jersey:
+            continue
+        used_jerseys.add(jersey)
+        roster_player = roster_by_jersey.get(jersey) if roster_by_jersey else None
+        mappings.append({
+            "tracker_id": int(item["tracker_id"]),
+            "jersey_number": jersey,
+            "player_name": (roster_player or {}).get("name") or (roster_player or {}).get("label"),
+        })
+
+    if not mappings:
+        return {
+            "applied": 0,
+            "mappings": [],
+            "events_updated": 0,
+            "reason": "no_roster_matches",
+            "hint_count": len(hints),
+        }
+
+    save_court_slot_mappings(db, game_id, mappings, apply_to_events=False)
+    result = apply_court_slot_mappings(db, game_id)
+    return {
+        "applied": len(mappings),
+        "mappings": mappings,
+        "events_updated": result.get("events_updated", 0),
+        "slots": get_court_slots(db, game_id),
+        "hint_count": len(hints),
+        "roster_source": roster_source,
+    }
+
+
 def aggregate_cluster_jersey_votes(
     db,
     game_id,
@@ -300,6 +369,9 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     )
     roster_by_jersey, roster_source = _roster_jersey_index(db, game_id)
     use_roster_whitelist = roster_source == "film_roster" and bool(roster_by_jersey)
+    if roster_by_jersey:
+        min_samples = min(min_samples, 1)
+        min_conf = min(min_conf, 0.45)
 
     mappings = _build_auto_apply_mappings(
         suggestions,
@@ -429,6 +501,7 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
 
     event_ocr_result = _run_event_jersey_ocr(db, game_id, ai_settings)
     report = build_identity_report(db, game_id, ai_settings)
+    ocr_status = jersey_ocr_engine_status()
     if not report.get("cluster_suggestions"):
         return {
             "skipped": True,
@@ -436,6 +509,8 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
             "raw_cluster_events": raw_cluster_events,
             "ocr_read_count": report.get("ocr_read_count", 0),
             "event_ocr": event_ocr_result,
+            "ocr_engines": ocr_status,
+            "ocr_hints": suggest_cluster_jerseys(db, game_id, ai_settings),
         }
 
     applied = auto_apply_cluster_jerseys(db, game_id, ai_settings)
@@ -445,5 +520,7 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
         "ocr_read_count": report.get("ocr_read_count", 0),
         "cluster_suggestions": len(report.get("cluster_suggestions") or []),
         "event_ocr": event_ocr_result,
+        "ocr_engines": ocr_status,
+        "ocr_hints": suggest_cluster_jerseys(db, game_id, ai_settings),
         **applied,
     }

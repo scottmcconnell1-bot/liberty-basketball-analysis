@@ -580,13 +580,31 @@ def get_track_identity_api(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_court_slots_api(game_id):
     from court_slot_mapping import get_court_slots
+    from track_identity import jersey_ocr_engine_status, suggest_cluster_jerseys
+    from settings_store import load_all_settings, AI_DEFAULTS
+
     db = get_db()
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
         game_id = row["analysis_key"]
+
+    ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+    hints = suggest_cluster_jerseys(db, game_id, ai_settings)
+    hints_by_slot = {int(item["tracker_id"]): item for item in hints}
+    slots = get_court_slots(db, game_id)
+    for slot in slots:
+        hint = hints_by_slot.get(int(slot["tracker_id"]))
+        if not hint:
+            continue
+        slot["ocr_suggested_jersey"] = int(hint["jersey_number"])
+        slot["ocr_confidence"] = hint.get("confidence")
+        slot["ocr_samples"] = hint.get("sample_count")
+
     return jsonify({
         "game_id": game_id,
-        "slots": get_court_slots(db, game_id),
+        "slots": slots,
+        "ocr_hints": hints,
+        "ocr_engines": jersey_ocr_engine_status(),
     })
 
 
@@ -625,6 +643,27 @@ def apply_court_slots_api(game_id):
     result = apply_court_slot_mappings(db, game_id)
     result["game_id"] = game_id
     result["slots"] = get_court_slots(db, game_id)
+    return jsonify(result)
+
+
+@ai_bp.route("/api/court-slots/<game_id>/apply-ocr-hints", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def apply_ocr_hints_api(game_id):
+    """Apply OCR jersey hints that match the loaded Film Tool roster."""
+    from settings_store import load_all_settings, AI_DEFAULTS
+    from stats import refresh_stats
+    from track_identity import apply_ocr_hints_to_slots, jersey_ocr_engine_status
+
+    db = get_db()
+    row = resolve_analysis_run_for_progress(db, game_id)
+    if row and row["analysis_key"]:
+        game_id = row["analysis_key"]
+
+    ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+    result = apply_ocr_hints_to_slots(db, game_id, ai_settings)
+    refresh_stats(db, game_id)
+    result["game_id"] = game_id
+    result["ocr_engines"] = jersey_ocr_engine_status()
     return jsonify(result)
 
 
