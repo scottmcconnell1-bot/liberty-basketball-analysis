@@ -400,8 +400,13 @@ async function loadResults() {
     setStep('step-fetch', 'active');
 
     const resp = await fetch('/api/analysis/' + GAME_ID);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (!resp.ok) {
+      if (resp.status === 503 && data.code === 'database_locked') {
+        throw new Error(data.error || 'Database busy — wait until analysis finishes, then refresh.');
+      }
+      throw new Error(data.error || ('HTTP ' + resp.status));
+    }
     if (data.analysis_key && data.analysis_key !== GAME_ID) {
       GAME_ID = data.analysis_key;
       const subtitle = document.getElementById('resultsSubtitle');
@@ -982,7 +987,9 @@ async function scanJerseysFromVideo() {
 document.getElementById('scanJerseysBtn')?.addEventListener('click', scanJerseysFromVideo);
 
 async function maybeAutoScanJerseys(identity) {
-  if (!identity || identity.reason !== 'no_cluster_suggestions') return;
+  if (!identity) return;
+  if (identity.reason === 'analysis_running' || identity.reason === 'database_locked') return;
+  if (identity.reason !== 'no_cluster_suggestions') return;
   const reads = identity.ocr_read_count || 0;
   const engines = identity.ocr_engines || {};
   if (reads > 0 || (!engines.easyocr && !engines.paddleocr)) return;

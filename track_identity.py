@@ -492,7 +492,7 @@ def scan_and_apply_jerseys(db, game_id, ai_settings=None, video_path=None) -> di
     }
 
 
-def ensure_analysis_player_slots(db, game_id, ai_settings=None):
+def ensure_analysis_player_slots(db, game_id, ai_settings=None, *, allow_ocr: bool = False):
     """Ensure court slots exist, then auto-apply jersey labels to AI events."""
     from court_slot_mapping import get_court_slots
 
@@ -506,10 +506,10 @@ def ensure_analysis_player_slots(db, game_id, ai_settings=None):
             calculate_player_minutes(db, game_id, fps=fps, detect_stride=detect_stride)
         except Exception:
             pass
-    return ensure_identity_applied(db, game_id, ai_settings)
+    return ensure_identity_applied(db, game_id, ai_settings, allow_ocr=allow_ocr)
 
 
-def ensure_identity_applied(db, game_id, ai_settings=None):
+def ensure_identity_applied(db, game_id, ai_settings=None, *, allow_ocr: bool = False):
     """Auto-apply jersey mappings when AI events still use raw cluster ids."""
     ai_settings = ai_settings or {}
     if not ai_settings.get("auto_apply_jersey_mapping", True):
@@ -538,7 +538,7 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
 
     existing_reads = count_jersey_reads_for_analysis(db, game_id)
     ocr_result = None
-    if existing_reads == 0:
+    if allow_ocr and existing_reads == 0:
         ocr_result = _run_jersey_ocr_scan(db, game_id, ai_settings)
     report = build_identity_report(db, game_id, ai_settings)
     ocr_status = jersey_ocr_engine_status()

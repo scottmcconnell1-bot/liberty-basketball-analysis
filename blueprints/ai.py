@@ -323,23 +323,74 @@ def get_analysis_progress(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_results(game_id):
     """Return full analysis results: box score, shots, plays, player effect."""
+    import sqlite3
     from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview, get_shot_breakdown_preview
+
+    try:
+        payload = _get_analysis_results_payload(
+            game_id,
+            refresh_stats=refresh_stats,
+            get_enhanced_stats=get_enhanced_stats,
+            aggregate_stats_preview=aggregate_stats_preview,
+            get_shot_breakdown_preview=get_shot_breakdown_preview,
+        )
+        return jsonify(payload)
+    except sqlite3.OperationalError as exc:
+        if "locked" in str(exc).lower():
+            return jsonify({
+                "error": (
+                    "Database is busy while analysis is still writing. "
+                    "Wait until Video Library shows Completed, then refresh."
+                ),
+                "code": "database_locked",
+            }), 503
+        raise
+
+
+def _get_analysis_results_payload(
+    game_id,
+    *,
+    refresh_stats,
+    get_enhanced_stats,
+    aggregate_stats_preview,
+    get_shot_breakdown_preview,
+):
     db = get_db()
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
         game_id = row["analysis_key"]
 
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
-    identity_status = None
-    try:
-        from settings_store import load_all_settings, AI_DEFAULTS
-        from track_identity import ensure_analysis_player_slots
+    analysis_running = row and row["status"] in {"running", "pending"}
 
-        ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-        identity_status = ensure_analysis_player_slots(db, game_id, ai_settings)
-    except Exception as exc:
-        current_app.logger.exception("Identity auto-apply failed for %s", game_id)
-        identity_status = {"skipped": True, "reason": "error", "error": str(exc)[:200]}
+    identity_status = None
+    if analysis_running:
+        identity_status = {
+            "skipped": True,
+            "reason": "analysis_running",
+            "message": "Analysis is still running — open Results again when AI Status shows Completed.",
+        }
+    else:
+        try:
+            from settings_store import load_all_settings, AI_DEFAULTS
+            from track_identity import ensure_analysis_player_slots
+
+            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            identity_status = ensure_analysis_player_slots(
+                db, game_id, ai_settings, allow_ocr=False,
+            )
+        except Exception as exc:
+            import sqlite3
+
+            current_app.logger.exception("Identity auto-apply failed for %s", game_id)
+            if isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower():
+                identity_status = {
+                    "skipped": True,
+                    "reason": "database_locked",
+                    "message": "Database busy (analysis may still be writing). Wait a minute and refresh.",
+                }
+            else:
+                identity_status = {"skipped": True, "reason": "error", "error": str(exc)[:200]}
 
     db.execute(
         """UPDATE events
@@ -448,7 +499,7 @@ def get_analysis_results(game_id):
             (game_id,),
         ).fetchall()
 
-    return jsonify({
+    return {
         "game_id": game_id,
         "video_id": _resolve_video_id_for_analysis(db, game_id),
         "detection_count": detection_count,
@@ -462,7 +513,7 @@ def get_analysis_results(game_id):
         "player_labels": _analysis_player_labels(db, game_id),
         "analysis_version": "2026-07-07-analysis-v2",
         **_analysis_film_payload(db, game_id),
-    })
+    }
 
 
 def _analysis_player_labels(db, game_id):
@@ -1125,18 +1176,20 @@ def _run_regenerate_events_worker(
     db_path: str,
 ) -> None:
     """Background worker: rebuild events, enhanced analysis, and jersey OCR."""
-    with app.app_context():
-        db = get_db()
+    from helpers import open_sqlite_connection
+
+    conn = open_sqlite_connection(db_path)
+    try:
         try:
             from event_generator import main as generate_events
 
-            db.execute(
+            conn.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=35, progress_step='Clustering players and rebuilding events…'
                    WHERE id=?""",
                 (run_id,),
             )
-            db.commit()
+            conn.commit()
 
             if generate_events(
                 analysis_key,
@@ -1153,15 +1206,15 @@ def _run_regenerate_events_worker(
 
             from helpers import assign_possessions_for_game
             if relational_game_id is not None:
-                assign_possessions_for_game(db, relational_game_id)
+                assign_possessions_for_game(conn, relational_game_id)
 
-            db.execute(
+            conn.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=70, progress_step='Running enhanced analysis…'
                    WHERE id=?""",
                 (run_id,),
             )
-            db.commit()
+            conn.commit()
 
             enhanced_warning = None
             try:
@@ -1175,27 +1228,26 @@ def _run_regenerate_events_worker(
             except Exception as exc:
                 enhanced_warning = f"Enhanced analysis skipped: {exc}"[:500]
 
-            db.execute(
+            conn.execute(
                 """UPDATE analysis_runs
                    SET progress_pct=85, progress_step='Scanning jersey numbers (OCR)…'
                    WHERE id=?""",
                 (run_id,),
             )
-            db.commit()
+            conn.commit()
 
             try:
                 from settings_store import load_all_settings, AI_DEFAULTS
-                from track_identity import ensure_analysis_player_slots, run_identity_postprocess
+                from track_identity import run_identity_postprocess
 
-                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-                ensure_analysis_player_slots(db, analysis_key, ai_settings)
+                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=conn).get("ai", AI_DEFAULTS)
                 run_identity_postprocess(
-                    db, analysis_key, ai_settings, video_path=video_path,
+                    conn, analysis_key, ai_settings, video_path=video_path,
                 )
             except Exception as exc:
                 app.logger.warning("Identity postprocess after regenerate failed: %s", exc)
 
-            db.execute(
+            conn.execute(
                 """UPDATE analysis_runs
                    SET status='completed', progress_pct=100, progress_step=?,
                        completed_at=CURRENT_TIMESTAMP, error_message=?
@@ -1206,12 +1258,12 @@ def _run_regenerate_events_worker(
                     run_id,
                 ),
             )
-            db.commit()
+            conn.commit()
         except Exception as exc:
             app.logger.exception("Rebuild events failed for %s", analysis_key)
             from helpers import format_exception_message
 
-            db.execute(
+            conn.execute(
                 """UPDATE analysis_runs
                    SET status='failed',
                        error_message=?,
@@ -1220,7 +1272,9 @@ def _run_regenerate_events_worker(
                    WHERE id=?""",
                 (format_exception_message(exc), run_id),
             )
-            db.commit()
+            conn.commit()
+    finally:
+        conn.close()
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/regenerate-events", methods=["POST"])

@@ -1016,7 +1016,7 @@ def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new ana
 
 def resolve_relational_game_id_for_analysis(db_path: str, game_id: str) -> int | None:
     """Resolve the relational games.id for an analysis key or legacy numeric id."""
-    conn = sqlite3.connect(db_path)
+    conn = open_sqlite_connection(db_path, row_factory=None)
     try:
         try:
             gid_int = int(game_id)
@@ -1546,7 +1546,7 @@ def start_analysis_subprocess(game_id, video_path):
                     code = proc.wait()
                     if code != 0:
                         tail = _read_log_tail(log_path)
-                        conn = sqlite3.connect(db_path)
+                        conn = open_sqlite_connection(db_path, row_factory=None)
                         conn.execute(
                             """UPDATE analysis_runs
                                SET status='failed',
@@ -1597,16 +1597,27 @@ def build_run_summary(run_row):
 
 # ── Database helpers ──────────────────────────────────────
 
+SQLITE_BUSY_TIMEOUT_MS = 60_000
+
+
+def configure_sqlite_connection(conn, *, busy_timeout_ms: int = SQLITE_BUSY_TIMEOUT_MS) -> None:
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(f"PRAGMA busy_timeout = {int(busy_timeout_ms)}")
+    conn.execute("PRAGMA foreign_keys = ON")
+
+
+def open_sqlite_connection(db_path, *, row_factory=sqlite3.Row, timeout: float = 30, busy_timeout_ms: int = SQLITE_BUSY_TIMEOUT_MS):
+    """Open SQLite with WAL + long busy wait — safe for background workers."""
+    conn = sqlite3.connect(db_path, timeout=timeout)
+    if row_factory is not None:
+        conn.row_factory = row_factory
+    configure_sqlite_connection(conn, busy_timeout_ms=busy_timeout_ms)
+    return conn
+
+
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(
-            current_app.config["DATABASE"],
-            timeout=10,
-        )
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA journal_mode=WAL")
-        g.db.execute("PRAGMA busy_timeout = 10000")
-        g.db.execute("PRAGMA foreign_keys = ON")
+        g.db = open_sqlite_connection(current_app.config["DATABASE"])
     return g.db
 
 
