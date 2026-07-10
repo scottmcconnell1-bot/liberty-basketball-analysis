@@ -1106,63 +1106,73 @@ def _start_video_analysis_run(video, *, run_label=None):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_video_analysis_debug(vid_id):
     """Return latest analysis run + log tail for troubleshooting."""
-    db = get_db()
-    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
-    if not video:
-        return jsonify({"error": "Video not found"}), 404
+    try:
+        db = get_db()
+        video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+        if not video:
+            return jsonify({"error": "Video not found"}), 404
 
-    clause = _video_analysis_runs_clause()
-    row = db.execute(
-        f"""SELECT * FROM analysis_runs
-            WHERE {clause}
-            ORDER BY id DESC LIMIT 1""",
-        (vid_id, video["game_id"], video["game_id"], video["file_path"]),
-    ).fetchone()
-    game_id = video["game_id"]
-    if row:
-        game_id = row["analysis_key"] or video["game_id"]
-        row = resolve_analysis_run_for_progress(db, game_id) or row
+        clause = _video_analysis_runs_clause()
+        row = db.execute(
+            f"""SELECT * FROM analysis_runs
+                WHERE {clause}
+                ORDER BY id DESC LIMIT 1""",
+            (vid_id, video["game_id"], video["game_id"], video["file_path"]),
+        ).fetchone()
+        game_id = video["game_id"]
+        if row:
+            game_id = row["analysis_key"] or video["game_id"]
+            row = resolve_analysis_run_for_progress(db, game_id) or row
 
-    if not row:
+        if not row:
+            return jsonify({
+                "video_id": vid_id,
+                "video_path": video["file_path"],
+                "video_exists": os.path.exists(video["file_path"]),
+                "run": None,
+                "log_path": ai_analysis_log_path(game_id) if game_id else None,
+                "log_tail": "",
+            })
+
+        game_id = row["analysis_key"] or game_id
+        reconcile_stuck_analysis_run(db, game_id)
+        row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
+        log_path = ai_analysis_log_path(game_id)
+        count_kwargs = dict(
+            analysis_key=row["analysis_key"],
+            relational_game_id=row["game_id"],
+            video_game_id=video["game_id"],
+            video_relational_game_id=video["relational_game_id"],
+            base_analysis_key=row["base_analysis_key"],
+            source_video_id=vid_id,
+            video_path=video["file_path"],
+        )
+        detection_count = count_detections_for_analysis(db, **count_kwargs)
+        event_count = count_events_for_analysis(
+            db,
+            analysis_key=count_kwargs["analysis_key"],
+            relational_game_id=count_kwargs["relational_game_id"],
+            video_game_id=count_kwargs["video_game_id"],
+            base_analysis_key=count_kwargs["base_analysis_key"],
+        )
         return jsonify({
             "video_id": vid_id,
             "video_path": video["file_path"],
             "video_exists": os.path.exists(video["file_path"]),
-            "run": None,
-            "log_path": ai_analysis_log_path(game_id) if game_id else None,
-            "log_tail": "",
+            "run": build_run_summary(row),
+            "detection_count": detection_count,
+            "event_count": event_count,
+            "needs_event_regeneration": detection_count > 0 and event_count == 0,
+            "log_path": log_path,
+            "log_tail": _read_log_tail(log_path, 2000) if os.path.exists(log_path) else "",
         })
-
-    game_id = row["analysis_key"] or game_id
-    reconcile_stuck_analysis_run(db, game_id)
-    row = db.execute("SELECT * FROM analysis_runs WHERE id=?", (row["id"],)).fetchone()
-    log_path = ai_analysis_log_path(game_id)
-    count_kwargs = dict(
-        analysis_key=row["analysis_key"],
-        relational_game_id=row["game_id"],
-        video_game_id=video["game_id"],
-        video_relational_game_id=video["relational_game_id"],
-        base_analysis_key=row["base_analysis_key"],
-    )
-    detection_count = count_detections_for_analysis(db, **count_kwargs)
-    event_count = count_events_for_analysis(
-        db,
-        analysis_key=count_kwargs["analysis_key"],
-        relational_game_id=count_kwargs["relational_game_id"],
-        video_game_id=count_kwargs["video_game_id"],
-        base_analysis_key=count_kwargs["base_analysis_key"],
-    )
-    return jsonify({
-        "video_id": vid_id,
-        "video_path": video["file_path"],
-        "video_exists": os.path.exists(video["file_path"]),
-        "run": dict(row),
-        "detection_count": detection_count,
-        "event_count": event_count,
-        "needs_event_regeneration": detection_count > 0 and event_count == 0,
-        "log_path": log_path,
-        "log_tail": _read_log_tail(log_path, 2000) if os.path.exists(log_path) else "",
-    })
+    except Exception as exc:
+        current_app.logger.exception("analysis-debug failed for video %s", vid_id)
+        return jsonify({
+            "video_id": vid_id,
+            "error": str(exc),
+            "hint": "If analysis is still running (OCR/Rebuild), wait until Completed and try again.",
+        }), 500
 
 
 def _run_regenerate_events_worker(
