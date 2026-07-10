@@ -1,5 +1,6 @@
 """Map AI court slots (Pos 0-9) to roster jersey numbers for a game."""
 
+from analysis_helpers import dedupe_player_minute_rows
 from stats import _resolve_relational_game_id, aggregate_stats_preview, refresh_stats
 
 
@@ -87,8 +88,8 @@ def get_court_slots(db, game_id):
     relational_game_id, analysis_key = _game_scope(db, game_id)
     if relational_game_id is not None:
         rows = db.execute(
-            """SELECT tracker_id, minutes_played, jersey_number, player_name,
-                      first_frame, last_frame, total_frames
+            """SELECT game_id, tracker_id, minutes_played, jersey_number, player_name,
+                      first_frame, last_frame, total_frames, relational_game_id
                  FROM player_minutes
                 WHERE relational_game_id = ?
                    OR (relational_game_id IS NULL AND game_id = ?)
@@ -97,14 +98,15 @@ def get_court_slots(db, game_id):
         ).fetchall()
     else:
         rows = db.execute(
-            """SELECT tracker_id, minutes_played, jersey_number, player_name,
-                      first_frame, last_frame, total_frames
+            """SELECT game_id, tracker_id, minutes_played, jersey_number, player_name,
+                      first_frame, last_frame, total_frames, relational_game_id
                  FROM player_minutes
                 WHERE game_id = ?
                 ORDER BY minutes_played DESC, tracker_id ASC""",
             (analysis_key,),
         ).fetchall()
 
+    rows = dedupe_player_minute_rows(rows, preferred_game_id=analysis_key)
     slots = []
     for row in rows:
         label = _player_label(row["jersey_number"], row["player_name"])

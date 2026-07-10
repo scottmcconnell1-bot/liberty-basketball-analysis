@@ -654,3 +654,66 @@ def list_analysis_events(
         },
         "events": events,
     }
+
+
+def resolve_analysis_key(db, game_id) -> str:
+    """Return the canonical analysis_key for an analysis or relational game id."""
+    context = resolve_analysis_game_context(db, game_id)
+    return context.get("analysis_key") or str(game_id)
+
+
+def event_scope_sql(db, game_id, alias="e"):
+    """Limit events to one analysis run instead of every run sharing relational_game_id."""
+    context = resolve_analysis_game_context(db, game_id)
+    analysis_key = context.get("analysis_key") or str(game_id)
+    relational_game_id = context.get("relational_game_id")
+    prefix = f"{alias}."
+    conditions = [f"{prefix}game_id = ?"]
+    params = [analysis_key]
+
+    if relational_game_id is not None:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE game_id = ?""",
+            (relational_game_id,),
+        ).fetchall()
+        known_keys = {analysis_key}
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    known_keys.add(str(value))
+
+        placeholders = ",".join("?" for _ in known_keys)
+        conditions.append(
+            f"({prefix}relational_game_id = ? AND {prefix}game_id NOT IN ({placeholders}))"
+        )
+        params.append(relational_game_id)
+        params.extend(sorted(known_keys))
+
+    return f"({' OR '.join(conditions)})", params
+
+
+def dedupe_player_minute_rows(rows, preferred_game_id=None):
+    """Merge duplicate player_minutes rows that share tracker_id across analysis keys."""
+    best_by_tracker = {}
+    for row in rows:
+        payload = dict(row) if not isinstance(row, dict) else row
+        tracker_id = int(payload["tracker_id"])
+        row_game_id = payload.get("game_id")
+        score = (
+            1 if preferred_game_id and str(row_game_id) == str(preferred_game_id) else 0,
+            1 if payload.get("relational_game_id") is not None else 0,
+            float(payload.get("minutes_played") or 0),
+            int(payload.get("total_frames") or 0),
+        )
+        current = best_by_tracker.get(tracker_id)
+        if current is None or score > current[0]:
+            best_by_tracker[tracker_id] = (score, payload)
+
+    merged = [entry[1] for entry in best_by_tracker.values()]
+    merged.sort(
+        key=lambda row: (-float(row.get("minutes_played") or 0), int(row["tracker_id"])),
+    )
+    return merged

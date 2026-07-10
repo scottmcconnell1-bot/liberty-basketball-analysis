@@ -252,7 +252,7 @@ def get_stats(game_id):
     from helpers import assign_possessions_for_game
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        assign_possessions_for_game(db, relational_game_id)
+        assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
 
     return jsonify({
         "basic": basic,
@@ -406,17 +406,18 @@ def _get_analysis_results_payload(
     )
     db.commit()
 
-    detection_count = db.execute(
-        """SELECT COUNT(*) AS c FROM detections d
-           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
-              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
-        (relational_game_id, relational_game_id, game_id),
-    ).fetchone()["c"]
+    from analysis_helpers import event_scope_sql
+    from helpers import count_detections_for_analysis
+
+    detection_count = count_detections_for_analysis(
+        db,
+        analysis_key=game_id,
+        relational_game_id=relational_game_id,
+    )
+    event_scope, event_scope_params = event_scope_sql(db, game_id, alias="e")
     event_count = db.execute(
-        """SELECT COUNT(*) AS c FROM events e
-           WHERE (e.relational_game_id = ? AND ? IS NOT NULL)
-              OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
-        (relational_game_id, relational_game_id, game_id),
+        f"SELECT COUNT(*) AS c FROM events e WHERE {event_scope}",
+        event_scope_params,
     ).fetchone()["c"]
 
     basic = aggregate_stats_preview(db, game_id)
@@ -430,6 +431,12 @@ def _get_analysis_results_payload(
     enhanced["shot_breakdown"] = [dict(row) for row in get_shot_breakdown_preview(db, game_id)]
     enhanced["basic_stats"] = basic
 
+    if detection_count < 1000:
+        quality_notes.append(
+            "Very few detections saved for this analysis run. Re-run AI on Video Library "
+            "(not just Rebuild) when no other analysis is writing to the database, then "
+            "open Results again."
+        )
     if detection_count > 250_000:
         quality_notes.append(
             "Very high detection count — the clip may include extra footage beyond one game, "
@@ -455,49 +462,26 @@ def _get_analysis_results_payload(
     from helpers import assign_possessions_for_game
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        assign_possessions_for_game(db, relational_game_id)
+        assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
 
     # Events summary
-    if relational_game_id is not None:
-        events_summary = db.execute(
-            """SELECT event_type, COUNT(*) as cnt
-                 FROM events
-                WHERE relational_game_id = ?
-                   OR (relational_game_id IS NULL AND game_id = ?)
-                GROUP BY event_type
-                ORDER BY cnt DESC""",
-            (relational_game_id, game_id),
-        ).fetchall()
+    events_summary = db.execute(
+        f"""SELECT event_type, COUNT(*) as cnt
+              FROM events e
+             WHERE {event_scope}
+             GROUP BY event_type
+             ORDER BY cnt DESC""",
+        event_scope_params,
+    ).fetchall()
 
-        # Top events timeline (last 50)
-        recent_events = db.execute(
-            """SELECT event_type, player, shot_result, timestamp_ms, details_json
-                 FROM events
-                WHERE relational_game_id = ?
-                   OR (relational_game_id IS NULL AND game_id = ?)
-                ORDER BY timestamp_ms DESC
-                LIMIT 50""",
-            (relational_game_id, game_id),
-        ).fetchall()
-    else:
-        events_summary = db.execute(
-            """SELECT event_type, COUNT(*) as cnt
-                 FROM events
-                WHERE game_id=?
-                GROUP BY event_type
-                ORDER BY cnt DESC""",
-            (game_id,),
-        ).fetchall()
-
-        # Top events timeline (last 50)
-        recent_events = db.execute(
-            """SELECT event_type, player, shot_result, timestamp_ms, details_json
-                 FROM events
-                WHERE game_id=?
-                ORDER BY timestamp_ms DESC
-                LIMIT 50""",
-            (game_id,),
-        ).fetchall()
+    recent_events = db.execute(
+        f"""SELECT event_type, player, shot_result, timestamp_ms, details_json
+              FROM events e
+             WHERE {event_scope}
+             ORDER BY timestamp_ms DESC
+             LIMIT 50""",
+        event_scope_params,
+    ).fetchall()
 
     return {
         "game_id": game_id,
@@ -801,7 +785,7 @@ def get_possessions(game_id):
     # Ensure possessions are assigned before returning summary
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        assign_possessions_for_game(db, relational_game_id)
+        assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
     return jsonify(get_possession_summary(db, game_id))
 
 
@@ -1214,7 +1198,7 @@ def _run_regenerate_events_worker(
 
             from helpers import assign_possessions_for_game
             if relational_game_id is not None:
-                assign_possessions_for_game(db, relational_game_id)
+                assign_possessions_for_game(db, relational_game_id, analysis_key=analysis_key)
 
             db.execute(
                 """UPDATE analysis_runs

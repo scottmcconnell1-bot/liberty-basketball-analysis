@@ -138,26 +138,20 @@ def build_possession_workflow_summary(db, game_id):
 
     relational_game_id = _resolve_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        assign_possessions_for_game(db, relational_game_id)
+        assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
 
     summary = get_possession_summary(db, game_id)
 
-    if relational_game_id is not None:
-        row = db.execute(
-            """SELECT COUNT(*) AS events_total,
+    from analysis_helpers import event_scope_sql
+
+    scope_sql, scope_params = event_scope_sql(db, game_id, alias="e")
+    row = db.execute(
+        f"""SELECT COUNT(*) AS events_total,
                       SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
-                 FROM events
-                WHERE relational_game_id = ?""",
-            (relational_game_id,),
-        ).fetchone()
-    else:
-        row = db.execute(
-            """SELECT COUNT(*) AS events_total,
-                      SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
-                 FROM events
-                WHERE game_id = ?""",
-            (str(game_id),),
-        ).fetchone()
+                 FROM events e
+                WHERE {scope_sql}""",
+        scope_params,
+    ).fetchone()
 
     events_total = row["events_total"] or 0
     events_linked = row["events_linked"] or 0
@@ -1927,7 +1921,22 @@ def _seed_event_types(db):
         )
 
 
-def assign_possessions_for_game(db, game_id):
+def _prune_orphan_possessions(db, possessions_gid, scope_sql, scope_params):
+    """Remove possession rows that are not linked to events in the current analysis scope."""
+    db.execute(
+        f"""DELETE FROM possessions
+             WHERE game_id = ?
+               AND id NOT IN (
+                     SELECT DISTINCT e.possession_id
+                       FROM events e
+                      WHERE {scope_sql}
+                        AND e.possession_id IS NOT NULL
+                   )""",
+        (possessions_gid, *scope_params),
+    )
+
+
+def assign_possessions_for_game(db, game_id, analysis_key=None):
     """Idempotent possession assignment for one game.
 
     Reads events for the game ordered by (timestamp_ms, id), creates
@@ -1937,22 +1946,48 @@ def assign_possessions_for_game(db, game_id):
     the NEW possession.  Consecutive boundary events merge into the same
     possession.
 
+    When analysis_key is provided, only events for that analysis run are
+    considered and stale possessions from prior reruns are pruned.
+
     Safe to call multiple times: existing possession_id values on events are
     checked first; existing possessions linked to this game are reused rather
     than duplicated.  Event facts (event_type, event_type_id, player,
     shot_result, timestamp_ms, review status) are never modified.
     """
-    # Collect events ordered by (timestamp_ms, id) — only those with a
-    # relational_game_id matching this game.
-    events = db.execute(
-        """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
-             FROM events e
-            WHERE e.relational_game_id = ?
-            ORDER BY e.timestamp_ms ASC, e.id ASC""",
-        (game_id,),
-    ).fetchall()
+    scope_sql = None
+    scope_params = ()
+    if analysis_key is not None:
+        from analysis_helpers import event_scope_sql
+
+        scope_sql, scope_params = event_scope_sql(db, analysis_key)
+        events = db.execute(
+            f"""SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
+                  FROM events e
+                 WHERE {scope_sql}
+                 ORDER BY e.timestamp_ms ASC, e.id ASC""",
+            scope_params,
+        ).fetchall()
+    else:
+        events = db.execute(
+            """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
+                 FROM events e
+                WHERE e.relational_game_id = ?
+                ORDER BY e.timestamp_ms ASC, e.id ASC""",
+            (game_id,),
+        ).fetchall()
 
     if not events:
+        if analysis_key is not None and scope_sql is not None:
+            out_of_scope_sql = scope_sql.replace("e.", "events.")
+            db.execute(
+                f"""UPDATE events
+                       SET possession_id = NULL
+                     WHERE relational_game_id = ?
+                       AND NOT ({out_of_scope_sql})""",
+                (game_id, *scope_params),
+            )
+            _prune_orphan_possessions(db, game_id, scope_sql, scope_params)
+            db.commit()
         return
 
     # Determine which event types are possession boundaries.
@@ -2013,8 +2048,19 @@ def assign_possessions_for_game(db, game_id):
 
         prev_was_boundary = is_boundary
 
+    if analysis_key is not None and scope_sql is not None:
+        out_of_scope_sql = scope_sql.replace("e.", "events.")
+        db.execute(
+            f"""UPDATE events
+                   SET possession_id = NULL
+                 WHERE relational_game_id = ?
+                   AND NOT ({out_of_scope_sql})""",
+            (game_id, *scope_params),
+        )
+        _prune_orphan_possessions(db, game_id, scope_sql, scope_params)
+
     from stats import score_possessions_for_game
-    score_possessions_for_game(db, game_id)
+    score_possessions_for_game(db, analysis_key or game_id)
 
 
 def _seed_base_module_entitlement(db, team_id):
