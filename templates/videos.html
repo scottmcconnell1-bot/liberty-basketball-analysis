@@ -284,7 +284,7 @@ async function loadVideos() {
           <a href="${filmToolHref(v)}" class="btn btn-primary btn-sm">Film Tool</a>
           <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
           ${rebuildAllowed(v) ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
-          ${!rebuildAllowed(v) && v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>` : ''}
+          ${v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video (required when Dets is very low)">Re-run AI</button>` : ''}
           <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
           <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
           <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
