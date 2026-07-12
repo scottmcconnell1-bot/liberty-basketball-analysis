@@ -36,15 +36,36 @@ def jersey_ocr_engine_status() -> dict:
     }
 
 
+def _accept_jersey_vote(
+    jersey: int,
+    confidence: float,
+    roster_by_jersey: dict | None,
+    *,
+    for_hints: bool = False,
+) -> bool:
+    """Reject noisy OCR reads (especially false #0) unless roster-backed and confident."""
+    jersey = int(jersey)
+    min_conf = float(0.35 if for_hints else 0.55)
+    on_roster = bool(roster_by_jersey) and jersey in roster_by_jersey
+    if jersey == 0:
+        if not on_roster:
+            return False
+        min_conf = max(min_conf, 0.60 if for_hints else 0.70)
+    return float(confidence) >= min_conf
+
+
 def suggest_cluster_jerseys(db, game_id, ai_settings=None):
     """Low-threshold OCR hints for coach review (not auto-applied)."""
     ai_settings = ai_settings or {}
     min_conf = float(ai_settings.get("jersey_ocr_suggest_min_confidence", 0.35))
+    roster_by_jersey, _ = _roster_jersey_index(db, game_id)
     return aggregate_cluster_jersey_votes(
         db,
         game_id,
         min_confidence=min_conf,
         min_samples=1,
+        roster_by_jersey=roster_by_jersey,
+        for_hints=True,
     )
 
 
@@ -101,8 +122,12 @@ def aggregate_cluster_jersey_votes(
     *,
     min_confidence: float = 0.55,
     min_samples: int = 3,
+    roster_by_jersey: dict | None = None,
+    for_hints: bool = False,
 ):
     """Majority vote jersey per court cluster from co-located OCR reads."""
+    if roster_by_jersey is None:
+        roster_by_jersey, _ = _roster_jersey_index(db, game_id)
     scope_sql, scope_params = _broad_detection_scope(db, game_id)
 
     rows = db.execute(
@@ -130,7 +155,21 @@ def aggregate_cluster_jersey_votes(
 
     suggestions = []
     for slot_id, votes in sorted(by_slot.items()):
-        top = votes[0]
+        filtered_votes = []
+        for vote in votes:
+            jersey = int(vote["jersey_number"])
+            confidence = float(vote["avg_confidence"])
+            if not _accept_jersey_vote(
+                jersey,
+                confidence,
+                roster_by_jersey,
+                for_hints=for_hints,
+            ):
+                continue
+            filtered_votes.append(vote)
+        if not filtered_votes:
+            continue
+        top = filtered_votes[0]
         if int(top["sample_count"]) < min_samples:
             continue
         suggestions.append({
@@ -145,7 +184,7 @@ def aggregate_cluster_jersey_votes(
                     "sample_count": int(v["sample_count"]),
                     "confidence": round(float(v["avg_confidence"]), 3),
                 }
-                for v in votes[1:3]
+                for v in filtered_votes[1:3]
             ],
         })
     return suggestions
@@ -157,8 +196,12 @@ def aggregate_track_jersey_votes(
     *,
     min_confidence: float = 0.55,
     min_samples: int = 3,
+    roster_by_jersey: dict | None = None,
+    for_hints: bool = False,
 ):
     """Majority vote jersey per ByteTrack tracker_id."""
+    if roster_by_jersey is None:
+        roster_by_jersey, _ = _roster_jersey_index(db, game_id)
     scope_sql, scope_params = _broad_detection_scope(db, game_id)
 
     rows = db.execute(
@@ -185,7 +228,21 @@ def aggregate_track_jersey_votes(
 
     suggestions = []
     for track_id, votes in sorted(by_track.items()):
-        top = votes[0]
+        filtered_votes = []
+        for vote in votes:
+            jersey = int(vote["jersey_number"])
+            confidence = float(vote["avg_confidence"])
+            if not _accept_jersey_vote(
+                jersey,
+                confidence,
+                roster_by_jersey,
+                for_hints=for_hints,
+            ):
+                continue
+            filtered_votes.append(vote)
+        if not filtered_votes:
+            continue
+        top = filtered_votes[0]
         if int(top["sample_count"]) < min_samples:
             continue
         suggestions.append({
@@ -200,7 +257,7 @@ def aggregate_track_jersey_votes(
                     "sample_count": int(v["sample_count"]),
                     "confidence": round(float(v["avg_confidence"]), 3),
                 }
-                for v in votes[1:3]
+                for v in filtered_votes[1:3]
             ],
         })
     return suggestions
@@ -336,6 +393,8 @@ def _build_auto_apply_mappings(suggestions, *, roster_by_jersey, use_roster_whit
         if item["confidence"] < min_conf or item["sample_count"] < min_samples:
             continue
         jersey = int(item["jersey_number"])
+        if not _accept_jersey_vote(jersey, item["confidence"], roster_by_jersey):
+            continue
         if use_roster_whitelist and jersey not in roster_by_jersey:
             continue
         if jersey in used_jerseys:

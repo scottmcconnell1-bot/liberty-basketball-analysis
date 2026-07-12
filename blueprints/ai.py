@@ -683,26 +683,166 @@ def apply_court_slots_api(game_id):
     return jsonify(result)
 
 
+def _run_scan_jerseys_worker(
+    app,
+    *,
+    run_id: int,
+    analysis_key: str,
+) -> None:
+    """Background worker: full jersey OCR scan and auto-apply roster mappings."""
+    with app.app_context():
+        db = get_db()
+        try:
+            from settings_store import load_all_settings, AI_DEFAULTS
+            from stats import refresh_stats
+            from track_identity import scan_and_apply_jerseys
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_step='jersey_scan:running'
+                   WHERE id=?""",
+                (run_id,),
+            )
+            db.commit()
+
+            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            result = scan_and_apply_jerseys(db, analysis_key, ai_settings)
+            status_code = result.pop("status_code", None)
+            if status_code:
+                raise RuntimeError(result.get("error") or "Jersey scan failed")
+
+            refresh_stats(db, analysis_key)
+            mapped = result.get("slots_mapped") or (result.get("auto_apply") or {}).get("applied", 0)
+            reads = result.get("ocr_read_count", 0)
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_step='jersey_scan:done',
+                       error_message=NULL
+                   WHERE id=?""",
+                (run_id,),
+            )
+            db.commit()
+            app.logger.info(
+                "Jersey scan finished for %s: %s mapped, %s reads",
+                analysis_key,
+                mapped,
+                reads,
+            )
+        except Exception as exc:
+            app.logger.exception("Jersey scan failed for %s", analysis_key)
+            from helpers import format_exception_message
+
+            db.execute(
+                """UPDATE analysis_runs
+                   SET progress_step=?
+                   WHERE id=?""",
+                (f"jersey_scan:failed:{format_exception_message(exc)}"[:500], run_id),
+            )
+            db.commit()
+        finally:
+            db.close()
+
+
 @ai_bp.route("/api/court-slots/<game_id>/scan-jerseys", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def scan_jerseys_api(game_id):
     """Run full jersey OCR on the video and auto-apply roster mappings."""
-    from settings_store import load_all_settings, AI_DEFAULTS
-    from stats import refresh_stats
-    from track_identity import scan_and_apply_jerseys
+    try:
+        from settings_store import load_all_settings, AI_DEFAULTS
+        from track_identity import jersey_ocr_engine_status, scan_and_apply_jerseys
 
-    db = get_db()
-    row = resolve_analysis_run_for_progress(db, game_id)
-    if row and row["analysis_key"]:
-        game_id = row["analysis_key"]
+        db = get_db()
+        row = resolve_analysis_run_for_progress(db, game_id)
+        if row and row["analysis_key"]:
+            game_id = row["analysis_key"]
 
-    ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-    result = scan_and_apply_jerseys(db, game_id, ai_settings)
-    status_code = result.pop("status_code", None)
-    if status_code:
-        return jsonify(result), status_code
-    refresh_stats(db, game_id)
-    return jsonify(result)
+        engines = jersey_ocr_engine_status()
+        if not engines.get("easyocr") and not engines.get("paddleocr"):
+            return jsonify({
+                "error": "No OCR engine installed. Run: py -3.12 -m pip install easyocr",
+                "ocr_engines": engines,
+                "code": "ocr_unavailable",
+            }), 400
+
+        if row is None:
+            return jsonify({
+                "error": "No analysis run found for this game.",
+                "game_id": game_id,
+                "code": "no_analysis_run",
+            }), 404
+
+        progress_step = (row["progress_step"] or "").strip()
+        if row["status"] in {"running", "pending"}:
+            return jsonify({
+                "error": "Analysis is already running. Wait until it finishes, then scan jerseys.",
+                "code": "analysis_running",
+                "analysis_key": game_id,
+            }), 409
+        if progress_step == "jersey_scan:running":
+            return jsonify({
+                "status": "jersey_scan_running",
+                "analysis_key": game_id,
+                "message": "Jersey scan is already running in the background.",
+            }), 202
+
+        ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+        from analysis_helpers import resolve_analysis_game_context
+
+        context = resolve_analysis_game_context(db, game_id)
+        video_path = context.get("video_path")
+        if not video_path:
+            return jsonify({
+                "error": "Video file path not found for this analysis. Re-link the video or re-run AI.",
+                "game_id": game_id,
+                "code": "no_video",
+            }), 400
+
+        # Quick path for tests/small scans when explicitly requested.
+        if request.args.get("sync") == "1":
+            result = scan_and_apply_jerseys(db, game_id, ai_settings, video_path=video_path)
+            status_code = result.pop("status_code", None)
+            if status_code:
+                return jsonify(result), status_code
+            from stats import refresh_stats
+            refresh_stats(db, game_id)
+            return jsonify(result)
+
+        db.execute(
+            """UPDATE analysis_runs
+               SET progress_step='jersey_scan:running'
+               WHERE id=?""",
+            (row["id"],),
+        )
+        db.commit()
+
+        app = current_app._get_current_object()
+        thread = threading.Thread(
+            target=_run_scan_jerseys_worker,
+            kwargs={
+                "app": app,
+                "run_id": row["id"],
+                "analysis_key": game_id,
+            },
+            daemon=True,
+            name=f"scan-jerseys-{row['id']}",
+        )
+        thread.start()
+
+        return jsonify({
+            "status": "jersey_scan_started",
+            "analysis_key": game_id,
+            "message": (
+                "Jersey scan started in the background. OCR on long games can take several minutes — "
+                "this page will refresh when it finishes."
+            ),
+            "ocr_engines": engines,
+        }), 202
+    except Exception as exc:
+        current_app.logger.exception("Could not start jersey scan for %s", game_id)
+        return jsonify({
+            "error": str(exc),
+            "code": "jersey_scan_start_failed",
+        }), 500
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/scan-jerseys", methods=["POST"])

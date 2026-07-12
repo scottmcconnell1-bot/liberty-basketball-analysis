@@ -135,14 +135,14 @@
       <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
         Jersey numbers are read automatically from the video via OCR and matched to your roster.
-        Only edit a row here if the AI mis-identified a player.
+        Only edit a row here if the AI mis-identified a player. You do not need to map every track manually.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
         <table id="slot-mapping-table" style="margin-bottom:12px;">
           <thead>
             <tr>
-              <th>Court slot</th>
+              <th>Player track</th>
               <th class="num">Min</th>
               <th>Roster player</th>
               <th>Jersey #</th>
@@ -298,14 +298,37 @@ const STAT_COLUMNS = {
   fga: 'fga',
 };
 
+async function parseJsonResponse(resp) {
+  const contentType = resp.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return resp.json();
+  }
+  const text = await resp.text();
+  const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 180);
+  throw new Error(
+    'Server returned HTML instead of JSON (HTTP ' + resp.status + '). '
+    + (snippet || 'Empty response')
+  );
+}
+
 function slotLabel(id, row) {
   if (row && row.mapped_label) return row.mapped_label;
   if (row && row.player_name && row.jersey_number != null) return '#' + row.jersey_number + ' ' + row.player_name;
   if (row && row.name) return row.name;
   if (row && row.jersey_number != null) return '#' + row.jersey_number;
   if (row && row.player_name) return row.player_name;
-  if (id === null || id === undefined || id === '') return 'Unknown';
-  return 'Pos ' + id;
+  if (id === null || id === undefined || id === '') return 'Unidentified';
+  return 'Unidentified';
+}
+
+function courtSlotDisplayLabel(slot) {
+  if (slot.mapped_label) return slot.mapped_label;
+  if (slot.jersey_number != null && slot.player_name) {
+    return '#' + slot.jersey_number + ' ' + slot.player_name;
+  }
+  if (slot.jersey_number != null) return '#' + slot.jersey_number;
+  if (slot.ocr_suggested_jersey != null) return 'Unidentified (OCR hint #' + slot.ocr_suggested_jersey + ')';
+  return 'Unidentified';
 }
 
 function playerDisplayName(row, pid, meta) {
@@ -336,7 +359,7 @@ async function regenerateEventsFromResults(videoId) {
   if (!confirm('Rebuild events from saved detections? This is faster than a full AI re-run.')) return;
   try {
     const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
     alert(data.message || 'Events regenerated. Refreshing results…');
     loadResults();
@@ -848,7 +871,7 @@ function renderSlotMappingTable() {
       ? ' <span style="color:var(--orange);font-size:.75rem;">OCR hint: #' + suggestedJersey + '</span>'
       : '';
     html += '<tr data-tracker-id="' + slot.tracker_id + '">';
-    html += '<td><strong>Pos ' + slot.tracker_id + '</strong>' + hintLabel + '</td>';
+    html += '<td><strong>' + escapeHtml(courtSlotDisplayLabel(slot)) + '</strong>' + hintLabel + '</td>';
     html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
     html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
     html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + jerseyValue + '"></td>';
@@ -925,7 +948,7 @@ async function applyRosterNamesToStats() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Could not apply roster names');
     if (status) {
       status.style.color = 'var(--green)';
@@ -945,13 +968,38 @@ async function applyRosterNamesToStats() {
 
 document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
 
+async function pollJerseyScanProgress() {
+  const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('scanJerseysBtn');
+  const started = Date.now();
+  while (true) {
+    await sleep(2000);
+    const resp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    const data = await parseJsonResponse(resp);
+    const step = String(data.progress_step || '');
+    if (step === 'jersey_scan:running') {
+      const elapsed = Math.round((Date.now() - started) / 1000);
+      if (status) {
+        status.style.display = 'block';
+        status.style.color = 'var(--muted)';
+        status.textContent = 'Scanning jersey numbers from video (OCR)… ' + elapsed + 's elapsed';
+      }
+      continue;
+    }
+    if (step.startsWith('jersey_scan:failed:')) {
+      throw new Error(step.slice('jersey_scan:failed:'.length) || 'Jersey scan failed');
+    }
+    break;
+  }
+}
+
 async function scanJerseysFromVideo() {
   const status = document.getElementById('slot-mapping-status');
   const btn = document.getElementById('scanJerseysBtn');
   if (status) {
     status.style.display = 'block';
     status.style.color = 'var(--muted)';
-    status.textContent = 'Scanning jersey numbers from video (OCR)… this may take several minutes.';
+    status.textContent = 'Starting jersey scan (OCR)…';
   }
   if (btn) btn.disabled = true;
   try {
@@ -959,8 +1007,27 @@ async function scanJerseysFromVideo() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Jersey scan failed');
+    if (resp.status === 202 || data.status === 'jersey_scan_started' || data.status === 'jersey_scan_running') {
+      if (status) {
+        status.textContent = 'Scanning jersey numbers from video (OCR)… this may take several minutes.';
+      }
+      await pollJerseyScanProgress();
+      await loadSlotMappingUI();
+      const slotsResp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID));
+      const slotsData = slotsResp.ok ? await parseJsonResponse(slotsResp) : {};
+      const mapped = (slotsData.slots || []).filter(function(slot) { return slot.is_mapped; }).length;
+      const reads = slotsData.ocr_hints ? slotsData.ocr_hints.length : 0;
+      if (status) {
+        status.style.color = mapped > 0 ? 'var(--green)' : 'var(--orange)';
+        status.textContent = mapped > 0
+          ? ('OCR mapped ' + mapped + ' players. Refreshing stats…')
+          : ('OCR finished but could not auto-map players yet. Fix any obvious mistakes below.');
+      }
+      if (mapped > 0) await loadResults();
+      return;
+    }
     const mapped = data.slots_mapped || data.auto_apply?.applied || 0;
     const reads = data.ocr_read_count || 0;
     if (status) {
@@ -1005,10 +1072,10 @@ async function loadSlotMappingUI() {
       fetch('/api/analysis/' + encodeURIComponent(GAME_ID) + '/roster'),
     ]);
     if (!slotsResp.ok) return;
-    const slotsData = await slotsResp.json();
+    const slotsData = await parseJsonResponse(slotsResp);
     COURT_SLOTS = slotsData.slots || [];
     if (rosterResp.ok) {
-      const rosterData = await rosterResp.json();
+      const rosterData = await parseJsonResponse(rosterResp);
       ROSTER_PLAYERS = rosterData.players || [];
       EXPLORER_PLAYERS = ROSTER_PLAYERS.slice();
       const status = document.getElementById('slot-mapping-status');
@@ -1078,7 +1145,7 @@ async function saveSlotMappings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mappings: mappings, apply_to_events: true }),
     });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Save failed');
     if (status) {
       status.style.color = 'var(--green)';
@@ -1119,7 +1186,7 @@ function populateExplorerPlayerFilter() {
   let html = '<option value="">All players</option>';
   const seen = new Set();
   COURT_SLOTS.forEach(function(slot) {
-    const label = slot.mapped_label || ('Pos ' + slot.tracker_id);
+    const label = slot.mapped_label || courtSlotDisplayLabel(slot);
     if (!seen.has(label)) {
       seen.add(label);
       html += '<option value="' + escapeHtml(label) + '" data-tracker="' + slot.tracker_id + '">' + escapeHtml(label) + '</option>';

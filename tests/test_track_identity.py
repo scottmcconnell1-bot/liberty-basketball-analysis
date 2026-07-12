@@ -393,3 +393,71 @@ def test_ocr_jerseys_for_game_runs_cluster_and_event_scans(db, monkeypatch, tmp_
     assert result["skipped"] is False
     assert calls["cluster"] == 1
     assert calls["event"] == 1
+
+
+def test_aggregate_cluster_jersey_votes_rejects_false_zero(db):
+    from track_identity import aggregate_cluster_jersey_votes
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'jersey-zero-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_jersey_zero"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/zero.mp4"),
+    )
+    for i in range(4):
+        db.execute(
+            """INSERT INTO detections
+                  (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                   confidence, x_center, y_center, width, height, tracker_id,
+                   player_cluster, jersey_read, jersey_confidence)
+               VALUES (?, ?, ?, ?, 'person', 0.9, 100, 200, 40, 80, ?, 0, 0, 0.80)""",
+            (analysis_key, game_id, 10 + i, 100 + i * 33, i),
+        )
+    db.commit()
+
+    suggestions = aggregate_cluster_jersey_votes(
+        db,
+        analysis_key,
+        min_confidence=0.5,
+        min_samples=1,
+        roster_by_jersey={},
+        for_hints=True,
+    )
+    assert suggestions == []
+
+
+def test_aggregate_cluster_jersey_votes_accepts_roster_zero(db):
+    from track_identity import aggregate_cluster_jersey_votes
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'roster-zero-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_roster_zero"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/roster-zero.mp4"),
+    )
+    for i in range(4):
+        db.execute(
+            """INSERT INTO detections
+                  (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                   confidence, x_center, y_center, width, height, tracker_id,
+                   player_cluster, jersey_read, jersey_confidence)
+               VALUES (?, ?, ?, ?, 'person', 0.9, 100, 200, 40, 80, 0, 0, 0, 0.85)""",
+            (analysis_key, game_id, 10 + i, 100 + i * 33),
+        )
+    db.commit()
+
+    roster = {0: {"jersey_number": 0, "name": "Caleb Henrickson"}}
+    suggestions = aggregate_cluster_jersey_votes(
+        db,
+        analysis_key,
+        min_confidence=0.5,
+        min_samples=1,
+        roster_by_jersey=roster,
+        for_hints=True,
+    )
+    assert len(suggestions) == 1
+    assert suggestions[0]["jersey_number"] == 0
