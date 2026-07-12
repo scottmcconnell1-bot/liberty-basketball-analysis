@@ -115,6 +115,22 @@ def close_db(exception):
         db.close()
 
 
+# ── API JSON errors (avoid HTML error pages on /api/* routes) ─
+@app.errorhandler(404)
+def handle_not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Not found", "path": request.path}), 404
+    return e
+
+
+@app.errorhandler(500)
+def handle_server_error(e):
+    if request.path.startswith("/api/"):
+        app.logger.exception("API 500 on %s", request.path)
+        return jsonify({"error": "Internal server error", "path": request.path}), 500
+    return e
+
+
 # ── Auth Middleware ───────────────────────────────────────────
 @app.before_request
 def require_auth_for_api():

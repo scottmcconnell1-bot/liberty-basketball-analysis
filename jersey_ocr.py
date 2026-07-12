@@ -11,6 +11,26 @@ _PADDLE_ENGINE = None
 _PADDLE_UNAVAILABLE = False
 
 
+def ocr_packages_available() -> dict:
+    """Fast check: is the OCR Python package installed (does not load ML weights)."""
+    from helpers import module_available
+
+    return {
+        "easyocr": module_available("easyocr") and not _OCR_UNAVAILABLE,
+        "paddleocr": module_available("paddleocr") and not _PADDLE_UNAVAILABLE,
+    }
+
+
+def jersey_ocr_engine_status() -> dict:
+    """Report OCR backend availability without loading EasyOCR/Paddle weights."""
+    packages = ocr_packages_available()
+    return {
+        **packages,
+        "easyocr_loaded": _OCR_ENGINE is not None,
+        "paddleocr_loaded": _PADDLE_ENGINE is not None,
+    }
+
+
 def _get_ocr_engine():
     global _OCR_ENGINE, _OCR_UNAVAILABLE
     if _OCR_UNAVAILABLE:

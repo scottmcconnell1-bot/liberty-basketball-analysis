@@ -748,26 +748,19 @@ def _run_scan_jerseys_worker(
 def scan_jerseys_api(game_id):
     """Run full jersey OCR on the video and auto-apply roster mappings."""
     try:
-        from settings_store import load_all_settings, AI_DEFAULTS
         from track_identity import jersey_ocr_engine_status, scan_and_apply_jerseys
+        from settings_store import load_all_settings, AI_DEFAULTS
 
         db = get_db()
         row = resolve_analysis_run_for_progress(db, game_id)
+        resolved_key = game_id
         if row and row["analysis_key"]:
-            game_id = row["analysis_key"]
-
-        engines = jersey_ocr_engine_status()
-        if not engines.get("easyocr") and not engines.get("paddleocr"):
-            return jsonify({
-                "error": "No OCR engine installed. Run: py -3.12 -m pip install easyocr",
-                "ocr_engines": engines,
-                "code": "ocr_unavailable",
-            }), 400
+            resolved_key = row["analysis_key"]
 
         if row is None:
             return jsonify({
                 "error": "No analysis run found for this game.",
-                "game_id": game_id,
+                "game_id": resolved_key,
                 "code": "no_analysis_run",
             }), 404
 
@@ -776,37 +769,44 @@ def scan_jerseys_api(game_id):
             return jsonify({
                 "error": "Analysis is already running. Wait until it finishes, then scan jerseys.",
                 "code": "analysis_running",
-                "analysis_key": game_id,
+                "analysis_key": resolved_key,
             }), 409
         if progress_step == "jersey_scan:running":
             return jsonify({
                 "status": "jersey_scan_running",
-                "analysis_key": game_id,
+                "analysis_key": resolved_key,
                 "message": "Jersey scan is already running in the background.",
             }), 202
 
-        ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-        from analysis_helpers import resolve_analysis_game_context
-
-        context = resolve_analysis_game_context(db, game_id)
-        video_path = context.get("video_path")
-        if not video_path:
-            return jsonify({
-                "error": "Video file path not found for this analysis. Re-link the video or re-run AI.",
-                "game_id": game_id,
-                "code": "no_video",
-            }), 400
-
         # Quick path for tests/small scans when explicitly requested.
         if request.args.get("sync") == "1":
-            result = scan_and_apply_jerseys(db, game_id, ai_settings, video_path=video_path)
+            engines = jersey_ocr_engine_status()
+            if not engines.get("easyocr") and not engines.get("paddleocr"):
+                return jsonify({
+                    "error": "No OCR engine installed. Run: py -3.12 -m pip install easyocr",
+                    "ocr_engines": engines,
+                    "code": "ocr_unavailable",
+                }), 400
+            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+            from analysis_helpers import resolve_analysis_game_context
+
+            context = resolve_analysis_game_context(db, resolved_key)
+            video_path = context.get("video_path")
+            if not video_path:
+                return jsonify({
+                    "error": "Video file path not found for this analysis. Re-link the video or re-run AI.",
+                    "game_id": resolved_key,
+                    "code": "no_video",
+                }), 400
+            result = scan_and_apply_jerseys(db, resolved_key, ai_settings, video_path=video_path)
             status_code = result.pop("status_code", None)
             if status_code:
                 return jsonify(result), status_code
             from stats import refresh_stats
-            refresh_stats(db, game_id)
+            refresh_stats(db, resolved_key)
             return jsonify(result)
 
+        # Return immediately — EasyOCR model load + video OCR can take many minutes.
         db.execute(
             """UPDATE analysis_runs
                SET progress_step='jersey_scan:running'
@@ -821,19 +821,20 @@ def scan_jerseys_api(game_id):
             kwargs={
                 "app": app,
                 "run_id": row["id"],
-                "analysis_key": game_id,
+                "analysis_key": resolved_key,
             },
             daemon=True,
             name=f"scan-jerseys-{row['id']}",
         )
         thread.start()
 
+        engines = jersey_ocr_engine_status()
         return jsonify({
             "status": "jersey_scan_started",
-            "analysis_key": game_id,
+            "analysis_key": resolved_key,
             "message": (
-                "Jersey scan started in the background. OCR on long games can take several minutes — "
-                "this page will refresh when it finishes."
+                "Jersey scan started in the background. Loading OCR models and scanning the video "
+                "can take several minutes on long games — this page will refresh when it finishes."
             ),
             "ocr_engines": engines,
         }), 202

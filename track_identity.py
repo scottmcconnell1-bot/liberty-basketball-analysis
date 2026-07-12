@@ -28,12 +28,9 @@ def _broad_detection_scope(db, game_id, alias="d"):
 
 def jersey_ocr_engine_status() -> dict:
     """Report whether OCR backends are available in this Python environment."""
-    from jersey_ocr import _get_ocr_engine, _get_paddle_engine
+    from jersey_ocr import jersey_ocr_engine_status as _engine_status
 
-    return {
-        "easyocr": _get_ocr_engine() is not None,
-        "paddleocr": _get_paddle_engine() is not None,
-    }
+    return _engine_status()
 
 
 def _accept_jersey_vote(

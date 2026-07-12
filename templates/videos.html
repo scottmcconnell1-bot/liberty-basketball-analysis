@@ -310,16 +310,21 @@ loadVideos();
 setInterval(loadVideos, 10000);
 
 async function parseJsonResponse(resp) {
-  const contentType = resp.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    return resp.json();
-  }
   const text = await resp.text();
-  const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 180);
-  throw new Error(
-    'Server returned HTML instead of JSON (HTTP ' + resp.status + '). '
-    + (snippet || 'Empty response')
-  );
+  const trimmed = (text || '').trim();
+  if (!trimmed) {
+    if (!resp.ok) throw new Error('Empty response (HTTP ' + resp.status + ')');
+    return {};
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (parseErr) {
+    const snippet = trimmed.replace(/\s+/g, ' ').slice(0, 180);
+    const htmlHint = snippet.toLowerCase().startsWith('<!doctype') || snippet.startsWith('<')
+      ? 'Server returned an HTML error page instead of JSON. '
+      : '';
+    throw new Error(htmlHint + '(HTTP ' + resp.status + ') ' + snippet);
+  }
 }
 
 async function regenerateEvents(videoId) {
