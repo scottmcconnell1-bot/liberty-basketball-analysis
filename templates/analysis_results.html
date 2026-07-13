@@ -154,6 +154,7 @@
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
       <button type="button" class="btn btn-primary btn-sm" id="scanJerseysBtn" style="margin-left:8px;">Scan jerseys (OCR)</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="resetJerseyScanBtn" style="margin-left:8px;display:none;">Reset stuck scan</button>
       <button type="button" class="btn btn-secondary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Re-apply roster to stats</button>
     </div>
 
@@ -287,6 +288,39 @@ let ANALYSIS_TEAMS = null;
 let EXPLORER_PLAYERS = [];
 let PLAYER_LABELS = {};
 let autoApplyAttempted = false;
+const JERSEY_SCAN_MAX_WAIT_MS = (2 * 60 * 60 + 5 * 60) * 1000; // 2h 5m client guard
+
+function formatElapsed(seconds) {
+  const total = Math.max(0, Math.round(seconds || 0));
+  if (total < 60) return total + 's';
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  if (mins < 60) return mins + 'm ' + secs + 's';
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return hours + 'h ' + remMins + 'm';
+}
+
+function jerseyScanStepIsActive(step) {
+  return step === 'jersey_scan:running'
+    || step === 'jersey_scan:loading'
+    || step.startsWith('jersey_scan:running:')
+    || step.startsWith('jersey_scan:loading:');
+}
+
+function jerseyScanElapsedSeconds(progressData) {
+  const scan = progressData && progressData.jersey_scan;
+  if (scan && scan.started_at) {
+    return Math.max(0, Math.floor(Date.now() / 1000) - Number(scan.started_at));
+  }
+  return null;
+}
+
+function setJerseyScanResetVisible(show) {
+  const btn = document.getElementById('resetJerseyScanBtn');
+  if (btn) btn.style.display = show ? 'inline-block' : 'none';
+}
+
 const STAT_COLUMNS = {
   reb: 'reb',
   ast: 'ast',
@@ -975,26 +1009,66 @@ document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRo
 
 async function pollJerseyScanProgress() {
   const status = document.getElementById('slot-mapping-status');
-  const btn = document.getElementById('scanJerseysBtn');
-  const started = Date.now();
+  const pollStarted = Date.now();
   while (true) {
     await sleep(2000);
+    if (Date.now() - pollStarted > JERSEY_SCAN_MAX_WAIT_MS) {
+      setJerseyScanResetVisible(true);
+      throw new Error(
+        'Jersey scan is taking too long (over 2 hours). Click Reset stuck scan, then try Scan jerseys again.'
+      );
+    }
     const resp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
     const data = await parseJsonResponse(resp);
     const step = String(data.progress_step || '');
-    if (step === 'jersey_scan:running') {
-      const elapsed = Math.round((Date.now() - started) / 1000);
+    if (step === 'jersey_scan:done') break;
+    if (step.startsWith('jersey_scan:failed:')) {
+      setJerseyScanResetVisible(true);
+      throw new Error(step.slice('jersey_scan:failed:'.length) || 'Jersey scan failed');
+    }
+    if (jerseyScanStepIsActive(step)) {
+      const elapsed = jerseyScanElapsedSeconds(data) ?? Math.round((Date.now() - pollStarted) / 1000);
+      const phase = (data.jersey_scan && data.jersey_scan.phase === 'loading')
+        ? 'Loading OCR models'
+        : 'Scanning jersey numbers';
       if (status) {
         status.style.display = 'block';
         status.style.color = 'var(--muted)';
-        status.textContent = 'Scanning jersey numbers from video (OCR)… ' + elapsed + 's elapsed';
+        status.textContent = phase + ' from video… ' + formatElapsed(elapsed) + ' elapsed';
       }
+      if (elapsed > 30 * 60) setJerseyScanResetVisible(true);
       continue;
     }
-    if (step.startsWith('jersey_scan:failed:')) {
-      throw new Error(step.slice('jersey_scan:failed:'.length) || 'Jersey scan failed');
-    }
     break;
+  }
+  setJerseyScanResetVisible(false);
+}
+
+async function resetJerseyScan() {
+  const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('resetJerseyScanBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/reset-jersey-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await parseJsonResponse(resp);
+    if (!resp.ok) throw new Error(data.error || 'Could not reset jersey scan');
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--green)';
+      status.textContent = data.message || 'Cleared stuck jersey scan. You can scan again.';
+    }
+    setJerseyScanResetVisible(false);
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not reset jersey scan: ' + err.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -1051,12 +1125,16 @@ async function scanJerseysFromVideo() {
     } else {
       alert(err.message || 'Jersey scan failed.');
     }
+    if (/reset|timed out|interrupted/i.test(err.message || '')) {
+      setJerseyScanResetVisible(true);
+    }
   } finally {
     if (btn) btn.disabled = false;
   }
 }
 
 document.getElementById('scanJerseysBtn')?.addEventListener('click', scanJerseysFromVideo);
+document.getElementById('resetJerseyScanBtn')?.addEventListener('click', resetJerseyScan);
 
 async function maybeAutoScanJerseys(identity) {
   if (!identity) return;
@@ -1066,6 +1144,20 @@ async function maybeAutoScanJerseys(identity) {
   const engines = identity.ocr_engines || {};
   if (reads > 0 || (!engines.easyocr && !engines.paddleocr)) return;
   if (window.__jerseyScanStarted) return;
+  try {
+    const progressResp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    if (progressResp.ok) {
+      const progressData = await parseJsonResponse(progressResp);
+      const step = String(progressData.progress_step || '');
+      if (jerseyScanStepIsActive(step)) return;
+      if (step.startsWith('jersey_scan:failed:')) {
+        setJerseyScanResetVisible(true);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Jersey scan progress check failed', err);
+  }
   window.__jerseyScanStarted = true;
   await scanJerseysFromVideo();
 }
@@ -1108,6 +1200,31 @@ async function loadSlotMappingUI() {
     }
     renderSlotMappingTable();
     populateExplorerPlayerFilter();
+    try {
+      const progressResp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+      if (progressResp.ok) {
+        const progressData = await parseJsonResponse(progressResp);
+        const step = String(progressData.progress_step || '');
+        const status = document.getElementById('slot-mapping-status');
+        if (step.startsWith('jersey_scan:failed:')) {
+          setJerseyScanResetVisible(true);
+          if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--red)';
+            status.textContent = step.slice('jersey_scan:failed:'.length);
+          }
+        } else if (jerseyScanStepIsActive(step)) {
+          setJerseyScanResetVisible(true);
+          if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--orange)';
+            status.textContent = 'A jersey scan may still be marked running. Click Reset stuck scan, then Scan jerseys again.';
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Jersey scan status check failed', err);
+    }
     if (ROSTER_PLAYERS.length && statsUsePositionClusters(BASIC_STATS_ROWS) && !autoApplyAttempted) {
       autoApplyAttempted = true;
       await applyRosterNamesToStats();

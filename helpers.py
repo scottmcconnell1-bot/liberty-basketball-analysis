@@ -1344,6 +1344,109 @@ def _is_sync_event_rebuild_step(progress_step: str | None) -> bool:
     )
 
 
+JERSEY_SCAN_MAX_AGE_SECONDS = 2 * 60 * 60  # 2 hours — OCR should finish well before this
+
+
+def jersey_scan_running_step(*, phase: str = "running") -> str:
+    """Persist jersey-scan state with a start timestamp for stale detection."""
+    import time
+
+    phase_key = "loading" if phase == "loading" else "running"
+    return f"jersey_scan:{phase_key}:{int(time.time())}"
+
+
+def parse_jersey_scan_step(progress_step: str | None) -> dict:
+    """Parse jersey_scan:* progress_step values."""
+    step = (progress_step or "").strip()
+    if not step.startswith("jersey_scan:"):
+        return {"active": False, "phase": None, "started_at": None, "message": None}
+    if step == "jersey_scan:done":
+        return {"active": False, "phase": "done", "started_at": None, "message": None}
+    if step.startswith("jersey_scan:failed:"):
+        return {
+            "active": False,
+            "phase": "failed",
+            "started_at": None,
+            "message": step[len("jersey_scan:failed:"):],
+        }
+    if step in {"jersey_scan:running", "jersey_scan:loading"}:
+        return {"active": True, "phase": step.split(":")[-1], "started_at": None, "message": None}
+    parts = step.split(":")
+    if len(parts) >= 3 and parts[1] in {"running", "loading"}:
+        started_at = int(parts[2]) if str(parts[2]).isdigit() else None
+        detail = ":".join(parts[3:]) if len(parts) > 3 else None
+        return {
+            "active": True,
+            "phase": parts[1],
+            "started_at": started_at,
+            "message": detail,
+        }
+    return {"active": False, "phase": None, "started_at": None, "message": None}
+
+
+def is_jersey_scan_active(progress_step: str | None) -> bool:
+    return parse_jersey_scan_step(progress_step).get("active") is True
+
+
+def clear_jersey_scan_progress(db, run_id: int) -> None:
+    db.execute(
+        "UPDATE analysis_runs SET progress_step='' WHERE id=?",
+        (run_id,),
+    )
+    db.commit()
+
+
+def mark_jersey_scan_failed(db, run_id: int, message: str) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET progress_step=?
+           WHERE id=?""",
+        (f"jersey_scan:failed:{message}"[:500], run_id),
+    )
+    db.commit()
+
+
+def reconcile_stuck_jersey_scan(db, game_id: str, *, max_age_seconds: int | None = None) -> bool:
+    """Clear jersey OCR progress that outlived the worker (restart/timeout)."""
+    import time
+
+    row = db.execute(
+        """SELECT id, progress_step
+           FROM analysis_runs
+           WHERE analysis_key=?
+           ORDER BY id DESC
+           LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if not row:
+        return False
+
+    parsed = parse_jersey_scan_step(row["progress_step"])
+    if not parsed.get("active"):
+        return False
+
+    max_age = JERSEY_SCAN_MAX_AGE_SECONDS if max_age_seconds is None else max_age_seconds
+    started_at = parsed.get("started_at")
+    if started_at is None:
+        mark_jersey_scan_failed(
+            db,
+            row["id"],
+            "Jersey scan was interrupted (server restarted or browser left open). "
+            "Click Scan jerseys to retry.",
+        )
+        return True
+
+    age_seconds = max(0, int(time.time()) - int(started_at))
+    if age_seconds > max_age:
+        mark_jersey_scan_failed(
+            db,
+            row["id"],
+            f"Jersey scan timed out after {max_age // 60} minutes. Click Scan jerseys to retry.",
+        )
+        return True
+    return False
+
+
 def heal_failed_analysis_run_with_events(db, game_id: str) -> bool:
     """Upgrade failed runs that already produced events (stale watchdog false positive)."""
     columns = {row[1] for row in db.execute("PRAGMA table_info(analysis_runs)").fetchall()}

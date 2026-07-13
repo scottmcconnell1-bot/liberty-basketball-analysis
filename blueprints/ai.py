@@ -47,6 +47,13 @@ from helpers import (
     validate_video_for_analysis,
     validate_ai_models_for_analysis,
     reconcile_stuck_analysis_run,
+    reconcile_stuck_jersey_scan,
+    is_jersey_scan_active,
+    jersey_scan_running_step,
+    parse_jersey_scan_step,
+    clear_jersey_scan_progress,
+    mark_jersey_scan_failed,
+    JERSEY_SCAN_MAX_AGE_SECONDS,
     heal_failed_analysis_run_with_events,
     ai_analysis_log_path,
     count_detections_for_analysis, count_events_for_analysis,
@@ -54,6 +61,25 @@ from helpers import (
 )
 
 ai_bp = Blueprint("ai", __name__)
+
+_JERSEY_SCAN_LOCK = threading.Lock()
+_JERSEY_SCAN_THREADS: dict[int, threading.Thread] = {}
+
+
+def _jersey_scan_thread_alive(run_id: int) -> bool:
+    with _JERSEY_SCAN_LOCK:
+        thread = _JERSEY_SCAN_THREADS.get(run_id)
+        return thread is not None and thread.is_alive()
+
+
+def _register_jersey_scan_thread(run_id: int, thread: threading.Thread) -> None:
+    with _JERSEY_SCAN_LOCK:
+        _JERSEY_SCAN_THREADS[run_id] = thread
+
+
+def _unregister_jersey_scan_thread(run_id: int) -> None:
+    with _JERSEY_SCAN_LOCK:
+        _JERSEY_SCAN_THREADS.pop(run_id, None)
 
 
 def _format_team_level_label(level, gender):
@@ -288,6 +314,7 @@ def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
     db = get_db()
     reconcile_stuck_analysis_run(db, game_id)
+    reconcile_stuck_jersey_scan(db, game_id)
     row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({"status": "not_started", "progress_pct": 0, "progress_step": ""})
@@ -295,6 +322,7 @@ def get_analysis_progress(game_id):
     error_message = row["error_message"]
     if is_superseded_analysis_run(row):
         error_message = None
+    jersey_scan = parse_jersey_scan_step(row["progress_step"])
     return jsonify({
         "status": row["status"],
         "analysis_key": progress_game_id,
@@ -304,6 +332,8 @@ def get_analysis_progress(game_id):
         "log_path": ai_analysis_log_path(progress_game_id),
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
+        "jersey_scan": jersey_scan,
+        "jersey_scan_max_age_seconds": JERSEY_SCAN_MAX_AGE_SECONDS,
         "detection_count": db.execute(
             """SELECT COUNT(*) AS c FROM detections d
                WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
@@ -690,57 +720,62 @@ def _run_scan_jerseys_worker(
     analysis_key: str,
 ) -> None:
     """Background worker: full jersey OCR scan and auto-apply roster mappings."""
-    with app.app_context():
-        db = get_db()
-        try:
-            from settings_store import load_all_settings, AI_DEFAULTS
-            from stats import refresh_stats
-            from track_identity import scan_and_apply_jerseys
+    try:
+        with app.app_context():
+            db = get_db()
+            try:
+                from settings_store import load_all_settings, AI_DEFAULTS
+                from stats import refresh_stats
+                from track_identity import scan_and_apply_jerseys
 
-            db.execute(
-                """UPDATE analysis_runs
-                   SET progress_step='jersey_scan:running'
-                   WHERE id=?""",
-                (run_id,),
-            )
-            db.commit()
+                db.execute(
+                    """UPDATE analysis_runs
+                       SET progress_step=?
+                       WHERE id=?""",
+                    (jersey_scan_running_step(phase="loading"), run_id),
+                )
+                db.commit()
 
-            ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-            result = scan_and_apply_jerseys(db, analysis_key, ai_settings)
-            status_code = result.pop("status_code", None)
-            if status_code:
-                raise RuntimeError(result.get("error") or "Jersey scan failed")
+                ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+                db.execute(
+                    """UPDATE analysis_runs
+                       SET progress_step=?
+                       WHERE id=?""",
+                    (jersey_scan_running_step(phase="running"), run_id),
+                )
+                db.commit()
 
-            refresh_stats(db, analysis_key)
-            mapped = result.get("slots_mapped") or (result.get("auto_apply") or {}).get("applied", 0)
-            reads = result.get("ocr_read_count", 0)
-            db.execute(
-                """UPDATE analysis_runs
-                   SET progress_step='jersey_scan:done',
-                       error_message=NULL
-                   WHERE id=?""",
-                (run_id,),
-            )
-            db.commit()
-            app.logger.info(
-                "Jersey scan finished for %s: %s mapped, %s reads",
-                analysis_key,
-                mapped,
-                reads,
-            )
-        except Exception as exc:
-            app.logger.exception("Jersey scan failed for %s", analysis_key)
-            from helpers import format_exception_message
+                result = scan_and_apply_jerseys(db, analysis_key, ai_settings)
+                status_code = result.pop("status_code", None)
+                if status_code:
+                    raise RuntimeError(result.get("error") or "Jersey scan failed")
 
-            db.execute(
-                """UPDATE analysis_runs
-                   SET progress_step=?
-                   WHERE id=?""",
-                (f"jersey_scan:failed:{format_exception_message(exc)}"[:500], run_id),
-            )
-            db.commit()
-        finally:
-            db.close()
+                refresh_stats(db, analysis_key)
+                mapped = result.get("slots_mapped") or (result.get("auto_apply") or {}).get("applied", 0)
+                reads = result.get("ocr_read_count", 0)
+                db.execute(
+                    """UPDATE analysis_runs
+                       SET progress_step='jersey_scan:done',
+                           error_message=NULL
+                       WHERE id=?""",
+                    (run_id,),
+                )
+                db.commit()
+                app.logger.info(
+                    "Jersey scan finished for %s: %s mapped, %s reads",
+                    analysis_key,
+                    mapped,
+                    reads,
+                )
+            except Exception as exc:
+                app.logger.exception("Jersey scan failed for %s", analysis_key)
+                from helpers import format_exception_message
+
+                mark_jersey_scan_failed(db, run_id, format_exception_message(exc))
+            finally:
+                db.close()
+    finally:
+        _unregister_jersey_scan_thread(run_id)
 
 
 @ai_bp.route("/api/court-slots/<game_id>/scan-jerseys", methods=["POST"])
@@ -764,6 +799,8 @@ def scan_jerseys_api(game_id):
                 "code": "no_analysis_run",
             }), 404
 
+        reconcile_stuck_jersey_scan(db, resolved_key)
+        row = resolve_analysis_run_for_progress(db, resolved_key) or row
         progress_step = (row["progress_step"] or "").strip()
         if row["status"] in {"running", "pending"}:
             return jsonify({
@@ -771,12 +808,15 @@ def scan_jerseys_api(game_id):
                 "code": "analysis_running",
                 "analysis_key": resolved_key,
             }), 409
-        if progress_step == "jersey_scan:running":
+        if is_jersey_scan_active(progress_step) and _jersey_scan_thread_alive(row["id"]):
             return jsonify({
                 "status": "jersey_scan_running",
                 "analysis_key": resolved_key,
                 "message": "Jersey scan is already running in the background.",
+                "jersey_scan": parse_jersey_scan_step(progress_step),
             }), 202
+        if is_jersey_scan_active(progress_step):
+            clear_jersey_scan_progress(db, row["id"])
 
         # Quick path for tests/small scans when explicitly requested.
         if request.args.get("sync") == "1":
@@ -809,9 +849,9 @@ def scan_jerseys_api(game_id):
         # Return immediately — EasyOCR model load + video OCR can take many minutes.
         db.execute(
             """UPDATE analysis_runs
-               SET progress_step='jersey_scan:running'
+               SET progress_step=?
                WHERE id=?""",
-            (row["id"],),
+            (jersey_scan_running_step(phase="loading"), row["id"]),
         )
         db.commit()
 
@@ -826,6 +866,7 @@ def scan_jerseys_api(game_id):
             daemon=True,
             name=f"scan-jerseys-{row['id']}",
         )
+        _register_jersey_scan_thread(row["id"], thread)
         thread.start()
 
         engines = jersey_ocr_engine_status()
@@ -844,6 +885,36 @@ def scan_jerseys_api(game_id):
             "error": str(exc),
             "code": "jersey_scan_start_failed",
         }), 500
+
+
+@ai_bp.route("/api/court-slots/<game_id>/reset-jersey-scan", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def reset_jersey_scan_api(game_id):
+    """Clear a stuck jersey OCR scan so the coach can retry."""
+    try:
+        db = get_db()
+        row = resolve_analysis_run_for_progress(db, game_id)
+        resolved_key = game_id
+        if row and row["analysis_key"]:
+            resolved_key = row["analysis_key"]
+        if row is None:
+            return jsonify({"error": "No analysis run found for this game."}), 404
+
+        if _jersey_scan_thread_alive(row["id"]):
+            return jsonify({
+                "error": "Jersey scan is still running on the server. Wait a few minutes or restart Liberty.",
+                "code": "scan_still_running",
+            }), 409
+
+        clear_jersey_scan_progress(db, row["id"])
+        return jsonify({
+            "status": "jersey_scan_reset",
+            "analysis_key": resolved_key,
+            "message": "Cleared stuck jersey scan. Click Scan jerseys (OCR) to start again.",
+        })
+    except Exception as exc:
+        current_app.logger.exception("Could not reset jersey scan for %s", game_id)
+        return jsonify({"error": str(exc), "code": "jersey_scan_reset_failed"}), 500
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/scan-jerseys", methods=["POST"])
