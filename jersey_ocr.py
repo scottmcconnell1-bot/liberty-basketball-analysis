@@ -304,10 +304,36 @@ def _roster_jersey_allowlist(db, game_id) -> set[int]:
         return set()
 
 
+def _trim_ocr_targets(targets: list[dict], max_total: int) -> list[dict]:
+    """Keep a balanced subset of crops so OCR finishes in reasonable time on CPU."""
+    if max_total <= 0 or len(targets) <= max_total:
+        return targets
+    by_cluster: dict[int, list[dict]] = {}
+    for target in targets:
+        by_cluster.setdefault(int(target["cluster_id"]), []).append(target)
+    clusters = sorted(by_cluster)
+    trimmed: list[dict] = []
+    index = 0
+    while len(trimmed) < max_total:
+        added = False
+        for cluster_id in clusters:
+            bucket = by_cluster[cluster_id]
+            if index < len(bucket):
+                trimmed.append(bucket[index])
+                added = True
+                if len(trimmed) >= max_total:
+                    break
+        if not added:
+            break
+        index += 1
+    return trimmed
+
+
 def _ocr_detection_targets(db, game_id, ai_settings=None) -> list[dict]:
     ai_settings = ai_settings or {}
     scope_sql, scope_params = _detection_scope(db, game_id)
-    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 30))
+    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 12))
+    max_total = int(ai_settings.get("jersey_ocr_max_total_samples", 100))
     cluster_rows = db.execute(
         f"""
         SELECT DISTINCT player_cluster AS cluster_id
@@ -351,10 +377,10 @@ def _ocr_detection_targets(db, game_id, ai_settings=None) -> list[dict]:
                 "width": int(row["width"]),
                 "height": int(row["height"]),
             })
-    return targets
+    return _trim_ocr_targets(targets, max_total)
 
 
-def _run_ocr_targets(db, video_path, targets, allowed_jerseys=None) -> dict:
+def _run_ocr_targets(db, video_path, targets, allowed_jerseys=None, *, progress_hook=None) -> dict:
     import cv2  # noqa: WPS433
 
     if not targets:
@@ -368,7 +394,10 @@ def _run_ocr_targets(db, video_path, targets, allowed_jerseys=None) -> dict:
     reads = 0
     updated = 0
     try:
-        print(f"[JerseyOCR] Scanning {len(targets)} player crops from video…")
+        total = len(targets)
+        print(f"[JerseyOCR] Scanning {total} player crops from video…")
+        if progress_hook:
+            progress_hook(f"0/{total} crops")
         for index, target in enumerate(sorted(targets, key=lambda item: item["timestamp_ms"]), start=1):
             ts = target["timestamp_ms"]
             if ts not in frame_cache:
@@ -400,8 +429,10 @@ def _run_ocr_targets(db, video_path, targets, allowed_jerseys=None) -> dict:
                 (jersey, conf, target["detection_id"]),
             )
             updated += 1
-            if index % 25 == 0:
-                print(f"[JerseyOCR] Progress {index}/{len(targets)} — {updated} reads saved")
+            if index == 1 or index % 5 == 0 or index == total:
+                print(f"[JerseyOCR] Progress {index}/{total} — {updated} reads saved")
+                if progress_hook:
+                    progress_hook(f"{index}/{total} crops ({updated} reads)")
                 db.commit()
         db.commit()
     finally:
@@ -419,7 +450,14 @@ def ocr_jerseys_on_cluster_samples(db, game_id, video_path, ai_settings=None) ->
 
     allowed = _roster_jersey_allowlist(db, game_id)
     targets = _ocr_detection_targets(db, game_id, ai_settings)
-    result = _run_ocr_targets(db, video_path, targets, allowed_jerseys=allowed or None)
+    progress_hook = ai_settings.get("_jersey_scan_progress")
+    result = _run_ocr_targets(
+        db,
+        video_path,
+        targets,
+        allowed_jerseys=allowed or None,
+        progress_hook=progress_hook,
+    )
     result["skipped"] = False
     result["allowed_jerseys"] = sorted(allowed)
     return result
@@ -483,7 +521,8 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
 
     scope_sql, scope_params = _detection_scope(db, game_id)
     window_ms = int(ai_settings.get("jersey_ocr_event_window_ms", 3000))
-    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 40))
+    max_per_cluster = int(ai_settings.get("jersey_ocr_max_samples_per_cluster", 12))
+    max_total = int(ai_settings.get("jersey_ocr_max_total_samples", 100))
     offsets_ms = ai_settings.get("jersey_ocr_event_offsets_ms") or [-2000, 0, 2000]
 
     from helpers import count_events_for_analysis
@@ -555,8 +594,17 @@ def ocr_jerseys_near_events(db, game_id, video_path, ai_settings=None) -> dict:
     if not targets:
         return {"skipped": True, "reason": "no_detection_targets", "events_sampled": len(events)}
 
+    targets = _trim_ocr_targets(targets, max(20, max_total // 2))
+
     allowed = _roster_jersey_allowlist(db, game_id)
-    result = _run_ocr_targets(db, video_path, targets, allowed_jerseys=allowed or None)
+    progress_hook = ai_settings.get("_jersey_scan_progress")
+    result = _run_ocr_targets(
+        db,
+        video_path,
+        targets,
+        allowed_jerseys=allowed or None,
+        progress_hook=progress_hook,
+    )
     result.update({
         "skipped": False,
         "events_sampled": sum(len(v) for v in samples_by_cluster.values()),

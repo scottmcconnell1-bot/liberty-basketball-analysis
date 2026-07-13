@@ -1030,11 +1030,13 @@ async function pollJerseyScanProgress() {
       const elapsed = jerseyScanElapsedSeconds(data) ?? Math.round((Date.now() - pollStarted) / 1000);
       const phase = (data.jersey_scan && data.jersey_scan.phase === 'loading')
         ? 'Loading OCR models'
-        : 'Scanning jersey numbers';
+        : 'Scanning jerseys';
+      const detail = (data.jersey_scan && data.jersey_scan.message) || '';
       if (status) {
         status.style.display = 'block';
         status.style.color = 'var(--muted)';
-        status.textContent = phase + ' from video… ' + formatElapsed(elapsed) + ' elapsed';
+        status.textContent = phase + '… ' + formatElapsed(elapsed) + ' elapsed'
+          + (detail ? ' — ' + detail : '');
       }
       if (elapsed > 30 * 60) setJerseyScanResetVisible(true);
       continue;

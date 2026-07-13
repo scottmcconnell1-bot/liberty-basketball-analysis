@@ -1347,12 +1347,15 @@ def _is_sync_event_rebuild_step(progress_step: str | None) -> bool:
 JERSEY_SCAN_MAX_AGE_SECONDS = 2 * 60 * 60  # 2 hours — OCR should finish well before this
 
 
-def jersey_scan_running_step(*, phase: str = "running") -> str:
+def jersey_scan_running_step(*, phase: str = "running", detail: str | None = None) -> str:
     """Persist jersey-scan state with a start timestamp for stale detection."""
     import time
 
     phase_key = "loading" if phase == "loading" else "running"
-    return f"jersey_scan:{phase_key}:{int(time.time())}"
+    started = int(time.time())
+    if detail:
+        return f"jersey_scan:{phase_key}:{started}:{detail}"[:500]
+    return f"jersey_scan:{phase_key}:{started}"
 
 
 def parse_jersey_scan_step(progress_step: str | None) -> dict:

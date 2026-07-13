@@ -20,7 +20,8 @@ AI_DEFAULTS = {
     "jersey_ocr_stride": 5,
     "jersey_ocr_event_enabled": True,
     "jersey_ocr_event_window_ms": 3000,
-    "jersey_ocr_max_samples_per_cluster": 40,
+    "jersey_ocr_max_samples_per_cluster": 12,
+    "jersey_ocr_max_total_samples": 100,
     "jersey_ocr_min_confidence": 0.50,
     "auto_apply_jersey_mapping": True,
     "identity_auto_apply_min_confidence": 0.55,
@@ -40,6 +41,7 @@ INT_SETTING_KEYS = {
     "ai.jersey_ocr_stride",
     "ai.jersey_ocr_event_window_ms",
     "ai.jersey_ocr_max_samples_per_cluster",
+    "ai.jersey_ocr_max_total_samples",
     "ai.identity_auto_apply_min_samples",
 }
 

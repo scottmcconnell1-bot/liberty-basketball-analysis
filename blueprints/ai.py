@@ -737,11 +737,23 @@ def _run_scan_jerseys_worker(
                 db.commit()
 
                 ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
+                scan_started_at = int(__import__("time").time())
+
+                def _report_jersey_progress(detail: str, phase: str = "running") -> None:
+                    db.execute(
+                        """UPDATE analysis_runs
+                           SET progress_step=?
+                           WHERE id=?""",
+                        (f"jersey_scan:{phase}:{scan_started_at}:{detail}"[:500], run_id),
+                    )
+                    db.commit()
+
+                ai_settings["_jersey_scan_progress"] = _report_jersey_progress
                 db.execute(
                     """UPDATE analysis_runs
                        SET progress_step=?
                        WHERE id=?""",
-                    (jersey_scan_running_step(phase="running"), run_id),
+                    (f"jersey_scan:running:{scan_started_at}:loading OCR models", run_id),
                 )
                 db.commit()
 
