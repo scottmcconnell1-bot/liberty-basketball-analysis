@@ -842,7 +842,7 @@ function renderRecentEvents(events) {
   events.forEach(function(e) {
     var cls = 'event-' + e.event_type;
     var time = e.timestamp_ms ? formatTime(e.timestamp_ms) : '-';
-    var filmLink = buildFilmLink(e.timestamp_ms, 'View film');
+    var filmLink = buildFilmLink(e.timestamp_ms, 'View film', e.id);
     html += '<span class="event-pill ' + cls + ' clickable-stat" data-explore-type="' + escapeHtml(e.event_type) + '" data-explore-player="' + escapeHtml(e.player || '') + '">' + e.event_type + (e.shot_result ? ' ' + e.shot_result : '') + '</span>';
     html += ' <span style="color:var(--muted);font-size:0.75rem">' + escapeHtml(e.player || '') + ' @ ' + time + '</span>';
     if (filmLink) html += ' ' + filmLink;
@@ -1289,17 +1289,20 @@ async function saveSlotMappings() {
 
 document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlotMappings);
 
-function buildFilmLink(timestampMs, label) {
+function buildFilmLink(timestampMs, label, eventId) {
   if (!STORED_FILENAME || timestampMs == null) return '';
   const CLIP_BEFORE_MS = 3000;
   const CLIP_AFTER_MS = 5000;
   const eventMs = Number(timestampMs);
   const startSec = Math.max(0, (eventMs - CLIP_BEFORE_MS) / 1000);
   const endSec = (eventMs + CLIP_AFTER_MS) / 1000;
-  const href = '/film/' + encodeURIComponent(STORED_FILENAME)
+  let href = '/film/' + encodeURIComponent(STORED_FILENAME)
     + '?game_id=' + encodeURIComponent(GAME_ID)
     + '&t=' + startSec.toFixed(2)
     + '&t_end=' + endSec.toFixed(2);
+  if (eventId != null && eventId !== '') {
+    href += '&event_id=' + encodeURIComponent(eventId);
+  }
   return '<a class="film-link" href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || 'Film') + '</a>';
 }
 
@@ -1412,7 +1415,7 @@ async function loadExplorerEvents(filters) {
       const label = event.event_type + (event.shot_result ? ' ' + event.shot_result : '');
       const player = event.player || '—';
       const period = (event.quarter_label || '') + ' · ' + (event.half_label || '');
-      const film = buildFilmLink(event.timestamp_ms, '▶ Play');
+      const film = buildFilmLink(event.timestamp_ms, '▶ Play', event.id);
       html += '<div class="event-explorer-row">';
       html += '<div>' + time + '</div>';
       html += '<div><span class="event-pill event-' + escapeHtml(event.event_type) + '">' + escapeHtml(label) + '</span> ' + escapeHtml(player);

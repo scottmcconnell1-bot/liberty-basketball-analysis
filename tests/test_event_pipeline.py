@@ -206,12 +206,12 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
         },
         {
             "player": "3",
-            "start_frame": 16,
-            "end_frame": 20,
-            "start_timestamp_ms": 528,
-            "end_timestamp_ms": 660,
+            "start_frame": 40,
+            "end_frame": 44,
+            "start_timestamp_ms": 1320,
+            "end_timestamp_ms": 1452,
             "duration_frames": 5,
-            "frames": [16, 17, 18, 19, 20],
+            "frames": [40, 41, 42, 43, 44],
             "player_x_start": 500,
             "player_x_end": 510,
             "player_y_median": 225.0,
@@ -219,12 +219,12 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
         },
         {
             "player": "4",
-            "start_frame": 24,
-            "end_frame": 28,
-            "start_timestamp_ms": 792,
-            "end_timestamp_ms": 924,
+            "start_frame": 48,
+            "end_frame": 52,
+            "start_timestamp_ms": 1584,
+            "end_timestamp_ms": 1716,
             "duration_frames": 5,
-            "frames": [24, 25, 26, 27, 28],
+            "frames": [48, 49, 50, 51, 52],
             "player_x_start": 650,
             "player_x_end": 660,
             "player_y_median": 235.0,
@@ -232,12 +232,12 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
         },
         {
             "player": "5",
-            "start_frame": 32,
-            "end_frame": 36,
-            "start_timestamp_ms": 1056,
-            "end_timestamp_ms": 1188,
+            "start_frame": 56,
+            "end_frame": 60,
+            "start_timestamp_ms": 1848,
+            "end_timestamp_ms": 1980,
             "duration_frames": 5,
-            "frames": [32, 33, 34, 35, 36],
+            "frames": [56, 57, 58, 59, 60],
             "player_x_start": 820,
             "player_x_end": 830,
             "player_y_median": 238.0,
@@ -254,24 +254,56 @@ def test_generate_expanded_events_from_segments_emits_requested_event_types():
             {"frame_number": 13, "timestamp_ms": 429, "x_center": 360, "y_center": 175},
             {"frame_number": 14, "timestamp_ms": 462, "x_center": 390, "y_center": 200},
             {"frame_number": 15, "timestamp_ms": 495, "x_center": 430, "y_center": 220},
-            {"frame_number": 32, "timestamp_ms": 1056, "x_center": 824, "y_center": 225},
-            {"frame_number": 33, "timestamp_ms": 1089, "x_center": 832, "y_center": 200},
-            {"frame_number": 34, "timestamp_ms": 1122, "x_center": 842, "y_center": 170},
-            {"frame_number": 35, "timestamp_ms": 1155, "x_center": 852, "y_center": 135},
-            {"frame_number": 36, "timestamp_ms": 1188, "x_center": 860, "y_center": 150},
-            {"frame_number": 37, "timestamp_ms": 1221, "x_center": 868, "y_center": 165},
-            {"frame_number": 38, "timestamp_ms": 1254, "x_center": 874, "y_center": 180},
+            {"frame_number": 56, "timestamp_ms": 1848, "x_center": 824, "y_center": 225},
+            {"frame_number": 57, "timestamp_ms": 1881, "x_center": 832, "y_center": 200},
+            {"frame_number": 58, "timestamp_ms": 1914, "x_center": 842, "y_center": 170},
+            {"frame_number": 59, "timestamp_ms": 1947, "x_center": 852, "y_center": 135},
+            {"frame_number": 60, "timestamp_ms": 1980, "x_center": 860, "y_center": 150},
+            {"frame_number": 61, "timestamp_ms": 2013, "x_center": 868, "y_center": 165},
+            {"frame_number": 62, "timestamp_ms": 2046, "x_center": 874, "y_center": 180},
         ]
     )
 
     events = generate_expanded_events_from_segments("game", segments, ball_track)
     event_types = {event["event_type"] for event in events}
 
-    # Shot is a make (ball reaches y=145, near basket), so expect shot+make but no miss/rebound
+    # Made shot: ball reaches rim height and next possession starts after an inbound gap.
     assert {"shot", "make", "assist", "possession_change"} <= event_types
     # Verify no miss/rebound events for this make
     assert "miss" not in event_types
     assert "rebound" not in event_types
+
+
+def test_classify_shot_result_marks_quick_rebound_as_miss():
+    from event_generator import classify_shot_result
+
+    segment = {"player_y_median": 230.0}
+    shot_info = {"peak_frame": 11}
+    next_segment = {"start_frame": 16}
+    next_gap = 4
+    ball_track = pd.DataFrame(
+        [
+            {"frame_number": 12, "y_center": 160},
+            {"frame_number": 13, "y_center": 175},
+        ]
+    )
+    assert classify_shot_result(shot_info, segment, next_segment, next_gap, ball_track) == "miss"
+
+
+def test_classify_shot_result_marks_long_inbound_gap_as_make():
+    from event_generator import classify_shot_result
+
+    segment = {"player_y_median": 230.0}
+    shot_info = {"peak_frame": 11}
+    next_segment = {"start_frame": 40}
+    next_gap = 28
+    ball_track = pd.DataFrame(
+        [
+            {"frame_number": 12, "y_center": 145},
+            {"frame_number": 13, "y_center": 160},
+        ]
+    )
+    assert classify_shot_result(shot_info, segment, next_segment, next_gap, ball_track) == "make"
 
 def test_persist_events_deletes_unverified_relational_events_when_relational_game_id_provided():
     """Test that persist_events deletes unverified events matching relational_game_id or legacy NULL with matching game_id."""

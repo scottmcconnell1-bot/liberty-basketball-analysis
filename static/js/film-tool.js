@@ -121,6 +121,7 @@ let currentLineups = { liberty: new Set(), opponent: new Set() };
 let startersMode = 'initial';
 let aiEventsCache = [];
 let activeAiEventId = null;
+let aiEventsSuppressAutoScrollUntil = 0;
 
 // ── DOM References ──────────────────────────────────────────
 let rowsBody, statusText, video, timeDisplay, lastTaggedTime, videoField, videoShell, videoFileInput;
@@ -1815,25 +1816,71 @@ function updateAiEventsSummary() {
     aiCurrentEventLabel.textContent = active ? `Active event: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No active event at the current playback position.';
 }
 
+function scrollAiEventItemIntoView(item) {
+    if (!item) return;
+    const scroller = aiEventsScroller || item.closest('.ai-events-scroll');
+    if (scroller) {
+        const itemTop = item.offsetTop;
+        const itemBottom = itemTop + item.offsetHeight;
+        const viewTop = scroller.scrollTop;
+        const viewBottom = viewTop + scroller.clientHeight;
+        if (itemTop < viewTop || itemBottom > viewBottom) {
+            const target = itemTop - Math.max(0, (scroller.clientHeight - item.offsetHeight) / 2);
+            scroller.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        }
+        return;
+    }
+    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
 function setActiveAiEvent(eventId, shouldScroll = false) {
     activeAiEventId = eventId == null ? null : String(eventId);
     if (!aiEventsList) return;
+    let activeItem = null;
     aiEventsList.querySelectorAll('[data-ai-event-id]').forEach(item => {
         const isActive = activeAiEventId && item.dataset.aiEventId === activeAiEventId;
         item.classList.toggle('active', Boolean(isActive));
-        if (isActive && shouldScroll) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (isActive) activeItem = item;
     });
+    if (activeItem && shouldScroll && Date.now() >= aiEventsSuppressAutoScrollUntil) {
+        scrollAiEventItemIntoView(activeItem);
+    }
     updateAiEventsSummary();
+}
+
+function findNearestAiEvent(timestampMs, maxDistanceMs = 5000) {
+    if (!aiEventsCache.length) return null;
+    const targetMs = Number(timestampMs || 0);
+    let nearest = null;
+    let nearestDistance = Infinity;
+    aiEventsCache.forEach(event => {
+        const distance = Math.abs(Number(event.timestamp_ms || 0) - targetMs);
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = event;
+        }
+    });
+    if (!nearest || nearestDistance > maxDistanceMs) return null;
+    return nearest;
+}
+
+function highlightAiEventNearTime(timestampMs, shouldScroll = false, maxDistanceMs = 5000) {
+    const nearest = findNearestAiEvent(timestampMs, maxDistanceMs);
+    if (!nearest) {
+        setActiveAiEvent(null);
+        return null;
+    }
+    setActiveAiEvent(nearest.id, shouldScroll);
+    return nearest;
 }
 
 function syncAiEventsToPlayback() {
     if (!video || !aiEventsCache.length) { setActiveAiEvent(null); return; }
     const currentMs = Math.round((video.currentTime || 0) * 1000);
-    let nearest = null, nearestDistance = Infinity;
-    aiEventsCache.forEach(event => { const distance = Math.abs(Number(event.timestamp_ms || 0) - currentMs); if (distance < nearestDistance) { nearestDistance = distance; nearest = event; } });
-    if (!nearest || nearestDistance > 5000) { setActiveAiEvent(null); return; }
-    const shouldScroll = String(nearest.id) !== String(activeAiEventId) && video && !video.paused;
-    setActiveAiEvent(nearest.id, shouldScroll);
+    const nearest = findNearestAiEvent(currentMs, 5000);
+    if (!nearest) { setActiveAiEvent(null); return; }
+    // Highlight the nearest event while watching, but never auto-scroll the list during playback.
+    setActiveAiEvent(nearest.id, false);
 }
 
 function reviewStatusLabel(status) {
@@ -1906,6 +1953,21 @@ function renderAiEvents(events) {
     syncAiEventsToPlayback();
 }
 
+function onAiEventsLoadedForDeepLink() {
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('event_id');
+    if (eventId) {
+        aiEventsSuppressAutoScrollUntil = Date.now() + 15000;
+        setActiveAiEvent(eventId, true);
+        return;
+    }
+    let seekSeconds = Number(params.get('t') || params.get('timestamp_ms') || 0);
+    if (seekSeconds > 1000) seekSeconds /= 1000;
+    if (!seekSeconds || Number.isNaN(seekSeconds)) return;
+    aiEventsSuppressAutoScrollUntil = Date.now() + 15000;
+    highlightAiEventNearTime(Math.round(seekSeconds * 1000), true, 8000);
+}
+
 async function fetchAndRenderAIEvents(gameId) {
     if (!gameId || !aiEventsList) return;
     aiEventsList.innerHTML = '<div class="empty-state">Loading AI events...</div>';
@@ -1914,6 +1976,7 @@ async function fetchAndRenderAIEvents(gameId) {
         if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load AI events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
         const events = await response.json();
         renderAiEvents(events);
+        onAiEventsLoadedForDeepLink();
     } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading AI events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
 }
 
@@ -2786,8 +2849,10 @@ function init() {
       if ((!startSeconds || Number.isNaN(startSeconds)) && (endSeconds == null || Number.isNaN(endSeconds))) return;
       if (endSeconds != null && !Number.isNaN(endSeconds)) setClipPlaybackEnd(endSeconds);
       const applySeek = () => {
+        aiEventsSuppressAutoScrollUntil = Date.now() + 15000;
         if (startSeconds && !Number.isNaN(startSeconds)) {
           video.currentTime = Math.max(0, startSeconds);
+          highlightAiEventNearTime(Math.round(startSeconds * 1000), true, 8000);
         }
         if (clipPlaybackEnd != null) {
           const fromLabel = startSeconds && !Number.isNaN(startSeconds) ? startSeconds.toFixed(1) : '0.0';

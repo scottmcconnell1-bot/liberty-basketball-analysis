@@ -122,6 +122,44 @@ def append_unique_event(events, seen_keys, event):
     events.append(event)
 
 
+def _ball_reached_basket_after_peak(shot_info, segment, ball_track, look_ahead_frames=30):
+    """Return True when post-peak ball track shows the ball reaching rim height."""
+    peak_frame = shot_info.get("peak_frame")
+    if peak_frame is None:
+        return False
+    post_peak_ball = ball_track[
+        (ball_track["frame_number"] >= peak_frame) &
+        (ball_track["frame_number"] <= peak_frame + look_ahead_frames)
+    ]
+    if post_peak_ball.empty:
+        return False
+    min_y = float(post_peak_ball["y_center"].min())
+    player_y = float(segment.get("player_y_median", 300))
+    # Rim is above the shooter; require the ball to climb well above torso height.
+    basket_threshold = max(120.0, player_y - 80.0)
+    return min_y < basket_threshold
+
+
+def classify_shot_result(shot_info, segment, next_segment, next_gap, ball_track):
+    """Conservative make/miss heuristic — prefer miss when possession resumes quickly."""
+    quick_followup_gap = 12
+    inbound_gap_frames = 20
+
+    if next_gap is not None and next_gap <= quick_followup_gap:
+        return "miss"
+
+    ball_reached_basket = _ball_reached_basket_after_peak(shot_info, segment, ball_track)
+    long_inbound_gap = next_gap is not None and next_gap > inbound_gap_frames
+
+    if next_segment is None:
+        return "make" if ball_reached_basket else "miss"
+    if long_inbound_gap and ball_reached_basket:
+        return "make"
+    if long_inbound_gap and next_gap > inbound_gap_frames + 10:
+        return "make"
+    return "miss"
+
+
 def build_ball_track(detections_df):
     ball_df = detections_df[detections_df["class_name"] == "ball"].copy()
     if ball_df.empty:
@@ -604,39 +642,8 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
 
-        # Determine make/miss using gap-based heuristic.
-        # At stride=10, possession segments are closely spaced. A gap of > 15 frames
-        # (~4 seconds at effective fps) after a shot suggests the other team is
-        # inbounding (make). A quick follow-up suggests a rebound (miss).
-        # Also check if the ball continues toward the basket after the peak.
-        shot_result = "miss"
-        if shot_info.get("peak_frame"):
-            peak_frame = shot_info["peak_frame"]
-            # Check ball trajectory after peak
-            post_peak_ball = ball_track[
-                (ball_track["frame_number"] > peak_frame) &
-                (ball_track["frame_number"] <= peak_frame + 30)
-            ]
-            ball_moving_to_basket = False
-            if not post_peak_ball.empty:
-                min_y = post_peak_ball["y_center"].min()
-                # Ball reaching top 1/3 of frame (y < 240 on 720p) = near basket
-                if min_y < 240:
-                    ball_moving_to_basket = True
-
-            # Gap to next possession segment
-            if next_segment is None:
-                # No follow-up = ball went in
-                shot_result = "make"
-            elif next_gap is not None and next_gap > 15:
-                # Longer gap = other team inbounding after make
-                shot_result = "make"
-            elif ball_moving_to_basket:
-                # Ball reached basket area
-                shot_result = "make"
-        else:
-            if next_segment is None or (next_gap is not None and next_gap > 15):
-                shot_result = "make"
+        # Determine make/miss using gap + ball-trajectory heuristics (default miss).
+        shot_result = classify_shot_result(shot_info, segment, next_segment, next_gap, ball_track)
 
         if shot_result == "miss":
             rebound_segment_indices.add(index + 1)
