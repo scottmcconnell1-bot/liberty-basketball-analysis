@@ -1683,8 +1683,14 @@ def film_tool_build_info():
         "repo_root": str(Path(current_app.root_path).resolve()),
         "template_path": str(template_path.resolve()),
         "has_focus_button": "manualTagFocusBtn" in text,
-        "has_build_stamp": "manual-tag-focus-20260716" in text,
-        "film_tool_js_cache_bust": "film-tool.js?v=20260716" in text,
+        "has_build_stamp": "manual-tag-controls-20260716c" in text,
+        "has_tagging_controls_v2": (
+            'id="undoBtnBar"' in text
+            and 'data-skip="-5"' in text
+            and "◀ 5s" in text
+            and "data-skip=\"-30\"" not in text
+        ),
+        "film_tool_js_cache_bust": "film-tool.js?v=20260716c" in text,
     })
 
 

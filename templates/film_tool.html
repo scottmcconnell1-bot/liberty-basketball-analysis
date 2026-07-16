@@ -88,6 +88,18 @@
     color: #94a3b8;
     font-size: .75rem;
   }
+  .ft-video-bar .ft-build-stamp {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    color: #047857;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
 
   /* Video Controls */
   .ft-vid-controls {
@@ -445,7 +457,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- film-tool-build: manual-tag-focus-20260716 -->
+<!-- film-tool-build: manual-tag-controls-20260716c -->
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -558,6 +570,7 @@
           <button class="btn btn-primary js-manual-tag-focus-toggle" id="manualTagFocusBtnBar" type="button" title="Large video + tag buttons only" style="margin-left:.5rem;padding:.2rem .55rem;min-height:26px;font-size:.72rem;">🎯 Focus</button>
           <span style="flex:1"></span>
           <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+          <span class="ft-build-stamp" title="Film Tool build — if you see -30s buttons, restart from Documents repo and hard-refresh">Controls v2</span>
         </div>
         {% if features.ENABLE_AUTO_STATS_M1 and filename %}
         <div id="runAnalysisBar" class="ft-run-analysis-bar ft-manual-clutter" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
@@ -1191,6 +1204,6 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
-<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716b"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716b"></script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716c"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716c"></script>
 {% endblock %}
