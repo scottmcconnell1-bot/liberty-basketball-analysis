@@ -1128,6 +1128,6 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
-<script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716"></script>
 {% endblock %}
