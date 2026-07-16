@@ -12,7 +12,8 @@ def test_film_tool_top_bar_is_simplified(client):
     assert 'data-theme-toggle' not in html
     assert 'id="exportBtn"' in html
     assert 'id="manualTagFocusBtn"' in html
-    assert 'id="manualTagFocusBtnBar"' in html
+    assert 'id="undoBtnBar"' in html
+    assert 'data-skip="-5"' in html
     assert 'manual-tag-focus' in html
 
 

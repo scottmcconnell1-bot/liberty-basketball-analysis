@@ -110,6 +110,22 @@
   .ft-vid-controls .btn.btn-primary {
     padding: .3rem .65rem;
   }
+  .ft-vid-speed-row {
+    padding-top: 0;
+    gap: .25rem;
+  }
+  .ft-vid-speed-row .btn {
+    padding: .2rem .45rem;
+    min-height: 26px;
+    font-size: .7rem;
+  }
+  #film-tool-root .ft-vid-controls .btn-danger,
+  #film-tool-root .ft-tag-actions .btn-danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+    font-weight: 600;
+  }
 
   /* Game Info Collapsible */
   .ft-game-info-toggle {
@@ -329,10 +345,10 @@
     display: none !important;
   }
   #film-tool-root.manual-tag-focus .ft-layout {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 4fr) minmax(0, min(280px, 22vw));
+    gap: 0.35rem;
     align-items: stretch;
-    min-height: calc(100vh - 52px);
+    min-height: calc(100vh - 48px);
   }
   #film-tool-root.manual-tag-focus .ft-video-column {
     display: flex;
@@ -344,22 +360,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.25rem;
     min-height: 0;
   }
   #film-tool-root.manual-tag-focus .ft-video-wrap video {
     width: 100%;
-    max-height: calc(100vh - 168px);
+    max-height: calc(100vh - 130px);
     height: auto;
-    min-height: 320px;
+    min-height: 360px;
     object-fit: contain;
   }
   #film-tool-root.manual-tag-focus .ft-vid-controls {
-    padding: 0.25rem 0;
+    padding: 0.15rem 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #film-tool-root.manual-tag-focus .ft-vid-controls .btn {
+    padding: 0.35rem 0.55rem;
+    min-height: 34px;
+    font-size: 0.8rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-vid-speed-row {
+    display: none;
+  }
+  #film-tool-root.manual-tag-focus .ft-video-bar {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
   }
   #film-tool-root.manual-tag-focus .ft-tag-column {
     min-height: 0;
-    max-height: calc(100vh - 48px);
+    max-height: calc(100vh - 44px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -369,8 +399,41 @@
     overflow-y: auto;
     margin: 0;
   }
+  #film-tool-root.manual-tag-focus .ft-tag-panel-header {
+    padding: 0.45rem 0.6rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-panel-header h3 {
+    font-size: 0.85rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-groups {
+    padding: 0.35rem 0.45rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-group {
+    margin-bottom: 0.35rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-group-label {
+    margin-bottom: 0.15rem;
+    font-size: 0.62rem;
+  }
   #film-tool-root.manual-tag-focus .ft-tag-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-grid .btn {
+    min-height: 1.85rem;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.45rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-actions {
+    padding: 0.4rem 0.45rem;
+    gap: 0.25rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-actions .ft-tag-secondary {
+    display: none;
+  }
+  #film-tool-root.manual-tag-focus #undoBtn {
+    flex: 1;
+    font-weight: 600;
   }
   #film-tool-root.manual-tag-focus #manualTagFocusBtn,
   #film-tool-root.manual-tag-focus #manualTagFocusBtnBar {
@@ -525,20 +588,19 @@
 
         <!-- Video Controls -->
         <div class="ft-vid-controls no-print">
-          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
-          <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10" title="Back 10 seconds">◀ 10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-5" title="Back 5 seconds">◀ 5s</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn" title="Play / Pause (Space)">▶ ⏸</button>
+          <button class="btn btn-ghost" type="button" data-skip="5" title="Forward 5 seconds">5s ▶</button>
+          <button class="btn btn-ghost" type="button" data-skip="10" title="Forward 10 seconds">10s ▶</button>
+          <button class="btn btn-danger" type="button" id="undoBtnBar" title="Undo last tag (Ctrl+Z)">↩ Undo</button>
+        </div>
+        <div class="ft-vid-controls ft-vid-speed-row ft-manual-clutter no-print">
           <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
           <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
-          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">▶ / ⏸</button>
           <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
           <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
           <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
-          <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
-          <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
-          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
         </div>
 
         <!-- Game Info (collapsible) -->
@@ -662,10 +724,10 @@
             </div>
           </div>
           <div class="ft-tag-actions">
-            <button class="btn btn-ghost" id="undoBtn" type="button">↩ Undo</button>
-            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
-            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
-            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+            <button class="btn btn-danger" id="undoBtn" type="button" title="Undo last tag (Ctrl+Z)">↩ Undo</button>
+            <button class="btn btn-ghost ft-tag-secondary" id="clearAllBtn" type="button">Clear</button>
+            <button class="btn btn-ghost ft-tag-secondary" id="subBtn" type="button">SUB</button>
+            <button class="btn btn-ghost ft-tag-secondary" id="startersBtn" type="button">Starters</button>
           </div>
         </div>
 
@@ -1129,6 +1191,6 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
-<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716"></script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716b"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716b"></script>
 {% endblock %}

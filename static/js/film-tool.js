@@ -1936,6 +1936,57 @@ function undoLastRow() {
     rows[rows.length - 1].remove(); handleRowsChanged(); updateEventCount(); setStatus('Undid last tagged event.');
 }
 
+function seekVideoBy(seconds) {
+    if (!video) return;
+    const delta = Number(seconds) || 0;
+    video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
+}
+
+function toggleVideoPlayPause() {
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+}
+
+function isFilmKeyboardShortcutActive() {
+    if (!document.getElementById('film-tool-root')) return false;
+    const taggerView = document.getElementById('taggerView');
+    if (!taggerView?.classList.contains('active')) return false;
+    const el = document.activeElement;
+    if (el) {
+        const tag = el.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+        if (el.isContentEditable) return false;
+    }
+    if (quickTagDialog?.open || rosterDialog?.open || playerDialog?.open || termDialog?.open) return false;
+    return true;
+}
+
+function initFilmKeyboardShortcuts() {
+    document.addEventListener('keydown', (event) => {
+        if (!isFilmKeyboardShortcutActive()) return;
+        if (event.key === ' ' || event.code === 'Space') {
+            event.preventDefault();
+            toggleVideoPlayPause();
+            return;
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            undoLastRow();
+            return;
+        }
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            seekVideoBy(event.shiftKey ? -10 : -5);
+            return;
+        }
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            seekVideoBy(event.shiftKey ? 10 : 5);
+        }
+    });
+}
+
 // ── Analysis Status Polling ─────────────────────────────────
 function showRunAnalysisProgress(pct, step, status, elapsedSec) {
     const runBar = document.getElementById('runAnalysisBar');
@@ -2594,6 +2645,7 @@ function attachEventHandlers() {
     videoFileInput?.addEventListener('change', handleVideoFile);
 
     document.getElementById('undoBtn')?.addEventListener('click', undoLastRow);
+    document.getElementById('undoBtnBar')?.addEventListener('click', undoLastRow);
     document.getElementById('clearAllBtn')?.addEventListener('click', () => { if (confirm('Clear all tagged events in this game?')) clearAllRows(); });
     document.getElementById('subBtn')?.addEventListener('click', tagSubstitution);
     document.getElementById('startersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
@@ -2612,8 +2664,10 @@ function attachEventHandlers() {
     focusExitBtn?.addEventListener('click', exitFocusMode);
     document.getElementById('quickTagCancelBtn')?.addEventListener('click', () => quickTagDialog.close());
 
-    document.querySelectorAll('.video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
-    document.getElementById('vidPlayPauseBtn')?.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
+    document.querySelectorAll('.ft-vid-controls [data-skip]').forEach(btn => {
+        btn.addEventListener('click', () => seekVideoBy(parseFloat(btn.dataset.skip || '0')));
+    });
+    document.getElementById('vidPlayPauseBtn')?.addEventListener('click', toggleVideoPlayPause);
     document.getElementById('vidToStartBtn')?.addEventListener('click', () => { video.currentTime = 0; });
     document.getElementById('vidToEndBtn')?.addEventListener('click', () => { video.currentTime = video.duration || 0; });
     document.getElementById('vidSlow5x')?.addEventListener('click', () => { video.playbackRate = 0.5; });
@@ -2713,6 +2767,7 @@ function init() {
     renderEventButtons();
     renderGames();
     attachEventHandlers();
+    initFilmKeyboardShortcuts();
     initManualTagFocus();
     applyFilmToolDeepLinks();
     updateScoreLabels();
