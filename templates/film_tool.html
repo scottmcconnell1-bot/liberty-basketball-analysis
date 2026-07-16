@@ -925,6 +925,12 @@
           <span class="tiny">CSV or Excel (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster PDF.</span>
         </div>
         <div class="term-list" id="playerList"></div>
+        <div class="field" id="rosterBulkPasteBlock">
+          <label for="rosterBulkNumbersInput">Paste jersey numbers</label>
+          <textarea id="rosterBulkNumbersInput" rows="5" placeholder="One per line, e.g.&#10;5&#10;12&#10;23&#10;12 - Smith (optional name)"></textarea>
+          <span class="tiny">Works for <strong>Our</strong> or <strong>Opp</strong> — switch the team button above first. Duplicates are skipped.</span>
+          <button class="btn btn-primary" id="rosterBulkAddBtn" type="button" style="margin-top:.5rem;">Add pasted numbers</button>
+        </div>
         <div id="rosterSlotHint" class="tiny" style="display:none;margin:.35rem 0 .75rem;color:var(--color-orange);"></div>
         <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button>

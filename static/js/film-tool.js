@@ -267,6 +267,26 @@ function getRosterKey(side = currentRosterSide) {
     return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}`;
 }
 
+function splitRosterKey(key) {
+    const [seasonId, level, gender, side] = String(key || '').split('|');
+    return { seasonId, level, gender, side };
+}
+
+function parseRosterBulkLines(text) {
+    const players = [];
+    const seen = new Set();
+    String(text || '').split(/\r?\n/).forEach(line => {
+        const trimmed = normalize(line);
+        if (!trimmed) return;
+        const entry = trimmed.replace(/^#/, '').trim();
+        const player = normalizeRosterPlayer(entry);
+        if (!player || seen.has(player.label)) return;
+        seen.add(player.label);
+        players.push(player);
+    });
+    return players;
+}
+
 function parsePlayerText(text) {
     const value = normalize(text);
     if (!value) return { num: NaN, base: '' };
@@ -420,28 +440,76 @@ function loadStores() {
     savedGames = loadJson(GAMES_STORAGE_KEY, []);
 }
 function persistVocab() { saveJson(VOCAB_STORAGE_KEY, vocabulary); }
-async function persistRosters() {
+async function persistRosterKey(key, options = {}) {
+    const { replace = true } = options;
     saveJson(ROSTER_STORAGE_KEY, rosters);
-    const seasonId = getSelectedSeasonId();
-    if (!seasonId) return;
-    const key = getRosterKey();
+    const { seasonId, level, gender, side } = splitRosterKey(key);
+    if (!seasonId || seasonId === 'unscoped') {
+        console.warn('Cannot persist roster without season');
+        return false;
+    }
     const players = sortRosterPlayers(rosters[key] || []);
     try {
-        await fetch('/api/film-rosters', {
+        const resp = await fetch('/api/film-rosters', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 season_id: Number(seasonId),
-                level: getSelectedLevel(),
-                gender: getSelectedGender(),
-                side: currentRosterSide,
+                level,
+                gender,
+                side,
                 players,
-                replace: true,
+                replace,
             }),
         });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Could not save roster');
+        }
+        return true;
     } catch (err) {
         console.warn('Could not save roster to server', err);
+        return false;
     }
+}
+
+async function ensureRosterSeasonForFilm() {
+    await ensureRosterSeasonsLoaded();
+    if (!getSelectedSeasonId()) {
+        const first = rosterSeasonOptions[0]?.id;
+        if (first) setActiveRosterSeasonId(String(first));
+    }
+    return getSelectedSeasonId();
+}
+
+async function addPlayerToTeamRoster(team, rawEntry) {
+    const seasonId = await ensureRosterSeasonForFilm();
+    if (!seasonId) {
+        alert('Add a season on the Schedule page before saving roster players.');
+        return null;
+    }
+    const player = normalizeRosterPlayer(rawEntry);
+    if (!player) {
+        alert('Enter a jersey number (e.g. 12) or name (e.g. 12 - Smith).');
+        return null;
+    }
+    const key = mapTeamToRosterKey(team);
+    const existing = rosters[key] || [];
+    if (existing.some(item => playerLabel(item) === player.label)) {
+        return player;
+    }
+    rosters[key] = sortRosterPlayers([...existing, player]);
+    const saved = await persistRosterKey(key);
+    if (saved) {
+        setStatus(`Added ${player.label} to ${team} roster.`);
+    }
+    return player;
+}
+
+async function persistRosters() {
+    saveJson(ROSTER_STORAGE_KEY, rosters);
+    const key = getRosterKey();
+    await persistRosterKey(key);
 }
 function persistGames() { saveJson(GAMES_STORAGE_KEY, savedGames); }
 
@@ -685,13 +753,11 @@ function showPlayerSelection(def, team) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(team);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showPlayerSelection(def, team);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(team, raw);
+        if (player) showPlayerSelection(def, team);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown / team only';
@@ -716,13 +782,11 @@ function showStealPlayers(def, stealTeam) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(stealTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showStealPlayers(def, stealTeam);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(stealTeam, raw);
+        if (player) showStealPlayers(def, stealTeam);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown stealer';
@@ -749,13 +813,11 @@ function showTurnoverChooser(def, stealTeam, stealer) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(turnoverTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showTurnoverChooser(def, stealTeam, stealer);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(turnoverTeam, raw);
+        if (player) showTurnoverChooser(def, stealTeam, stealer);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown turnover';
@@ -1442,6 +1504,28 @@ function seasonLabel(seasonId) {
     return season?.name || `Season ${seasonId}`;
 }
 
+async function importBulkRosterNumbers() {
+    const textarea = document.getElementById('rosterBulkNumbersInput');
+    const seasonId = getSelectedSeasonId();
+    if (!seasonId) { alert('Select a season first.'); return; }
+    const parsed = parseRosterBulkLines(textarea?.value || '');
+    if (!parsed.length) {
+        alert('Paste one jersey number per line (e.g. 5, 12, 23). Names are optional: 12 - Smith');
+        return;
+    }
+    const key = getRosterKey();
+    const before = (rosters[key] || []).length;
+    rosters[key] = sortRosterPlayers([...(rosters[key] || []), ...parsed]);
+    const added = rosters[key].length - before;
+    const saved = await persistRosterKey(key);
+    if (textarea) textarea.value = '';
+    showRoster();
+    const sideLabel = currentRosterSide === 'opp' ? 'opponent' : currentRosterSide;
+    setStatus(saved
+        ? `Added ${added} player${added === 1 ? '' : 's'} to ${sideLabel} roster.`
+        : `Added ${added} locally; could not save to server.`);
+}
+
 async function clearCurrentRoster() {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) { alert('Select a season first.'); return; }
@@ -1530,10 +1614,11 @@ function renderStarterChoices(listEl, team, selectedSet) {
     const addRowEl = document.createElement('div'); addRowEl.className = 'term-item';
     const addLabel = document.createElement('div'); addLabel.textContent = 'Add new player';
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = 'Add';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number e.g. 24 - Smith'); if (!name) return;
-        const key = mapTeamToRosterKey(team); rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]); persistRosters();
-        renderStarterChoices(listEl, team, selectedSet);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(team, raw);
+        if (player) renderStarterChoices(listEl, team, selectedSet);
     });
     addRowEl.appendChild(addLabel); addRowEl.appendChild(addBtn); listEl.appendChild(addRowEl);
 }
@@ -2454,6 +2539,7 @@ function attachEventHandlers() {
         });
     });
     rosterFileInput?.addEventListener('change', e => { const file = e.target.files[0]; if (file) queueRosterImport(file); });
+    document.getElementById('rosterBulkAddBtn')?.addEventListener('click', importBulkRosterNumbers);
     document.getElementById('clearRosterBtn')?.addEventListener('click', clearCurrentRoster);
     document.getElementById('rosterImportCancelBtn')?.addEventListener('click', () => { pendingRosterImportFile = null; if (rosterFileInput) rosterFileInput.value = ''; rosterImportDialog?.close(); });
     document.getElementById('rosterImportConfirmBtn')?.addEventListener('click', confirmRosterImport);
