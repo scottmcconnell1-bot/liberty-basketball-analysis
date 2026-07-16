@@ -414,25 +414,57 @@
   }
   #film-tool-root.manual-tag-focus .ft-focus-dock {
     flex-shrink: 0;
-    background: #0a0a0a;
-    border-top: 1px solid #222;
-    padding: 0.35rem 0.5rem 0.5rem;
+    background: #111;
+    border-top: 1px solid #444;
+    padding: 0.45rem 0.65rem 0.65rem;
   }
   #film-tool-root.manual-tag-focus .ft-video-bar {
-    padding: 0.15rem 0 0.35rem;
+    padding: 0.15rem 0 0.4rem;
     background: transparent;
     font-size: 0.72rem;
+    color: #f1f5f9;
+  }
+  #film-tool-root.manual-tag-focus .ft-video-bar .ft-last-tag {
+    color: #cbd5e1;
   }
   #film-tool-root.manual-tag-focus .ft-vid-controls {
     padding: 0;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
   }
   #film-tool-root.manual-tag-focus .ft-vid-controls .btn {
-    padding: 0.4rem 0.6rem;
-    min-height: 36px;
-    font-size: 0.82rem;
+    padding: 0.45rem 0.7rem;
+    min-height: 38px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  #film-tool-root.manual-tag-focus .ft-focus-dock .ft-vid-controls .btn-ghost {
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+  }
+  #film-tool-root.manual-tag-focus .ft-focus-dock .ft-vid-controls .btn-ghost:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #020617;
+  }
+  #film-tool-root.manual-tag-focus .ft-focus-dock .ft-vid-controls .btn-primary {
+    background: var(--color-primary, #0d9488);
+    border-color: var(--color-primary, #0d9488);
+    color: #fff;
+    min-width: 4.5rem;
+  }
+  #film-tool-root.manual-tag-focus .ft-focus-dock .ft-vid-controls .btn-danger {
+    background: #fff;
+    border: 1px solid #f87171;
+    color: #b91c1c;
+  }
+  #film-tool-root.manual-tag-focus .ft-focus-dock .ft-vid-controls .btn-danger:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #991b1b;
   }
   #film-tool-root.manual-tag-focus .ft-vid-speed-row {
     display: none;
@@ -513,26 +545,29 @@
     right: 0;
     top: 50%;
     z-index: 240;
-    width: 22px;
-    height: 72px;
+    width: 26px;
+    height: 80px;
     margin: 0;
     padding: 0;
-    border: none;
-    border-radius: 6px 0 0 6px;
-    background: #111;
-    color: #fff;
-    font-size: 1rem;
+    border: 1px solid #555;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    background: #e2e8f0;
+    color: #0f172a;
+    font-size: 1.1rem;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
     transform: translateY(-50%);
-    transition: right 0.28s ease;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.35);
+    transition: right 0.28s ease, background 0.15s ease;
+    box-shadow: -3px 0 12px rgba(0, 0, 0, 0.4);
   }
   #film-tool-root.manual-tag-focus.ft-tag-drawer-open .ft-tag-drawer-toggle {
     right: min(300px, 88vw);
   }
   #film-tool-root.manual-tag-focus .ft-tag-drawer-toggle:hover {
-    background: #222;
+    background: #f8fafc;
+    color: #020617;
   }
   .ft-tag-drawer-toggle {
     display: none;
@@ -541,7 +576,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- film-tool-build: focus-fullscreen-20260716d -->
+<!-- film-tool-build: focus-fullscreen-20260716e -->
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -1292,6 +1327,6 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
-<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716d"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716d"></script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716e"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716e"></script>
 {% endblock %}
