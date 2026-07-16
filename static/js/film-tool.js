@@ -56,6 +56,7 @@ const GAMES_STORAGE_KEY = 'filmToolSavedGamesV20260423final';
 const LAST_GAME_KEY = 'filmToolLastGameIdV20260423final';
 const CURRENT_AUTOSAVE_KEY = 'filmToolCurrentAutosaveV20260423final';
 const MANUAL_FOCUS_STORAGE_KEY = 'filmToolManualTagFocusV1';
+const MANUAL_TAG_DRAWER_KEY = 'filmToolTagDrawerOpenV1';
 
 // ── Vocabulary (tagging terms) ──────────────────────────────
 const vocabulary = {
@@ -1724,9 +1725,42 @@ function applyFilmToolDeepLinks() {
     }
 }
 
-// ── Manual tag focus (75% video / 25% tags) ─────────────────
+// ── Manual tag focus (fullscreen video + slide-in tags) ─────
 function isManualTagFocusEnabled() {
     return document.getElementById('film-tool-root')?.classList.contains('manual-tag-focus') || false;
+}
+
+function isTagDrawerOpen() {
+    return document.getElementById('film-tool-root')?.classList.contains('ft-tag-drawer-open') || false;
+}
+
+function syncTagDrawerToggle() {
+    const toggle = document.getElementById('ftTagDrawerToggle');
+    if (!toggle) return;
+    const open = isTagDrawerOpen();
+    toggle.textContent = open ? '▶' : '◀';
+    toggle.title = open ? 'Hide tag panel' : 'Show tag panel';
+    toggle.setAttribute('aria-label', open ? 'Hide tag panel' : 'Show tag panel');
+}
+
+function setTagDrawerOpen(open, options = {}) {
+    const root = document.getElementById('film-tool-root');
+    if (!root || !isManualTagFocusEnabled()) return;
+    const on = Boolean(open);
+    root.classList.toggle('ft-tag-drawer-open', on);
+    if (!options.skipPersist) saveJson(MANUAL_TAG_DRAWER_KEY, on);
+    syncTagDrawerToggle();
+}
+
+function toggleTagDrawer() {
+    if (!isManualTagFocusEnabled()) return;
+    setTagDrawerOpen(!isTagDrawerOpen());
+}
+
+function syncFocusVideoChrome() {
+    if (!video) return;
+    if (isManualTagFocusEnabled()) video.removeAttribute('controls');
+    else video.setAttribute('controls', '');
 }
 
 function setManualTagFocus(enabled, options = {}) {
@@ -1736,16 +1770,24 @@ function setManualTagFocus(enabled, options = {}) {
     root.classList.toggle('manual-tag-focus', on);
     document.body.classList.toggle('manual-tag-focus', on);
     saveJson(MANUAL_FOCUS_STORAGE_KEY, on);
+    if (!on) {
+        root.classList.remove('ft-tag-drawer-open');
+    } else {
+        const drawerOpen = Boolean(loadJson(MANUAL_TAG_DRAWER_KEY, false));
+        root.classList.toggle('ft-tag-drawer-open', drawerOpen);
+    }
+    syncTagDrawerToggle();
+    syncFocusVideoChrome();
     document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
         btn.classList.toggle('active', on);
         btn.textContent = on ? '↩ Full layout' : '🎯 Focus';
         btn.title = on
-            ? 'Show upload, AI, bookmarks, scoreboard, and site navigation'
-            : 'Large video + tag buttons only (about 75% / 25%)';
+            ? 'Exit fullscreen focus — show upload, AI, bookmarks, and navigation'
+            : 'Fullscreen video with bottom controls and slide-in tags';
     });
     if (!options.silent && typeof setStatus === 'function') {
         setStatus(on
-            ? 'Focus mode: large video on the left, tag buttons on the right.'
+            ? 'Focus mode: fullscreen video. Click the black arrow on the right for tags.'
             : 'Full layout restored.');
     }
 }
@@ -2617,6 +2659,7 @@ function attachEventHandlers() {
     document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
         btn.addEventListener('click', toggleManualTagFocus);
     });
+    document.getElementById('ftTagDrawerToggle')?.addEventListener('click', toggleTagDrawer);
     document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });

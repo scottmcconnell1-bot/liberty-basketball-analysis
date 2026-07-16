@@ -31,3 +31,9 @@ def test_film_tool_build_info_detects_controls_v2():
     info = launcher.film_tool_build_info()
     assert info["has_tagging_controls_v2"] is True
     assert info["has_focus_mode"] is True
+
+
+def test_film_tool_template_has_fullscreen_focus_drawer():
+    text = launcher.FILM_TOOL_TEMPLATE.read_text(encoding="utf-8")
+    assert "focus-fullscreen-20260716d" in text
+    assert "ft-tag-drawer-open" in text

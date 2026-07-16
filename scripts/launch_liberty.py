@@ -43,6 +43,7 @@ def film_tool_build_info() -> dict[str, bool | str]:
         "template": str(FILM_TOOL_TEMPLATE),
         "has_tagging_controls_v2": (
             'id="undoBtnBar"' in text
+            and 'id="ftTagDrawerToggle"' in text
             and 'data-skip="-5"' in text
             and 'data-skip="-30"' not in text
         ),
@@ -278,7 +279,7 @@ def main() -> int:
         _log(f"Server ready: {base_url}")
         build = film_tool_build_info()
         if build["has_tagging_controls_v2"]:
-            _log("Film Tool: Controls v2 loaded (◀5/10s, ▶⏸, red Undo)")
+            _log("Film Tool: Focus FS loaded (fullscreen video, slide-in tags, bottom controls)")
         else:
             _warn(
                 "Film Tool is missing Controls v2 — git pull this repo, then restart. "

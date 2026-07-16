@@ -14,10 +14,12 @@ def test_film_tool_top_bar_is_simplified(client):
     assert 'id="manualTagFocusBtn"' in html
     assert 'id="undoBtnBar"' in html
     assert 'id="vidPlayPauseBtn"' in html
+    assert 'id="ftTagDrawerToggle"' in html
     assert 'data-skip="-5"' in html
     assert 'data-skip="-10"' in html
     assert 'data-skip="5"' in html
-    assert 'Controls v2' in html
+    assert 'Focus FS' in html
+    assert 'ft-tag-drawer-toggle' in html
     assert 'data-skip="-30"' not in html
     assert 'manual-tag-focus' in html
 
