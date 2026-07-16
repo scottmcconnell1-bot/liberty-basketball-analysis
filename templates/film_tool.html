@@ -372,7 +372,8 @@
   #film-tool-root.manual-tag-focus .ft-tag-grid {
     grid-template-columns: 1fr 1fr;
   }
-  #film-tool-root.manual-tag-focus #manualTagFocusBtn {
+  #film-tool-root.manual-tag-focus #manualTagFocusBtn,
+  #film-tool-root.manual-tag-focus #manualTagFocusBtnBar {
     background: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
@@ -393,7 +394,7 @@
       <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
     <div class="ft-topbar-actions">
-      <button class="btn" id="manualTagFocusBtn" type="button" title="Large video + tag buttons only (75/25)">🎯 Focus</button>
+      <button class="btn btn-primary js-manual-tag-focus-toggle" id="manualTagFocusBtn" type="button" title="Large video + tag buttons only (75/25)">🎯 Focus</button>
       <button class="btn ft-focus-hide" id="resumeLastBtn" type="button">↩ Resume</button>
       <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
       <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
@@ -420,6 +421,16 @@
     </div>
 
     <div class="ft-layout">
+
+      {% if not filename and not uploaded_video_url %}
+      <div class="panel ft-manual-clutter" style="grid-column:1/-1;margin-bottom:.75rem;padding:1rem 1.25rem;">
+        <strong>No video loaded.</strong>
+        <p class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);">
+          Go to <a href="/videos">Videos</a>, find your game, and click <strong>Film Tool</strong> on that row.
+          That opens the film with your video and Focus layout for tagging.
+        </p>
+      </div>
+      {% endif %}
 
       <!-- ── Left: Video + Controls + Bookmarks ────────────── -->
       <div class="ft-video-column">
@@ -480,6 +491,7 @@
         </div>
         <div class="ft-video-bar">
           <span class="ft-time" id="timeDisplay">0:00.0</span>
+          <button class="btn btn-primary js-manual-tag-focus-toggle" id="manualTagFocusBtnBar" type="button" title="Large video + tag buttons only" style="margin-left:.5rem;padding:.2rem .55rem;min-height:26px;font-size:.72rem;">🎯 Focus</button>
           <span style="flex:1"></span>
           <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
         </div>

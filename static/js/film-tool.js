@@ -1736,14 +1736,13 @@ function setManualTagFocus(enabled, options = {}) {
     root.classList.toggle('manual-tag-focus', on);
     document.body.classList.toggle('manual-tag-focus', on);
     saveJson(MANUAL_FOCUS_STORAGE_KEY, on);
-    const btn = document.getElementById('manualTagFocusBtn');
-    if (btn) {
+    document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
         btn.classList.toggle('active', on);
         btn.textContent = on ? '↩ Full layout' : '🎯 Focus';
         btn.title = on
             ? 'Show upload, AI, bookmarks, scoreboard, and site navigation'
             : 'Large video + tag buttons only (about 75% / 25%)';
-    }
+    });
     if (!options.silent && typeof setStatus === 'function') {
         setStatus(on
             ? 'Focus mode: large video on the left, tag buttons on the right.'
@@ -1759,7 +1758,10 @@ function initManualTagFocus() {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = params.get('focus') === '1';
     const stored = Boolean(loadJson(MANUAL_FOCUS_STORAGE_KEY, false));
-    setManualTagFocus(fromUrl || stored, { silent: true });
+    const hasServerVideo = Boolean(window.FILM_TOOL_UPLOADED_VIDEO_URL);
+    // Default to focus when opening a saved video from the library (?focus=1 or server video).
+    const shouldFocus = fromUrl || stored || (hasServerVideo && params.get('focus') !== '0');
+    setManualTagFocus(shouldFocus, { silent: true });
 }
 
 // ── Focus Mode ──────────────────────────────────────────────
@@ -2561,7 +2563,9 @@ function attachEventHandlers() {
     termFieldSelect?.addEventListener('change', renderTermList);
 
     document.getElementById('manageRostersBtn')?.addEventListener('click', () => { openRosterDialog(); });
-    document.getElementById('manualTagFocusBtn')?.addEventListener('click', toggleManualTagFocus);
+    document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
+        btn.addEventListener('click', toggleManualTagFocus);
+    });
     document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
