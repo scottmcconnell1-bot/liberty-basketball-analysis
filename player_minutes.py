@@ -117,13 +117,16 @@ def get_player_minutes(db, game_id):
 
     Returns rows sorted by minutes_played descending.
     """
+    from analysis_helpers import dedupe_player_minute_rows, resolve_analysis_key
+
+    analysis_key = resolve_analysis_key(db, game_id)
     relational_game_id = _resolve_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        return db.execute(
+        rows = db.execute(
             """
-            SELECT pm.tracker_id, pm.first_frame, pm.last_frame,
+            SELECT pm.game_id, pm.tracker_id, pm.first_frame, pm.last_frame,
                    pm.total_frames, pm.minutes_played,
-                   pm.jersey_number, pm.player_name,
+                   pm.jersey_number, pm.player_name, pm.relational_game_id,
                    p.id AS player_id, p.name AS resolved_name
             FROM player_minutes pm
             LEFT JOIN players p ON p.tracker_id = pm.tracker_id
@@ -131,22 +134,24 @@ def get_player_minutes(db, game_id):
                OR (pm.relational_game_id IS NULL AND pm.game_id = ?)
             ORDER BY pm.minutes_played DESC
             """,
-            (relational_game_id, str(game_id)),
+            (relational_game_id, analysis_key),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            """
+            SELECT pm.game_id, pm.tracker_id, pm.first_frame, pm.last_frame,
+                   pm.total_frames, pm.minutes_played,
+                   pm.jersey_number, pm.player_name, pm.relational_game_id,
+                   p.id AS player_id, p.name AS resolved_name
+            FROM player_minutes pm
+            LEFT JOIN players p ON p.tracker_id = pm.tracker_id
+            WHERE pm.game_id = ?
+            ORDER BY pm.minutes_played DESC
+            """,
+            (analysis_key,),
         ).fetchall()
 
-    return db.execute(
-        """
-        SELECT pm.tracker_id, pm.first_frame, pm.last_frame,
-               pm.total_frames, pm.minutes_played,
-               pm.jersey_number, pm.player_name,
-               p.id AS player_id, p.name AS resolved_name
-        FROM player_minutes pm
-        LEFT JOIN players p ON p.tracker_id = pm.tracker_id
-        WHERE pm.game_id = ?
-        ORDER BY pm.minutes_played DESC
-        """,
-        (game_id,),
-    ).fetchall()
+    return dedupe_player_minute_rows(rows, preferred_game_id=analysis_key)
 
 
 def get_player_minutes_for_player(db, tracker_id):

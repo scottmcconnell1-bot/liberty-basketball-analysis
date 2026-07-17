@@ -889,15 +889,22 @@
   </dialog>
 
   <dialog id="rosterDialog">
-    <form method="dialog">
-      <div class="modal-head"><h2>Manage rosters</h2></div>
+    <form method="dialog" id="rosterDialogForm">
+      <div class="modal-head">
+        <h2>Manage rosters</h2>
+        <button class="btn btn-sm" type="button" id="rosterDialogCloseBtn" aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
         <div class="field">
           <label for="rosterSeasonSelect">Season</label>
-          <select id="rosterSeasonSelect" required>
+          <select id="rosterSeasonSelect">
             <option value="">Loading seasons…</option>
           </select>
-          <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
+          <span class="tiny" id="rosterSeasonHelp">Rosters are saved per season so you can keep last year’s players.</span>
+          <div id="rosterSeasonActions" style="display:none;margin-top:.5rem;">
+            <button class="btn btn-sm btn-primary" type="button" id="createDefaultSeasonBtn">Create season</button>
+            <a class="btn btn-sm" href="/schedule" target="_blank" rel="noopener">Open Schedule</a>
+          </div>
         </div>
         <div class="split">
           <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity" checked> Varsity</label></div></div>
@@ -931,18 +938,23 @@
           <button class="btn btn-danger" id="clearRosterBtn" type="button">Clear roster</button>
         </div>
       </div>
-      <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="rosterDialogFooterCloseBtn">Close</button>
+      </div>
     </form>
   </dialog>
 
   <dialog id="rosterImportDialog">
-    <form method="dialog">
-      <div class="modal-head"><h2>Import roster</h2></div>
+    <form method="dialog" id="rosterImportDialogForm">
+      <div class="modal-head">
+        <h2>Import roster</h2>
+        <button class="btn btn-sm" type="button" id="rosterImportCloseBtn" aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
         <p class="tiny" id="rosterImportFileLabel"></p>
         <div class="field">
           <label for="rosterImportSeasonSelect">Season</label>
-          <select id="rosterImportSeasonSelect" required></select>
+          <select id="rosterImportSeasonSelect"></select>
         </div>
         <div class="split">
           <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity" checked> Varsity</label></div></div>

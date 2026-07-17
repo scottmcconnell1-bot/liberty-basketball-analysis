@@ -590,13 +590,27 @@
     min-height: 0;
 }
 #film-tool-root #rosterDialog .modal-head,
+#film-tool-root #rosterImportDialog .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+#film-tool-root #rosterDialog .modal-head h2,
+#film-tool-root #rosterImportDialog .modal-head h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+#film-tool-root #rosterSeasonSelect,
+#film-tool-root #rosterImportSeasonSelect {
+    width: 100%;
+    max-width: 100%;
+    pointer-events: auto;
+}
+#film-tool-root #rosterDialog .modal-head,
 #film-tool-root #rosterDialog .modal-foot {
     flex: 0 0 auto;
     padding: 1.1rem 1.5rem;
-}
-#film-tool-root #rosterDialog .modal-head h2 {
-    margin: 0;
-    font-size: 1.2rem;
 }
 #film-tool-root #rosterDialog .modal-body {
     flex: 1 1 auto;

@@ -1146,6 +1146,27 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
+def test_analysis_status_parses_settings_json(client, db):
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, video_path, status, settings_json)
+           VALUES (?, ?, ?, ?)""",
+        (
+            "analysis_settings_json",
+            "uploads/demo.mp4",
+            "completed",
+            '{"ai": {"event_generator_mode": "expanded"}}',
+        ),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_status/analysis_settings_json")
+    assert r.status_code == 200
+    payload = r.get_json()
+    assert payload["status"] == "completed"
+    assert "expanded heuristic generator" in payload["event_generation_summary"]
+
+
 def test_analysis_status_counts_detections_via_relational_game_id(client, db):
     game_row = db.execute(
         "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
@@ -2014,6 +2035,60 @@ def test_games_routes_hidden_when_feature_disabled(app, client):
         assert client.get("/api/sources").status_code == 404
     finally:
         app.config["FEATURES"]["ENABLE_GAMES_SOURCES"] = original
+
+
+def test_film_page_accessible_with_auto_stats_only(app, client):
+    original_manual = app.config["FEATURES"]["ENABLE_MANUAL_TAG_MVP"]
+    original_auto = app.config["FEATURES"]["ENABLE_AUTO_STATS_M1"]
+    app.config["FEATURES"]["ENABLE_MANUAL_TAG_MVP"] = False
+    app.config["FEATURES"]["ENABLE_AUTO_STATS_M1"] = True
+    try:
+        resp = client.get("/film?game_id=test_game")
+        assert resp.status_code == 200
+    finally:
+        app.config["FEATURES"]["ENABLE_MANUAL_TAG_MVP"] = original_manual
+        app.config["FEATURES"]["ENABLE_AUTO_STATS_M1"] = original_auto
+
+
+def test_video_film_redirect_route(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("game.mp4", "wilder_game.mp4", "uploads/wilder_game.mp4", 1000, "nfhs_wilder"),
+    )
+    db.commit()
+    resp = client.get("/videos/1/film")
+    assert resp.status_code == 302
+    assert "/film/wilder_game.mp4" in resp.headers["Location"]
+    assert "game_id=nfhs_wilder" in resp.headers["Location"]
+
+
+def test_count_detections_includes_linked_analysis_runs(db):
+    from helpers import count_detections_for_analysis
+
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id)
+           VALUES ('a.mp4', 'a.mp4', 'uploads/a.mp4', 1, 'nfhs_trim_child')"""
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, base_analysis_key, source_video_id, video_path, status)
+           VALUES ('nfhs_trim_child', 'nfhs_parent', 1, 'uploads/a.mp4', 'completed')"""
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES ('nfhs_parent', 1, 1000, 'person', 0.9, 10, 10, 5, 10)"""
+    )
+    db.commit()
+    count = count_detections_for_analysis(
+        db,
+        analysis_key="nfhs_trim_child",
+        source_video_id=1,
+    )
+    assert count == 1
 
 
 def test_auto_stats_routes_hidden_when_feature_disabled(app, client):

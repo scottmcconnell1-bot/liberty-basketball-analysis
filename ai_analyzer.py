@@ -443,7 +443,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         if relational_game_id:
             try:
                 from helpers import assign_possessions_for_game
-                assign_possessions_for_game(db, relational_game_id)
+                assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
                 print(f"[AI] Possessions assigned for game_id={relational_game_id}")
             except Exception as e:
                 print(f"[AI] Possession assignment failed: {e}")

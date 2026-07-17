@@ -56,6 +56,7 @@ from helpers import (
     read_filtered_app_logs,
     render_schedule_page,
     require_feature,
+    require_any_feature,
     resolve_analysis_run_for_progress,
     safe_return_path,
     append_query_params,
@@ -1669,11 +1670,26 @@ def review_page():
     return render_template("review_events.html")
 
 
+@core.route("/videos/<int:vid_id>/film")
+@require_any_feature("ENABLE_MANUAL_TAG_MVP", "ENABLE_AUTO_STATS_M1")
+def video_film_redirect(vid_id):
+    """Open Film Tool for a library video (works even when filename is awkward)."""
+    db = get_db()
+    video = db.execute("SELECT stored_filename, game_id FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        abort(404)
+    filename = (video["stored_filename"] or "").strip()
+    if filename:
+        return redirect(url_for("core.film", filename=filename, game_id=video["game_id"]))
+    return redirect(url_for("core.film", game_id=video["game_id"], video_id=vid_id))
+
+
 @core.route("/film")
 @core.route("/film/<filename>")
-@require_feature("ENABLE_MANUAL_TAG_MVP")
+@require_any_feature("ENABLE_MANUAL_TAG_MVP", "ENABLE_AUTO_STATS_M1")
 def film(filename=None):
     requested_game_id = (request.args.get("game_id") or "").strip() or None
+    requested_video_id = request.args.get("video_id", type=int)
     game_id = requested_game_id
     shot_summary = []
     player_effect_data = []
@@ -1682,6 +1698,16 @@ def film(filename=None):
     video_id = None
     analysis_status = None
     detection_count = None
+    if requested_video_id and not filename:
+        db = get_db()
+        video_row = db.execute(
+            "SELECT stored_filename, game_id FROM videos WHERE id=?",
+            (requested_video_id,),
+        ).fetchone()
+        if video_row:
+            filename = (video_row["stored_filename"] or "").strip() or None
+            if not game_id:
+                game_id = video_row["game_id"]
     if filename:
         db = get_db()
         latest_run = latest_analysis_run_id_subquery()
@@ -1720,6 +1746,7 @@ def film(filename=None):
                     relational_game_id=run_row["game_id"],
                     video_game_id=video_row["game_id"] if video_row else None,
                     base_analysis_key=run_row["base_analysis_key"],
+                    source_video_id=video_id,
                 )
     if game_id:
         db = get_db()

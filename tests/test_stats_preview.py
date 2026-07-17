@@ -167,10 +167,52 @@ def test_possession_summary_uses_relational_game_id(db):
     )
     db.commit()
 
-    assign_possessions_for_game(db, game_id)
-    score_possessions_for_game(db, game_id)
+    assign_possessions_for_game(db, game_id, analysis_key=analysis_key)
+    score_possessions_for_game(db, analysis_key)
 
     summary = get_possession_summary(db, analysis_key)
     assert summary["total_possessions"] > 0
     assert summary["scoring_possessions"] > 0
     assert summary["points_per_possession"] > 0
+
+
+def test_possession_summary_scopes_to_current_analysis_key(db):
+    """Stale possessions from a prior rerun must not inflate the current summary."""
+    from helpers import assign_possessions_for_game
+    from stats import get_possession_summary
+
+    db.execute(
+        """INSERT INTO games (source_type, source_key) VALUES ('manual', 'poss-scope')"""
+    )
+    relational_game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    parent_key = "nfhs_parent_poss"
+    rerun_key = "nfhs_parent_poss__rerun_1"
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, game_id, video_path, base_analysis_key, status)
+           VALUES (?, ?, '/tmp/rerun.mp4', ?, 'completed')""",
+        (rerun_key, relational_game_id, parent_key),
+    )
+
+    for index in range(20):
+        db.execute(
+            """INSERT INTO events
+                  (game_id, relational_game_id, player, event_type, timestamp_ms,
+                   review_status)
+               VALUES (?, ?, '1', 'possession_change', ?, 'pending')""",
+            (parent_key, relational_game_id, index * 1000),
+        )
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, player, event_type, timestamp_ms,
+               review_status)
+           VALUES (?, ?, '2', 'make', 1000, 'pending')""",
+        (rerun_key, relational_game_id),
+    )
+    db.commit()
+
+    assign_possessions_for_game(db, relational_game_id)
+    assign_possessions_for_game(db, relational_game_id, analysis_key=rerun_key)
+
+    summary = get_possession_summary(db, rerun_key)
+    assert summary["total_possessions"] == 1

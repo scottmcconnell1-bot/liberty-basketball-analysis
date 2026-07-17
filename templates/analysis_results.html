@@ -134,8 +134,8 @@
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
       <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
-        The AI auto-maps jersey numbers from the video to your roster.
-        Only edit a row here if a player was mis-identified — otherwise just click stats above to verify on film.
+        Jersey numbers are read automatically from the video via OCR and matched to your roster.
+        Only edit a row here if the AI mis-identified a player.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
@@ -153,7 +153,8 @@
         </table>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
-      <button type="button" class="btn btn-primary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Apply roster to stats</button>
+      <button type="button" class="btn btn-primary btn-sm" id="scanJerseysBtn" style="margin-left:8px;">Scan jerseys (OCR)</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Re-apply roster to stats</button>
     </div>
 
     <div class="grid">
@@ -399,8 +400,13 @@ async function loadResults() {
     setStep('step-fetch', 'active');
 
     const resp = await fetch('/api/analysis/' + GAME_ID);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (!resp.ok) {
+      if (resp.status === 503 && data.code === 'database_locked') {
+        throw new Error(data.error || 'Database busy — wait until analysis finishes, then refresh.');
+      }
+      throw new Error(data.error || ('HTTP ' + resp.status));
+    }
     if (data.analysis_key && data.analysis_key !== GAME_ID) {
       GAME_ID = data.analysis_key;
       const subtitle = document.getElementById('resultsSubtitle');
@@ -444,8 +450,17 @@ async function loadResults() {
           + (ocrReads ? ' (' + ocrReads.toLocaleString() + ' jersey reads)' : '') + '. ';
         html += 'Click any stat to verify each play on film.';
       } else if (identity.reason === 'no_cluster_suggestions') {
-        html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
-        html += 'Try <strong>Rebuild events</strong> on Video Library, or verify the roster is imported in Film Tool.';
+        const engines = identity.ocr_engines || {};
+        const reads = identity.ocr_read_count || 0;
+        html += 'Jersey OCR could not auto-name players';
+        if (!engines.easyocr && !engines.paddleocr) {
+          html += ' — <strong>EasyOCR is not installed</strong> on this PC (`py -3.12 -m pip install easyocr`). ';
+        } else if (reads === 0) {
+          html += ' — scanning jerseys from the video now (this may take a few minutes). ';
+        } else {
+          html += ' (' + reads.toLocaleString() + ' reads, not confident enough). ';
+        }
+        html += 'Click <strong>Scan jerseys (OCR)</strong> below to retry, or wait for the automatic scan to finish.';
       } else {
         html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
         html += 'Click stats to verify events on film.';
@@ -507,6 +522,7 @@ async function loadResults() {
     document.getElementById('results').style.display = 'block';
 
     await loadSlotMappingUI();
+    maybeAutoScanJerseys(data.identity_status || {});
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
@@ -826,11 +842,16 @@ function renderSlotMappingTable() {
 
   let html = '';
   COURT_SLOTS.forEach(function(slot) {
+    const suggestedJersey = slot.ocr_suggested_jersey ?? '';
+    const jerseyValue = slot.jersey_number ?? suggestedJersey ?? '';
+    const hintLabel = suggestedJersey && !slot.jersey_number
+      ? ' <span style="color:var(--orange);font-size:.75rem;">OCR hint: #' + suggestedJersey + '</span>'
+      : '';
     html += '<tr data-tracker-id="' + slot.tracker_id + '">';
-    html += '<td><strong>Pos ' + slot.tracker_id + '</strong></td>';
+    html += '<td><strong>Pos ' + slot.tracker_id + '</strong>' + hintLabel + '</td>';
     html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
     html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
-    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + (slot.jersey_number ?? '') + '"></td>';
+    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + jerseyValue + '"></td>';
     html += '<td><input class="slot-name" type="text" style="min-width:140px" value="' + escapeHtml(slot.player_name || '') + '"></td>';
     html += '</tr>';
   });
@@ -845,6 +866,17 @@ function renderSlotMappingTable() {
       for (const opt of select.options) {
         if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
           select.value = opt.value;
+          break;
+        }
+      }
+    } else if (slot.ocr_suggested_jersey != null && slot.ocr_suggested_jersey !== '') {
+      for (const opt of select.options) {
+        if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.ocr_suggested_jersey)) {
+          select.value = opt.value;
+          const tr = select.closest('tr');
+          if (tr && !tr.querySelector('.slot-name').value && opt.dataset.name) {
+            tr.querySelector('.slot-name').value = opt.dataset.name;
+          }
           break;
         }
       }
@@ -912,6 +944,59 @@ async function applyRosterNamesToStats() {
 }
 
 document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
+
+async function scanJerseysFromVideo() {
+  const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('scanJerseysBtn');
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Scanning jersey numbers from video (OCR)… this may take several minutes.';
+  }
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/scan-jerseys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Jersey scan failed');
+    const mapped = data.slots_mapped || data.auto_apply?.applied || 0;
+    const reads = data.ocr_read_count || 0;
+    if (status) {
+      status.style.color = mapped > 0 ? 'var(--green)' : 'var(--orange)';
+      status.textContent = mapped > 0
+        ? ('OCR mapped ' + mapped + ' players (' + reads.toLocaleString() + ' jersey reads). Refreshing stats…')
+        : ('OCR finished with ' + reads.toLocaleString() + ' reads but could not auto-map players yet.');
+    }
+    await loadSlotMappingUI();
+    if (mapped > 0) await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Jersey scan failed: ' + err.message;
+    } else {
+      alert(err.message || 'Jersey scan failed.');
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.getElementById('scanJerseysBtn')?.addEventListener('click', scanJerseysFromVideo);
+
+async function maybeAutoScanJerseys(identity) {
+  if (!identity) return;
+  if (identity.reason === 'analysis_running' || identity.reason === 'database_locked') return;
+  if (identity.reason !== 'no_cluster_suggestions') return;
+  const reads = identity.ocr_read_count || 0;
+  const engines = identity.ocr_engines || {};
+  if (reads > 0 || (!engines.easyocr && !engines.paddleocr)) return;
+  if (window.__jerseyScanStarted) return;
+  window.__jerseyScanStarted = true;
+  await scanJerseysFromVideo();
+}
 
 async function loadSlotMappingUI() {
   try {
@@ -1015,10 +1100,15 @@ document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlo
 
 function buildFilmLink(timestampMs, label) {
   if (!STORED_FILENAME || timestampMs == null) return '';
-  const seconds = Math.max(0, Math.floor(Number(timestampMs) / 1000));
+  const CLIP_BEFORE_MS = 3000;
+  const CLIP_AFTER_MS = 5000;
+  const eventMs = Number(timestampMs);
+  const startSec = Math.max(0, (eventMs - CLIP_BEFORE_MS) / 1000);
+  const endSec = (eventMs + CLIP_AFTER_MS) / 1000;
   const href = '/film/' + encodeURIComponent(STORED_FILENAME)
     + '?game_id=' + encodeURIComponent(GAME_ID)
-    + '&t=' + seconds;
+    + '&t=' + startSec.toFixed(2)
+    + '&t_end=' + endSec.toFixed(2);
   return '<a class="film-link" href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || 'Film') + '</a>';
 }
 
