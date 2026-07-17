@@ -206,8 +206,8 @@
         scheduleHtml += '<div class="schedule-list">';
         scheduleHtml += t.upcoming.map(g => {
           const loc = g.location_type || 'home';
-          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
-          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
+          const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : (loc === 'tbd' ? 'TBD' : 'T'));
+          const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : (loc === 'tbd' ? 'loc-tbd' : 'loc-tournament'));
           const shortDate = formatGameDate(g.game_date, g.game_time);
           const tournament = g.tournament_name ? ` <span class="text-muted">(${g.tournament_name})</span>` : '';
           return `<div class="sched-row">

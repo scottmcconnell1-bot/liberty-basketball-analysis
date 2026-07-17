@@ -157,16 +157,68 @@ def test_parse_schedule_line_various_formats():
     assert result["gender"] == "girls"
 
 
-def test_parse_schedule_line_jr_high_b_and_a_times():
-    """Jr High PDF rows map first time to B team and second to A team."""
+def test_parse_schedule_line_jr_high_assumes_pm():
     from blueprints.core import _parse_schedule_line
 
-    result = _parse_schedule_line("TUES, DEC 2 MARSING (H) 4:30/6:00", pdf_team="jr_boys")
+    result = _parse_schedule_line("TUES, JAN 27 NOTUS (H) 3:30/5:00", pdf_team="jr_boys")
+    assert result["jv_game_time"] == "15:30"
+    assert result["game_time"] == "17:00"
+
+
+def test_parse_schedule_line_jr_high_space_separated_times():
+    from blueprints.core import _parse_schedule_line
+
+    result = _parse_schedule_line("JAN 27 NOTUS 3:30 5:00", pdf_team="jr_boys")
+    assert result["jv_game_time"] == "15:30"
+    assert result["game_time"] == "17:00"
+
+
+def test_parse_schedule_line_jr_high_compact_pm_suffix():
+    from blueprints.core import _parse_schedule_line
+
+    result = _parse_schedule_line("TUES, JAN 27 NOTUS (H) 3:30p/5:00p", pdf_team="jr_boys")
+    assert result["jv_game_time"] == "15:30"
+    assert result["game_time"] == "17:00"
+    assert result["opponent_name"] == "Notus"
+
+
+def test_parse_schedule_line_normalizes_opponent_title_case():
+    from blueprints.core import _parse_schedule_line
+
+    result = _parse_schedule_line("JAN 29 RIVERSTONE (A) 4:00/6:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Riverstone"
+
+    result = _parse_schedule_line("FEB 2 Rimrock (H) 3:30", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Rimrock"
+
+    result = _parse_schedule_line("FEB 10 IDAHO CITY (A) 4:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "Idaho City"
+
+
+def test_parse_schedule_line_tbd_opponent_and_location():
+    from blueprints.core import _normalize_opponent_name, _normalize_location_type, _parse_schedule_line
+
+    assert _normalize_opponent_name("tbd") == "TBD"
+    assert _normalize_location_type("TBD") == "tbd"
+
+    result = _parse_schedule_line("JAN 15 TBD (TBD) 3:30/5:00", pdf_team="jr_boys")
     assert result is not None
-    assert result["level"] == "jr_high"
-    assert result["jv_game_time"] == "04:30"
-    assert result["game_time"] == "06:00"
-    assert result["frosh_game_time"] in ("", None)
+    assert result["opponent_name"] == "TBD"
+    assert result["location_type"] == "tbd"
+
+    result = _parse_schedule_line("FEB 5 tbd (tbd) 4:00", pdf_team="jr_boys")
+    assert result["opponent_name"] == "TBD"
+    assert result["location_type"] == "tbd"
+
+
+def test_detect_season_jr_boys_uses_title_year():
+    from blueprints.core import _detect_season_from_text
+
+    text = "2026 Junior High Boys' Basketball Schedule\nJAN 27 NOTUS 3:30/5:00"
+    season = _detect_season_from_text(text, pdf_team="jr_boys")
+    assert season is not None
+    assert season["start_date"] == "2026-01-01"
+    assert season["end_date"] == "2026-02-28"
 
 
 def test_parse_schedule_text_jr_high_ab_continuation_line():
@@ -176,8 +228,8 @@ def test_parse_schedule_text_jr_high_ab_continuation_line():
     text = "TUES, DEC 2 MARSING (H) 4:30\nA 6:00"
     games = _parse_schedule_text(text, pdf_team="jr_boys")
     assert len(games) == 1
-    assert games[0]["jv_game_time"] == "04:30"
-    assert games[0]["game_time"] == "06:00"
+    assert games[0]["jv_game_time"] == "16:30"
+    assert games[0]["game_time"] == "18:00"
 
 
 def test_api_schedule_import_maxpreps_pdf(client, monkeypatch):

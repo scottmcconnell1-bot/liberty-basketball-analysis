@@ -2613,6 +2613,7 @@ SCHEDULE_LOCATION_OPTIONS = [
     ("home", "Home"),
     ("away", "Away"),
     ("neutral", "Neutral"),
+    ("tbd", "TBD"),
 ]
 SCHEDULE_STATUS_OPTIONS = [
     ("scheduled", "Scheduled"),
