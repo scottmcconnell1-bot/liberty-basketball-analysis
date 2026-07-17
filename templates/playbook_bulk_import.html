@@ -79,10 +79,21 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script>
 let bulkData = null;
 let currentMode = 'auto';
 let currentSection = '';
+const bulkCategoryTree = {{ category_tree|tojson }};
+const bulkLeafCategories = {{ leaf_categories|tojson }};
+
+function categoryOptionsHtml(selectedId) {
+  return bulkLeafCategories.map((cat) => {
+    const label = (cat.slug_path || cat.name || '').replace(/\//g, ' · ').replace(/_/g, ' ');
+    const selected = String(cat.id) === String(selectedId) ? ' selected' : '';
+    return '<option value="' + cat.id + '"' + selected + '>' + escapeHtml(label) + '</option>';
+  }).join('');
+}
 
 function setMode(mode) {
   currentMode = mode;
@@ -206,13 +217,9 @@ function showSection(section) {
     html += '</div>';
 
     // Category selector
-    html += '<select class="form-control play-category" data-idx="' + globalIdx + '" style="width:auto;font-size:0.8rem;padding:4px 8px;">';
-    html += '<option value="offense"' + (play.section.toLowerCase().includes('offense') ? ' selected' : '') + '>Offense</option>';
-    html += '<option value="defense"' + (play.section.toLowerCase().includes('defense') ? ' selected' : '') + '>Defense</option>';
-    html += '<option value="out_of_bounds"' + (play.section.toLowerCase().includes('blob') || play.section.toLowerCase().includes('slob') ? ' selected' : '') + '>Out of Bounds</option>';
-    html += '<option value="press"' + (play.section.toLowerCase().includes('press') ? ' selected' : '') + '>Press</option>';
-    html += '<option value="transition"' + (play.section.toLowerCase().includes('transition') ? ' selected' : '') + '>Transition</option>';
-    html += '<option value="special"' + (play.section.toLowerCase().includes('drill') ? ' selected' : '') + '>Drill</option>';
+    const defaultCategoryId = play.category_id || '';
+    html += '<select class="form-control play-category" data-idx="' + globalIdx + '" style="width:auto;min-width:180px;font-size:0.8rem;padding:4px 8px;">';
+    html += categoryOptionsHtml(defaultCategoryId);
     html += '</select>';
 
     // PDF download button (split mode)
@@ -286,13 +293,14 @@ function saveBulkPlays() {
     const idx = parseInt(card.dataset.idx);
     const play = bulkData.plays[idx];
     if (!play) return;
-    const category = card.querySelector('.play-category').value;
+    const categoryId = card.querySelector('.play-category').value;
     const nameInput = card.querySelector('.play-name-input');
     const name = nameInput ? nameInput.value.trim() : play.play_name;
     plays.push({
       play_name: name,
       section: play.section,
-      category: category,
+      subsection: play.subsection || '',
+      category_id: categoryId,
       playbook_id: defaultPlaybook,
       pages: play.pages,
     });

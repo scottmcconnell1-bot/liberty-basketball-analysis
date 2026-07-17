@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liberty Playbook — Coach Preview</title>
+  <style>
+    :root {
+      --navy: #1e3a5f;
+      --gold: #c9a227;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .deck { max-width: 960px; margin: 0 auto; padding: 24px 20px 80px; }
+    .slide {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      padding: 32px;
+      margin-bottom: 28px;
+      border-top: 4px solid var(--navy);
+    }
+    .slide h1 { font-size: 1.9rem; color: var(--navy); margin-bottom: 8px; }
+    .slide h2 { font-size: 1.35rem; color: var(--navy); margin-bottom: 14px; }
+    .slide p, .slide li { margin-bottom: 10px; }
+    .slide ul { padding-left: 1.25rem; }
+    .badge {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .hero-meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .shot {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .caption { font-size: 0.82rem; color: var(--muted); margin-top: 8px; text-align: center; }
+    .tree {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+    }
+    .tree strong { color: var(--navy); }
+    .callout {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      font-size: 0.92rem;
+    }
+    .feedback-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .feedback-box textarea {
+      width: 100%;
+      min-height: 100px;
+      margin-top: 8px;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    .nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      z-index: 100;
+    }
+    .nav a { color: var(--gold); text-decoration: none; font-weight: 600; }
+    .status { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .pill.done { background: #dcfce7; color: #166534; }
+    .pill.next { background: #e0e7ff; color: #3730a3; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="deck">
+
+    <!-- Slide 1: Title -->
+    <section class="slide" id="intro">
+      <span class="badge">Work in progress — feedback welcome</span>
+      <h1>Liberty Playbook &amp; Play Creator</h1>
+      <p class="hero-meta">Preview for coaching staff · July 2026 · Inspired by Hoops Geek-style diagramming</p>
+      <p>We are building a digital playbook inside Liberty Basketball Analysis so you can <strong>organize plays by situation</strong>, <strong>draw them on a court</strong>, <strong>animate steps</strong>, and <strong>import scout PDFs</strong> — all in one place.</p>
+      <div class="status">
+        <span class="pill done">Category tree</span>
+        <span class="pill done">Play creator canvas</span>
+        <span class="pill done">Ball handler</span>
+        <span class="pill done">PDF import</span>
+        <span class="pill next">Coach review</span>
+      </div>
+      <div class="callout">
+        <strong>How to use this deck:</strong> Scroll through the slides, watch the demo video (link below), then fill in the feedback section at the bottom. Tell us what would make this useful in practice and film sessions.
+      </div>
+    </section>
+
+    <!-- Slide 2: Why -->
+    <section class="slide">
+      <h2>Why we're building this</h2>
+      <ul>
+        <li><strong>One library</strong> — offense, defense, press, and press break in the same tool as film and stats</li>
+        <li><strong>Same structure as our scout PDFs</strong> — Man/Zone, BLOB, SLOB sections match Fast Scout-style playbooks</li>
+        <li><strong>Draw &amp; animate</strong> — like Hoops Geek: move players, show passes, cuts, dribbles, screens</li>
+        <li><strong>Import existing PDFs</strong> — bulk import a full scout book instead of retyping every play</li>
+      </ul>
+    </section>
+
+    <!-- Slide 3: Categories -->
+    <section class="slide">
+      <h2>Play categories</h2>
+      <p>Every play lives in a clear hierarchy. You can add custom folders (e.g. "Horns" under Offense → Man) and move or rename them.</p>
+      <div class="tree">
+        <strong>Offense</strong> → Man / Zone → Plays, BLOB, SLOB<br>
+        <strong>Defense</strong> → Man / Zone → Plays<br>
+        <strong>Press</strong> → Man / Zone → Plays<br>
+        <strong>Press Break</strong> → Man / Zone → Plays
+      </div>
+      <p style="margin-top:14px;">On the Playbook page, a sidebar lets you filter plays by category. Buttons: <strong>Add · Rename · Move · Delete</strong>.</p>
+    </section>
+
+    <!-- Slide 4: Play creator -->
+    <section class="slide">
+      <h2>Play creator (draw on the court)</h2>
+      <div class="grid-2">
+        <div>
+          <ul>
+            <li>Half-court or full-court view</li>
+            <li>5 offense (circles) + 5 defense (X's)</li>
+            <li>Tools: <strong>Dribble · Pass · Cut · Run · Screen</strong></li>
+            <li><strong>Double-click</strong> an offensive player to assign the <strong>ball handler</strong> (orange ball)</li>
+            <li>Multiple steps per play with smooth animation</li>
+            <li>Export diagram as PNG</li>
+          </ul>
+        </div>
+        <div>
+          <img class="shot" src="demo-assets/playbook/7a77f.webp" alt="Play creator canvas">
+          <p class="caption">New play — court canvas with player positions</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Tools & ball -->
+    <section class="slide">
+      <h2>Drawing tools &amp; ball handler</h2>
+      <div class="grid-2">
+        <div>
+          <img class="shot" src="demo-assets/playbook/63d8d.webp" alt="Drawing tools menu">
+          <p class="caption">Movement tools dropdown</p>
+        </div>
+        <div>
+          <img class="shot" src="demo-assets/playbook/ba80e.webp" alt="Ball handler on player 3">
+          <p class="caption">Ball handler assigned (orange icon)</p>
+        </div>
+      </div>
+      <p style="margin-top:12px;">To draw a pass or cut: pick the tool, click the <strong>from</strong> player, then the <strong>to</strong> player. Use Select/Move to drag players into position.</p>
+    </section>
+
+    <!-- Slide 6: Multi-step -->
+    <section class="slide">
+      <h2>Multi-step plays</h2>
+      <div class="grid-2">
+        <div>
+          <p>Each play can have several steps (e.g. initial set → screen → cut → shot). Add steps, duplicate them, and play back the animation for walk-throughs.</p>
+          <ul>
+            <li>Label each step ("Down screen", "Replace", etc.)</li>
+            <li>Notes per step for teaching points</li>
+            <li>View mode: ▶ Play All animates player movement</li>
+          </ul>
+        </div>
+        <div>
+          <img class="shot" src="demo-assets/playbook/d439e.webp" alt="Step 2 of a play">
+          <p class="caption">Step 2 added — step list on the right</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Import -->
+    <section class="slide">
+      <h2>Import from PDF</h2>
+      <div class="grid-2">
+        <div>
+          <p><strong>Single import</strong> — one diagram (image or 1-page PDF)</p>
+          <p><strong>Bulk import</strong> — full scout playbook; Liberty reads headers like <em>Liberty Charter Patriots - BLOB</em> and sorts plays automatically.</p>
+          <p>Both use the same category picker so imported plays land in the right Man/Zone folder.</p>
+        </div>
+        <div>
+          <img class="shot" src="demo-assets/playbook/a3c4f.webp" alt="Category picker on import page">
+          <p class="caption">Category picker — offense · man · blob, etc.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: Try it -->
+    <section class="slide">
+      <h2>Try it on your machine</h2>
+      <p>After the latest update is pulled:</p>
+      <ol>
+        <li>Double-click <strong>Start Liberty.bat</strong> (or run <code>python scripts/launch_liberty.py</code>)</li>
+        <li>Open <strong>Playbook</strong> in the nav (or go to <code>/playbook</code>)</li>
+        <li>Click <strong>+ New Play</strong> to open the creator</li>
+        <li>Use <strong>Bulk Import</strong> for a full scout PDF</li>
+      </ol>
+      <div class="callout">
+        Requires <code>pip install pymupdf</code> for PDF import (included in <code>requirements-dev.txt</code>).
+      </div>
+    </section>
+
+    <!-- Slide 9: Feedback -->
+    <section class="slide" id="feedback">
+      <h2>We need your feedback</h2>
+      <p>Please answer these questions — copy your notes and send to the staff lead or reply in your team channel.</p>
+      <div class="feedback-box" style="margin-bottom:16px;">
+        <strong>1. Category structure</strong>
+        <textarea placeholder="Is Offense/Defense/Press/Press Break → Man/Zone → Plays/BLOB/SLOB the right breakdown? Anything missing?"></textarea>
+      </div>
+      <div class="feedback-box" style="margin-bottom:16px;">
+        <strong>2. Play creator</strong>
+        <textarea placeholder="Are the drawing tools enough? What would you add from Hoops Geek or Fast Draw?"></textarea>
+      </div>
+      <div class="feedback-box" style="margin-bottom:16px;">
+        <strong>3. Practice &amp; film use</strong>
+        <textarea placeholder="Would you use this in practice planning, walk-throughs, or sharing with players? How?"></textarea>
+      </div>
+      <div class="feedback-box">
+        <strong>4. Import workflow</strong>
+        <textarea placeholder="Does bulk PDF import match how our scout book is organized? Any plays miscategorized?"></textarea>
+      </div>
+    </section>
+
+    <!-- Slide 10: Roadmap -->
+    <section class="slide">
+      <h2>Coming next (if useful)</h2>
+      <ul>
+        <li>Shareable play link for players</li>
+        <li>MP4 export of animated plays</li>
+        <li>Optional vs synchronous action flags per step</li>
+        <li>Link plays to film clips (tag a possession with the play name)</li>
+      </ul>
+      <p style="margin-top:16px;color:var(--muted);font-size:0.9rem;">Thank you for reviewing — your input shapes what we build next.</p>
+    </section>
+
+  </div>
+
+  <div class="nav">
+    <span>Liberty Basketball · Playbook Preview</span>
+    <a href="#feedback">Jump to feedback ↓</a>
+  </div>
+</body>
+</html>

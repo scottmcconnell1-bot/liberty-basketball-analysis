@@ -28,9 +28,15 @@ from module_keys import PLAYBOOK_RECOGNITION
 
 playbook_bp = Blueprint("playbook", __name__)
 
+_PUBLIC_ENDPOINTS = frozenset({
+    "playbook.playbook_share",
+})
+
 
 @playbook_bp.before_request
 def _playbook_module_gate():
+    if request.endpoint in _PUBLIC_ENDPOINTS:
+        return
     db = get_db()
     enforce_module_access(db, get_default_team_id(db), PLAYBOOK_RECOGNITION)
 
@@ -55,27 +61,58 @@ PLAYBOOK_CATEGORIES = [
 ]
 
 
+def _load_playbook_taxonomy(db):
+    from playbook_taxonomy import build_category_tree, ensure_playbook_taxonomy
+
+    ensure_playbook_taxonomy(db)
+    db.commit()
+    return build_category_tree(db)
+
+
+def _plays_query(db):
+    return db.execute(
+        """SELECT p.*, pb.name as playbook_name,
+                  pc.name as category_name,
+                  pc.slug_path as category_path,
+                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
+           FROM plays p
+           LEFT JOIN playbooks pb ON pb.id = p.playbook_id
+           LEFT JOIN play_categories pc ON pc.id = p.category_id
+           ORDER BY p.updated_at DESC"""
+    ).fetchall()
+
+
+def _default_category_id(db):
+    from playbook_taxonomy import resolve_category_id_by_path
+
+    return resolve_category_id_by_path(db, "offense/man/plays")
+
+
+def _share_url_for_play(play):
+    token = play["share_token"] if play else None
+    if not token:
+        return None
+    return url_for("playbook.playbook_share", token=token, _external=True)
+
+
 @playbook_bp.route("/playbook")
 @require_feature("ENABLE_PRACTICES")
 def playbook_list():
     """Playbook list / plays library page."""
     db = get_db()
-    plays = db.execute(
-        """SELECT p.*, pb.name as playbook_name,
-                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
-           FROM plays p
-           LEFT JOIN playbooks pb ON pb.id = p.playbook_id
-           ORDER BY p.updated_at DESC"""
-    ).fetchall()
+    category_tree = _load_playbook_taxonomy(db)
+    plays = _plays_query(db)
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
     return render_template(
         "playbook.html",
         plays=[dict(p) for p in plays],
         playbooks=[dict(p) for p in playbooks],
         categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
         editing_play=None,
         editing_steps=[],
         view_mode="list",
+        selected_category_id=None,
     )
 
 
@@ -84,15 +121,19 @@ def playbook_list():
 def playbook_create():
     """Create new play — opens the canvas editor."""
     db = get_db()
+    category_tree = _load_playbook_taxonomy(db)
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
+    selected_category_id = request.args.get("category_id", type=int) or _default_category_id(db)
     return render_template(
         "playbook.html",
         plays=[],
         playbooks=playbooks,
         categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
         editing_play=None,
         editing_steps=[],
         view_mode="editor",
+        selected_category_id=selected_category_id,
     )
 
 
@@ -109,14 +150,51 @@ def playbook_view(play_id):
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
     ).fetchall()
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
+    category_tree = _load_playbook_taxonomy(db)
     return render_template(
         "playbook.html",
         plays=[],
         playbooks=[dict(p) for p in playbooks],
         categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
         editing_play=dict(play),
         editing_steps=[dict(s) for s in steps],
         view_mode="view",
+        selected_category_id=play["category_id"],
+        share_url=_share_url_for_play(play),
+    )
+
+
+@playbook_bp.route("/play/share/<token>")
+def playbook_share(token):
+    """Public read-only view of a play via share link."""
+    db = get_db()
+    from playbook_sharing import get_play_by_share_token
+
+    play = get_play_by_share_token(db, token)
+    if not play:
+        return (
+            "<!DOCTYPE html><html><body style='font-family:sans-serif;padding:40px;'>"
+            "<h2>Play not found</h2><p>This share link is invalid or has been revoked.</p>"
+            "</body></html>",
+            404,
+            {"Content-Type": "text/html"},
+        )
+    steps = db.execute(
+        "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
+    ).fetchall()
+    category_tree = _load_playbook_taxonomy(db)
+    return render_template(
+        "playbook.html",
+        plays=[],
+        playbooks=[],
+        categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
+        editing_play=dict(play),
+        editing_steps=[dict(s) for s in steps],
+        view_mode="share",
+        selected_category_id=play["category_id"],
+        share_url=url_for("playbook.playbook_share", token=token, _external=True),
     )
 
 
@@ -133,14 +211,18 @@ def playbook_edit(play_id):
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
     ).fetchall()
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
+    category_tree = _load_playbook_taxonomy(db)
     return render_template(
         "playbook.html",
         plays=[],
         playbooks=[dict(p) for p in playbooks],
         categories=PLAYBOOK_CATEGORIES,
+        category_tree=category_tree,
         editing_play=dict(play),
         editing_steps=[dict(s) for s in steps],
         view_mode="editor",
+        selected_category_id=play["category_id"],
+        share_url=_share_url_for_play(play),
     )
 
 
@@ -169,12 +251,13 @@ def playbook_duplicate(play_id):
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
     ).fetchall()
     cur = db.execute(
-        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
-           VALUES (?,?,?,?,?,?)""",
+        """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
+           VALUES (?,?,?,?,?,?,?)""",
         (
             play["name"] + " (copy)",
             play["description"],
             play["category"],
+            play["category_id"],
             play["tags"],
             play["playbook_id"],
             play["diagram_json"],
@@ -201,6 +284,7 @@ def playbook_save():
     name = (form.get("name") or "").strip()
     description = (form.get("description") or "").strip()
     category = (form.get("category") or "offense").strip()
+    category_id_raw = (form.get("category_id") or "").strip()
     tags = (form.get("tags") or "").strip()
     playbook_id = (form.get("playbook_id") or "").strip()
     diagram_json = (form.get("diagram_json") or "{}").strip()
@@ -211,16 +295,27 @@ def playbook_save():
         return redirect(url_for("playbook.playbook_list"))
 
     db = get_db()
-    now = "CURRENT_TIMESTAMP"
+    from playbook_taxonomy import legacy_category_from_id, resolve_category_id_by_path
+
+    _load_playbook_taxonomy(db)
+    category_id = None
+    if category_id_raw:
+        try:
+            category_id = int(category_id_raw)
+        except ValueError:
+            category_id = None
+    if not category_id:
+        category_id = resolve_category_id_by_path(db, "offense/man/plays")
+    category = legacy_category_from_id(db, category_id)
 
     if play_id:
         # Update existing play
         db.execute(
-            """UPDATE plays SET name=?, description=?, category=?, tags=?,
+            """UPDATE plays SET name=?, description=?, category=?, category_id=?, tags=?,
                playbook_id=?, diagram_json=?, updated_at=CURRENT_TIMESTAMP
                WHERE id=?""",
             (
-                name, description, category, tags,
+                name, description, category, category_id, tags,
                 int(playbook_id) if playbook_id else None,
                 diagram_json, int(play_id),
             ),
@@ -231,10 +326,10 @@ def playbook_save():
     else:
         # Create new play
         cur = db.execute(
-            """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
-               VALUES (?,?,?,?,?,?)""",
+            """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
+               VALUES (?,?,?,?,?,?,?)""",
             (
-                name, description, category, tags,
+                name, description, category, category_id, tags,
                 int(playbook_id) if playbook_id else None,
                 diagram_json,
             ),
@@ -246,7 +341,12 @@ def playbook_save():
         steps = json.loads(steps_json)
         for i, step in enumerate(steps):
             positions = json.dumps(step.get("positions", {}))
-            movements = json.dumps(step.get("movements", []))
+            movements = list(step.get("movements", []))
+            ball = step.get("ball")
+            if ball:
+                movements = [m for m in movements if not (isinstance(m, dict) and m.get("_meta"))]
+                movements.append({"_meta": True, "_ball": ball})
+            movements = json.dumps(movements)
             label = step.get("label", "")
             notes = step.get("notes", "")
             source_image = step.get("source_image", "")
@@ -261,6 +361,24 @@ def playbook_save():
     db.commit()
     flash("Play saved.", "success")
     return redirect(url_for("playbook.playbook_view", play_id=play_db_id))
+
+
+@playbook_bp.route("/api/playbook/play/<int:play_id>/share", methods=["POST"])
+def playbook_share_api(play_id):
+    """Create or return a shareable public link for a play."""
+    from playbook_sharing import ensure_share_token
+
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    try:
+        token = ensure_share_token(db, play_id)
+        db.commit()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    share_url = url_for("playbook.playbook_share", token=token, _external=True)
+    return jsonify({"token": token, "url": share_url})
 
 
 @playbook_bp.route("/api/playbook/play/<int:play_id>")
@@ -278,6 +396,85 @@ def playbook_api_play(play_id):
         "play": _serialize(dict(play)),
         "steps": [_serialize(dict(s)) for s in steps],
     })
+
+
+@playbook_bp.route("/api/playbook/categories")
+@require_feature("ENABLE_PRACTICES")
+def playbook_categories_api():
+    db = get_db()
+    from playbook_taxonomy import build_category_tree, list_categories_flat
+
+    tree = _load_playbook_taxonomy(db)
+    return jsonify({"tree": tree, "flat": list_categories_flat(db)})
+
+
+@playbook_bp.route("/api/playbook/categories", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_categories_create():
+    from playbook_taxonomy import build_category_tree, create_category
+
+    data = request.get_json(force=True) or {}
+    db = get_db()
+    try:
+        category_id = create_category(
+            db,
+            parent_id=data.get("parent_id"),
+            name=data.get("name"),
+        )
+        db.commit()
+        return jsonify({"id": category_id, "tree": build_category_tree(db)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@playbook_bp.route("/api/playbook/categories/<int:category_id>", methods=["PUT"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_categories_update(category_id):
+    from playbook_taxonomy import build_category_tree, rename_category
+
+    data = request.get_json(force=True) or {}
+    db = get_db()
+    try:
+        rename_category(db, category_id, data.get("name"))
+        db.commit()
+        return jsonify({"ok": True, "tree": build_category_tree(db)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@playbook_bp.route("/api/playbook/categories/<int:category_id>/move", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_categories_move(category_id):
+    from playbook_taxonomy import build_category_tree, move_category
+
+    data = request.get_json(force=True) or {}
+    db = get_db()
+    try:
+        move_category(
+            db,
+            category_id,
+            parent_id=data.get("parent_id"),
+            sort_order=data.get("sort_order"),
+        )
+        db.commit()
+        return jsonify({"ok": True, "tree": build_category_tree(db)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@playbook_bp.route("/api/playbook/categories/<int:category_id>", methods=["DELETE"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_categories_delete(category_id):
+    from playbook_taxonomy import build_category_tree, delete_category
+
+    data = request.get_json(force=True) or {}
+    db = get_db()
+    try:
+        delete_category(db, category_id, reassign_to=data.get("reassign_to"))
+        db.commit()
+        return jsonify({"ok": True, "tree": build_category_tree(db)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 @playbook_bp.route("/playbook/export/<int:play_id>")
@@ -310,11 +507,15 @@ def playbook_export(play_id):
 def playbook_import():
     """Plays import page — upload PDF or image for diagram extraction."""
     db = get_db()
+    from playbook_taxonomy import build_category_tree, ensure_playbook_taxonomy
+
+    ensure_playbook_taxonomy(db)
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
     return render_template(
         "playbook_import.html",
         playbooks=[dict(p) for p in playbooks],
         categories=PLAYBOOK_CATEGORIES,
+        category_tree=build_category_tree(db),
     )
 
 
@@ -396,6 +597,7 @@ def playbook_import_save():
     name = (data.get("name") or "").strip()
     description = (data.get("description") or "").strip()
     category = (data.get("category") or "offense").strip()
+    category_id_raw = (data.get("category_id") or "").strip()
     tags = (data.get("tags") or "").strip()
     playbook_id = (data.get("playbook_id") or "").strip()
     diagram_json = (data.get("diagram_json") or "{}").strip()
@@ -406,11 +608,24 @@ def playbook_import_save():
         return jsonify({"error": "Play name is required"}), 400
 
     db = get_db()
+    from playbook_taxonomy import ensure_playbook_taxonomy, legacy_category_from_id, resolve_category_id_by_path
+
+    ensure_playbook_taxonomy(db)
+    category_id = None
+    if category_id_raw:
+        try:
+            category_id = int(category_id_raw)
+        except ValueError:
+            category_id = None
+    if not category_id:
+        category_id = resolve_category_id_by_path(db, "offense/man/plays")
+    category = legacy_category_from_id(db, category_id)
+
     cur = db.execute(
-        """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
-           VALUES (?,?,?,?,?,?)""",
+        """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
+           VALUES (?,?,?,?,?,?,?)""",
         (
-            name, description, category, tags,
+            name, description, category, category_id, tags,
             int(playbook_id) if playbook_id else None,
             diagram_json,
         ),

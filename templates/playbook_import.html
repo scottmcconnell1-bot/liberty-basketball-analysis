@@ -45,13 +45,9 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group">
-            <label for="import-category">Category</label>
-            <select class="form-control" id="import-category" name="category">
-              {% for value, label in categories %}
-              <option value="{{ value }}">{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
+          <label for="import-category">Category</label>
+          <select class="form-control" id="import-category" name="category_id"></select>
+        </div>
           <div class="form-group">
             <label for="import-playbook">Playbook</label>
             <select class="form-control" id="import-playbook" name="playbook_id">
@@ -87,8 +83,17 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script>
 let importData = null;
+const importCategoryTree = {{ category_tree|tojson }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const select = document.getElementById('import-category');
+  if (window.PlaybookTaxonomy && select) {
+    window.PlaybookTaxonomy.fillLeafCategorySelect(select, importCategoryTree, null);
+  }
+});
 
 function escapeHtml(value) {
   return String(value || '')
@@ -228,7 +233,7 @@ function saveImport() {
   const payload = {
     name: document.getElementById('import-name').value.trim(),
     description: document.getElementById('import-description').value.trim(),
-    category: document.getElementById('import-category').value,
+    category_id: document.getElementById('import-category').value,
     playbook_id: document.getElementById('import-playbook').value,
     tags: document.getElementById('import-tags').value.trim(),
     diagram_json: document.getElementById('import-diagram-json').value,

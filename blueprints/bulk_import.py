@@ -237,10 +237,15 @@ def _extract_pages_with_categories(pdf_path):
 def bulk_import_page():
     """Bulk playbook import page — upload a large PDF and extract plays."""
     db = get_db()
+    from playbook_taxonomy import build_category_tree, ensure_playbook_taxonomy, leaf_categories
+
+    ensure_playbook_taxonomy(db)
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
     return render_template(
         "playbook_bulk_import.html",
         playbooks=[dict(p) for p in playbooks],
+        category_tree=build_category_tree(db),
+        leaf_categories=leaf_categories(db),
     )
 
 
@@ -268,8 +273,16 @@ def bulk_import_parse():
 
     try:
         from playbook_pdf import require_pymupdf
+        from playbook_taxonomy import ensure_playbook_taxonomy, resolve_category_from_section
+
         require_pymupdf()
         plays = _extract_pages_with_categories(pdf_path)
+        ensure_playbook_taxonomy(db := get_db())
+        for play in plays:
+            category_id, _legacy = resolve_category_from_section(
+                db, play.get("section", ""), play.get("subsection", "")
+            )
+            play["category_id"] = category_id
     except ImportError:
         return jsonify({
             "error": "PyMuPDF is required for bulk playbook import. Install with: pip install pymupdf",
@@ -323,8 +336,16 @@ def bulk_import_split():
 
     try:
         from playbook_pdf import require_pymupdf
+        from playbook_taxonomy import ensure_playbook_taxonomy, resolve_category_from_section
+
         require_pymupdf()
         plays = _extract_pages_with_categories(pdf_path)
+        ensure_playbook_taxonomy(db := get_db())
+        for play in plays:
+            category_id, _legacy = resolve_category_from_section(
+                db, play.get("section", ""), play.get("subsection", "")
+            )
+            play["category_id"] = category_id
     except ImportError:
         return jsonify({
             "error": "PyMuPDF is required for bulk playbook import. Install with: pip install pymupdf",
@@ -390,7 +411,9 @@ def bulk_import_save():
     for i, play_data in enumerate(plays):
         name = (play_data.get("play_name") or "").strip()
         section = (play_data.get("section") or "").strip()
+        subsection = (play_data.get("subsection") or "").strip()
         playbook_id = (play_data.get("playbook_id") or default_playbook_id).strip()
+        category_id_raw = play_data.get("category_id")
         category = play_data.get("category") or _section_to_category(section)
         tags = play_data.get("tags", "")
         pages = play_data.get("pages", [])
@@ -400,14 +423,33 @@ def bulk_import_save():
             continue
 
         try:
+            from playbook_taxonomy import (
+                ensure_playbook_taxonomy,
+                legacy_category_from_id,
+                resolve_category_from_section,
+            )
+
+            ensure_playbook_taxonomy(db)
+            category_id = None
+            if category_id_raw:
+                try:
+                    category_id = int(category_id_raw)
+                except (TypeError, ValueError):
+                    category_id = None
+            if not category_id:
+                category_id, category = resolve_category_from_section(db, section, subsection)
+            else:
+                category = legacy_category_from_id(db, category_id)
+
             # Create the play
             cur = db.execute(
-                """INSERT INTO plays (name, description, category, tags, playbook_id, diagram_json)
-                   VALUES (?,?,?,?,?,?)""",
+                """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
+                   VALUES (?,?,?,?,?,?,?)""",
                 (
                     name,
                     f"Imported from bulk PDF — {section}",
                     category,
+                    category_id,
                     tags,
                     int(playbook_id) if playbook_id else None,
                     json.dumps({"section": section, "source": "bulk_import"}),
