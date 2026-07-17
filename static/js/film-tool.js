@@ -124,6 +124,7 @@ let activeAiEventId = null;
 
 // ── DOM References ──────────────────────────────────────────
 let rowsBody, statusText, video, timeDisplay, lastTaggedTime, videoField, videoShell, videoFileInput;
+let clipPlaybackEnd = null;
 let gameTypeSelect, competitionTypeSelect, gameDateInput, ourTeamNameInput, opponentInput, gameResultSelect;
 let homeTeamNameInput, awayTeamNameInput, outputDirInput;
 let leftScoreName, rightScoreName, leftScoreValue, rightScoreValue;
@@ -1638,6 +1639,21 @@ function applyFilmToolDeepLinks() {
     }
 }
 
+function setClipPlaybackEnd(endSeconds) {
+    const end = Number(endSeconds);
+    clipPlaybackEnd = Number.isFinite(end) && end > 0 ? end : null;
+}
+
+function enforceClipPlaybackEnd() {
+    if (!video || clipPlaybackEnd == null) return;
+    if (video.currentTime >= clipPlaybackEnd) {
+        video.pause();
+        video.currentTime = clipPlaybackEnd;
+        setStatus(`Clip ended at ${clipPlaybackEnd.toFixed(1)}s.`);
+        clipPlaybackEnd = null;
+    }
+}
+
 // ── Focus Mode ──────────────────────────────────────────────
 function toggleGameInfo() {
     const container = document.getElementById('gameInfoFields');
@@ -2508,7 +2524,11 @@ function attachEventHandlers() {
     document.getElementById('vidFast25x')?.addEventListener('click', () => { video.playbackRate = 2.5; });
     document.getElementById('vidFast5x')?.addEventListener('click', () => { video.playbackRate = 5; });
 
-    video.addEventListener('timeupdate', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
+    video.addEventListener('timeupdate', () => {
+        timeDisplay.textContent = formatTime(video.currentTime || 0);
+        enforceClipPlaybackEnd();
+        syncAiEventsToPlayback();
+    });
     video.addEventListener('seeked', syncAiEventsToPlayback);
     video.addEventListener('loadedmetadata', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
 }
@@ -2624,18 +2644,29 @@ function init() {
     const gameIdFromUrl = urlParams.get('game_id');
     const activeGameId = gameIdFromUrl || window.FILM_TOOL_GAME_ID || '';
     const seekSeconds = Number(urlParams.get('t') || urlParams.get('timestamp_ms') || 0);
+    const clipEndSeconds = urlParams.has('t_end') ? Number(urlParams.get('t_end')) : null;
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
     setStatus('Ready.');
 
     function seekFromUrlParam() {
-      const seconds = seekSeconds > 1000 ? seekSeconds / 1000 : seekSeconds;
-      if (!seconds || Number.isNaN(seconds)) return;
+      let startSeconds = seekSeconds;
+      if (startSeconds > 1000) startSeconds /= 1000;
+      let endSeconds = clipEndSeconds;
+      if (endSeconds != null && endSeconds > 1000) endSeconds /= 1000;
+      if ((!startSeconds || Number.isNaN(startSeconds)) && (endSeconds == null || Number.isNaN(endSeconds))) return;
+      if (endSeconds != null && !Number.isNaN(endSeconds)) setClipPlaybackEnd(endSeconds);
       const applySeek = () => {
-        video.currentTime = Math.max(0, seconds);
-        if (typeof setStatus === 'function') {
-          setStatus(`Jumped to ${seconds.toFixed(1)}s from analysis link.`);
+        if (startSeconds && !Number.isNaN(startSeconds)) {
+          video.currentTime = Math.max(0, startSeconds);
+        }
+        if (clipPlaybackEnd != null) {
+          const fromLabel = startSeconds && !Number.isNaN(startSeconds) ? startSeconds.toFixed(1) : '0.0';
+          setStatus(`Playing clip ${fromLabel}s – ${clipPlaybackEnd.toFixed(1)}s from analysis link.`);
+          video.play().catch(() => {});
+        } else if (startSeconds && !Number.isNaN(startSeconds)) {
+          setStatus(`Jumped to ${startSeconds.toFixed(1)}s from analysis link.`);
         }
       };
       if (video.readyState >= 1) applySeek();

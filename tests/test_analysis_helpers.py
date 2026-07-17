@@ -320,3 +320,12 @@ def test_analysis_results_page_includes_event_explorer(client):
     assert b"event-explorer" in resp.data
     assert b"openEventExplorer" in resp.data
     assert b"/api/analysis/" in resp.data
+
+
+def test_analysis_results_film_links_include_clip_window(client):
+    resp = client.get("/analysis/test-game-key")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "CLIP_BEFORE_MS = 3000" in html
+    assert "CLIP_AFTER_MS = 5000" in html
+    assert "t_end=" in html
