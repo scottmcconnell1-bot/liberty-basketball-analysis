@@ -212,11 +212,18 @@
     min-height: 2.4rem;
     font-size: .8rem;
     border-radius: var(--radius-sm);
-    justify-content: flex-start;
+    display: flex;
+    justify-content: flex-start !important;
+    text-align: left;
+    width: 100%;
     background: #f1f5f9;
     color: #0f172a;
     border: 1px solid #cbd5e1;
     font-weight: 600;
+  }
+  .ft-tag-grid .btn > span:first-child {
+    flex: 1;
+    text-align: left;
   }
   .ft-tag-grid .btn:hover {
     background: #e2e8f0;
@@ -529,6 +536,10 @@
     min-height: 1.85rem;
     font-size: 0.82rem;
     padding: 0.3rem 0.45rem;
+    display: flex;
+    justify-content: flex-start !important;
+    text-align: left;
+    width: 100%;
     background: #f1f5f9;
     color: #0f172a;
     border: 1px solid #cbd5e1;
@@ -539,6 +550,14 @@
   }
   #film-tool-root.manual-tag-focus .ft-tag-actions .ft-tag-secondary {
     display: none;
+  }
+  #film-tool-root.manual-tag-focus .ft-tag-actions .ft-tag-sub {
+    display: inline-flex;
+    flex: 1;
+    font-weight: 700;
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #94a3b8;
   }
   #film-tool-root.manual-tag-focus #undoBtn {
     flex: 1;
@@ -589,7 +608,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- film-tool-build: focus-roster-starters-20260717a -->
+<!-- film-tool-build: reports-drilldown-20260717b -->
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -873,7 +892,7 @@
           <div class="ft-tag-actions">
             <button class="btn btn-danger" id="undoBtn" type="button" title="Undo last tag (Ctrl+Z)">↩ Undo</button>
             <button class="btn btn-ghost ft-tag-secondary" id="clearAllBtn" type="button">Clear</button>
-            <button class="btn btn-ghost ft-tag-secondary" id="subBtn" type="button">SUB</button>
+            <button class="btn btn-ghost ft-tag-sub" id="subBtn" type="button" title="Mid-game substitution">SUB</button>
             <button class="btn btn-ghost ft-tag-secondary" id="startersBtn" type="button">Starters</button>
           </div>
         </div>
@@ -1117,22 +1136,20 @@
           </div>
         </div>
         <div class="panel-body list-stack">
-          <div class="filters no-print">
+          <div class="filters no-print ft-reports-filters">
             <select id="reportScope">
-              <option value="selected">Selected Game</option>
-              <option value="my-season">My Games Season to Date</option>
-              <option value="scout-season">Scout Games Season to Date</option>
-              <option value="all-season">All Saved Games</option>
+              <option value="selected">Current game</option>
             </select>
             <select id="reportType">
+              <option value="box-score" selected>Box Score</option>
               <option value="team-totals">Team Totals</option>
               <option value="player-totals">Individual Totals</option>
               <option value="opponent-totals">Opponent Totals</option>
               <option value="record-summary">Team Record</option>
-              <option value="box-score">Box Score</option>
-              <option value="raw-data">Raw Data</option>
+              <option value="raw-data">Raw Data (line items)</option>
             </select>
             <button class="btn btn-primary" id="generateReportBtn" type="button">Generate Report</button>
+            <button class="btn" id="clearReportDrilldownBtn" type="button">Clear drill-down</button>
           </div>
           <div class="report-card">
             <div class="tiny">Report title</div>
@@ -1142,24 +1159,36 @@
             <div class="tiny">Summary</div>
             <textarea id="reportSummary" readonly></textarea>
           </div>
-          <div class="split">
-            <div class="report-card">
+          <div class="ft-reports-layout">
+            <div class="report-card ft-reports-main">
               <div class="tiny">Main table</div>
-              <div class="table-wrap" style="margin-top:.6rem;max-height:420px">
-                <table><thead><tr id="reportHeadRow"></tr></thead><tbody id="reportTableBody"></tbody></table>
+              <div class="table-wrap ft-reports-table-wrap">
+                <table class="ft-reports-table"><thead><tr id="reportHeadRow"></tr></thead><tbody id="reportTableBody"></tbody></table>
               </div>
             </div>
-            <div class="report-card">
+            <div class="report-card ft-reports-kpis">
               <div class="tiny">Quick stats</div>
-              <div class="kpi-grid" id="reportKpiGrid" style="margin-top:.6rem"></div>
+              <div class="kpi-grid" id="reportKpiGrid"></div>
             </div>
           </div>
         </div>
       </section>
-      <section class="panel">
-        <div class="panel-head"><div><h2>Current tagged rows</h2><p>Editable event table for the active tagging game.</p></div></div>
+      <section class="panel" id="reportTaggedRowsPanel">
+        <div class="panel-head">
+          <div>
+            <h2>Tagged events</h2>
+            <p id="reportDrilldownHint">Generate a box score, then click any total to filter these rows for review or editing.</p>
+          </div>
+          <button class="btn" id="clearReportDrilldownBtnPanel" type="button">Show all rows</button>
+        </div>
         <div class="panel-body">
-          <div class="table-wrap">
+          <div class="table-wrap ft-report-drilldown-readonly" id="reportDrilldownReadonly" hidden>
+            <table>
+              <thead><tr><th>#</th><th>Label</th><th>Player</th><th>Quarter</th><th>Team</th><th>Event</th><th>Result</th><th>Start</th></tr></thead>
+              <tbody id="reportDrilldownBody"></tbody>
+            </table>
+          </div>
+          <div class="table-wrap" id="reportDrilldownEditable">
             <table>
               <thead><tr><th>#</th><th>Label</th><th>Player</th><th>Quarter</th><th>Team</th><th>Side</th><th>Category</th><th>Event Type</th><th>Result</th><th>Start</th><th>Duration</th><th>Notes</th><th>Row</th></tr></thead>
               <tbody id="rowsBody"></tbody>
@@ -1354,5 +1383,5 @@
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260717a"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260717a"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260717b"></script>
 {% endblock %}

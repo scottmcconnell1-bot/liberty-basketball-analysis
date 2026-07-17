@@ -527,6 +527,60 @@
     margin-top: .35rem;
 }
 
+/* ── Reports layout ───────────────────────────────────────── */
+#film-tool-root .ft-reports-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+}
+#film-tool-root .ft-reports-filters select {
+    min-width: 220px;
+    max-width: 100%;
+}
+#film-tool-root .ft-reports-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+    gap: 1rem;
+    align-items: start;
+}
+#film-tool-root .ft-reports-table-wrap {
+    margin-top: .6rem;
+    overflow-x: auto;
+    max-width: 100%;
+}
+#film-tool-root .ft-reports-table {
+    width: 100%;
+    min-width: 720px;
+}
+#film-tool-root .ft-reports-table th,
+#film-tool-root .ft-reports-table td,
+#film-tool-root #reportTaggedRowsPanel th,
+#film-tool-root #reportTaggedRowsPanel td {
+    text-align: left;
+    vertical-align: top;
+}
+#film-tool-root .ft-report-stat-link {
+    border: none;
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+#film-tool-root .ft-report-stat-link:hover {
+    color: var(--color-primary-hover, #0f766e);
+}
+#film-tool-root #rowsBody tr.ft-report-row-hidden {
+    display: none;
+}
+#film-tool-root #rowsBody tr.ft-report-row-match td {
+    background: rgba(20, 184, 166, 0.12);
+}
+
 /* ── Game Cards ───────────────────────────────────────────── */
 #film-tool-root .games-grid {
     display: grid;
@@ -994,7 +1048,8 @@
 @media (max-width: 1180px) {
     #film-tool-root .grid-main,
     #film-tool-root .split,
-    #film-tool-root .film-review-grid {
+    #film-tool-root .film-review-grid,
+    #film-tool-root .ft-reports-layout {
         grid-template-columns: 1fr;
     }
     #film-tool-root .kpi-grid {

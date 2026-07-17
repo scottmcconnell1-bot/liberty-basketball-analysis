@@ -57,6 +57,12 @@ const LAST_GAME_KEY = 'filmToolLastGameIdV20260423final';
 const CURRENT_AUTOSAVE_KEY = 'filmToolCurrentAutosaveV20260423final';
 const MANUAL_FOCUS_STORAGE_KEY = 'filmToolManualTagFocusV1';
 const MANUAL_TAG_DRAWER_KEY = 'filmToolTagDrawerOpenV1';
+const UNKNOWN_PLAYER = 'UNKNOWN';
+
+const REPORT_STAT_COLUMNS = new Set([
+    'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT',
+    'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF', 'Min',
+]);
 
 // ── Vocabulary (tagging terms) ──────────────────────────────
 const vocabulary = {
@@ -127,6 +133,9 @@ let pendingStarterCallback = null;
 let editingStarterSets = { liberty: new Set(), opponent: new Set() };
 let aiEventsCache = [];
 let activeAiEventId = null;
+let lastReportSourceRows = [];
+let reportRowFilter = null;
+let reportScopeLoadedGameId = null;
 
 // ── DOM References ──────────────────────────────────────────
 let rowsBody, statusText, video, timeDisplay, lastTaggedTime, videoField, videoShell, videoFileInput;
@@ -853,8 +862,8 @@ function showPlayerSelection(def, team) {
         if (player) showPlayerSelection(def, team);
     });
     const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown / team only';
-    unknown.addEventListener('click', () => commitTag(def, { team, player: '' }));
+    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = UNKNOWN_PLAYER;
+    unknown.addEventListener('click', () => commitTag(def, { team, player: UNKNOWN_PLAYER }));
     wrap.append(addBtn, unknown);
     sec.appendChild(wrap);
     quickTagBody.appendChild(sec);
@@ -882,8 +891,8 @@ function showStealPlayers(def, stealTeam) {
         if (player) showStealPlayers(def, stealTeam);
     });
     const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown stealer';
-    unknown.addEventListener('click', () => showTurnoverChooser(def, stealTeam, ''));
+    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = `${UNKNOWN_PLAYER} stealer`;
+    unknown.addEventListener('click', () => showTurnoverChooser(def, stealTeam, UNKNOWN_PLAYER));
     wrap.append(addBtn, unknown);
     sec.appendChild(wrap);
     quickTagBody.appendChild(sec);
@@ -913,8 +922,8 @@ function showTurnoverChooser(def, stealTeam, stealer) {
         if (player) showTurnoverChooser(def, stealTeam, stealer);
     });
     const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown turnover';
-    unknown.addEventListener('click', () => commitStealPair(def, { stealTeam, stealer, turnoverTeam, turnoverPlayer: '' }));
+    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = `${UNKNOWN_PLAYER} turnover`;
+    unknown.addEventListener('click', () => commitStealPair(def, { stealTeam, stealer, turnoverTeam, turnoverPlayer: UNKNOWN_PLAYER }));
     wrap.append(addBtn, unknown);
     sec.appendChild(wrap);
     quickTagBody.appendChild(sec);
@@ -1024,12 +1033,17 @@ function exportGameData() {
 // ── Game Save / Load / Autosave ─────────────────────────────
 function getGameMeta() {
     const score = getScoreState();
+    const analysisGameId = window.FILM_TOOL_GAME_ID
+        || document.getElementById('gameId')?.value?.trim()
+        || new URLSearchParams(window.location.search).get('game_id')
+        || '';
     return {
         id: selectedGameId || `game-${Date.now()}`, gameType: gameTypeSelect.value,
         competitionType: competitionTypeSelect.value, date: gameDateInput.value.trim(),
         ourTeam: ourTeamNameInput.value.trim() || 'Our Team', opponent: opponentInput.value.trim(),
         gameResult: gameResultSelect.value, homeTeam: homeTeamNameInput.value.trim(),
         awayTeam: awayTeamNameInput.value.trim(), outputDir: outputDirInput.value.trim(),
+        analysisGameId,
         lastTaggedTime: lastTaggedTime.textContent, score, updatedAt: new Date().toISOString()
     };
 }
@@ -1172,24 +1186,299 @@ function renderGames() {
             selectedGameId = btn.dataset.id;
             renderGames();
             setActiveTab('reportsView');
-            reportScope.value = 'selected';
+            refreshReportScopeOptions();
+            reportScope.value = `game:${btn.dataset.id}`;
+            if (reportType) reportType.value = 'box-score';
             generateReport();
         });
     });
+    refreshReportScopeOptions();
 }
 
-// ── Reports ─────────────────────────────────────────────────
+function normalizePlayerName(player) {
+    const value = String(player || '').trim();
+    if (!value || value.toLowerCase() === 'unknown' || value.toLowerCase() === 'unknown / team only') {
+        return UNKNOWN_PLAYER;
+    }
+    return value;
+}
+
+function findSavedGameForAnalysisId(analysisGameId) {
+    if (!analysisGameId) return null;
+    const exact = savedGames.find(g => g.analysisGameId === analysisGameId || g.id === analysisGameId);
+    if (exact) return exact;
+    const slug = String(analysisGameId).toLowerCase();
+    return savedGames.find(g => {
+        const opponent = String(g.opponent || g.awayTeam || '').toLowerCase();
+        return opponent && slug.includes(opponent.replace(/\s+/g, '_'));
+    }) || null;
+}
+
+function gameReportLabel(game) {
+    const left = game.gameType === 'my' ? (game.ourTeam || 'Our Team') : (game.homeTeam || 'Home');
+    const right = game.gameType === 'my' ? (game.opponent || 'Opponent') : (game.awayTeam || 'Away');
+    const date = game.date || 'No date';
+    const count = (game.rows || []).length;
+    return `${date} — ${left} vs ${right} (${count} tags)`;
+}
+
+function refreshReportScopeOptions() {
+    if (!reportScope) return;
+    const previous = reportScope.value;
+    reportScope.innerHTML = '';
+
+    const current = serializeCurrentGame();
+    const currentOpt = document.createElement('option');
+    currentOpt.value = 'selected';
+    currentOpt.textContent = `Current game — ${current.date || 'unsaved'} vs ${current.opponent || '—'}`;
+    reportScope.appendChild(currentOpt);
+
+    const myGames = savedGames.filter(g => g.gameType === 'my');
+    if (myGames.length) {
+        const group = document.createElement('optgroup');
+        group.label = 'My Games';
+        myGames.forEach(game => {
+            const opt = document.createElement('option');
+            opt.value = `game:${game.id}`;
+            opt.textContent = gameReportLabel(game);
+            group.appendChild(opt);
+        });
+        reportScope.appendChild(group);
+    }
+
+    const scoutGames = savedGames.filter(g => g.gameType === 'scout');
+    if (scoutGames.length) {
+        const group = document.createElement('optgroup');
+        group.label = 'Scout Games';
+        scoutGames.forEach(game => {
+            const opt = document.createElement('option');
+            opt.value = `game:${game.id}`;
+            opt.textContent = gameReportLabel(game);
+            group.appendChild(opt);
+        });
+        reportScope.appendChild(group);
+    }
+
+    const seasonGroup = document.createElement('optgroup');
+    seasonGroup.label = 'Season totals';
+    [
+        ['my-season', 'My Games Season to Date'],
+        ['scout-season', 'Scout Games Season to Date'],
+        ['all-season', 'All Saved Games'],
+    ].forEach(([value, label]) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        seasonGroup.appendChild(opt);
+    });
+    reportScope.appendChild(seasonGroup);
+
+    const values = [...reportScope.querySelectorAll('option')].map(opt => opt.value);
+    reportScope.value = values.includes(previous) ? previous : 'selected';
+}
+
+function reportScopeGameId(scope) {
+    if (scope === 'selected') return selectedGameId;
+    if (scope.startsWith('game:')) return scope.slice(5);
+    return null;
+}
+
 function gatherGamesForScope(scope) {
-    if (scope === 'selected') { const g = savedGames.find(g => g.id === selectedGameId) || serializeCurrentGame(); return [g]; }
+    if (scope === 'selected') {
+        const saved = savedGames.find(g => g.id === selectedGameId);
+        return [saved || serializeCurrentGame()];
+    }
+    if (scope.startsWith('game:')) {
+        const id = scope.slice(5);
+        const saved = savedGames.find(g => g.id === id);
+        if (saved) return [saved];
+        if (id === selectedGameId) return [serializeCurrentGame()];
+        return [];
+    }
     if (scope === 'my-season') return savedGames.filter(g => g.gameType === 'my');
     if (scope === 'scout-season') return savedGames.filter(g => g.gameType === 'scout');
     return savedGames.slice();
 }
 
+function rowsForReportScope(scope) {
+    const gameId = reportScopeGameId(scope);
+    if (gameId && gameId === selectedGameId) return getAllRows();
+    if (scope === 'selected') return getAllRows();
+    if (scope.startsWith('game:')) {
+        const game = gatherGamesForScope(scope)[0];
+        return game?.rows || [];
+    }
+    return gatherGamesForScope(scope).flatMap(g => g.rows || []);
+}
+
+function reportScopeTitle(scope, games) {
+    if (scope === 'selected') {
+        const game = games[0] || serializeCurrentGame();
+        return `Current game — ${game.date || 'unsaved'} vs ${game.opponent || game.awayTeam || '—'}`;
+    }
+    if (scope.startsWith('game:')) {
+        const game = games[0];
+        return game ? gameReportLabel(game) : 'Selected game';
+    }
+    if (scope === 'my-season') return 'My Games Season to Date';
+    if (scope === 'scout-season') return 'Scout Games Season to Date';
+    return 'All Saved Games';
+}
+
+function rowMatchesReportStat(row, stat) {
+    const eventtype = row.eventtype || '';
+    const result = row.result || '';
+    switch (stat) {
+        case 'PTS':
+            return (eventtype === '2PT' && result === 'Make')
+                || (eventtype === '3PT' && result === 'Make')
+                || (eventtype === 'FT' && result === 'Make');
+        case 'FGM':
+            return (eventtype === '2PT' || eventtype === '3PT') && result === 'Make';
+        case 'FGA':
+            return eventtype === '2PT' || eventtype === '3PT';
+        case 'FG':
+            return eventtype === '2PT' || eventtype === '3PT';
+        case '3PM':
+            return eventtype === '3PT' && result === 'Make';
+        case '3PA':
+        case '3P':
+            return eventtype === '3PT';
+        case 'FTM':
+            return eventtype === 'FT' && result === 'Make';
+        case 'FTA':
+        case 'FT':
+            return eventtype === 'FT';
+        case 'OReb':
+            return eventtype === 'OffRebound';
+        case 'DReb':
+            return eventtype === 'DefRebound';
+        case 'Reb':
+            return eventtype === 'OffRebound' || eventtype === 'DefRebound';
+        case 'Ast':
+            return eventtype === 'Assist';
+        case 'Stl':
+            return eventtype === 'Steal';
+        case 'Blk':
+            return eventtype === 'Block';
+        case 'TO':
+            return eventtype === 'Turnover';
+        case 'PF':
+            return eventtype === 'Foul';
+        case 'Min':
+            return ['SubIn', 'SubOut', 'StartQTR'].includes(eventtype);
+        default:
+            return false;
+    }
+}
+
+function reportStatCellValue(value) {
+    if (typeof value === 'number') return value;
+    const text = String(value ?? '');
+    const match = text.match(/^(\d+)/);
+    return match ? Number(match[1]) : 0;
+}
+
+function clearReportRowFilter() {
+    reportRowFilter = null;
+    document.querySelectorAll('#rowsBody tr').forEach(tr => {
+        tr.classList.remove('ft-report-row-hidden', 'ft-report-row-match');
+    });
+    const hint = document.getElementById('reportDrilldownHint');
+    const readonly = document.getElementById('reportDrilldownReadonly');
+    const editable = document.getElementById('reportDrilldownEditable');
+    if (hint) {
+        hint.textContent = 'Generate a box score, then click any total to filter these rows for review or editing.';
+    }
+    if (readonly) readonly.hidden = true;
+    if (editable) editable.hidden = false;
+}
+
+function applyReportRowFilter(filter, label, scope) {
+    const panel = document.getElementById('reportTaggedRowsPanel');
+    const hint = document.getElementById('reportDrilldownHint');
+    const readonly = document.getElementById('reportDrilldownReadonly');
+    const editable = document.getElementById('reportDrilldownEditable');
+    const scopeGameId = reportScopeGameId(scope);
+    const canEdit = !scopeGameId || scopeGameId === selectedGameId;
+    reportRowFilter = filter;
+    const matches = lastReportSourceRows.filter(filter);
+    if (hint) {
+        hint.textContent = canEdit
+            ? `${label} — ${matches.length} tagged event${matches.length === 1 ? '' : 's'} (edit below)`
+            : `${label} — ${matches.length} tagged event${matches.length === 1 ? '' : 's'}. Open this game in Tagger to edit.`;
+    }
+    if (!canEdit) {
+        if (readonly) readonly.hidden = false;
+        if (editable) editable.hidden = true;
+        renderReportDrilldownTable(filter);
+        panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+    }
+    if (readonly) readonly.hidden = true;
+    if (editable) editable.hidden = false;
+    [...rowsBody.querySelectorAll('tr')].forEach(tr => {
+        const data = getRowData(tr);
+        const match = filter(data);
+        tr.classList.toggle('ft-report-row-hidden', !match);
+        tr.classList.toggle('ft-report-row-match', match);
+    });
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderReportDrilldownTable(filter) {
+    const tbody = document.getElementById('reportDrilldownBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const matches = lastReportSourceRows.filter(filter);
+    if (!matches.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 8;
+        td.textContent = 'No matching tagged events.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+    matches.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        [
+            index + 1,
+            row.label,
+            normalizePlayerName(row.player),
+            row.quarter,
+            row.team,
+            row.eventtype,
+            row.result,
+            row.start,
+        ].forEach(text => {
+            const td = document.createElement('td');
+            td.textContent = text ?? '';
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+}
+
+function openReportDrilldown({ player, team, stat, scope }) {
+    const playerLabel = player ? normalizePlayerName(player) : '';
+    const filter = (row) => {
+        if (playerLabel && normalizePlayerName(row.player) !== playerLabel) return false;
+        if (team && row.team !== team) return false;
+        return rowMatchesReportStat(row, stat);
+    };
+    const who = playerLabel || team || 'Team';
+    applyReportRowFilter(filter, `${who} — ${stat}`, scope);
+}
+
+// ── Reports ─────────────────────────────────────────────────
+
 function statAccumulator(rows) {
     const byTeam = {}, byPlayer = {};
     rows.forEach(r => {
-        const team = r.team || 'Unknown', player = r.player || 'Unknown', key = `${team}__${player}`;
+        const team = r.team || 'Unknown';
+        const player = normalizePlayerName(r.player);
+        const key = `${team}__${player}`;
         if (!byTeam[team]) byTeam[team] = { Points: 0, FGM: 0, FGA: 0, '3PM': 0, '3PA': 0, FTM: 0, FTA: 0, OReb: 0, DReb: 0, Reb: 0, Assists: 0, Steals: 0, Blocks: 0, Turnovers: 0, Fouls: 0 };
         if (!byPlayer[key]) byPlayer[key] = { Team: team, Player: player, Points: 0, FGM: 0, FGA: 0, '3PM': 0, '3PA': 0, FTM: 0, FTA: 0, OReb: 0, DReb: 0, Reb: 0, Assists: 0, Steals: 0, Blocks: 0, Turnovers: 0, Fouls: 0, Seconds: 0 };
         const t = byTeam[team], p = byPlayer[key];
@@ -1217,19 +1506,49 @@ function teamRecordSummary(games) {
     return [{ Category: 'Overall', Record: `${ow}-${ol}` }, { Category: 'Conference', Record: `${cw}-${cl}` }, { Category: 'Non-Conference / Other', Record: `${nw}-${nl}` }];
 }
 
-function drawReportTable(columns, rows) {
+function drawReportTable(columns, rows, options = {}) {
+    const { clickable = false, rowMeta = [], scope = '' } = options;
     reportHeadRow.innerHTML = '';
     reportTableBody.innerHTML = '';
-    columns.forEach(c => { const th = document.createElement('th'); th.textContent = c; reportHeadRow.appendChild(th); });
-    rows.forEach(row => {
+    columns.forEach(c => {
+        const th = document.createElement('th');
+        th.textContent = c;
+        reportHeadRow.appendChild(th);
+    });
+    rows.forEach((row, rowIdx) => {
         const tr = document.createElement('tr');
-        columns.forEach(col => { const td = document.createElement('td'); td.textContent = row[col] ?? ''; tr.appendChild(td); });
+        const meta = rowMeta[rowIdx] || {};
+        columns.forEach(col => {
+            const td = document.createElement('td');
+            const val = row[col] ?? '';
+            const numeric = reportStatCellValue(val);
+            if (clickable && REPORT_STAT_COLUMNS.has(col) && numeric > 0) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ft-report-stat-link';
+                btn.textContent = val;
+                btn.title = 'Show tagged events for this total';
+                btn.addEventListener('click', () => openReportDrilldown({
+                    player: meta.player,
+                    team: meta.team,
+                    stat: col,
+                    scope,
+                }));
+                td.appendChild(btn);
+            } else {
+                td.textContent = val;
+            }
+            tr.appendChild(td);
+        });
         reportTableBody.appendChild(tr);
     });
     if (!rows.length) {
         const tr = document.createElement('tr');
-        const td = document.createElement('td'); td.colSpan = columns.length || 1; td.textContent = 'No data for this report.';
-        tr.appendChild(td); reportTableBody.appendChild(tr);
+        const td = document.createElement('td');
+        td.colSpan = columns.length || 1;
+        td.textContent = 'No data for this report.';
+        tr.appendChild(td);
+        reportTableBody.appendChild(tr);
     }
 }
 
@@ -1265,21 +1584,26 @@ function addMinutesToStatAccumulator(rows, byPlayer) {
         const tEnd = (idx < sorted.length - 1) ? sorted[idx + 1]._time : totalTime;
         const dt = Math.max(0, tEnd - tStart);
         if (dt <= 0) return;
-        [...onCourtLiberty].forEach(player => { const key = `${liberty}__${player || 'Unknown'}`; if (byPlayer[key]) byPlayer[key].Seconds += dt; });
+        [...onCourtLiberty].forEach(player => {
+            const key = `${liberty}__${normalizePlayerName(player)}`;
+            if (byPlayer[key]) byPlayer[key].Seconds += dt;
+        });
         if (row.eventtype === 'SubIn' || row.eventtype === 'SubOut') handleSub(row);
     });
 }
 
 function generateReport() {
-    const scope = reportScope.value, type = reportType.value;
+    const scope = reportScope.value;
+    const type = reportType.value;
     const games = gatherGamesForScope(scope);
-    const rows = scope === 'selected' ? getAllRows() : games.flatMap(g => g.rows || []);
-    reportHeadRow.innerHTML = ''; reportTableBody.innerHTML = ''; reportKpiGrid.innerHTML = '';
-    const titleParts = [];
-    if (scope === 'selected') titleParts.push('Selected Game');
-    else if (scope === 'my-season') titleParts.push('My Games Season to Date');
-    else if (scope === 'scout-season') titleParts.push('Scout Games Season to Date');
-    else titleParts.push('All Saved Games');
+    const rows = rowsForReportScope(scope);
+    lastReportSourceRows = rows.slice();
+    reportScopeLoadedGameId = reportScopeGameId(scope);
+    clearReportRowFilter();
+    reportHeadRow.innerHTML = '';
+    reportTableBody.innerHTML = '';
+    reportKpiGrid.innerHTML = '';
+    const titleParts = [reportScopeTitle(scope, games)];
     if (type === 'team-totals') titleParts.push('Team Totals');
     else if (type === 'player-totals') titleParts.push('Individual Totals');
     else if (type === 'opponent-totals') titleParts.push('Opponent Totals');
@@ -1287,39 +1611,118 @@ function generateReport() {
     else if (type === 'box-score') titleParts.push('Box Score');
     else titleParts.push('Raw Data');
     reportTitle.textContent = titleParts.join(' • ');
-    if (!rows.length && type !== 'record-summary') { reportSummary.value = 'No events tagged yet.'; return; }
+    if (!rows.length && type !== 'record-summary') {
+        reportSummary.value = 'No events tagged yet for this game/scope. Tag events in the Tagger tab, then click Generate Report again.';
+        drawReportTable(['Message'], [{ Message: 'No tagged events found.' }]);
+        drawKpis([['Games', games.length || 0], ['Events', 0]]);
+        return;
+    }
     if (type === 'raw-data') {
         const headers = ['#', 'Label', 'Player', 'Quarter', 'Team', 'Side', 'Category', 'Event Type', 'Result', 'Start', 'Duration', 'Notes'];
-        drawReportTable(headers, rows.map((r, i) => ({ '#': i + 1, Label: r.label, Player: r.player, Quarter: r.quarter, Team: r.team, Side: r.side, Category: r.category, 'Event Type': r.eventtype, Result: r.result, Start: r.start, Duration: r.duration, Notes: r.notes })));
-        drawKpis([['Events', rows.length]]); reportSummary.value = 'Raw data for tagged events.'; return;
+        drawReportTable(headers, rows.map((r, i) => ({
+            '#': i + 1,
+            Label: r.label,
+            Player: normalizePlayerName(r.player),
+            Quarter: r.quarter,
+            Team: r.team,
+            Side: r.side,
+            Category: r.category,
+            'Event Type': r.eventtype,
+            Result: r.result,
+            Start: r.start,
+            Duration: r.duration,
+            Notes: r.notes,
+        })));
+        drawKpis([['Events', rows.length]]);
+        reportSummary.value = 'Raw line-item list of tagged events. Switch report type to Box Score for player totals.';
+        return;
     }
     const acc = statAccumulator(rows);
     addMinutesToStatAccumulator(rows, acc.byPlayer);
+    const reportOpts = { clickable: true, scope };
     if (type === 'team-totals') {
-        const teams = Object.entries(acc.byTeam).map(([team, s]) => ({ Team: team, PTS: s.Points, FGM: s.FGM, FGA: s.FGA, FG: `${s.FGA ? s.FGM + '/' + s.FGA : '0/0'}`, '3PM': s['3PM'], '3PA': s['3PA'], '3P': `${s['3PA'] ? s['3PM'] + '/' + s['3PA'] : '0/0'}`, FTM: s.FTM, FTA: s.FTA, FT: `${s.FTA ? s.FTM + '/' + s.FTA : '0/0'}`, OReb: s.OReb, DReb: s.DReb, Reb: s.Reb, Ast: s.Assists, Stl: s.Steals, Blk: s.Blocks, TO: s.Turnovers, PF: s.Fouls }));
-        drawReportTable(['Team', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF'], teams);
+        const teams = Object.entries(acc.byTeam).map(([team, s]) => ({
+            Team: team,
+            PTS: s.Points,
+            FGM: s.FGM,
+            FGA: s.FGA,
+            FG: `${s.FGA ? `${s.FGM}/${s.FGA}` : '0/0'}`,
+            '3PM': s['3PM'],
+            '3PA': s['3PA'],
+            '3P': `${s['3PA'] ? `${s['3PM']}/${s['3PA']}` : '0/0'}`,
+            FTM: s.FTM,
+            FTA: s.FTA,
+            FT: `${s.FTA ? `${s.FTM}/${s.FTA}` : '0/0'}`,
+            OReb: s.OReb,
+            DReb: s.DReb,
+            Reb: s.Reb,
+            Ast: s.Assists,
+            Stl: s.Steals,
+            Blk: s.Blocks,
+            TO: s.Turnovers,
+            PF: s.Fouls,
+        }));
+        const cols = ['Team', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF'];
+        drawReportTable(cols, teams, {
+            ...reportOpts,
+            rowMeta: teams.map(row => ({ team: row.Team })),
+        });
         const totalPts = teams.reduce((n, t) => n + (t.PTS || 0), 0);
         drawKpis([['Games', games.length || 1], ['Total PTS', totalPts], ['Events', rows.length]]);
-        reportSummary.value = 'Team totals across selected scope.'; return;
+        reportSummary.value = 'Team totals. Click any non-zero stat to see the tagged events behind it.';
+        return;
     }
     if (type === 'player-totals' || type === 'opponent-totals' || type === 'box-score') {
         const liberty = ourTeamNameInput.value.trim() || 'Our Team';
         const rowsPlayers = Object.values(acc.byPlayer).filter(p => {
-            if (type === 'player-totals' || type === 'box-score') return p.Team === liberty || p.Team === 'Our Team';
+            if (type === 'player-totals' || type === 'box-score') {
+                return p.Team === liberty || p.Team === 'Our Team';
+            }
             return p.Team !== liberty && p.Team !== 'Our Team';
-        }).map(p => ({ Team: p.Team, Player: p.Player, Min: formatSecondsToMMSS(p.Seconds), PTS: p.Points, FGM: p.FGM, FGA: p.FGA, FG: `${p.FGA ? p.FGM + '/' + p.FGA : '0/0'}`, '3PM': p['3PM'], '3PA': p['3PA'], '3P': `${p['3PA'] ? p['3PM'] + '/' + p['3PA'] : '0/0'}`, FTM: p.FTM, FTA: p.FTA, FT: `${p.FTA ? p.FTM + '/' + p.FTA : '0/0'}`, OReb: p.OReb, DReb: p.DReb, Reb: p.Reb, Ast: p.Assists, Stl: p.Steals, Blk: p.Blocks, TO: p.Turnovers, PF: p.Fouls }));
-        const cols = (type === 'box-score' ? ['Player', 'Min', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF'] : ['Team', 'Player', 'Min', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF']);
-        drawReportTable(cols, rowsPlayers);
+        }).map(p => ({
+            Team: p.Team,
+            Player: p.Player,
+            Min: formatSecondsToMMSS(p.Seconds),
+            PTS: p.Points,
+            FGM: p.FGM,
+            FGA: p.FGA,
+            FG: `${p.FGA ? `${p.FGM}/${p.FGA}` : '0/0'}`,
+            '3PM': p['3PM'],
+            '3PA': p['3PA'],
+            '3P': `${p['3PA'] ? `${p['3PM']}/${p['3PA']}` : '0/0'}`,
+            FTM: p.FTM,
+            FTA: p.FTA,
+            FT: `${p.FTA ? `${p.FTM}/${p.FTA}` : '0/0'}`,
+            OReb: p.OReb,
+            DReb: p.DReb,
+            Reb: p.Reb,
+            Ast: p.Assists,
+            Stl: p.Steals,
+            Blk: p.Blocks,
+            TO: p.Turnovers,
+            PF: p.Fouls,
+        }));
+        const cols = (type === 'box-score'
+            ? ['Player', 'Min', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF']
+            : ['Team', 'Player', 'Min', 'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT', 'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF']);
+        drawReportTable(cols, rowsPlayers, {
+            ...reportOpts,
+            rowMeta: rowsPlayers.map(row => ({ player: row.Player, team: row.Team })),
+        });
         const pts = rowsPlayers.reduce((n, r) => n + (r.PTS || 0), 0);
         drawKpis([['Games', games.length || 1], ['Players', rowsPlayers.length], ['Total PTS', pts]]);
-        reportSummary.value = (type === 'box-score' ? 'Box score for Liberty in the selected game/scope.' : (type === 'player-totals' ? 'Liberty player totals across selected scope.' : 'Opponent player totals across selected scope.'));
+        reportSummary.value = (type === 'box-score'
+            ? 'Box score from your manual tags. Click any non-zero total to review or edit the underlying events.'
+            : (type === 'player-totals'
+                ? 'Liberty player totals across selected scope.'
+                : 'Opponent player totals across selected scope.'));
         return;
     }
     if (type === 'record-summary') {
         const summary = teamRecordSummary(games);
         drawReportTable(['Category', 'Record'], summary);
         drawKpis([['Games', games.length]]);
-        reportSummary.value = 'Record summary based on saved results.'; return;
+        reportSummary.value = 'Record summary based on saved results.';
     }
 }
 
@@ -1920,6 +2323,17 @@ function applyFilmToolDeepLinks() {
     if (params.get('open') === 'terms') {
         loadVocabulary();
         termDialog?.showModal();
+    }
+    const analysisGameId = params.get('game_id');
+    if (tab === 'reports') {
+        refreshReportScopeOptions();
+        if (reportType) reportType.value = 'box-score';
+        const matched = findSavedGameForAnalysisId(analysisGameId);
+        if (matched) {
+            loadGameIntoUI(matched);
+            reportScope.value = `game:${matched.id}`;
+        }
+        generateReport();
     }
 }
 
@@ -2901,6 +3315,8 @@ function attachEventHandlers() {
     document.getElementById('saveGameBtn')?.addEventListener('click', saveCurrentGameToLibrary);
     document.getElementById('resumeLastBtn')?.addEventListener('click', resumeLastGame);
     document.getElementById('generateReportBtn')?.addEventListener('click', generateReport);
+    document.getElementById('clearReportDrilldownBtn')?.addEventListener('click', clearReportRowFilter);
+    document.getElementById('clearReportDrilldownBtnPanel')?.addEventListener('click', clearReportRowFilter);
     document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());
     document.getElementById('saveReportBtn')?.addEventListener('click', saveReportAsFile);
     document.getElementById('exportBtn')?.addEventListener('click', exportGameData);
