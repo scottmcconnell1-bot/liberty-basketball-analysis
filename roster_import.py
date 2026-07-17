@@ -65,11 +65,12 @@ def _normalize_player(
     position: str | None = None,
 ) -> dict | None:
     name = (name or "").strip()
-    if not name:
-        return None
     jersey_number = (jersey_number or "").strip() or None
     grade = (grade or "").strip() or None
     position = (position or "").strip() or None
+
+    if not name and not jersey_number:
+        return None
 
     label = ""
     if jersey_number and name:
@@ -188,6 +189,8 @@ def _parse_maxpreps_player_line(line: str) -> dict | None:
 
 def _parse_roster_row_parts(parts: list[str]) -> dict | None:
     if len(parts) == 1:
+        if parts[0].isdigit():
+            return _normalize_player(jersey_number=parts[0], name=None)
         parsed = _parse_maxpreps_player_line(parts[0])
         if parsed:
             return parsed

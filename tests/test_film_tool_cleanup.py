@@ -11,6 +11,8 @@ def test_film_tool_top_bar_is_simplified(client):
     assert 'id="manageTermsBtn"' not in html
     assert 'data-theme-toggle' not in html
     assert 'id="exportBtn"' in html
+    assert 'id="rosterBulkNumbersInput"' in html
+    assert "Paste jersey numbers" in html
 
 
 def test_settings_includes_film_tool_section(client):

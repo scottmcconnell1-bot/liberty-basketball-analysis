@@ -44,6 +44,28 @@ def test_save_and_list_film_roster(db):
     assert players[0]["label"] == "0 - Carter Sullivan, 8"
 
 
+def test_save_opponent_roster_jersey_numbers_only(db):
+    season_id = _create_season(db)
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="opp",
+        players=[
+            {"label": "5", "jersey_number": "5", "name": None},
+            {"label": "12", "jersey_number": "12", "name": None},
+        ],
+        replace=True,
+    )
+    db.commit()
+
+    players = list_film_roster_players(
+        db, season_id=season_id, level="varsity", gender="boys", side="opp"
+    )
+    assert [player["label"] for player in players] == ["5", "12"]
+
+
 def test_merge_film_roster_keeps_existing_players(db):
     season_id = _create_season(db)
     save_film_roster(
@@ -94,6 +116,33 @@ def test_delete_film_roster(db):
     assert not list_film_roster_players(
         db, season_id=season_id, level="jrhigh", gender="boys", side="opp"
     )
+
+
+def test_api_film_rosters_put_opponent_jersey_numbers(client, db):
+    season_id = _create_season(db)
+    db.commit()
+    resp = client.put(
+        "/api/film-rosters",
+        json={
+            "season_id": season_id,
+            "level": "varsity",
+            "gender": "boys",
+            "side": "opp",
+            "replace": True,
+            "players": [
+                {"label": "5", "jersey_number": "5", "name": None},
+                {"label": "23", "jersey_number": "23", "name": None},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["count"] == 2
+
+    list_resp = client.get(
+        f"/api/film-rosters?season_id={season_id}&level=varsity&gender=boys&side=opp"
+    )
+    labels = [player["label"] for player in list_resp.get_json()["players"]]
+    assert labels == ["5", "23"]
 
 
 def test_api_film_rosters_import_with_season(client, db):
