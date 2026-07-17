@@ -114,15 +114,19 @@ def _try_winget_install(package_id: str, label: str) -> bool:
     if os.name != "nt" or shutil.which("winget") is None:
         return False
     _log(f"Attempting to install {label} with winget ({package_id})...")
-    result = subprocess.run(
-        [
-            "winget", "install", "-e", "--id", package_id,
-            "--accept-package-agreements", "--accept-source-agreements",
-        ],
-        cwd=ROOT,
-        check=False,
-    )
-    return result.returncode == 0
+    for source_args in (["--source", "winget"], []):
+        result = subprocess.run(
+            [
+                "winget", "install", "-e", "--id", package_id,
+                *source_args,
+                "--accept-package-agreements", "--accept-source-agreements",
+            ],
+            cwd=ROOT,
+            check=False,
+        )
+        if result.returncode == 0:
+            return True
+    return False
 
 
 def ensure_python() -> list[str]:
@@ -170,7 +174,45 @@ def ensure_git() -> None:
     _warn("git not found. You can still run the app from an extracted copy of the repo.")
 
 
-def ensure_venv(python_cmd: list[str]) -> Path:
+def _deps_marker() -> Path:
+    return ROOT / ".venv" / ".liberty_deps_installed"
+
+
+def venv_is_healthy(venv_python: Path) -> bool:
+    if not venv_python.exists():
+        return False
+    result = subprocess.run(
+        [
+            str(venv_python),
+            "-c",
+            "import flask; from app import app; print('ok')",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def remove_venv() -> None:
+    venv_dir = ROOT / ".venv"
+    marker = _deps_marker()
+    if marker.exists():
+        marker.unlink()
+    if venv_dir.exists():
+        _log("Removing broken virtual environment (.venv)...")
+        shutil.rmtree(venv_dir, ignore_errors=True)
+
+
+def ensure_venv(python_cmd: list[str], *, recreate: bool = False) -> Path:
+    venv_python = _venv_python()
+    if recreate:
+        remove_venv()
+    elif venv_python.exists() and not venv_is_healthy(venv_python):
+        _warn("Virtual environment is broken (common after OneDrive sync). Recreating .venv...")
+        remove_venv()
+
     venv_python = _venv_python()
     if venv_python.exists():
         _log("Virtual environment already exists.")
@@ -183,15 +225,22 @@ def ensure_venv(python_cmd: list[str]) -> Path:
     return venv_python
 
 
-def ensure_dependencies(venv_python: Path) -> None:
-    marker = ROOT / ".venv" / ".liberty_deps_installed"
-    if marker.exists():
-        _log("Python dependencies already installed (marker present).")
+def ensure_dependencies(venv_python: Path, *, force: bool = False) -> None:
+    marker = _deps_marker()
+    if not force and marker.exists() and venv_is_healthy(venv_python):
+        _log("Python dependencies already installed.")
         return
 
+    if marker.exists():
+        marker.unlink()
     _log("Installing Python dependencies (first run may take a few minutes)...")
     _run([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"])
     _run([str(venv_python), "-m", "pip", "install", "-r", "requirements.txt"])
+    if not venv_is_healthy(venv_python):
+        raise RuntimeError(
+            "Dependencies installed but import check failed. "
+            "Try: py -3.12 scripts/launch_liberty.py --repair"
+        )
     marker.write_text("ok\n", encoding="utf-8")
     _log("Dependencies installed.")
 
@@ -241,6 +290,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", DEFAULT_PORT)))
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser tab.")
     parser.add_argument("--reinstall-deps", action="store_true", help="Force pip install on every run.")
+    parser.add_argument(
+        "--repair",
+        action="store_true",
+        help="Recreate .venv and reinstall dependencies (fixes OneDrive/corrupt venv).",
+    )
     return parser.parse_args()
 
 
@@ -254,17 +308,16 @@ def main() -> int:
     print("=" * 60)
     print()
 
-    if args.reinstall_deps:
-        marker = ROOT / ".venv" / ".liberty_deps_installed"
-        if marker.exists():
-            marker.unlink()
+    force_deps = args.reinstall_deps or args.repair
+    if force_deps:
+        _deps_marker().unlink(missing_ok=True)
 
     try:
         python_cmd = ensure_python()
         ensure_git()
         ensure_ffmpeg()
-        venv_python = ensure_venv(python_cmd)
-        ensure_dependencies(venv_python)
+        venv_python = ensure_venv(python_cmd, recreate=args.repair)
+        ensure_dependencies(venv_python, force=force_deps)
         ensure_database(venv_python)
     except Exception as exc:
         _log(f"Setup failed: {exc}")
