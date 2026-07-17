@@ -155,6 +155,34 @@ def _find_film_roster_players(db, *, season_id=None, level="varsity", gender="bo
             hit["source"] = "film_roster_inferred"
             return hit
 
+    # Last resort: use any non-empty roster slot in the database.
+    row = db.execute(
+        """
+        SELECT season_id, level, gender, side, COUNT(*) AS roster_count
+          FROM film_roster_players
+         GROUP BY season_id, level, gender, side
+         ORDER BY roster_count DESC, season_id DESC
+         LIMIT 1
+        """
+    ).fetchone()
+    if row and int(row["roster_count"] or 0) > 0:
+        players = _load_film_roster_players(
+            db,
+            season_id=row["season_id"],
+            level=row["level"],
+            gender=row["gender"],
+            side=row["side"],
+        )
+        if players:
+            return {
+                "players": players,
+                "season_id": row["season_id"],
+                "level": row["level"],
+                "gender": row["gender"],
+                "side": row["side"],
+                "source": "film_roster_any_slot",
+            }
+
     return None
 
 
@@ -162,8 +190,12 @@ def resolve_analysis_game_context(db, game_id):
     """Resolve season, level, gender, opponent, and video metadata for an analysis key."""
     from helpers import resolve_analysis_run_for_progress
 
-    row = resolve_analysis_run_for_progress(db, game_id)
-    analysis_key = row["analysis_key"] if row and row["analysis_key"] else str(game_id)
+    analysis_run_row = resolve_analysis_run_for_progress(db, game_id)
+    analysis_key = (
+        analysis_run_row["analysis_key"]
+        if analysis_run_row and analysis_run_row["analysis_key"]
+        else str(game_id)
+    )
     relational_game_id = _resolve_relational_game_id(db, analysis_key)
 
     context = {
@@ -208,7 +240,7 @@ def resolve_analysis_game_context(db, game_id):
                 context["our_team_name"] = game_row["program_name"]
 
     if not context["season_id"] and context["opponent_name"]:
-        row = db.execute(
+        season_row = db.execute(
             """
             SELECT sg.season_id, sg.level, sg.gender, sg.game_date
               FROM scheduled_games sg
@@ -222,19 +254,19 @@ def resolve_analysis_game_context(db, game_id):
             """,
             (context["opponent_name"], context["game_date"], context["game_date"]),
         ).fetchone()
-        if row:
-            if row["season_id"]:
-                context["season_id"] = row["season_id"]
-            if row["level"]:
-                context["level"] = _normalize_film_level(row["level"])
-            if row["gender"]:
-                context["gender"] = str(row["gender"]).lower()
+        if season_row:
+            if season_row["season_id"]:
+                context["season_id"] = season_row["season_id"]
+            if season_row["level"]:
+                context["level"] = _normalize_film_level(season_row["level"])
+            if season_row["gender"]:
+                context["gender"] = str(season_row["gender"]).lower()
             if not context["game_date"]:
-                context["game_date"] = row["game_date"]
+                context["game_date"] = season_row["game_date"]
 
     video_row = db.execute(
         """
-        SELECT v.id, v.stored_filename, v.opponent
+        SELECT v.id, v.stored_filename, v.opponent, v.file_path
           FROM videos v
           LEFT JOIN analysis_runs ar
             ON ar.source_video_id = v.id
@@ -251,9 +283,20 @@ def resolve_analysis_game_context(db, game_id):
     if video_row:
         context["video_id"] = video_row["id"]
         context["stored_filename"] = video_row["stored_filename"]
+        context["video_path"] = video_row["file_path"]
         if not context["opponent_name"] and video_row["opponent"]:
             context["opponent_name"] = video_row["opponent"]
             context["opponent_team_name"] = video_row["opponent"]
+
+    if analysis_run_row and analysis_run_row["video_path"]:
+        context["video_path"] = analysis_run_row["video_path"]
+    if analysis_run_row:
+        context["base_analysis_key"] = analysis_run_row["base_analysis_key"]
+        run_keys = analysis_run_row.keys()
+        if "base_game_id" in run_keys and analysis_run_row["base_game_id"]:
+            context["video_game_id"] = analysis_run_row["base_game_id"]
+        elif "game_id" in run_keys and analysis_run_row["game_id"] is not None:
+            context["video_game_id"] = analysis_run_row["game_id"]
 
     team_row = db.execute(
         """
@@ -611,3 +654,66 @@ def list_analysis_events(
         },
         "events": events,
     }
+
+
+def resolve_analysis_key(db, game_id) -> str:
+    """Return the canonical analysis_key for an analysis or relational game id."""
+    context = resolve_analysis_game_context(db, game_id)
+    return context.get("analysis_key") or str(game_id)
+
+
+def event_scope_sql(db, game_id, alias="e"):
+    """Limit events to one analysis run instead of every run sharing relational_game_id."""
+    context = resolve_analysis_game_context(db, game_id)
+    analysis_key = context.get("analysis_key") or str(game_id)
+    relational_game_id = context.get("relational_game_id")
+    prefix = f"{alias}."
+    conditions = [f"{prefix}game_id = ?"]
+    params = [analysis_key]
+
+    if relational_game_id is not None:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE game_id = ?""",
+            (relational_game_id,),
+        ).fetchall()
+        known_keys = {analysis_key}
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    known_keys.add(str(value))
+
+        placeholders = ",".join("?" for _ in known_keys)
+        conditions.append(
+            f"({prefix}relational_game_id = ? AND {prefix}game_id NOT IN ({placeholders}))"
+        )
+        params.append(relational_game_id)
+        params.extend(sorted(known_keys))
+
+    return f"({' OR '.join(conditions)})", params
+
+
+def dedupe_player_minute_rows(rows, preferred_game_id=None):
+    """Merge duplicate player_minutes rows that share tracker_id across analysis keys."""
+    best_by_tracker = {}
+    for row in rows:
+        payload = dict(row) if not isinstance(row, dict) else row
+        tracker_id = int(payload["tracker_id"])
+        row_game_id = payload.get("game_id")
+        score = (
+            1 if preferred_game_id and str(row_game_id) == str(preferred_game_id) else 0,
+            1 if payload.get("relational_game_id") is not None else 0,
+            float(payload.get("minutes_played") or 0),
+            int(payload.get("total_frames") or 0),
+        )
+        current = best_by_tracker.get(tracker_id)
+        if current is None or score > current[0]:
+            best_by_tracker[tracker_id] = (score, payload)
+
+    merged = [entry[1] for entry in best_by_tracker.values()]
+    merged.sort(
+        key=lambda row: (-float(row.get("minutes_played") or 0), int(row["tracker_id"])),
+    )
+    return merged

@@ -232,3 +232,232 @@ def test_auto_apply_cluster_jerseys_updates_events(db):
     assert result["applied"] >= 1
     row = db.execute("SELECT player FROM events WHERE player LIKE '#12%'").fetchone()
     assert row is not None
+
+
+def test_sample_event_timestamps_spreads_samples():
+    from jersey_ocr import _sample_event_timestamps
+
+    events = [
+        {"player": "3", "timestamp_ms": 1000},
+        {"player": "3", "timestamp_ms": 1100},
+        {"player": "3", "timestamp_ms": 5000},
+        {"player": "7", "timestamp_ms": 2000},
+    ]
+    sampled = _sample_event_timestamps(events, max_per_cluster=10)
+    assert sampled[3] == [1000, 5000]
+    assert sampled[7] == [2000]
+
+
+def test_ocr_jerseys_near_events_updates_detection(db, monkeypatch, tmp_path):
+    from jersey_ocr import ocr_jerseys_near_events
+
+    video_path = tmp_path / "event-ocr.mp4"
+    video_path.write_bytes(b"not-a-real-video")
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'event-ocr')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_event_ocr"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, str(video_path)),
+    )
+    db.execute(
+        """INSERT INTO events
+               (game_id, relational_game_id, player, event_type, timestamp_ms, source_type)
+           VALUES (?, ?, '3', 'shot', 5000, 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, tracker_id, player_cluster)
+           VALUES (?, ?, 150, 5000, 'person', 0.9, 200, 300, 80, 120, 1, 3)""",
+        (analysis_key, game_id),
+    )
+    db.commit()
+    det_id = db.execute("SELECT id FROM detections").fetchone()[0]
+
+    import sys
+
+    class FakeCap:
+        def __init__(self, path, *_args):
+            self.path = path
+
+        def isOpened(self):
+            return True
+
+        def set(self, *_args):
+            return True
+
+        def read(self):
+            import numpy as np
+
+            return True, np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        def release(self):
+            return None
+
+    fake_cv2 = type(sys)("cv2")
+    fake_cv2.VideoCapture = FakeCap
+    fake_cv2.CAP_FFMPEG = 0
+    fake_cv2.CAP_PROP_POS_MSEC = 0
+    monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
+    monkeypatch.setattr(
+        "jersey_ocr.read_jersey_from_detection",
+        lambda *_args, **_kwargs: (23, 0.88),
+    )
+
+    result = ocr_jerseys_near_events(db, analysis_key, str(video_path))
+    assert result["skipped"] is False
+    assert result["updated"] >= 1
+    row = db.execute("SELECT jersey_read, jersey_confidence FROM detections WHERE id=?", (det_id,)).fetchone()
+    assert row["jersey_read"] == 23
+    assert row["jersey_confidence"] == 0.88
+
+
+def test_detection_scope_includes_parent_analysis_key(db):
+    from helpers import count_jersey_reads_for_analysis, detection_scope_for_analysis
+
+    parent_key = "nfhs_parent_detections"
+    child_key = "nfhs_child_analysis"
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'scope-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, game_id, video_path, base_analysis_key, base_game_id, status)
+           VALUES (?, ?, '/tmp/child.mp4', ?, ?, 'completed')""",
+        (child_key, game_id, parent_key, parent_key),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, jersey_read, jersey_confidence)
+           VALUES (?, ?, 1, 1000, 'person', 0.9, 100, 200, 40, 80, 23, 0.9)""",
+        (parent_key, game_id),
+    )
+    db.commit()
+
+    scope_sql, scope_params = detection_scope_for_analysis(db, child_key)
+    row = db.execute(
+        f"SELECT COUNT(*) AS c FROM detections d WHERE {scope_sql} AND d.jersey_read IS NOT NULL",
+        scope_params,
+    ).fetchone()
+    assert row["c"] == 1
+    assert count_jersey_reads_for_analysis(db, child_key) == 1
+
+
+def test_ocr_jerseys_for_game_runs_cluster_and_event_scans(db, monkeypatch, tmp_path):
+    from jersey_ocr import ocr_jerseys_for_game
+
+    video_path = tmp_path / "full-scan.mp4"
+    video_path.write_bytes(b"fake")
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'full-scan')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_full_scan"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, str(video_path)),
+    )
+    db.execute(
+        """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                confidence, x_center, y_center, width, height, tracker_id, player_cluster)
+           VALUES (?, ?, 10, 1000, 'person', 0.9, 200, 300, 80, 120, 1, 3)""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO events
+               (game_id, relational_game_id, player, event_type, timestamp_ms, source_type)
+           VALUES (?, ?, '3', 'shot', 1000, 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.commit()
+
+    calls = {"cluster": 0, "event": 0}
+
+    def fake_cluster(*_args, **_kwargs):
+        calls["cluster"] += 1
+        return {"skipped": False, "updated": 1, "ocr_attempts": 1}
+
+    def fake_event(*_args, **_kwargs):
+        calls["event"] += 1
+        return {"skipped": False, "updated": 1, "ocr_attempts": 1}
+
+    monkeypatch.setattr("jersey_ocr.ocr_jerseys_on_cluster_samples", fake_cluster)
+    monkeypatch.setattr("jersey_ocr.ocr_jerseys_near_events", fake_event)
+
+    result = ocr_jerseys_for_game(db, analysis_key, str(video_path))
+    assert result["skipped"] is False
+    assert calls["cluster"] == 1
+    assert calls["event"] == 1
+
+
+def test_aggregate_cluster_jersey_votes_rejects_false_zero(db):
+    from track_identity import aggregate_cluster_jersey_votes
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'jersey-zero-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_jersey_zero"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/zero.mp4"),
+    )
+    for i in range(4):
+        db.execute(
+            """INSERT INTO detections
+                  (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                   confidence, x_center, y_center, width, height, tracker_id,
+                   player_cluster, jersey_read, jersey_confidence)
+               VALUES (?, ?, ?, ?, 'person', 0.9, 100, 200, 40, 80, ?, 0, 0, 0.80)""",
+            (analysis_key, game_id, 10 + i, 100 + i * 33, i),
+        )
+    db.commit()
+
+    suggestions = aggregate_cluster_jersey_votes(
+        db,
+        analysis_key,
+        min_confidence=0.5,
+        min_samples=1,
+        roster_by_jersey={},
+        for_hints=True,
+    )
+    assert suggestions == []
+
+
+def test_aggregate_cluster_jersey_votes_accepts_roster_zero(db):
+    from track_identity import aggregate_cluster_jersey_votes
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'roster-zero-test')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_roster_zero"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/roster-zero.mp4"),
+    )
+    for i in range(4):
+        db.execute(
+            """INSERT INTO detections
+                  (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                   confidence, x_center, y_center, width, height, tracker_id,
+                   player_cluster, jersey_read, jersey_confidence)
+               VALUES (?, ?, ?, ?, 'person', 0.9, 100, 200, 40, 80, 0, 0, 0, 0.85)""",
+            (analysis_key, game_id, 10 + i, 100 + i * 33),
+        )
+    db.commit()
+
+    roster = {0: {"jersey_number": 0, "name": "Caleb Henrickson"}}
+    suggestions = aggregate_cluster_jersey_votes(
+        db,
+        analysis_key,
+        min_confidence=0.5,
+        min_samples=1,
+        roster_by_jersey=roster,
+        for_hints=True,
+    )
+    assert len(suggestions) == 1
+    assert suggestions[0]["jersey_number"] == 0

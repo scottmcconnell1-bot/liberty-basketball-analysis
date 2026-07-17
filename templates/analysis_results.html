@@ -134,15 +134,15 @@
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
       <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
-        The AI auto-maps jersey numbers from the video to your roster.
-        Only edit a row here if a player was mis-identified — otherwise just click stats above to verify on film.
+        Jersey numbers are read automatically from the video via OCR and matched to your roster.
+        Only edit a row here if the AI mis-identified a player. You do not need to map every track manually.
       </p>
       <div id="slot-mapping-status" style="display:none;margin-bottom:10px;font-size:.85rem;"></div>
       <div style="overflow-x:auto;">
         <table id="slot-mapping-table" style="margin-bottom:12px;">
           <thead>
             <tr>
-              <th>Court slot</th>
+              <th>Player track</th>
               <th class="num">Min</th>
               <th>Roster player</th>
               <th>Jersey #</th>
@@ -153,7 +153,9 @@
         </table>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="saveSlotMappingsBtn">Save correction</button>
-      <button type="button" class="btn btn-primary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Apply roster to stats</button>
+      <button type="button" class="btn btn-primary btn-sm" id="scanJerseysBtn" style="margin-left:8px;">Scan jerseys (OCR)</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="resetJerseyScanBtn" style="margin-left:8px;display:none;">Reset stuck scan</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="applyRosterNamesBtn" style="margin-left:8px;">Re-apply roster to stats</button>
     </div>
 
     <div class="grid">
@@ -286,6 +288,39 @@ let ANALYSIS_TEAMS = null;
 let EXPLORER_PLAYERS = [];
 let PLAYER_LABELS = {};
 let autoApplyAttempted = false;
+const JERSEY_SCAN_MAX_WAIT_MS = (2 * 60 * 60 + 5 * 60) * 1000; // 2h 5m client guard
+
+function formatElapsed(seconds) {
+  const total = Math.max(0, Math.round(seconds || 0));
+  if (total < 60) return total + 's';
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  if (mins < 60) return mins + 'm ' + secs + 's';
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return hours + 'h ' + remMins + 'm';
+}
+
+function jerseyScanStepIsActive(step) {
+  return step === 'jersey_scan:running'
+    || step === 'jersey_scan:loading'
+    || step.startsWith('jersey_scan:running:')
+    || step.startsWith('jersey_scan:loading:');
+}
+
+function jerseyScanElapsedSeconds(progressData) {
+  const scan = progressData && progressData.jersey_scan;
+  if (scan && scan.started_at) {
+    return Math.max(0, Math.floor(Date.now() / 1000) - Number(scan.started_at));
+  }
+  return null;
+}
+
+function setJerseyScanResetVisible(show) {
+  const btn = document.getElementById('resetJerseyScanBtn');
+  if (btn) btn.style.display = show ? 'inline-block' : 'none';
+}
+
 const STAT_COLUMNS = {
   reb: 'reb',
   ast: 'ast',
@@ -297,14 +332,42 @@ const STAT_COLUMNS = {
   fga: 'fga',
 };
 
+async function parseJsonResponse(resp) {
+  const text = await resp.text();
+  const trimmed = (text || '').trim();
+  if (!trimmed) {
+    if (!resp.ok) throw new Error('Empty response (HTTP ' + resp.status + ')');
+    return {};
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (parseErr) {
+    const snippet = trimmed.replace(/\s+/g, ' ').slice(0, 180);
+    const htmlHint = snippet.toLowerCase().startsWith('<!doctype') || snippet.startsWith('<')
+      ? 'Server returned an HTML error page instead of JSON. '
+      : '';
+    throw new Error(htmlHint + '(HTTP ' + resp.status + ') ' + snippet);
+  }
+}
+
 function slotLabel(id, row) {
   if (row && row.mapped_label) return row.mapped_label;
   if (row && row.player_name && row.jersey_number != null) return '#' + row.jersey_number + ' ' + row.player_name;
   if (row && row.name) return row.name;
   if (row && row.jersey_number != null) return '#' + row.jersey_number;
   if (row && row.player_name) return row.player_name;
-  if (id === null || id === undefined || id === '') return 'Unknown';
-  return 'Pos ' + id;
+  if (id === null || id === undefined || id === '') return 'Unidentified';
+  return 'Unidentified';
+}
+
+function courtSlotDisplayLabel(slot) {
+  if (slot.mapped_label) return slot.mapped_label;
+  if (slot.jersey_number != null && slot.player_name) {
+    return '#' + slot.jersey_number + ' ' + slot.player_name;
+  }
+  if (slot.jersey_number != null) return '#' + slot.jersey_number;
+  if (slot.ocr_suggested_jersey != null) return 'Unidentified (OCR hint #' + slot.ocr_suggested_jersey + ')';
+  return 'Unidentified';
 }
 
 function playerDisplayName(row, pid, meta) {
@@ -335,7 +398,7 @@ async function regenerateEventsFromResults(videoId) {
   if (!confirm('Rebuild events from saved detections? This is faster than a full AI re-run.')) return;
   try {
     const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Failed to regenerate events');
     alert(data.message || 'Events regenerated. Refreshing results…');
     loadResults();
@@ -399,8 +462,13 @@ async function loadResults() {
     setStep('step-fetch', 'active');
 
     const resp = await fetch('/api/analysis/' + GAME_ID);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (!resp.ok) {
+      if (resp.status === 503 && data.code === 'database_locked') {
+        throw new Error(data.error || 'Database busy — wait until analysis finishes, then refresh.');
+      }
+      throw new Error(data.error || ('HTTP ' + resp.status));
+    }
     if (data.analysis_key && data.analysis_key !== GAME_ID) {
       GAME_ID = data.analysis_key;
       const subtitle = document.getElementById('resultsSubtitle');
@@ -444,8 +512,17 @@ async function loadResults() {
           + (ocrReads ? ' (' + ocrReads.toLocaleString() + ' jersey reads)' : '') + '. ';
         html += 'Click any stat to verify each play on film.';
       } else if (identity.reason === 'no_cluster_suggestions') {
-        html += 'Jersey OCR did not find enough reads to auto-name players yet. ';
-        html += 'Try <strong>Rebuild events</strong> on Video Library, or verify the roster is imported in Film Tool.';
+        const engines = identity.ocr_engines || {};
+        const reads = identity.ocr_read_count || 0;
+        html += 'Jersey OCR could not auto-name players';
+        if (!engines.easyocr && !engines.paddleocr) {
+          html += ' — <strong>EasyOCR is not installed</strong> on this PC (`py -3.12 -m pip install easyocr`). ';
+        } else if (reads === 0) {
+          html += ' — scanning jerseys from the video now (this may take a few minutes). ';
+        } else {
+          html += ' (' + reads.toLocaleString() + ' reads, not confident enough). ';
+        }
+        html += 'Click <strong>Scan jerseys (OCR)</strong> below to retry, or wait for the automatic scan to finish.';
       } else {
         html += 'Stats are grouped by court area until jersey OCR can auto-map players. ';
         html += 'Click stats to verify events on film.';
@@ -507,6 +584,7 @@ async function loadResults() {
     document.getElementById('results').style.display = 'block';
 
     await loadSlotMappingUI();
+    maybeAutoScanJerseys(data.identity_status || {});
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     const el = document.getElementById('error');
@@ -826,11 +904,16 @@ function renderSlotMappingTable() {
 
   let html = '';
   COURT_SLOTS.forEach(function(slot) {
+    const suggestedJersey = slot.ocr_suggested_jersey ?? '';
+    const jerseyValue = slot.jersey_number ?? suggestedJersey ?? '';
+    const hintLabel = suggestedJersey && !slot.jersey_number
+      ? ' <span style="color:var(--orange);font-size:.75rem;">OCR hint: #' + suggestedJersey + '</span>'
+      : '';
     html += '<tr data-tracker-id="' + slot.tracker_id + '">';
-    html += '<td><strong>Pos ' + slot.tracker_id + '</strong></td>';
+    html += '<td><strong>' + escapeHtml(courtSlotDisplayLabel(slot)) + '</strong>' + hintLabel + '</td>';
     html += '<td class="num">' + (slot.minutes_played != null ? slot.minutes_played.toFixed(1) : '-') + '</td>';
     html += '<td><select class="slot-roster" style="min-width:180px;">' + rosterOptions + '</select></td>';
-    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + (slot.jersey_number ?? '') + '"></td>';
+    html += '<td><input class="slot-jersey" type="number" min="0" max="99" style="width:70px" value="' + jerseyValue + '"></td>';
     html += '<td><input class="slot-name" type="text" style="min-width:140px" value="' + escapeHtml(slot.player_name || '') + '"></td>';
     html += '</tr>';
   });
@@ -845,6 +928,17 @@ function renderSlotMappingTable() {
       for (const opt of select.options) {
         if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.jersey_number)) {
           select.value = opt.value;
+          break;
+        }
+      }
+    } else if (slot.ocr_suggested_jersey != null && slot.ocr_suggested_jersey !== '') {
+      for (const opt of select.options) {
+        if (opt.dataset.jersey && String(opt.dataset.jersey) === String(slot.ocr_suggested_jersey)) {
+          select.value = opt.value;
+          const tr = select.closest('tr');
+          if (tr && !tr.querySelector('.slot-name').value && opt.dataset.name) {
+            tr.querySelector('.slot-name').value = opt.dataset.name;
+          }
           break;
         }
       }
@@ -893,7 +987,7 @@ async function applyRosterNamesToStats() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Could not apply roster names');
     if (status) {
       status.style.color = 'var(--green)';
@@ -913,6 +1007,163 @@ async function applyRosterNamesToStats() {
 
 document.getElementById('applyRosterNamesBtn').addEventListener('click', applyRosterNamesToStats);
 
+async function pollJerseyScanProgress() {
+  const status = document.getElementById('slot-mapping-status');
+  const pollStarted = Date.now();
+  while (true) {
+    await sleep(2000);
+    if (Date.now() - pollStarted > JERSEY_SCAN_MAX_WAIT_MS) {
+      setJerseyScanResetVisible(true);
+      throw new Error(
+        'Jersey scan is taking too long (over 2 hours). Click Reset stuck scan, then try Scan jerseys again.'
+      );
+    }
+    const resp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    const data = await parseJsonResponse(resp);
+    const step = String(data.progress_step || '');
+    if (step === 'jersey_scan:done') break;
+    if (step.startsWith('jersey_scan:failed:')) {
+      setJerseyScanResetVisible(true);
+      throw new Error(step.slice('jersey_scan:failed:'.length) || 'Jersey scan failed');
+    }
+    if (jerseyScanStepIsActive(step)) {
+      const elapsed = jerseyScanElapsedSeconds(data) ?? Math.round((Date.now() - pollStarted) / 1000);
+      const phase = (data.jersey_scan && data.jersey_scan.phase === 'loading')
+        ? 'Loading OCR models'
+        : 'Scanning jerseys';
+      const detail = (data.jersey_scan && data.jersey_scan.message) || '';
+      if (status) {
+        status.style.display = 'block';
+        status.style.color = 'var(--muted)';
+        status.textContent = phase + '… ' + formatElapsed(elapsed) + ' elapsed'
+          + (detail ? ' — ' + detail : '');
+      }
+      if (elapsed > 30 * 60) setJerseyScanResetVisible(true);
+      continue;
+    }
+    break;
+  }
+  setJerseyScanResetVisible(false);
+}
+
+async function resetJerseyScan() {
+  const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('resetJerseyScanBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/reset-jersey-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await parseJsonResponse(resp);
+    if (!resp.ok) throw new Error(data.error || 'Could not reset jersey scan');
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--green)';
+      status.textContent = data.message || 'Cleared stuck jersey scan. You can scan again.';
+    }
+    setJerseyScanResetVisible(false);
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not reset jersey scan: ' + err.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function scanJerseysFromVideo() {
+  const status = document.getElementById('slot-mapping-status');
+  const btn = document.getElementById('scanJerseysBtn');
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Starting jersey scan (OCR)…';
+  }
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID) + '/scan-jerseys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await parseJsonResponse(resp);
+    if (!resp.ok) throw new Error(data.error || 'Jersey scan failed');
+    if (resp.status === 202 || data.status === 'jersey_scan_started' || data.status === 'jersey_scan_running') {
+      if (status) {
+        status.textContent = 'Scanning jersey numbers from video (OCR)… this may take several minutes.';
+      }
+      await pollJerseyScanProgress();
+      await loadSlotMappingUI();
+      const slotsResp = await fetch('/api/court-slots/' + encodeURIComponent(GAME_ID));
+      const slotsData = slotsResp.ok ? await parseJsonResponse(slotsResp) : {};
+      const mapped = (slotsData.slots || []).filter(function(slot) { return slot.is_mapped; }).length;
+      const reads = slotsData.ocr_hints ? slotsData.ocr_hints.length : 0;
+      if (status) {
+        status.style.color = mapped > 0 ? 'var(--green)' : 'var(--orange)';
+        status.textContent = mapped > 0
+          ? ('OCR mapped ' + mapped + ' players. Refreshing stats…')
+          : ('OCR finished but could not auto-map players yet. Fix any obvious mistakes below.');
+      }
+      if (mapped > 0) await loadResults();
+      return;
+    }
+    const mapped = data.slots_mapped || data.auto_apply?.applied || 0;
+    const reads = data.ocr_read_count || 0;
+    if (status) {
+      status.style.color = mapped > 0 ? 'var(--green)' : 'var(--orange)';
+      status.textContent = mapped > 0
+        ? ('OCR mapped ' + mapped + ' players (' + reads.toLocaleString() + ' jersey reads). Refreshing stats…')
+        : ('OCR finished with ' + reads.toLocaleString() + ' reads but could not auto-map players yet.');
+    }
+    await loadSlotMappingUI();
+    if (mapped > 0) await loadResults();
+  } catch (err) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = 'Jersey scan failed: ' + err.message;
+    } else {
+      alert(err.message || 'Jersey scan failed.');
+    }
+    if (/reset|timed out|interrupted/i.test(err.message || '')) {
+      setJerseyScanResetVisible(true);
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.getElementById('scanJerseysBtn')?.addEventListener('click', scanJerseysFromVideo);
+document.getElementById('resetJerseyScanBtn')?.addEventListener('click', resetJerseyScan);
+
+async function maybeAutoScanJerseys(identity) {
+  if (!identity) return;
+  if (identity.reason === 'analysis_running' || identity.reason === 'database_locked') return;
+  if (identity.reason !== 'no_cluster_suggestions') return;
+  const reads = identity.ocr_read_count || 0;
+  const engines = identity.ocr_engines || {};
+  if (reads > 0 || (!engines.easyocr && !engines.paddleocr)) return;
+  if (window.__jerseyScanStarted) return;
+  try {
+    const progressResp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+    if (progressResp.ok) {
+      const progressData = await parseJsonResponse(progressResp);
+      const step = String(progressData.progress_step || '');
+      if (jerseyScanStepIsActive(step)) return;
+      if (step.startsWith('jersey_scan:failed:')) {
+        setJerseyScanResetVisible(true);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Jersey scan progress check failed', err);
+  }
+  window.__jerseyScanStarted = true;
+  await scanJerseysFromVideo();
+}
+
 async function loadSlotMappingUI() {
   try {
     const [slotsResp, rosterResp] = await Promise.all([
@@ -920,10 +1171,10 @@ async function loadSlotMappingUI() {
       fetch('/api/analysis/' + encodeURIComponent(GAME_ID) + '/roster'),
     ]);
     if (!slotsResp.ok) return;
-    const slotsData = await slotsResp.json();
+    const slotsData = await parseJsonResponse(slotsResp);
     COURT_SLOTS = slotsData.slots || [];
     if (rosterResp.ok) {
-      const rosterData = await rosterResp.json();
+      const rosterData = await parseJsonResponse(rosterResp);
       ROSTER_PLAYERS = rosterData.players || [];
       EXPLORER_PLAYERS = ROSTER_PLAYERS.slice();
       const status = document.getElementById('slot-mapping-status');
@@ -951,6 +1202,31 @@ async function loadSlotMappingUI() {
     }
     renderSlotMappingTable();
     populateExplorerPlayerFilter();
+    try {
+      const progressResp = await fetch('/api/analysis_progress/' + encodeURIComponent(GAME_ID));
+      if (progressResp.ok) {
+        const progressData = await parseJsonResponse(progressResp);
+        const step = String(progressData.progress_step || '');
+        const status = document.getElementById('slot-mapping-status');
+        if (step.startsWith('jersey_scan:failed:')) {
+          setJerseyScanResetVisible(true);
+          if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--red)';
+            status.textContent = step.slice('jersey_scan:failed:'.length);
+          }
+        } else if (jerseyScanStepIsActive(step)) {
+          setJerseyScanResetVisible(true);
+          if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--orange)';
+            status.textContent = 'A jersey scan may still be marked running. Click Reset stuck scan, then Scan jerseys again.';
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Jersey scan status check failed', err);
+    }
     if (ROSTER_PLAYERS.length && statsUsePositionClusters(BASIC_STATS_ROWS) && !autoApplyAttempted) {
       autoApplyAttempted = true;
       await applyRosterNamesToStats();
@@ -993,7 +1269,7 @@ async function saveSlotMappings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mappings: mappings, apply_to_events: true }),
     });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) throw new Error(data.error || 'Save failed');
     if (status) {
       status.style.color = 'var(--green)';
@@ -1015,10 +1291,15 @@ document.getElementById('saveSlotMappingsBtn').addEventListener('click', saveSlo
 
 function buildFilmLink(timestampMs, label) {
   if (!STORED_FILENAME || timestampMs == null) return '';
-  const seconds = Math.max(0, Math.floor(Number(timestampMs) / 1000));
+  const CLIP_BEFORE_MS = 3000;
+  const CLIP_AFTER_MS = 5000;
+  const eventMs = Number(timestampMs);
+  const startSec = Math.max(0, (eventMs - CLIP_BEFORE_MS) / 1000);
+  const endSec = (eventMs + CLIP_AFTER_MS) / 1000;
   const href = '/film/' + encodeURIComponent(STORED_FILENAME)
     + '?game_id=' + encodeURIComponent(GAME_ID)
-    + '&t=' + seconds;
+    + '&t=' + startSec.toFixed(2)
+    + '&t_end=' + endSec.toFixed(2);
   return '<a class="film-link" href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || 'Film') + '</a>';
 }
 
@@ -1029,7 +1310,7 @@ function populateExplorerPlayerFilter() {
   let html = '<option value="">All players</option>';
   const seen = new Set();
   COURT_SLOTS.forEach(function(slot) {
-    const label = slot.mapped_label || ('Pos ' + slot.tracker_id);
+    const label = slot.mapped_label || courtSlotDisplayLabel(slot);
     if (!seen.has(label)) {
       seen.add(label);
       html += '<option value="' + escapeHtml(label) + '" data-tracker="' + slot.tracker_id + '">' + escapeHtml(label) + '</option>';

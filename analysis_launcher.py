@@ -3,13 +3,18 @@
 
 from __future__ import annotations
 
-import sqlite3
 import sys
 import traceback
 
 
+def _db_connection(db_path: str):
+    from helpers import open_sqlite_connection
+
+    return open_sqlite_connection(db_path, row_factory=None)
+
+
 def _mark_failed(db_path: str, game_id: str, message: str) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _db_connection(db_path)
     try:
         conn.execute(
             """UPDATE analysis_runs
@@ -26,7 +31,7 @@ def _mark_failed(db_path: str, game_id: str, message: str) -> None:
                    WHERE analysis_key=? AND status='failed'""",
                 (game_id,),
             )
-        except sqlite3.OperationalError:
+        except Exception:
             pass
         conn.commit()
     finally:
@@ -34,7 +39,7 @@ def _mark_failed(db_path: str, game_id: str, message: str) -> None:
 
 
 def _mark_running(db_path: str, game_id: str) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _db_connection(db_path)
     try:
         conn.execute(
             """UPDATE analysis_runs
@@ -50,7 +55,7 @@ def _mark_running(db_path: str, game_id: str) -> None:
                    WHERE analysis_key=? AND status='running'""",
                 (game_id,),
             )
-        except sqlite3.OperationalError:
+        except Exception:
             pass
         conn.commit()
     finally:
@@ -76,8 +81,10 @@ def main() -> int:
             _mark_failed(db_path, game_id, f"Analysis worker exited with code {code}")
         raise
     except Exception as exc:
+        from helpers import format_exception_message
+
         detail = traceback.format_exc()
-        _mark_failed(db_path, game_id, f"{exc}\n{detail[-400:]}")
+        _mark_failed(db_path, game_id, format_exception_message(exc))
         print(detail, file=sys.stderr)
         return 1
 

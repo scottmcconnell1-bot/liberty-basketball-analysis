@@ -152,6 +152,16 @@ def calculate_player_minutes(conn, game_id, fps=30.0, detect_stride=1):
             "player_name": player_name,
         })
 
+    if relational_game_id is not None:
+        conn.execute(
+            """DELETE FROM player_minutes
+                WHERE relational_game_id = ?
+                  AND game_id != ?""",
+            (relational_game_id, str(game_id)),
+        )
+    else:
+        conn.execute("DELETE FROM player_minutes WHERE game_id = ?", (str(game_id),))
+
     conn.executemany("""
         INSERT OR REPLACE INTO player_minutes
             (game_id, relational_game_id, tracker_id, first_frame, last_frame, total_frames,
@@ -437,6 +447,15 @@ def recognize_plays(conn, game_id):
     plays.extend(iso_plays)
     postup_plays = _detect_post_up(conn, game_id)
     plays.extend(postup_plays)
+
+    conn.execute("DELETE FROM play_recognitions WHERE game_id = ?", (str(game_id),))
+    if relational_game_id is not None:
+        conn.execute(
+            """DELETE FROM play_recognitions
+                WHERE relational_game_id = ?
+                  AND game_id != ?""",
+            (relational_game_id, str(game_id)),
+        )
 
     for play in plays:
         conn.execute("""
@@ -889,6 +908,16 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
             print(w)
 
     # ── Write results to DB ──
+    if relational_game_id is not None:
+        conn.execute(
+            """DELETE FROM player_effect
+                WHERE relational_game_id = ?
+                  AND game_id != ?""",
+            (relational_game_id, str(game_id)),
+        )
+    else:
+        conn.execute("DELETE FROM player_effect WHERE game_id = ?", (str(game_id),))
+
     for r in results:
         conn.execute("""
             INSERT OR REPLACE INTO player_effect

@@ -438,12 +438,28 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 f"Processed {frame_number} frames but wrote 0 detections for {game_id}. "
                 "Check AI model weights and video playback."
             )
+        if frame_number > 1000 and detection_count < max(5000, int(frame_number * 0.25)):
+            sparse_msg = (
+                f"Done — low detections ({detection_count} rows / {frame_number} frames). "
+                "Rebuild may help events, but full stats and jersey OCR need more YOLO data."
+            )
+            try:
+                _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
+                _pconn.execute(
+                    "UPDATE analysis_runs SET progress_step=? WHERE analysis_key=? AND status='running'",
+                    (sparse_msg, game_id),
+                )
+                _pconn.commit()
+                _pconn.close()
+            except Exception:
+                pass
+            print(f"[AI] WARNING: {sparse_msg}")
 
         # Assign possessions after events are generated
         if relational_game_id:
             try:
                 from helpers import assign_possessions_for_game
-                assign_possessions_for_game(db, relational_game_id)
+                assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
                 print(f"[AI] Possessions assigned for game_id={relational_game_id}")
             except Exception as e:
                 print(f"[AI] Possession assignment failed: {e}")

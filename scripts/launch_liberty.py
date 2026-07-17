@@ -256,6 +256,11 @@ def main() -> int:
     try:
         if not wait_for_server(base_url, WAIT_SECONDS):
             _log("Server did not respond in time. Check output above for errors.")
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
             return 1
 
         _log(f"Server ready: {base_url}")
