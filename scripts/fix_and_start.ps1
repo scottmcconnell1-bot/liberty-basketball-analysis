@@ -6,6 +6,11 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+function Write-Fix {
+    param([string]$Message)
+    Write-Host ("fix: " + $Message)
+}
+
 Write-Host ""
 Write-Host "============================================================"
 Write-Host " Liberty Basketball — Fix and Start"
@@ -13,16 +18,22 @@ Write-Host "============================================================"
 Write-Host ""
 
 function Find-Python {
-    foreach ($cmd in @(
+    $candidates = @(
         @("py", "-3.12"),
         @("py", "-3.13"),
         @("python"),
         @("python3")
-    )) {
+    )
+    foreach ($cmd in $candidates) {
         if (-not (Get-Command $cmd[0] -ErrorAction SilentlyContinue)) { continue }
         try {
-            $version = & $cmd[0] $cmd[1..($cmd.Length - 1)] -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')" 2>$null
-            if ($version -match "^3\.(12|13)$") {
+            $args = @()
+            if ($cmd.Length -gt 1) {
+                $args = $cmd[1..($cmd.Length - 1)]
+            }
+            $version = & $cmd[0] @args -c "import sys; print('{}.{}'.format(sys.version_info[0], sys.version_info[1]))" 2>$null
+            $version = ($version | Out-String).Trim()
+            if ($version -eq "3.12" -or $version -eq "3.13") {
                 return $cmd
             }
         } catch {}
@@ -31,15 +42,16 @@ function Find-Python {
 }
 
 $pythonCmd = Find-Python
-Write-Host "[fix] Using Python: $($pythonCmd -join ' ')"
+Write-Fix ("Using Python: " + ($pythonCmd -join " "))
 
 # Backup game data before git repairs.
-$backupDir = Join-Path $env:TEMP "liberty-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$backupDir = Join-Path $env:TEMP ("liberty-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 New-Item -ItemType Directory -Path $backupDir | Out-Null
 foreach ($item in @("film_analysis.db", "uploads")) {
-    if (Test-Path (Join-Path $Root $item)) {
-        Copy-Item (Join-Path $Root $item) $backupDir -Recurse -Force
-        Write-Host "[fix] Backed up $item"
+    $source = Join-Path $Root $item
+    if (Test-Path $source) {
+        Copy-Item $source $backupDir -Recurse -Force
+        Write-Fix ("Backed up " + $item)
     }
 }
 
@@ -58,8 +70,8 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 
 if (-not $gitOk) {
-    Write-Host "[fix] Git repo corrupted — repairing .git from GitHub..."
-    $clonePath = Join-Path $env:TEMP "liberty-git-repair-$(Get-Random)"
+    Write-Fix "Git repo corrupted — repairing .git from GitHub..."
+    $clonePath = Join-Path $env:TEMP ("liberty-git-repair-" + (Get-Random))
     if (Test-Path $clonePath) { Remove-Item $clonePath -Recurse -Force }
     git clone --branch cursor/q1-manual-ai-compare-ac1f --single-branch `
         https://github.com/scottmcconnell1-bot/liberty-basketball-analysis.git $clonePath
@@ -69,7 +81,7 @@ if (-not $gitOk) {
     git checkout cursor/q1-manual-ai-compare-ac1f
     git reset --hard origin/cursor/q1-manual-ai-compare-ac1f
     Remove-Item $clonePath -Recurse -Force
-    Write-Host "[fix] Git repaired."
+    Write-Fix "Git repaired."
 }
 
 # Restore backed-up data.
@@ -77,19 +89,24 @@ foreach ($item in @("film_analysis.db", "uploads")) {
     $src = Join-Path $backupDir $item
     if (Test-Path $src) {
         Copy-Item $src $Root -Recurse -Force
-        Write-Host "[fix] Restored $item"
+        Write-Fix ("Restored " + $item)
     }
 }
 
 # Optional ffmpeg (skip msstore certificate errors).
 if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        Write-Host "[fix] Installing ffmpeg (winget source)..."
+        Write-Fix "Installing ffmpeg (winget source)..."
         winget install -e --id Gyan.FFmpeg --source winget `
             --accept-package-agreements --accept-source-agreements 2>$null | Out-Null
     }
 }
 
-Write-Host "[fix] Recreating virtual environment and starting app..."
-& $pythonCmd[0] $pythonCmd[1..($pythonCmd.Length - 1)] scripts\launch_liberty.py --repair
+Write-Fix "Recreating virtual environment and starting app..."
+$launchArgs = @("scripts\launch_liberty.py", "--repair")
+if ($pythonCmd.Length -gt 1) {
+    & $pythonCmd[0] $pythonCmd[1] @launchArgs
+} else {
+    & $pythonCmd[0] @launchArgs
+}
 exit $LASTEXITCODE
