@@ -18,10 +18,14 @@ AI_DEFAULTS = {
     "tracker_backend": "bytetrack",
     "jersey_ocr_enabled": True,
     "jersey_ocr_stride": 5,
-    "jersey_ocr_min_confidence": 0.55,
+    "jersey_ocr_event_enabled": True,
+    "jersey_ocr_event_window_ms": 3000,
+    "jersey_ocr_max_samples_per_cluster": 12,
+    "jersey_ocr_max_total_samples": 100,
+    "jersey_ocr_min_confidence": 0.50,
     "auto_apply_jersey_mapping": True,
-    "identity_auto_apply_min_confidence": 0.60,
-    "identity_auto_apply_min_samples": 4,
+    "identity_auto_apply_min_confidence": 0.55,
+    "identity_auto_apply_min_samples": 2,
     "auto_accept_event_confidence": 0.50,
     "llm_provider": "ollama",
     "llm_model": ""
@@ -35,12 +39,16 @@ INT_SETTING_KEYS = {
     "ai.tracker_max_frame_gap",
     "ai.ball_class_id",
     "ai.jersey_ocr_stride",
+    "ai.jersey_ocr_event_window_ms",
+    "ai.jersey_ocr_max_samples_per_cluster",
+    "ai.jersey_ocr_max_total_samples",
     "ai.identity_auto_apply_min_samples",
 }
 
 
 BOOL_SETTING_KEYS = {
     "ai.jersey_ocr_enabled",
+    "ai.jersey_ocr_event_enabled",
     "ai.auto_apply_jersey_mapping",
 }
 

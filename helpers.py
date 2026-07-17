@@ -138,26 +138,20 @@ def build_possession_workflow_summary(db, game_id):
 
     relational_game_id = _resolve_relational_game_id(db, game_id)
     if relational_game_id is not None:
-        assign_possessions_for_game(db, relational_game_id)
+        assign_possessions_for_game(db, relational_game_id, analysis_key=game_id)
 
     summary = get_possession_summary(db, game_id)
 
-    if relational_game_id is not None:
-        row = db.execute(
-            """SELECT COUNT(*) AS events_total,
+    from analysis_helpers import event_scope_sql
+
+    scope_sql, scope_params = event_scope_sql(db, game_id, alias="e")
+    row = db.execute(
+        f"""SELECT COUNT(*) AS events_total,
                       SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
-                 FROM events
-                WHERE relational_game_id = ?""",
-            (relational_game_id,),
-        ).fetchone()
-    else:
-        row = db.execute(
-            """SELECT COUNT(*) AS events_total,
-                      SUM(CASE WHEN possession_id IS NOT NULL THEN 1 ELSE 0 END) AS events_linked
-                 FROM events
-                WHERE game_id = ?""",
-            (str(game_id),),
-        ).fetchone()
+                 FROM events e
+                WHERE {scope_sql}""",
+        scope_params,
+    ).fetchone()
 
     events_total = row["events_total"] or 0
     events_linked = row["events_linked"] or 0
@@ -207,7 +201,13 @@ def build_player_minutes_summary(db):
 
 
 def feature_enabled(flag_name):
-    return bool(get_runtime_settings()["features"].get(flag_name, False))
+    from flask import has_app_context
+
+    if has_app_context():
+        return bool(get_runtime_settings()["features"].get(flag_name, False))
+    from config import Features
+
+    return bool(getattr(Features, flag_name, False))
 
 
 def analysis_option_enabled(option_name):
@@ -219,6 +219,21 @@ def require_feature(flag_name):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
             if not feature_enabled(flag_name):
+                abort(404)
+            return view_func(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
+def require_any_feature(*flag_names):
+    """Allow route when at least one feature flag is enabled."""
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(*args, **kwargs):
+            if not any(feature_enabled(name) for name in flag_names):
                 abort(404)
             return view_func(*args, **kwargs)
 
@@ -1001,7 +1016,7 @@ def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new ana
 
 def resolve_relational_game_id_for_analysis(db_path: str, game_id: str) -> int | None:
     """Resolve the relational games.id for an analysis key or legacy numeric id."""
-    conn = sqlite3.connect(db_path)
+    conn = open_sqlite_connection(db_path, row_factory=None)
     try:
         try:
             gid_int = int(game_id)
@@ -1136,14 +1151,34 @@ def count_detections_for_analysis(
     video_game_id=None,
     video_relational_game_id=None,
     base_analysis_key=None,
+    source_video_id=None,
+    video_path=None,
 ) -> int:
     """Count detections for a video/analysis run across legacy and relational keys."""
+    game_ids = set()
+    for gid in (analysis_key, video_game_id, base_analysis_key):
+        if gid:
+            game_ids.add(gid)
+    if source_video_id is not None or video_path:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE (? IS NOT NULL AND source_video_id = ?)
+                   OR (? IS NOT NULL AND video_path = ?)""",
+            (source_video_id, source_video_id, video_path, video_path),
+        ).fetchall()
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    game_ids.add(value)
+
     conditions = []
     params = []
     for rel_id in {relational_game_id, video_relational_game_id} - {None}:
         conditions.append("d.relational_game_id = ?")
         params.append(rel_id)
-    for game_id in {analysis_key, video_game_id, base_analysis_key} - {None}:
+    for game_id in game_ids:
         conditions.append("d.game_id = ?")
         params.append(game_id)
     if not conditions:
@@ -1175,6 +1210,96 @@ def count_events_for_analysis(
     return db.execute(query, params).fetchone()["c"]
 
 
+def detection_scope_for_analysis(db, game_id, alias="d"):
+    """Build SQL scope matching all detection rows linked to an analysis/video."""
+    from analysis_helpers import resolve_analysis_game_context
+
+    context = resolve_analysis_game_context(db, game_id)
+    analysis_key = context.get("analysis_key") or str(game_id)
+    game_ids = {str(game_id), str(analysis_key)}
+    for key in ("video_game_id", "base_analysis_key"):
+        value = context.get(key)
+        if value:
+            game_ids.add(str(value))
+
+    video_id = context.get("video_id")
+    video_path = context.get("video_path") or context.get("stored_filename")
+    if video_id is not None or video_path:
+        run_rows = db.execute(
+            """SELECT analysis_key, base_analysis_key, base_game_id
+                 FROM analysis_runs
+                WHERE (? IS NOT NULL AND source_video_id = ?)
+                   OR (? IS NOT NULL AND video_path = ?)
+                   OR analysis_key = ?
+                   OR base_analysis_key = ?""",
+            (video_id, video_id, video_path, video_path, analysis_key, analysis_key),
+        ).fetchall()
+        for row in run_rows:
+            for col in ("analysis_key", "base_analysis_key", "base_game_id"):
+                value = row[col]
+                if value:
+                    game_ids.add(str(value))
+
+    relational_ids = set()
+    for rel_key in ("relational_game_id", "video_relational_game_id"):
+        rel_id = context.get(rel_key)
+        if rel_id is not None:
+            relational_ids.add(int(rel_id))
+    resolved = _resolve_relational_game_id_for_count(db, analysis_key)
+    if resolved is not None:
+        relational_ids.add(int(resolved))
+
+    prefix = f"{alias}."
+    conditions = []
+    params = []
+    for rel_id in relational_ids:
+        conditions.append(f"{prefix}relational_game_id = ?")
+        params.append(rel_id)
+    for gid in sorted(game_ids):
+        conditions.append(f"{prefix}game_id = ?")
+        params.append(gid)
+    if not conditions:
+        return "1=0", ()
+    return "(" + " OR ".join(conditions) + ")", tuple(params)
+
+
+def _resolve_relational_game_id_for_count(db, game_id):
+    from stats import _resolve_relational_game_id
+
+    try:
+        return _resolve_relational_game_id(db, game_id)
+    except Exception:
+        return None
+
+
+def count_jersey_reads_for_analysis(db, game_id) -> int:
+    scope_sql, scope_params = detection_scope_for_analysis(db, game_id)
+    row = db.execute(
+        f"SELECT COUNT(*) AS c FROM detections d WHERE {scope_sql} AND d.jersey_read IS NOT NULL",
+        scope_params,
+    ).fetchone()
+    return int(row["c"] or 0)
+
+
+def format_exception_message(exc: BaseException, *, limit: int = 500) -> str:
+    """Store the exception headline plus the start of the traceback (not the tail)."""
+    import traceback
+
+    detail = traceback.format_exc()
+    headline = f"{type(exc).__name__}: {exc}".strip()
+    for line in detail.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("Traceback"):
+            continue
+        if stripped.startswith("File "):
+            continue
+        if any(token in stripped for token in ("Error", "Exception", "exit")):
+            headline = stripped
+    body = detail[: max(0, limit - len(headline) - 1)].strip()
+    message = headline if not body else f"{headline}\n{body}"
+    return message[:limit]
+
+
 def _analysis_log_error_message(content: str) -> str | None:
     if not content:
         return None
@@ -1190,7 +1315,15 @@ def _analysis_log_error_message(content: str) -> str | None:
                 return line.strip()[:500]
         return "Event generation failed. See logs for details."
     if "Traceback" in content or "ModuleNotFoundError" in content or "No module named" in content:
-        return _read_log_tail_from_content(content, 500)
+        lines = [line.strip() for line in content.splitlines() if line.strip()]
+        for line in reversed(lines):
+            if line.startswith("Traceback"):
+                continue
+            if line.startswith("File "):
+                continue
+            if "Error" in line or "Exception" in line:
+                return line[:500]
+        return content[:500]
     return None
 
 
@@ -1209,6 +1342,112 @@ def _is_sync_event_rebuild_step(progress_step: str | None) -> bool:
             "loading detections",
         )
     )
+
+
+JERSEY_SCAN_MAX_AGE_SECONDS = 2 * 60 * 60  # 2 hours — OCR should finish well before this
+
+
+def jersey_scan_running_step(*, phase: str = "running", detail: str | None = None) -> str:
+    """Persist jersey-scan state with a start timestamp for stale detection."""
+    import time
+
+    phase_key = "loading" if phase == "loading" else "running"
+    started = int(time.time())
+    if detail:
+        return f"jersey_scan:{phase_key}:{started}:{detail}"[:500]
+    return f"jersey_scan:{phase_key}:{started}"
+
+
+def parse_jersey_scan_step(progress_step: str | None) -> dict:
+    """Parse jersey_scan:* progress_step values."""
+    step = (progress_step or "").strip()
+    if not step.startswith("jersey_scan:"):
+        return {"active": False, "phase": None, "started_at": None, "message": None}
+    if step == "jersey_scan:done":
+        return {"active": False, "phase": "done", "started_at": None, "message": None}
+    if step.startswith("jersey_scan:failed:"):
+        return {
+            "active": False,
+            "phase": "failed",
+            "started_at": None,
+            "message": step[len("jersey_scan:failed:"):],
+        }
+    if step in {"jersey_scan:running", "jersey_scan:loading"}:
+        return {"active": True, "phase": step.split(":")[-1], "started_at": None, "message": None}
+    parts = step.split(":")
+    if len(parts) >= 3 and parts[1] in {"running", "loading"}:
+        started_at = int(parts[2]) if str(parts[2]).isdigit() else None
+        detail = ":".join(parts[3:]) if len(parts) > 3 else None
+        return {
+            "active": True,
+            "phase": parts[1],
+            "started_at": started_at,
+            "message": detail,
+        }
+    return {"active": False, "phase": None, "started_at": None, "message": None}
+
+
+def is_jersey_scan_active(progress_step: str | None) -> bool:
+    return parse_jersey_scan_step(progress_step).get("active") is True
+
+
+def clear_jersey_scan_progress(db, run_id: int) -> None:
+    db.execute(
+        "UPDATE analysis_runs SET progress_step='' WHERE id=?",
+        (run_id,),
+    )
+    db.commit()
+
+
+def mark_jersey_scan_failed(db, run_id: int, message: str) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET progress_step=?
+           WHERE id=?""",
+        (f"jersey_scan:failed:{message}"[:500], run_id),
+    )
+    db.commit()
+
+
+def reconcile_stuck_jersey_scan(db, game_id: str, *, max_age_seconds: int | None = None) -> bool:
+    """Clear jersey OCR progress that outlived the worker (restart/timeout)."""
+    import time
+
+    row = db.execute(
+        """SELECT id, progress_step
+           FROM analysis_runs
+           WHERE analysis_key=?
+           ORDER BY id DESC
+           LIMIT 1""",
+        (game_id,),
+    ).fetchone()
+    if not row:
+        return False
+
+    parsed = parse_jersey_scan_step(row["progress_step"])
+    if not parsed.get("active"):
+        return False
+
+    max_age = JERSEY_SCAN_MAX_AGE_SECONDS if max_age_seconds is None else max_age_seconds
+    started_at = parsed.get("started_at")
+    if started_at is None:
+        mark_jersey_scan_failed(
+            db,
+            row["id"],
+            "Jersey scan was interrupted (server restarted or browser left open). "
+            "Click Scan jerseys to retry.",
+        )
+        return True
+
+    age_seconds = max(0, int(time.time()) - int(started_at))
+    if age_seconds > max_age:
+        mark_jersey_scan_failed(
+            db,
+            row["id"],
+            f"Jersey scan timed out after {max_age // 60} minutes. Click Scan jerseys to retry.",
+        )
+        return True
+    return False
 
 
 def heal_failed_analysis_run_with_events(db, game_id: str) -> bool:
@@ -1413,7 +1652,7 @@ def start_analysis_subprocess(game_id, video_path):
                     code = proc.wait()
                     if code != 0:
                         tail = _read_log_tail(log_path)
-                        conn = sqlite3.connect(db_path)
+                        conn = open_sqlite_connection(db_path, row_factory=None)
                         conn.execute(
                             """UPDATE analysis_runs
                                SET status='failed',
@@ -1464,16 +1703,27 @@ def build_run_summary(run_row):
 
 # ── Database helpers ──────────────────────────────────────
 
+SQLITE_BUSY_TIMEOUT_MS = 60_000
+
+
+def configure_sqlite_connection(conn, *, busy_timeout_ms: int = SQLITE_BUSY_TIMEOUT_MS) -> None:
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(f"PRAGMA busy_timeout = {int(busy_timeout_ms)}")
+    conn.execute("PRAGMA foreign_keys = ON")
+
+
+def open_sqlite_connection(db_path, *, row_factory=sqlite3.Row, timeout: float = 30, busy_timeout_ms: int = SQLITE_BUSY_TIMEOUT_MS):
+    """Open SQLite with WAL + long busy wait — safe for background workers."""
+    conn = sqlite3.connect(db_path, timeout=timeout)
+    if row_factory is not None:
+        conn.row_factory = row_factory
+    configure_sqlite_connection(conn, busy_timeout_ms=busy_timeout_ms)
+    return conn
+
+
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(
-            current_app.config["DATABASE"],
-            timeout=10,
-        )
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA journal_mode=WAL")
-        g.db.execute("PRAGMA busy_timeout = 10000")
-        g.db.execute("PRAGMA foreign_keys = ON")
+        g.db = open_sqlite_connection(current_app.config["DATABASE"])
     return g.db
 
 
@@ -1514,11 +1764,43 @@ def append_query_params(path, **params):
     ))
 
 
-def film_page_path(stored_filename: str, game_id: str) -> str:
+def analysis_film_clip_query(
+    timestamp_ms,
+    *,
+    clip_before_ms: int = 3000,
+    clip_after_ms: int = 5000,
+) -> dict[str, str]:
+    """Return Film Tool query params for a bounded clip around an event."""
+    event_ms = max(0, int(timestamp_ms or 0))
+    start_sec = max(0.0, (event_ms - clip_before_ms) / 1000.0)
+    end_sec = (event_ms + clip_after_ms) / 1000.0
+    return {
+        "t": f"{start_sec:.2f}",
+        "t_end": f"{end_sec:.2f}",
+    }
+
+
+def film_page_path(
+    stored_filename: str,
+    game_id: str,
+    *,
+    timestamp_ms=None,
+    clip_before_ms: int = 3000,
+    clip_after_ms: int = 5000,
+) -> str:
     """Build a Film Tool path without Flask request context (safe in background jobs)."""
+    params = {"game_id": game_id}
+    if timestamp_ms is not None:
+        params.update(
+            analysis_film_clip_query(
+                timestamp_ms,
+                clip_before_ms=clip_before_ms,
+                clip_after_ms=clip_after_ms,
+            )
+        )
     return append_query_params(
         f"/film/{quote(stored_filename, safe='')}",
-        game_id=game_id,
+        **params,
     )
 
 
@@ -1745,7 +2027,22 @@ def _seed_event_types(db):
         )
 
 
-def assign_possessions_for_game(db, game_id):
+def _prune_orphan_possessions(db, possessions_gid, scope_sql, scope_params):
+    """Remove possession rows that are not linked to events in the current analysis scope."""
+    db.execute(
+        f"""DELETE FROM possessions
+             WHERE game_id = ?
+               AND id NOT IN (
+                     SELECT DISTINCT e.possession_id
+                       FROM events e
+                      WHERE {scope_sql}
+                        AND e.possession_id IS NOT NULL
+                   )""",
+        (possessions_gid, *scope_params),
+    )
+
+
+def assign_possessions_for_game(db, game_id, analysis_key=None):
     """Idempotent possession assignment for one game.
 
     Reads events for the game ordered by (timestamp_ms, id), creates
@@ -1755,22 +2052,48 @@ def assign_possessions_for_game(db, game_id):
     the NEW possession.  Consecutive boundary events merge into the same
     possession.
 
+    When analysis_key is provided, only events for that analysis run are
+    considered and stale possessions from prior reruns are pruned.
+
     Safe to call multiple times: existing possession_id values on events are
     checked first; existing possessions linked to this game are reused rather
     than duplicated.  Event facts (event_type, event_type_id, player,
     shot_result, timestamp_ms, review status) are never modified.
     """
-    # Collect events ordered by (timestamp_ms, id) — only those with a
-    # relational_game_id matching this game.
-    events = db.execute(
-        """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
-             FROM events e
-            WHERE e.relational_game_id = ?
-            ORDER BY e.timestamp_ms ASC, e.id ASC""",
-        (game_id,),
-    ).fetchall()
+    scope_sql = None
+    scope_params = ()
+    if analysis_key is not None:
+        from analysis_helpers import event_scope_sql
+
+        scope_sql, scope_params = event_scope_sql(db, analysis_key)
+        events = db.execute(
+            f"""SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
+                  FROM events e
+                 WHERE {scope_sql}
+                 ORDER BY e.timestamp_ms ASC, e.id ASC""",
+            scope_params,
+        ).fetchall()
+    else:
+        events = db.execute(
+            """SELECT e.id, e.event_type, e.timestamp_ms, e.possession_id
+                 FROM events e
+                WHERE e.relational_game_id = ?
+                ORDER BY e.timestamp_ms ASC, e.id ASC""",
+            (game_id,),
+        ).fetchall()
 
     if not events:
+        if analysis_key is not None and scope_sql is not None:
+            out_of_scope_sql = scope_sql.replace("e.", "events.")
+            db.execute(
+                f"""UPDATE events
+                       SET possession_id = NULL
+                     WHERE relational_game_id = ?
+                       AND NOT ({out_of_scope_sql})""",
+                (game_id, *scope_params),
+            )
+            _prune_orphan_possessions(db, game_id, scope_sql, scope_params)
+            db.commit()
         return
 
     # Determine which event types are possession boundaries.
@@ -1831,8 +2154,19 @@ def assign_possessions_for_game(db, game_id):
 
         prev_was_boundary = is_boundary
 
+    if analysis_key is not None and scope_sql is not None:
+        out_of_scope_sql = scope_sql.replace("e.", "events.")
+        db.execute(
+            f"""UPDATE events
+                   SET possession_id = NULL
+                 WHERE relational_game_id = ?
+                   AND NOT ({out_of_scope_sql})""",
+            (game_id, *scope_params),
+        )
+        _prune_orphan_possessions(db, game_id, scope_sql, scope_params)
+
     from stats import score_possessions_for_game
-    score_possessions_for_game(db, game_id)
+    score_possessions_for_game(db, analysis_key or game_id)
 
 
 def _seed_base_module_entitlement(db, team_id):

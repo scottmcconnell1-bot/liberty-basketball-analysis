@@ -83,25 +83,16 @@ def _dedupe_stat_events(rows):
 
 def _preview_event_rows(db, game_id):
     """Return AI/pending events for the analysis results preview (no review filter)."""
-    relational_game_id = _resolve_relational_game_id(db, game_id)
-    if relational_game_id is not None:
-        return db.execute(
-            """SELECT e.player, e.event_type, e.shot_result, e.timestamp_ms, et.code,
-                      et.counts_for_stats, et.is_scoring_event
-               FROM events e
-               LEFT JOIN event_types et ON et.id = e.event_type_id
-               WHERE e.relational_game_id = ?
-                  OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
-            (relational_game_id, str(game_id)),
-        ).fetchall()
+    from analysis_helpers import event_scope_sql
 
+    scope_sql, scope_params = event_scope_sql(db, game_id, alias="e")
     return db.execute(
-        """SELECT e.player, e.event_type, e.shot_result, e.timestamp_ms, et.code,
+        f"""SELECT e.player, e.event_type, e.shot_result, e.timestamp_ms, et.code,
                   et.counts_for_stats, et.is_scoring_event
-           FROM events e
-           LEFT JOIN event_types et ON et.id = e.event_type_id
-           WHERE e.game_id = ?""",
-        (str(game_id),),
+             FROM events e
+             LEFT JOIN event_types et ON et.id = e.event_type_id
+            WHERE {scope_sql}""",
+        scope_params,
     ).fetchall()
 
 
@@ -428,27 +419,33 @@ def get_enhanced_stats(db, game_id):
     - player_effect: possessions, points scored, and offensive rating per position
     - plays: recognized plays summary
     """
+    from analysis_helpers import dedupe_player_minute_rows, resolve_analysis_key
+
     basic = aggregate_stats(db, game_id)
+    analysis_key = resolve_analysis_key(db, game_id)
     relational_game_id = _resolve_relational_game_id(db, game_id)
 
     # Minutes
     if relational_game_id is not None:
-        minutes = db.execute("""
-            SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
+        minute_rows = db.execute("""
+            SELECT pm.game_id, pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name,
+                   pm.total_frames, pm.relational_game_id, p.name
             FROM player_minutes pm
             LEFT JOIN players p ON p.tracker_id = pm.tracker_id
             WHERE pm.relational_game_id = ?
                OR (pm.relational_game_id IS NULL AND pm.game_id = ?)
             ORDER BY pm.minutes_played DESC
-        """, (relational_game_id, str(game_id))).fetchall()
+        """, (relational_game_id, analysis_key)).fetchall()
     else:
-        minutes = db.execute("""
-            SELECT pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name, p.name
+        minute_rows = db.execute("""
+            SELECT pm.game_id, pm.tracker_id, pm.minutes_played, pm.jersey_number, pm.player_name,
+                   pm.total_frames, pm.relational_game_id, p.name
             FROM player_minutes pm
             LEFT JOIN players p ON p.tracker_id = pm.tracker_id
             WHERE pm.game_id = ?
             ORDER BY pm.minutes_played DESC
-        """, (game_id,)).fetchall()
+        """, (analysis_key,)).fetchall()
+    minutes = dedupe_player_minute_rows(minute_rows, preferred_game_id=analysis_key)
 
     # Shot breakdown (trusted events only)
     review_clause = _trusted_event_review_clause()
@@ -482,8 +479,8 @@ def get_enhanced_stats(db, game_id):
 
     # Player effect
     if relational_game_id is not None:
-        effects = db.execute("""
-            SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+        effect_rows = db.execute("""
+            SELECT pe.game_id, pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
                    pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
             FROM player_effect pe
             LEFT JOIN player_minutes pm
@@ -496,36 +493,30 @@ def get_enhanced_stats(db, game_id):
             WHERE pe.relational_game_id = ?
                OR (pe.relational_game_id IS NULL AND pe.game_id = ?)
             ORDER BY pe.ortg DESC
-        """, (relational_game_id, str(game_id))).fetchall()
+        """, (relational_game_id, analysis_key)).fetchall()
     else:
-        effects = db.execute("""
-            SELECT pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
+        effect_rows = db.execute("""
+            SELECT pe.game_id, pe.tracker_id, pe.possessions_on AS possessions, pe.points_for AS points_scored,
                    pe.ortg, pe.drtg, pe.net_rating, pm.minutes_played, p.name
             FROM player_effect pe
             LEFT JOIN player_minutes pm ON pm.game_id = pe.game_id AND pm.tracker_id = pe.tracker_id
             LEFT JOIN players p ON p.tracker_id = pe.tracker_id
             WHERE pe.game_id = ?
             ORDER BY pe.ortg DESC
-        """, (game_id,)).fetchall()
+        """, (analysis_key,)).fetchall()
+    effects = dedupe_player_minute_rows(
+        effect_rows,
+        preferred_game_id=analysis_key,
+    )
 
-    # Plays summary
-    if relational_game_id is not None:
-        plays = db.execute("""
-            SELECT play_type, COUNT(*) as cnt
-            FROM play_recognitions
-            WHERE relational_game_id = ?
-               OR (relational_game_id IS NULL AND game_id = ?)
-            GROUP BY play_type
-            ORDER BY cnt DESC
-        """, (relational_game_id, str(game_id))).fetchall()
-    else:
-        plays = db.execute("""
-            SELECT play_type, COUNT(*) as cnt
-            FROM play_recognitions
-            WHERE game_id = ?
-            GROUP BY play_type
-            ORDER BY cnt DESC
-        """, (game_id,)).fetchall()
+    # Plays summary — scoped to the current analysis run only
+    plays = db.execute("""
+        SELECT play_type, COUNT(*) as cnt
+        FROM play_recognitions
+        WHERE game_id = ?
+        GROUP BY play_type
+        ORDER BY cnt DESC
+    """, (analysis_key,)).fetchall()
 
     # Possession summary
     possession_summary = get_possession_summary(db, game_id)
@@ -764,12 +755,20 @@ def get_possession_summary(db, game_id):
     Returns dict with: total_possessions, scoring_possessions, points_per_possession,
     turnover_rate, top_outcomes.
     """
-    relational_game_id = _resolve_relational_game_id(db, game_id)
+    from analysis_helpers import event_scope_sql
+
     possessions_gid = _possessions_game_id(db, game_id)
+    scope_sql, scope_params = event_scope_sql(db, game_id, alias="e")
+    possession_filter = f"""p.game_id = ?
+        AND EXISTS (
+            SELECT 1 FROM events e
+             WHERE e.possession_id = p.id
+               AND {scope_sql}
+        )"""
 
     total = db.execute(
-        "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ?",
-        (possessions_gid,),
+        f"SELECT COUNT(*) as cnt FROM possessions p WHERE {possession_filter}",
+        (possessions_gid, *scope_params),
     ).fetchone()["cnt"]
 
     if total == 0:
@@ -783,43 +782,35 @@ def get_possession_summary(db, game_id):
 
     # Scoring possessions (points_for > 0)
     scoring = db.execute(
-        "SELECT COUNT(*) as cnt FROM possessions WHERE game_id = ? AND points_for > 0",
-        (possessions_gid,),
+        f"""SELECT COUNT(*) as cnt FROM possessions p
+            WHERE {possession_filter} AND p.points_for > 0""",
+        (possessions_gid, *scope_params),
     ).fetchone()["cnt"]
 
     # Total points
     total_points = db.execute(
-        "SELECT COALESCE(SUM(points_for), 0) as pts FROM possessions WHERE game_id = ?",
-        (possessions_gid,),
+        f"""SELECT COALESCE(SUM(p.points_for), 0) as pts FROM possessions p
+            WHERE {possession_filter}""",
+        (possessions_gid, *scope_params),
     ).fetchone()["pts"]
 
     # Turnover events (trusted review status only)
     turnover_review_clause = _trusted_event_review_clause("review_status")
-    if relational_game_id is not None:
-        turnovers = db.execute(
-            f"""SELECT COUNT(*) as cnt FROM events
-               WHERE relational_game_id = ?
-                 AND possession_id IS NOT NULL
-                 AND event_type = 'turnover'
-                 AND {turnover_review_clause}""",
-            (relational_game_id,),
-        ).fetchone()["cnt"]
-    else:
-        turnovers = db.execute(
-            f"""SELECT COUNT(*) as cnt FROM events
-               WHERE game_id = ?
-                 AND possession_id IS NOT NULL
-                 AND event_type = 'turnover'
-                 AND {turnover_review_clause}""",
-            (game_id,),
-        ).fetchone()["cnt"]
+    turnovers = db.execute(
+        f"""SELECT COUNT(*) as cnt FROM events e
+           WHERE {scope_sql}
+             AND e.possession_id IS NOT NULL
+             AND e.event_type = 'turnover'
+             AND {turnover_review_clause}""",
+        scope_params,
+    ).fetchone()["cnt"]
 
     # Top 3 possession outcomes by count
     top = db.execute(
-        """SELECT outcome, COUNT(*) as cnt FROM possessions
-           WHERE game_id = ? AND outcome IS NOT NULL
-           GROUP BY outcome ORDER BY cnt DESC LIMIT 3""",
-        (possessions_gid,),
+        f"""SELECT p.outcome, COUNT(*) as cnt FROM possessions p
+            WHERE {possession_filter} AND p.outcome IS NOT NULL
+            GROUP BY p.outcome ORDER BY cnt DESC LIMIT 3""",
+        (possessions_gid, *scope_params),
     ).fetchall()
 
     return {

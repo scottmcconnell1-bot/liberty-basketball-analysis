@@ -39,12 +39,14 @@ Video
 
 **Phase 1 limitation:** Events still originate from spatial clusters; jersey labels are applied **after** event generation by mapping cluster ↔ jersey votes from co-occurring detections. Good enough for first automated box scores; not yet track-native events.
 
-### Phase 2 — Track-native events (next)
+### Phase 2 — Track-native events (in progress)
 
-- `build_possession_segments()` prefers `tracker_id` when track lifespan > threshold
-- `events.player` = jersey label from `track_identity_labels` at event timestamp
-- Deprecate KMeans cluster as primary identity (keep as fallback)
-- Substitution detection: track ID change on court slot
+| Deliverable | Status |
+|-------------|--------|
+| `build_possession_segments()` prefers `tracker_id` when track lifespan ≥ 15 frames | Implemented |
+| `events.player` = jersey label from `track_identity_labels` at event timestamp | Pending |
+| Deprecate KMeans cluster as primary identity (keep as fallback) | Partial — tracker preferred when stable |
+| Substitution detection: track ID change on court slot | Pending |
 
 ### Phase 3 — Accuracy hardening
 

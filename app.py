@@ -115,6 +115,22 @@ def close_db(exception):
         db.close()
 
 
+# ── API JSON errors (avoid HTML error pages on /api/* routes) ─
+@app.errorhandler(404)
+def handle_not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Not found", "path": request.path}), 404
+    return e
+
+
+@app.errorhandler(500)
+def handle_server_error(e):
+    if request.path.startswith("/api/"):
+        app.logger.exception("API 500 on %s", request.path)
+        return jsonify({"error": "Internal server error", "path": request.path}), 500
+    return e
+
+
 # ── Auth Middleware ───────────────────────────────────────────
 @app.before_request
 def require_auth_for_api():
@@ -141,9 +157,9 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    import os
     _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=5000, debug=_debug, use_reloader=False)
+    _port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)
 
 
 @app.route("/sw.js")
