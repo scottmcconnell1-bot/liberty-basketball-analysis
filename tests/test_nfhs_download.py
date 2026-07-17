@@ -366,14 +366,27 @@ def test_regenerate_video_events(client, db, monkeypatch, tmp_path):
     )
     db.commit()
 
+    class _SyncThread:
+        def __init__(self, target=None, kwargs=None, args=(), daemon=None, name=None):
+            self._target = target
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            if self._target:
+                self._target(**self._kwargs)
+
+    monkeypatch.setattr("blueprints.ai.threading.Thread", _SyncThread)
     monkeypatch.setattr("helpers.module_available", lambda name: name == "sklearn")
     monkeypatch.setattr("event_generator.main", lambda *args, **kwargs: True)
     monkeypatch.setattr("film_analysis.run_enhanced_analysis", lambda *args, **kwargs: None)
+    monkeypatch.setattr("track_identity.run_identity_postprocess", lambda *args, **kwargs: {"slots_mapped": 0})
 
     resp = client.post("/api/videos/1/regenerate-events")
-    assert resp.status_code == 200
+    assert resp.status_code == 202
     payload = resp.get_json()
-    assert payload["status"] == "events_regenerated"
+    assert payload["status"] == "rebuild_started"
+    row = db.execute("SELECT status FROM analysis_runs WHERE analysis_key=?", ("nfhs_gam444_20260101",)).fetchone()
+    assert row["status"] == "completed"
 
 
 def test_regenerate_video_events_requires_detections(client, db, tmp_path):

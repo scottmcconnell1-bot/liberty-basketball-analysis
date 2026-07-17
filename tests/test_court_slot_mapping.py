@@ -53,6 +53,38 @@ def test_get_court_slots_lists_player_minutes(db):
     assert slots[0]["is_mapped"] is False
 
 
+def test_get_court_slots_dedupes_rerun_rows(db):
+    """Rerun analysis keys should not show duplicate Pos rows from prior runs."""
+    from court_slot_mapping import get_court_slots
+
+    db.execute(
+        """INSERT INTO games (source_type, source_key) VALUES ('manual', 'court-slot-dedupe')"""
+    )
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    parent_key = "nfhs_parent_minutes"
+    rerun_key = "nfhs_parent_minutes__rerun_1"
+    db.execute(
+        """INSERT INTO analysis_runs
+               (analysis_key, game_id, video_path, base_analysis_key, status)
+           VALUES (?, ?, '/tmp/rerun.mp4', ?, 'completed')""",
+        (rerun_key, game_id, parent_key),
+    )
+    for analysis_key, minutes in ((parent_key, 0.0), (rerun_key, 18.5)):
+        db.execute(
+            """INSERT INTO player_minutes
+                  (game_id, relational_game_id, tracker_id, first_frame, last_frame,
+                   total_frames, minutes_played)
+               VALUES (?, ?, 3, 0, 1000, 500, ?)""",
+            (analysis_key, game_id, minutes),
+        )
+    db.commit()
+
+    slots = get_court_slots(db, rerun_key)
+    assert len(slots) == 1
+    assert slots[0]["tracker_id"] == 3
+    assert slots[0]["minutes_played"] == 18.5
+
+
 def test_save_film_roster_mapping_without_player_id(db):
     """Court slot mapping should work when Film Tool roster players have no DB id."""
     from court_slot_mapping import save_court_slot_mappings

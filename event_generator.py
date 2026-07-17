@@ -13,7 +13,7 @@ def get_db_connection(db_path):
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout = 10000")
+    conn.execute("PRAGMA busy_timeout = 60000")
     return conn
 
 
@@ -80,68 +80,26 @@ def _empty_detections_frame(conn):
     return pd.DataFrame()
 
 
-def find_ball_possession(detections_df, possession_threshold=None):
+def find_ball_possession(detections_df, possession_threshold=None, containment_threshold=0.35, min_consecutive_frames=3):
     """
     Analyzes detections to determine ball possession for each frame.
-    Adds 'has_ball' and 'ball_distance' columns to the player detections.
+    Adds 'has_ball', 'ball_distance', and 'ball_containment' columns.
 
-    possession_threshold: max distance (pixels) for ball possession.
-        If None, auto-calculated from video resolution (10% of frame diagonal).
+    Uses distance + ball-in-hands containment with a minimum consecutive-frame
+    requirement to reduce single-frame flicker.
     """
-    print("INFO: Analyzing ball possession.")
-    detections_df = detections_df.sort_values('frame_number').reset_index(drop=True)
+    from ball_possession import assign_ball_possession
 
-    detections_df['has_ball'] = False
-    detections_df['ball_distance'] = float('inf')
-
-    # Auto-calculate threshold from video resolution if not provided
-    if possession_threshold is None:
-        # Cap coordinates to reasonable frame bounds (YOLO boxes can overflow)
-        x_max = min(detections_df['x_center'].quantile(0.99), 3840)  # cap at 4K width
-        y_max = min(detections_df['y_center'].quantile(0.99), 2160)  # cap at 4K height
-        diagonal = math.sqrt(x_max**2 + y_max**2)
-        possession_threshold = diagonal * 0.10  # 10% of frame diagonal
-        print(f"INFO: Auto possession threshold: {possession_threshold:.0f}px (diagonal={diagonal:.0f}px, x_max={x_max:.0f}, y_max={y_max:.0f})")
-
-    # Vectorized possession detection — much faster than groupby loop
-    # Build per-frame ball positions (use first ball detection per frame)
-    ball_df = detections_df[detections_df['class_name'] == 'ball'][['frame_number', 'x_center', 'y_center']].copy()
-    ball_df = ball_df.rename(columns={'x_center': 'ball_x', 'y_center': 'ball_y'})
-    ball_df = ball_df.groupby('frame_number').first()  # one ball pos per frame
-
-    player_mask = detections_df['class_name'] == 'person'
-    if ball_df.empty or player_mask.sum() == 0:
-        print("INFO: No ball or player detections — skipping possession analysis.")
-        return detections_df
-
-    # Get player rows with original index preserved
-    player_df = detections_df.loc[player_mask, ['frame_number', 'x_center', 'y_center']]
-
-    # Merge ball positions onto player detections by frame
-    merged = player_df.merge(ball_df, left_on='frame_number', right_index=True, how='left')
-
-    # Calculate distances vectorized (NaN ball pos = inf distance)
-    import numpy as np
-    dx = merged['x_center'].values - merged['ball_x'].values
-    dy = merged['y_center'].values - merged['ball_y'].values
-    dists = np.sqrt(dx**2 + dy**2)
-    dists = np.where(np.isnan(dists), np.inf, dists)
-
-    # Set ball_distance for all player detections using original indices
-    detections_df.loc[merged.index, 'ball_distance'] = dists
-
-    # Find closest player per frame (only frames with valid ball data)
-    merged['_dist'] = dists
-    valid = merged[merged['_dist'] < np.inf].copy()
-    if not valid.empty:
-        closest_per_frame = valid.loc[valid.groupby('frame_number')['_dist'].idxmin()]
-        closest_per_frame = closest_per_frame[closest_per_frame['_dist'] <= possession_threshold]
-        detections_df.loc[closest_per_frame.index, 'has_ball'] = True
-
-    possession_events = detections_df[detections_df['has_ball'] == True]
+    print("INFO: Analyzing ball possession (distance + containment + temporal filter).")
+    result = assign_ball_possession(
+        detections_df,
+        possession_threshold=possession_threshold,
+        containment_threshold=containment_threshold,
+        min_consecutive_frames=min_consecutive_frames,
+    )
+    possession_events = result[result["has_ball"] == True]
     print(f"INFO: Identified {len(possession_events)} instances of player possession.")
-
-    return detections_df
+    return result
 
 
 def make_event(game_id, event_type, timestamp_ms, player=None, shot_result=None, confidence=0.45, details=None):
@@ -297,7 +255,45 @@ def _cluster_players_spatially(detections_df, n_clusters=10, conn=None, game_id=
     return detections_df
 
 
-def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3):
+def _stable_tracker_lifespans(players: pd.DataFrame) -> dict[int, int]:
+    if "tracker_id" not in players.columns:
+        return {}
+    lifespans = {}
+    for tid, group in players.groupby("tracker_id"):
+        if tid is None or pd.isna(tid):
+            continue
+        try:
+            lifespans[int(tid)] = int(group["frame_number"].nunique())
+        except (TypeError, ValueError):
+            continue
+    return lifespans
+
+
+def _owner_key_for_row(row, track_lifespans: dict[int, int], min_track_frames: int = 15) -> str:
+    """Prefer ByteTrack tracker_id when stable; fall back to spatial cluster/grid."""
+    tracker_id = row.get("tracker_id")
+    if tracker_id is not None and not pd.isna(tracker_id):
+        try:
+            tid = int(tracker_id)
+            if track_lifespans.get(tid, 0) >= min_track_frames:
+                return str(tid)
+        except (TypeError, ValueError):
+            pass
+
+    cluster_id = row.get("cluster_id")
+    if cluster_id is not None and not pd.isna(cluster_id):
+        try:
+            if int(cluster_id) >= 0:
+                return str(int(cluster_id))
+        except (TypeError, ValueError):
+            pass
+
+    return (
+        f"{int(row['x_center']) // 60}_{int(row['y_center']) // 60}"
+    )
+
+
+def build_possession_segments(detections_with_possession_df, max_ball_distance=None, max_gap_frames=30, min_segment_frames=3, min_track_frames=15):
     """
     Build possession segments from detections with ball possession data.
 
@@ -313,16 +309,11 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     if players.empty:
         return []
 
-    # Use cluster_id as owner_key (stable spatial identity)
-    # Fall back to spatial grid if cluster_id not available
-    if "cluster_id" in players.columns and (players["cluster_id"] >= 0).any():
-        players["owner_key"] = players["cluster_id"].astype(str)
-    else:
-        # Fallback: spatial grid bucketing (60x60 pixel cells)
-        players["owner_key"] = (
-            (players["x_center"] // 60).astype(int).astype(str) + "_" +
-            (players["y_center"] // 60).astype(int).astype(str)
-        )
+    track_lifespans = _stable_tracker_lifespans(players)
+    players["owner_key"] = players.apply(
+        lambda row: _owner_key_for_row(row, track_lifespans, min_track_frames=min_track_frames),
+        axis=1,
+    )
 
     # Filter to players who have the ball
     has_ball = players[players["has_ball"] == True].copy()

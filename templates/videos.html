@@ -65,6 +65,7 @@
   Use <em>✂️ Trim</em> to cut NFHS padding (previous game, warmups, empty gym) before analysis.
   <strong>Rebuild</strong> only works when detections are already saved — if Dets is 0, open <em>Film Tool</em> and click <em>Run AI Analysis</em> (or use <em>Re-run AI</em>).
   Use the 🗑 button on any row to permanently delete a video and its analysis data.
+  <span style="display:block;margin-top:8px;font-size:.75rem;color:#6b7280;">UI build: jersey-film-ac1f @ eb6a9bf</span>
 </div>
 
 <div class="card" id="videos-card" data-frame="4.2">
@@ -129,6 +130,12 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
+function errorHint(message) {
+  if (!message) return '';
+  const firstLine = String(message).split('\n').find(line => line.trim()) || message;
+  return firstLine.trim();
+}
+
 function statusBadge(status, detectionCount, errorMessage, eventCount) {
   const dets = detectionCount ?? 0;
   const evts = eventCount ?? 0;
@@ -141,7 +148,9 @@ function statusBadge(status, detectionCount, errorMessage, eventCount) {
     return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
   }
   const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
-  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+  const title = errorMessage && status === 'failed'
+    ? ` title="${escHtml(errorHint(errorMessage))}"`
+    : '';
   return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
 }
 
@@ -161,6 +170,18 @@ function formatGameDate(value) {
 function escHtml(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function filmToolHref(v) {
+  const gameId = encodeURIComponent(v.analysis_key || v.game_id || '');
+  if (v.stored_filename) {
+    return `/film/${encodeURIComponent(v.stored_filename)}?game_id=${gameId}`;
+  }
+  return `/videos/${v.id}/film`;
+}
+
+function rebuildAllowed(v) {
+  return (v.detection_count ?? 0) > 0;
 }
 
 // ── Delete single video ─────────────────────────────────
@@ -220,22 +241,23 @@ async function doResetAll() {
 
 // ── Load video list ─────────────────────────────────────
 async function loadVideos() {
-  const resp = await fetch('/api/videos');
-  const videos = await resp.json();
+  try {
+    const resp = await fetch('/api/videos');
+    const videos = await parseJsonResponse(resp);
 
-  document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
 
-  if (!videos.length) {
-    document.getElementById('video-table').style.display = 'none';
-    document.getElementById('empty-msg').style.display = 'block';
-    return;
-  }
+    if (!Array.isArray(videos) || !videos.length) {
+      document.getElementById('video-table').style.display = 'none';
+      document.getElementById('empty-msg').style.display = 'block';
+      return;
+    }
 
-  document.getElementById('empty-msg').style.display = 'none';
-  const tbody = document.getElementById('video-tbody');
-  tbody.innerHTML = '';
+    document.getElementById('empty-msg').style.display = 'none';
+    const tbody = document.getElementById('video-tbody');
+    tbody.innerHTML = '';
 
-  for (const v of videos) {
+    for (const v of videos) {
     const dupBadge = v.is_duplicate
       ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">Dup</span>`
       : '';
@@ -259,10 +281,10 @@ async function loadVideos() {
       <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
       <td class="col-actions" data-label="Actions">
         <div class="video-actions">
-          <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
+          <a href="${filmToolHref(v)}" class="btn btn-primary btn-sm">Film Tool</a>
           <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
-          ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
-          ${(v.detection_count ?? 0) === 0 && v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>` : ''}
+          ${rebuildAllowed(v) ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
+          ${v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video (required when Dets is very low)">Re-run AI</button>` : ''}
           <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
           <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
           <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
@@ -274,11 +296,31 @@ async function loadVideos() {
     tbody.appendChild(tr);
   }
 
-  document.getElementById('video-table').style.display = 'table';
+    document.getElementById('video-table').style.display = 'table';
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('video-table').style.display = 'none';
+    const empty = document.getElementById('empty-msg');
+    empty.style.display = 'block';
+    empty.textContent = 'Could not load videos: ' + err.message + '. Try a hard refresh (Ctrl+F5).';
+  }
 }
 
 loadVideos();
 setInterval(loadVideos, 10000);
+
+async function parseJsonResponse(resp) {
+  const contentType = resp.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return resp.json();
+  }
+  const text = await resp.text();
+  const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 180);
+  throw new Error(
+    'Server returned HTML instead of JSON (HTTP ' + resp.status + '). '
+    + (snippet || 'Empty response')
+  );
+}
 
 async function regenerateEvents(videoId) {
   if (!confirm('Rebuild events from saved detections? This re-clusters players and regenerates events from existing YOLO data (no full video re-run).')) return;
@@ -287,7 +329,7 @@ async function regenerateEvents(videoId) {
   const started = Date.now();
   try {
     const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
-    const data = await resp.json();
+    const data = await parseJsonResponse(resp);
     if (!resp.ok) {
       const extra = data.code === 'sklearn_missing'
         ? '\n\nPull latest code and retry Rebuild (numpy fallback). For full AI stack use Python 3.12 or 3.13.'
@@ -295,6 +337,11 @@ async function regenerateEvents(videoId) {
           ? '\n\nRun full AI analysis on this video first — Rebuild only works when detections are already saved.'
           : '');
       throw new Error((data.error || 'Failed to regenerate events') + extra);
+    }
+    if (resp.status === 202 || data.status === 'rebuild_started') {
+      alert(data.message || 'Rebuild started in background. Watch AI Status — may take several minutes.');
+      loadVideos();
+      return;
     }
     const elapsed = Math.round((Date.now() - started) / 1000);
     alert((data.message || 'Events regenerated.') + (elapsed ? ` (${elapsed}s)` : ''));
