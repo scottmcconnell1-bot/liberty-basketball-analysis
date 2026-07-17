@@ -13,7 +13,7 @@
   </div>
   <div style="display:flex;gap:10px;">
     <a href="{{ url_for('core.videos_page') }}" class="btn btn-secondary btn-sm">Back to Videos</a>
-    <a href="{{ url_for('core.film', filename=video.stored_filename, game_id=video.game_id) }}" class="btn btn-secondary btn-sm">Open in Film Tool</a>
+    <a href="{{ url_for('core.film', filename=video.stored_filename, game_id=film_game_id) }}" class="btn btn-secondary btn-sm">Open in Film Tool</a>
   </div>
 </div>
 

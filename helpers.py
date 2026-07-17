@@ -985,6 +985,33 @@ def resolve_analysis_run_for_progress(db, game_id: str):
     return active or row
 
 
+def resolve_video_film_game_id(db, video_row) -> str | None:
+    """Best analysis_key / game_id for linking Film Tool to an uploaded video."""
+    video = dict(video_row) if video_row is not None else {}
+    vid_id = video.get("id")
+    stored_filename = video.get("stored_filename")
+    game_id = (video.get("game_id") or "").strip() or None
+    if vid_id is not None:
+        latest_run = latest_analysis_run_id_subquery()
+        row = db.execute(
+            f"""SELECT ar.analysis_key
+                  FROM videos v
+                  LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+                 WHERE v.id = ?""",
+            (vid_id,),
+        ).fetchone()
+        if row and row["analysis_key"]:
+            return row["analysis_key"]
+    if stored_filename:
+        row = db.execute(
+            "SELECT analysis_key FROM analysis_runs WHERE video_path LIKE ? ORDER BY id DESC LIMIT 1",
+            (f"%{stored_filename}",),
+        ).fetchone()
+        if row and row["analysis_key"]:
+            return row["analysis_key"]
+    return game_id
+
+
 def supersede_pending_analysis_runs(db, video_row, reason="Superseded by new analysis request"):
     """Cancel stuck pending runs so a new analysis can start."""
     clause = _analysis_run_video_clause()
@@ -2138,6 +2165,25 @@ def _ensure_migration_columns(db):
             updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(season_id, level, gender, side, player_label)
         );
+        CREATE TABLE IF NOT EXISTS film_tool_games (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_game_id      TEXT NOT NULL UNIQUE,
+            analysis_key        TEXT,
+            relational_game_id  INTEGER REFERENCES games(id),
+            game_type           TEXT NOT NULL DEFAULT 'my',
+            game_date           TEXT,
+            our_team            TEXT,
+            opponent            TEXT,
+            tag_count           INTEGER NOT NULL DEFAULT 0,
+            state_json          TEXT NOT NULL,
+            created_by_user_id  INTEGER REFERENCES users(id),
+            created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_film_tool_games_analysis_key
+            ON film_tool_games(analysis_key);
+        CREATE INDEX IF NOT EXISTS idx_film_tool_games_relational_game_id
+            ON film_tool_games(relational_game_id);
         CREATE TABLE IF NOT EXISTS videos (
             id                INTEGER PRIMARY KEY AUTOINCREMENT,
             original_filename TEXT NOT NULL,

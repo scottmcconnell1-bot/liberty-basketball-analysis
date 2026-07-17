@@ -588,6 +588,112 @@ async function persistRosters() {
 }
 function persistGames() { saveJson(GAMES_STORAGE_KEY, savedGames); }
 
+function parseGameUpdatedAt(game) {
+    const raw = game?.updatedAt || game?._serverUpdatedAt || '';
+    const ts = Date.parse(raw);
+    return Number.isNaN(ts) ? 0 : ts;
+}
+
+function mergeGameLists(localGames, serverGames) {
+    const merged = new Map();
+    for (const game of serverGames || []) {
+        if (game?.id) merged.set(game.id, game);
+    }
+    for (const game of localGames || []) {
+        if (!game?.id) continue;
+        const existing = merged.get(game.id);
+        if (!existing || parseGameUpdatedAt(game) > parseGameUpdatedAt(existing)) {
+            merged.set(game.id, game);
+        }
+    }
+    return [...merged.values()].sort((a, b) => parseGameUpdatedAt(b) - parseGameUpdatedAt(a));
+}
+
+async function fetchGamesFromServer(analysisKey) {
+    const params = new URLSearchParams();
+    if (analysisKey) params.set('analysis_key', analysisKey);
+    const qs = params.toString();
+    const resp = await fetch(`/api/film-tool-games${qs ? `?${qs}` : ''}`);
+    if (!resp.ok) return [];
+    const data = await resp.json().catch(() => ({}));
+    return Array.isArray(data.games) ? data.games : [];
+}
+
+async function persistGameToServer(game, options = {}) {
+    const { silent = false } = options;
+    if (!game?.id) return false;
+    try {
+        const resp = await fetch('/api/film-tool-games', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(game),
+        });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Could not save tags to server');
+        }
+        return true;
+    } catch (err) {
+        console.warn('Could not save game to server', err);
+        if (!silent) setStatus('Saved locally; server sync failed. Will retry on next save.');
+        return false;
+    }
+}
+
+async function loadGamesFromServer() {
+    const localGames = loadJson(GAMES_STORAGE_KEY, []);
+    const serverGames = await fetchGamesFromServer();
+    savedGames = mergeGameLists(localGames, serverGames);
+    saveJson(GAMES_STORAGE_KEY, savedGames);
+
+    for (const game of localGames) {
+        const serverCopy = serverGames.find(g => g.id === game.id);
+        if (!serverCopy || parseGameUpdatedAt(game) > parseGameUpdatedAt(serverCopy)) {
+            await persistGameToServer(game, { silent: true });
+        }
+    }
+    const autosave = loadJson(CURRENT_AUTOSAVE_KEY, null);
+    if (autosave?.rows?.length) {
+        await persistGameToServer(autosave, { silent: true });
+    }
+}
+
+let serverGamesLoadPromise = null;
+function ensureServerGamesLoaded() {
+    if (!serverGamesLoadPromise) {
+        serverGamesLoadPromise = loadGamesFromServer().catch(err => {
+            console.warn('Failed to load games from server', err);
+        });
+    }
+    return serverGamesLoadPromise;
+}
+
+let serverSaveTimeout = null;
+function queueServerSave(game) {
+    clearTimeout(serverSaveTimeout);
+    serverSaveTimeout = setTimeout(() => {
+        persistGameToServer(game, { silent: true });
+    }, 1200);
+}
+
+async function importGameJsonToServer(payload, analysisGameId) {
+    const body = { ...payload };
+    if (analysisGameId && !body.analysisGameId) body.analysisGameId = analysisGameId;
+    const resp = await fetch('/api/film-tool-games/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Import failed');
+    await loadGamesFromServer();
+    renderGames();
+    const imported = savedGames.find(g => g.id === data.client_game_id)
+        || savedGames.find(g => g.analysisGameId === (body.analysisGameId || analysisGameId));
+    if (imported) loadGameIntoUI(imported);
+    return data;
+}
+
 // ── Row Management (tagged events table) ────────────────────
 function createSelect(field, selected) {
     const select = document.createElement('select');
@@ -1108,6 +1214,7 @@ function autosaveCurrentGame() {
     localStorage.setItem(CURRENT_AUTOSAVE_KEY, JSON.stringify(game));
     localStorage.setItem(LAST_GAME_KEY, game.id);
     selectedGameId = game.id;
+    queueServerSave(game);
 }
 
 let autosaveTimeout = null;
@@ -1121,7 +1228,9 @@ function saveCurrentGameToLibrary() {
     persistGames();
     localStorage.setItem(LAST_GAME_KEY, game.id);
     renderGames();
-    setStatus('Game saved.');
+    persistGameToServer(game).then(saved => {
+        setStatus(saved ? 'Game saved to server.' : 'Game saved locally; server sync failed.');
+    });
 }
 
 function resumeLastGame() {
@@ -2537,7 +2646,8 @@ function setActiveTab(id) {
     if (view) view.classList.add('active');
 }
 
-function applyFilmToolDeepLinks() {
+async function applyFilmToolDeepLinks() {
+    await ensureServerGamesLoaded();
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab === 'games') setActiveTab('gamesView');
@@ -2554,6 +2664,13 @@ function applyFilmToolDeepLinks() {
         if (matched) {
             loadGameIntoUI(matched);
             reportScope.value = `game:${matched.id}`;
+        } else if (analysisGameId) {
+            const serverMatches = await fetchGamesFromServer(analysisGameId);
+            if (serverMatches.length) {
+                const best = serverMatches[0];
+                loadGameIntoUI(best);
+                reportScope.value = `game:${best.id}`;
+            }
         }
         generateReport();
     }
@@ -3559,6 +3676,26 @@ function attachEventHandlers() {
     document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());
     document.getElementById('saveReportBtn')?.addEventListener('click', saveReportAsFile);
     document.getElementById('exportBtn')?.addEventListener('click', exportGameData);
+    document.getElementById('importTagsBtn')?.addEventListener('click', () => {
+        document.getElementById('importTagsFile')?.click();
+    });
+    document.getElementById('importTagsFile')?.addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const payload = JSON.parse(text);
+            const analysisGameId = window.FILM_TOOL_GAME_ID
+                || new URLSearchParams(window.location.search).get('game_id')
+                || '';
+            await importGameJsonToServer(payload, analysisGameId);
+            setStatus(`Imported ${file.name} to server.`);
+            setActiveTab('gamesView');
+        } catch (err) {
+            alert(err.message || 'Could not import tags file.');
+        }
+    });
     document.getElementById('toggleInfoBtn')?.addEventListener('click', toggleGameInfo);
     focusExitBtn?.addEventListener('click', exitFocusMode);
     document.getElementById('quickTagCancelBtn')?.addEventListener('click', () => quickTagDialog.close());
@@ -3670,7 +3807,18 @@ function init() {
     attachEventHandlers();
     initFilmKeyboardShortcuts();
     initManualTagFocus();
-    applyFilmToolDeepLinks();
+    ensureServerGamesLoaded().then(() => {
+        renderGames();
+        return applyFilmToolDeepLinks();
+    }).then(() => {
+        const activeGameId = window.FILM_TOOL_GAME_ID
+            || new URLSearchParams(window.location.search).get('game_id')
+            || '';
+        if (activeGameId && !getAllRows().length) {
+            const matched = findSavedGameForAnalysisId(activeGameId);
+            if (matched) loadGameIntoUI(matched);
+        }
+    });
     updateScoreLabels();
     renderScore();
     initFromAutosave();

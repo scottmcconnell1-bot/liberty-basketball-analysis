@@ -725,6 +725,94 @@ def api_film_rosters_import():
         return jsonify({"error": f"Failed to import roster: {exc}"}), 500
 
 
+# ── API: Film Tool saved games (manual tags) ───────────────
+
+@clips_bp.route("/api/film-tool-games", methods=["GET"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_film_tool_games_get():
+    """List saved Film Tool games (manual tag state) from the database."""
+    from film_tool_games import list_film_tool_games
+
+    try:
+        games = list_film_tool_games(
+            get_db(),
+            analysis_key=request.args.get("analysis_key"),
+            game_type=request.args.get("game_type"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"games": games, "count": len(games)})
+
+
+@clips_bp.route("/api/film-tool-games/<client_game_id>", methods=["GET"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_film_tool_game_get(client_game_id):
+    from film_tool_games import get_film_tool_game
+
+    try:
+        game = get_film_tool_game(get_db(), client_game_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not game:
+        return jsonify({"error": "Game not found"}), 404
+    return jsonify(game)
+
+
+@clips_bp.route("/api/film-tool-games", methods=["PUT"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_film_tool_games_put():
+    """Upsert a saved Film Tool game (full serializeCurrentGame payload)."""
+    from film_tool_games import save_film_tool_game
+
+    data = request.get_json(force=True) or {}
+    try:
+        result = save_film_tool_game(
+            get_db(),
+            data,
+            created_by_user_id=session.get("user_id"),
+        )
+        get_db().commit()
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@clips_bp.route("/api/film-tool-games/<client_game_id>", methods=["DELETE"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_film_tool_games_delete(client_game_id):
+    from film_tool_games import delete_film_tool_game
+
+    try:
+        deleted = delete_film_tool_game(get_db(), client_game_id)
+        get_db().commit()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not deleted:
+        return jsonify({"error": "Game not found"}), 404
+    return jsonify({"deleted": True})
+
+
+@clips_bp.route("/api/film-tool-games/import", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_film_tool_games_import():
+    """Import exported events JSON or a saved game blob into the database."""
+    from film_tool_games import import_exported_events
+
+    data = request.get_json(force=True) or {}
+    if request.args.get("analysis_key"):
+        data.setdefault("analysisGameId", request.args.get("analysis_key"))
+    try:
+        result = import_exported_events(
+            get_db(),
+            data,
+            created_by_user_id=session.get("user_id"),
+        )
+        get_db().commit()
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 # ── API: Clips ────────────────────────────────────────────
 
 @clips_bp.route("/api/clips")

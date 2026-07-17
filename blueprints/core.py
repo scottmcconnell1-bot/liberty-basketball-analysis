@@ -56,6 +56,7 @@ from helpers import (
     render_schedule_page,
     require_feature,
     resolve_analysis_run_for_progress,
+    resolve_video_film_game_id,
     safe_return_path,
     append_query_params,
     save_settings,
@@ -1654,9 +1655,11 @@ def video_trim_page(vid_id):
     video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
     if not video:
         abort(404)
+    film_game_id = resolve_video_film_game_id(db, video) or video["game_id"]
     return render_template(
         "video_trim.html",
         video=dict(video),
+        film_game_id=film_game_id,
         video_url=url_for("core.uploaded_file", filename=video["stored_filename"]),
         ffmpeg_available=ffmpeg_available(),
     )
@@ -1683,7 +1686,7 @@ def film_tool_build_info():
         "repo_root": str(Path(current_app.root_path).resolve()),
         "template_path": str(template_path.resolve()),
         "has_focus_button": "manualTagFocusBtn" in text,
-        "has_build_stamp": "q1-manual-ai-compare-20260717c" in text,
+        "has_build_stamp": "server-persist-manual-tags-20260717d" in text,
         "has_tagging_controls_v2": (
             'id="undoBtnBar"' in text
             and 'id="ftTagDrawerToggle"' in text

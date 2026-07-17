@@ -38,7 +38,7 @@ from helpers import (
     get_runtime_settings, is_superseded_analysis_run, latest_analysis_run_id_subquery,
     load_all_settings,
     queue_analysis_run, require_feature,
-    resolve_analysis_run_for_progress, resolve_detector_model, safe_return_path,
+    resolve_analysis_run_for_progress, resolve_video_film_game_id, resolve_detector_model, safe_return_path,
     start_analysis_subprocess,
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
@@ -871,6 +871,7 @@ def compare_video_analysis(vid_id):
     return render_template(
         "analysis_compare.html",
         video=video,
+        film_game_id=resolve_video_film_game_id(db, video) or video["game_id"],
         runs=runs,
         primary_run=primary_run,
         current_ai_settings=current_ai_settings,
