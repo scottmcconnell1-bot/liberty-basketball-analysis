@@ -2,7 +2,7 @@ services:
   web:
     build:
       args:
-        TORCH_INDEX_URL: https://download.pytorch.org/whl/cu124
+        TORCH_INDEX_URL: https://download.pytorch.org/whl/cu128
     gpus: all
     environment:
       NVIDIA_VISIBLE_DEVICES: all

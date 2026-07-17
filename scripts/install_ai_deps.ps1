@@ -70,10 +70,19 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $torchIndex = "https://download.pytorch.org/whl/cpu"
 $torchLabel = "CPU"
 if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
-    $null = & nvidia-smi -L 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $torchIndex = "https://download.pytorch.org/whl/cu124"
-        $torchLabel = "CUDA 12.4 (GPU)"
+    $gpuLines = & nvidia-smi --query-gpu=name,compute_cap --format=csv,noheader 2>$null
+    if ($LASTEXITCODE -eq 0 -and $gpuLines) {
+        $gpuText = ($gpuLines | Out-String).Trim()
+        # Blackwell (RTX 50-series) uses sm_120 and needs PyTorch wheels built with CUDA 12.8+.
+        $needsCu128 = ($gpuText -match "12\.0") -or ($gpuText -match "RTX 50")
+        if ($needsCu128) {
+            $torchIndex = "https://download.pytorch.org/whl/cu128"
+            $torchLabel = "CUDA 12.8 (Blackwell GPU)"
+        } else {
+            $torchIndex = "https://download.pytorch.org/whl/cu124"
+            $torchLabel = "CUDA 12.4 (GPU)"
+        }
+        Write-Step "Detected GPU: $gpuText"
     }
 }
 Write-Step "Installing PyTorch ($torchLabel) wheels..."
@@ -88,8 +97,31 @@ Write-Step "Installing OpenCV, Ultralytics, scikit-learn, and container AI deps.
 & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install -r requirements.docker.txt
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Step "Verifying imports..."
-& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; import sklearn; cuda = torch.cuda.is_available(); name = torch.cuda.get_device_name(0) if cuda else 'n/a'; print('OK: torch', torch.__version__, 'cuda', cuda, name, 'cv2', cv2.__version__, 'sklearn', sklearn.__version__)"
+Write-Step "Verifying imports and CUDA kernels..."
+$verifyScript = @'
+import cv2
+import ultralytics
+import torch
+import sklearn
+
+cuda = torch.cuda.is_available()
+name = torch.cuda.get_device_name(0) if cuda else "n/a"
+print("OK: torch", torch.__version__, "cuda_runtime", torch.version.cuda, "device", name)
+
+if cuda:
+    cap = torch.cuda.get_device_capability(0)
+    arch = f"sm_{cap[0]}{cap[1]}"
+    if arch == "sm_120" and (not torch.version.cuda or float(torch.version.cuda) < 12.8):
+        raise SystemExit(
+            "Blackwell GPU detected but PyTorch was built with CUDA "
+            + str(torch.version.cuda)
+            + ". Reinstall with: --index-url https://download.pytorch.org/whl/cu128"
+        )
+    x = torch.randn(64, 64, device="cuda")
+    _ = x @ x
+    print("CUDA matmul OK on", arch)
+'@
+& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c $verifyScript
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (Get-Command git -ErrorAction SilentlyContinue) {
