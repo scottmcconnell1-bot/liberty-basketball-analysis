@@ -847,8 +847,10 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
     db.commit()
 
 
-def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_label=None):
+def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_label=None, analysis_window=None):
     settings_snapshot = build_analysis_settings_snapshot(runtime_settings)
+    if analysis_window:
+        settings_snapshot["analysis_window"] = analysis_window
     analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"])
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(

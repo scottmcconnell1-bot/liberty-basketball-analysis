@@ -6,6 +6,7 @@ from event_generator import main as generate_events
 import sqlite3
 import sys
 import math
+import json
 import numpy as np
 
 from config import AnalysisConfig
@@ -48,6 +49,31 @@ def person_detector_settings(ai_settings):
     except (TypeError, ValueError):
         confidence = AI_DEFAULTS["person_confidence"]
     return max(0.01, min(confidence, 0.99))
+
+
+def load_analysis_window(db_path, game_id):
+    """Return optional (start_ms, end_ms) window stored on the analysis run."""
+    conn = sqlite3.connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT settings_json FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
+            (game_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row or not row[0]:
+        return 0, None
+    try:
+        data = json.loads(row[0])
+        window = data.get("analysis_window") or {}
+        start_ms = max(0, int(window.get("start_ms") or 0))
+        end_ms = window.get("end_ms")
+        end_ms = int(end_ms) if end_ms is not None else None
+        if end_ms is not None and end_ms <= start_ms:
+            end_ms = None
+        return start_ms, end_ms
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return 0, None
 
 
 def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
@@ -109,6 +135,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if total_frames <= 0 and orig_w <= 0 and orig_h <= 0:
             raise RuntimeError(f"Video has no readable frames: {video_path}")
+        window_start_ms, window_end_ms = load_analysis_window(db_path, game_id)
+        if window_start_ms > 0:
+            cap.set(cv2.CAP_PROP_POS_MSEC, window_start_ms)
         detect_stride = int(ai_settings.get("detection_stride") or ai_settings.get("frame_stride") or 1)
         if detect_stride < 1:
             detect_stride = 1
@@ -119,6 +148,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         scale_x = orig_w / infer_size
         scale_y = orig_h / infer_size
         print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px, tracker={tracker_backend}")
+        if window_start_ms or window_end_ms:
+            end_label = f"{window_end_ms}ms" if window_end_ms is not None else "end"
+            print(f"[AI] Analysis window: {window_start_ms}ms → {end_label}")
 
         frame_number = 0
         db = get_db()
@@ -160,6 +192,8 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 break
 
             timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
+            if window_end_ms is not None and timestamp_ms > window_end_ms:
+                break
 
             # --- Run YOLO person detection (every Nth frame based on stride) ---
             new_detections = []

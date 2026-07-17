@@ -63,6 +63,26 @@ const REPORT_STAT_COLUMNS = new Set([
     'PTS', 'FGM', 'FGA', 'FG', '3PM', '3PA', '3P', 'FTM', 'FTA', 'FT',
     'OReb', 'DReb', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF', 'Min',
 ]);
+const Q1_COMPARE_END_SEC = 871;
+const Q1_COMPARE_END_MS = Q1_COMPARE_END_SEC * 1000;
+const Q1_COMPARE_LABEL = 'Q1 0:00–14:31';
+const TEAM_STAT_KEY_MAP = {
+    PTS: 'Points',
+    FGM: 'FGM',
+    FGA: 'FGA',
+    '3PM': '3PM',
+    '3PA': '3PA',
+    FTM: 'FTM',
+    FTA: 'FTA',
+    OReb: 'OReb',
+    DReb: 'DReb',
+    Reb: 'Reb',
+    Ast: 'Assists',
+    Stl: 'Steals',
+    Blk: 'Blocks',
+    TO: 'Turnovers',
+    PF: 'Fouls',
+};
 
 // ── Vocabulary (tagging terms) ──────────────────────────────
 const vocabulary = {
@@ -1471,6 +1491,182 @@ function openReportDrilldown({ player, team, stat, scope }) {
     applyReportRowFilter(filter, `${who} — ${stat}`, scope);
 }
 
+function filterManualQ1Rows(rows, endSec = Q1_COMPARE_END_SEC) {
+    return rows.filter(row => {
+        if (row.quarter && row.quarter !== 'Q1') return false;
+        const seconds = timeToSeconds(row.start);
+        if (Number.isFinite(seconds) && seconds > endSec) return false;
+        const category = String(row.category || '');
+        const eventtype = String(row.eventtype || '');
+        if (eventtype === 'EndQTR' || eventtype === 'StartQTR') return false;
+        if (category === 'Quarter' && !['2PT', '3PT', 'FT', 'Assist', 'Steal', 'Turnover', 'Foul', 'Block', 'OffRebound', 'DefRebound'].includes(eventtype)) {
+            return false;
+        }
+        return true;
+    });
+}
+
+function filterAiEventsToWindow(events, startMs = 0, endMs = Q1_COMPARE_END_MS) {
+    return (events || []).filter(event => {
+        if ((event.source_type || 'ai') !== 'ai') return false;
+        const ts = Number(event.timestamp_ms) || 0;
+        return ts >= startMs && ts <= endMs;
+    });
+}
+
+function convertAiEventsToStatRows(events, teamName) {
+    const team = teamName || 'Our Team';
+    const rows = [];
+    const skipTypes = new Set(['make', 'miss', 'possession_change', 'bookmark']);
+    events.forEach(event => {
+        const eventType = String(event.event_type || '').toLowerCase();
+        if (skipTypes.has(eventType)) return;
+        const shotResult = String(event.shot_result || '').toLowerCase();
+        const player = normalizePlayerName(event.player);
+        const start = String((Number(event.timestamp_ms) || 0) / 1000);
+        let details = {};
+        try {
+            details = JSON.parse(event.details_json || '{}');
+        } catch (_err) {
+            details = {};
+        }
+        if (eventType === 'shot') {
+            const isMake = shotResult === 'make' || shotResult === 'made';
+            const shotKind = String(details.shot_type || details.shotType || '2pt').toLowerCase();
+            let manualType = '2PT';
+            if (shotKind.includes('3')) manualType = '3PT';
+            else if (shotKind.includes('ft') || shotKind.includes('free')) manualType = 'FT';
+            rows.push({
+                eventtype: manualType,
+                result: isMake ? 'Make' : 'Miss',
+                player,
+                team,
+                start,
+            });
+            return;
+        }
+        const mapped = {
+            rebound: 'DefRebound',
+            assist: 'Assist',
+            steal: 'Steal',
+            turnover: 'Turnover',
+            block: 'Block',
+            foul: 'Foul',
+        }[eventType];
+        if (!mapped) return;
+        rows.push({
+            eventtype: mapped,
+            result: 'NA',
+            player,
+            team,
+            start,
+        });
+    });
+    return rows;
+}
+
+function teamStatValue(teamStats, statCode) {
+    const key = TEAM_STAT_KEY_MAP[statCode];
+    if (!key || !teamStats) return 0;
+    return teamStats[key] || 0;
+}
+
+async function fetchAiEventsForCompare(gameId) {
+    if (!gameId) return [];
+    const response = await fetch(`/api/events/${encodeURIComponent(gameId)}`);
+    if (!response.ok) return [];
+    const events = await response.json();
+    return Array.isArray(events) ? events : [];
+}
+
+async function startQ1AnalysisRun() {
+    const videoId = window.FILM_TOOL_VIDEO_ID;
+    if (!videoId) {
+        alert('Open this game from Video Library so the video is linked before running Q1 AI analysis.');
+        return null;
+    }
+    const response = await fetch(`/api/videos/${encodeURIComponent(videoId)}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            start_ms: 0,
+            end_ms: Q1_COMPARE_END_MS,
+            run_label: `Q1 compare ${Q1_COMPARE_LABEL}`,
+        }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to start Q1 AI analysis');
+    if (data.game_id) window.FILM_TOOL_GAME_ID = data.game_id;
+    if (typeof window.startAnalysisProgressPolling === 'function') {
+        window.startAnalysisProgressPolling(data.game_id || window.FILM_TOOL_GAME_ID);
+    }
+    if (typeof window.updateRunAnalysisBar === 'function') {
+        window.updateRunAnalysisBar('running');
+    }
+    return data;
+}
+
+async function generateManualVsAiQ1Report(scope, games, rows) {
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const manualRows = filterManualQ1Rows(rows);
+    const gameId = window.FILM_TOOL_GAME_ID || games[0]?.analysisGameId || '';
+    const aiEvents = filterAiEventsToWindow(await fetchAiEventsForCompare(gameId));
+    const aiRows = convertAiEventsToStatRows(aiEvents, liberty);
+    const manualAcc = statAccumulator(manualRows);
+    const aiAcc = statAccumulator(aiRows);
+    const manualTeam = manualAcc.byTeam[liberty] || manualAcc.byTeam['Our Team'] || {};
+    const aiTeam = aiAcc.byTeam[liberty] || aiAcc.byTeam['Our Team'] || {};
+    const compareStats = ['PTS', 'FGM', 'FGA', '3PM', '3PA', 'FTM', 'FTA', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF'];
+    const teamRows = compareStats.map(stat => {
+        const manualValue = teamStatValue(manualTeam, stat);
+        const aiValue = teamStatValue(aiTeam, stat);
+        return {
+            Stat: stat,
+            Manual: manualValue,
+            AI: aiValue,
+            Delta: manualValue - aiValue,
+        };
+    });
+    drawReportTable(['Stat', 'Manual', 'AI', 'Delta'], teamRows);
+    const manualPlayers = Object.values(manualAcc.byPlayer).filter(p => p.Team === liberty || p.Team === 'Our Team');
+    const aiPlayers = Object.values(aiAcc.byPlayer).filter(p => p.Team === liberty || p.Team === 'Our Team');
+    const playerNames = [...new Set([
+        ...manualPlayers.map(p => p.Player),
+        ...aiPlayers.map(p => p.Player),
+    ])].sort((a, b) => a.localeCompare(b));
+    if (playerNames.length) {
+        const spacer = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 4;
+        td.innerHTML = '<strong style="display:block;margin-top:.75rem">Player points (Q1)</strong>';
+        spacer.appendChild(td);
+        reportTableBody.appendChild(spacer);
+        playerNames.forEach(player => {
+            const manualPlayer = manualPlayers.find(p => p.Player === player);
+            const aiPlayer = aiPlayers.find(p => p.Player === player);
+            const tr = document.createElement('tr');
+            ['Player', 'Manual PTS', 'AI PTS', 'Delta'].forEach((col, index) => {
+                const cell = document.createElement('td');
+                if (index === 0) cell.textContent = player;
+                else if (index === 1) cell.textContent = manualPlayer?.Points || 0;
+                else if (index === 2) cell.textContent = aiPlayer?.Points || 0;
+                else cell.textContent = (manualPlayer?.Points || 0) - (aiPlayer?.Points || 0);
+                tr.appendChild(cell);
+            });
+            reportTableBody.appendChild(tr);
+        });
+    }
+    drawKpis([
+        ['Manual tags', manualRows.length],
+        ['AI events', aiEvents.length],
+        ['Window', Q1_COMPARE_LABEL],
+    ]);
+    const hasAi = aiEvents.length > 0;
+    reportSummary.value = hasAi
+        ? `Q1 comparison for ${liberty}. Manual tags are your ground truth; AI counts are from ${gameId || 'the linked analysis run'} between 0:00 and 14:31.`
+        : `No AI events found for Q1 yet. Click "Run Q1 AI Analysis" above, wait for it to finish, then generate this report again. You have ${manualRows.length} manual Q1 tags ready to compare.`;
+}
+
 // ── Reports ─────────────────────────────────────────────────
 
 function statAccumulator(rows) {
@@ -1597,6 +1793,31 @@ function generateReport() {
     const type = reportType.value;
     const games = gatherGamesForScope(scope);
     const rows = rowsForReportScope(scope);
+    if (type === 'manual-vs-ai-q1') {
+        generateReportAsync(scope, games, rows, type);
+        return;
+    }
+    renderReport(scope, type, games, rows);
+}
+
+async function generateReportAsync(scope, games, rows, type) {
+    lastReportSourceRows = filterManualQ1Rows(rows).slice();
+    reportScopeLoadedGameId = reportScopeGameId(scope);
+    clearReportRowFilter();
+    reportTitle.textContent = `${reportScopeTitle(scope, games)} • Manual vs AI (Q1)`;
+    reportHeadRow.innerHTML = '';
+    reportTableBody.innerHTML = '';
+    reportKpiGrid.innerHTML = '';
+    reportSummary.value = 'Loading AI events for Q1 comparison…';
+    try {
+        await generateManualVsAiQ1Report(scope, games, rows);
+    } catch (err) {
+        reportSummary.value = `Could not build Q1 comparison: ${err.message || err}`;
+        drawReportTable(['Message'], [{ Message: 'Comparison failed. Try running Q1 AI analysis first.' }]);
+    }
+}
+
+function renderReport(scope, type, games, rows) {
     lastReportSourceRows = rows.slice();
     reportScopeLoadedGameId = reportScopeGameId(scope);
     clearReportRowFilter();
@@ -1609,6 +1830,7 @@ function generateReport() {
     else if (type === 'opponent-totals') titleParts.push('Opponent Totals');
     else if (type === 'record-summary') titleParts.push('Team Record');
     else if (type === 'box-score') titleParts.push('Box Score');
+    else if (type === 'manual-vs-ai-q1') titleParts.push('Manual vs AI (Q1)');
     else titleParts.push('Raw Data');
     reportTitle.textContent = titleParts.join(' • ');
     if (!rows.length && type !== 'record-summary') {
@@ -3315,6 +3537,20 @@ function attachEventHandlers() {
     document.getElementById('saveGameBtn')?.addEventListener('click', saveCurrentGameToLibrary);
     document.getElementById('resumeLastBtn')?.addEventListener('click', resumeLastGame);
     document.getElementById('generateReportBtn')?.addEventListener('click', generateReport);
+    document.getElementById('runQ1AnalysisBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('runQ1AnalysisBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const data = await startQ1AnalysisRun();
+            setStatus(data?.message || `Q1 AI analysis started for ${Q1_COMPARE_LABEL}.`);
+            if (reportType) reportType.value = 'manual-vs-ai-q1';
+            setActiveTab('reportsView');
+        } catch (err) {
+            alert(err.message || 'Could not start Q1 AI analysis.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    });
     document.getElementById('clearReportDrilldownBtn')?.addEventListener('click', clearReportRowFilter);
     document.getElementById('clearReportDrilldownBtnPanel')?.addEventListener('click', clearReportRowFilter);
     document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());

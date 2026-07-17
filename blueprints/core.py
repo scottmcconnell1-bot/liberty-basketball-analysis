@@ -1683,7 +1683,7 @@ def film_tool_build_info():
         "repo_root": str(Path(current_app.root_path).resolve()),
         "template_path": str(template_path.resolve()),
         "has_focus_button": "manualTagFocusBtn" in text,
-        "has_build_stamp": "focus-roster-starters-20260717a" in text,
+        "has_build_stamp": "q1-manual-ai-compare-20260717c" in text,
         "has_tagging_controls_v2": (
             'id="undoBtnBar"' in text
             and 'id="ftTagDrawerToggle"' in text
@@ -1691,7 +1691,7 @@ def film_tool_build_info():
             and "◀ 5s" in text
             and "data-skip=\"-30\"" not in text
         ),
-        "film_tool_js_cache_bust": "film-tool.js?v=20260717a" in text,
+        "film_tool_js_cache_bust": "film-tool.js?v=20260717c" in text,
     })
 
 

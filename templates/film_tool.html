@@ -608,7 +608,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- film-tool-build: reports-drilldown-20260717b -->
+<!-- film-tool-build: q1-manual-ai-compare-20260717c -->
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -1142,6 +1142,7 @@
             </select>
             <select id="reportType">
               <option value="box-score" selected>Box Score</option>
+              <option value="manual-vs-ai-q1">Manual vs AI (Q1)</option>
               <option value="team-totals">Team Totals</option>
               <option value="player-totals">Individual Totals</option>
               <option value="opponent-totals">Opponent Totals</option>
@@ -1149,6 +1150,7 @@
               <option value="raw-data">Raw Data (line items)</option>
             </select>
             <button class="btn btn-primary" id="generateReportBtn" type="button">Generate Report</button>
+            <button class="btn" id="runQ1AnalysisBtn" type="button" title="Run AI on first quarter only (0:00–14:31) for comparison">Run Q1 AI Analysis</button>
             <button class="btn" id="clearReportDrilldownBtn" type="button">Clear drill-down</button>
           </div>
           <div class="report-card">
@@ -1383,5 +1385,5 @@
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260717a"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260717b"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260717c"></script>
 {% endblock %}

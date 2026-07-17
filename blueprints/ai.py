@@ -886,7 +886,7 @@ def _video_analysis_runs_clause():
     return """(source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?)"""
 
 
-def _start_video_analysis_run(video, *, run_label=None):
+def _start_video_analysis_run(video, *, run_label=None, start_ms=None, end_ms=None):
     """Queue and optionally launch AI analysis for an existing video."""
     if not ai_runtime_available():
         return None, ai_packages_install_hint(), "ai_packages_unavailable"
@@ -921,12 +921,20 @@ def _start_video_analysis_run(video, *, run_label=None):
     if run_kind == "rerun":
         ensure_primary_run_metadata(db, video, build_analysis_settings_snapshot(runtime_settings))
     default_label = "NFHS / library video" if run_kind == "primary" else None
+    analysis_window = None
+    if start_ms is not None or end_ms is not None:
+        analysis_window = {
+            "start_ms": max(0, int(start_ms or 0)),
+        }
+        if end_ms is not None:
+            analysis_window["end_ms"] = max(analysis_window["start_ms"] + 1, int(end_ms))
     run_payload = queue_analysis_run(
         db,
         video,
         runtime_settings,
         run_kind=run_kind,
         run_label=run_label or default_label,
+        analysis_window=analysis_window,
     )
 
     try:
@@ -1149,10 +1157,23 @@ def api_start_video_analysis(vid_id):
     if not video:
         return jsonify({"error": "Video not found"}), 404
 
-    payload, error, error_code = _start_video_analysis_run(video)
+    body = request.get_json(silent=True) or {}
+    start_ms = body.get("start_ms")
+    end_ms = body.get("end_ms")
+    payload, error, error_code = _start_video_analysis_run(
+        video,
+        run_label=body.get("run_label"),
+        start_ms=start_ms,
+        end_ms=end_ms,
+    )
     if error:
         status = 503 if error_code == "ai_packages_unavailable" else 409
         return jsonify({"error": error, "code": error_code}), status
+    if payload and (start_ms is not None or end_ms is not None):
+        payload["analysis_window"] = {
+            "start_ms": max(0, int(start_ms or 0)),
+            "end_ms": int(end_ms) if end_ms is not None else None,
+        }
     return jsonify(payload)
 
 
