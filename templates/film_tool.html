@@ -1035,6 +1035,7 @@
   window.FILM_TOOL_GAME_ID = {{ game_id|tojson|safe }};
   window.FILM_TOOL_VIDEO_ID = {{ video_id|tojson|safe }};
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
+  window.FILM_TOOL_DETECTION_COUNT = {{ detection_count|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>

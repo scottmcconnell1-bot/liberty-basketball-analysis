@@ -1,6 +1,6 @@
 # Task Queue
 
-Updated: 2026-07-06
+Updated: 2026-07-08
 Driver: Cursor Cloud Agent only
 
 ## Active
@@ -18,6 +18,6 @@ See `ACTIVE.md`.
 
 ## Done recently
 
+- Rebuild events + Re-run AI UX (#122)
 - 10A read-only assistant API (#85)
-- 9C/9D Docker smoke + transfer parity (#84)
-- Nav active-state + doc freshness (this slice)
+- 6B module route soft gating

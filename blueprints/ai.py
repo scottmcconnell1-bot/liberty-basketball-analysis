@@ -1042,20 +1042,60 @@ def api_regenerate_video_events(vid_id):
     relational_game_id = row["game_id"]
     run_id = row["id"]
     db_path = current_app.config["DATABASE"]
+    lookup_kwargs = dict(
+        analysis_key=analysis_key,
+        relational_game_id=relational_game_id,
+        video_game_id=video["game_id"],
+        video_relational_game_id=video["relational_game_id"],
+        base_analysis_key=row["base_analysis_key"],
+    )
+    expected_detections = count_detections_for_analysis(db, **lookup_kwargs)
+    if expected_detections == 0:
+        return jsonify({
+            "error": (
+                "No saved detections found for this video. "
+                "Run full AI analysis first, then use Rebuild."
+            ),
+            "code": "no_detections",
+        }), 400
 
     db.execute(
         """UPDATE analysis_runs
-           SET status='running', progress_pct=50, progress_step='Regenerating events…',
+           SET status='running', progress_pct=10, progress_step='Loading detections…',
                error_message=NULL, completed_at=NULL
            WHERE id=?""",
         (run_id,),
     )
     db.commit()
 
+    log_path = ai_analysis_log_path(analysis_key)
+    try:
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as handle:
+            handle.write(f"\n[{datetime.utcnow().isoformat()}Z] Rebuild events started in web worker.\n")
+    except OSError:
+        pass
+
     try:
         from event_generator import main as generate_events
 
-        if generate_events(analysis_key, db_path, relational_game_id=relational_game_id) is False:
+        db.execute(
+            """UPDATE analysis_runs
+               SET progress_pct=35, progress_step='Clustering players and rebuilding events…'
+               WHERE id=?""",
+            (run_id,),
+        )
+        db.commit()
+
+        if generate_events(
+            analysis_key,
+            db_path,
+            relational_game_id=relational_game_id,
+            video_game_id=lookup_kwargs["video_game_id"],
+            base_analysis_key=lookup_kwargs["base_analysis_key"],
+            video_relational_game_id=lookup_kwargs["video_relational_game_id"],
+            force_expanded=True,
+        ) is False:
             raise RuntimeError(
                 "Event generation failed. Check logs for details, then click Rebuild again."
             )
@@ -1100,17 +1140,20 @@ def api_regenerate_video_events(vid_id):
         )
         db.commit()
 
-        event_count = db.execute(
-            "SELECT COUNT(*) AS c FROM events WHERE game_id=?",
-            (analysis_key,),
-        ).fetchone()["c"]
-        detection_count = db.execute(
-            """SELECT COUNT(*) AS c FROM detections d
-               WHERE d.game_id = ?
-                  OR (? IS NOT NULL AND d.relational_game_id = ?)""",
-            (analysis_key, relational_game_id, relational_game_id),
-        ).fetchone()["c"]
+        event_count = count_events_for_analysis(
+            db,
+            analysis_key=lookup_kwargs["analysis_key"],
+            relational_game_id=lookup_kwargs["relational_game_id"],
+            video_game_id=lookup_kwargs["video_game_id"],
+            base_analysis_key=lookup_kwargs["base_analysis_key"],
+        )
+        detection_count = count_detections_for_analysis(db, **lookup_kwargs)
         message = f"Regenerated {event_count} events from {detection_count:,} detections."
+        if detection_count > 0 and event_count == 0:
+            message += (
+                " Warning: detections were found but no events were generated. "
+                "Check Settings → Event Generator is set to Expanded, then Rebuild again."
+            )
         if identity_applied:
             message += f" Auto-mapped {identity_applied} players from jersey OCR."
         if enhanced_warning:

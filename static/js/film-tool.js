@@ -2006,6 +2006,10 @@ function initRunAnalysis() {
 
     const aiAvailable = window.FILM_TOOL_AI_AVAILABLE !== false && String(window.FILM_TOOL_AI_AVAILABLE) !== 'false';
     let analysisStatus = window.FILM_TOOL_ANALYSIS_STATUS || 'not_started';
+    const detectionCount = Number(window.FILM_TOOL_DETECTION_COUNT ?? NaN);
+    const needsDetectionRerun = analysisStatus === 'completed'
+        && Number.isFinite(detectionCount)
+        && detectionCount === 0;
 
     function updateRunAnalysisBar(status) {
         analysisStatus = status || analysisStatus;
@@ -2066,8 +2070,20 @@ function initRunAnalysis() {
                 .catch(() => {});
             return;
         }
-        if (analysisStatus === 'completed') {
+        if (analysisStatus === 'completed' && !needsDetectionRerun) {
             bar.style.display = 'none';
+            return;
+        }
+        if (analysisStatus === 'completed' && needsDetectionRerun) {
+            bar.style.display = 'flex';
+            if (idleRow) idleRow.style.display = 'flex';
+            if (progressBlock) progressBlock.style.display = 'none';
+            btn.style.display = '';
+            btn.disabled = false;
+            btn.textContent = '🔄 Re-run AI Analysis';
+            if (statusEl) {
+                statusEl.textContent = 'Analysis finished with 0 detections saved. Re-run to detect players and the ball.';
+            }
             return;
         }
         if (analysisStatus === 'failed') {

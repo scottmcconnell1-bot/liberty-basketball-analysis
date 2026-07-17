@@ -47,6 +47,7 @@ from helpers import (
     build_resource_status,
     build_review_workflow_summary,
     build_settings_catalog,
+    count_detections_for_analysis,
     extract_local_path,
     feature_enabled,
     get_db,
@@ -1680,6 +1681,7 @@ def film(filename=None):
     possession_summary = None
     video_id = None
     analysis_status = None
+    detection_count = None
     if filename:
         db = get_db()
         latest_run = latest_analysis_run_id_subquery()
@@ -1709,6 +1711,16 @@ def film(filename=None):
                 analysis_status = run_row["status"]
                 if run_row["analysis_key"]:
                     game_id = run_row["analysis_key"]
+        if game_id and video_id:
+            run_row = resolve_analysis_run_for_progress(db, game_id)
+            if run_row:
+                detection_count = count_detections_for_analysis(
+                    db,
+                    analysis_key=run_row["analysis_key"],
+                    relational_game_id=run_row["game_id"],
+                    video_game_id=video_row["game_id"] if video_row else None,
+                    base_analysis_key=run_row["base_analysis_key"],
+                )
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)
@@ -1781,6 +1793,7 @@ def film(filename=None):
         game_id=game_id,
         video_id=video_id,
         analysis_status=analysis_status,
+        detection_count=detection_count,
         ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
         shot_summary=shot_summary,

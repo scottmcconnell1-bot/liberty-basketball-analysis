@@ -17,19 +17,37 @@ def get_db_connection(db_path):
     return conn
 
 
-def get_detections(conn, game_id, relational_game_id=None):
-    """Retrieves all detections for a given game_id from the database and normalizes columns."""
-    print(f"INFO: Reading detections for game_id: {game_id}")
-    if relational_game_id is not None:
-        query = """
-            SELECT * FROM detections
-            WHERE relational_game_id = ?
-               OR (relational_game_id IS NULL AND game_id = ?)
-        """
-        params = (relational_game_id, game_id)
-    else:
-        query = "SELECT * FROM detections WHERE game_id = ?"
-        params = (game_id,)
+def get_detections(
+    conn,
+    game_id,
+    relational_game_id=None,
+    *,
+    video_game_id=None,
+    base_analysis_key=None,
+    video_relational_game_id=None,
+):
+    """Load detections using the same key resolution as the video library counts."""
+    game_ids = [gid for gid in {game_id, video_game_id, base_analysis_key} if gid]
+    rel_ids = [rid for rid in {relational_game_id, video_relational_game_id} if rid is not None]
+
+    conditions = []
+    params = []
+    for rel_id in rel_ids:
+        conditions.append("relational_game_id = ?")
+        params.append(rel_id)
+    for gid in game_ids:
+        conditions.append("game_id = ?")
+        params.append(gid)
+
+    if not conditions:
+        print(f"INFO: No detection lookup keys provided for game_id: {game_id}")
+        return _empty_detections_frame(conn)
+
+    query = f"SELECT * FROM detections WHERE {' OR '.join(conditions)}"
+    print(
+        "INFO: Reading detections for keys "
+        f"game_ids={game_ids}, relational_ids={rel_ids}"
+    )
     df = pd.read_sql_query(query, conn, params=params)
     print(f"INFO: Found {len(df)} detections in the database.")
 
@@ -49,6 +67,17 @@ def get_detections(conn, game_id, relational_game_id=None):
         df['tracker_id'] = pd.NA
 
     return df
+
+
+def _empty_detections_frame(conn):
+    """Return an empty detections frame with expected columns."""
+    try:
+        rows = conn.execute("SELECT * FROM detections LIMIT 0").fetchall()
+        if rows:
+            return pd.DataFrame(columns=rows[0].keys())
+    except Exception:
+        pass
+    return pd.DataFrame()
 
 
 def find_ball_possession(detections_df, possession_threshold=None):
@@ -779,7 +808,16 @@ def persist_events(conn, game_id, events, relational_game_id=None):
     )
 
 
-def main(game_id, db_path, relational_game_id=None):
+def main(
+    game_id,
+    db_path,
+    relational_game_id=None,
+    *,
+    video_game_id=None,
+    base_analysis_key=None,
+    video_relational_game_id=None,
+    force_expanded=False,
+):
     """
     Analyzes raw detection data to identify and store basketball events.
     """
@@ -795,11 +833,18 @@ def main(game_id, db_path, relational_game_id=None):
             db=conn,
         )
         ai_settings = runtime_settings["ai"]
-        detections_df = get_detections(conn, game_id, relational_game_id=relational_game_id)
+        detections_df = get_detections(
+            conn,
+            game_id,
+            relational_game_id=relational_game_id,
+            video_game_id=video_game_id,
+            base_analysis_key=base_analysis_key,
+            video_relational_game_id=video_relational_game_id,
+        )
 
         if detections_df.empty:
             print("INFO: No detections found for this game. Exiting.")
-            return True
+            return False
 
         # Step 1: Interpolate ball positions between anchor frames
         # This is critical because ball detection only runs on anchor frames
@@ -821,6 +866,9 @@ def main(game_id, db_path, relational_game_id=None):
         detections_with_possession_df = find_ball_possession(detections_df)
 
         generator_mode = ai_settings.get("event_generator_mode", "legacy")
+        if force_expanded:
+            generator_mode = "expanded"
+            print("INFO: Forcing expanded event generator for rebuild.")
         events_to_persist = []
 
         if generator_mode == "expanded":
@@ -831,6 +879,7 @@ def main(game_id, db_path, relational_game_id=None):
             print(f"INFO: Expanded generator produced {len(events_to_persist)} events.")
             persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)
         else:
+            print("WARN: Legacy event generator mode produces no events; skipping persist.")
             persist_events(conn, game_id, [], relational_game_id=relational_game_id)
 
         print("INFO: Successfully completed event generation pipeline.")
