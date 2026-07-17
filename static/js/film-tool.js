@@ -120,7 +120,11 @@ let selectedGameId = null;
 let autosavePaused = false;
 let currentStarters = null;
 let currentLineups = { liberty: new Set(), opponent: new Set() };
+let quarterStarters = { Q1: null, Q2: null, Q3: null, Q4: null };
 let startersMode = 'initial';
+let activeStarterQuarter = 'Q1';
+let pendingStarterCallback = null;
+let editingStarterSets = { liberty: new Set(), opponent: new Set() };
 let aiEventsCache = [];
 let activeAiEventId = null;
 
@@ -137,7 +141,7 @@ let rosterDialog, playerList, rosterFileInput, rosterFileTypeSelect;
 let rosterSeasonSelect, rosterImportDialog, rosterImportSeasonSelect, rosterImportReplace, rosterImportFileLabel;
 let playerDialog, playerPosInput, playerNumInput, playerNameInput, playerGradeInput;
 let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
-let startersDialog, libertyStartersList, opponentStartersList, startersHelp;
+let startersDialog, startersDialogTitle, starterQuarterTabs, libertyStartersList, opponentStartersList, startersHelp;
 let uploadedVideoUrl = '';
 let uploadedVideoName = '';
 
@@ -274,15 +278,55 @@ function splitRosterKey(key) {
     return { seasonId, level, gender, side };
 }
 
+function expandRosterPasteEntries(text) {
+    const entries = [];
+    String(text || '').split(/\r?\n/).forEach(line => {
+        const trimmed = normalize(line);
+        if (!trimmed || isNonPlayerRosterLine(trimmed)) return;
+
+        if (/[\t,;|]/.test(trimmed)) {
+            trimmed.split(/[\t,;|]+/).forEach(part => {
+                const piece = normalize(part).replace(/^#/, '').trim();
+                if (piece && !isNonPlayerRosterLine(piece)) entries.push(piece);
+            });
+            return;
+        }
+
+        const tokens = trimmed.split(/\s+/).map(t => t.replace(/^#/, ''));
+        if (tokens.length > 1 && tokens.every(t => /^\d{1,2}$/.test(t))) {
+            tokens.forEach(t => entries.push(t));
+            return;
+        }
+
+        const freeform = parseFreeformRosterLine(trimmed);
+        if (freeform?.jersey_number) {
+            entries.push(trimmed);
+            return;
+        }
+
+        entries.push(trimmed.replace(/^#/, '').trim());
+    });
+    return entries;
+}
+
+function isNonPlayerRosterLine(line) {
+    const text = normalize(line);
+    if (!text) return true;
+    if (/^(staff|players|coach|address|school|printable|roster)\b/i.test(text)) return true;
+    if (/\b(head coach|assistant coach|athletic director)\b/i.test(text)) return true;
+    if (/\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd)\b/i.test(text)) return true;
+    if (/\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/.test(text)) return true;
+    if (/^https?:\/\//i.test(text)) return true;
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(text)) return true;
+    return false;
+}
+
 function parseRosterBulkLines(text) {
     const players = [];
     const seen = new Set();
-    String(text || '').split(/\r?\n/).forEach(line => {
-        const trimmed = normalize(line);
-        if (!trimmed) return;
-        const entry = trimmed.replace(/^#/, '').trim();
+    expandRosterPasteEntries(text).forEach(entry => {
         const player = normalizeRosterPlayer(entry);
-        if (!player || seen.has(player.label)) return;
+        if (!player?.jersey_number || seen.has(player.label)) return;
         seen.add(player.label);
         players.push(player);
     });
@@ -642,8 +686,33 @@ function renderScore() {
 }
 
 function currentQuarter() {
+    const startRows = getAllRows().filter(r => r.eventtype === 'StartQTR' && r.quarter);
+    if (startRows.length) return startRows[startRows.length - 1].quarter;
     const rows = getAllRows().filter(r => r.quarter);
     return rows.length ? rows[rows.length - 1].quarter : 'Q1';
+}
+
+function nextQuarterLabel() {
+    const count = getAllRows().filter(r => r.eventtype === 'StartQTR').length;
+    return `Q${Math.min(count + 1, 4)}`;
+}
+
+function formatQuarterStarterNotes(quarterData) {
+    if (!quarterData) return '';
+    const liberty = (quarterData.liberty || []).join(', ');
+    const opponent = (quarterData.opponent || []).join(', ');
+    const parts = [];
+    if (liberty) parts.push(`${quarterData.libertyTeam || 'Our team'}: ${liberty}`);
+    if (opponent) parts.push(`${quarterData.opponentTeam || 'Opponent'}: ${opponent}`);
+    return parts.join(' | ');
+}
+
+function rosterDisplayPlayer(player) {
+    if (!player) return player;
+    if (player.jersey_number && player.name) return player;
+    const parsed = parseFreeformRosterLine(player.label || player.name || '');
+    if (parsed?.jersey_number) return { ...player, ...parsed };
+    return player;
 }
 
 // ── Event Buttons ───────────────────────────────────────────
@@ -677,6 +746,19 @@ function commitTag(def, { team = '', player = '' }) {
     setStatus(`Tagged ${def.label}.`);
 }
 
+function commitStartQuarterTag(def, quarter) {
+    const starterData = quarterStarters[quarter];
+    addRow({
+        label: def.label, player: '', quarter, team: '',
+        side: def.side, category: def.category, eventtype: def.eventtype, result: def.result,
+        start: formatTime(video.currentTime || 0), duration: '0:05.0',
+        notes: formatQuarterStarterNotes(starterData),
+    });
+    lastTaggedTime.textContent = formatTime(video.currentTime || 0);
+    handleRowsChanged();
+    setStatus(`${quarter} started. Starters recorded.`);
+}
+
 function commitStealPair(def, p) {
     commitTag(def, { team: p.stealTeam, player: p.stealer });
     addRow({
@@ -696,6 +778,15 @@ function openQuickTag(def) {
     quickDialogTitle.textContent = def.label;
     quickTagLabel.textContent = `Video paused at ${formatTime(video.currentTime || 0)}.`;
     quickTagBody.innerHTML = '';
+
+    if (def.id === 'startqtr') {
+        const quarter = nextQuarterLabel();
+        openStartersDialog(quarter === 'Q1' ? 'initial' : quarter, {
+            quarter,
+            onComplete: () => commitStartQuarterTag(def, quarter),
+        });
+        return;
+    }
 
     if (def.teamMode === 'event-only') {
         const btn = document.createElement('button');
@@ -944,7 +1035,12 @@ function getGameMeta() {
 }
 
 function serializeCurrentGame() {
-    return { ...getGameMeta(), rows: getAllRows() };
+    return {
+        ...getGameMeta(),
+        rows: getAllRows(),
+        currentStarters,
+        quarterStarters,
+    };
 }
 
 function loadGameIntoUI(game) {
@@ -960,6 +1056,10 @@ function loadGameIntoUI(game) {
     awayTeamNameInput.value = game.awayTeam || '';
     outputDirInput.value = game.outputDir || '';
     lastTaggedTime.textContent = game.lastTaggedTime || '—';
+    currentStarters = game.currentStarters || null;
+    quarterStarters = game.quarterStarters || { Q1: null, Q2: null, Q3: null, Q4: null };
+    if (currentStarters?.liberty) currentLineups.liberty = new Set(currentStarters.liberty);
+    if (currentStarters?.opponent) currentLineups.opponent = new Set(currentStarters.opponent);
     rowsBody.innerHTML = '';
     (game.rows || []).forEach(addRow);
     autosavePaused = false;
@@ -1394,7 +1494,8 @@ function showRoster() {
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
-    list.forEach(player => {
+    list.forEach(rawPlayer => {
+        const player = rosterDisplayPlayer(rawPlayer);
         const row = document.createElement('tr');
         const fields = [
             ['col-pos', player.position || ''],
@@ -1512,7 +1613,7 @@ async function importBulkRosterNumbers() {
     if (!seasonId) { alert('Select a season first.'); return; }
     const parsed = parseRosterBulkLines(textarea?.value || '');
     if (!parsed.length) {
-        alert('Paste one jersey number per line (e.g. 5, 12, 23). Names are optional: 12 - Smith');
+        alert('Paste jersey numbers (one per line, or separated by tabs/commas/spaces). Only rows with a jersey # are imported.');
         return;
     }
     const key = getRosterKey();
@@ -1625,31 +1726,128 @@ function renderStarterChoices(listEl, team, selectedSet) {
     addRowEl.appendChild(addLabel); addRowEl.appendChild(addBtn); listEl.appendChild(addRowEl);
 }
 
-function openStartersDialog(mode = 'initial') {
+function getStarterSelectionsForQuarter(quarter, mode) {
+    const stored = quarterStarters[quarter];
+    if (mode === 'adjust') {
+        return {
+            liberty: new Set(currentLineups.liberty),
+            opponent: new Set(currentLineups.opponent),
+        };
+    }
+    if (stored) {
+        return {
+            liberty: new Set(stored.liberty || []),
+            opponent: new Set(stored.opponent || []),
+        };
+    }
+    if (quarter === 'Q1' && currentStarters) {
+        return {
+            liberty: new Set(currentStarters.liberty || []),
+            opponent: new Set(currentStarters.opponent || []),
+        };
+    }
+    return { liberty: new Set(), opponent: new Set() };
+}
+
+function setActiveStarterQuarterTab(quarter) {
+    activeStarterQuarter = quarter;
+    document.querySelectorAll('.starter-q-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.quarter === quarter);
+    });
+    if (startersDialogTitle) {
+        startersDialogTitle.textContent = quarter === 'Q1'
+            ? 'Game starters (opening tip)'
+            : `${quarter} starters`;
+    }
+}
+
+function buildStarterPayload(libertyTeam, opponentTeam, libertySet, opponentSet) {
+    return {
+        libertyTeam,
+        opponentTeam,
+        liberty: Array.from(libertySet),
+        opponent: Array.from(opponentSet),
+    };
+}
+
+function switchStarterQuarter(quarter) {
+    if (!['Q1', 'Q2', 'Q3', 'Q4'].includes(quarter)) return;
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opp = opponentInput.value.trim() || 'Opponent';
+    if (startersMode !== 'adjust' && !pendingStarterCallback) {
+        quarterStarters[activeStarterQuarter] = buildStarterPayload(
+            liberty, opp, editingStarterSets.liberty, editingStarterSets.opponent,
+        );
+    }
+    activeStarterQuarter = quarter;
+    setActiveStarterQuarterTab(quarter);
+    if (startersHelp) {
+        startersHelp.textContent = quarter === 'Q1'
+            ? `Choose the five ${liberty} starters before tip. Opponent jersey numbers are optional.`
+            : `Choose the five ${liberty} players starting ${quarter}. Opponent optional.`;
+    }
+    const sel = getStarterSelectionsForQuarter(quarter, startersMode);
+    editingStarterSets = { liberty: sel.liberty, opponent: sel.opponent };
+    renderStarterChoices(libertyStartersList, liberty, editingStarterSets.liberty);
+    renderStarterChoices(opponentStartersList, opp, editingStarterSets.opponent);
+}
+
+function openStartersDialog(mode = 'initial', options = {}) {
     startersMode = mode;
+    pendingStarterCallback = options.onComplete || null;
+    const quarter = options.quarter || (mode === 'initial' ? 'Q1' : mode);
+    activeStarterQuarter = ['Q1', 'Q2', 'Q3', 'Q4'].includes(quarter) ? quarter : 'Q1';
     if (!video.paused) video.pause();
     const liberty = ourTeamNameInput.value.trim() || 'Our Team';
     const opp = opponentInput.value.trim() || 'Opponent';
-    startersHelp.textContent = mode === 'initial' ? `Choose the five ${liberty} starters before tip. Opponent is optional.` : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
-    const libertySelected = mode === 'initial' ? new Set(currentStarters?.liberty || []) : new Set(currentLineups.liberty);
-    const opponentSelected = mode === 'initial' ? new Set(currentStarters?.opponent || []) : new Set(currentLineups.opponent);
-    renderStarterChoices(libertyStartersList, liberty, libertySelected);
-    renderStarterChoices(opponentStartersList, opp, opponentSelected);
+    if (startersHelp) {
+        startersHelp.textContent = mode === 'adjust'
+            ? `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`
+            : activeStarterQuarter === 'Q1'
+                ? `Choose the five ${liberty} starters before tip. Opponent jersey numbers are optional.`
+                : `Choose the five ${liberty} players starting ${activeStarterQuarter}. Opponent optional.`;
+    }
+    setActiveStarterQuarterTab(activeStarterQuarter);
+    const sel = getStarterSelectionsForQuarter(activeStarterQuarter, mode);
+    editingStarterSets = { liberty: sel.liberty, opponent: sel.opponent };
+    renderStarterChoices(libertyStartersList, liberty, editingStarterSets.liberty);
+    renderStarterChoices(opponentStartersList, opp, editingStarterSets.opponent);
+    if (starterQuarterTabs) {
+        starterQuarterTabs.style.display = (mode === 'adjust' || pendingStarterCallback) ? 'none' : 'flex';
+    }
     startersDialog.returnValue = '';
     startersDialog.showModal();
     document.getElementById('startersSaveBtn').onclick = () => {
-        if (libertySelected.size !== 5) { alert(`Please pick exactly 5 starters for ${liberty}.`); return; }
-        const libertyArr = Array.from(libertySelected), oppArr = Array.from(opponentSelected);
-        if (mode === 'initial') {
-            currentStarters = { libertyTeam: liberty, opponentTeam: opp, liberty: libertyArr, opponent: oppArr };
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+        if (editingStarterSets.liberty.size !== 5) {
+            alert(`Please pick exactly 5 starters for ${liberty}.`);
+            return;
+        }
+        const payload = buildStarterPayload(
+            liberty, opp, editingStarterSets.liberty, editingStarterSets.opponent,
+        );
+        if (mode === 'adjust') {
+            tagLineupChanges(liberty, new Set(currentLineups.liberty), editingStarterSets.liberty);
+            tagLineupChanges(opp, new Set(currentLineups.opponent), editingStarterSets.opponent);
+            currentLineups.liberty = new Set(payload.liberty);
+            currentLineups.opponent = new Set(payload.opponent);
         } else {
-            tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
-            tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+            quarterStarters[activeStarterQuarter] = payload;
+            if (activeStarterQuarter === 'Q1') {
+                currentStarters = payload;
+                currentLineups.liberty = new Set(payload.liberty);
+                currentLineups.opponent = new Set(payload.opponent);
+            }
         }
         startersDialog.close();
-        setStatus(mode === 'initial' ? 'Starters recorded.' : 'Lineups updated from SUB dialog.');
+        const callback = pendingStarterCallback;
+        pendingStarterCallback = null;
+        if (callback) {
+            callback();
+            return;
+        }
+        setStatus(mode === 'adjust'
+            ? 'Lineups updated from SUB dialog.'
+            : `${activeStarterQuarter} starters saved.`);
     };
 }
 
@@ -2692,6 +2890,9 @@ function attachEventHandlers() {
     document.getElementById('clearAllBtn')?.addEventListener('click', () => { if (confirm('Clear all tagged events in this game?')) clearAllRows(); });
     document.getElementById('subBtn')?.addEventListener('click', tagSubstitution);
     document.getElementById('startersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
+    document.querySelectorAll('.starter-q-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchStarterQuarter(btn.dataset.quarter));
+    });
 
     document.getElementById('newGameBtn')?.addEventListener('click', () => {
         if (!confirm('Start a new game? This clears current tagged rows.')) return;
@@ -2794,6 +2995,8 @@ function init() {
     quickTagBody = document.getElementById('quickTagBody');
     focusExitBtn = document.getElementById('focusExitBtn');
     startersDialog = document.getElementById('startersDialog');
+    startersDialogTitle = document.getElementById('startersDialogTitle');
+    starterQuarterTabs = document.getElementById('starterQuarterTabs');
     libertyStartersList = document.getElementById('libertyStartersList');
     opponentStartersList = document.getElementById('opponentStartersList');
     startersHelp = document.getElementById('startersHelp');

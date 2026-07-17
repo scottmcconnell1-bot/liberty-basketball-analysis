@@ -14,6 +14,27 @@ _HEADER_WORDS = {
     "player", "height", "weight", "jersey",
 }
 
+_NON_PLAYER_LINE_PATTERNS = [
+    r"^Staff\s*\(\d+\)",
+    r"\bStaff\s*\(\d+\)",
+    r"^Players\s*\(\d+\)",
+    r"^Head\s+Coach\b",
+    r"^Assistant\s+Coach\b",
+    r"^Coach\b",
+    r"^Athletic\s+Director\b",
+    r"^Address\b",
+    r"^School\b",
+    r"^Printable\b",
+    r"^America'?s\s+Source\b",
+    r"^Basketball\s+Roster\b",
+    r"^#\s*Player\s+Grade\s+Position\b",
+    r"^maxpreps\.com\b",
+    r"^https?://",
+    r"\b(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd)\b",
+    r"\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b",
+    r"^\d{1,2}/\d{1,2}/\d{2,4},",
+]
+
 
 def extract_pdf_text(pdf_file: BinaryIO) -> str:
     """Extract text from a PDF file object."""
@@ -55,6 +76,88 @@ def is_maxpreps_printable_roster(text: str) -> bool:
         text,
         re.IGNORECASE,
     ))
+
+
+def _is_valid_jersey(value: str | None) -> bool:
+    if not value:
+        return False
+    cleaned = str(value).strip().lstrip("#")
+    return cleaned.isdigit() and 0 <= int(cleaned) <= 99
+
+
+def _is_non_player_line(line: str) -> bool:
+    text = (line or "").strip()
+    if not text:
+        return True
+    if any(re.search(pattern, text, re.IGNORECASE) for pattern in _NON_PLAYER_LINE_PATTERNS):
+        return True
+    lower = text.lower()
+    if "coach" in lower and not re.search(r"\b\d{1,2}\s+[A-Za-z]", text):
+        return True
+    return False
+
+
+def _filter_players_with_jersey(players: list[dict]) -> list[dict]:
+    """Keep only roster rows with a jersey number (players, not coaches/headers)."""
+    seen: set[str] = set()
+    filtered: list[dict] = []
+    for player in players:
+        jersey = (player.get("jersey_number") or "").strip()
+        if not _is_valid_jersey(jersey):
+            continue
+        label = player.get("label") or jersey
+        if label in seen:
+            continue
+        seen.add(label)
+        filtered.append(player)
+    return filtered
+
+
+def _extract_players_from_blob(text: str) -> list[dict]:
+    """Find all MaxPreps-style player rows inside a flattened PDF line."""
+    if not text:
+        return []
+    working = text
+    staff_match = re.search(r"\bStaff\s*\(\d+\)", working, re.IGNORECASE)
+    if staff_match:
+        working = working[: staff_match.start()]
+
+    players: list[dict] = []
+    seen: set[str] = set()
+    for match in re.finditer(r"(?:^|\s)(\d{1,2})\s+[A-Za-z]", working):
+        segment = working[match.start() :].strip()
+        next_match = re.search(r"(?:^|\s)\d{1,2}\s+[A-Za-z]", segment[1:])
+        if next_match:
+            segment = segment[: next_match.start() + 1].strip()
+        player = _parse_maxpreps_player_line(segment)
+        if not player:
+            continue
+        label = player.get("label") or ""
+        if label in seen:
+            continue
+        seen.add(label)
+        players.append(player)
+    return _filter_players_with_jersey(players)
+
+
+def _split_flattened_roster_text(text: str) -> list[str]:
+    """Break single-line PDF paste into logical roster lines."""
+    if not text:
+        return []
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    if "\n" in normalized and normalized.count("\n") >= 2:
+        return normalized.splitlines()
+
+    staff_match = re.search(r"\bStaff\s*\(\d+\)", normalized, re.IGNORECASE)
+    if staff_match:
+        normalized = normalized[: staff_match.start()]
+
+    normalized = re.sub(
+        r"(?<![A-Za-z/\d])(\d{1,2})\s+(?=[A-Z][a-z])",
+        r"\n\1 ",
+        normalized,
+    )
+    return normalized.splitlines()
 
 
 def _normalize_player(
@@ -242,14 +345,42 @@ def parse_roster_rows(rows: list[list]) -> list[dict]:
         parts = [_cell_str(cell) for cell in row if _cell_str(cell)]
         if not parts or _looks_like_header(parts):
             continue
+        if len(parts) == 1 and _is_non_player_line(parts[0]):
+            continue
         player = _parse_roster_row_parts(parts)
         if player:
             players.append(player)
-    return players
+    return _filter_players_with_jersey(players)
 
 
 def parse_roster_csv(text: str) -> list[dict]:
     """Parse CSV roster text into player dicts."""
+    stripped = text.strip()
+    if stripped:
+        tokens = stripped.split()
+        if tokens and all(_is_valid_jersey(token.lstrip("#")) for token in tokens):
+            return _filter_players_with_jersey([
+                _normalize_player(jersey_number=token.lstrip("#"))
+                for token in tokens
+            ])
+
+    if "\n" not in stripped and re.search(r"\d{1,2}\s+[A-Za-z]", stripped):
+        players = _extract_players_from_blob(stripped)
+        if players:
+            return players
+
+    if "\n" not in stripped and re.search(r"\d{1,2}\s+[A-Za-z]", stripped):
+        players: list[dict] = []
+        for line in _split_flattened_roster_text(stripped):
+            line = line.strip()
+            if not line or _is_non_player_line(line):
+                continue
+            player = _parse_maxpreps_player_line(line)
+            if player:
+                players.append(player)
+        if players:
+            return _filter_players_with_jersey(players)
+
     reader = csv.reader(io.StringIO(text))
     return parse_roster_rows(list(reader))
 
@@ -311,14 +442,18 @@ def parse_maxpreps_roster_text(text: str) -> list[dict]:
 
     players: list[dict] = []
     in_staff = False
-    for raw_line in text.splitlines():
+    for raw_line in _split_flattened_roster_text(text):
         line = raw_line.strip()
         if not line:
             continue
-        if re.search(r"^Staff\s*\(\d+\)", line, re.IGNORECASE):
+        if re.search(r"Staff\s*\(\d+\)", line, re.IGNORECASE):
             in_staff = True
-            continue
+            line = re.split(r"Staff\s*\(\d+\)", line, maxsplit=1, flags=re.IGNORECASE)[0].strip()
+            if not line:
+                continue
         if in_staff:
+            continue
+        if _is_non_player_line(line):
             continue
         if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
             continue
@@ -340,7 +475,11 @@ def parse_maxpreps_roster_text(text: str) -> list[dict]:
             )
         if player:
             players.append(player)
-    return players
+    filtered = _filter_players_with_jersey(players)
+    blob_players = _extract_players_from_blob(text)
+    if len(blob_players) > len(filtered):
+        return blob_players
+    return filtered
 
 
 def parse_generic_roster_pdf_text(text: str) -> list[dict]:
@@ -385,9 +524,11 @@ def parse_generic_roster_pdf_text(text: str) -> list[dict]:
         r"^NAME\b",
     ]
 
-    for raw_line in text.splitlines():
+    for raw_line in _split_flattened_roster_text(text):
         line = raw_line.strip()
         if not line:
+            continue
+        if _is_non_player_line(line):
             continue
         if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
             continue
@@ -418,7 +559,7 @@ def parse_generic_roster_pdf_text(text: str) -> list[dict]:
         if matched:
             continue
 
-    return players
+    return _filter_players_with_jersey(players)
 
 
 def detect_roster_file_type(filename: str, text: str | None = None) -> str:
@@ -497,6 +638,8 @@ def parse_roster_upload(file, file_type: str = "auto") -> dict:
     else:
         text = file.read().decode("utf-8-sig", errors="replace")
         players, detected_type = parse_roster_text(text, file_type=file_type, filename=filename)
+
+    players = _filter_players_with_jersey(players)
 
     return {
         "detected_type": detected_type,

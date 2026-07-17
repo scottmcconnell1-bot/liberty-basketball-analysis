@@ -213,12 +213,22 @@
     font-size: .8rem;
     border-radius: var(--radius-sm);
     justify-content: flex-start;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    font-weight: 600;
+  }
+  .ft-tag-grid .btn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #020617;
   }
   .ft-tag-grid .btn .ft-hotkey {
     margin-left: auto;
     font-size: .65rem;
-    opacity: .6;
-    font-weight: 600;
+    opacity: .75;
+    font-weight: 700;
+    color: #475569;
   }
 
   /* Tag action bar */
@@ -519,6 +529,9 @@
     min-height: 1.85rem;
     font-size: 0.82rem;
     padding: 0.3rem 0.45rem;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
   }
   #film-tool-root.manual-tag-focus .ft-tag-actions {
     padding: 0.4rem 0.45rem;
@@ -576,7 +589,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- film-tool-build: focus-fullscreen-20260716e -->
+<!-- film-tool-build: focus-roster-starters-20260717a -->
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -1211,7 +1224,7 @@
         <div class="term-list" id="playerList"></div>
         <div class="field" id="rosterBulkPasteBlock">
           <label for="rosterBulkNumbersInput">Paste jersey numbers</label>
-          <textarea id="rosterBulkNumbersInput" rows="5" placeholder="One per line, e.g.&#10;5&#10;12&#10;23&#10;12 - Smith (optional name)"></textarea>
+          <textarea id="rosterBulkNumbersInput" rows="5" placeholder="Jersey numbers only (coaches/headers skipped)&#10;5&#10;12&#10;23&#10;Or tab/comma separated: 5, 12, 23&#10;Optional name: 12 - Smith"></textarea>
           <span class="tiny">Works for <strong>Our</strong> or <strong>Opp</strong> — switch the team button above first. Duplicates are skipped.</span>
           <button class="btn btn-primary" id="rosterBulkAddBtn" type="button" style="margin-top:.5rem;">Add pasted numbers</button>
         </div>
@@ -1271,25 +1284,38 @@
   </dialog>
 
   <dialog id="quickTagDialog">
-    <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
+    <div class="modal-head">
+      <h2 id="quickDialogTitle">Tag event</h2>
+      <p class="quick-tag-subtitle" id="quickTagLabel"></p>
+    </div>
     <div class="modal-body" id="quickTagBody"></div>
-    <div class="modal-foot"><span class="tiny">Select what applies, then tag.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+    <div class="modal-foot quick-tag-foot">
+      <button class="btn" id="quickTagCancelBtn" type="button">Cancel</button>
+    </div>
   </dialog>
 
   <dialog id="startersDialog">
     <form method="dialog">
-      <div class="modal-head"><h2>Select Liberty starters</h2></div>
+      <div class="modal-head">
+        <h2 id="startersDialogTitle">Game starters</h2>
+        <div class="starter-quarter-tabs" id="starterQuarterTabs">
+          <button type="button" class="btn starter-q-tab active" data-quarter="Q1">Q1</button>
+          <button type="button" class="btn starter-q-tab" data-quarter="Q2">Q2</button>
+          <button type="button" class="btn starter-q-tab" data-quarter="Q3">Q3</button>
+          <button type="button" class="btn starter-q-tab" data-quarter="Q4">Q4</button>
+        </div>
+      </div>
       <div class="modal-body">
-        <p class="tiny" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent is optional.</p>
-        <div class="split" style="margin-top:.75rem">
-          <div class="field"><label>Liberty starters</label><div class="term-list" id="libertyStartersList"></div></div>
+        <p class="starters-help" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent jersey numbers are optional.</p>
+        <div class="split starters-split">
+          <div class="field"><label>Our starters</label><div class="term-list" id="libertyStartersList"></div></div>
           <div class="field"><label>Opponent starters (optional)</label><div class="term-list" id="opponentStartersList"></div></div>
         </div>
-        <p class="tiny" style="margin-top:.75rem">This records who starts; minutes still come from SUB tags.</p>
+        <p class="starters-note">Use the <strong>Starters</strong> button anytime, or tag <strong>Start QTR</strong> to set lineups per quarter.</p>
       </div>
       <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
     </form>
-  </div>
+  </dialog>
 
   <!-- Report Drawer -->
   <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
@@ -1327,6 +1353,6 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
 </script>
-<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260716e"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260716e"></script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260717a"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260717a"></script>
 {% endblock %}

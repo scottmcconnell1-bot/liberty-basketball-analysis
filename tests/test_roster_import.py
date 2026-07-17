@@ -73,6 +73,36 @@ def test_parse_roster_csv_jersey_numbers_only():
     assert players[2]["label"] == "23"
 
 
+def test_filter_players_with_jersey_excludes_coaches():
+    from roster_import import _filter_players_with_jersey, _normalize_player
+
+    players = _filter_players_with_jersey([
+        _normalize_player(jersey_number="12", name="Smith"),
+        _normalize_player(name="Head Coach Smith"),
+        _normalize_player(jersey_number=None, name="1234 School Rd"),
+    ])
+    assert len(players) == 1
+    assert players[0]["jersey_number"] == "12"
+
+
+def test_parse_maxpreps_flattened_single_line():
+    blob = (
+        "Players (11) # Player Grade Position "
+        "45 Jasper Musgrave 8 C 3 Jonathan Kariuki 8 PG 0 Carter Sullivan 8 PG "
+        "Staff (2) Head Coach Smith"
+    )
+    players = parse_maxpreps_roster_text(blob)
+    assert len(players) == 3
+    jerseys = {p["jersey_number"] for p in players}
+    assert jerseys == {"45", "3", "0"}
+
+
+def test_parse_roster_csv_space_separated_jerseys():
+    players = parse_roster_csv("5 12 23")
+    assert len(players) == 3
+    assert [p["jersey_number"] for p in players] == ["5", "12", "23"]
+
+
 def test_is_maxpreps_printable_roster():
     assert is_maxpreps_printable_roster(MAXPREPS_ROSTER_TEXT)
     assert not is_maxpreps_printable_roster(SAMPLE_CSV)
