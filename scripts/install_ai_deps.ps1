@@ -11,10 +11,11 @@ function Write-Step([string]$Message) {
 }
 
 function Find-Python312 {
+    # Prefer project .venv so packages land where launch_liberty.py runs the app.
     $candidates = @(
+        @("$Root\.venv\Scripts\python.exe"),
         @("py", "-3.12"),
         @("py", "-3.13"),
-        @("$Root\.venv\Scripts\python.exe"),
         @("python")
     )
     foreach ($cmd in $candidates) {
@@ -66,10 +67,19 @@ Write-Step "Upgrading pip..."
 & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Step "Installing PyTorch CPU wheels..."
-& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+$torchIndex = "https://download.pytorch.org/whl/cpu"
+$torchLabel = "CPU"
+if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+    $null = & nvidia-smi -L 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $torchIndex = "https://download.pytorch.org/whl/cu124"
+        $torchLabel = "CUDA 12.4 (GPU)"
+    }
+}
+Write-Step "Installing PyTorch ($torchLabel) wheels..."
+& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install torch torchvision --index-url $torchIndex
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[liberty-ai] CPU index install failed; trying default PyPI..." -ForegroundColor Yellow
+    Write-Host "[liberty-ai] $torchLabel index install failed; trying default PyPI..." -ForegroundColor Yellow
     & $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -m pip install torch torchvision
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
@@ -79,7 +89,7 @@ Write-Step "Installing OpenCV, Ultralytics, scikit-learn, and container AI deps.
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Step "Verifying imports..."
-& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; import sklearn; print('OK: torch', torch.__version__, 'cv2', cv2.__version__, 'sklearn', sklearn.__version__)"
+& $pythonCmd[0] @($pythonCmd[1..($pythonCmd.Length - 1)]) -c "import cv2; import ultralytics; import torch; import sklearn; cuda = torch.cuda.is_available(); name = torch.cuda.get_device_name(0) if cuda else 'n/a'; print('OK: torch', torch.__version__, 'cuda', cuda, name, 'cv2', cv2.__version__, 'sklearn', sklearn.__version__)"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (Get-Command git -ErrorAction SilentlyContinue) {
