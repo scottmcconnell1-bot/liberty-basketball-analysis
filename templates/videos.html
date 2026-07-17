@@ -252,7 +252,7 @@ async function loadVideos() {
       <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
       <td class="col-actions" data-label="Actions">
         <div class="video-actions">
-          <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
+          <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}&amp;focus=1" class="btn btn-primary btn-sm">Film Tool</a>
           <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
           ${((v.detection_count ?? 0) > 0 || (v.event_count ?? 0) > 0) ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
           <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>

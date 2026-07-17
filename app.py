@@ -143,7 +143,8 @@ if __name__ == "__main__":
         ensure_db()
     import os
     _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=5000, debug=_debug, use_reloader=False)
+    _port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)
 
 
 @app.route("/sw.js")

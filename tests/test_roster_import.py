@@ -64,6 +64,15 @@ def test_parse_roster_csv_liberty_format():
     assert players[2]["label"] == "45 - Jasper Musgrave, 8"
 
 
+def test_parse_roster_csv_jersey_numbers_only():
+    players = parse_roster_csv("5\n12\n23\n")
+    assert len(players) == 3
+    assert players[0]["jersey_number"] == "5"
+    assert players[0]["label"] == "5"
+    assert players[1]["label"] == "12"
+    assert players[2]["label"] == "23"
+
+
 def test_is_maxpreps_printable_roster():
     assert is_maxpreps_printable_roster(MAXPREPS_ROSTER_TEXT)
     assert not is_maxpreps_printable_roster(SAMPLE_CSV)

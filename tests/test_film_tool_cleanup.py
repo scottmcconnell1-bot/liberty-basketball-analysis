@@ -11,6 +11,17 @@ def test_film_tool_top_bar_is_simplified(client):
     assert 'id="manageTermsBtn"' not in html
     assert 'data-theme-toggle' not in html
     assert 'id="exportBtn"' in html
+    assert 'id="manualTagFocusBtn"' in html
+    assert 'id="undoBtnBar"' in html
+    assert 'id="vidPlayPauseBtn"' in html
+    assert 'id="ftTagDrawerToggle"' in html
+    assert 'data-skip="-5"' in html
+    assert 'data-skip="-10"' in html
+    assert 'data-skip="5"' in html
+    assert 'Focus FS' in html
+    assert 'ft-tag-drawer-toggle' in html
+    assert 'data-skip="-30"' not in html
+    assert 'manual-tag-focus' in html
 
 
 def test_settings_includes_film_tool_section(client):

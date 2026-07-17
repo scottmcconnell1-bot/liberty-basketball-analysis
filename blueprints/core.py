@@ -1668,6 +1668,33 @@ def review_page():
     return render_template("review_events.html")
 
 
+@core.route("/api/film-tool-build")
+def film_tool_build_info():
+    """Return which repo copy is serving Film Tool (helps debug stale servers)."""
+    from pathlib import Path
+
+    from flask import current_app
+
+    template_path = Path(current_app.root_path) / "templates" / "film_tool.html"
+    text = ""
+    if template_path.exists():
+        text = template_path.read_text(encoding="utf-8")
+    return jsonify({
+        "repo_root": str(Path(current_app.root_path).resolve()),
+        "template_path": str(template_path.resolve()),
+        "has_focus_button": "manualTagFocusBtn" in text,
+        "has_build_stamp": "focus-fullscreen-20260716e" in text,
+        "has_tagging_controls_v2": (
+            'id="undoBtnBar"' in text
+            and 'id="ftTagDrawerToggle"' in text
+            and 'data-skip="-5"' in text
+            and "◀ 5s" in text
+            and "data-skip=\"-30\"" not in text
+        ),
+        "film_tool_js_cache_bust": "film-tool.js?v=20260716e" in text,
+    })
+
+
 @core.route("/film")
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
