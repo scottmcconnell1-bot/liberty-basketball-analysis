@@ -577,8 +577,8 @@
 #film-tool-root #rowsBody tr.ft-report-row-hidden {
     display: none;
 }
-#film-tool-root #rowsBody tr.ft-report-row-match td {
-    background: rgba(20, 184, 166, 0.12);
+#film-tool-root .ft-reports-table td:nth-child(4) {
+    font-weight: 600;
 }
 
 /* ── Game Cards ───────────────────────────────────────────── */

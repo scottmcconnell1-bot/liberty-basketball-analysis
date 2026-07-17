@@ -2985,6 +2985,9 @@ function initAnalysisStatus() {
                     }
                 }, 3000);
                 fetchAndRenderAIEvents(gameId);
+                if (reportType?.value === 'manual-vs-ai-q1') {
+                    generateReport();
+                }
             } else if (data.status === 'failed') {
                 pollTimer = null;
                 if (isSupersededAnalysisError(data.error_message)) {
