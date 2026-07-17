@@ -31,6 +31,24 @@ MIN_PYTHON = (3, 12)
 MAX_PYTHON = (3, 13)
 DEFAULT_PORT = 8080
 WAIT_SECONDS = 90
+FILM_TOOL_TEMPLATE = ROOT / "templates" / "film_tool.html"
+
+
+def film_tool_build_info() -> dict[str, bool | str]:
+    """Read Film Tool template markers (helps catch stale repo copies)."""
+    text = ""
+    if FILM_TOOL_TEMPLATE.exists():
+        text = FILM_TOOL_TEMPLATE.read_text(encoding="utf-8")
+    return {
+        "template": str(FILM_TOOL_TEMPLATE),
+        "has_tagging_controls_v2": (
+            'id="undoBtnBar"' in text
+            and 'id="ftTagDrawerToggle"' in text
+            and 'data-skip="-5"' in text
+            and 'data-skip="-30"' not in text
+        ),
+        "has_focus_mode": "manualTagFocusBtn" in text,
+    }
 
 
 def _log(message: str) -> None:
@@ -259,6 +277,14 @@ def main() -> int:
             return 1
 
         _log(f"Server ready: {base_url}")
+        build = film_tool_build_info()
+        if build["has_tagging_controls_v2"]:
+            _log("Film Tool: Focus FS loaded (fullscreen video, slide-in tags, bottom controls)")
+        else:
+            _warn(
+                "Film Tool is missing Controls v2 — git pull this repo, then restart. "
+                f"Template: {build['template']}"
+            )
         if not args.no_browser:
             _log("Opening dashboard in your browser...")
             webbrowser.open(base_url)
@@ -270,6 +296,7 @@ def main() -> int:
         print(f"    Preview   : {base_url}preview")
         print(f"    Status    : {base_url}status")
         print(f"    Film      : {base_url}film")
+        print(f"    Film build: {base_url}api/film-tool-build")
         print(f"    Review    : {base_url}review")
         print(f"    Assistant : {base_url}assistant")
         print()

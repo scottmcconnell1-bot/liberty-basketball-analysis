@@ -55,6 +55,8 @@ const ROSTER_GENDER_STORAGE_KEY = 'filmToolRosterGender';
 const GAMES_STORAGE_KEY = 'filmToolSavedGamesV20260423final';
 const LAST_GAME_KEY = 'filmToolLastGameIdV20260423final';
 const CURRENT_AUTOSAVE_KEY = 'filmToolCurrentAutosaveV20260423final';
+const MANUAL_FOCUS_STORAGE_KEY = 'filmToolManualTagFocusV1';
+const MANUAL_TAG_DRAWER_KEY = 'filmToolTagDrawerOpenV1';
 
 // ── Vocabulary (tagging terms) ──────────────────────────────
 const vocabulary = {
@@ -118,7 +120,11 @@ let selectedGameId = null;
 let autosavePaused = false;
 let currentStarters = null;
 let currentLineups = { liberty: new Set(), opponent: new Set() };
+let quarterStarters = { Q1: null, Q2: null, Q3: null, Q4: null };
 let startersMode = 'initial';
+let activeStarterQuarter = 'Q1';
+let pendingStarterCallback = null;
+let editingStarterSets = { liberty: new Set(), opponent: new Set() };
 let aiEventsCache = [];
 let activeAiEventId = null;
 
@@ -135,7 +141,7 @@ let rosterDialog, playerList, rosterFileInput, rosterFileTypeSelect;
 let rosterSeasonSelect, rosterImportDialog, rosterImportSeasonSelect, rosterImportReplace, rosterImportFileLabel;
 let playerDialog, playerPosInput, playerNumInput, playerNameInput, playerGradeInput;
 let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
-let startersDialog, libertyStartersList, opponentStartersList, startersHelp;
+let startersDialog, startersDialogTitle, starterQuarterTabs, libertyStartersList, opponentStartersList, startersHelp;
 let uploadedVideoUrl = '';
 let uploadedVideoName = '';
 
@@ -265,6 +271,66 @@ function setActiveRosterSeasonId(seasonId) {
 function getRosterKey(side = currentRosterSide) {
     const seasonId = getSelectedSeasonId() || 'unscoped';
     return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}`;
+}
+
+function splitRosterKey(key) {
+    const [seasonId, level, gender, side] = String(key || '').split('|');
+    return { seasonId, level, gender, side };
+}
+
+function expandRosterPasteEntries(text) {
+    const entries = [];
+    String(text || '').split(/\r?\n/).forEach(line => {
+        const trimmed = normalize(line);
+        if (!trimmed || isNonPlayerRosterLine(trimmed)) return;
+
+        if (/[\t,;|]/.test(trimmed)) {
+            trimmed.split(/[\t,;|]+/).forEach(part => {
+                const piece = normalize(part).replace(/^#/, '').trim();
+                if (piece && !isNonPlayerRosterLine(piece)) entries.push(piece);
+            });
+            return;
+        }
+
+        const tokens = trimmed.split(/\s+/).map(t => t.replace(/^#/, ''));
+        if (tokens.length > 1 && tokens.every(t => /^\d{1,2}$/.test(t))) {
+            tokens.forEach(t => entries.push(t));
+            return;
+        }
+
+        const freeform = parseFreeformRosterLine(trimmed);
+        if (freeform?.jersey_number) {
+            entries.push(trimmed);
+            return;
+        }
+
+        entries.push(trimmed.replace(/^#/, '').trim());
+    });
+    return entries;
+}
+
+function isNonPlayerRosterLine(line) {
+    const text = normalize(line);
+    if (!text) return true;
+    if (/^(staff|players|coach|address|school|printable|roster)\b/i.test(text)) return true;
+    if (/\b(head coach|assistant coach|athletic director)\b/i.test(text)) return true;
+    if (/\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd)\b/i.test(text)) return true;
+    if (/\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/.test(text)) return true;
+    if (/^https?:\/\//i.test(text)) return true;
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(text)) return true;
+    return false;
+}
+
+function parseRosterBulkLines(text) {
+    const players = [];
+    const seen = new Set();
+    expandRosterPasteEntries(text).forEach(entry => {
+        const player = normalizeRosterPlayer(entry);
+        if (!player?.jersey_number || seen.has(player.label)) return;
+        seen.add(player.label);
+        players.push(player);
+    });
+    return players;
 }
 
 function parsePlayerText(text) {
@@ -420,28 +486,76 @@ function loadStores() {
     savedGames = loadJson(GAMES_STORAGE_KEY, []);
 }
 function persistVocab() { saveJson(VOCAB_STORAGE_KEY, vocabulary); }
-async function persistRosters() {
+async function persistRosterKey(key, options = {}) {
+    const { replace = true } = options;
     saveJson(ROSTER_STORAGE_KEY, rosters);
-    const seasonId = getSelectedSeasonId();
-    if (!seasonId) return;
-    const key = getRosterKey();
+    const { seasonId, level, gender, side } = splitRosterKey(key);
+    if (!seasonId || seasonId === 'unscoped') {
+        console.warn('Cannot persist roster without season');
+        return false;
+    }
     const players = sortRosterPlayers(rosters[key] || []);
     try {
-        await fetch('/api/film-rosters', {
+        const resp = await fetch('/api/film-rosters', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 season_id: Number(seasonId),
-                level: getSelectedLevel(),
-                gender: getSelectedGender(),
-                side: currentRosterSide,
+                level,
+                gender,
+                side,
                 players,
-                replace: true,
+                replace,
             }),
         });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Could not save roster');
+        }
+        return true;
     } catch (err) {
         console.warn('Could not save roster to server', err);
+        return false;
     }
+}
+
+async function ensureRosterSeasonForFilm() {
+    await ensureRosterSeasonsLoaded();
+    if (!getSelectedSeasonId()) {
+        const first = rosterSeasonOptions[0]?.id;
+        if (first) setActiveRosterSeasonId(String(first));
+    }
+    return getSelectedSeasonId();
+}
+
+async function addPlayerToTeamRoster(team, rawEntry) {
+    const seasonId = await ensureRosterSeasonForFilm();
+    if (!seasonId) {
+        alert('Add a season on the Schedule page before saving roster players.');
+        return null;
+    }
+    const player = normalizeRosterPlayer(rawEntry);
+    if (!player) {
+        alert('Enter a jersey number (e.g. 12) or name (e.g. 12 - Smith).');
+        return null;
+    }
+    const key = mapTeamToRosterKey(team);
+    const existing = rosters[key] || [];
+    if (existing.some(item => playerLabel(item) === player.label)) {
+        return player;
+    }
+    rosters[key] = sortRosterPlayers([...existing, player]);
+    const saved = await persistRosterKey(key);
+    if (saved) {
+        setStatus(`Added ${player.label} to ${team} roster.`);
+    }
+    return player;
+}
+
+async function persistRosters() {
+    saveJson(ROSTER_STORAGE_KEY, rosters);
+    const key = getRosterKey();
+    await persistRosterKey(key);
 }
 function persistGames() { saveJson(GAMES_STORAGE_KEY, savedGames); }
 
@@ -572,8 +686,33 @@ function renderScore() {
 }
 
 function currentQuarter() {
+    const startRows = getAllRows().filter(r => r.eventtype === 'StartQTR' && r.quarter);
+    if (startRows.length) return startRows[startRows.length - 1].quarter;
     const rows = getAllRows().filter(r => r.quarter);
     return rows.length ? rows[rows.length - 1].quarter : 'Q1';
+}
+
+function nextQuarterLabel() {
+    const count = getAllRows().filter(r => r.eventtype === 'StartQTR').length;
+    return `Q${Math.min(count + 1, 4)}`;
+}
+
+function formatQuarterStarterNotes(quarterData) {
+    if (!quarterData) return '';
+    const liberty = (quarterData.liberty || []).join(', ');
+    const opponent = (quarterData.opponent || []).join(', ');
+    const parts = [];
+    if (liberty) parts.push(`${quarterData.libertyTeam || 'Our team'}: ${liberty}`);
+    if (opponent) parts.push(`${quarterData.opponentTeam || 'Opponent'}: ${opponent}`);
+    return parts.join(' | ');
+}
+
+function rosterDisplayPlayer(player) {
+    if (!player) return player;
+    if (player.jersey_number && player.name) return player;
+    const parsed = parseFreeformRosterLine(player.label || player.name || '');
+    if (parsed?.jersey_number) return { ...player, ...parsed };
+    return player;
 }
 
 // ── Event Buttons ───────────────────────────────────────────
@@ -607,6 +746,19 @@ function commitTag(def, { team = '', player = '' }) {
     setStatus(`Tagged ${def.label}.`);
 }
 
+function commitStartQuarterTag(def, quarter) {
+    const starterData = quarterStarters[quarter];
+    addRow({
+        label: def.label, player: '', quarter, team: '',
+        side: def.side, category: def.category, eventtype: def.eventtype, result: def.result,
+        start: formatTime(video.currentTime || 0), duration: '0:05.0',
+        notes: formatQuarterStarterNotes(starterData),
+    });
+    lastTaggedTime.textContent = formatTime(video.currentTime || 0);
+    handleRowsChanged();
+    setStatus(`${quarter} started. Starters recorded.`);
+}
+
 function commitStealPair(def, p) {
     commitTag(def, { team: p.stealTeam, player: p.stealer });
     addRow({
@@ -626,6 +778,15 @@ function openQuickTag(def) {
     quickDialogTitle.textContent = def.label;
     quickTagLabel.textContent = `Video paused at ${formatTime(video.currentTime || 0)}.`;
     quickTagBody.innerHTML = '';
+
+    if (def.id === 'startqtr') {
+        const quarter = nextQuarterLabel();
+        openStartersDialog(quarter === 'Q1' ? 'initial' : quarter, {
+            quarter,
+            onComplete: () => commitStartQuarterTag(def, quarter),
+        });
+        return;
+    }
 
     if (def.teamMode === 'event-only') {
         const btn = document.createElement('button');
@@ -685,13 +846,11 @@ function showPlayerSelection(def, team) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(team);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showPlayerSelection(def, team);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(team, raw);
+        if (player) showPlayerSelection(def, team);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown / team only';
@@ -716,13 +875,11 @@ function showStealPlayers(def, stealTeam) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(stealTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showStealPlayers(def, stealTeam);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(stealTeam, raw);
+        if (player) showStealPlayers(def, stealTeam);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown stealer';
@@ -749,13 +906,11 @@ function showTurnoverChooser(def, stealTeam, stealer) {
     });
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(turnoverTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showTurnoverChooser(def, stealTeam, stealer);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):', '');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(turnoverTeam, raw);
+        if (player) showTurnoverChooser(def, stealTeam, stealer);
     });
     const unknown = document.createElement('button');
     unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown turnover';
@@ -880,7 +1035,12 @@ function getGameMeta() {
 }
 
 function serializeCurrentGame() {
-    return { ...getGameMeta(), rows: getAllRows() };
+    return {
+        ...getGameMeta(),
+        rows: getAllRows(),
+        currentStarters,
+        quarterStarters,
+    };
 }
 
 function loadGameIntoUI(game) {
@@ -896,6 +1056,10 @@ function loadGameIntoUI(game) {
     awayTeamNameInput.value = game.awayTeam || '';
     outputDirInput.value = game.outputDir || '';
     lastTaggedTime.textContent = game.lastTaggedTime || '—';
+    currentStarters = game.currentStarters || null;
+    quarterStarters = game.quarterStarters || { Q1: null, Q2: null, Q3: null, Q4: null };
+    if (currentStarters?.liberty) currentLineups.liberty = new Set(currentStarters.liberty);
+    if (currentStarters?.opponent) currentLineups.opponent = new Set(currentStarters.opponent);
     rowsBody.innerHTML = '';
     (game.rows || []).forEach(addRow);
     autosavePaused = false;
@@ -1330,7 +1494,8 @@ function showRoster() {
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
-    list.forEach(player => {
+    list.forEach(rawPlayer => {
+        const player = rosterDisplayPlayer(rawPlayer);
         const row = document.createElement('tr');
         const fields = [
             ['col-pos', player.position || ''],
@@ -1442,6 +1607,28 @@ function seasonLabel(seasonId) {
     return season?.name || `Season ${seasonId}`;
 }
 
+async function importBulkRosterNumbers() {
+    const textarea = document.getElementById('rosterBulkNumbersInput');
+    const seasonId = getSelectedSeasonId();
+    if (!seasonId) { alert('Select a season first.'); return; }
+    const parsed = parseRosterBulkLines(textarea?.value || '');
+    if (!parsed.length) {
+        alert('Paste jersey numbers (one per line, or separated by tabs/commas/spaces). Only rows with a jersey # are imported.');
+        return;
+    }
+    const key = getRosterKey();
+    const before = (rosters[key] || []).length;
+    rosters[key] = sortRosterPlayers([...(rosters[key] || []), ...parsed]);
+    const added = rosters[key].length - before;
+    const saved = await persistRosterKey(key);
+    if (textarea) textarea.value = '';
+    showRoster();
+    const sideLabel = currentRosterSide === 'opp' ? 'opponent' : currentRosterSide;
+    setStatus(saved
+        ? `Added ${added} player${added === 1 ? '' : 's'} to ${sideLabel} roster.`
+        : `Added ${added} locally; could not save to server.`);
+}
+
 async function clearCurrentRoster() {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) { alert('Select a season first.'); return; }
@@ -1530,39 +1717,137 @@ function renderStarterChoices(listEl, team, selectedSet) {
     const addRowEl = document.createElement('div'); addRowEl.className = 'term-item';
     const addLabel = document.createElement('div'); addLabel.textContent = 'Add new player';
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = 'Add';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number e.g. 24 - Smith'); if (!name) return;
-        const key = mapTeamToRosterKey(team); rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]); persistRosters();
-        renderStarterChoices(listEl, team, selectedSet);
+    addBtn.addEventListener('click', async () => {
+        const raw = prompt('Jersey # or name (e.g. 12 or 12 - Smith):');
+        if (!raw) return;
+        const player = await addPlayerToTeamRoster(team, raw);
+        if (player) renderStarterChoices(listEl, team, selectedSet);
     });
     addRowEl.appendChild(addLabel); addRowEl.appendChild(addBtn); listEl.appendChild(addRowEl);
 }
 
-function openStartersDialog(mode = 'initial') {
+function getStarterSelectionsForQuarter(quarter, mode) {
+    const stored = quarterStarters[quarter];
+    if (mode === 'adjust') {
+        return {
+            liberty: new Set(currentLineups.liberty),
+            opponent: new Set(currentLineups.opponent),
+        };
+    }
+    if (stored) {
+        return {
+            liberty: new Set(stored.liberty || []),
+            opponent: new Set(stored.opponent || []),
+        };
+    }
+    if (quarter === 'Q1' && currentStarters) {
+        return {
+            liberty: new Set(currentStarters.liberty || []),
+            opponent: new Set(currentStarters.opponent || []),
+        };
+    }
+    return { liberty: new Set(), opponent: new Set() };
+}
+
+function setActiveStarterQuarterTab(quarter) {
+    activeStarterQuarter = quarter;
+    document.querySelectorAll('.starter-q-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.quarter === quarter);
+    });
+    if (startersDialogTitle) {
+        startersDialogTitle.textContent = quarter === 'Q1'
+            ? 'Game starters (opening tip)'
+            : `${quarter} starters`;
+    }
+}
+
+function buildStarterPayload(libertyTeam, opponentTeam, libertySet, opponentSet) {
+    return {
+        libertyTeam,
+        opponentTeam,
+        liberty: Array.from(libertySet),
+        opponent: Array.from(opponentSet),
+    };
+}
+
+function switchStarterQuarter(quarter) {
+    if (!['Q1', 'Q2', 'Q3', 'Q4'].includes(quarter)) return;
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opp = opponentInput.value.trim() || 'Opponent';
+    if (startersMode !== 'adjust' && !pendingStarterCallback) {
+        quarterStarters[activeStarterQuarter] = buildStarterPayload(
+            liberty, opp, editingStarterSets.liberty, editingStarterSets.opponent,
+        );
+    }
+    activeStarterQuarter = quarter;
+    setActiveStarterQuarterTab(quarter);
+    if (startersHelp) {
+        startersHelp.textContent = quarter === 'Q1'
+            ? `Choose the five ${liberty} starters before tip. Opponent jersey numbers are optional.`
+            : `Choose the five ${liberty} players starting ${quarter}. Opponent optional.`;
+    }
+    const sel = getStarterSelectionsForQuarter(quarter, startersMode);
+    editingStarterSets = { liberty: sel.liberty, opponent: sel.opponent };
+    renderStarterChoices(libertyStartersList, liberty, editingStarterSets.liberty);
+    renderStarterChoices(opponentStartersList, opp, editingStarterSets.opponent);
+}
+
+function openStartersDialog(mode = 'initial', options = {}) {
     startersMode = mode;
+    pendingStarterCallback = options.onComplete || null;
+    const quarter = options.quarter || (mode === 'initial' ? 'Q1' : mode);
+    activeStarterQuarter = ['Q1', 'Q2', 'Q3', 'Q4'].includes(quarter) ? quarter : 'Q1';
     if (!video.paused) video.pause();
     const liberty = ourTeamNameInput.value.trim() || 'Our Team';
     const opp = opponentInput.value.trim() || 'Opponent';
-    startersHelp.textContent = mode === 'initial' ? `Choose the five ${liberty} starters before tip. Opponent is optional.` : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
-    const libertySelected = mode === 'initial' ? new Set(currentStarters?.liberty || []) : new Set(currentLineups.liberty);
-    const opponentSelected = mode === 'initial' ? new Set(currentStarters?.opponent || []) : new Set(currentLineups.opponent);
-    renderStarterChoices(libertyStartersList, liberty, libertySelected);
-    renderStarterChoices(opponentStartersList, opp, opponentSelected);
+    if (startersHelp) {
+        startersHelp.textContent = mode === 'adjust'
+            ? `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`
+            : activeStarterQuarter === 'Q1'
+                ? `Choose the five ${liberty} starters before tip. Opponent jersey numbers are optional.`
+                : `Choose the five ${liberty} players starting ${activeStarterQuarter}. Opponent optional.`;
+    }
+    setActiveStarterQuarterTab(activeStarterQuarter);
+    const sel = getStarterSelectionsForQuarter(activeStarterQuarter, mode);
+    editingStarterSets = { liberty: sel.liberty, opponent: sel.opponent };
+    renderStarterChoices(libertyStartersList, liberty, editingStarterSets.liberty);
+    renderStarterChoices(opponentStartersList, opp, editingStarterSets.opponent);
+    if (starterQuarterTabs) {
+        starterQuarterTabs.style.display = (mode === 'adjust' || pendingStarterCallback) ? 'none' : 'flex';
+    }
     startersDialog.returnValue = '';
     startersDialog.showModal();
     document.getElementById('startersSaveBtn').onclick = () => {
-        if (libertySelected.size !== 5) { alert(`Please pick exactly 5 starters for ${liberty}.`); return; }
-        const libertyArr = Array.from(libertySelected), oppArr = Array.from(opponentSelected);
-        if (mode === 'initial') {
-            currentStarters = { libertyTeam: liberty, opponentTeam: opp, liberty: libertyArr, opponent: oppArr };
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+        if (editingStarterSets.liberty.size !== 5) {
+            alert(`Please pick exactly 5 starters for ${liberty}.`);
+            return;
+        }
+        const payload = buildStarterPayload(
+            liberty, opp, editingStarterSets.liberty, editingStarterSets.opponent,
+        );
+        if (mode === 'adjust') {
+            tagLineupChanges(liberty, new Set(currentLineups.liberty), editingStarterSets.liberty);
+            tagLineupChanges(opp, new Set(currentLineups.opponent), editingStarterSets.opponent);
+            currentLineups.liberty = new Set(payload.liberty);
+            currentLineups.opponent = new Set(payload.opponent);
         } else {
-            tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
-            tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+            quarterStarters[activeStarterQuarter] = payload;
+            if (activeStarterQuarter === 'Q1') {
+                currentStarters = payload;
+                currentLineups.liberty = new Set(payload.liberty);
+                currentLineups.opponent = new Set(payload.opponent);
+            }
         }
         startersDialog.close();
-        setStatus(mode === 'initial' ? 'Starters recorded.' : 'Lineups updated from SUB dialog.');
+        const callback = pendingStarterCallback;
+        pendingStarterCallback = null;
+        if (callback) {
+            callback();
+            return;
+        }
+        setStatus(mode === 'adjust'
+            ? 'Lineups updated from SUB dialog.'
+            : `${activeStarterQuarter} starters saved.`);
     };
 }
 
@@ -1636,6 +1921,87 @@ function applyFilmToolDeepLinks() {
         loadVocabulary();
         termDialog?.showModal();
     }
+}
+
+// ── Manual tag focus (fullscreen video + slide-in tags) ─────
+function isManualTagFocusEnabled() {
+    return document.getElementById('film-tool-root')?.classList.contains('manual-tag-focus') || false;
+}
+
+function isTagDrawerOpen() {
+    return document.getElementById('film-tool-root')?.classList.contains('ft-tag-drawer-open') || false;
+}
+
+function syncTagDrawerToggle() {
+    const toggle = document.getElementById('ftTagDrawerToggle');
+    if (!toggle) return;
+    const open = isTagDrawerOpen();
+    toggle.textContent = open ? '▶' : '◀';
+    toggle.title = open ? 'Hide tag panel' : 'Show tag panel';
+    toggle.setAttribute('aria-label', open ? 'Hide tag panel' : 'Show tag panel');
+}
+
+function setTagDrawerOpen(open, options = {}) {
+    const root = document.getElementById('film-tool-root');
+    if (!root || !isManualTagFocusEnabled()) return;
+    const on = Boolean(open);
+    root.classList.toggle('ft-tag-drawer-open', on);
+    if (!options.skipPersist) saveJson(MANUAL_TAG_DRAWER_KEY, on);
+    syncTagDrawerToggle();
+}
+
+function toggleTagDrawer() {
+    if (!isManualTagFocusEnabled()) return;
+    setTagDrawerOpen(!isTagDrawerOpen());
+}
+
+function syncFocusVideoChrome() {
+    if (!video) return;
+    if (isManualTagFocusEnabled()) video.removeAttribute('controls');
+    else video.setAttribute('controls', '');
+}
+
+function setManualTagFocus(enabled, options = {}) {
+    const root = document.getElementById('film-tool-root');
+    if (!root) return;
+    const on = Boolean(enabled);
+    root.classList.toggle('manual-tag-focus', on);
+    document.body.classList.toggle('manual-tag-focus', on);
+    saveJson(MANUAL_FOCUS_STORAGE_KEY, on);
+    if (!on) {
+        root.classList.remove('ft-tag-drawer-open');
+    } else {
+        const drawerOpen = Boolean(loadJson(MANUAL_TAG_DRAWER_KEY, false));
+        root.classList.toggle('ft-tag-drawer-open', drawerOpen);
+    }
+    syncTagDrawerToggle();
+    syncFocusVideoChrome();
+    document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
+        btn.classList.toggle('active', on);
+        btn.textContent = on ? '↩ Full layout' : '🎯 Focus';
+        btn.title = on
+            ? 'Exit fullscreen focus — show upload, AI, bookmarks, and navigation'
+            : 'Fullscreen video with bottom controls and slide-in tags';
+    });
+    if (!options.silent && typeof setStatus === 'function') {
+        setStatus(on
+            ? 'Focus mode: fullscreen video. Click the black arrow on the right for tags.'
+            : 'Full layout restored.');
+    }
+}
+
+function toggleManualTagFocus() {
+    setManualTagFocus(!isManualTagFocusEnabled());
+}
+
+function initManualTagFocus() {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('focus') === '1';
+    const stored = Boolean(loadJson(MANUAL_FOCUS_STORAGE_KEY, false));
+    const hasServerVideo = Boolean(window.FILM_TOOL_UPLOADED_VIDEO_URL);
+    // Default to focus when opening a saved video from the library (?focus=1 or server video).
+    const shouldFocus = fromUrl || stored || (hasServerVideo && params.get('focus') !== '0');
+    setManualTagFocus(shouldFocus, { silent: true });
 }
 
 // ── Focus Mode ──────────────────────────────────────────────
@@ -1808,6 +2174,57 @@ function handleDirectoryPick() {
 function undoLastRow() {
     const rows = [...rowsBody.querySelectorAll('tr')]; if (!rows.length) return;
     rows[rows.length - 1].remove(); handleRowsChanged(); updateEventCount(); setStatus('Undid last tagged event.');
+}
+
+function seekVideoBy(seconds) {
+    if (!video) return;
+    const delta = Number(seconds) || 0;
+    video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
+}
+
+function toggleVideoPlayPause() {
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+}
+
+function isFilmKeyboardShortcutActive() {
+    if (!document.getElementById('film-tool-root')) return false;
+    const taggerView = document.getElementById('taggerView');
+    if (!taggerView?.classList.contains('active')) return false;
+    const el = document.activeElement;
+    if (el) {
+        const tag = el.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+        if (el.isContentEditable) return false;
+    }
+    if (quickTagDialog?.open || rosterDialog?.open || playerDialog?.open || termDialog?.open) return false;
+    return true;
+}
+
+function initFilmKeyboardShortcuts() {
+    document.addEventListener('keydown', (event) => {
+        if (!isFilmKeyboardShortcutActive()) return;
+        if (event.key === ' ' || event.code === 'Space') {
+            event.preventDefault();
+            toggleVideoPlayPause();
+            return;
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            undoLastRow();
+            return;
+        }
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            seekVideoBy(event.shiftKey ? -10 : -5);
+            return;
+        }
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            seekVideoBy(event.shiftKey ? 10 : 5);
+        }
+    });
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
@@ -2453,6 +2870,10 @@ function attachEventHandlers() {
     termFieldSelect?.addEventListener('change', renderTermList);
 
     document.getElementById('manageRostersBtn')?.addEventListener('click', () => { openRosterDialog(); });
+    document.querySelectorAll('.js-manual-tag-focus-toggle, #manualTagFocusBtn').forEach(btn => {
+        btn.addEventListener('click', toggleManualTagFocus);
+    });
+    document.getElementById('ftTagDrawerToggle')?.addEventListener('click', toggleTagDrawer);
     document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
     document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
@@ -2470,6 +2891,7 @@ function attachEventHandlers() {
         });
     });
     rosterFileInput?.addEventListener('change', e => { const file = e.target.files[0]; if (file) queueRosterImport(file); });
+    document.getElementById('rosterBulkAddBtn')?.addEventListener('click', importBulkRosterNumbers);
     document.getElementById('clearRosterBtn')?.addEventListener('click', clearCurrentRoster);
     document.getElementById('rosterImportCancelBtn')?.addEventListener('click', () => { pendingRosterImportFile = null; if (rosterFileInput) rosterFileInput.value = ''; rosterImportDialog?.close(); });
     document.getElementById('rosterImportConfirmBtn')?.addEventListener('click', confirmRosterImport);
@@ -2480,9 +2902,13 @@ function attachEventHandlers() {
     videoFileInput?.addEventListener('change', handleVideoFile);
 
     document.getElementById('undoBtn')?.addEventListener('click', undoLastRow);
+    document.getElementById('undoBtnBar')?.addEventListener('click', undoLastRow);
     document.getElementById('clearAllBtn')?.addEventListener('click', () => { if (confirm('Clear all tagged events in this game?')) clearAllRows(); });
     document.getElementById('subBtn')?.addEventListener('click', tagSubstitution);
     document.getElementById('startersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
+    document.querySelectorAll('.starter-q-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchStarterQuarter(btn.dataset.quarter));
+    });
 
     document.getElementById('newGameBtn')?.addEventListener('click', () => {
         if (!confirm('Start a new game? This clears current tagged rows.')) return;
@@ -2498,8 +2924,10 @@ function attachEventHandlers() {
     focusExitBtn?.addEventListener('click', exitFocusMode);
     document.getElementById('quickTagCancelBtn')?.addEventListener('click', () => quickTagDialog.close());
 
-    document.querySelectorAll('.video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
-    document.getElementById('vidPlayPauseBtn')?.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
+    document.querySelectorAll('.ft-vid-controls [data-skip]').forEach(btn => {
+        btn.addEventListener('click', () => seekVideoBy(parseFloat(btn.dataset.skip || '0')));
+    });
+    document.getElementById('vidPlayPauseBtn')?.addEventListener('click', toggleVideoPlayPause);
     document.getElementById('vidToStartBtn')?.addEventListener('click', () => { video.currentTime = 0; });
     document.getElementById('vidToEndBtn')?.addEventListener('click', () => { video.currentTime = video.duration || 0; });
     document.getElementById('vidSlow5x')?.addEventListener('click', () => { video.playbackRate = 0.5; });
@@ -2583,6 +3011,8 @@ function init() {
     quickTagBody = document.getElementById('quickTagBody');
     focusExitBtn = document.getElementById('focusExitBtn');
     startersDialog = document.getElementById('startersDialog');
+    startersDialogTitle = document.getElementById('startersDialogTitle');
+    starterQuarterTabs = document.getElementById('starterQuarterTabs');
     libertyStartersList = document.getElementById('libertyStartersList');
     opponentStartersList = document.getElementById('opponentStartersList');
     startersHelp = document.getElementById('startersHelp');
@@ -2599,6 +3029,8 @@ function init() {
     renderEventButtons();
     renderGames();
     attachEventHandlers();
+    initFilmKeyboardShortcuts();
+    initManualTagFocus();
     applyFilmToolDeepLinks();
     updateScoreLabels();
     renderScore();
