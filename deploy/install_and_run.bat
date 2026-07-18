@@ -5,7 +5,8 @@ cd /d "%~dp0"
 
 REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
-REM Prefer py -3.12, then py -3.13, then python.
+REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
+REM then python on PATH. Winget install is attempted at most ONCE.
 REM Start server with venv python + scripts\launch_liberty.py --no-browser.
 REM Kill only the Liberty process tree (not all python.exe).
 REM Cleanup: local .venv + TEMP log. Does NOT uninstall winget Python.
@@ -15,8 +16,8 @@ set "PACKAGE_DIR=%CD%"
 set "VENV_DIR=%PACKAGE_DIR%\.venv"
 set "LOG_FILE=%TEMP%\LibertyDemo_%RANDOM%.log"
 set "PORT=8080"
-set "PYTHON_CMD="
-set "PYTHON_ARGS="
+set "PYTHON_EXE="
+set "INSTALL_TRIED=0"
 set "LAUNCHER_PID="
 
 echo.
@@ -44,16 +45,12 @@ if not exist "%PACKAGE_DIR%\scripts\launch_liberty.py" (
 call :find_python
 if errorlevel 1 goto :fail
 
-echo Using: !PYTHON_CMD! !PYTHON_ARGS!
+echo Using: !PYTHON_EXE!
 echo.
 
 if not exist "%VENV_DIR%\Scripts\python.exe" (
   echo Creating virtual environment...
-  if defined PYTHON_ARGS (
-    !PYTHON_CMD! !PYTHON_ARGS! -m venv "%VENV_DIR%" >> "%LOG_FILE%" 2>&1
-  ) else (
-    !PYTHON_CMD! -m venv "%VENV_DIR%" >> "%LOG_FILE%" 2>&1
-  )
+  "!PYTHON_EXE!" -m venv "%VENV_DIR%" >> "%LOG_FILE%" 2>&1
   if errorlevel 1 (
     echo ERROR: Failed to create venv. See %LOG_FILE%
     goto :fail
@@ -121,58 +118,135 @@ goto :cleanup_ok
 
 REM ======================== helpers ========================
 
-:find_python
+:refresh_path
+REM Merge Machine + User Path from the registry into this session.
+set "PATH="
+for /f "tokens=2*" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "PATH=%%B"
+for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "PATH=!PATH!;%%B"
+REM Prefer common Python install dirs even if not yet on registry PATH.
+set "PATH=%LocalAppData%\Programs\Python\Python312;%LocalAppData%\Programs\Python\Python312\Scripts;%LocalAppData%\Programs\Python\Python313;%LocalAppData%\Programs\Python\Python313\Scripts;%LocalAppData%\Programs\Python\Launcher;%ProgramFiles%\Python312;%ProgramFiles%\Python313;%PATH%"
+exit /b 0
+
+:probe_common_python
+REM Sets PYTHON_EXE to a known-good 3.12/3.13 interpreter if found.
+if exist "%LocalAppData%\Programs\Python\Python312\python.exe" (
+  "%LocalAppData%\Programs\Python\Python312\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,12) else 1)" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    set "PYTHON_EXE=%LocalAppData%\Programs\Python\Python312\python.exe"
+    exit /b 0
+  )
+)
+if exist "%LocalAppData%\Programs\Python\Python313\python.exe" (
+  "%LocalAppData%\Programs\Python\Python313\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,13) else 1)" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    set "PYTHON_EXE=%LocalAppData%\Programs\Python\Python313\python.exe"
+    exit /b 0
+  )
+)
+if exist "%ProgramFiles%\Python312\python.exe" (
+  "%ProgramFiles%\Python312\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,12) else 1)" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    set "PYTHON_EXE=%ProgramFiles%\Python312\python.exe"
+    exit /b 0
+  )
+)
+if exist "%ProgramFiles%\Python313\python.exe" (
+  "%ProgramFiles%\Python313\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,13) else 1)" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    set "PYTHON_EXE=%ProgramFiles%\Python313\python.exe"
+    exit /b 0
+  )
+)
+exit /b 1
+
+:resolve_py_launcher
+REM Prefer py launcher; store full path via sys.executable.
 where py >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-  py -3.12 -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,12) else 1)" >nul 2>&1
-  if !ERRORLEVEL! EQU 0 (
-    set "PYTHON_CMD=py"
-    set "PYTHON_ARGS=-3.12"
-    exit /b 0
-  )
-  py -3.13 -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,13) else 1)" >nul 2>&1
-  if !ERRORLEVEL! EQU 0 (
-    set "PYTHON_CMD=py"
-    set "PYTHON_ARGS=-3.13"
-    exit /b 0
+if errorlevel 1 exit /b 1
+for /f "usebackq delims=" %%P in (`py -3.12 -c "import sys; print(sys.executable)" 2^>nul`) do (
+  if exist "%%P" (
+    "%%P" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,12) else 1)" >nul 2>&1
+    if !ERRORLEVEL! EQU 0 (
+      set "PYTHON_EXE=%%P"
+      exit /b 0
+    )
   )
 )
+for /f "usebackq delims=" %%P in (`py -3.13 -c "import sys; print(sys.executable)" 2^>nul`) do (
+  if exist "%%P" (
+    "%%P" -c "import sys; raise SystemExit(0 if sys.version_info[:2]==(3,13) else 1)" >nul 2>&1
+    if !ERRORLEVEL! EQU 0 (
+      set "PYTHON_EXE=%%P"
+      exit /b 0
+    )
+  )
+)
+exit /b 1
 
+:resolve_path_python
 where python >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-  python -c "import sys; v=sys.version_info[:2]; raise SystemExit(0 if v in ((3,12),(3,13)) else 1)" >nul 2>&1
-  if !ERRORLEVEL! EQU 0 (
-    set "PYTHON_CMD=python"
-    set "PYTHON_ARGS="
-    exit /b 0
+if errorlevel 1 exit /b 1
+for /f "usebackq delims=" %%P in (`python -c "import sys; print(sys.executable)" 2^>nul`) do (
+  if exist "%%P" (
+    "%%P" -c "import sys; v=sys.version_info[:2]; raise SystemExit(0 if v in ((3,12),(3,13)) else 1)" >nul 2>&1
+    if !ERRORLEVEL! EQU 0 (
+      set "PYTHON_EXE=%%P"
+      exit /b 0
+    )
   )
 )
+exit /b 1
 
-echo Python 3.12/3.13 not found. Attempting winget install of Python 3.12...
+:find_python
+REM Single-pass discovery. Winget at most once (INSTALL_TRIED). Never goto :find_python.
+call :resolve_py_launcher
+if not errorlevel 1 exit /b 0
+
+call :probe_common_python
+if not errorlevel 1 exit /b 0
+
+call :resolve_path_python
+if not errorlevel 1 exit /b 0
+
+if "!INSTALL_TRIED!"=="1" goto :python_not_found
+
+echo Python 3.12-3.13 not found. Attempting to install via winget...
 echo (winget Python is permanent — demo cleanup will not remove it.)
 where winget >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-  echo ERROR: winget not found. Install Python 3.12 from https://www.python.org/downloads/
+if errorlevel 1 (
+  echo ERROR: winget not found.
+  echo Install Python 3.12 from https://www.python.org/downloads/
+  echo Then re-run install_and_run.bat.
   exit /b 1
 )
+
+set "INSTALL_TRIED=1"
 winget install -e --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements
 if errorlevel 1 (
-  echo ERROR: winget install failed.
+  echo ERROR: winget install of Python 3.12 failed.
+  echo Install manually from https://www.python.org/downloads/
   exit /b 1
 )
 
-where py >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-  py -3.12 -c "pass" >nul 2>&1
-  if !ERRORLEVEL! EQU 0 (
-    set "PYTHON_CMD=py"
-    set "PYTHON_ARGS=-3.12"
-    exit /b 0
-  )
-)
+echo Python installed. Refreshing PATH and re-probing (no restart loop)...
+call :refresh_path
 
-echo ERROR: Python installed but not on PATH yet. Open a new Command Prompt
-echo        and run install_and_run.bat again.
+call :resolve_py_launcher
+if not errorlevel 1 exit /b 0
+
+call :probe_common_python
+if not errorlevel 1 exit /b 0
+
+call :resolve_path_python
+if not errorlevel 1 exit /b 0
+
+:python_not_found
+echo.
+echo ERROR: Python 3.12 or 3.13 was not found after one install attempt.
+echo Download and install Python 3.12 from:
+echo   https://www.python.org/downloads/
+echo During setup, enable "Add python.exe to PATH", then re-run this script.
+echo.
 exit /b 1
 
 :install_requirements

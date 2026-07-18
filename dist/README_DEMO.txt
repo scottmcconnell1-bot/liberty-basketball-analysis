@@ -1,4 +1,4 @@
-﻿Liberty Basketball Analysis - Coach Demo
+Liberty Basketball Analysis - Coach Demo
 ========================================
 
 Double-click LibertyDemo.exe. It extracts a portable copy and runs
@@ -20,12 +20,12 @@ analysis in this build (detector weights omitted to keep the download small).
 Build notes (2026-07-18)
 ------------------------
 - Staging: C:\Temp\LibertyDemoPackage\LibertyDemo
-- Demo DB: slim film_analysis.db (~0.52 MB) - schema + teams/games/roster/events;
+- Demo DB: slim film_analysis.db (0.52 MB) - schema + teams/games/roster/events;
   omitted heavy detections/review_items (and credentials). Full source DB was ~123 MB.
 - Excluded: .git, .venv, __pycache__, build, dist, .pytest_cache, logs, uploads,
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
-- SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.zip
+- SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo

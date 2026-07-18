@@ -1,13 +1,13 @@
 # Active Task
 
 Updated: 2026-07-18
-Branch: `cursor/fix-wilder-compare-ac1f`
+Branch: `cursor/fix-demo-sfx-7z-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | fix-wilder-compare |
+| **id** | fix-demo-python-detect-loop |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,23 +15,16 @@ Branch: `cursor/fix-wilder-compare-ac1f`
 
 ### Proven
 
-- PDF `No comparison available.pdf` is a Chrome print of `/videos/8/compare` (Liberty vs Wilder High School). Exact on-page error: **"AI analysis is not available on this server."**
-- Compare route works: video id 8 has 3 completed analysis_runs (primary 0 events; reruns 40 and 99 events). Detections exist (190 / 2875) but compare SQL showed **0** because it queried `games.game_id` (column does not exist) and skipped rows with `relational_game_id` set.
-- Wilder NFHS mp4 is **missing on disk** (`uploads/nfhs_gam30b09cbb4f_…_191311.mp4` and original `nfhs_gam30b09cbb4f.mp4`). Only Riverstone mp4 remains in `uploads/`. Cannot restore from local data.
-- Port 8080 was served by `.venv` Python (no cv2/ultralytics). System Python 3.12 has AI packages, but was not the process answering `/api/ai/runtime`.
+- LibertyDemo `install_and_run.bat` could re-enter Python discovery after winget without a max-attempt guard; when PATH was stale post-install, discovery failed again and winget/`goto` restart logic looped forever ("Python … not found … winget" / "Restarting script…").
+- Fix: `INSTALL_TRIED=1` caps winget to **once**; after install, refresh Machine+User PATH from registry + prepend common Python dirs; probe `LocalAppData\Programs\Python\Python312|313`, `ProgramFiles\Python312`, and `py -3.12`/`py -3.13`; store `PYTHON_EXE` as full path (py launcher preferred via `sys.executable`).
+- Smoke (this machine): detection found `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe` via py launcher; `INSTALL_TRIED` stayed `0` (no winget).
+- Rebuilt SFX (`-t7z`): `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` and `dist\LibertyDemo.exe` (26.22 MB / 27,490,284 bytes). GPU AI job left alone.
 
-### Fixed
+### Files
 
-- `blueprints/ai.py` compare counts via `count_detections_for_analysis` / `count_events_for_analysis` keyed by `analysis_key`
-- Compare template banners for missing video file + clearer AI-unavailable copy
-- Tests: relational detection counts + missing-video banner
+- `deploy/install_and_run.bat` — one-shot winget + PATH refresh + common probes
+- `scripts/build_demo_package.ps1` — markers assert `INSTALL_TRIED` / `PYTHON_EXE` / no `goto :find_python` restart
 
-### User must do
+### Leave alone
 
-1. Restart Liberty so code changes load (and preferably run the interpreter that has cv2/ultralytics — system Python 3.12, or install AI into `.venv`).
-2. Re-download NFHS VOD `gam30b09cbb4f` (or re-upload the Wilder mp4) before new reruns / Film Tool playback.
-
-### Compare after fix
-
-- Count comparison of existing runs: yes (after restart).
-- New "Rerun AI" comparison pass: blocked until AI runtime + video file restored.
+- GPU AI / Q1 rerun job — not touched

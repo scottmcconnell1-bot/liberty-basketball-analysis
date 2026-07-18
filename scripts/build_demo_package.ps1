@@ -184,12 +184,23 @@ foreach ($rel in $required) {
 
 # Basic bat syntax: cmd /c with echo only parse via findstr markers
 $bat = Get-Content (Join-Path $Staging "install_and_run.bat") -Raw
-foreach ($marker in @("find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py", "VENV_DIR")) {
+foreach ($marker in @(
+    "find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py",
+    "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python"
+)) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
     }
 }
-Write-Host "  OK install_and_run.bat markers"
+# Reject real restart loops (not comments that mention the forbidden pattern).
+$gotoLines = ($bat -split "`r?`n") | Where-Object { $_ -match '(?i)^\s*goto\s+:(find_python|check_python)\b' }
+if ($gotoLines) {
+    throw "install_and_run.bat must not restart via goto :find_python / :check_python (infinite winget loop risk)"
+}
+if ($bat -notmatch 'INSTALL_TRIED=1') {
+    throw "install_and_run.bat must set INSTALL_TRIED=1 before winget (one-shot install)"
+}
+Write-Host "  OK install_and_run.bat markers (one-shot winget + PATH refresh)"
 
 Write-Step "Locating 7-Zip"
 $sevenZip = Ensure-7Zip
