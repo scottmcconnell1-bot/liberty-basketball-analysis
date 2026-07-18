@@ -1,13 +1,13 @@
 # Active Task
 
 Updated: 2026-07-18
-Branch: `cursor/fix-demo-sfx-7z-ac1f`
+Branch: `cursor/demo-desktop-shortcut-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | fix-demo-python-detect-loop |
+| **id** | demo-desktop-shortcut |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,15 +15,16 @@ Branch: `cursor/fix-demo-sfx-7z-ac1f`
 
 ### Proven
 
-- LibertyDemo `install_and_run.bat` could re-enter Python discovery after winget without a max-attempt guard; when PATH was stale post-install, discovery failed again and winget/`goto` restart logic looped forever ("Python … not found … winget" / "Restarting script…").
-- Fix: `INSTALL_TRIED=1` caps winget to **once**; after install, refresh Machine+User PATH from registry + prepend common Python dirs; probe `LocalAppData\Programs\Python\Python312|313`, `ProgramFiles\Python312`, and `py -3.12`/`py -3.13`; store `PYTHON_EXE` as full path (py launcher preferred via `sys.executable`).
-- Smoke (this machine): detection found `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe` via py launcher; `INSTALL_TRIED` stayed `0` (no winget).
-- Rebuilt SFX (`-t7z`): `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` and `dist\LibertyDemo.exe` (26.22 MB / 27,490,284 bytes). GPU AI job left alone.
+- First run (SFX TEMP extract) robocopies payload to `%LOCALAPPDATA%\LibertyBasketballDemo\` (excludes `.venv`), creates Desktop shortcut `Liberty Basketball Demo.lnk` via WScript.Shell targeting that folder's `install_and_run.bat`, then relaunches from LocalAppData so TEMP cleanup cannot break the shortcut.
+- Subsequent runs from LocalAppData / shortcut: skip copy, reuse `.venv`, winget only if Python missing (still one-shot `INSTALL_TRIED`).
+- On exit: stop Liberty process tree + delete TEMP log; keep install, `.venv`, and Desktop shortcut.
+- Rebuilt SFX (`-t7z`): `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` and `dist\LibertyDemo.exe` (26.22 MB / 27,489,939 bytes).
+- Shortcut COM smoke: CreateShortcut wrote a valid `.lnk` with Target + WorkingDirectory under LocalAppData.
 
 ### Files
 
-- `deploy/install_and_run.bat` — one-shot winget + PATH refresh + common probes
-- `scripts/build_demo_package.ps1` — markers assert `INSTALL_TRIED` / `PYTHON_EXE` / no `goto :find_python` restart
+- `deploy/install_and_run.bat` — persist install + Desktop shortcut + keep `.venv`
+- `scripts/build_demo_package.ps1` — markers + README_DEMO text for persist/shortcut
 
 ### Leave alone
 

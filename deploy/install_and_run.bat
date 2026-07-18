@@ -5,14 +5,78 @@ cd /d "%~dp0"
 
 REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
+REM First run (SFX TEMP extract): copy payload to
+REM   %LOCALAPPDATA%\LibertyBasketballDemo\
+REM create Desktop shortcut, then relaunch from that folder.
+REM Subsequent runs (shortcut / LocalAppData): reuse .venv, skip winget if
+REM Python is already found.
 REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
 REM then python on PATH. Winget install is attempted at most ONCE.
 REM Start server with venv python + scripts\launch_liberty.py --no-browser.
 REM Kill only the Liberty process tree (not all python.exe).
-REM Cleanup: local .venv + TEMP log. Does NOT uninstall winget Python.
+REM Cleanup: stop server + TEMP log. Keeps LocalAppData install, .venv, and
+REM Desktop shortcut. Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
-set "PACKAGE_DIR=%CD%"
+set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
+set "SHORTCUT_NAME=Liberty Basketball Demo.lnk"
+set "SCRIPT_DIR=%~dp0"
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+
+REM Normalize persist path (expand + strip trailing slash)
+for %%I in ("%PERSIST_DIR%") do set "PERSIST_DIR=%%~fI"
+if "%PERSIST_DIR:~-1%"=="\" set "PERSIST_DIR=%PERSIST_DIR:~0,-1%"
+
+REM If not already running from the persistent install, copy + shortcut + relaunch.
+if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
+  echo.
+  echo ============================================================
+  echo   Liberty Basketball Analysis - Demo Setup
+  echo ============================================================
+  echo.
+  echo Installing demo to:
+  echo   %PERSIST_DIR%
+  echo.
+
+  if not exist "%SCRIPT_DIR%\app.py" (
+    echo ERROR: app.py not found in extract folder: %SCRIPT_DIR%
+    goto :fail
+  )
+
+  if not exist "%PERSIST_DIR%" mkdir "%PERSIST_DIR%" 2>nul
+  echo Copying package files ^(excluding .venv^)...
+  robocopy "%SCRIPT_DIR%" "%PERSIST_DIR%" /E /XD .venv __pycache__ .git /XF *.pyc *.pyo /NFL /NDL /NJH /NJS /NP /R:2 /W:1 >nul
+  set "RC=!ERRORLEVEL!"
+  if !RC! GEQ 8 (
+    echo ERROR: robocopy failed with code !RC!
+    goto :fail
+  )
+  echo Copy complete.
+
+  REM Ensure launcher bat is present at persist root
+  if not exist "%PERSIST_DIR%\install_and_run.bat" (
+    copy /y "%SCRIPT_DIR%\install_and_run.bat" "%PERSIST_DIR%\install_and_run.bat" >nul
+  )
+
+  call :create_desktop_shortcut
+  if errorlevel 1 (
+    echo WARNING: Desktop shortcut could not be created. You can still run:
+    echo   "%PERSIST_DIR%\install_and_run.bat"
+  ) else (
+    echo Desktop shortcut created: %SHORTCUT_NAME%
+  )
+
+  echo.
+  echo Launching from persistent install...
+  echo.
+  start "" "%PERSIST_DIR%\install_and_run.bat"
+  exit /b 0
+)
+
+REM ========== Running from LocalAppData persistent install ==========
+set "PACKAGE_DIR=%PERSIST_DIR%"
+cd /d "%PACKAGE_DIR%"
+
 set "VENV_DIR=%PACKAGE_DIR%\.venv"
 set "LOG_FILE=%TEMP%\LibertyDemo_%RANDOM%.log"
 set "PORT=8080"
@@ -25,13 +89,16 @@ echo ============================================================
 echo   Liberty Basketball Analysis - Demo
 echo ============================================================
 echo.
-echo Package: %PACKAGE_DIR%
+echo Install: %PACKAGE_DIR%
 echo Log:     %LOG_FILE%
 echo.
 echo NOTE: winget-installed Python is permanent on this PC.
-echo       Demo cleanup removes only the TEMP log and local .venv.
+echo       Demo keeps this LocalAppData install, .venv, and Desktop shortcut.
 echo       GPU AI / large model weights / game video are not in this demo.
 echo.
+
+REM Refresh / ensure Desktop shortcut exists on every LocalAppData run
+call :create_desktop_shortcut >nul 2>&1
 
 if not exist "%PACKAGE_DIR%\app.py" (
   echo ERROR: app.py not found. Run this from the Liberty package root.
@@ -76,7 +143,6 @@ echo Starting Liberty on http://127.0.0.1:%PORT% ...
 echo.
 
 REM Start via venv python (NOT bare "start scripts\launch_liberty.py").
-REM Equivalent to: start ... "%VENV_DIR%\Scripts\python.exe" scripts\launch_liberty.py --no-browser
 REM Start-Process is used so we can store the launcher PID for safe cleanup.
 for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
   set "LAUNCHER_PID=%%P"
@@ -109,7 +175,8 @@ start "" "http://127.0.0.1:%PORT%/"
 echo.
 echo ------------------------------------------------------------
 echo   Demo is running at http://127.0.0.1:%PORT%/
-echo   Press any key in this window to stop and clean up.
+echo   Press any key in this window to stop the server.
+echo   Install + Desktop shortcut will remain for next time.
 echo ------------------------------------------------------------
 echo.
 pause >nul
@@ -117,6 +184,31 @@ pause >nul
 goto :cleanup_ok
 
 REM ======================== helpers ========================
+
+:create_desktop_shortcut
+REM Create/update Desktop shortcut via WScript.Shell.
+REM Target: LocalAppData install_and_run.bat; WorkingDirectory: persist folder.
+set "DESKTOP_DIR="
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%D"
+if not defined DESKTOP_DIR set "DESKTOP_DIR=%USERPROFILE%\Desktop"
+set "LNK_PATH=%DESKTOP_DIR%\%SHORTCUT_NAME%"
+set "TARGET_BAT=%PERSIST_DIR%\install_and_run.bat"
+if not exist "%TARGET_BAT%" (
+  echo ERROR: shortcut target missing: %TARGET_BAT%
+  exit /b 1
+)
+powershell -NoProfile -Command ^
+  "$ws = New-Object -ComObject WScript.Shell;" ^
+  "$s = $ws.CreateShortcut('%LNK_PATH%');" ^
+  "$s.TargetPath = '%TARGET_BAT%';" ^
+  "$s.WorkingDirectory = '%PERSIST_DIR%';" ^
+  "$s.WindowStyle = 1;" ^
+  "$s.Description = 'Liberty Basketball Analysis Demo';" ^
+  "$s.Save()"
+if errorlevel 1 exit /b 1
+if not exist "%LNK_PATH%" exit /b 1
+echo Shortcut ready: %LNK_PATH%
+exit /b 0
 
 :refresh_path
 REM Merge Machine + User Path from the registry into this session.
@@ -311,11 +403,10 @@ exit /b 0
 
 :cleanup_ok
 call :stop_liberty_tree
-echo Cleaning demo venv and log...
-if exist "%VENV_DIR%" rmdir /s /q "%VENV_DIR%" 2>nul
+echo Cleaning TEMP log only (keeping install + .venv + Desktop shortcut)...
 if exist "%LOG_FILE%" del /f /q "%LOG_FILE%" 2>nul
 if exist "%LOG_FILE%.err" del /f /q "%LOG_FILE%.err" 2>nul
-echo Done. (System Python from winget was left installed, if used.)
+echo Done. Re-launch anytime via Desktop "Liberty Basketball Demo".
 echo.
 pause
 exit /b 0

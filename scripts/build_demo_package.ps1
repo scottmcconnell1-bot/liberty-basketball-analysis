@@ -186,7 +186,9 @@ foreach ($rel in $required) {
 $bat = Get-Content (Join-Path $Staging "install_and_run.bat") -Raw
 foreach ($marker in @(
     "find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py",
-    "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python"
+    "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python",
+    "PERSIST_DIR", "LibertyBasketballDemo", "create_desktop_shortcut", "WScript.Shell",
+    "SHORTCUT_NAME"
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
@@ -200,7 +202,13 @@ if ($gotoLines) {
 if ($bat -notmatch 'INSTALL_TRIED=1') {
     throw "install_and_run.bat must set INSTALL_TRIED=1 before winget (one-shot install)"
 }
-Write-Host "  OK install_and_run.bat markers (one-shot winget + PATH refresh)"
+if ($bat -notmatch 'Liberty Basketball Demo\.lnk') {
+    throw "install_and_run.bat must create Desktop shortcut Liberty Basketball Demo.lnk"
+}
+if ($bat -notmatch 'robocopy') {
+    throw "install_and_run.bat must robocopy payload to LocalAppData persist dir"
+}
+Write-Host "  OK install_and_run.bat markers (persist install + Desktop shortcut + one-shot winget)"
 
 Write-Step "Locating 7-Zip"
 $sevenZip = Ensure-7Zip
@@ -250,14 +258,17 @@ $readme = @"
 Liberty Basketball Analysis - Coach Demo
 ========================================
 
-Double-click LibertyDemo.exe. It extracts a portable copy and runs
+Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
 install_and_run.bat, which:
 
-  1. Finds Python 3.12/3.13 (py launcher preferred) or installs 3.12 via winget
-  2. Creates a local .venv and installs requirements.txt
-  3. Starts the app with the venv Python (scripts\launch_liberty.py --no-browser)
-  4. Opens http://127.0.0.1:8080
-  5. On keypress: stops only Liberty processes, removes .venv + TEMP log
+  1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\
+  2. Creates Desktop shortcut "Liberty Basketball Demo.lnk"
+     (target: that folder\install_and_run.bat)
+  3. Relaunches from LocalAppData (so the shortcut survives TEMP cleanup)
+  4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
+  5. Creates/reuses LocalAppData\.venv and installs requirements.txt
+  6. Starts the app (scripts\launch_liberty.py --no-browser) and opens :8080
+  7. On keypress: stops Liberty processes; keeps install + .venv + shortcut
 
 Coach blurb
 -----------
@@ -275,6 +286,7 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
 - SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
+- Persist: %LOCALAPPDATA%\LibertyBasketballDemo + Desktop shortcut
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
