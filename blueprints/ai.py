@@ -848,9 +848,7 @@ def compare_video_analysis(vid_id):
 
     ensure_primary_run_metadata(db, video)
     rows = db.execute(
-        """SELECT ar.*,
-                  (SELECT COUNT(*) FROM detections d WHERE (d.relational_game_id = (SELECT id FROM games WHERE game_id = ar.analysis_key) OR (d.relational_game_id IS NULL AND d.game_id = ar.analysis_key))) AS detection_count,
-                  (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.analysis_key) AS event_count
+        """SELECT ar.*
            FROM analysis_runs ar
            WHERE ar.source_video_id = ?
               OR ar.base_analysis_key = ?
@@ -859,7 +857,15 @@ def compare_video_analysis(vid_id):
            ORDER BY ar.id DESC""",
         (vid_id, video["game_id"], video["game_id"], video["file_path"]),
     ).fetchall()
-    runs = [build_run_summary(row) for row in rows]
+    # Count per analysis_key only. Do not join detections via games.game_id
+    # (that column does not exist) or shared relational_game_id (would merge reruns).
+    runs = []
+    for row in rows:
+        run = build_run_summary(row)
+        analysis_key = run.get("analysis_key")
+        run["detection_count"] = count_detections_for_analysis(db, analysis_key=analysis_key)
+        run["event_count"] = count_events_for_analysis(db, analysis_key=analysis_key)
+        runs.append(run)
     primary_run = next((run for run in runs if run.get("run_kind") == "primary"), runs[-1] if runs else None)
     baseline_detection_count = primary_run["detection_count"] if primary_run else 0
     baseline_event_count = primary_run["event_count"] if primary_run else 0
@@ -867,6 +873,18 @@ def compare_video_analysis(vid_id):
     for run in runs:
         run["detection_delta"] = run["detection_count"] - baseline_detection_count
         run["event_delta"] = run["event_count"] - baseline_event_count
+
+    video_path = video["file_path"] or ""
+    video_abs = os.path.abspath(video_path) if video_path else ""
+    video_on_disk = bool(video_abs) and os.path.isfile(video_abs)
+    video_missing_message = None
+    if not video_on_disk:
+        video_missing_message = (
+            f"Video file is missing on disk: {video_path or '(no path recorded)'}. "
+            "Existing AI runs below can still be compared by counts, but Film Tool "
+            "playback and new reruns need the MP4 restored (re-download from NFHS "
+            "or re-upload the file)."
+        )
 
     return render_template(
         "analysis_compare.html",
@@ -880,6 +898,8 @@ def compare_video_analysis(vid_id):
         error=request.args.get("error"),
         ai_runtime_available=ai_runtime_available(),
         ai_install_commands=ai_packages_install_commands(),
+        video_on_disk=video_on_disk,
+        video_missing_message=video_missing_message,
     )
 
 

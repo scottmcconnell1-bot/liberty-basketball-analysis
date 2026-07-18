@@ -1740,6 +1740,79 @@ def test_compare_video_analysis_keeps_run_specific_counts(client, db):
     assert html.count("+1</div>") >= 2
 
 
+def test_compare_counts_detections_when_relational_game_id_set(client, db, tmp_path):
+    """Wilder-style rows set detections.relational_game_id; counts must still key off analysis_key."""
+    video_file = tmp_path / "wilder.mp4"
+    video_file.write_bytes(b"\x00" * 2048)
+    relational_game_id = db.execute(
+        "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
+        ("nfhs_vod", "gam_wilder_compare"),
+    ).lastrowid
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id, relational_game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder.mp4", "wilder.mp4", str(video_file), 2048, "Wilder High School", "wilder_base", relational_game_id),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status, game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder_base", str(video_file), 1, "wilder_base", "Primary", "primary", "completed", relational_game_id),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status, game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder_base__rerun_1", str(video_file), 1, "wilder_base", "Rerun A", "rerun", "completed", relational_game_id),
+    )
+    for frame in (1, 2, 3):
+        db.execute(
+            """INSERT INTO detections
+               (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence,
+                x_center, y_center, width, height)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            ("wilder_base__rerun_1", relational_game_id, frame, frame * 100, "person", 0.9, 10, 10, 20, 40),
+        )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, relational_game_id, frame_number, timestamp_ms, object_class, confidence,
+            x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("wilder_base", relational_game_id, 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/videos/1/compare")
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert "Rerun A" in html
+    assert "3\n          <div class=\"text-muted\">+2</div>" in html
+    assert "Video file missing" not in html
+
+
+def test_compare_shows_missing_video_banner(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("gone.mp4", "gone.mp4", "uploads/does-not-exist-wilder.mp4", 1000, "Wilder High School", "gone_game"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, run_label, run_kind, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        ("gone_game", "uploads/does-not-exist-wilder.mp4", 1, "gone_game", "Primary", "primary", "completed"),
+    )
+    db.commit()
+
+    r = client.get("/videos/1/compare")
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert "Video file missing" in html
+    assert "does-not-exist-wilder.mp4" in html
+
+
 def test_stats_empty_game(client):
     r = client.get("/api/stats/no_such_game")
     assert r.status_code == 200

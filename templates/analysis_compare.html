@@ -20,13 +20,25 @@
 <div class="alert alert-success">{{ message }}</div>
 {% endif %}
 
+{% if video_missing_message %}
+<div class="card" style="margin-bottom:16px;padding:14px 20px;background:#fff7ed;border-color:#fdba74;">
+  <strong>Video file missing — new comparison reruns and Film Tool playback are blocked.</strong>
+  <p class="text-muted" style="margin:.5rem 0 0;">{{ video_missing_message }}</p>
+  {% if runs %}
+  <p class="text-muted" style="margin:.5rem 0 0;">{{ runs|length }} saved AI run(s) are listed below for side-by-side count comparison.</p>
+  {% else %}
+  <p class="text-muted" style="margin:.5rem 0 0;">No analysis runs are stored for this video yet, so there is nothing to compare until the file is restored and AI is run.</p>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if not ai_runtime_available %}
 <div class="card" style="margin-bottom:16px;padding:14px 20px;background:#fef2f2;border-color:#fca5a5;">
   <strong>AI analysis is not available on this server.</strong>
-  <p class="text-muted" style="margin:.5rem 0 0;">OpenCV (<code>cv2</code>) and Ultralytics must be installed before reruns can execute. The default local install only includes the web app — not the full AI stack.</p>
-  <p style="margin:.75rem 0 .35rem;font-weight:600;">Install (in your app virtualenv), then restart:</p>
+  <p class="text-muted" style="margin:.5rem 0 0;">OpenCV (<code>cv2</code>) and Ultralytics must be installed in the <em>same Python that is serving Liberty</em> before new comparison reruns can execute. Check <a href="{{ url_for('core.settings_page') }}">Settings → Runtime</a> for the active interpreter path.</p>
+  <p style="margin:.75rem 0 .35rem;font-weight:600;">Install (into that interpreter / .venv), then restart the app:</p>
   <pre style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;font-size:.82rem;overflow:auto;margin:0;">{{ ai_install_commands }}</pre>
-  <p class="text-muted" style="margin:.75rem 0 0;">Or use Docker: <code>docker compose up -d --build</code>. Check <a href="{{ url_for('core.settings_page') }}">Settings → Runtime</a> to confirm packages show Yes.</p>
+  <p class="text-muted" style="margin:.75rem 0 0;">Or use Docker: <code>docker compose up -d --build</code>. Existing completed runs below remain available for count comparison even while packages are missing.</p>
 </div>
 {% endif %}
 
@@ -46,7 +58,7 @@
           {% if current_ai_settings.llm_model %}<br>{{ current_ai_settings.llm_provider }} / {{ current_ai_settings.llm_model }}{% endif %}
         </div>
       </div>
-      <button class="btn btn-primary" type="submit" {% if not ai_runtime_available %}disabled title="Install AI packages first"{% endif %}>Rerun AI with Current Settings</button>
+      <button class="btn btn-primary" type="submit" {% if not ai_runtime_available or not video_on_disk %}disabled title="{% if not video_on_disk %}Video file missing on disk{% else %}Install AI packages first{% endif %}"{% endif %}>Rerun AI with Current Settings</button>
     </div>
     <p class="text-muted mt-2">Each rerun gets its own analysis key, so detections and events stay separate for side-by-side comparison. Opening a <strong>running</strong> rerun in Film Tool shows analysis progress (animated bar until the first percent appears).</p>
     <p class="text-muted">Detector and runtime settings affect the current video pipeline directly. Local LLM choices are captured in the snapshot so you can compare them as future AI-assisted steps are added.</p>
