@@ -678,7 +678,15 @@ function queueServerSave(game) {
 
 async function importGameJsonToServer(payload, analysisGameId) {
     const body = { ...payload };
-    if (analysisGameId && !body.analysisGameId) body.analysisGameId = analysisGameId;
+    if (analysisGameId && !body.analysisGameId) {
+        body.analysisGameId = analysisGameId;
+        if (body.autosave && !body.autosave.analysisGameId) body.autosave = { ...body.autosave, analysisGameId };
+        if (Array.isArray(body.savedGames)) {
+            body.savedGames = body.savedGames.map(g => (
+                g.analysisGameId ? g : { ...g, analysisGameId }
+            ));
+        }
+    }
     const resp = await fetch('/api/film-tool-games/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

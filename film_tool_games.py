@@ -193,10 +193,32 @@ def delete_film_tool_game(db, client_game_id: str) -> bool:
     return cur.rowcount > 0
 
 
+def _pick_backup_game(payload: dict) -> dict | None:
+    """Normalize browser backup JSON (savedGames + autosave) to one game object."""
+    if isinstance(payload.get("rows"), list):
+        return payload
+    autosave = payload.get("autosave")
+    if isinstance(autosave, dict) and isinstance(autosave.get("rows"), list) and autosave["rows"]:
+        return autosave
+    saved = payload.get("savedGames")
+    if isinstance(saved, list):
+        candidates = [g for g in saved if isinstance(g, dict) and isinstance(g.get("rows"), list) and g["rows"]]
+        if candidates:
+            return max(candidates, key=lambda g: len(g.get("rows") or []))
+    return None
+
+
 def import_exported_events(db, payload: dict, *, created_by_user_id=None) -> dict:
     """Import Film Tool export JSON (events_*.json) or a full saved game blob."""
     if not isinstance(payload, dict):
         raise ValueError("Import payload must be a JSON object")
+
+    backup_game = _pick_backup_game(payload)
+    if backup_game is not None and backup_game is not payload:
+        merged = dict(backup_game)
+        if payload.get("analysisGameId") and not merged.get("analysisGameId"):
+            merged["analysisGameId"] = payload["analysisGameId"]
+        return save_film_tool_game(db, merged, created_by_user_id=created_by_user_id)
 
     if isinstance(payload.get("rows"), list):
         return save_film_tool_game(db, payload, created_by_user_id=created_by_user_id)

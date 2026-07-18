@@ -63,6 +63,19 @@ def test_list_film_tool_games_by_analysis_key(db):
     assert alpha_games[0]["id"] == "game-a"
 
 
+def test_import_browser_backup_json(db):
+    payload = {
+        "exportedAt": "2026-07-18T07:16:08.859Z",
+        "savedGames": [_sample_game("game-backup", "backup_game_key")],
+        "autosave": None,
+    }
+    result = import_exported_events(db, payload)
+    db.commit()
+    loaded = get_film_tool_game(db, "game-backup")
+    assert loaded is not None
+    assert len(loaded["rows"]) == 1
+
+
 def test_import_exported_events_json(db):
     export_payload = {
         "mode": "my",
