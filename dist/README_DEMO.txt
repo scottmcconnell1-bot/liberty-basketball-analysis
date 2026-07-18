@@ -1,14 +1,21 @@
 Liberty Basketball Analysis - Coach Demo
 ========================================
 
-Double-click LibertyDemo.exe. It extracts a portable copy and runs
+Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
 install_and_run.bat, which:
 
-  1. Finds Python 3.12/3.13 (py launcher preferred) or installs 3.12 via winget
-  2. Creates a local .venv and installs requirements.txt
-  3. Starts the app with the venv Python (scripts\launch_liberty.py --no-browser)
-  4. Opens http://127.0.0.1:8080
-  5. On keypress: stops only Liberty processes, removes .venv + TEMP log
+  1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\ (session only)
+  2. Creates Desktop URL shortcuts that open http://127.0.0.1:8080
+       - Liberty Basketball Demo.lnk
+       - Liberty Basketball Demo.url  (InternetShortcut; more reliable for URLs)
+     Desktop is resolved via GetFolderPath, %HOME%\Desktop,
+     %HOME%\OneDrive\Desktop, and registry User Shell Folders
+  3. Relaunches from LocalAppData for the session
+  4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
+  5. Creates/reuses LocalAppData\.venv and installs requirements.txt
+  6. Starts the app (scripts\launch_liberty.py --no-browser) and opens :8080
+  7. On keypress: stops Liberty (PID-based), deletes Desktop shortcuts,
+     wipes %LOCALAPPDATA%\LibertyBasketballDemo, deletes TEMP logs
 
 Coach blurb
 -----------
@@ -26,6 +33,7 @@ Build notes (2026-07-18)
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
 - SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
+- Session install: %LOCALAPPDATA%\LibertyBasketballDemo (wiped on exit)
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo

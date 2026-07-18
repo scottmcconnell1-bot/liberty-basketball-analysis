@@ -7,19 +7,23 @@ REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
 REM First run (SFX TEMP extract): copy payload to
 REM   %LOCALAPPDATA%\LibertyBasketballDemo\
-REM create Desktop shortcut, then relaunch from that folder.
-REM Subsequent runs (shortcut / LocalAppData): reuse .venv, skip winget if
-REM Python is already found.
+REM create Desktop URL shortcuts (.lnk + .url), then relaunch from that folder.
+REM Subsequent runs from LocalAppData: reuse .venv for the session.
 REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
 REM then python on PATH. Winget install is attempted at most ONCE.
 REM Start server with venv python + scripts\launch_liberty.py --no-browser.
 REM Kill only the Liberty process tree (not all python.exe).
-REM Cleanup: stop server + TEMP log. Keeps LocalAppData install, .venv, and
-REM Desktop shortcut. Does NOT uninstall winget Python.
+REM Cleanup on exit: stop server, wipe LocalAppData install, delete TEMP log,
+REM delete Desktop shortcuts. Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
 set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
-set "SHORTCUT_NAME=Liberty Basketball Demo.lnk"
+set "SHORTCUT_LNK=Liberty Basketball Demo.lnk"
+set "SHORTCUT_URL=Liberty Basketball Demo.url"
+set "DEMO_URL=http://127.0.0.1:8080"
+set "DESKTOP_DIR="
+set "LNK_PATH="
+set "URL_PATH="
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -27,14 +31,23 @@ REM Normalize persist path (expand + strip trailing slash)
 for %%I in ("%PERSIST_DIR%") do set "PERSIST_DIR=%%~fI"
 if "%PERSIST_DIR:~-1%"=="\" set "PERSIST_DIR=%PERSIST_DIR:~0,-1%"
 
-REM If not already running from the persistent install, copy + shortcut + relaunch.
+REM Cleanup handoff: bat may live under PERSIST_DIR; wipe from a TEMP copy.
+if /I "%~1"=="--cleanup-phase" (
+  set "PACKAGE_DIR=%PERSIST_DIR%"
+  set "PORT=8080"
+  if not "%~2"=="" set "LOG_FILE=%~2"
+  if not "%~3"=="" set "LAUNCHER_PID=%~3"
+  if /I "%~4"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
+)
+
+REM If not already running from the session install, copy + shortcut + relaunch.
 if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
   echo.
   echo ============================================================
   echo   Liberty Basketball Analysis - Demo Setup
   echo ============================================================
   echo.
-  echo Installing demo to:
+  echo Installing demo for this session to:
   echo   %PERSIST_DIR%
   echo.
 
@@ -60,20 +73,17 @@ if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
 
   call :create_desktop_shortcut
   if errorlevel 1 (
-    echo WARNING: Desktop shortcut could not be created. You can still run:
-    echo   "%PERSIST_DIR%\install_and_run.bat"
-  ) else (
-    echo Desktop shortcut created: %SHORTCUT_NAME%
+    echo WARNING: Desktop shortcut could not be created. Demo will still run.
   )
 
   echo.
-  echo Launching from persistent install...
+  echo Launching from session install...
   echo.
   start "" "%PERSIST_DIR%\install_and_run.bat"
   exit /b 0
 )
 
-REM ========== Running from LocalAppData persistent install ==========
+REM ========== Running from LocalAppData session install ==========
 set "PACKAGE_DIR=%PERSIST_DIR%"
 cd /d "%PACKAGE_DIR%"
 
@@ -89,16 +99,17 @@ echo ============================================================
 echo   Liberty Basketball Analysis - Demo
 echo ============================================================
 echo.
-echo Install: %PACKAGE_DIR%
-echo Log:     %LOG_FILE%
+echo Session install: %PACKAGE_DIR%
+echo Log:             %LOG_FILE%
 echo.
-echo NOTE: winget-installed Python is permanent on this PC.
-echo       Demo keeps this LocalAppData install, .venv, and Desktop shortcut.
+echo NOTE: winget-installed Python ^(if needed^) stays on this PC.
+echo       When you press a key, this demo wipes LocalAppData files
+echo       and removes the Desktop shortcut^(s^).
 echo       GPU AI / large model weights / game video are not in this demo.
 echo.
 
-REM Refresh / ensure Desktop shortcut exists on every LocalAppData run
-call :create_desktop_shortcut >nul 2>&1
+REM Refresh / ensure Desktop URL shortcuts exist for this session
+call :create_desktop_shortcut
 
 if not exist "%PACKAGE_DIR%\app.py" (
   echo ERROR: app.py not found. Run this from the Liberty package root.
@@ -175,8 +186,9 @@ start "" "http://127.0.0.1:%PORT%/"
 echo.
 echo ------------------------------------------------------------
 echo   Demo is running at http://127.0.0.1:%PORT%/
-echo   Press any key in this window to stop the server.
-echo   Install + Desktop shortcut will remain for next time.
+echo   Desktop shortcut opens that URL while the demo runs.
+echo   Press any key in this window to stop and remove all
+echo   installed demo files ^(LocalAppData + Desktop shortcuts^).
 echo ------------------------------------------------------------
 echo.
 pause >nul
@@ -185,29 +197,156 @@ goto :cleanup_ok
 
 REM ======================== helpers ========================
 
-:create_desktop_shortcut
-REM Create/update Desktop shortcut via WScript.Shell.
-REM Target: LocalAppData install_and_run.bat; WorkingDirectory: persist folder.
+:resolve_desktop_dir
+REM Resolve Desktop via ALL known locations; pick first that exists and is writable.
+REM Sets DESKTOP_DIR. Exit 0 on success, 1 on failure.
 set "DESKTOP_DIR="
-for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%D"
-if not defined DESKTOP_DIR set "DESKTOP_DIR=%USERPROFILE%\Desktop"
-set "LNK_PATH=%DESKTOP_DIR%\%SHORTCUT_NAME%"
-set "TARGET_BAT=%PERSIST_DIR%\install_and_run.bat"
-if not exist "%TARGET_BAT%" (
-  echo ERROR: shortcut target missing: %TARGET_BAT%
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command ^
+  "$cands = New-Object System.Collections.Generic.List[string];" ^
+  "try { $p = [Environment]::GetFolderPath('Desktop'); if ($p) { [void]$cands.Add($p) } } catch {};" ^
+  "foreach ($p in @((Join-Path $HOME 'Desktop'), (Join-Path $HOME 'OneDrive\Desktop'))) { if ($p -and (Test-Path -LiteralPath $p)) { [void]$cands.Add($p) } };" ^
+  "try {" ^
+  "  $reg = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Desktop -ErrorAction Stop).Desktop;" ^
+  "  if ($reg) { [void]$cands.Add([Environment]::ExpandEnvironmentVariables($reg)) }" ^
+  "} catch {};" ^
+  "$seen = @{};" ^
+  "foreach ($d in $cands) {" ^
+  "  if (-not $d) { continue };" ^
+  "  $full = [IO.Path]::GetFullPath($d);" ^
+  "  if ($seen.ContainsKey($full.ToLowerInvariant())) { continue };" ^
+  "  $seen[$full.ToLowerInvariant()] = $true;" ^
+  "  if (-not (Test-Path -LiteralPath $full)) { continue };" ^
+  "  try {" ^
+  "    $t = Join-Path $full ('_liberty_desk_test_' + [guid]::NewGuid().ToString('N') + '.tmp');" ^
+  "    [IO.File]::WriteAllText($t, 'ok');" ^
+  "    Remove-Item -LiteralPath $t -Force -ErrorAction SilentlyContinue;" ^
+  "    Write-Output $full;" ^
+  "    exit 0" ^
+  "  } catch { continue }" ^
+  "};" ^
+  "exit 1"`) do set "DESKTOP_DIR=%%D"
+if not defined DESKTOP_DIR exit /b 1
+if not exist "%DESKTOP_DIR%" exit /b 1
+exit /b 0
+
+:create_desktop_shortcut
+REM Create URL shortcuts on the resolved Desktop:
+REM   1) Liberty Basketball Demo.lnk  (WScript URL shortcut)
+REM   2) Liberty Basketball Demo.url  (InternetShortcut — more reliable for URLs)
+REM Echoes the full path(s) created.
+call :resolve_desktop_dir
+if errorlevel 1 (
+  echo ERROR: Could not resolve a writable Desktop folder.
+  echo Tried: GetFolderPath, %%HOME%%\Desktop, %%HOME%%\OneDrive\Desktop, registry User Shell Folders.
   exit /b 1
 )
+
+set "LNK_PATH=%DESKTOP_DIR%\%SHORTCUT_LNK%"
+set "URL_PATH=%DESKTOP_DIR%\%SHORTCUT_URL%"
+echo Desktop folder: %DESKTOP_DIR%
+
+set "LNK_OK=0"
+set "URL_OK=0"
+
 powershell -NoProfile -Command ^
-  "$ws = New-Object -ComObject WScript.Shell;" ^
-  "$s = $ws.CreateShortcut('%LNK_PATH%');" ^
-  "$s.TargetPath = '%TARGET_BAT%';" ^
-  "$s.WorkingDirectory = '%PERSIST_DIR%';" ^
-  "$s.WindowStyle = 1;" ^
-  "$s.Description = 'Liberty Basketball Analysis Demo';" ^
-  "$s.Save()"
-if errorlevel 1 exit /b 1
-if not exist "%LNK_PATH%" exit /b 1
-echo Shortcut ready: %LNK_PATH%
+  "$lnk = '%LNK_PATH%';" ^
+  "$url = '%URL_PATH%';" ^
+  "$target = '%DEMO_URL%';" ^
+  "$okLnk = $false; $okUrl = $false;" ^
+  "try {" ^
+  "  $ws = New-Object -ComObject WScript.Shell;" ^
+  "  $s = $ws.CreateShortcut($lnk);" ^
+  "  $s.TargetPath = $env:SystemRoot + '\System32\cmd.exe';" ^
+  "  $s.Arguments = '/c start ' + [char]34 + [char]34 + ' ' + [char]34 + $target + [char]34;" ^
+  "  $s.WindowStyle = 7;" ^
+  "  $s.Description = 'Liberty Basketball Analysis Demo';" ^
+  "  $s.Save();" ^
+  "  if (Test-Path -LiteralPath $lnk) { $okLnk = $true }" ^
+  "} catch { Write-Host ('  .lnk failed: ' + $_.Exception.Message) }" ^
+  "try {" ^
+  "  $body = \"[InternetShortcut]`r`nURL=$target`r`n\";" ^
+  "  [IO.File]::WriteAllText($url, $body);" ^
+  "  if (Test-Path -LiteralPath $url) { $okUrl = $true }" ^
+  "} catch { Write-Host ('  .url failed: ' + $_.Exception.Message) }" ^
+  "if ($okLnk) { Write-Host ('SHORTCUT_LNK_OK=' + $lnk) }" ^
+  "if ($okUrl) { Write-Host ('SHORTCUT_URL_OK=' + $url) }" ^
+  "if (-not $okLnk -and -not $okUrl) { exit 1 }; exit 0"
+
+if errorlevel 1 (
+  echo ERROR: Failed to create Desktop shortcut files.
+  exit /b 1
+)
+
+if exist "%LNK_PATH%" (
+  echo Shortcut created: %LNK_PATH%
+  set "LNK_OK=1"
+)
+if exist "%URL_PATH%" (
+  echo Shortcut created: %URL_PATH%
+  set "URL_OK=1"
+)
+if "!LNK_OK!"=="0" if "!URL_OK!"=="0" exit /b 1
+exit /b 0
+
+:remove_desktop_shortcuts
+REM Delete .lnk and .url from every candidate Desktop path (not only the one we used).
+echo Removing Desktop shortcut^(s^)...
+powershell -NoProfile -Command ^
+  "$names = @('Liberty Basketball Demo.lnk','Liberty Basketball Demo.url');" ^
+  "$cands = New-Object System.Collections.Generic.List[string];" ^
+  "try { $p = [Environment]::GetFolderPath('Desktop'); if ($p) { [void]$cands.Add($p) } } catch {};" ^
+  "foreach ($p in @((Join-Path $HOME 'Desktop'), (Join-Path $HOME 'OneDrive\Desktop'))) { if ($p) { [void]$cands.Add($p) } };" ^
+  "try {" ^
+  "  $reg = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Desktop -ErrorAction Stop).Desktop;" ^
+  "  if ($reg) { [void]$cands.Add([Environment]::ExpandEnvironmentVariables($reg)) }" ^
+  "} catch {};" ^
+  "if ($env:DESKTOP_DIR) { [void]$cands.Add($env:DESKTOP_DIR) };" ^
+  "$seen = @{}; $deleted = 0;" ^
+  "foreach ($d in $cands) {" ^
+  "  if (-not $d) { continue };" ^
+  "  try { $full = [IO.Path]::GetFullPath($d) } catch { continue };" ^
+  "  $key = $full.ToLowerInvariant();" ^
+  "  if ($seen.ContainsKey($key)) { continue }; $seen[$key] = $true;" ^
+  "  foreach ($n in $names) {" ^
+  "    $f = Join-Path $full $n;" ^
+  "    if (Test-Path -LiteralPath $f) {" ^
+  "      try { Remove-Item -LiteralPath $f -Force; Write-Host ('  deleted: ' + $f); $deleted++ }" ^
+  "      catch { Write-Host ('  FAILED delete: ' + $f + ' — ' + $_.Exception.Message) }" ^
+  "    }" ^
+  "  }" ^
+  "};" ^
+  "if ($deleted -eq 0) { Write-Host '  (no Desktop shortcuts found to delete)' }"
+exit /b 0
+
+:wipe_session_install
+REM Delete %LOCALAPPDATA%\LibertyBasketballDemo entirely.
+echo Removing session install...
+if exist "%PERSIST_DIR%" (
+  powershell -NoProfile -Command ^
+    "$dir = '%PERSIST_DIR%';" ^
+    "if (Test-Path -LiteralPath $dir) {" ^
+    "  try {" ^
+    "    Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop;" ^
+    "    Write-Host ('  deleted: ' + $dir)" ^
+    "  } catch {" ^
+    "    Write-Host ('  retry after brief wait...');" ^
+    "    Start-Sleep -Seconds 2;" ^
+    "    try {" ^
+    "      Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop;" ^
+    "      Write-Host ('  deleted: ' + $dir)" ^
+    "    } catch {" ^
+    "      Write-Host ('  FAILED delete: ' + $dir + ' — ' + $_.Exception.Message);" ^
+    "      Get-ChildItem -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {" ^
+    "        try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue } catch {}" ^
+    "      };" ^
+    "      try { Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop; Write-Host ('  deleted: ' + $dir) }" ^
+    "      catch { Write-Host ('  STILL PRESENT: ' + $dir) }" ^
+    "    }" ^
+    "  }" ^
+    "} else { Write-Host ('  (already gone: ' + $dir + ')') }"
+) else (
+  echo   ^(already gone: %PERSIST_DIR%^)
+)
 exit /b 0
 
 :refresh_path
@@ -402,19 +541,68 @@ powershell -NoProfile -Command ^
 exit /b 0
 
 :cleanup_ok
-call :stop_liberty_tree
-echo Cleaning TEMP log only (keeping install + .venv + Desktop shortcut)...
-if exist "%LOG_FILE%" del /f /q "%LOG_FILE%" 2>nul
-if exist "%LOG_FILE%.err" del /f /q "%LOG_FILE%.err" 2>nul
-echo Done. Re-launch anytime via Desktop "Liberty Basketball Demo".
-echo.
-pause
-exit /b 0
+set "_CLEANUP_ARG=ok"
+goto :handoff_cleanup_goto
 
 :cleanup_fail
+set "_CLEANUP_ARG=fail"
+goto :handoff_cleanup_goto
+
+:handoff_cleanup_goto
+REM Transfer control to a TEMP copy so we can wipe PERSIST_DIR (this folder).
+REM Invoking the other .bat without CALL does not return here.
+set "CLEANUP_BAT=%TEMP%\LibertyDemo_cleanup_run.bat"
+copy /y "%~f0" "%CLEANUP_BAT%" >nul
+if not exist "%CLEANUP_BAT%" (
+  echo WARNING: Could not copy cleanup helper to TEMP; wiping in-place.
+  if /I "%_CLEANUP_ARG%"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
+)
+"%CLEANUP_BAT%" --cleanup-phase "%LOG_FILE%" "%LAUNCHER_PID%" %_CLEANUP_ARG%
+exit /b 0
+
+:cleanup_ok_body
 call :stop_liberty_tree
-echo Leaving .venv in place for debugging. Log: %LOG_FILE%
+echo.
+echo Cleaning up all demo files...
+if defined LOG_FILE if exist "%LOG_FILE%" (
+  del /f /q "%LOG_FILE%" 2>nul
+  echo   deleted: %LOG_FILE%
+)
+if defined LOG_FILE if exist "%LOG_FILE%.err" (
+  del /f /q "%LOG_FILE%.err" 2>nul
+  echo   deleted: %LOG_FILE%.err
+)
+REM Also sweep any leftover LibertyDemo_*.log in TEMP
+for %%F in ("%TEMP%\LibertyDemo_*.log" "%TEMP%\LibertyDemo_*.log.err") do (
+  if exist "%%~fF" (
+    del /f /q "%%~fF" 2>nul
+    echo   deleted: %%~fF
+  )
+)
+call :remove_desktop_shortcuts
+call :wipe_session_install
+echo.
+echo Done. Demo files removed. ^(winget Python, if installed, was left alone.^)
+echo.
 pause
+REM Remove TEMP cleanup helper if we are that helper
+if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
+exit /b 0
+
+:cleanup_fail_body
+call :stop_liberty_tree
+echo.
+echo Setup/start failed — still cleaning demo files...
+if defined LOG_FILE if exist "%LOG_FILE%" (
+  echo   log kept for debug: %LOG_FILE%
+) else (
+  echo   ^(no log file^)
+)
+call :remove_desktop_shortcuts
+call :wipe_session_install
+echo.
+pause
+if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
 exit /b 1
 
 :fail

@@ -188,7 +188,9 @@ foreach ($marker in @(
     "find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py",
     "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python",
     "PERSIST_DIR", "LibertyBasketballDemo", "create_desktop_shortcut", "WScript.Shell",
-    "SHORTCUT_NAME"
+    "resolve_desktop_dir", "remove_desktop_shortcuts", "wipe_session_install",
+    "InternetShortcut", "OneDrive", "User Shell Folders",
+    "--cleanup-phase"
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
@@ -205,10 +207,16 @@ if ($bat -notmatch 'INSTALL_TRIED=1') {
 if ($bat -notmatch 'Liberty Basketball Demo\.lnk') {
     throw "install_and_run.bat must create Desktop shortcut Liberty Basketball Demo.lnk"
 }
-if ($bat -notmatch 'robocopy') {
-    throw "install_and_run.bat must robocopy payload to LocalAppData persist dir"
+if ($bat -notmatch 'Liberty Basketball Demo\.url') {
+    throw "install_and_run.bat must create Desktop InternetShortcut Liberty Basketball Demo.url"
 }
-Write-Host "  OK install_and_run.bat markers (persist install + Desktop shortcut + one-shot winget)"
+if ($bat -notmatch 'robocopy') {
+    throw "install_and_run.bat must robocopy payload to LocalAppData session dir"
+}
+if ($bat -notmatch 'wipe_session_install') {
+    throw "install_and_run.bat must wipe LocalAppData session install on exit"
+}
+Write-Host "  OK install_and_run.bat markers (session install + Desktop URL shortcuts + full wipe + one-shot winget)"
 
 Write-Step "Locating 7-Zip"
 $sevenZip = Ensure-7Zip
@@ -234,7 +242,7 @@ $configPath = Join-Path $PackageDir "config.txt"
 @"
 ;!@Install@!UTF-8!
 Title="Liberty Basketball Demo"
-BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nGPU AI weights are not included."
+BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nDemo files are removed when you finish.\nGPU AI weights are not included."
 RunProgram="cmd /c install_and_run.bat"
 ;!@InstallEnd@!
 "@ | Set-Content -Path $configPath -Encoding ASCII
@@ -261,14 +269,18 @@ Liberty Basketball Analysis - Coach Demo
 Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
 install_and_run.bat, which:
 
-  1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\
-  2. Creates Desktop shortcut "Liberty Basketball Demo.lnk"
-     (target: that folder\install_and_run.bat)
-  3. Relaunches from LocalAppData (so the shortcut survives TEMP cleanup)
+  1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\ (session only)
+  2. Creates Desktop URL shortcuts that open http://127.0.0.1:8080
+       - Liberty Basketball Demo.lnk
+       - Liberty Basketball Demo.url  (InternetShortcut; more reliable for URLs)
+     Desktop is resolved via GetFolderPath, %HOME%\Desktop,
+     %HOME%\OneDrive\Desktop, and registry User Shell Folders
+  3. Relaunches from LocalAppData for the session
   4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   5. Creates/reuses LocalAppData\.venv and installs requirements.txt
   6. Starts the app (scripts\launch_liberty.py --no-browser) and opens :8080
-  7. On keypress: stops Liberty processes; keeps install + .venv + shortcut
+  7. On keypress: stops Liberty (PID-based), deletes Desktop shortcuts,
+     wipes %LOCALAPPDATA%\LibertyBasketballDemo, deletes TEMP logs
 
 Coach blurb
 -----------
@@ -286,7 +298,7 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
 - SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
-- Persist: %LOCALAPPDATA%\LibertyBasketballDemo + Desktop shortcut
+- Session install: %LOCALAPPDATA%\LibertyBasketballDemo (wiped on exit)
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
