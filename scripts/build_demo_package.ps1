@@ -199,29 +199,32 @@ if (-not (Test-Path $sfx)) {
     throw "7z.sfx not found next to 7z.exe ($sfx). Reinstall 7-Zip full package."
 }
 
-Write-Step "Creating zip archive"
-$zipPath = Join-Path $PackageDir "LibertyDemo.zip"
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-# Zip contents of staging (so SFX extracts install_and_run.bat at top level of extract folder)
+Write-Step "Creating 7z archive"
+# Stock 7z.sfx expects a 7z payload (-t7z), NOT zip. Using -tzip produces a broken SFX
+# that fails with "Cannot open the file as [7z] archive / Is not archive".
+$archivePath = Join-Path $PackageDir "LibertyDemo.7z"
+if (Test-Path $archivePath) { Remove-Item $archivePath -Force }
+# Archive contents of staging (so SFX extracts install_and_run.bat at top level of extract folder)
 Push-Location $Staging
-& $sevenZip a -tzip -mx=7 $zipPath * | Out-Host
+& $sevenZip a -t7z -mx=9 $archivePath * | Out-Host
 Pop-Location
-if (-not (Test-Path $zipPath)) { throw "Zip was not created" }
+if (-not (Test-Path $archivePath)) { throw "7z archive was not created" }
 
 Write-Step "Building SFX config + LibertyDemo.exe"
 $configPath = Join-Path $PackageDir "config.txt"
 @"
 ;!@Install@!UTF-8!
-Title="Liberty Basketball Analysis Demo"
+Title="Liberty Basketball Demo"
 BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nGPU AI weights are not included."
-RunProgram="install_and_run.bat"
+RunProgram="cmd /c install_and_run.bat"
 ;!@InstallEnd@!
 "@ | Set-Content -Path $configPath -Encoding ASCII
 
 $exePath = Join-Path $PackageDir "LibertyDemo.exe"
 if (Test-Path $exePath) { Remove-Item $exePath -Force }
 
-cmd /c "copy /b `"$sfx`" + `"$configPath`" + `"$zipPath`" `"$exePath`""
+# Use visible 7z.sfx (not 7zCon.sfx / hidcon) so install progress is visible
+cmd /c "copy /b `"$sfx`" + `"$configPath`" + `"$archivePath`" `"$exePath`""
 if (-not (Test-Path $exePath)) { throw "LibertyDemo.exe was not created" }
 
 $exeMb = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
@@ -260,7 +263,7 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
 - Excluded: .git, .venv, __pycache__, build, dist, .pytest_cache, logs, uploads,
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
-- SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.zip
+- SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
