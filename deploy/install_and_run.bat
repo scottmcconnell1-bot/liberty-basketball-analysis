@@ -9,11 +9,11 @@ REM First run (SFX TEMP extract): copy payload to
 REM   %LOCALAPPDATA%\LibertyBasketballDemo\
 REM then CONTINUE in this same visible console (no second window / no shortcut).
 REM Prefer py -3.12 / py -3.13, then common dirs, then PATH. Winget at most ONCE.
-REM Start server with DEMO_MODE=1 + launch_liberty.py --no-browser.
-REM Bat opens the browser IMMEDIATELY after Start-Process (no health-check wait).
-REM Demo uses free port 8090+ (never 8080 — reserved for main Liberty app).
+REM Start server with DEMO_MODE=1 + launch_liberty.py --no-browser (hidden window).
+REM Wait until http://127.0.0.1:PORT/ returns HTTP 200, THEN open browser ONCE
+REM via a single PowerShell Start-Process. Never writes Desktop shortcuts.
 REM Wait for server exit (web DONE), then wipe LocalAppData + TEMP leftovers.
-REM Does NOT uninstall winget Python.
+REM Does NOT uninstall winget Python. Does NOT delete dist\LibertyDemo.exe.
 REM ---------------------------------------------------------------------------
 
 set "LOG_FILE=%TEMP%\LibertyDemo_run.log"
@@ -39,6 +39,18 @@ if /I "%~1"=="--cleanup-phase" (
   if /I "%~5"=="fail" (goto :cleanup_fail_body)
   if /I "%~5"=="ok" (goto :cleanup_ok_body)
   if /I "%~4"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
+)
+
+REM Guard: if already running from LocalAppData session, or a demo server is
+REM already listening on 8090-8100, do NOT re-copy from Temp / re-enter setup.
+call :check_already_running
+if "!ALREADY_RUNNING!"=="1" (
+  call :log "Demo already running at http://127.0.0.1:!PORT!/ — opening browser once and exiting setup."
+  call :open_browser
+  call :log "Attach to existing demo. Click DONE in the browser when finished."
+  call :log "This console will close; the existing demo console owns cleanup."
+  ping -n 4 127.0.0.1 >nul 2>&1
+  exit /b 0
 )
 
 REM If not already running from the session install, copy then CONTINUE here.
@@ -90,6 +102,7 @@ set "PORT=8090"
 set "PYTHON_EXE="
 set "INSTALL_TRIED=0"
 set "LAUNCHER_PID="
+set "BROWSER_OPENED=0"
 
 REM Signal demo mode for the web UI (env + flag file)
 set "DEMO_MODE=1"
@@ -159,12 +172,12 @@ call :log "Starting Liberty on http://127.0.0.1:!PORT! (DEMO_MODE=1, --no-browse
 call :log .
 
 REM Start via venv python (NOT bare "start scripts\launch_liberty.py").
-REM DEMO_MODE is inherited from this cmd session into PowerShell / child.
-REM Start-Process is used so we can store the launcher PID for wait + cleanup.
+REM WindowStyle Hidden so only this bat console is visible.
 REM Do NOT use start /wait — that would block this console on python.
 del /f /q "%LOG_FILE%.server" "%LOG_FILE%.err" 2>nul
+del /f /q "%TEMP%\LibertyDemo_done.flag" 2>nul
 set "LAUNCHER_PID="
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','!PORT!') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%.server' -RedirectStandardError '%LOG_FILE%.err'; Write-Output $p.Id"`) do (
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','!PORT!') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Hidden -PassThru -RedirectStandardOutput '%LOG_FILE%.server' -RedirectStandardError '%LOG_FILE%.err'; Write-Output $p.Id"`) do (
   set "LAUNCHER_PID=%%P"
 )
 
@@ -174,48 +187,50 @@ if not defined LAUNCHER_PID (
   call :log "Launcher PID: !LAUNCHER_PID!"
 )
 
-REM HARD FIX: open browser IMMEDIATELY — do NOT wait for health check.
-REM launch_liberty may re-pip for minutes; previous builds stuck in the wait
-REM loop and never reached :open_browser (log stopped at "[WAIT] attempt at 2s").
-call :log "Opening browser NOW (before any health poll)..."
-call :open_browser
-set "BROWSER_OPENED=1"
-
-REM Background-style readiness poll (logging only). Re-open browser once ready.
+REM Wait for HTTP 200 BEFORE opening the browser (avoids ERR_CONNECTION_REFUSED).
+REM Poll every ~1s, max 120s. Show console "Waiting for server..." so user knows.
 set /a "WAITED=0"
 set "SERVER_READY=0"
-call :log "Polling http://127.0.0.1:!PORT!/ for readiness (log only; browser already opened)..."
+set "BROWSER_OPENED=0"
+call :log "Waiting for server at http://127.0.0.1:!PORT!/ (up to 120s)..."
+call :log "First launch may take a few minutes while pip finishes — please wait."
 
 :wait_loop
-call :log "[WAIT] attempt at !WAITED!s ..."
-powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 2; Write-Output ('[WAIT] HTTP ' + $r.StatusCode); if ($r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { Write-Output ('[WAIT] not ready: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
+call :log "[WAIT] Waiting for server... (!WAITED!s)"
+powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 2; Write-Output ('[WAIT] HTTP ' + $r.StatusCode); if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { Write-Output ('[WAIT] not ready: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
 if !ERRORLEVEL! EQU 0 (
   set "SERVER_READY=1"
-  call :log "[WAIT] server responded OK at !WAITED!s — re-opening browser to be sure."
-  call :open_browser
+  call :log "[WAIT] server ready (HTTP 200) at !WAITED!s"
   goto :after_wait
 )
 
-if !WAITED! GEQ 90 (
-  if "!SERVER_READY!"=="0" (
-    call :log "WARNING: No HTTP success within 90s on port !PORT! — continuing anyway."
-    call :log "See log: %LOG_FILE%"
-    if exist "%LOG_FILE%.err" (
-      call :log "--- err log (tail) ---"
-      powershell -NoProfile -Command "Get-Content -LiteralPath '%LOG_FILE%.err' -Tail 40 -ErrorAction SilentlyContinue"
-    )
+if !WAITED! GEQ 120 (
+  call :log "ERROR: No HTTP 200 within 120s on port !PORT!."
+  call :log "See log: %LOG_FILE%"
+  if exist "%LOG_FILE%.err" (
+    call :log "--- err log (tail) ---"
+    powershell -NoProfile -Command "Get-Content -LiteralPath '%LOG_FILE%.err' -Tail 40 -ErrorAction SilentlyContinue"
   )
-  call :log "Re-opening browser after poll timeout..."
-  call :open_browser
-  goto :after_wait
+  if exist "%LOG_FILE%.server" (
+    call :log "--- server log (tail) ---"
+    powershell -NoProfile -Command "Get-Content -LiteralPath '%LOG_FILE%.server' -Tail 40 -ErrorAction SilentlyContinue"
+  )
+  goto :cleanup_fail
 )
 
-REM Avoid "timeout" (can hang when stdin is redirected from SFX). Use ping delay.
-ping -n 3 127.0.0.1 >nul 2>&1
-set /a "WAITED+=2"
+REM ~1 second delay (avoid "timeout" — can hang when stdin redirected from SFX)
+ping -n 2 127.0.0.1 >nul 2>&1
+set /a "WAITED+=1"
 goto :wait_loop
 
 :after_wait
+REM ONE browser open only — after HTTP 200. Never open on DONE / cleanup.
+if "!SERVER_READY!"=="1" if "!BROWSER_OPENED!"=="0" (
+  call :log "Opening browser ONCE (server ready)..."
+  call :open_browser
+  set "BROWSER_OPENED=1"
+)
+
 call :log .
 call :log "========================================"
 call :log "  DEMO RUNNING — http://127.0.0.1:!PORT!"
@@ -242,7 +257,30 @@ if "%~1"=="." (
   exit /b 0
 )
 echo(%~1
->>"%LOG_FILE%" echo(%~1
+>>"%LOG_FILE%" echo(%~1)
+exit /b 0
+
+:check_already_running
+REM Sets ALREADY_RUNNING=1 and PORT if a demo HTTP server is already up.
+set "ALREADY_RUNNING=0"
+REM If we were launched from Temp/SFX again while LocalAppData session exists
+REM and listens, skip re-setup entirely.
+for /L %%N in (8090,1,8100) do (
+  powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:%%N/' -TimeoutSec 1; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    REM Prefer confirming it looks like our demo (mode flag or persist dir lock).
+    if exist "%TEMP%\LibertyDemo_mode.flag" (
+      set "PORT=%%N"
+      set "ALREADY_RUNNING=1"
+      exit /b 0
+    )
+    if exist "%PERSIST_DIR%\.liberty_demo_mode" (
+      set "PORT=%%N"
+      set "ALREADY_RUNNING=1"
+      exit /b 0
+    )
+  )
+)
 exit /b 0
 
 :pick_port
@@ -264,68 +302,24 @@ exit /b 1
 
 :open_browser
 REM Bat MUST open the browser — launch_liberty is started with --no-browser.
-REM Fire multiple methods; some Windows/SFX contexts break one or another.
+REM ONE method only: PowerShell Start-Process. No Desktop .url. No pile-on.
 set "OPEN_URL=http://127.0.0.1:!PORT!/"
 call :log .
-call :log "[BROWSER] ========================================"
-call :log "[BROWSER] Opening !OPEN_URL! via ALL methods..."
-call :log "[BROWSER] ========================================"
-
-REM Write Desktop .url so user can click even if auto-open fails.
-set "URL_FILE=%USERPROFILE%\Desktop\Liberty Basketball Demo.url"
-(
-  echo [InternetShortcut]
-  echo URL=!OPEN_URL!
-) > "!URL_FILE!" 2>nul
-if exist "!URL_FILE!" (
-  call :log "[BROWSER] Wrote Desktop shortcut: !URL_FILE!"
-) else (
-  set "URL_FILE=%USERPROFILE%\OneDrive\Desktop\Liberty Basketball Demo.url"
-  (
-    echo [InternetShortcut]
-    echo URL=!OPEN_URL!
-  ) > "!URL_FILE!" 2>nul
-  if exist "!URL_FILE!" (
-    call :log "[BROWSER] Wrote OneDrive Desktop shortcut: !URL_FILE!"
-  ) else (
-    call :log "[BROWSER] WARNING: could not write Desktop .url"
-  )
-)
-
-call :log "[BROWSER] Method 1: cmd /c start http://..."
-cmd /c start http://127.0.0.1:!PORT!/ >> "%LOG_FILE%" 2>&1
-call :log "[BROWSER] Method 1 ERRORLEVEL=!ERRORLEVEL!"
-
-call :log "[BROWSER] Method 2: powershell Start-Process"
-powershell -NoProfile -Command "try { Start-Process 'http://127.0.0.1:!PORT!/'; Write-Output '[BROWSER] Start-Process: OK' } catch { Write-Output ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
-call :log "[BROWSER] Method 2 done ERRORLEVEL=!ERRORLEVEL!"
-
-call :log "[BROWSER] Method 3: explorer.exe URL"
-explorer.exe "http://127.0.0.1:!PORT!/" >> "%LOG_FILE%" 2>&1
-call :log "[BROWSER] Method 3 ERRORLEVEL=!ERRORLEVEL!"
-
-call :log "[BROWSER] Method 4: start empty-title quoted URL"
-start "" "!OPEN_URL!"
-call :log "[BROWSER] Method 4 ERRORLEVEL=!ERRORLEVEL!"
-
-if exist "!URL_FILE!" (
-  call :log "[BROWSER] Method 5: explorer Desktop .url"
-  explorer.exe "!URL_FILE!" >> "%LOG_FILE%" 2>&1
-  call :log "[BROWSER] Method 5 ERRORLEVEL=!ERRORLEVEL!"
-)
-
-call :log "[BROWSER] All open commands finished for !OPEN_URL!"
+call :log "[BROWSER] Opening !OPEN_URL! (single Start-Process)..."
+powershell -NoProfile -Command "Start-Process 'http://127.0.0.1:!PORT!/'" >> "%LOG_FILE%" 2>&1
+call :log "[BROWSER] Start-Process done ERRORLEVEL=!ERRORLEVEL!"
 call :log .
 exit /b 0
 
 :wait_for_server_exit
 REM Primary: wait until launcher PID exits (web DONE calls os._exit).
 REM Also accept %TEMP%\LibertyDemo_done.flag from the API.
+REM Do NOT open the browser here.
 echo Waiting for web DONE ^(server process exit^)...
 :wait_exit_loop
 if exist "%TEMP%\LibertyDemo_done.flag" (
   echo DONE flag detected — proceeding to cleanup...
-  timeout /t 2 /nobreak >nul
+  ping -n 3 127.0.0.1 >nul 2>&1
   exit /b 0
 )
 if defined LAUNCHER_PID (
@@ -341,7 +335,7 @@ if defined LAUNCHER_PID (
     exit /b 0
   )
 )
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul 2>&1
 goto :wait_exit_loop
 
 :remove_leftover_shortcuts
@@ -373,12 +367,14 @@ exit /b 0
 
 :wipe_temp_leftovers
 REM Delete TEMP LibertyDemo_* logs / leftover dirs we created.
+REM Also best-effort wipe orphaned 7zS* extract folders (SFX temp) if idle.
 REM Do NOT delete this cleanup bat until the very end ^(caller handles that^).
 echo Removing TEMP LibertyDemo leftovers...
 set "_TEMP_REMOVED=0"
 for %%F in (
   "%TEMP%\LibertyDemo_*.log"
   "%TEMP%\LibertyDemo_*.log.err"
+  "%TEMP%\LibertyDemo_*.log.server"
   "%TEMP%\LibertyDemo_mode.flag"
   "%TEMP%\LibertyDemo_done.flag"
   "%TEMP%\LibertyDemo_wait_done.ps1"
@@ -403,11 +399,30 @@ for /d %%D in ("%TEMP%\LibertyDemo_*") do (
     )
   )
 )
+REM Safe 7zS* cleanup: only folders that look like our SFX extract (have our bat)
+REM and are not our current script directory.
+powershell -NoProfile -Command ^
+  "$cur = [string]'%~dp0';" ^
+  "Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter '7zS*' -ErrorAction SilentlyContinue | ForEach-Object {" ^
+  "  $d = $_.FullName;" ^
+  "  if ($cur -and ($d.TrimEnd('\') -ieq $cur.TrimEnd('\'))) { return }" ^
+  "  $marker = Join-Path $d 'install_and_run.bat';" ^
+  "  $app = Join-Path $d 'app.py';" ^
+  "  if ((Test-Path -LiteralPath $marker) -and (Test-Path -LiteralPath $app)) {" ^
+  "    try {" ^
+  "      Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction Stop;" ^
+  "      Write-Host ('  deleted SFX temp: ' + $d)" ^
+  "    } catch {" ^
+  "      Write-Host ('  skip busy SFX temp: ' + $d)" ^
+  "    }" ^
+  "  }" ^
+  "}"
 if "!_TEMP_REMOVED!"=="0" echo   ^(no TEMP LibertyDemo_* leftovers found^)
 exit /b 0
 
 :wipe_session_install
 REM Delete %LOCALAPPDATA%\LibertyBasketballDemo entirely.
+REM NEVER touch dist\LibertyDemo.exe or the repo deliverable.
 echo Removing session install...
 if exist "%PERSIST_DIR%" (
   powershell -NoProfile -Command ^
@@ -639,6 +654,7 @@ goto :handoff_cleanup_goto
 :handoff_cleanup_goto
 REM Transfer control to a TEMP copy so we can wipe PERSIST_DIR (this folder).
 REM Invoking the other .bat without CALL does not return here.
+REM Do NOT open browser during cleanup.
 set "CLEANUP_BAT=%TEMP%\LibertyDemo_cleanup_run.bat"
 copy /y "%~f0" "%CLEANUP_BAT%" >nul
 if not exist "%CLEANUP_BAT%" (
@@ -661,6 +677,10 @@ if defined LOG_FILE if exist "%LOG_FILE%.err" (
   del /f /q "%LOG_FILE%.err" 2>nul
   echo   deleted: %LOG_FILE%.err
 )
+if defined LOG_FILE if exist "%LOG_FILE%.server" (
+  del /f /q "%LOG_FILE%.server" 2>nul
+  echo   deleted: %LOG_FILE%.server
+)
 call :wipe_temp_leftovers
 call :remove_leftover_shortcuts
 call :wipe_session_install
@@ -668,11 +688,11 @@ echo.
 echo ========================================
 echo   Uninstall complete.
 echo   Demo files removed from this PC.
-echo   winget Python ^(if installed^) was NOT removed.
+echo   Kept: dist\LibertyDemo.exe ^(deliverable^) and winget Python.
 echo ========================================
 echo.
 echo You can close this window.
-timeout /t 5 /nobreak >nul
+ping -n 6 127.0.0.1 >nul 2>&1
 REM Remove TEMP cleanup helper if we are that helper
 if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
 exit /b 0

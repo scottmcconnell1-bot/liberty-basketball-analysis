@@ -183,7 +183,7 @@ foreach ($rel in $required) {
     Write-Host "  OK $rel"
 }
 
-# Basic bat syntax markers — no Desktop shortcut creation
+# Basic bat syntax markers — wait-for-200 then ONE browser open; no Desktop shortcuts
 $bat = Get-Content (Join-Path $Staging "install_and_run.bat") -Raw
 foreach ($marker in @(
     "find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py",
@@ -191,8 +191,9 @@ foreach ($marker in @(
     "PERSIST_DIR", "LibertyBasketballDemo", "wipe_session_install",
     "wipe_temp_leftovers", "wait_for_server_exit", "open_browser",
     "DEMO_MODE", "--cleanup-phase", "DEMO RUNNING",
-    "[BROWSER]", "Start-Process",
+    "[BROWSER]", "Start-Process", "Waiting for server",
     "LibertyDemo_run.log", "pick_port", "PORT=8090",
+    "WindowStyle Hidden", "check_already_running",
     'cd /d "%~dp0"'
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
@@ -213,11 +214,11 @@ if ($bat -match 'create_desktop_shortcut' -or $bat -match '(?m)^\s*call\s+:creat
 if ($bat -match 'WScript\.Shell') {
     throw "install_and_run.bat must NOT use WScript.Shell"
 }
-if ($bat -notmatch '\[InternetShortcut\]') {
-    throw "install_and_run.bat must write a Desktop InternetShortcut .url as browser-open fallback"
+if ($bat -match '\[InternetShortcut\]') {
+    throw "install_and_run.bat must NOT write Desktop InternetShortcut .url files"
 }
-if ($bat -notmatch 'Liberty Basketball Demo\.url') {
-    throw "install_and_run.bat must write Liberty Basketball Demo.url on Desktop"
+if ($bat -match '(?m)^\s*.*Desktop\\Liberty Basketball Demo\.url') {
+    throw "install_and_run.bat must NOT create Desktop Liberty Basketball Demo.url"
 }
 if ($bat -match 'demo_done_dialog\.ps1' -or $bat -match 'System\.Windows\.Forms') {
     throw "install_and_run.bat must NOT use WinForms DONE dialog (web DONE button instead)"
@@ -225,20 +226,23 @@ if ($bat -match 'demo_done_dialog\.ps1' -or $bat -match 'System\.Windows\.Forms'
 if ($bat -notmatch 'DEMO_MODE=1') {
     throw "install_and_run.bat must set DEMO_MODE=1 for the web UI"
 }
-if ($bat -notmatch 'start\s+""\s+"http://127\.0\.0\.1:%PORT%/"' -and $bat -notmatch 'start\s+""\s+"%OPEN_URL%"' -and $bat -notmatch 'start\s+""\s+"!OPEN_URL!"') {
-    throw "install_and_run.bat must open browser via start "" url"
+if ($bat -match 'cmd /c start http://') {
+    throw "install_and_run.bat must NOT use cmd /c start pile-on browser opens"
 }
-if ($bat -notmatch 'cmd /c start http://127\.0\.0\.1:!PORT!/') {
-    throw "install_and_run.bat must open browser via cmd /c start http://..."
+if ($bat -match 'explorer\.exe "http://') {
+    throw "install_and_run.bat must NOT use explorer.exe URL browser opens"
 }
-if ($bat -notmatch 'Start-Process') {
-    throw "install_and_run.bat must open browser via PowerShell Start-Process"
+if ($bat -match 'Opening browser NOW') {
+    throw "install_and_run.bat must NOT open browser before HTTP 200"
 }
-if ($bat -notmatch 'explorer\.exe "http://127\.0\.0\.1:!PORT!/"') {
-    throw "install_and_run.bat must open browser via explorer.exe URL"
+if ($bat -notmatch 'Start-Process ''http://127\.0\.0\.1:!PORT!/''') {
+    throw "install_and_run.bat must open browser via single PowerShell Start-Process"
 }
-if ($bat -notmatch 'Opening browser NOW') {
-    throw "install_and_run.bat must open browser IMMEDIATELY after Start-Process (no health-check gate)"
+if ($bat -notmatch 'StatusCode -eq 200') {
+    throw "install_and_run.bat must wait for HTTP 200 before opening browser"
+}
+if ($bat -notmatch 'WAITED! GEQ 120') {
+    throw "install_and_run.bat must poll readiness up to 120s"
 }
 if ($bat -notmatch 'CHOSEN DEMO PORT') {
     throw "install_and_run.bat must log CHOSEN DEMO PORT loudly"
@@ -280,7 +284,7 @@ $appPy = Get-Content (Join-Path $Staging "app.py") -Raw
 if ($appPy -notmatch 'demo_bp' -or $appPy -notmatch 'demo_mode') {
     throw "app.py must register demo_bp and inject demo_mode"
 }
-Write-Host "  OK install_and_run.bat markers (DEMO_MODE + browser + port fallback + same-console + no shortcuts)"
+Write-Host "  OK install_and_run.bat markers (wait-for-200 + single Start-Process + no shortcuts)"
 
 Write-Step "Locating 7-Zip + installer SFX module (7zSD.sfx)"
 $sevenZip = Ensure-7Zip
@@ -373,12 +377,13 @@ opens a VISIBLE console, and runs install_and_run.bat, which:
   3. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   4. Creates/reuses LocalAppData\.venv and installs requirements.txt
   5. Starts the app with DEMO_MODE=1 (scripts\launch_liberty.py --no-browser)
-  6. Uses free port 8090+ (never 8080 — reserved for main Liberty); opens browser
-     IMMEDIATELY via cmd start / Start-Process / explorer (no health-check wait)
-  7. Coach clicks DONE in the web app top menu → POST /api/demo/done
+  6. Uses free port 8090+ (never 8080 — reserved for main Liberty)
+  7. Polls http://127.0.0.1:PORT/ until HTTP 200 (every ~1s, max 120s), then
+     opens the browser ONCE via PowerShell Start-Process. No Desktop shortcuts.
+  8. Coach clicks DONE in the web app top menu → POST /api/demo/done
      schedules TEMP cleanup, stops the server; bat then wipes
      %LOCALAPPDATA%\LibertyBasketballDemo and TEMP LibertyDemo_* leftovers.
-     winget Python is NOT uninstalled.
+     Does NOT delete dist\LibertyDemo.exe. winget Python is NOT uninstalled.
   Debug log: %TEMP%\LibertyDemo_run.log
 
 Coach blurb
@@ -407,7 +412,7 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
   * GPU AI / YOLO inference is not in the demo
   * First run needs network for pip wheels
   * Demo always uses 8090+ (8080 reserved for main Liberty app)
-  * Browser opens immediately after server Start-Process (before health poll)
+  * Browser opens only after HTTP 200 (single Start-Process; no Desktop .url)
 
 Rebuild
 -------

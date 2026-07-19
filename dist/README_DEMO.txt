@@ -9,12 +9,13 @@ opens a VISIBLE console, and runs install_and_run.bat, which:
   3. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   4. Creates/reuses LocalAppData\.venv and installs requirements.txt
   5. Starts the app with DEMO_MODE=1 (scripts\launch_liberty.py --no-browser)
-  6. Uses free port 8090+ (never 8080 ??? reserved for main Liberty); opens browser
-     IMMEDIATELY via cmd start / Start-Process / explorer (no health-check wait)
-  7. Coach clicks DONE in the web app top menu ??? POST /api/demo/done
+  6. Uses free port 8090+ (never 8080 ??? reserved for main Liberty)
+  7. Polls http://127.0.0.1:PORT/ until HTTP 200 (every ~1s, max 120s), then
+     opens the browser ONCE via PowerShell Start-Process. No Desktop shortcuts.
+  8. Coach clicks DONE in the web app top menu ??? POST /api/demo/done
      schedules TEMP cleanup, stops the server; bat then wipes
      %LOCALAPPDATA%\LibertyBasketballDemo and TEMP LibertyDemo_* leftovers.
-     winget Python is NOT uninstalled.
+     Does NOT delete dist\LibertyDemo.exe. winget Python is NOT uninstalled.
   Debug log: %TEMP%\LibertyDemo_run.log
 
 Coach blurb
@@ -43,7 +44,7 @@ Build notes (2026-07-19)
   * GPU AI / YOLO inference is not in the demo
   * First run needs network for pip wheels
   * Demo always uses 8090+ (8080 reserved for main Liberty app)
-  * Browser opens immediately after server Start-Process (before health poll)
+  * Browser opens only after HTTP 200 (single Start-Process; no Desktop .url)
 
 Rebuild
 -------

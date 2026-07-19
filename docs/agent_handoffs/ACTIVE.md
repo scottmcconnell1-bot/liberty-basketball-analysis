@@ -7,22 +7,22 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-browser-immediate-open |
-| **status** | `done` |
+| **id** | demo-wait-before-browser |
+| **status** | `in_progress` |
 | **assigned_to** | cursor-cloud-agent |
 
 ## Report
 
 ### Proven
 
-- **Why 3c69672 still failed:** Log after "Starting Liberty" showed `Launcher PID`, then `[WAIT] attempt at 0s` (timeout) and `[WAIT] attempt at 2s` — then **stopped**. No `[BROWSER]` lines ever. Browser open was still gated behind the wait loop; `launch_liberty` re-ran pip for minutes before Flask listened, so the bat never reached `:open_browser` (second `Invoke-WebRequest` appeared stuck / loop never advanced to the 3s early-open path in practice).
-- **Server was fine:** `.server`/`.err` showed Flask up on 8080 with API 200s — console wait was the failure, not the app.
-- **Hard fix:** Open browser **immediately** after `Start-Process` (before any health poll). Five methods: `cmd /c start`, PowerShell `Start-Process`, `explorer.exe` URL, `start ""`, Desktop `.url` + explorer. Demo ports **8090–8100 only** (8080 reserved for main). Loud `CHOSEN DEMO PORT` / `DEMO URL` logs. Poll is log-only; re-opens browser when HTTP ready. Replaced `timeout` delay with `ping` (SFX stdin hang risk).
+- Immediate multi-method browser open caused ERR_CONNECTION_REFUSED + many Chrome tabs (server not ready / DONE re-opened).
+- Fix: wait for HTTP 200 (poll ~1s, max 120s) then ONE `powershell Start-Process` browser open. No Desktop `.url`. Python `-WindowStyle Hidden`. Skip re-setup if demo already listening. DONE does not open browser; uninstall wipes LocalAppData + TEMP leftovers, keeps `dist\LibertyDemo.exe`.
 
 ### Files
 
-- `deploy/install_and_run.bat` — immediate multi-method browser; 8090+ port pick
-- `scripts/build_demo_package.ps1` — smoke checks for new markers / README
+- `deploy/install_and_run.bat` — wait-for-200, single browser, no shortcut, hidden server, already-running guard
+- `scripts/build_demo_package.ps1` — smoke checks aligned
+- `blueprints/demo.py` — cleanup also tries idle 7zS* SFX temps
 
 ### Leave alone
 

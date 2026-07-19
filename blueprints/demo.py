@@ -78,6 +78,14 @@ del /f /q "%TEMP%\\LibertyDemo_mode.flag" 2>nul
 del /f /q "%TEMP%\\LibertyDemo_done.flag" 2>nul
 for /d %%D in ("%TEMP%\\LibertyDemo_*") do rd /s /q "%%~fD" 2>nul
 
+REM Best-effort: idle SFX extract folders that contain our payload markers.
+REM Do NOT delete dist\\LibertyDemo.exe (deliverable lives elsewhere).
+for /d %%D in ("%TEMP%\\7zS*") do (
+  if exist "%%~fD\\install_and_run.bat" if exist "%%~fD\\app.py" (
+    rd /s /q "%%~fD" 2>nul
+  )
+)
+
 echo Demo cleanup finished.
 timeout /t 2 /nobreak >nul
 del /f /q "%~f0" 2>nul
