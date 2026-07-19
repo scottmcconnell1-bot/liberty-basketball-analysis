@@ -13,8 +13,10 @@ REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
 REM then python on PATH. Winget install is attempted at most ONCE.
 REM Start server with venv python + scripts\launch_liberty.py --no-browser.
 REM Kill only the Liberty process tree (not all python.exe).
-REM Cleanup on exit: stop server, wipe LocalAppData install, delete TEMP log,
-REM delete Desktop shortcuts. Does NOT uninstall winget Python.
+REM Wait for coach DONE (WinForms button, or type DONE / Enter).
+REM Cleanup on DONE: stop server, wipe LocalAppData install, delete TEMP
+REM LibertyDemo_* leftovers, delete Desktop shortcuts.
+REM Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
 set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
@@ -104,8 +106,8 @@ echo Session install: %PACKAGE_DIR%
 echo Log:             %LOG_FILE%
 echo.
 echo NOTE: winget-installed Python ^(if needed^) stays on this PC.
-echo       When you press a key, this demo wipes LocalAppData files
-echo       and removes the Desktop shortcut^(s^).
+echo       Click DONE when finished — that wipes LocalAppData files,
+echo       TEMP leftovers, and Desktop shortcut^(s^).
 echo       GPU AI / large model weights / game video are not in this demo.
 echo.
 
@@ -185,15 +187,14 @@ goto :wait_loop
 echo Server ready.
 start "" "http://127.0.0.1:%PORT%/"
 echo.
-echo ------------------------------------------------------------
-echo   Demo is running at http://127.0.0.1:%PORT%/
-echo   Desktop shortcut opens that URL while the demo runs.
-echo   Press any key in this window to stop and remove all
-echo   installed demo files ^(LocalAppData + Desktop shortcuts^).
-echo ------------------------------------------------------------
+echo ========================================
+echo   DEMO RUNNING — http://127.0.0.1:%PORT%
+echo   Click DONE in the popup window
+echo   to uninstall and exit.
+echo   ^(Or click this window and type DONE^)
+echo ========================================
 echo.
-pause >nul
-
+call :wait_for_done
 goto :cleanup_ok
 
 REM ======================== helpers ========================
@@ -265,6 +266,39 @@ if exist "%PUBLIC%\Desktop" (
 if "!URL_OK!"=="0" exit /b 1
 exit /b 0
 
+:wait_for_done
+REM Prefer WinForms DONE button; fall back to typing DONE / Enter in this console.
+set "DONE_SCRIPT=%PACKAGE_DIR%\demo_done_dialog.ps1"
+if not exist "%DONE_SCRIPT%" set "DONE_SCRIPT=%PACKAGE_DIR%\deploy\demo_done_dialog.ps1"
+if not exist "%DONE_SCRIPT%" set "DONE_SCRIPT=%~dp0demo_done_dialog.ps1"
+if exist "%DONE_SCRIPT%" (
+  echo Opening DONE button window...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%DONE_SCRIPT%" -Url "http://127.0.0.1:%PORT%"
+  if !ERRORLEVEL! EQU 0 (
+    echo DONE clicked — uninstalling...
+    exit /b 0
+  )
+  echo WARNING: DONE dialog failed; type DONE in this window instead.
+) else (
+  echo WARNING: demo_done_dialog.ps1 not found; type DONE in this window.
+)
+echo.
+echo Type DONE then Enter to uninstall and exit.
+echo ^(Or press Enter alone.^)
+:done_type_loop
+set "DONE_INPUT="
+set /p "DONE_INPUT=DONE> "
+if /I "!DONE_INPUT!"=="DONE" (
+  echo DONE received — uninstalling...
+  exit /b 0
+)
+if "!DONE_INPUT!"=="" (
+  echo Enter received — uninstalling...
+  exit /b 0
+)
+echo Type DONE ^(or press Enter^) to continue.
+goto :done_type_loop
+
 :remove_desktop_shortcuts
 REM Delete .url (and any leftover .lnk) from known Desktop paths — plain cmd.
 echo Removing Desktop shortcut^(s^)...
@@ -292,6 +326,38 @@ for %%D in (
   )
 )
 if "!_REMOVED!"=="0" echo   ^(no Desktop shortcuts found to delete^)
+exit /b 0
+
+:wipe_temp_leftovers
+REM Delete TEMP LibertyDemo_* logs / dialog scripts / leftover dirs we created.
+REM Do NOT delete this cleanup bat until the very end ^(caller handles that^).
+echo Removing TEMP LibertyDemo leftovers...
+set "_TEMP_REMOVED=0"
+for %%F in (
+  "%TEMP%\LibertyDemo_*.log"
+  "%TEMP%\LibertyDemo_*.log.err"
+  "%TEMP%\LibertyDemo_wait_done.ps1"
+) do (
+  if exist "%%~fF" (
+    del /f /q "%%~fF" 2>nul
+    if not exist "%%~fF" (
+      echo   deleted: %%~fF
+      set "_TEMP_REMOVED=1"
+    )
+  )
+)
+for /d %%D in ("%TEMP%\LibertyDemo_*") do (
+  if exist "%%~fD" (
+    rd /s /q "%%~fD" 2>nul
+    if not exist "%%~fD" (
+      echo   deleted: %%~fD
+      set "_TEMP_REMOVED=1"
+    ) else (
+      echo   FAILED delete: %%~fD
+    )
+  )
+)
+if "!_TEMP_REMOVED!"=="0" echo   ^(no TEMP LibertyDemo_* leftovers found^)
 exit /b 0
 
 :wipe_session_install
@@ -540,6 +606,7 @@ exit /b 0
 call :stop_liberty_tree
 echo.
 echo Cleaning up all demo files...
+echo Removed items:
 if defined LOG_FILE if exist "%LOG_FILE%" (
   del /f /q "%LOG_FILE%" 2>nul
   echo   deleted: %LOG_FILE%
@@ -548,17 +615,15 @@ if defined LOG_FILE if exist "%LOG_FILE%.err" (
   del /f /q "%LOG_FILE%.err" 2>nul
   echo   deleted: %LOG_FILE%.err
 )
-REM Also sweep any leftover LibertyDemo_*.log in TEMP
-for %%F in ("%TEMP%\LibertyDemo_*.log" "%TEMP%\LibertyDemo_*.log.err") do (
-  if exist "%%~fF" (
-    del /f /q "%%~fF" 2>nul
-    echo   deleted: %%~fF
-  )
-)
+call :wipe_temp_leftovers
 call :remove_desktop_shortcuts
 call :wipe_session_install
 echo.
-echo Done. Demo files removed. ^(winget Python, if installed, was left alone.^)
+echo ========================================
+echo   Uninstall complete.
+echo   Demo files removed from this PC.
+echo   winget Python ^(if installed^) was NOT removed.
+echo ========================================
 echo.
 pause
 REM Remove TEMP cleanup helper if we are that helper
@@ -569,13 +634,17 @@ exit /b 0
 call :stop_liberty_tree
 echo.
 echo Setup/start failed — still cleaning demo files...
+echo Removed items:
 if defined LOG_FILE if exist "%LOG_FILE%" (
   echo   log kept for debug: %LOG_FILE%
 ) else (
   echo   ^(no log file^)
 )
+call :wipe_temp_leftovers
 call :remove_desktop_shortcuts
 call :wipe_session_install
+echo.
+echo Demo files cleaned. ^(winget Python, if installed, was left alone.^)
 echo.
 pause
 if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul

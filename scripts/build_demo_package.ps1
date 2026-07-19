@@ -160,13 +160,15 @@ the download small. The web app, Film Tool, roster/schedule views, and tagging U
 still run. GPU AI analysis is not available in this demo.
 "@ | Set-Content -Path (Join-Path $modelsDir "README_DEMO_MODELS.txt") -Encoding UTF8
 
-Write-Step "Adding install_and_run.bat"
+Write-Step "Adding install_and_run.bat + DONE dialog"
 Copy-Item (Join-Path $RepoRoot "deploy\install_and_run.bat") (Join-Path $Staging "install_and_run.bat") -Force
+Copy-Item (Join-Path $RepoRoot "deploy\demo_done_dialog.ps1") (Join-Path $Staging "demo_done_dialog.ps1") -Force
 
 # Also mirror under deploy/ inside package for discoverability
 $deployPkg = Join-Path $Staging "deploy"
 if (-not (Test-Path $deployPkg)) { New-Item -ItemType Directory -Path $deployPkg | Out-Null }
 Copy-Item (Join-Path $RepoRoot "deploy\install_and_run.bat") (Join-Path $deployPkg "install_and_run.bat") -Force
+Copy-Item (Join-Path $RepoRoot "deploy\demo_done_dialog.ps1") (Join-Path $deployPkg "demo_done_dialog.ps1") -Force
 
 Write-Step "Smoke-check package contents"
 $required = @(
@@ -174,6 +176,7 @@ $required = @(
     "scripts\launch_liberty.py",
     "requirements.txt",
     "install_and_run.bat",
+    "demo_done_dialog.ps1",
     "film_analysis.db"
 )
 foreach ($rel in $required) {
@@ -189,8 +192,9 @@ foreach ($marker in @(
     "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python",
     "PERSIST_DIR", "LibertyBasketballDemo", "create_desktop_shortcut",
     "resolve_desktop_dir", "remove_desktop_shortcuts", "wipe_session_install",
+    "wipe_temp_leftovers", "wait_for_done", "demo_done_dialog.ps1",
     "InternetShortcut", "OneDrive", "PUBLIC",
-    "--cleanup-phase"
+    "--cleanup-phase", "DEMO RUNNING"
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
@@ -222,7 +226,14 @@ if ($bat -notmatch 'robocopy') {
 if ($bat -notmatch 'wipe_session_install') {
     throw "install_and_run.bat must wipe LocalAppData session install on exit"
 }
-Write-Host "  OK install_and_run.bat markers (session install + Desktop URL shortcuts + full wipe + one-shot winget)"
+if ($bat -match '(?m)^\s*pause\s*>nul\s*$') {
+    throw "install_and_run.bat must not use silent pause>nul for exit (use DONE dialog)"
+}
+$donePs1 = Get-Content (Join-Path $Staging "demo_done_dialog.ps1") -Raw
+if ($donePs1 -notmatch 'System\.Windows\.Forms' -or $donePs1 -notmatch 'Text\s*=\s*"DONE"') {
+    throw "demo_done_dialog.ps1 must be a WinForms form with a DONE button"
+}
+Write-Host "  OK install_and_run.bat markers (session install + DONE uninstall + Desktop URL + full wipe + one-shot winget)"
 
 Write-Step "Locating 7-Zip"
 $sevenZip = Ensure-7Zip
@@ -248,7 +259,7 @@ $configPath = Join-Path $PackageDir "config.txt"
 @"
 ;!@Install@!UTF-8!
 Title="Liberty Basketball Demo"
-BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nDemo files are removed when you finish.\nGPU AI weights are not included."
+BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nWhen finished, click DONE to remove all demo files.\nGPU AI weights are not included."
 RunProgram="cmd /c install_and_run.bat"
 ;!@InstallEnd@!
 "@ | Set-Content -Path $configPath -Encoding ASCII
@@ -284,8 +295,10 @@ install_and_run.bat, which:
   4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   5. Creates/reuses LocalAppData\.venv and installs requirements.txt
   6. Starts the app (scripts\launch_liberty.py --no-browser) and opens :8080
-  7. On keypress: stops Liberty (PID-based), deletes Desktop shortcuts,
-     wipes %LOCALAPPDATA%\LibertyBasketballDemo, deletes TEMP logs
+  7. Shows a WinForms DONE button (demo_done_dialog.ps1). On DONE:
+     stops Liberty (PID-based), deletes Desktop shortcuts, wipes
+     %LOCALAPPDATA%\LibertyBasketballDemo, deletes TEMP LibertyDemo_* leftovers.
+     winget Python is NOT uninstalled.
 
 Coach blurb
 -----------
@@ -303,7 +316,8 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
 - SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
-- Session install: %LOCALAPPDATA%\LibertyBasketballDemo (wiped on exit)
+- Session install: %LOCALAPPDATA%\LibertyBasketballDemo (wiped on DONE)
+- Exit UX: WinForms DONE button (fallback: type DONE / Enter in console)
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
@@ -314,7 +328,7 @@ Rebuild
 -------
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_demo_package.ps1
 
-Installer source of truth: deploy\install_and_run.bat
+Installer source of truth: deploy\install_and_run.bat + deploy\demo_done_dialog.ps1
 "@
 Set-Content -Path (Join-Path $distDir "README_DEMO.txt") -Value $readme -Encoding ASCII
 Set-Content -Path (Join-Path $PackageDir "README_DEMO.txt") -Value $readme -Encoding ASCII
