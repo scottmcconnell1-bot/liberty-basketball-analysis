@@ -2,8 +2,9 @@
 """
 One-click local launcher for Liberty Basketball Analysis.
 
-Checks prerequisites, installs Python deps into .venv, initializes the DB,
-starts the Flask app, and opens the dashboard in your browser.
+Checks prerequisites, prefers a CUDA-capable Python (system 3.12 with torch)
+over a torch-less .venv, initializes the DB, starts the Flask app, and opens
+the dashboard in your browser.
 
 Usage:
   python scripts/launch_liberty.py
@@ -16,6 +17,7 @@ Linux:   bash scripts/launch_liberty.sh
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -69,23 +71,24 @@ def _python_ok(version: tuple[int, int, int]) -> bool:
     return MIN_PYTHON <= version[:2] <= MAX_PYTHON
 
 
-def _find_system_python() -> list[str]:
-    candidates = []
+def _system_python_candidates() -> list[list[str]]:
     if os.name == "nt":
-        candidates.extend([
+        return [
             ["py", "-3.12"],
             ["py", "-3.13"],
             ["python"],
             ["python3"],
-        ])
-    else:
-        candidates.extend([
-            ["python3.12"],
-            ["python3.13"],
-            ["python3"],
-            ["python"],
-        ])
-    for cmd in candidates:
+        ]
+    return [
+        ["python3.12"],
+        ["python3.13"],
+        ["python3"],
+        ["python"],
+    ]
+
+
+def _find_system_python() -> list[str]:
+    for cmd in _system_python_candidates():
         if shutil.which(cmd[0]) is None:
             continue
         try:
@@ -103,6 +106,137 @@ def _find_system_python() -> list[str]:
         except (OSError, ValueError):
             continue
     return []
+
+
+def _probe_interpreter(cmd: list[str]) -> dict | None:
+    """Probe version, app import, and torch CUDA for an interpreter."""
+    probe = (
+        "import json, sys\n"
+        "info = {"
+        " 'exe': sys.executable,"
+        " 'version': '.'.join(map(str, sys.version_info[:3])),"
+        " 'app_ok': False,"
+        " 'torch': None,"
+        " 'cuda': False,"
+        "}\n"
+        "try:\n"
+        "    ver = tuple(sys.version_info[:2])\n"
+        "    info['version_ok'] = (3, 12) <= ver <= (3, 13)\n"
+        "except Exception:\n"
+        "    info['version_ok'] = False\n"
+        "try:\n"
+        "    import flask  # noqa: F401\n"
+        "    from app import app  # noqa: F401\n"
+        "    info['app_ok'] = True\n"
+        "except Exception as e:\n"
+        "    info['app_err'] = type(e).__name__\n"
+        "try:\n"
+        "    import torch\n"
+        "    info['torch'] = str(torch.__version__)\n"
+        "    info['cuda'] = bool(torch.cuda.is_available())\n"
+        "except Exception:\n"
+        "    pass\n"
+        "print(json.dumps(info))\n"
+    )
+    try:
+        result = subprocess.run(
+            cmd + ["-c", probe],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    line = (result.stdout or "").strip().splitlines()
+    if not line:
+        return None
+    try:
+        return json.loads(line[-1])
+    except json.JSONDecodeError:
+        return None
+
+
+def _cmd_key(cmd: list[str]) -> str:
+    return " ".join(cmd)
+
+
+def resolve_runtime_python(venv_python: Path | None) -> list[str] | None:
+    """
+    Prefer an interpreter where torch.cuda.is_available() is True.
+
+    Order:
+      1. .venv if it has CUDA torch and can import the app
+      2. system py -3.12 / Python 3.12+ with CUDA torch and app import
+      3. .venv if healthy (no CUDA)
+      4. system Python that can import the app
+    """
+    candidates: list[tuple[str, list[str]]] = []
+    seen: set[str] = set()
+
+    def _add(kind: str, cmd: list[str]) -> None:
+        key = _cmd_key(cmd)
+        if key in seen:
+            return
+        if shutil.which(cmd[0]) is None and kind != "venv":
+            return
+        if kind == "venv" and not Path(cmd[0]).exists():
+            return
+        seen.add(key)
+        candidates.append((kind, cmd))
+
+    if venv_python is not None:
+        _add("venv", [str(venv_python)])
+    for cmd in _system_python_candidates():
+        _add("system", cmd)
+
+    probed: list[tuple[str, list[str], dict]] = []
+    for kind, cmd in candidates:
+        info = _probe_interpreter(cmd)
+        if not info:
+            _log(f"Probe skip: {_cmd_key(cmd)} (not usable)")
+            continue
+        if not info.get("version_ok", False):
+            _log(f"Probe skip: {_cmd_key(cmd)} (Python {info.get('version')} out of range)")
+            continue
+        probed.append((kind, cmd, info))
+        _log(
+            f"Probe {_cmd_key(cmd)}: exe={info.get('exe')} "
+            f"torch={info.get('torch')} cuda={info.get('cuda')} app_ok={info.get('app_ok')}"
+        )
+
+    def _pick(predicate) -> tuple[str, list[str], dict] | None:
+        for item in probed:
+            if predicate(*item):
+                return item
+        return None
+
+    chosen = (
+        _pick(lambda k, _c, i: k == "venv" and i.get("cuda") and i.get("app_ok"))
+        or _pick(lambda k, _c, i: k == "system" and i.get("cuda") and i.get("app_ok"))
+        or _pick(lambda _k, _c, i: i.get("cuda") and i.get("app_ok"))
+        or _pick(lambda k, _c, i: k == "venv" and i.get("app_ok"))
+        or _pick(lambda k, _c, i: k == "system" and i.get("app_ok"))
+        or _pick(lambda _k, _c, i: i.get("app_ok"))
+    )
+    if not chosen:
+        return None
+
+    kind, cmd, info = chosen
+    exe = info.get("exe") or _cmd_key(cmd)
+    torch_v = info.get("torch") or "none"
+    cuda = bool(info.get("cuda"))
+    _log(f"Runtime Python: {exe} (torch={torch_v}, cuda={cuda}, source={kind})")
+    if not cuda:
+        _warn(
+            "CUDA torch not available on the selected interpreter. "
+            "GPU analysis will fall back to CPU. "
+            "Install torch with CUDA on Python 3.12, or recreate .venv with CUDA torch."
+        )
+    return cmd
 
 
 def _run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
@@ -132,7 +266,7 @@ def _try_winget_install(package_id: str, label: str) -> bool:
 def ensure_python() -> list[str]:
     cmd = _find_system_python()
     if cmd:
-        _log(f"Using Python: {' '.join(cmd)}")
+        _log(f"Bootstrap Python: {' '.join(cmd)}")
         return cmd
 
     if os.name == "nt":
@@ -245,10 +379,10 @@ def ensure_dependencies(venv_python: Path, *, force: bool = False) -> None:
     _log("Dependencies installed.")
 
 
-def ensure_database(venv_python: Path) -> None:
+def ensure_database(python_cmd: list[str]) -> None:
     _log("Initializing database if needed...")
     _run([
-        str(venv_python),
+        *python_cmd,
         "-c",
         "from app import app, init_db; "
         "ctx = app.app_context(); ctx.push(); init_db(); ctx.pop(); "
@@ -270,7 +404,7 @@ def wait_for_server(base_url: str, timeout: int) -> bool:
     return False
 
 
-def start_server(venv_python: Path, port: int) -> subprocess.Popen:
+def start_server(python_cmd: list[str], port: int) -> subprocess.Popen:
     env = os.environ.copy()
     env.setdefault("LIBERTY_DEBUG", "1")
     env["PORT"] = str(port)
@@ -279,7 +413,7 @@ def start_server(venv_python: Path, port: int) -> subprocess.Popen:
 
     _log(f"Starting Liberty on http://127.0.0.1:{port} ...")
     return subprocess.Popen(
-        [str(venv_python), "app.py"],
+        [*python_cmd, "app.py"],
         cwd=ROOT,
         env=env,
     )
@@ -316,14 +450,23 @@ def main() -> int:
         python_cmd = ensure_python()
         ensure_git()
         ensure_ffmpeg()
-        venv_python = ensure_venv(python_cmd, recreate=args.repair)
-        ensure_dependencies(venv_python, force=force_deps)
-        ensure_database(venv_python)
+
+        venv_path = _venv_python()
+        # Prefer CUDA system Python over a torch-less .venv when both exist.
+        runtime = resolve_runtime_python(venv_path if venv_path.exists() else None)
+
+        if args.repair or force_deps or runtime is None:
+            venv_python = ensure_venv(python_cmd, recreate=args.repair)
+            ensure_dependencies(venv_python, force=force_deps or args.repair)
+            runtime = resolve_runtime_python(venv_python) or [str(venv_python)]
+        # else: keep selected runtime (typically system Python 3.12 + CUDA torch)
+
+        ensure_database(runtime)
     except Exception as exc:
         _log(f"Setup failed: {exc}")
         return 1
 
-    process = start_server(venv_python, args.port)
+    process = start_server(runtime, args.port)
     try:
         if not wait_for_server(base_url, WAIT_SECONDS):
             _log("Server did not respond in time. Check output above for errors.")
