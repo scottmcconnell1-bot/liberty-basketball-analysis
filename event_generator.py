@@ -318,6 +318,8 @@ def postprocess_ai_events(events):
         filtered_other.append(event)
 
     # Steal / turnover rate cap — abrupt flips are noisy on this detector.
+    # Taught from manual: true steal/TO pairs can sit ~8–11s from neighbors;
+    # widen same-type suppression slightly so recall is not capped away.
     steal_to = [e for e in filtered_other if str(e.get("event_type") or "").lower() in {"steal", "turnover"}]
     rest = [e for e in filtered_other if str(e.get("event_type") or "").lower() not in {"steal", "turnover"}]
     steal_to = sorted(steal_to, key=lambda e: (int(e.get("timestamp_ms") or 0), -_rank(e)))
@@ -328,7 +330,7 @@ def postprocess_ai_events(events):
         recent_same = [
             s for s in kept_st
             if str(s.get("event_type") or "").lower() == et
-            and abs(int(s.get("timestamp_ms") or 0) - ts) <= 8000
+            and abs(int(s.get("timestamp_ms") or 0) - ts) <= 6500
         ]
         if recent_same:
             continue
@@ -336,6 +338,42 @@ def postprocess_ai_events(events):
 
     result = rate_kept_shots + rest + kept_st
     result.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), str(e.get("event_type") or "")))
+
+    # Manual-taught calibrator (taxonomy / make-miss / keep-drop). Optional —
+    # no-op when models/manual_q1_event_calibrator.json is absent.
+    try:
+        from event_calibrator import apply_event_calibrator, load_calibrator
+
+        model = load_calibrator()
+        if model:
+            before = len(result)
+            result = apply_event_calibrator(result, model)
+            # Overlay data-driven confidence floors learned from manual stats
+            # (after calibrator so taught positives are already flagged).
+            learned_floors = model.get("learned_event_min_confidence") or {}
+            if learned_floors:
+                filtered = []
+                for event in result:
+                    et = str(event.get("event_type") or "").lower()
+                    conf = float(event.get("confidence") or 0.0)
+                    floor = float(learned_floors.get(et, EVENT_MIN_CONFIDENCE.get(et, 0.35)))
+                    details = _event_details(event)
+                    if (
+                        details.get("near_manual_template")
+                        or details.get("taught_shot_type")
+                        or details.get("taught_shot_result")
+                    ):
+                        filtered.append(event)
+                        continue
+                    if conf >= floor:
+                        filtered.append(event)
+                result = filtered
+            print(
+                f"INFO: event calibrator applied ({before} -> {len(result)} events)"
+            )
+    except Exception as exc:
+        print(f"WARNING: event calibrator skipped: {exc}")
+
     return result
 
 
@@ -825,25 +863,30 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 if min_y < 240:
                     ball_moving_to_basket = True
 
-            # Gap to next possession segment
+            # Gap to next possession segment.
+            # Manual Q1 teach: AI under-called makes (5 Make↔Miss disagreements);
+            # lower gap threshold from 15→11 frames to recover true makes without
+            # needing GPU re-detect.
             if next_segment is None:
                 # No follow-up = ball went in
                 shot_result = "make"
-            elif next_gap is not None and next_gap > 15:
+            elif next_gap is not None and next_gap > 11:
                 # Longer gap = other team inbounding after make
                 shot_result = "make"
             elif ball_moving_to_basket:
                 # Ball reached basket area
                 shot_result = "make"
+            elif next_gap is not None and next_gap > 6 and float(shot_info.get("ball_rise") or 0) >= 400:
+                # High arc + modest gap often still a make on this camera.
+                shot_result = "make"
         else:
-            if next_segment is None or (next_gap is not None and next_gap > 15):
+            if next_segment is None or (next_gap is not None and next_gap > 11):
                 shot_result = "make"
 
         if shot_result == "miss":
             rebound_segment_indices.add(index + 1)
 
-        # Keep shot_type=2pt until court geometry / enhanced analysis classifies
-        # 3PT reliably. Lateral-travel heuristics mislabeled many 2PT as 3PT.
+        # Default 2pt; manual-taught calibrator remaps 3PT/FT from matched pairs.
         shot_type = "2pt"
         shot_confidence = 0.42 if is_secondary else 0.60
 

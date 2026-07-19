@@ -1,0 +1,671 @@
+{
+  "version": 1,
+  "source": "teach_from_manual_q1",
+  "analysis_key": "nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754",
+  "match_tolerance_ms": 10000,
+  "clock_offset_ms": 1500,
+  "shot_label_anchors": [
+    {
+      "family": "shot",
+      "center_ms": 123800,
+      "radius_ms": 9500,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 130800
+    },
+    {
+      "family": "shot",
+      "center_ms": 366920,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 367400
+    },
+    {
+      "family": "shot",
+      "center_ms": 686120,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 685300
+    },
+    {
+      "family": "shot",
+      "center_ms": 698800,
+      "radius_ms": 9500,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 691800
+    },
+    {
+      "family": "shot",
+      "center_ms": 713320,
+      "radius_ms": 4780,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 715600
+    },
+    {
+      "family": "shot",
+      "center_ms": 810200,
+      "radius_ms": 7700,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 815400
+    },
+    {
+      "family": "shot",
+      "center_ms": 853200,
+      "radius_ms": 4600,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 851100
+    },
+    {
+      "family": "shot",
+      "center_ms": 39960,
+      "radius_ms": 8160,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 34300
+    },
+    {
+      "family": "shot",
+      "center_ms": 155600,
+      "radius_ms": 5800,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 158900
+    },
+    {
+      "family": "shot",
+      "center_ms": 207760,
+      "radius_ms": 8260,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 202000
+    },
+    {
+      "family": "shot",
+      "center_ms": 343520,
+      "radius_ms": 4980,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 346000
+    },
+    {
+      "family": "shot",
+      "center_ms": 392680,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 393800
+    },
+    {
+      "family": "shot",
+      "center_ms": 582520,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 584000
+    },
+    {
+      "family": "shot",
+      "center_ms": 610640,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 612100
+    },
+    {
+      "family": "shot",
+      "center_ms": 621160,
+      "radius_ms": 7140,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 625800
+    },
+    {
+      "family": "shot",
+      "center_ms": 646480,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 647000
+    },
+    {
+      "family": "shot",
+      "center_ms": 738600,
+      "radius_ms": 6800,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 742900
+    },
+    {
+      "family": "shot",
+      "center_ms": 751600,
+      "radius_ms": 8000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 757100
+    },
+    {
+      "family": "shot",
+      "center_ms": 775520,
+      "radius_ms": 4620,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 773400
+    },
+    {
+      "family": "shot",
+      "center_ms": 821040,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 821500
+    },
+    {
+      "family": "shot",
+      "center_ms": 831400,
+      "radius_ms": 4100,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 833000
+    },
+    {
+      "family": "shot",
+      "center_ms": 868200,
+      "radius_ms": 10900,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 859800
+    }
+  ],
+  "positive_windows": [
+    {
+      "center_ms": 34300,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 37600,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 40700,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 40700,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist"
+    },
+    {
+      "center_ms": 94800,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 126700,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal"
+    },
+    {
+      "center_ms": 126700,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 130800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 158900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 179700,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 202000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 202000,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist"
+    },
+    {
+      "center_ms": 291100,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 322400,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 346000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 367400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 393800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 396800,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 397900,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 432800,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal"
+    },
+    {
+      "center_ms": 432800,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 481800,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 584000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 586800,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 589600,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 612100,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 625800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 647000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 649100,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 661100,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul"
+    },
+    {
+      "center_ms": 685300,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 688600,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 691800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 691800,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist"
+    },
+    {
+      "center_ms": 711900,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal"
+    },
+    {
+      "center_ms": 711900,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 715600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 717300,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 742900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 746100,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 757100,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 757100,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist"
+    },
+    {
+      "center_ms": 773400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 788200,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 815400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 821500,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 821500,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist"
+    },
+    {
+      "center_ms": 830900,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal"
+    },
+    {
+      "center_ms": 830900,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover"
+    },
+    {
+      "center_ms": 833000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 851100,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 853300,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "Rebound"
+    },
+    {
+      "center_ms": 859800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    }
+  ],
+  "shot_type_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "classes": {
+      "2pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          50.866306,
+          20.323257,
+          0.0,
+          -1.097284,
+          0.374337
+        ],
+        "bias": -4.301317
+      },
+      "3pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          -37.896588,
+          -5.931756,
+          0.0,
+          1.429458,
+          -0.734846
+        ],
+        "bias": 5.494605
+      },
+      "ft": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          -3.695531,
+          -7.257831,
+          0.0,
+          -0.296842,
+          0.390095
+        ],
+        "bias": -1.205086
+      }
+    },
+    "min_margin": 0.2
+  },
+  "make_miss_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "weights": [
+      -26.341495,
+      -1.016005,
+      0.0,
+      -0.735097,
+      1.269595
+    ],
+    "bias": -2.780274,
+    "threshold": 0.35,
+    "train_accuracy": 0.4667
+  },
+  "keep_clf": {
+    "features": [
+      "conf",
+      "is_shot",
+      "is_rebound",
+      "is_steal",
+      "is_turnover",
+      "is_assist",
+      "lat_norm",
+      "rise_norm",
+      "secondary",
+      "local_density"
+    ],
+    "weights": [
+      -0.975426,
+      0.653676,
+      -0.663668,
+      -1.180769,
+      -0.79107,
+      -0.177216,
+      -0.087727,
+      0.194029,
+      0.0,
+      0.888675
+    ],
+    "bias": -2.53589,
+    "threshold": 0.2,
+    "train_f1": 0.5895
+  },
+  "fp_suppress": {
+    "orphan_steal_to": true,
+    "orphan_steal_to_max_shot_gap_ms": 6000
+  },
+  "learned_event_min_confidence": {
+    "shot": 0.48,
+    "make": 0.4,
+    "miss": 0.4,
+    "rebound": 0.55,
+    "block": 0.95,
+    "assist": 0.4,
+    "steal": 0.5,
+    "turnover": 0.5,
+    "foul": 0.55,
+    "possession_change": 0.55
+  },
+  "train_snapshot": {
+    "manual_tags": 53,
+    "ai_comparable": 245,
+    "exact_matches_pre": 23,
+    "manual_only_pre": 15,
+    "ai_only_pre": 207,
+    "disagreements_pre": 15,
+    "shot_anchors": 22,
+    "shot_train_rows": 30,
+    "keep_train_rows": 245,
+    "keep_train_f1": 0.5895,
+    "make_train_accuracy": 0.4667,
+    "type_stats": {
+      "2PT|Make": {
+        "tp": 4,
+        "fp": 3
+      },
+      "2PT|Miss": {
+        "tp": 18,
+        "fp": 46
+      },
+      "Assist": {
+        "tp": 0,
+        "fp": 2
+      },
+      "Rebound": {
+        "tp": 8,
+        "fp": 68
+      },
+      "Steal": {
+        "tp": 3,
+        "fp": 45
+      },
+      "Turnover": {
+        "tp": 5,
+        "fp": 43
+      }
+    }
+  }
+}

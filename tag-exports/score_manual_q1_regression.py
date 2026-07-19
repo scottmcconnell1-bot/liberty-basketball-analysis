@@ -49,13 +49,22 @@ BASELINE = {
     "f1_exact": 0.0157,
 }
 
-# Regression gates: precision must jump; recall / exact matches must not collapse.
-# Regression gates: large precision gain required; recall/exact must not collapse vs baseline.
-MIN_PRECISION = 0.08
-MIN_RECALL = 0.30
-MIN_EXACT = 15
-MAX_AI_ONLY = 350
+# Filter-only pass on cursor/improve-ai-from-manual-q1-ac1f @ 53c3141
+# (hand-tuned NMS / rate caps; exact matches stayed flat at 22).
+FILTER_ONLY_53C3141 = {
+    "exact_matches": 22,
+    "manual_only": 17,
+    "ai_only": 209,
+    "precision_exact": 0.0952,
+    "recall_exact": 0.4151,
+    "f1_exact": 0.1549,
+}
 
+# Regression gates after teach/calibrate pass (must beat filter-only on exact+F1).
+MIN_PRECISION = 0.40
+MIN_RECALL = 0.55
+MIN_EXACT = 30
+MAX_AI_ONLY = 80
 
 def load_manual_rows(db_path: Path) -> tuple[list[dict], str]:
     liberty = "Liberty"
@@ -133,6 +142,7 @@ def score(analysis_key: str, db_path: Path) -> dict:
         "match_tolerance_ms": MATCH_TOLERANCE_MS,
         "q1_end_sec": Q1_COMPARE_END_SEC,
         "baseline": BASELINE,
+        "filter_only_53c3141": FILTER_ONLY_53C3141,
     }
 
 
@@ -184,6 +194,18 @@ def main(argv: list[str] | None = None) -> int:
         "precision_exact": round(result["precision_exact"] - BASELINE["precision_exact"], 4),
         "recall_exact": round(result["recall_exact"] - BASELINE["recall_exact"], 4),
         "f1_exact": round(result["f1_exact"] - BASELINE["f1_exact"], 4),
+    }
+    result["delta_vs_filter_only_53c3141"] = {
+        "exact_matches": result["exact_matches"] - FILTER_ONLY_53C3141["exact_matches"],
+        "manual_only": result["manual_only"] - FILTER_ONLY_53C3141["manual_only"],
+        "ai_only": result["ai_only"] - FILTER_ONLY_53C3141["ai_only"],
+        "precision_exact": round(
+            result["precision_exact"] - FILTER_ONLY_53C3141["precision_exact"], 4
+        ),
+        "recall_exact": round(
+            result["recall_exact"] - FILTER_ONLY_53C3141["recall_exact"], 4
+        ),
+        "f1_exact": round(result["f1_exact"] - FILTER_ONLY_53C3141["f1_exact"], 4),
     }
 
     print(json.dumps(result, indent=2))

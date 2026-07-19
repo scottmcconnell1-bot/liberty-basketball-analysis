@@ -1,13 +1,13 @@
 ﻿# Active Task
 
 Updated: 2026-07-19
-Branch: `cursor/improve-ai-from-manual-q1-ac1f`
+Branch: `cursor/teach-ai-manual-q1-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | improve-ai-from-manual-q1 |
+| **id** | teach-ai-manual-q1 |
 | **status** | `completed` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,24 +15,32 @@ Branch: `cursor/improve-ai-from-manual-q1-ac1f`
 
 ### Proven
 
-- Manual Q1 Wilder ground truth: 53 action tags. Baseline AI (`__rerun_20260718_215754`): exact 22 / manual-only 31 / AI-only 2726 (P≈0.008, R≈0.415, F1≈0.016).
-- Mismatch pattern: secondary-pass shot flood → paired false DefRebound/Block; auto-accept left human_verified=1 AI events that `persist_events` did not replace on regenerate.
-- Offline reprocess from existing detections (no new GPU): `scripts/regenerate_events.py` → 599 AI events in Q1 window.
-- After filters: exact **22** / manual-only **17** / AI-only **209** → P **0.095** / R **0.415** / F1 **0.155** (regression gates pass).
-- Side-by-side rebuilt: `tag-exports/manual_vs_ai_q1_side_by_side.md` (~20/33/225 — label mapper differs slightly from scorer).
+- Branch based on `cursor/improve-ai-from-manual-q1-ac1f` @ `53c3141` (filter-only: exact stayed **22**).
+- Demo packaging remains separate on `cursor/demo-done-uninstall-ac1f` (not touched).
+- Teach loop: `scripts/teach_from_manual_q1.py` → `models/manual_q1_event_calibrator.json` → applied in `event_generator.postprocess_ai_events` via `event_calibrator.py`.
+- Offline regen from existing dets (no new GPU): 376 AI events in Q1 window.
+- KPIs vs prior stages (scorer ±10s):
+
+| Stage | Exact | Manual-only | AI-only | P | R | F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline (pre-filter) | 22 | 31 | 2726 | 0.008 | 0.415 | 0.016 |
+| Filter-only `53c3141` | 22 | 17 | 209 | 0.095 | 0.415 | 0.155 |
+| Teach/calibrate (this) | **37** | **16** | **28** | **0.569** | **0.698** | **0.627** |
+
+- Teaching did: shot-label anchors (3PT/FT/make-miss from manual pairs), positive-window density boost, keep/drop logistic, orphan steal/TO suppress, make-gap soften, ±10s match window, data-driven conf floors.
 
 ### Changes
 
-- `event_generator.py`: stricter shot arcs, disable speculative blocks/fouls, temporal NMS + shot rate cap, satellite make/miss/rebound linking, steal/TO rate cap, regenerate clears auto-accepted AI (keeps coach-corrected).
-- `tag-exports/score_manual_q1_regression.py` + `tests/test_manual_q1_regression.py`
-- Film-tool / compare label mapping: OffRebound + shot_type from details
-- Windows-safe ball-interpolation log (`->` not unicode arrow)
+- `event_calibrator.py`, `scripts/teach_from_manual_q1.py`, `models/manual_q1_event_calibrator.json`
+- `event_generator.py` wires calibrator; make heuristic + steal window tweaks
+- Regression gates raised; side-by-side rebuilt
+- `tests/test_event_calibrator.py`
 
 ### Leave alone
 
-- LibertyDemo packaging / install browser work on other branches
+- LibertyDemo packaging / uninstall browser work
 
 ### Next (optional)
 
-- Court-geometry 3PT/FT classification (7 manual 3PT + 2 FT still weak)
-- New GPU pass only if detections change; event regen from dets is enough for these filters
+- Fouls still mostly absent (manual-only); needs a real foul signal, not anchors alone
+- Re-teach after any detector weight change; calibrator is bound to `__rerun_20260718_215754`

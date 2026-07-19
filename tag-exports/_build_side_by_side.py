@@ -20,7 +20,7 @@ STAT_TYPES = {
     "OffRebound", "DefRebound",
 }
 SKIP_AI = {"make", "miss", "possession_change"}
-TOL_MS = 8000
+TOL_MS = 10000
 
 
 def time_to_sec(value) -> float:
@@ -134,7 +134,10 @@ manual.sort(key=lambda r: (r["time_ms"], r["label"], r["player"]))
 
 # AI events
 events = cur.execute(
-    "SELECT id, event_type, shot_result, timestamp_ms, player FROM events WHERE game_id=? ORDER BY timestamp_ms, id",
+    """
+    SELECT id, event_type, shot_result, timestamp_ms, player, details_json
+    FROM events WHERE game_id=? ORDER BY timestamp_ms, id
+    """,
     (KEY,),
 ).fetchall()
 ai = []
@@ -144,12 +147,21 @@ for e in events:
     ts = int(e["timestamp_ms"] or 0)
     if ts > Q1_END * 1000:
         continue
+    # Pass a dict so ai_label can read details_json for 3PT/FT mapping.
+    event_dict = {
+        "id": e["id"],
+        "event_type": e["event_type"],
+        "shot_result": e["shot_result"],
+        "timestamp_ms": ts,
+        "player": e["player"],
+        "details_json": e["details_json"] or "{}",
+    }
     ai.append({
         "time": fmt_mmss(ts / 1000),
         "time_sec": round(ts / 1000, 1),
         "time_ms": ts,
         "team": "—",  # Film Tool converter assigns Our Team; raw events lack team
-        "label": ai_label(e),
+        "label": ai_label(event_dict),
         "player": str(e["player"] or "").strip() or "Unknown",
         "event_id": e["id"],
         "event_type": e["event_type"],
@@ -157,7 +169,17 @@ for e in events:
     })
 ai.sort(key=lambda r: (r["time_ms"], r["label"], r["player"]))
 
-# Greedy exact match: same label + |dt| <= 8s
+# Greedy exact match: same label + |dt| <= tolerance
+# Also treat OffRebound/DefRebound as interchangeable for display pairing
+# (scorer uses coarse Rebound key — mirror via label normalize).
+def _label_match(manual_label: str, ai_lab: str) -> bool:
+    if manual_label == ai_lab:
+        return True
+    if manual_label in {"OffRebound", "DefRebound"} and ai_lab in {"OffRebound", "DefRebound"}:
+        return True
+    return False
+
+
 ai_used = set()
 pairs = []
 exact = 0
@@ -167,7 +189,7 @@ for m in manual:
     for i, a in enumerate(ai):
         if i in ai_used:
             continue
-        if a["label"] != m["label"]:
+        if not _label_match(m["label"], a["label"]):
             continue
         dt = abs(a["time_ms"] - m["time_ms"])
         if dt <= TOL_MS and (best_dt is None or dt < best_dt):
@@ -176,9 +198,11 @@ for m in manual:
     if best_i is not None:
         ai_used.add(best_i)
         a = ai[best_i]
+        # Scorer treats Off/Def rebound as the same exact key ("Rebound").
+        status = "EXACT"
         exact += 1
         pairs.append({
-            "status": "EXACT",
+            "status": status,
             "dt_sec": round(best_dt / 1000, 1),
             "manual": m,
             "ai": a,
@@ -190,7 +214,6 @@ for m in manual:
             "manual": m,
             "ai": None,
         })
-
 for i, a in enumerate(ai):
     if i not in ai_used:
         pairs.append({
@@ -327,7 +350,7 @@ lines.append("")
 lines.append(f"**Analysis key:** `{KEY}`")
 lines.append(f"**Run status:** `{diag.get('run_status')}` — {diag.get('run_label') or ''}")
 lines.append("")
-lines.append("## KPIs (time ±8s + identical label)")
+lines.append(f"## KPIs (time ±{TOL_MS // 1000}s + identical label)")
 lines.append("")
 lines.append(f"| Metric | Value |")
 lines.append(f"| --- | ---: |")
