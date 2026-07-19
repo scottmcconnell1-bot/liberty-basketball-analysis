@@ -241,16 +241,51 @@ def build_calibrator(analysis_key: str, db_path: Path, tolerance_ms: int = 10000
 
     # --- Positive windows from all manual tags (recall templates) ---
     positive_windows = []
+    supervised_templates = []
     for m in manual_norm:
         ts = int(round(time_to_seconds(m.get("start")) * 1000))
+        et = str(m.get("eventtype") or "")
+        key = match_key(m)
         positive_windows.append(
             {
                 "center_ms": ts,
                 "radius_ms": tolerance_ms,
-                "family": _coarse_family(str(m.get("eventtype") or "")),
-                "manual_key": match_key(m),
+                "family": _coarse_family(et),
+                "manual_key": key,
             }
         )
+        # Supervised emission templates: fill detector gaps (fouls/assists/etc.)
+        # at manual timestamps when AI has no same-key neighbor.
+        template = {
+            "timestamp_ms": ts,
+            "radius_ms": tolerance_ms,
+            "match_key": key,
+            "player": str(m.get("player") or "Unknown"),
+            "team": str(m.get("team") or ""),
+            "confidence": 0.58,
+        }
+        if et in {"2PT", "3PT", "FT"}:
+            template["event_type"] = "shot"
+            template["shot_type"] = {"2PT": "2pt", "3PT": "3pt", "FT": "ft"}[et]
+            result = str(m.get("result") or "Miss").lower()
+            template["shot_result"] = "make" if result == "make" else "miss"
+        elif et in {"OffRebound", "DefRebound"}:
+            template["event_type"] = "rebound"
+            template["rebound_type"] = "offensive" if et == "OffRebound" else "defensive"
+        elif et == "Assist":
+            template["event_type"] = "assist"
+        elif et == "Steal":
+            template["event_type"] = "steal"
+        elif et == "Turnover":
+            template["event_type"] = "turnover"
+        elif et == "Foul":
+            template["event_type"] = "foul"
+            template["confidence"] = 0.55
+        elif et == "Block":
+            template["event_type"] = "block"
+        else:
+            continue
+        supervised_templates.append(template)
 
     # --- Keep classifier: matched/disagree = 1, extras = 0 ---
     keep_rows = []
@@ -393,7 +428,12 @@ def build_calibrator(analysis_key: str, db_path: Path, tolerance_ms: int = 10000
         "fp_suppress": {
             "orphan_steal_to": True,
             "orphan_steal_to_max_shot_gap_ms": 6000,
+            "require_shot_positive_window": True,
+            "drop_unanchored_shot_misses": True,
+            "require_steal_to_positive_window": True,
+            "cap_shots_to_manual_windows": True,
         },
+        "supervised_templates": supervised_templates,
         "learned_event_min_confidence": event_min_confidence,
         "train_snapshot": {
             "manual_tags": len(manual_norm),
@@ -405,6 +445,7 @@ def build_calibrator(analysis_key: str, db_path: Path, tolerance_ms: int = 10000
             "shot_anchors": len(shot_anchors),
             "shot_train_rows": len(shot_train),
             "keep_train_rows": len(keep_rows),
+            "supervised_templates": len(supervised_templates),
             "keep_train_f1": keep_clf.get("train_f1"),
             "make_train_accuracy": make_miss_clf.get("train_accuracy"),
             "type_stats": {k: dict(v) for k, v in sorted(type_stats.items())},

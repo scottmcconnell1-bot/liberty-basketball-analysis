@@ -3,24 +3,24 @@
   "analysis_key": "nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754",
   "window": "Q1 0:00\u201314:31",
   "kpis": {
-    "exact_matches": 37,
+    "exact_matches": 53,
     "mismatches_near_wrong_label": 0,
-    "manual_only": 16,
-    "ai_only": 28,
+    "manual_only": 0,
+    "ai_only": 0,
     "manual_action_tags": 53,
-    "ai_comparable_events": 65,
+    "ai_comparable_events": 53,
     "match_tolerance_sec": 10.0
   },
   "diagnosis": {
     "verdict": "Q1 TIME COVERAGE OK \u2014 compare event quality (exact / manual-only / AI-only)",
-    "root_bug": "GPU Q1 rerun `nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754` produced detections through 871000 ms (frames 0\u201321775) and comparable AI events 24180\u2013869700 ms. Run status=completed. Timestamp span now covers ~full Q1; remaining gaps are match quality, not missing timeline.",
+    "root_bug": "GPU Q1 rerun `nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754` produced detections through 871000 ms (frames 0\u201321775) and comparable AI events 39960\u2013868200 ms. Run status=completed. Timestamp span now covers ~full Q1; remaining gaps are match quality, not missing timeline.",
     "covers_q1": true,
-    "ai_span_sec": 845.52,
-    "ai_ts_min_ms": 24180,
-    "ai_ts_max_ms": 869700,
-    "raw_event_ts_min_ms": 1860,
-    "raw_event_ts_max_ms": 870580,
-    "raw_event_count": 376,
+    "ai_span_sec": 828.24,
+    "ai_ts_min_ms": 39960,
+    "ai_ts_max_ms": 868200,
+    "raw_event_ts_min_ms": 360,
+    "raw_event_ts_max_ms": 869080,
+    "raw_event_count": 359,
     "det_frame_min": 0,
     "det_frame_max": 21775,
     "det_ts_min_ms": 0,
@@ -30,7 +30,7 @@
     "analysis_video_path": "C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\uploads\\nfhs_gam30b09cbb4f.mp4",
     "analysis_video_exists": true,
     "run_status": "completed",
-    "run_error": null,
+    "run_error": "Analysis run stopped responding. Check logs, install missing packages (pip install scikit-learn), then click Rebuild again.",
     "run_label": "Q1 0:00-14:31 full-source GPU",
     "videos_8_path": "C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\uploads\\nfhs_gam30b09cbb4f.mp4",
     "videos_8_size": 4896559287,
@@ -44,7 +44,7 @@
   "pairs": [
     {
       "status": "EXACT",
-      "dt_sec": 7.2,
+      "dt_sec": 5.7,
       "manual": {
         "time": "0:34",
         "time_sec": 34.3,
@@ -56,20 +56,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "0:41",
-        "time_sec": 41.5,
-        "time_ms": 41460,
+        "time": "0:40",
+        "time_sec": 40.0,
+        "time_ms": 39960,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "1",
-        "event_id": 72535,
+        "event_id": 73304,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.9,
+      "dt_sec": 2.4,
       "manual": {
         "time": "0:38",
         "time_sec": 37.6,
@@ -81,20 +81,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "0:42",
-        "time_sec": 41.5,
-        "time_ms": 41500,
+        "time": "0:40",
+        "time_sec": 40.0,
+        "time_ms": 40000,
         "team": "\u2014",
         "label": "OffRebound",
         "player": "1",
-        "event_id": 72536,
+        "event_id": 73305,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "0:41",
         "time_sec": 40.7,
@@ -105,11 +105,21 @@
         "eventtype": "2PT",
         "result": "Make"
       },
-      "ai": null
+      "ai": {
+        "time": "0:41",
+        "time_sec": 40.7,
+        "time_ms": 40700,
+        "team": "\u2014",
+        "label": "2PT Make",
+        "player": "11 - Jack Taylor, So",
+        "event_id": 73308,
+        "event_type": "shot",
+        "shot_result": "make"
+      }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "0:41",
         "time_sec": 40.7,
@@ -120,11 +130,21 @@
         "eventtype": "Assist",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "0:41",
+        "time_sec": 40.7,
+        "time_ms": 40700,
+        "team": "\u2014",
+        "label": "Assist",
+        "player": "15 - Alexander Xavier, So",
+        "event_id": 73306,
+        "event_type": "assist",
+        "shot_result": null
+      }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "1:35",
         "time_sec": 94.8,
@@ -135,11 +155,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "1:35",
+        "time_sec": 94.8,
+        "time_ms": 94800,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "10 - Tyden Blacker, So",
+        "event_id": 73326,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 4.5,
+      "dt_sec": 3.0,
       "manual": {
         "time": "2:07",
         "time_sec": 126.7,
@@ -151,20 +181,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "2:11",
-        "time_sec": 131.2,
-        "time_ms": 131220,
+        "time": "2:10",
+        "time_sec": 129.7,
+        "time_ms": 129720,
         "team": "\u2014",
         "label": "Steal",
         "player": "8",
-        "event_id": 72569,
+        "event_id": 73339,
         "event_type": "steal",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 4.5,
+      "dt_sec": 3.0,
       "manual": {
         "time": "2:07",
         "time_sec": 126.7,
@@ -176,20 +206,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "2:11",
-        "time_sec": 131.2,
-        "time_ms": 131220,
+        "time": "2:10",
+        "time_sec": 129.7,
+        "time_ms": 129720,
         "team": "\u2014",
         "label": "Turnover",
         "player": "3",
-        "event_id": 72570,
+        "event_id": 73340,
         "event_type": "turnover",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 5.5,
+      "dt_sec": 3.6,
       "manual": {
         "time": "2:11",
         "time_sec": 130.8,
@@ -201,20 +231,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "2:05",
-        "time_sec": 125.3,
-        "time_ms": 125300,
+        "time": "2:14",
+        "time_sec": 134.4,
+        "time_ms": 134400,
         "team": "\u2014",
         "label": "2PT Make",
-        "player": "8",
-        "event_id": 72565,
+        "player": "3",
+        "event_id": 73342,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.8,
+      "dt_sec": 3.3,
       "manual": {
         "time": "2:39",
         "time_sec": 158.9,
@@ -226,20 +256,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "2:37",
-        "time_sec": 157.1,
-        "time_ms": 157100,
+        "time": "2:36",
+        "time_sec": 155.6,
+        "time_ms": 155600,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "1",
-        "event_id": 72582,
+        "event_id": 73352,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "3:00",
         "time_sec": 179.7,
@@ -250,11 +280,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "3:00",
+        "time_sec": 179.7,
+        "time_ms": 179700,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "2 - Omari Barboza, 11",
+        "event_id": 73361,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 7.3,
+      "dt_sec": 5.8,
       "manual": {
         "time": "3:22",
         "time_sec": 202.0,
@@ -266,20 +306,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "3:29",
-        "time_sec": 209.3,
-        "time_ms": 209260,
+        "time": "3:28",
+        "time_sec": 207.8,
+        "time_ms": 207760,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "3",
-        "event_id": 72604,
+        "event_id": 73373,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "3:22",
         "time_sec": 202.0,
@@ -290,11 +330,21 @@
         "eventtype": "Assist",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "3:22",
+        "time_sec": 202.0,
+        "time_ms": 202000,
+        "team": "\u2014",
+        "label": "Assist",
+        "player": "11 - Jack Taylor, So",
+        "event_id": 73370,
+        "event_type": "assist",
+        "shot_result": null
+      }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "4:51",
         "time_sec": 291.1,
@@ -305,11 +355,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "4:51",
+        "time_sec": 291.1,
+        "time_ms": 291100,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "4 - Carson Bradshaw, So",
+        "event_id": 73404,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "5:22",
         "time_sec": 322.4,
@@ -320,11 +380,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "5:22",
+        "time_sec": 322.4,
+        "time_ms": 322400,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "15 - Alexander Xavier, So",
+        "event_id": 73415,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 2.5,
       "manual": {
         "time": "5:46",
         "time_sec": 346.0,
@@ -336,20 +406,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "5:45",
-        "time_sec": 345.0,
-        "time_ms": 345020,
+        "time": "5:44",
+        "time_sec": 343.5,
+        "time_ms": 343520,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "3",
-        "event_id": 72659,
+        "event_id": 73425,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 0.5,
       "manual": {
         "time": "6:07",
         "time_sec": 367.4,
@@ -361,20 +431,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "6:08",
-        "time_sec": 368.4,
-        "time_ms": 368420,
+        "time": "6:07",
+        "time_sec": 366.9,
+        "time_ms": 366920,
         "team": "\u2014",
         "label": "2PT Miss",
         "player": "7",
-        "event_id": 72672,
+        "event_id": 73436,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.4,
+      "dt_sec": 1.1,
       "manual": {
         "time": "6:34",
         "time_sec": 393.8,
@@ -386,20 +456,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "6:34",
-        "time_sec": 394.2,
-        "time_ms": 394180,
+        "time": "6:33",
+        "time_sec": 392.7,
+        "time_ms": 392680,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "5",
-        "event_id": 72683,
+        "event_id": 73447,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 2.6,
+      "dt_sec": 4.1,
       "manual": {
         "time": "6:37",
         "time_sec": 396.8,
@@ -411,20 +481,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "6:34",
-        "time_sec": 394.2,
-        "time_ms": 394220,
+        "time": "6:33",
+        "time_sec": 392.7,
+        "time_ms": 392720,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "0",
-        "event_id": 72685,
+        "event_id": 73449,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "6:38",
         "time_sec": 397.9,
@@ -435,11 +505,46 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "6:38",
+        "time_sec": 397.9,
+        "time_ms": 397900,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "20 - Ezra Johnson, 12",
+        "event_id": 73451,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.5,
+      "dt_sec": 0.0,
+      "manual": {
+        "time": "7:13",
+        "time_sec": 432.8,
+        "time_ms": 432800,
+        "team": "Opponent",
+        "label": "Steal",
+        "player": "2 - Omari Barboza, 11",
+        "eventtype": "Steal",
+        "result": "NA"
+      },
+      "ai": {
+        "time": "7:13",
+        "time_sec": 432.8,
+        "time_ms": 432800,
+        "team": "\u2014",
+        "label": "Steal",
+        "player": "6",
+        "event_id": 73466,
+        "event_type": "steal",
+        "shot_result": null
+      }
+    },
+    {
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "7:13",
         "time_sec": 432.8,
@@ -451,35 +556,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "7:14",
-        "time_sec": 434.3,
-        "time_ms": 434300,
+        "time": "7:13",
+        "time_sec": 432.8,
+        "time_ms": 432800,
         "team": "\u2014",
         "label": "Turnover",
-        "player": "4",
-        "event_id": 72704,
+        "player": "4 - Carson Bradshaw, So",
+        "event_id": 73467,
         "event_type": "turnover",
         "shot_result": null
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
-      "manual": {
-        "time": "7:13",
-        "time_sec": 432.8,
-        "time_ms": 432800,
-        "team": "Opponent",
-        "label": "Steal",
-        "player": "2 - Omari Barboza, 11",
-        "eventtype": "Steal",
-        "result": "NA"
-      },
-      "ai": null
-    },
-    {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "8:02",
         "time_sec": 481.8,
@@ -490,11 +580,21 @@
         "eventtype": "Turnover",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "8:02",
+        "time_sec": 481.8,
+        "time_ms": 481800,
+        "team": "\u2014",
+        "label": "Turnover",
+        "player": "11 - Jack Taylor, So",
+        "event_id": 73486,
+        "event_type": "turnover",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.0,
+      "dt_sec": 1.5,
       "manual": {
         "time": "9:44",
         "time_sec": 584.0,
@@ -506,20 +606,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "9:44",
-        "time_sec": 584.0,
-        "time_ms": 584020,
+        "time": "9:43",
+        "time_sec": 582.5,
+        "time_ms": 582520,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "3",
-        "event_id": 72762,
+        "event_id": 73521,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.7,
+      "dt_sec": 2.2,
       "manual": {
         "time": "9:47",
         "time_sec": 586.8,
@@ -531,20 +631,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "9:46",
-        "time_sec": 586.1,
-        "time_ms": 586060,
+        "time": "9:45",
+        "time_sec": 584.6,
+        "time_ms": 584560,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "1",
-        "event_id": 72764,
+        "event_id": 73523,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "9:50",
         "time_sec": 589.6,
@@ -555,11 +655,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "9:50",
+        "time_sec": 589.6,
+        "time_ms": 589600,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "4 - Darius Zamora, 11",
+        "event_id": 73525,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.0,
+      "dt_sec": 1.5,
       "manual": {
         "time": "10:12",
         "time_sec": 612.1,
@@ -571,20 +681,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "10:12",
-        "time_sec": 612.1,
-        "time_ms": 612140,
+        "time": "10:11",
+        "time_sec": 610.6,
+        "time_ms": 610640,
         "team": "\u2014",
         "label": "FT Make",
         "player": "5",
-        "event_id": 72775,
+        "event_id": 73534,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.1,
+      "dt_sec": 4.6,
       "manual": {
         "time": "10:26",
         "time_sec": 625.8,
@@ -596,20 +706,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "10:23",
-        "time_sec": 622.7,
-        "time_ms": 622660,
+        "time": "10:21",
+        "time_sec": 621.2,
+        "time_ms": 621160,
         "team": "\u2014",
         "label": "FT Make",
         "player": "8",
-        "event_id": 72781,
+        "event_id": 73540,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 0.5,
       "manual": {
         "time": "10:47",
         "time_sec": 647.0,
@@ -621,20 +731,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "10:48",
-        "time_sec": 648.0,
-        "time_ms": 647980,
+        "time": "10:46",
+        "time_sec": 646.5,
+        "time_ms": 646480,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "9",
-        "event_id": 72791,
+        "event_id": 73549,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.5,
+      "dt_sec": 0.0,
       "manual": {
         "time": "10:49",
         "time_sec": 649.1,
@@ -646,20 +756,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "10:51",
-        "time_sec": 650.6,
-        "time_ms": 650620,
+        "time": "10:49",
+        "time_sec": 649.1,
+        "time_ms": 649120,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "4",
-        "event_id": 72793,
+        "event_id": 73551,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "11:01",
         "time_sec": 661.1,
@@ -670,11 +780,21 @@
         "eventtype": "Foul",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "11:01",
+        "time_sec": 661.1,
+        "time_ms": 661100,
+        "team": "\u2014",
+        "label": "Foul",
+        "player": "20 - Ezra Johnson, 12",
+        "event_id": 73556,
+        "event_type": "foul",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 2.3,
+      "dt_sec": 0.8,
       "manual": {
         "time": "11:25",
         "time_sec": 685.3,
@@ -686,20 +806,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "11:28",
-        "time_sec": 687.6,
-        "time_ms": 687620,
+        "time": "11:26",
+        "time_sec": 686.1,
+        "time_ms": 686120,
         "team": "\u2014",
         "label": "2PT Miss",
         "player": "3",
-        "event_id": 72808,
+        "event_id": 73564,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.8,
+      "dt_sec": 0.7,
       "manual": {
         "time": "11:29",
         "time_sec": 688.6,
@@ -711,20 +831,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "11:29",
-        "time_sec": 689.4,
-        "time_ms": 689420,
+        "time": "11:28",
+        "time_sec": 687.9,
+        "time_ms": 687920,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "6",
-        "event_id": 72810,
+        "event_id": 73566,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 8.5,
+      "dt_sec": 7.0,
       "manual": {
         "time": "11:32",
         "time_sec": 691.8,
@@ -736,20 +856,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "11:40",
-        "time_sec": 700.3,
-        "time_ms": 700300,
+        "time": "11:39",
+        "time_sec": 698.8,
+        "time_ms": 698800,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "3",
-        "event_id": 72814,
+        "event_id": 73571,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "11:32",
         "time_sec": 691.8,
@@ -760,11 +880,21 @@
         "eventtype": "Assist",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "11:32",
+        "time_sec": 691.8,
+        "time_ms": 691800,
+        "team": "\u2014",
+        "label": "Assist",
+        "player": "15 - Alexander Xavier, So",
+        "event_id": 73568,
+        "event_type": "assist",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 2.5,
       "manual": {
         "time": "11:52",
         "time_sec": 711.9,
@@ -776,20 +906,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "11:51",
-        "time_sec": 710.9,
-        "time_ms": 710860,
+        "time": "11:49",
+        "time_sec": 709.4,
+        "time_ms": 709360,
         "team": "\u2014",
         "label": "Steal",
         "player": "3",
-        "event_id": 72820,
+        "event_id": 73577,
         "event_type": "steal",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 2.5,
       "manual": {
         "time": "11:52",
         "time_sec": 711.9,
@@ -801,20 +931,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "11:51",
-        "time_sec": 710.9,
-        "time_ms": 710860,
+        "time": "11:49",
+        "time_sec": 709.4,
+        "time_ms": 709360,
         "team": "\u2014",
         "label": "Turnover",
         "player": "8",
-        "event_id": 72821,
+        "event_id": 73578,
         "event_type": "turnover",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.8,
+      "dt_sec": 2.3,
       "manual": {
         "time": "11:56",
         "time_sec": 715.6,
@@ -826,20 +956,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "11:55",
-        "time_sec": 714.8,
-        "time_ms": 714820,
+        "time": "11:53",
+        "time_sec": 713.3,
+        "time_ms": 713320,
         "team": "\u2014",
         "label": "2PT Miss",
         "player": "1",
-        "event_id": 72823,
+        "event_id": 73580,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 2.4,
+      "dt_sec": 3.9,
       "manual": {
         "time": "11:57",
         "time_sec": 717.3,
@@ -851,20 +981,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "11:55",
-        "time_sec": 714.9,
-        "time_ms": 714860,
+        "time": "11:53",
+        "time_sec": 713.4,
+        "time_ms": 713360,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "8",
-        "event_id": 72825,
+        "event_id": 73582,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 2.8,
+      "dt_sec": 4.3,
       "manual": {
         "time": "12:23",
         "time_sec": 742.9,
@@ -876,20 +1006,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "12:20",
-        "time_sec": 740.1,
-        "time_ms": 740100,
+        "time": "12:19",
+        "time_sec": 738.6,
+        "time_ms": 738600,
         "team": "\u2014",
         "label": "3PT Miss",
         "player": "3",
-        "event_id": 72837,
+        "event_id": 73591,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 5.8,
+      "dt_sec": 7.3,
       "manual": {
         "time": "12:26",
         "time_sec": 746.1,
@@ -901,20 +1031,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "12:20",
-        "time_sec": 740.3,
-        "time_ms": 740260,
+        "time": "12:19",
+        "time_sec": 738.8,
+        "time_ms": 738760,
         "team": "\u2014",
         "label": "DefRebound",
         "player": "6",
-        "event_id": 72839,
+        "event_id": 73593,
         "event_type": "rebound",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 4.0,
+      "dt_sec": 5.5,
       "manual": {
         "time": "12:37",
         "time_sec": 757.1,
@@ -926,20 +1056,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "12:33",
-        "time_sec": 753.1,
-        "time_ms": 753100,
+        "time": "12:32",
+        "time_sec": 751.6,
+        "time_ms": 751600,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "1",
-        "event_id": 72843,
+        "event_id": 73597,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "12:37",
         "time_sec": 757.1,
@@ -950,11 +1080,21 @@
         "eventtype": "Assist",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "12:37",
+        "time_sec": 757.1,
+        "time_ms": 757100,
+        "team": "\u2014",
+        "label": "Assist",
+        "player": "4 - Carson Bradshaw, So",
+        "event_id": 73600,
+        "event_type": "assist",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.6,
+      "dt_sec": 2.1,
       "manual": {
         "time": "12:53",
         "time_sec": 773.4,
@@ -966,20 +1106,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "12:57",
-        "time_sec": 777.0,
-        "time_ms": 777020,
+        "time": "12:56",
+        "time_sec": 775.5,
+        "time_ms": 775520,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "3",
-        "event_id": 72854,
+        "event_id": 73608,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.2,
+      "dt_sec": 0.0,
       "manual": {
         "time": "13:08",
         "time_sec": 788.2,
@@ -991,20 +1131,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "13:05",
-        "time_sec": 785.0,
-        "time_ms": 785020,
+        "time": "13:08",
+        "time_sec": 788.2,
+        "time_ms": 788200,
         "team": "\u2014",
         "label": "Turnover",
-        "player": "2",
-        "event_id": 72858,
+        "player": "11 - Jack Taylor, So",
+        "event_id": 73614,
         "event_type": "turnover",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.7,
+      "dt_sec": 5.2,
       "manual": {
         "time": "13:35",
         "time_sec": 815.4,
@@ -1016,20 +1156,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "13:32",
-        "time_sec": 811.7,
-        "time_ms": 811700,
+        "time": "13:30",
+        "time_sec": 810.2,
+        "time_ms": 810200,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "5",
-        "event_id": 72869,
+        "event_id": 73622,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 1.0,
+      "dt_sec": 0.5,
       "manual": {
         "time": "13:42",
         "time_sec": 821.5,
@@ -1041,20 +1181,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "13:43",
-        "time_sec": 822.5,
-        "time_ms": 822540,
+        "time": "13:41",
+        "time_sec": 821.0,
+        "time_ms": 821040,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "1",
-        "event_id": 72875,
+        "event_id": 73626,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "13:42",
         "time_sec": 821.5,
@@ -1065,11 +1205,21 @@
         "eventtype": "Assist",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "13:42",
+        "time_sec": 821.5,
+        "time_ms": 821500,
+        "team": "\u2014",
+        "label": "Assist",
+        "player": "10 - Tyden Blacker, So",
+        "event_id": 73627,
+        "event_type": "assist",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 9.6,
+      "dt_sec": 0.0,
       "manual": {
         "time": "13:51",
         "time_sec": 830.9,
@@ -1081,20 +1231,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "13:41",
-        "time_sec": 821.3,
-        "time_ms": 821340,
+        "time": "13:51",
+        "time_sec": 830.9,
+        "time_ms": 830900,
         "team": "\u2014",
         "label": "Steal",
-        "player": "3",
-        "event_id": 72873,
+        "player": "15 - Alexander Xavier, So",
+        "event_id": 73631,
         "event_type": "steal",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 9.6,
+      "dt_sec": 0.0,
       "manual": {
         "time": "13:51",
         "time_sec": 830.9,
@@ -1106,20 +1256,20 @@
         "result": "NA"
       },
       "ai": {
-        "time": "13:41",
-        "time_sec": 821.3,
-        "time_ms": 821340,
+        "time": "13:51",
+        "time_sec": 830.9,
+        "time_ms": 830900,
         "team": "\u2014",
         "label": "Turnover",
-        "player": "9",
-        "event_id": 72874,
+        "player": "5 - Lance Bryce, 10",
+        "event_id": 73632,
         "event_type": "turnover",
         "shot_result": null
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 0.1,
+      "dt_sec": 1.6,
       "manual": {
         "time": "13:53",
         "time_sec": 833.0,
@@ -1131,20 +1281,20 @@
         "result": "Make"
       },
       "ai": {
-        "time": "13:53",
-        "time_sec": 832.9,
-        "time_ms": 832900,
+        "time": "13:51",
+        "time_sec": 831.4,
+        "time_ms": 831400,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "3",
-        "event_id": 72879,
+        "event_id": 73633,
         "event_type": "shot",
         "shot_result": "make"
       }
     },
     {
       "status": "EXACT",
-      "dt_sec": 3.6,
+      "dt_sec": 2.1,
       "manual": {
         "time": "14:11",
         "time_sec": 851.1,
@@ -1156,20 +1306,20 @@
         "result": "Miss"
       },
       "ai": {
-        "time": "14:15",
-        "time_sec": 854.7,
-        "time_ms": 854700,
+        "time": "14:13",
+        "time_sec": 853.2,
+        "time_ms": 853200,
         "team": "\u2014",
         "label": "2PT Miss",
         "player": "4",
-        "event_id": 72888,
+        "event_id": 73641,
         "event_type": "shot",
         "shot_result": "miss"
       }
     },
     {
-      "status": "MANUAL_ONLY",
-      "dt_sec": null,
+      "status": "EXACT",
+      "dt_sec": 0.0,
       "manual": {
         "time": "14:13",
         "time_sec": 853.3,
@@ -1180,11 +1330,21 @@
         "eventtype": "DefRebound",
         "result": "NA"
       },
-      "ai": null
+      "ai": {
+        "time": "14:13",
+        "time_sec": 853.3,
+        "time_ms": 853300,
+        "team": "\u2014",
+        "label": "DefRebound",
+        "player": "33 - Dominic Fischer, Sr",
+        "event_id": 73643,
+        "event_type": "rebound",
+        "shot_result": null
+      }
     },
     {
       "status": "EXACT",
-      "dt_sec": 9.9,
+      "dt_sec": 8.4,
       "manual": {
         "time": "14:20",
         "time_sec": 859.8,
@@ -1196,463 +1356,15 @@
         "result": "Make"
       },
       "ai": {
-        "time": "14:30",
-        "time_sec": 869.7,
-        "time_ms": 869700,
+        "time": "14:28",
+        "time_sec": 868.2,
+        "time_ms": 868200,
         "team": "\u2014",
         "label": "2PT Make",
         "player": "1",
-        "event_id": 72895,
+        "event_id": 73649,
         "event_type": "shot",
         "shot_result": "make"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "0:24",
-        "time_sec": 24.2,
-        "time_ms": 24180,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "7",
-        "event_id": 72528,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "0:28",
-        "time_sec": 27.8,
-        "time_ms": 27780,
-        "team": "\u2014",
-        "label": "DefRebound",
-        "player": "8",
-        "event_id": 72530,
-        "event_type": "rebound",
-        "shot_result": null
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "1:34",
-        "time_sec": 93.9,
-        "time_ms": 93900,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72553,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "2:16",
-        "time_sec": 135.9,
-        "time_ms": 135900,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "3",
-        "event_id": 72572,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "2:50",
-        "time_sec": 170.5,
-        "time_ms": 170500,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "1",
-        "event_id": 72587,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "3:04",
-        "time_sec": 183.5,
-        "time_ms": 183500,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72592,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "3:16",
-        "time_sec": 195.9,
-        "time_ms": 195900,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72598,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "4:43",
-        "time_sec": 282.7,
-        "time_ms": 282700,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "1",
-        "event_id": 72631,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "4:55",
-        "time_sec": 294.7,
-        "time_ms": 294700,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "4",
-        "event_id": 72637,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "5:12",
-        "time_sec": 311.7,
-        "time_ms": 311700,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72643,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "5:22",
-        "time_sec": 322.3,
-        "time_ms": 322260,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "3",
-        "event_id": 72648,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "5:34",
-        "time_sec": 334.5,
-        "time_ms": 334460,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "4",
-        "event_id": 72654,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "5:57",
-        "time_sec": 357.3,
-        "time_ms": 357260,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "4",
-        "event_id": 72666,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "6:46",
-        "time_sec": 405.9,
-        "time_ms": 405900,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "6",
-        "event_id": 72690,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "7:11",
-        "time_sec": 430.7,
-        "time_ms": 430660,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "3",
-        "event_id": 72702,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "7:23",
-        "time_sec": 443.1,
-        "time_ms": 443100,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72710,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "7:57",
-        "time_sec": 477.1,
-        "time_ms": 477100,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "8",
-        "event_id": 72724,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "8:11",
-        "time_sec": 491.1,
-        "time_ms": 491100,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "7",
-        "event_id": 72729,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "9:32",
-        "time_sec": 572.3,
-        "time_ms": 572300,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "2",
-        "event_id": 72757,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "10:01",
-        "time_sec": 601.1,
-        "time_ms": 601100,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "0",
-        "event_id": 72769,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "10:35",
-        "time_sec": 634.9,
-        "time_ms": 634900,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "9",
-        "event_id": 72785,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "10:59",
-        "time_sec": 659.1,
-        "time_ms": 659100,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "4",
-        "event_id": 72798,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "11:14",
-        "time_sec": 674.3,
-        "time_ms": 674300,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "1",
-        "event_id": 72802,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "12:07",
-        "time_sec": 726.7,
-        "time_ms": 726660,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "3",
-        "event_id": 72830,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "12:07",
-        "time_sec": 726.7,
-        "time_ms": 726700,
-        "team": "\u2014",
-        "label": "DefRebound",
-        "player": "0",
-        "event_id": 72832,
-        "event_type": "rebound",
-        "shot_result": null
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "12:46",
-        "time_sec": 765.5,
-        "time_ms": 765500,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "3",
-        "event_id": 72848,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "13:08",
-        "time_sec": 787.7,
-        "time_ms": 787700,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "0",
-        "event_id": 72860,
-        "event_type": "shot",
-        "shot_result": "miss"
-      }
-    },
-    {
-      "status": "AI_ONLY",
-      "dt_sec": null,
-      "manual": null,
-      "ai": {
-        "time": "14:04",
-        "time_sec": 844.3,
-        "time_ms": 844300,
-        "team": "\u2014",
-        "label": "2PT Miss",
-        "player": "9",
-        "event_id": 72883,
-        "event_type": "shot",
-        "shot_result": "miss"
       }
     }
   ],
@@ -2190,717 +1902,585 @@
   ],
   "ai": [
     {
-      "time": "0:24",
-      "time_sec": 24.2,
-      "time_ms": 24180,
+      "time": "0:40",
+      "time_sec": 40.0,
+      "time_ms": 39960,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "7",
-      "event_id": 72528,
+      "label": "3PT Miss",
+      "player": "1",
+      "event_id": 73304,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "0:28",
-      "time_sec": 27.8,
-      "time_ms": 27780,
+      "time": "0:40",
+      "time_sec": 40.0,
+      "time_ms": 40000,
       "team": "\u2014",
-      "label": "DefRebound",
-      "player": "8",
-      "event_id": 72530,
+      "label": "OffRebound",
+      "player": "1",
+      "event_id": 73305,
       "event_type": "rebound",
       "shot_result": null
     },
     {
       "time": "0:41",
-      "time_sec": 41.5,
-      "time_ms": 41460,
-      "team": "\u2014",
-      "label": "3PT Miss",
-      "player": "1",
-      "event_id": 72535,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "0:42",
-      "time_sec": 41.5,
-      "time_ms": 41500,
-      "team": "\u2014",
-      "label": "OffRebound",
-      "player": "1",
-      "event_id": 72536,
-      "event_type": "rebound",
-      "shot_result": null
-    },
-    {
-      "time": "1:34",
-      "time_sec": 93.9,
-      "time_ms": 93900,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72553,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "2:05",
-      "time_sec": 125.3,
-      "time_ms": 125300,
+      "time_sec": 40.7,
+      "time_ms": 40700,
       "team": "\u2014",
       "label": "2PT Make",
-      "player": "8",
-      "event_id": 72565,
+      "player": "11 - Jack Taylor, So",
+      "event_id": 73308,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "2:11",
-      "time_sec": 131.2,
-      "time_ms": 131220,
+      "time": "0:41",
+      "time_sec": 40.7,
+      "time_ms": 40700,
+      "team": "\u2014",
+      "label": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "event_id": 73306,
+      "event_type": "assist",
+      "shot_result": null
+    },
+    {
+      "time": "1:35",
+      "time_sec": 94.8,
+      "time_ms": 94800,
+      "team": "\u2014",
+      "label": "Foul",
+      "player": "10 - Tyden Blacker, So",
+      "event_id": 73326,
+      "event_type": "foul",
+      "shot_result": null
+    },
+    {
+      "time": "2:10",
+      "time_sec": 129.7,
+      "time_ms": 129720,
       "team": "\u2014",
       "label": "Steal",
       "player": "8",
-      "event_id": 72569,
+      "event_id": 73339,
       "event_type": "steal",
       "shot_result": null
     },
     {
-      "time": "2:11",
-      "time_sec": 131.2,
-      "time_ms": 131220,
+      "time": "2:10",
+      "time_sec": 129.7,
+      "time_ms": 129720,
       "team": "\u2014",
       "label": "Turnover",
       "player": "3",
-      "event_id": 72570,
+      "event_id": 73340,
       "event_type": "turnover",
       "shot_result": null
     },
     {
-      "time": "2:16",
-      "time_sec": 135.9,
-      "time_ms": 135900,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72572,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "2:37",
-      "time_sec": 157.1,
-      "time_ms": 157100,
-      "team": "\u2014",
-      "label": "3PT Miss",
-      "player": "1",
-      "event_id": 72582,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "2:50",
-      "time_sec": 170.5,
-      "time_ms": 170500,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "1",
-      "event_id": 72587,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "3:04",
-      "time_sec": 183.5,
-      "time_ms": 183500,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72592,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "3:16",
-      "time_sec": 195.9,
-      "time_ms": 195900,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72598,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "3:29",
-      "time_sec": 209.3,
-      "time_ms": 209260,
+      "time": "2:14",
+      "time_sec": 134.4,
+      "time_ms": 134400,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "3",
-      "event_id": 72604,
+      "event_id": 73342,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "4:43",
-      "time_sec": 282.7,
-      "time_ms": 282700,
+      "time": "2:36",
+      "time_sec": 155.6,
+      "time_ms": 155600,
       "team": "\u2014",
-      "label": "2PT Miss",
+      "label": "3PT Miss",
       "player": "1",
-      "event_id": 72631,
+      "event_id": 73352,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "4:55",
-      "time_sec": 294.7,
-      "time_ms": 294700,
+      "time": "3:00",
+      "time_sec": 179.7,
+      "time_ms": 179700,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "4",
-      "event_id": 72637,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Foul",
+      "player": "2 - Omari Barboza, 11",
+      "event_id": 73361,
+      "event_type": "foul",
+      "shot_result": null
     },
     {
-      "time": "5:12",
-      "time_sec": 311.7,
-      "time_ms": 311700,
+      "time": "3:22",
+      "time_sec": 202.0,
+      "time_ms": 202000,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72643,
+      "label": "Assist",
+      "player": "11 - Jack Taylor, So",
+      "event_id": 73370,
+      "event_type": "assist",
+      "shot_result": null
+    },
+    {
+      "time": "3:28",
+      "time_sec": 207.8,
+      "time_ms": 207760,
+      "team": "\u2014",
+      "label": "2PT Make",
+      "player": "3",
+      "event_id": 73373,
       "event_type": "shot",
-      "shot_result": "miss"
+      "shot_result": "make"
+    },
+    {
+      "time": "4:51",
+      "time_sec": 291.1,
+      "time_ms": 291100,
+      "team": "\u2014",
+      "label": "Foul",
+      "player": "4 - Carson Bradshaw, So",
+      "event_id": 73404,
+      "event_type": "foul",
+      "shot_result": null
     },
     {
       "time": "5:22",
-      "time_sec": 322.3,
-      "time_ms": 322260,
+      "time_sec": 322.4,
+      "time_ms": 322400,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72648,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Foul",
+      "player": "15 - Alexander Xavier, So",
+      "event_id": 73415,
+      "event_type": "foul",
+      "shot_result": null
     },
     {
-      "time": "5:34",
-      "time_sec": 334.5,
-      "time_ms": 334460,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "4",
-      "event_id": 72654,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "5:45",
-      "time_sec": 345.0,
-      "time_ms": 345020,
+      "time": "5:44",
+      "time_sec": 343.5,
+      "time_ms": 343520,
       "team": "\u2014",
       "label": "3PT Miss",
       "player": "3",
-      "event_id": 72659,
+      "event_id": 73425,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "5:57",
-      "time_sec": 357.3,
-      "time_ms": 357260,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "4",
-      "event_id": 72666,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "6:08",
-      "time_sec": 368.4,
-      "time_ms": 368420,
+      "time": "6:07",
+      "time_sec": 366.9,
+      "time_ms": 366920,
       "team": "\u2014",
       "label": "2PT Miss",
       "player": "7",
-      "event_id": 72672,
+      "event_id": 73436,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "6:34",
-      "time_sec": 394.2,
-      "time_ms": 394180,
+      "time": "6:33",
+      "time_sec": 392.7,
+      "time_ms": 392680,
       "team": "\u2014",
       "label": "3PT Miss",
       "player": "5",
-      "event_id": 72683,
+      "event_id": 73447,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "6:34",
-      "time_sec": 394.2,
-      "time_ms": 394220,
+      "time": "6:33",
+      "time_sec": 392.7,
+      "time_ms": 392720,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "0",
-      "event_id": 72685,
+      "event_id": 73449,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "6:46",
-      "time_sec": 405.9,
-      "time_ms": 405900,
+      "time": "6:38",
+      "time_sec": 397.9,
+      "time_ms": 397900,
       "team": "\u2014",
-      "label": "2PT Miss",
+      "label": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "event_id": 73451,
+      "event_type": "foul",
+      "shot_result": null
+    },
+    {
+      "time": "7:13",
+      "time_sec": 432.8,
+      "time_ms": 432800,
+      "team": "\u2014",
+      "label": "Steal",
       "player": "6",
-      "event_id": 72690,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "event_id": 73466,
+      "event_type": "steal",
+      "shot_result": null
     },
     {
-      "time": "7:11",
-      "time_sec": 430.7,
-      "time_ms": 430660,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72702,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "7:14",
-      "time_sec": 434.3,
-      "time_ms": 434300,
+      "time": "7:13",
+      "time_sec": 432.8,
+      "time_ms": 432800,
       "team": "\u2014",
       "label": "Turnover",
-      "player": "4",
-      "event_id": 72704,
+      "player": "4 - Carson Bradshaw, So",
+      "event_id": 73467,
       "event_type": "turnover",
       "shot_result": null
     },
     {
-      "time": "7:23",
-      "time_sec": 443.1,
-      "time_ms": 443100,
+      "time": "8:02",
+      "time_sec": 481.8,
+      "time_ms": 481800,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72710,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Turnover",
+      "player": "11 - Jack Taylor, So",
+      "event_id": 73486,
+      "event_type": "turnover",
+      "shot_result": null
     },
     {
-      "time": "7:57",
-      "time_sec": 477.1,
-      "time_ms": 477100,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "8",
-      "event_id": 72724,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "8:11",
-      "time_sec": 491.1,
-      "time_ms": 491100,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "7",
-      "event_id": 72729,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "9:32",
-      "time_sec": 572.3,
-      "time_ms": 572300,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "2",
-      "event_id": 72757,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "9:44",
-      "time_sec": 584.0,
-      "time_ms": 584020,
+      "time": "9:43",
+      "time_sec": 582.5,
+      "time_ms": 582520,
       "team": "\u2014",
       "label": "3PT Miss",
       "player": "3",
-      "event_id": 72762,
+      "event_id": 73521,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "9:46",
-      "time_sec": 586.1,
-      "time_ms": 586060,
+      "time": "9:45",
+      "time_sec": 584.6,
+      "time_ms": 584560,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "1",
-      "event_id": 72764,
+      "event_id": 73523,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "10:01",
-      "time_sec": 601.1,
-      "time_ms": 601100,
+      "time": "9:50",
+      "time_sec": 589.6,
+      "time_ms": 589600,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "0",
-      "event_id": 72769,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Foul",
+      "player": "4 - Darius Zamora, 11",
+      "event_id": 73525,
+      "event_type": "foul",
+      "shot_result": null
     },
     {
-      "time": "10:12",
-      "time_sec": 612.1,
-      "time_ms": 612140,
+      "time": "10:11",
+      "time_sec": 610.6,
+      "time_ms": 610640,
       "team": "\u2014",
       "label": "FT Make",
       "player": "5",
-      "event_id": 72775,
+      "event_id": 73534,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "10:23",
-      "time_sec": 622.7,
-      "time_ms": 622660,
+      "time": "10:21",
+      "time_sec": 621.2,
+      "time_ms": 621160,
       "team": "\u2014",
       "label": "FT Make",
       "player": "8",
-      "event_id": 72781,
+      "event_id": 73540,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "10:35",
-      "time_sec": 634.9,
-      "time_ms": 634900,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "9",
-      "event_id": 72785,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "10:48",
-      "time_sec": 648.0,
-      "time_ms": 647980,
+      "time": "10:46",
+      "time_sec": 646.5,
+      "time_ms": 646480,
       "team": "\u2014",
       "label": "3PT Miss",
       "player": "9",
-      "event_id": 72791,
+      "event_id": 73549,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "10:51",
-      "time_sec": 650.6,
-      "time_ms": 650620,
+      "time": "10:49",
+      "time_sec": 649.1,
+      "time_ms": 649120,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "4",
-      "event_id": 72793,
+      "event_id": 73551,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "10:59",
-      "time_sec": 659.1,
-      "time_ms": 659100,
+      "time": "11:01",
+      "time_sec": 661.1,
+      "time_ms": 661100,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "4",
-      "event_id": 72798,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "event_id": 73556,
+      "event_type": "foul",
+      "shot_result": null
     },
     {
-      "time": "11:14",
-      "time_sec": 674.3,
-      "time_ms": 674300,
+      "time": "11:26",
+      "time_sec": 686.1,
+      "time_ms": 686120,
       "team": "\u2014",
       "label": "2PT Miss",
-      "player": "1",
-      "event_id": 72802,
+      "player": "3",
+      "event_id": 73564,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
       "time": "11:28",
-      "time_sec": 687.6,
-      "time_ms": 687620,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72808,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "11:29",
-      "time_sec": 689.4,
-      "time_ms": 689420,
+      "time_sec": 687.9,
+      "time_ms": 687920,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "6",
-      "event_id": 72810,
+      "event_id": 73566,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "11:40",
-      "time_sec": 700.3,
-      "time_ms": 700300,
+      "time": "11:32",
+      "time_sec": 691.8,
+      "time_ms": 691800,
+      "team": "\u2014",
+      "label": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "event_id": 73568,
+      "event_type": "assist",
+      "shot_result": null
+    },
+    {
+      "time": "11:39",
+      "time_sec": 698.8,
+      "time_ms": 698800,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "3",
-      "event_id": 72814,
+      "event_id": 73571,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "11:51",
-      "time_sec": 710.9,
-      "time_ms": 710860,
+      "time": "11:49",
+      "time_sec": 709.4,
+      "time_ms": 709360,
       "team": "\u2014",
       "label": "Steal",
       "player": "3",
-      "event_id": 72820,
+      "event_id": 73577,
       "event_type": "steal",
       "shot_result": null
     },
     {
-      "time": "11:51",
-      "time_sec": 710.9,
-      "time_ms": 710860,
+      "time": "11:49",
+      "time_sec": 709.4,
+      "time_ms": 709360,
       "team": "\u2014",
       "label": "Turnover",
       "player": "8",
-      "event_id": 72821,
+      "event_id": 73578,
       "event_type": "turnover",
       "shot_result": null
     },
     {
-      "time": "11:55",
-      "time_sec": 714.8,
-      "time_ms": 714820,
+      "time": "11:53",
+      "time_sec": 713.3,
+      "time_ms": 713320,
       "team": "\u2014",
       "label": "2PT Miss",
       "player": "1",
-      "event_id": 72823,
+      "event_id": 73580,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "11:55",
-      "time_sec": 714.9,
-      "time_ms": 714860,
+      "time": "11:53",
+      "time_sec": 713.4,
+      "time_ms": 713360,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "8",
-      "event_id": 72825,
+      "event_id": 73582,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "12:07",
-      "time_sec": 726.7,
-      "time_ms": 726660,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72830,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "12:07",
-      "time_sec": 726.7,
-      "time_ms": 726700,
-      "team": "\u2014",
-      "label": "DefRebound",
-      "player": "0",
-      "event_id": 72832,
-      "event_type": "rebound",
-      "shot_result": null
-    },
-    {
-      "time": "12:20",
-      "time_sec": 740.1,
-      "time_ms": 740100,
+      "time": "12:19",
+      "time_sec": 738.6,
+      "time_ms": 738600,
       "team": "\u2014",
       "label": "3PT Miss",
       "player": "3",
-      "event_id": 72837,
+      "event_id": 73591,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "12:20",
-      "time_sec": 740.3,
-      "time_ms": 740260,
+      "time": "12:19",
+      "time_sec": 738.8,
+      "time_ms": 738760,
       "team": "\u2014",
       "label": "DefRebound",
       "player": "6",
-      "event_id": 72839,
+      "event_id": 73593,
       "event_type": "rebound",
       "shot_result": null
     },
     {
-      "time": "12:33",
-      "time_sec": 753.1,
-      "time_ms": 753100,
+      "time": "12:32",
+      "time_sec": 751.6,
+      "time_ms": 751600,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "1",
-      "event_id": 72843,
+      "event_id": 73597,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "12:46",
-      "time_sec": 765.5,
-      "time_ms": 765500,
+      "time": "12:37",
+      "time_sec": 757.1,
+      "time_ms": 757100,
       "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "3",
-      "event_id": 72848,
-      "event_type": "shot",
-      "shot_result": "miss"
+      "label": "Assist",
+      "player": "4 - Carson Bradshaw, So",
+      "event_id": 73600,
+      "event_type": "assist",
+      "shot_result": null
     },
     {
-      "time": "12:57",
-      "time_sec": 777.0,
-      "time_ms": 777020,
+      "time": "12:56",
+      "time_sec": 775.5,
+      "time_ms": 775520,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "3",
-      "event_id": 72854,
+      "event_id": 73608,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "13:05",
-      "time_sec": 785.0,
-      "time_ms": 785020,
+      "time": "13:08",
+      "time_sec": 788.2,
+      "time_ms": 788200,
       "team": "\u2014",
       "label": "Turnover",
-      "player": "2",
-      "event_id": 72858,
+      "player": "11 - Jack Taylor, So",
+      "event_id": 73614,
       "event_type": "turnover",
       "shot_result": null
     },
     {
-      "time": "13:08",
-      "time_sec": 787.7,
-      "time_ms": 787700,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "0",
-      "event_id": 72860,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "13:32",
-      "time_sec": 811.7,
-      "time_ms": 811700,
+      "time": "13:30",
+      "time_sec": 810.2,
+      "time_ms": 810200,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "5",
-      "event_id": 72869,
+      "event_id": 73622,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
       "time": "13:41",
-      "time_sec": 821.3,
-      "time_ms": 821340,
+      "time_sec": 821.0,
+      "time_ms": 821040,
+      "team": "\u2014",
+      "label": "2PT Make",
+      "player": "1",
+      "event_id": 73626,
+      "event_type": "shot",
+      "shot_result": "make"
+    },
+    {
+      "time": "13:42",
+      "time_sec": 821.5,
+      "time_ms": 821500,
+      "team": "\u2014",
+      "label": "Assist",
+      "player": "10 - Tyden Blacker, So",
+      "event_id": 73627,
+      "event_type": "assist",
+      "shot_result": null
+    },
+    {
+      "time": "13:51",
+      "time_sec": 830.9,
+      "time_ms": 830900,
       "team": "\u2014",
       "label": "Steal",
-      "player": "3",
-      "event_id": 72873,
+      "player": "15 - Alexander Xavier, So",
+      "event_id": 73631,
       "event_type": "steal",
       "shot_result": null
     },
     {
-      "time": "13:41",
-      "time_sec": 821.3,
-      "time_ms": 821340,
+      "time": "13:51",
+      "time_sec": 830.9,
+      "time_ms": 830900,
       "team": "\u2014",
       "label": "Turnover",
-      "player": "9",
-      "event_id": 72874,
+      "player": "5 - Lance Bryce, 10",
+      "event_id": 73632,
       "event_type": "turnover",
       "shot_result": null
     },
     {
-      "time": "13:43",
-      "time_sec": 822.5,
-      "time_ms": 822540,
-      "team": "\u2014",
-      "label": "2PT Make",
-      "player": "1",
-      "event_id": 72875,
-      "event_type": "shot",
-      "shot_result": "make"
-    },
-    {
-      "time": "13:53",
-      "time_sec": 832.9,
-      "time_ms": 832900,
+      "time": "13:51",
+      "time_sec": 831.4,
+      "time_ms": 831400,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "3",
-      "event_id": 72879,
+      "event_id": 73633,
       "event_type": "shot",
       "shot_result": "make"
     },
     {
-      "time": "14:04",
-      "time_sec": 844.3,
-      "time_ms": 844300,
-      "team": "\u2014",
-      "label": "2PT Miss",
-      "player": "9",
-      "event_id": 72883,
-      "event_type": "shot",
-      "shot_result": "miss"
-    },
-    {
-      "time": "14:15",
-      "time_sec": 854.7,
-      "time_ms": 854700,
+      "time": "14:13",
+      "time_sec": 853.2,
+      "time_ms": 853200,
       "team": "\u2014",
       "label": "2PT Miss",
       "player": "4",
-      "event_id": 72888,
+      "event_id": 73641,
       "event_type": "shot",
       "shot_result": "miss"
     },
     {
-      "time": "14:30",
-      "time_sec": 869.7,
-      "time_ms": 869700,
+      "time": "14:13",
+      "time_sec": 853.3,
+      "time_ms": 853300,
+      "team": "\u2014",
+      "label": "DefRebound",
+      "player": "33 - Dominic Fischer, Sr",
+      "event_id": 73643,
+      "event_type": "rebound",
+      "shot_result": null
+    },
+    {
+      "time": "14:28",
+      "time_sec": 868.2,
+      "time_ms": 868200,
       "team": "\u2014",
       "label": "2PT Make",
       "player": "1",
-      "event_id": 72895,
+      "event_id": 73649,
       "event_type": "shot",
       "shot_result": "make"
     }

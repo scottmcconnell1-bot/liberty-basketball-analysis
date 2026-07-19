@@ -362,6 +362,7 @@ def postprocess_ai_events(events):
                         details.get("near_manual_template")
                         or details.get("taught_shot_type")
                         or details.get("taught_shot_result")
+                        or details.get("supervised_from_manual")
                     ):
                         filtered.append(event)
                         continue
@@ -951,8 +952,8 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
             prev_duration = int(previous.get("duration_frames") or 0)
             if (
                 previous["player"] != segment["player"]
-                and assist_gap <= 25
-                and prev_duration >= 3
+                and assist_gap <= 40
+                and prev_duration >= 2
                 and not is_secondary
             ):
                 append_unique_event(

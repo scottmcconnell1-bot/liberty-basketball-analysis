@@ -60,11 +60,11 @@ FILTER_ONLY_53C3141 = {
     "f1_exact": 0.1549,
 }
 
-# Regression gates after teach/calibrate pass (must beat filter-only on exact+F1).
-MIN_PRECISION = 0.40
-MIN_RECALL = 0.55
-MIN_EXACT = 30
-MAX_AI_ONLY = 80
+# Regression gates after supervised teach (53/0/0 on Q1 action tags).
+MIN_PRECISION = 0.95
+MIN_RECALL = 0.95
+MIN_EXACT = 50
+MAX_AI_ONLY = 5
 
 def load_manual_rows(db_path: Path) -> tuple[list[dict], str]:
     liberty = "Liberty"

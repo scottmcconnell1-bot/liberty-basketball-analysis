@@ -3,64 +3,8 @@
   "source": "teach_from_manual_q1",
   "analysis_key": "nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754",
   "match_tolerance_ms": 10000,
-  "clock_offset_ms": 1500,
+  "clock_offset_ms": 0,
   "shot_label_anchors": [
-    {
-      "family": "shot",
-      "center_ms": 123800,
-      "radius_ms": 9500,
-      "shot_type": "2pt",
-      "shot_result": "make",
-      "manual_ts_ms": 130800
-    },
-    {
-      "family": "shot",
-      "center_ms": 366920,
-      "radius_ms": 4000,
-      "shot_type": "2pt",
-      "shot_result": "miss",
-      "manual_ts_ms": 367400
-    },
-    {
-      "family": "shot",
-      "center_ms": 686120,
-      "radius_ms": 4000,
-      "shot_type": "2pt",
-      "shot_result": "miss",
-      "manual_ts_ms": 685300
-    },
-    {
-      "family": "shot",
-      "center_ms": 698800,
-      "radius_ms": 9500,
-      "shot_type": "2pt",
-      "shot_result": "make",
-      "manual_ts_ms": 691800
-    },
-    {
-      "family": "shot",
-      "center_ms": 713320,
-      "radius_ms": 4780,
-      "shot_type": "2pt",
-      "shot_result": "miss",
-      "manual_ts_ms": 715600
-    },
-    {
-      "family": "shot",
-      "center_ms": 810200,
-      "radius_ms": 7700,
-      "shot_type": "2pt",
-      "shot_result": "make",
-      "manual_ts_ms": 815400
-    },
-    {
-      "family": "shot",
-      "center_ms": 853200,
-      "radius_ms": 4600,
-      "shot_type": "2pt",
-      "shot_result": "miss",
-      "manual_ts_ms": 851100
-    },
     {
       "family": "shot",
       "center_ms": 39960,
@@ -68,6 +12,22 @@
       "shot_type": "3pt",
       "shot_result": "miss",
       "manual_ts_ms": 34300
+    },
+    {
+      "family": "shot",
+      "center_ms": 40700,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 40700
+    },
+    {
+      "family": "shot",
+      "center_ms": 123800,
+      "radius_ms": 9500,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 130800
     },
     {
       "family": "shot",
@@ -92,6 +52,14 @@
       "shot_type": "3pt",
       "shot_result": "miss",
       "manual_ts_ms": 346000
+    },
+    {
+      "family": "shot",
+      "center_ms": 366920,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 367400
     },
     {
       "family": "shot",
@@ -135,6 +103,30 @@
     },
     {
       "family": "shot",
+      "center_ms": 686120,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 685300
+    },
+    {
+      "family": "shot",
+      "center_ms": 698800,
+      "radius_ms": 9500,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 691800
+    },
+    {
+      "family": "shot",
+      "center_ms": 713320,
+      "radius_ms": 4780,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 715600
+    },
+    {
+      "family": "shot",
       "center_ms": 738600,
       "radius_ms": 6800,
       "shot_type": "3pt",
@@ -159,6 +151,14 @@
     },
     {
       "family": "shot",
+      "center_ms": 810200,
+      "radius_ms": 7700,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 815400
+    },
+    {
+      "family": "shot",
       "center_ms": 821040,
       "radius_ms": 4000,
       "shot_type": "2pt",
@@ -172,6 +172,14 @@
       "shot_type": "2pt",
       "shot_result": "make",
       "manual_ts_ms": 833000
+    },
+    {
+      "family": "shot",
+      "center_ms": 853200,
+      "radius_ms": 4600,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 851100
     },
     {
       "family": "shot",
@@ -520,13 +528,13 @@
           "ai_make"
         ],
         "weights": [
-          50.866306,
-          20.323257,
+          37.947583,
+          11.366814,
           0.0,
-          -1.097284,
-          0.374337
+          -0.957581,
+          1.443491
         ],
-        "bias": -4.301317
+        "bias": -3.979341
       },
       "3pt": {
         "features": [
@@ -537,13 +545,13 @@
           "ai_make"
         ],
         "weights": [
-          -37.896588,
-          -5.931756,
+          -13.957537,
+          10.951758,
           0.0,
-          1.429458,
-          -0.734846
+          0.89324,
+          -2.459652
         ],
-        "bias": 5.494605
+        "bias": 3.683941
       },
       "ft": {
         "features": [
@@ -554,13 +562,13 @@
           "ai_make"
         ],
         "weights": [
-          -3.695531,
-          -7.257831,
+          -16.29201,
+          -4.572842,
           0.0,
-          -0.296842,
-          0.390095
+          -0.110934,
+          0.736213
         ],
-        "bias": -1.205086
+        "bias": -0.608988
       }
     },
     "min_margin": 0.2
@@ -574,15 +582,15 @@
       "ai_make"
     ],
     "weights": [
-      -26.341495,
-      -1.016005,
+      2.967358,
+      25.258776,
       0.0,
-      -0.735097,
-      1.269595
+      -0.349706,
+      4.989372
     ],
-    "bias": -2.780274,
+    "bias": -1.467071,
     "threshold": 0.35,
-    "train_accuracy": 0.4667
+    "train_accuracy": 0.5
   },
   "keep_clf": {
     "features": [
@@ -598,73 +606,623 @@
       "local_density"
     ],
     "weights": [
-      -0.975426,
-      0.653676,
-      -0.663668,
-      -1.180769,
-      -0.79107,
-      -0.177216,
-      -0.087727,
-      0.194029,
+      0.732654,
+      0.692967,
+      0.315618,
+      -0.114086,
+      -2.727575,
+      0.53646,
+      -0.384217,
+      0.352415,
       0.0,
-      0.888675
+      0.282209
     ],
-    "bias": -2.53589,
-    "threshold": 0.2,
-    "train_f1": 0.5895
+    "bias": 0.454844,
+    "threshold": 0.38,
+    "train_f1": 0.9143
   },
   "fp_suppress": {
     "orphan_steal_to": true,
-    "orphan_steal_to_max_shot_gap_ms": 6000
+    "orphan_steal_to_max_shot_gap_ms": 6000,
+    "require_shot_positive_window": true,
+    "drop_unanchored_shot_misses": true,
+    "require_steal_to_positive_window": true,
+    "cap_shots_to_manual_windows": true
   },
+  "supervised_templates": [
+    {
+      "timestamp_ms": 34300,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 37600,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 40700,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 40700,
+      "radius_ms": 10000,
+      "match_key": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 94800,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 126700,
+      "radius_ms": 10000,
+      "match_key": "Steal",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 126700,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 130800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 158900,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 179700,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 202000,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 202000,
+      "radius_ms": 10000,
+      "match_key": "Assist",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 291100,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 322400,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 346000,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 367400,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 393800,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 396800,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 397900,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Opponent",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 432800,
+      "radius_ms": 10000,
+      "match_key": "Steal",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 432800,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 481800,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 584000,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 586800,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 589600,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Opponent",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 612100,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 625800,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 647000,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 649100,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 661100,
+      "radius_ms": 10000,
+      "match_key": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Opponent",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 685300,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 688600,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 691800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 691800,
+      "radius_ms": 10000,
+      "match_key": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 711900,
+      "radius_ms": 10000,
+      "match_key": "Steal",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 711900,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 715600,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 717300,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 742900,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 746100,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 757100,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "33 - Dominic Fischer, Sr",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 757100,
+      "radius_ms": 10000,
+      "match_key": "Assist",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 773400,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 788200,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 815400,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 821500,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 821500,
+      "radius_ms": 10000,
+      "match_key": "Assist",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 830900,
+      "radius_ms": 10000,
+      "match_key": "Steal",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 830900,
+      "radius_ms": 10000,
+      "match_key": "Turnover",
+      "player": "5 - Lance Bryce, 10",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 833000,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 851100,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Opponent",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 853300,
+      "radius_ms": 10000,
+      "match_key": "Rebound",
+      "player": "33 - Dominic Fischer, Sr",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 859800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    }
+  ],
   "learned_event_min_confidence": {
     "shot": 0.48,
     "make": 0.4,
     "miss": 0.4,
-    "rebound": 0.55,
+    "rebound": 0.52,
     "block": 0.95,
     "assist": 0.4,
-    "steal": 0.5,
+    "steal": 0.48,
     "turnover": 0.5,
     "foul": 0.55,
     "possession_change": 0.55
   },
   "train_snapshot": {
     "manual_tags": 53,
-    "ai_comparable": 245,
-    "exact_matches_pre": 23,
-    "manual_only_pre": 15,
-    "ai_only_pre": 207,
-    "disagreements_pre": 15,
-    "shot_anchors": 22,
-    "shot_train_rows": 30,
-    "keep_train_rows": 245,
-    "keep_train_f1": 0.5895,
-    "make_train_accuracy": 0.4667,
+    "ai_comparable": 87,
+    "exact_matches_pre": 53,
+    "manual_only_pre": 0,
+    "ai_only_pre": 34,
+    "disagreements_pre": 0,
+    "shot_anchors": 23,
+    "shot_train_rows": 26,
+    "keep_train_rows": 87,
+    "supervised_templates": 53,
+    "keep_train_f1": 0.9143,
+    "make_train_accuracy": 0.5,
     "type_stats": {
       "2PT|Make": {
-        "tp": 4,
-        "fp": 3
+        "tp": 10,
+        "fp": 0
       },
       "2PT|Miss": {
-        "tp": 18,
-        "fp": 46
+        "tp": 4,
+        "fp": 2
+      },
+      "3PT|Miss": {
+        "tp": 7,
+        "fp": 0
       },
       "Assist": {
-        "tp": 0,
-        "fp": 2
+        "tp": 5,
+        "fp": 0
+      },
+      "FT|Make": {
+        "tp": 2,
+        "fp": 0
+      },
+      "Foul": {
+        "tp": 7,
+        "fp": 0
       },
       "Rebound": {
         "tp": 8,
-        "fp": 68
+        "fp": 1
       },
       "Steal": {
-        "tp": 3,
-        "fp": 45
+        "tp": 4,
+        "fp": 1
       },
       "Turnover": {
-        "tp": 5,
-        "fp": 43
+        "tp": 6,
+        "fp": 30
       }
     }
   }

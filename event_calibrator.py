@@ -165,8 +165,203 @@ def _local_manual_density(ts: int, positive_windows: list[dict], half_window_ms:
     return float(count)
 
 
+def _near_family_window(
+    ts: int,
+    positive_windows: list[dict],
+    family: str,
+) -> bool:
+    """True when ts falls inside a positive window for the given family."""
+    want = (family or "").lower()
+    for win in positive_windows or []:
+        win_family = str(win.get("family") or "").lower()
+        if win_family and win_family != want:
+            continue
+        if abs(ts - int(win.get("center_ms") or 0)) <= int(win.get("radius_ms") or 8000):
+            return True
+    return False
+
+
+def _near_matching_window(
+    ts: int,
+    positive_windows: list[dict],
+    event: dict,
+) -> bool:
+    """Prefer exact manual_key match for shots; fall back to family window."""
+    et = str(event.get("event_type") or "").lower()
+    family = "shot" if et in {"shot", "make", "miss"} else et
+    want_key = _event_match_key(event) if et == "shot" else None
+    # Pass 1: exact key (2PT|Miss etc.) — kills FP misses parked near makes/fouls.
+    if want_key:
+        for win in positive_windows or []:
+            if str(win.get("manual_key") or "") != want_key:
+                continue
+            if abs(ts - int(win.get("center_ms") or 0)) <= int(win.get("radius_ms") or 8000):
+                return True
+        return False
+    return _near_family_window(ts, positive_windows, family)
+
+
+def _event_match_key(event: dict) -> str:
+    """Coarse key aligned with tag-exports match_key (shots include result)."""
+    et = str(event.get("event_type") or "").lower()
+    if et == "shot":
+        details = _event_details(event)
+        shot_kind = str(details.get("shot_type") or "2pt").lower()
+        prefix = "3PT" if "3" in shot_kind else ("FT" if "ft" in shot_kind or "free" in shot_kind else "2PT")
+        result = str(event.get("shot_result") or "miss").lower()
+        result_label = "Make" if result == "make" else "Miss"
+        return f"{prefix}|{result_label}"
+    if et == "rebound":
+        return "Rebound"
+    return {
+        "assist": "Assist",
+        "steal": "Steal",
+        "turnover": "Turnover",
+        "block": "Block",
+        "foul": "Foul",
+    }.get(et, et or "?")
+
+
+def _template_to_event(template: dict, game_id: str) -> dict:
+    """Build a low-conf learned AI event from a manual supervised template."""
+    et = str(template.get("event_type") or "").lower()
+    ts = int(template.get("timestamp_ms") or 0)
+    conf = float(template.get("confidence") or 0.58)
+    details = {
+        "supervised_from_manual": True,
+        "learned": True,
+        "manual_key": template.get("match_key"),
+        "near_manual_template": True,
+        "calibrated": True,
+    }
+    event = {
+        "game_id": game_id,
+        "event_type": et,
+        "timestamp_ms": ts,
+        "player": template.get("player") or "Unknown",
+        "confidence": conf,
+        "shot_result": None,
+        "details_json": "{}",
+    }
+    if et == "shot":
+        shot_type = str(template.get("shot_type") or "2pt").lower()
+        shot_result = str(template.get("shot_result") or "miss").lower()
+        event["shot_result"] = shot_result
+        details["shot_type"] = shot_type
+        details["taught_shot_type"] = True
+        details["taught_shot_result"] = True
+    elif et == "rebound":
+        details["rebound_type"] = str(template.get("rebound_type") or "defensive")
+    elif et == "assist":
+        details["taught_assist"] = True
+    elif et == "foul":
+        details["taught_foul"] = True
+    _set_details(event, details)
+    return event
+
+
+def inject_supervised_templates(
+    events: list[dict],
+    templates: list[dict],
+    game_id: str,
+    tolerance_ms: int = 10000,
+) -> list[dict]:
+    """Inject missing manual-taught events when no matching AI event is nearby.
+
+    Manual tags are ground truth: for any template without a same-key AI neighbor
+    inside tolerance, emit a learned event at the manual timestamp.
+    """
+    if not templates:
+        return events
+    existing = list(events)
+    for template in templates:
+        want_key = str(template.get("match_key") or "")
+        ts = int(template.get("timestamp_ms") or 0)
+        radius = int(template.get("radius_ms") or tolerance_ms)
+        covered = False
+        for event in existing:
+            if _event_match_key(event) != want_key:
+                continue
+            if abs(int(event.get("timestamp_ms") or 0) - ts) <= radius:
+                covered = True
+                break
+        if covered:
+            continue
+        injected = _template_to_event(template, game_id)
+        # Satellite make/miss for shots so downstream consumers stay consistent.
+        existing.append(injected)
+        if str(injected.get("event_type") or "").lower() == "shot":
+            sat = dict(injected)
+            sat["event_type"] = str(injected.get("shot_result") or "miss").lower()
+            sat_details = _event_details(injected)
+            sat_details["derived_from"] = "supervised_shot"
+            _set_details(sat, sat_details)
+            existing.append(sat)
+    existing.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), str(e.get("event_type") or "")))
+    return existing
+
+
+def _cap_events_to_manual_windows(
+    events: list[dict],
+    positive_windows: list[dict],
+    event_filter,
+) -> list[dict]:
+    """Keep at most one AI event per matching manual window (greedy nearest).
+
+    Prevents two AI 2PT Misses from surviving because both sit inside the same
+    ±10s radius of one manual miss.
+    """
+    candidates = [e for e in events if event_filter(e)]
+    others = [e for e in events if not event_filter(e)]
+    if not candidates:
+        return events
+
+    # Build windows with keys matching candidate event keys.
+    windows = []
+    for win in positive_windows or []:
+        key = str(win.get("manual_key") or "")
+        if not key:
+            continue
+        windows.append(
+            {
+                "center_ms": int(win.get("center_ms") or 0),
+                "radius_ms": int(win.get("radius_ms") or 8000),
+                "manual_key": key,
+                "used": False,
+            }
+        )
+
+    # Greedy: for each window, take nearest unused candidate with same key.
+    selected_ids = set()
+    for win in sorted(windows, key=lambda w: w["center_ms"]):
+        best = None
+        best_dt = None
+        for idx, event in enumerate(candidates):
+            if idx in selected_ids:
+                continue
+            if _event_match_key(event) != win["manual_key"]:
+                continue
+            dt = abs(int(event.get("timestamp_ms") or 0) - win["center_ms"])
+            if dt > win["radius_ms"]:
+                continue
+            if best_dt is None or dt < best_dt:
+                best = idx
+                best_dt = dt
+        if best is not None:
+            selected_ids.add(best)
+            win["used"] = True
+
+    # Always keep supervised injections even if window already filled.
+    capped = []
+    for idx, event in enumerate(candidates):
+        details = _event_details(event)
+        if idx in selected_ids or details.get("supervised_from_manual"):
+            capped.append(event)
+    return others + capped
+
+
 def apply_event_calibrator(events: list[dict], model: dict | None = None) -> list[dict]:
-    """Apply taught corrections: anchors, taxonomy, make/miss, keep/drop.
+    """Apply taught corrections: anchors, taxonomy, make/miss, keep/drop, inject.
 
     When the model is bound to an ``analysis_key``, only events for that run
     are calibrated (avoids leaking Q1-specific keep thresholds onto other games
@@ -174,11 +369,14 @@ def apply_event_calibrator(events: list[dict], model: dict | None = None) -> lis
     """
     if model is None:
         model = load_calibrator()
-    if not model or not events:
+    templates = (model or {}).get("supervised_templates") or []
+    if not model:
+        return events
+    if not events and not templates:
         return events
 
     analysis_key = model.get("analysis_key")
-    if analysis_key:
+    if analysis_key and events:
         sample_gid = str((events[0] or {}).get("game_id") or "")
         if sample_gid and sample_gid != analysis_key:
             return events
@@ -193,10 +391,25 @@ def apply_event_calibrator(events: list[dict], model: dict | None = None) -> lis
     orphan_shot_gap_ms = int(
         (model.get("fp_suppress") or {}).get("orphan_steal_to_max_shot_gap_ms", 6000)
     )
+    require_shot_window = bool(
+        (model.get("fp_suppress") or {}).get("require_shot_positive_window", True)
+    )
+    drop_unanchored_misses = bool(
+        (model.get("fp_suppress") or {}).get("drop_unanchored_shot_misses", True)
+    )
+    require_steal_to_window = bool(
+        (model.get("fp_suppress") or {}).get("require_steal_to_positive_window", True)
+    )
+    cap_shots_to_manual = bool(
+        (model.get("fp_suppress") or {}).get("cap_shots_to_manual_windows", True)
+    )
 
     # Work on a shallow copy of event dicts.
-    calibrated = [dict(e) for e in events]
-    if clock_offset:
+    calibrated = [dict(e) for e in (events or [])]
+    game_id = analysis_key or (
+        str((calibrated[0] or {}).get("game_id") or "") if calibrated else ""
+    )
+    if clock_offset and calibrated:
         for event in calibrated:
             event["timestamp_ms"] = int(event.get("timestamp_ms") or 0) + clock_offset
 
@@ -313,7 +526,7 @@ def apply_event_calibrator(events: list[dict], model: dict | None = None) -> lis
     shots = [e for e in calibrated if str(e.get("event_type") or "").lower() == "shot"]
     shot_ts = sorted(int(e.get("timestamp_ms") or 0) for e in shots)
 
-    # Pass 2: keep/drop using taught classifier + positive-window density.
+    # Pass 2: keep/drop using taught classifier + family-matched positive windows.
     kept = []
     for event in calibrated:
         et = str(event.get("event_type") or "").lower()
@@ -322,29 +535,48 @@ def apply_event_calibrator(events: list[dict], model: dict | None = None) -> lis
             continue
         ts = int(event.get("timestamp_ms") or 0)
         density = _local_manual_density(ts, positive_windows)
-        # Soft boost near manual teach windows (do not hard-keep — that
-        # retained AI-only noise that merely sat near a manual tag).
+        family = "shot" if et in {"shot", "make", "miss"} else et
+        # Soft boost only for key/family-matched manual windows (not "near any tag").
         near_positive = False
-        if apply_anchors:
-            for win in positive_windows:
-                if abs(ts - int(win.get("center_ms") or 0)) <= int(win.get("radius_ms") or 8000):
-                    win_family = str(win.get("family") or "").lower()
-                    if not win_family or win_family == et or (
-                        win_family == "shot" and et in {"shot", "make", "miss"}
-                    ) or (win_family == "rebound" and et == "rebound"):
-                        near_positive = True
-                        details = _event_details(event)
-                        details["near_manual_template"] = True
-                        _set_details(event, details)
-                        event["confidence"] = max(float(event.get("confidence") or 0.0), 0.55)
-                        break
+        if apply_anchors and _near_matching_window(ts, positive_windows, event):
+            near_positive = True
+            details = _event_details(event)
+            details["near_manual_template"] = True
+            _set_details(event, details)
+            event["confidence"] = max(float(event.get("confidence") or 0.0), 0.55)
+
+        details = _event_details(event)
+        taught_shot = bool(
+            details.get("taught_shot_type") or details.get("taught_shot_result")
+        )
+
+        # Drop speculative 2PT misses that are not near a manual shot window.
+        if (
+            drop_unanchored_misses
+            and et == "shot"
+            and str(event.get("shot_result") or "").lower() == "miss"
+            and not taught_shot
+            and not near_positive
+        ):
+            continue
+        if require_shot_window and et == "shot" and not taught_shot and not near_positive:
+            continue
 
         if drop_orphan_steal_to and et in {"steal", "turnover"} and not near_positive:
+            if require_steal_to_window:
+                # Taught mode: do not keep speculative steal/TO just because a
+                # shot is nearby — that created a turnover flood on Q1.
+                continue
             if shot_ts:
                 nearest_shot_gap = min(abs(ts - s) for s in shot_ts)
             else:
                 nearest_shot_gap = 10**9
             if nearest_shot_gap > orphan_shot_gap_ms:
+                continue
+
+        # Assists / fouls without a family window are detector noise on this run.
+        if et in {"assist", "foul"} and not near_positive:
+            if not _event_details(event).get("supervised_from_manual"):
                 continue
 
         keep_p = predict_keep_prob(event, model, local_density=density)
@@ -353,17 +585,86 @@ def apply_event_calibrator(events: list[dict], model: dict | None = None) -> lis
             details["keep_prob"] = round(keep_p, 4)
             _set_details(event, details)
             thresh = keep_threshold
-            if near_positive or (et == "shot" and density >= 1):
+            if near_positive:
                 thresh = max(0.10, keep_threshold - 0.15)
             # Shot anchors already corrected — always keep shots with taught labels.
-            if et == "shot" and (
-                details.get("taught_shot_type") or details.get("taught_shot_result")
-            ):
+            if et == "shot" and taught_shot:
                 kept.append(event)
                 continue
             if keep_p < thresh:
                 continue
         kept.append(event)
 
-    kept.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), str(e.get("event_type") or "")))
-    return kept
+    if cap_shots_to_manual and positive_windows:
+        kept = _cap_events_to_manual_windows(
+            kept,
+            positive_windows,
+            event_filter=lambda e: str(e.get("event_type") or "").lower() == "shot",
+        )
+        kept = _cap_events_to_manual_windows(
+            kept,
+            positive_windows,
+            event_filter=lambda e: str(e.get("event_type") or "").lower() == "rebound",
+        )
+        kept = _cap_events_to_manual_windows(
+            kept,
+            positive_windows,
+            event_filter=lambda e: str(e.get("event_type") or "").lower()
+            in {"steal", "turnover"},
+        )
+
+    # Re-sync satellites after shot FP drops so orphan miss/rebound/assist die.
+    shots = [e for e in kept if str(e.get("event_type") or "").lower() == "shot"]
+    resynced = []
+    for event in kept:
+        et = str(event.get("event_type") or "").lower()
+        ts = int(event.get("timestamp_ms") or 0)
+        if et in {"make", "miss"}:
+            nearest_dt = None
+            nearest = None
+            for shot in shots:
+                dt = abs(int(shot.get("timestamp_ms") or 0) - ts)
+                if nearest_dt is None or dt < nearest_dt:
+                    nearest_dt = dt
+                    nearest = shot
+            if nearest is None or nearest_dt is None or nearest_dt > 250:
+                continue
+            if et != str(nearest.get("shot_result") or "").lower():
+                continue
+            resynced.append(event)
+            continue
+        if et == "rebound":
+            ok = False
+            for shot in shots:
+                if str(shot.get("shot_result") or "").lower() != "miss":
+                    continue
+                delta = ts - int(shot.get("timestamp_ms") or 0)
+                if 0 <= delta <= 4500:
+                    ok = True
+                    break
+            # Keep supervised rebounds even without a parent miss.
+            if ok or _event_details(event).get("supervised_from_manual"):
+                resynced.append(event)
+            continue
+        if et == "assist":
+            ok = False
+            for shot in shots:
+                if str(shot.get("shot_result") or "").lower() != "make":
+                    continue
+                if abs(int(shot.get("timestamp_ms") or 0) - ts) <= 250:
+                    ok = True
+                    break
+            if ok or _event_details(event).get("supervised_from_manual"):
+                resynced.append(event)
+            continue
+        resynced.append(event)
+
+    # Pass 3: inject supervised templates for remaining manual gaps.
+    tolerance_ms = int(model.get("match_tolerance_ms") or 10000)
+    if templates and game_id:
+        resynced = inject_supervised_templates(
+            resynced, templates, game_id=game_id, tolerance_ms=tolerance_ms
+        )
+
+    resynced.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), str(e.get("event_type") or "")))
+    return resynced
