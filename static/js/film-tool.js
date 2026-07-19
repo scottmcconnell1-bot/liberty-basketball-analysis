@@ -1623,6 +1623,131 @@ function filterManualQ1Rows(rows, endSec = Q1_COMPARE_END_SEC) {
     });
 }
 
+/** Film Tool often stores Liberty as team "Select" — remap so Manual totals aren't all zeros. */
+function normalizeManualTeamForCompare(team, liberty, opponent) {
+    const raw = String(team || '').trim();
+    const our = liberty || 'Our Team';
+    const opp = opponent || 'Opponent';
+    if (!raw || raw === 'Select' || raw === 'Unknown' || /^our\s*team$/i.test(raw)) return our;
+    if (/^opp(onent)?$/i.test(raw) || raw === opp) return opp;
+    if (raw.toLowerCase() === our.toLowerCase() || raw === 'Liberty') return our;
+    return raw;
+}
+
+function normalizeManualRowsForCompare(rows, liberty, opponent) {
+    return (rows || []).map(row => ({
+        ...row,
+        team: normalizeManualTeamForCompare(row.team, liberty, opponent),
+    }));
+}
+
+function sumStatBuckets(byTeam) {
+    const out = {
+        Points: 0, FGM: 0, FGA: 0, '3PM': 0, '3PA': 0, FTM: 0, FTA: 0,
+        OReb: 0, DReb: 0, Reb: 0, Assists: 0, Steals: 0, Blocks: 0, Turnovers: 0, Fouls: 0,
+    };
+    Object.values(byTeam || {}).forEach(team => {
+        Object.keys(out).forEach(key => {
+            out[key] += Number(team[key]) || 0;
+        });
+    });
+    return out;
+}
+
+function manualCompareKey(row) {
+    const et = String(row.eventtype || '');
+    const result = String(row.result || 'NA');
+    if (et === '2PT' || et === '3PT' || et === 'FT') return `${et}|${result === 'Make' ? 'Make' : 'Miss'}`;
+    return et;
+}
+
+function formatCompareClock(seconds) {
+    const s = Math.max(0, Number(seconds) || 0);
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, '0')}`;
+}
+
+function explainAiOnlyTag(aiRow, manualRows, matchedManualIdx) {
+    const aiSec = timeToSeconds(aiRow.start);
+    const aiKey = manualCompareKey(aiRow);
+    let nearest = null;
+    let nearestDist = Infinity;
+    manualRows.forEach((m, idx) => {
+        if (matchedManualIdx.has(idx)) return;
+        const dist = Math.abs(timeToSeconds(m.start) - aiSec);
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearest = m;
+        }
+    });
+    if (aiKey === 'Foul') {
+        return 'Fouls are hard for vision AI (contact is subtle); often false or missed without a clear pose cue.';
+    }
+    if (nearest && nearestDist <= 10) {
+        return `Near manual ${manualCompareKey(nearest)} at ${nearest.start} (${nearestDist.toFixed(1)}s apart) — likely duplicate/mis-label vs your tag.`;
+    }
+    if (nearest && nearestDist <= 30) {
+        return `Closest manual tag is ${manualCompareKey(nearest)} at ${nearest.start} (${nearestDist.toFixed(0)}s away) — AI invented an extra event.`;
+    }
+    return 'No nearby manual tag — AI-only detection/event with no ground-truth counterpart.';
+}
+
+function buildManualVsAiTagRows(manualRows, aiRows, windowSec = 10) {
+    const manuals = manualRows.map((row, index) => ({ row, index, sec: timeToSeconds(row.start), key: manualCompareKey(row), used: false }));
+    const ais = aiRows.map((row, index) => ({ row, index, sec: timeToSeconds(row.start), key: manualCompareKey(row), used: false }));
+    const matched = [];
+    manuals.forEach(m => {
+        let best = null;
+        let bestDist = windowSec + 1;
+        ais.forEach(a => {
+            if (a.used || a.key !== m.key) return;
+            const dist = Math.abs(a.sec - m.sec);
+            if (dist <= windowSec && dist < bestDist) {
+                best = a;
+                bestDist = dist;
+            }
+        });
+        if (best) {
+            m.used = true;
+            best.used = true;
+            matched.push({
+                Status: 'Match',
+                Clock: m.row.start,
+                Manual: `${m.key} · ${normalizePlayerName(m.row.player) || '—'} · ${m.row.team}`,
+                AI: `${best.key} · ${normalizePlayerName(best.row.player) || '—'}`,
+                Diff_s: bestDist.toFixed(1),
+                Why: 'Same event type/result within ±10s of your manual tag.',
+            });
+        }
+    });
+    const matchedManualIdx = new Set(manuals.filter(m => m.used).map(m => m.index));
+    manuals.filter(m => !m.used).forEach(m => {
+        matched.push({
+            Status: 'Manual only',
+            Clock: m.row.start,
+            Manual: `${m.key} · ${normalizePlayerName(m.row.player) || '—'} · ${m.row.team}`,
+            AI: '—',
+            Diff_s: '',
+            Why: m.key === 'Foul'
+                ? 'You tagged a foul; vision AI often cannot see contact clearly.'
+                : 'AI has no matching event type/result near this time.',
+        });
+    });
+    ais.filter(a => !a.used).forEach(a => {
+        matched.push({
+            Status: 'AI only',
+            Clock: formatCompareClock(a.sec),
+            Manual: '—',
+            AI: `${a.key} · ${normalizePlayerName(a.row.player) || '—'}`,
+            Diff_s: '',
+            Why: explainAiOnlyTag(a.row, manualRows, matchedManualIdx),
+        });
+    });
+    matched.sort((a, b) => timeToSeconds(a.Clock) - timeToSeconds(b.Clock));
+    return matched;
+}
+
 function filterAiEventsToWindow(events, startMs = 0, endMs = Q1_COMPARE_END_MS) {
     return (events || []).filter(event => {
         if ((event.source_type || 'ai') !== 'ai') return false;
@@ -1730,14 +1855,19 @@ async function startQ1AnalysisRun() {
 
 async function generateManualVsAiQ1Report(scope, games, rows) {
     const liberty = ourTeamNameInput.value.trim() || 'Our Team';
-    const manualRows = filterManualQ1Rows(rows);
+    const opponent = (typeof opponentInput !== 'undefined' && opponentInput?.value?.trim())
+        ? opponentInput.value.trim()
+        : (games[0]?.opponent || 'Opponent');
+    const manualRowsRaw = filterManualQ1Rows(rows);
+    const manualRows = normalizeManualRowsForCompare(manualRowsRaw, liberty, opponent);
     const gameId = window.FILM_TOOL_GAME_ID || games[0]?.analysisGameId || '';
     const aiEvents = filterAiEventsToWindow(await fetchAiEventsForCompare(gameId));
     const aiRows = convertAiEventsToStatRows(aiEvents, liberty);
     const manualAcc = statAccumulator(manualRows);
     const aiAcc = statAccumulator(aiRows);
-    const manualTeam = manualAcc.byTeam[liberty] || manualAcc.byTeam['Our Team'] || {};
-    const aiTeam = aiAcc.byTeam[liberty] || aiAcc.byTeam['Our Team'] || {};
+    // Combined game totals so Manual isn't zero when tags used team "Select"
+    const manualTeam = sumStatBuckets(manualAcc.byTeam);
+    const aiTeam = sumStatBuckets(aiAcc.byTeam);
     const compareStats = ['PTS', 'FGM', 'FGA', '3PM', '3PA', 'FTM', 'FTA', 'Reb', 'Ast', 'Stl', 'Blk', 'TO', 'PF'];
     const teamRows = compareStats.map(stat => {
         const manualValue = teamStatValue(manualTeam, stat);
@@ -1749,30 +1879,90 @@ async function generateManualVsAiQ1Report(scope, games, rows) {
             Delta: manualValue - aiValue,
         };
     });
-    drawReportTable(['Stat', 'Manual', 'AI', 'Delta'], teamRows);
-    const manualPlayers = Object.values(manualAcc.byPlayer).filter(p => p.Team === liberty || p.Team === 'Our Team');
-    const aiPlayers = Object.values(aiAcc.byPlayer).filter(p => p.Team === liberty || p.Team === 'Our Team');
+    const tagRows = buildManualVsAiTagRows(manualRows, aiRows, 10);
+    const matchCount = tagRows.filter(r => r.Status === 'Match').length;
+    const manualOnlyCount = tagRows.filter(r => r.Status === 'Manual only').length;
+    const aiOnlyCount = tagRows.filter(r => r.Status === 'AI only').length;
+
+    reportHeadRow.innerHTML = '';
+    reportTableBody.innerHTML = '';
+    ['Stat', 'Manual', 'AI', 'Delta'].forEach(c => {
+        const th = document.createElement('th');
+        th.textContent = c;
+        reportHeadRow.appendChild(th);
+    });
+    teamRows.forEach(row => {
+        const tr = document.createElement('tr');
+        ['Stat', 'Manual', 'AI', 'Delta'].forEach(col => {
+            const cell = document.createElement('td');
+            cell.textContent = row[col] ?? '';
+            tr.appendChild(cell);
+        });
+        reportTableBody.appendChild(tr);
+    });
+    const spacer2 = document.createElement('tr');
+    const td2 = document.createElement('td');
+    td2.colSpan = 4;
+    td2.innerHTML = `<strong style="display:block;margin-top:1rem">Tag-by-tag comparison (Manual = ground truth)</strong>
+      <div style="margin:.35rem 0 .5rem;font-size:.9em">Match ${matchCount} · Manual only ${manualOnlyCount} · AI only ${aiOnlyCount} · window ±10s</div>
+      <div style="overflow:auto;max-height:28rem;border:1px solid rgba(0,0,0,.12);border-radius:6px">
+        <table style="width:100%;border-collapse:collapse;font-size:.85em">
+          <thead><tr>
+            <th style="text-align:left;padding:.35rem">Status</th>
+            <th style="text-align:left;padding:.35rem">Clock</th>
+            <th style="text-align:left;padding:.35rem">Manual</th>
+            <th style="text-align:left;padding:.35rem">AI</th>
+            <th style="text-align:left;padding:.35rem">Δs</th>
+            <th style="text-align:left;padding:.35rem">Why</th>
+          </tr></thead>
+          <tbody id="manualAiTagBody"></tbody>
+        </table>
+      </div>`;
+    spacer2.appendChild(td2);
+    reportTableBody.appendChild(spacer2);
+    const tagBody = td2.querySelector('#manualAiTagBody');
+    tagRows.forEach(row => {
+        const tr = document.createElement('tr');
+        const color = row.Status === 'Match' ? '#0a7a32' : (row.Status === 'Manual only' ? '#a15c00' : '#b00020');
+        [
+            row.Status, row.Clock, row.Manual, row.AI, row.Diff_s, row.Why,
+        ].forEach((text, i) => {
+            const cell = document.createElement('td');
+            cell.textContent = text ?? '';
+            cell.style.padding = '.3rem .35rem';
+            cell.style.borderTop = '1px solid rgba(0,0,0,.06)';
+            cell.style.verticalAlign = 'top';
+            if (i === 0) cell.style.color = color;
+            tr.appendChild(cell);
+        });
+        tagBody.appendChild(tr);
+    });
+
+    const libertyManualPlayers = Object.values(manualAcc.byPlayer).filter(p => p.Team === liberty);
+    const libertyAiPlayers = Object.values(aiAcc.byPlayer).filter(p => p.Team === liberty);
     const playerNames = [...new Set([
-        ...manualPlayers.map(p => p.Player),
-        ...aiPlayers.map(p => p.Player),
-    ])].sort((a, b) => a.localeCompare(b));
+        ...libertyManualPlayers.map(p => p.Player),
+        ...libertyAiPlayers.map(p => p.Player),
+    ])].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
     if (playerNames.length) {
-        const spacer = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = 4;
-        td.innerHTML = '<strong style="display:block;margin-top:.75rem">Player points (Q1)</strong>';
-        spacer.appendChild(td);
-        reportTableBody.appendChild(spacer);
+        const playerSpacer = document.createElement('tr');
+        const ptd = document.createElement('td');
+        ptd.colSpan = 4;
+        ptd.innerHTML = `<strong style="display:block;margin-top:1rem">Player points (Q1) — ${liberty}</strong>`;
+        playerSpacer.appendChild(ptd);
+        reportTableBody.appendChild(playerSpacer);
         playerNames.forEach(player => {
-            const manualPlayer = manualPlayers.find(p => p.Player === player);
-            const aiPlayer = aiPlayers.find(p => p.Player === player);
+            const manualPlayer = libertyManualPlayers.find(p => p.Player === player);
+            const aiPlayer = libertyAiPlayers.find(p => p.Player === player);
             const tr = document.createElement('tr');
-            ['Player', 'Manual PTS', 'AI PTS', 'Delta'].forEach((col, index) => {
+            [
+                player,
+                manualPlayer?.Points || 0,
+                aiPlayer?.Points || 0,
+                (manualPlayer?.Points || 0) - (aiPlayer?.Points || 0),
+            ].forEach(val => {
                 const cell = document.createElement('td');
-                if (index === 0) cell.textContent = player;
-                else if (index === 1) cell.textContent = manualPlayer?.Points || 0;
-                else if (index === 2) cell.textContent = aiPlayer?.Points || 0;
-                else cell.textContent = (manualPlayer?.Points || 0) - (aiPlayer?.Points || 0);
+                cell.textContent = val;
                 tr.appendChild(cell);
             });
             reportTableBody.appendChild(tr);
@@ -1781,11 +1971,12 @@ async function generateManualVsAiQ1Report(scope, games, rows) {
     drawKpis([
         ['Manual tags', manualRows.length],
         ['AI events', aiEvents.length],
+        ['Matches', matchCount],
         ['Window', Q1_COMPARE_LABEL],
     ]);
     const hasAi = aiEvents.length > 0;
     reportSummary.value = hasAi
-        ? `Q1 comparison for ${liberty}. Manual tags are your ground truth; AI counts are from ${gameId || 'the linked analysis run'} between 0:00 and 14:31.`
+        ? `Q1 comparison for ${liberty} (Manual = ground truth). Totals include both teams. AI run: ${gameId || 'linked analysis'} · ${Q1_COMPARE_LABEL}. Tag-by-tag: ${matchCount} match, ${manualOnlyCount} manual-only, ${aiOnlyCount} AI-only.`
         : `No AI events found for Q1 yet. Click "Run Q1 AI Analysis" above, wait for it to finish, then generate this report again. You have ${manualRows.length} manual Q1 tags ready to compare.`;
 }
 
