@@ -1,25 +1,26 @@
 @echo off
+cd /d "%~dp0"
 setlocal EnableExtensions EnableDelayedExpansion
 title Liberty Basketball Analysis - Demo
-cd /d "%~dp0"
 
 REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
 REM First run (SFX TEMP extract): copy payload to
 REM   %LOCALAPPDATA%\LibertyBasketballDemo\
-REM then relaunch from that folder. NO Desktop shortcuts.
-REM Subsequent runs from LocalAppData: reuse .venv for the session.
-REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
-REM then python on PATH. Winget install is attempted at most ONCE.
-REM Start server with DEMO_MODE=1 + venv python + launch_liberty.py --no-browser.
-REM Bat opens the browser after server is ready (does not rely on launch_liberty).
-REM Wait for server process exit (web DONE button stops it), then cleanup.
-REM Cleanup: wipe LocalAppData install, TEMP LibertyDemo_*, leftover shortcuts.
-REM Does NOT uninstall winget Python.
+REM then CONTINUE in this same visible console (no second window / no shortcut).
+REM Prefer py -3.12 / py -3.13, then common dirs, then PATH. Winget at most ONCE.
+REM Start server with DEMO_MODE=1 + launch_liberty.py --no-browser.
+REM Bat opens the browser after server is ready. Port 8080, else 8090.
+REM Wait for server exit (web DONE), then wipe LocalAppData + TEMP leftovers.
+REM Does NOT uninstall winget Python. NO Desktop shortcuts.
 REM ---------------------------------------------------------------------------
 
+set "LOG_FILE=%TEMP%\LibertyDemo_run.log"
+echo ===== LibertyDemo start %DATE% %TIME% =====> "%LOG_FILE%"
+call :log "cwd=%CD%"
+call :log "script=%~f0"
+
 set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
-set "DEMO_URL=http://127.0.0.1:8080"
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -36,50 +37,51 @@ if /I "%~1"=="--cleanup-phase" (
   if /I "%~4"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
 )
 
-REM If not already running from the session install, copy + relaunch (no shortcut).
+REM If not already running from the session install, copy then CONTINUE here.
 if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
-  echo.
-  echo ============================================================
-  echo   Liberty Basketball Analysis - Demo Setup
-  echo ============================================================
-  echo.
-  echo Installing demo for this session to:
-  echo   %PERSIST_DIR%
-  echo.
+  call :log ""
+  call :log "============================================================"
+  call :log "  Liberty Basketball Analysis - Demo Setup"
+  call :log "============================================================"
+  call :log "Installing demo for this session to: %PERSIST_DIR%"
 
   if not exist "%SCRIPT_DIR%\app.py" (
-    echo ERROR: app.py not found in extract folder: %SCRIPT_DIR%
+    call :log "ERROR: app.py not found in extract folder: %SCRIPT_DIR%"
     goto :fail
   )
 
   if not exist "%PERSIST_DIR%" mkdir "%PERSIST_DIR%" 2>nul
-  echo Copying package files ^(excluding .venv^)...
-  robocopy "%SCRIPT_DIR%" "%PERSIST_DIR%" /E /XD .venv __pycache__ .git /XF *.pyc *.pyo /NFL /NDL /NJH /NJS /NP /R:2 /W:1 >nul
+  call :log "Copying package files (excluding .venv)..."
+  robocopy "%SCRIPT_DIR%" "%PERSIST_DIR%" /E /XD .venv __pycache__ .git /XF *.pyc *.pyo /NFL /NDL /NJH /NJS /NP /R:2 /W:1 >> "%LOG_FILE%" 2>&1
   set "RC=!ERRORLEVEL!"
   if !RC! GEQ 8 (
-    echo ERROR: robocopy failed with code !RC!
+    call :log "ERROR: robocopy failed with code !RC!"
     goto :fail
   )
-  echo Copy complete.
+  call :log "Copy complete."
 
-  REM Ensure launcher bat is present at persist root
   if not exist "%PERSIST_DIR%\install_and_run.bat" (
     copy /y "%SCRIPT_DIR%\install_and_run.bat" "%PERSIST_DIR%\install_and_run.bat" >nul
   )
 
-  echo.
-  echo Launching from session install...
-  echo.
-  start "" "%PERSIST_DIR%\install_and_run.bat"
-  exit /b 0
+  call :log "Continuing from session install in THIS console (no shortcut)..."
+  cd /d "%PERSIST_DIR%"
+  if errorlevel 1 (
+    call :log "ERROR: could not cd to %PERSIST_DIR%"
+    goto :fail
+  )
+  set "SCRIPT_DIR=%PERSIST_DIR%"
 )
 
 REM ========== Running from LocalAppData session install ==========
 set "PACKAGE_DIR=%PERSIST_DIR%"
 cd /d "%PACKAGE_DIR%"
+if errorlevel 1 (
+  call :log "ERROR: could not cd to package dir %PACKAGE_DIR%"
+  goto :fail
+)
 
 set "VENV_DIR=%PACKAGE_DIR%\.venv"
-set "LOG_FILE=%TEMP%\LibertyDemo_%RANDOM%.log"
 set "PORT=8080"
 set "PYTHON_EXE="
 set "INSTALL_TRIED=0"
@@ -90,85 +92,84 @@ set "DEMO_MODE=1"
 echo 1> "%TEMP%\LibertyDemo_mode.flag"
 echo 1> "%PACKAGE_DIR%\.liberty_demo_mode"
 
-echo.
-echo ============================================================
-echo   Liberty Basketball Analysis - Demo
-echo ============================================================
-echo.
-echo Session install: %PACKAGE_DIR%
-echo Log:             %LOG_FILE%
-echo DEMO_MODE:       %DEMO_MODE%
-echo.
-echo NOTE: winget-installed Python ^(if needed^) stays on this PC.
-echo       Click DONE in the browser top menu when finished —
-echo       that stops the server and wipes LocalAppData + TEMP leftovers.
-echo       GPU AI / large model weights / game video are not in this demo.
-echo.
+call :log ""
+call :log "============================================================"
+call :log "  Liberty Basketball Analysis - Demo"
+call :log "============================================================"
+call :log "Session install: %PACKAGE_DIR%"
+call :log "Log:             %LOG_FILE%"
+call :log "DEMO_MODE:       %DEMO_MODE%"
+call :log "NOTE: Click DONE in the browser top menu when finished."
+call :log "      GPU AI / large model weights / game video are not in this demo."
+call :log ""
 
 if not exist "%PACKAGE_DIR%\app.py" (
-  echo ERROR: app.py not found. Run this from the Liberty package root.
+  call :log "ERROR: app.py not found. Run this from the Liberty package root."
   goto :fail
 )
 if not exist "%PACKAGE_DIR%\scripts\launch_liberty.py" (
-  echo ERROR: scripts\launch_liberty.py not found.
+  call :log "ERROR: scripts\launch_liberty.py not found."
   goto :fail
 )
 
 call :find_python
 if errorlevel 1 goto :fail
 
-echo Using: !PYTHON_EXE!
-echo.
+call :log "Using: !PYTHON_EXE!"
+call :log ""
 
 if not exist "%VENV_DIR%\Scripts\python.exe" (
-  echo Creating virtual environment...
+  call :log "Creating virtual environment..."
   "!PYTHON_EXE!" -m venv "%VENV_DIR%" >> "%LOG_FILE%" 2>&1
   if errorlevel 1 (
-    echo ERROR: Failed to create venv. See %LOG_FILE%
+    call :log "ERROR: Failed to create venv. See %LOG_FILE%"
     goto :fail
   )
 ) else (
-  echo Reusing existing virtual environment.
+  call :log "Reusing existing virtual environment."
 )
 
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 if not exist "%VENV_PY%" (
-  echo ERROR: venv python missing: %VENV_PY%
+  call :log "ERROR: venv python missing: %VENV_PY%"
   goto :fail
 )
 
-echo Upgrading pip...
+call :log "Upgrading pip..."
 "%VENV_PY%" -m pip install --upgrade pip >> "%LOG_FILE%" 2>&1
 
 call :install_requirements
 if errorlevel 1 goto :fail
 
-echo.
-echo Starting Liberty on http://127.0.0.1:%PORT% ^(DEMO_MODE=1, --no-browser^)...
-echo.
+call :pick_port
+if errorlevel 1 goto :fail
+
+call :log ""
+call :log "Starting Liberty on http://127.0.0.1:!PORT! (DEMO_MODE=1, --no-browser)..."
+call :log ""
 
 REM Start via venv python (NOT bare "start scripts\launch_liberty.py").
 REM DEMO_MODE is inherited from this cmd session into PowerShell / child.
 REM Start-Process is used so we can store the launcher PID for wait + cleanup.
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%.server' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
   set "LAUNCHER_PID=%%P"
 )
 
 if not defined LAUNCHER_PID (
-  echo WARNING: Could not capture launcher PID; will wait for port / done flag.
+  call :log "WARNING: Could not capture launcher PID; will wait for port / done flag."
 ) else (
-  echo Launcher PID: !LAUNCHER_PID!
+  call :log "Launcher PID: !LAUNCHER_PID!"
 )
 
-echo Waiting for server...
+call :log "Waiting for server..."
 set /a "WAITED=0"
 :wait_loop
 powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:%PORT%/' -TimeoutSec 2; if ($r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
 if %ERRORLEVEL% EQU 0 goto :server_ready
 set /a "WAITED+=2"
 if !WAITED! GEQ 180 (
-  echo ERROR: Server did not become ready within 180s.
-  echo See log: %LOG_FILE%
+  call :log "ERROR: Server did not become ready within 180s on port %PORT%."
+  call :log "See log: %LOG_FILE%"
   if exist "%LOG_FILE%.err" type "%LOG_FILE%.err"
   goto :cleanup_fail
 )
@@ -176,32 +177,55 @@ timeout /t 2 /nobreak >nul
 goto :wait_loop
 
 :server_ready
-echo Server ready at http://127.0.0.1:%PORT%/
+call :log "Server ready at http://127.0.0.1:%PORT%/"
 call :open_browser
-echo.
-echo ========================================
-echo   DEMO RUNNING — http://127.0.0.1:%PORT%
-echo   Click DONE in the browser top menu
-echo   to uninstall and exit.
-echo   ^(Backup: close this window after DONE^)
-echo ========================================
-echo.
+call :log ""
+call :log "========================================"
+call :log "  DEMO RUNNING — http://127.0.0.1:%PORT%"
+call :log "  Click DONE in the browser top menu"
+call :log "  to uninstall and exit."
+call :log "========================================"
+call :log ""
 call :wait_for_server_exit
 goto :cleanup_ok
 
 REM ======================== helpers ========================
 
+:log
+echo %~1
+>>"%LOG_FILE%" echo %~1
+exit /b 0
+
+:pick_port
+REM Prefer 8080; if busy (e.g. main Liberty), use 8090. Fail if both busy.
+set "PORT=8080"
+powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
+if !ERRORLEVEL! EQU 0 (
+  call :log "Port 8080 is free — using it."
+  exit /b 0
+)
+call :log "Port 8080 is in use — trying 8090..."
+set "PORT=8090"
+powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort 8090 -State Listen -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
+if !ERRORLEVEL! EQU 0 (
+  call :log "Port 8090 is free — using it."
+  exit /b 0
+)
+call :log "ERROR: Ports 8080 and 8090 are both in use."
+call :log "Stop the other Liberty/app using those ports, then re-run."
+exit /b 1
+
 :open_browser
 REM Bat MUST open the browser — launch_liberty is started with --no-browser.
 set "OPEN_URL=http://127.0.0.1:%PORT%/"
-echo.
-echo [BROWSER] Opening %OPEN_URL% ...
-echo [BROWSER] Method 1: cmd start "" url
+call :log ""
+call :log "[BROWSER] Opening %OPEN_URL% ..."
+call :log "[BROWSER] Method 1: cmd start \"\" url"
 start "" "%OPEN_URL%"
-echo [BROWSER] cmd start ERRORLEVEL=%ERRORLEVEL%
-echo [BROWSER] Method 2: powershell Start-Process
+call :log "[BROWSER] cmd start ERRORLEVEL=%ERRORLEVEL%"
+call :log "[BROWSER] Method 2: powershell Start-Process"
 powershell -NoProfile -Command "try { Start-Process '%OPEN_URL%'; Write-Host '[BROWSER] Start-Process: OK' } catch { Write-Host ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }"
-echo [BROWSER] Browser open commands finished — check lines above.
+call :log "[BROWSER] Browser open commands finished — check lines above."
 exit /b 0
 
 :wait_for_server_exit
@@ -573,19 +597,60 @@ if defined LOG_FILE if exist "%LOG_FILE%" (
 ) else (
   echo   ^(no log file^)
 )
-call :wipe_temp_leftovers
+if defined LOG_FILE if exist "%LOG_FILE%.server" (
+  echo   server log kept: %LOG_FILE%.server
+)
+if defined LOG_FILE if exist "%LOG_FILE%.err" (
+  echo   err log kept: %LOG_FILE%.err
+)
+call :wipe_temp_leftovers_keep_run_log
 call :remove_leftover_shortcuts
 call :wipe_session_install
 echo.
 echo Demo files cleaned. ^(winget Python, if installed, was left alone.^)
+echo Full debug log: %TEMP%\LibertyDemo_run.log
 echo.
-echo You can close this window.
-timeout /t 5 /nobreak >nul
+echo Press any key to close this window...
+pause >nul
 if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
 exit /b 1
 
+:wipe_temp_leftovers_keep_run_log
+REM Like wipe_temp_leftovers but keep LibertyDemo_run.log for debugging failures.
+echo Removing TEMP LibertyDemo leftovers ^(keeping run log^)...
+set "_TEMP_REMOVED=0"
+for %%F in (
+  "%TEMP%\LibertyDemo_*.log.err"
+  "%TEMP%\LibertyDemo_*.log.server"
+  "%TEMP%\LibertyDemo_mode.flag"
+  "%TEMP%\LibertyDemo_done.flag"
+  "%TEMP%\LibertyDemo_wait_done.ps1"
+  "%TEMP%\LibertyDemo_web_cleanup.bat"
+) do (
+  if exist "%%~fF" (
+    del /f /q "%%~fF" 2>nul
+    if not exist "%%~fF" (
+      echo   deleted: %%~fF
+      set "_TEMP_REMOVED=1"
+    )
+  )
+)
+for /d %%D in ("%TEMP%\LibertyDemo_*") do (
+  if exist "%%~fD" (
+    rd /s /q "%%~fD" 2>nul
+    if not exist "%%~fD" (
+      echo   deleted: %%~fD
+      set "_TEMP_REMOVED=1"
+    )
+  )
+)
+if "!_TEMP_REMOVED!"=="0" echo   ^(no TEMP LibertyDemo_* leftovers found^)
+exit /b 0
+
 :fail
 echo.
-echo Setup failed. Log (if any): %LOG_FILE%
-pause
+call :log "Setup failed. Log: %LOG_FILE%"
+echo.
+echo Press any key to close this window...
+pause >nul
 exit /b 1

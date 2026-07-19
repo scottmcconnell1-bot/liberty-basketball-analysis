@@ -7,7 +7,7 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-web-done-no-shortcut |
+| **id** | demo-sfx-autostart-fix |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,20 +15,17 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 ### Proven
 
-- **No Desktop shortcuts:** `install_and_run.bat` has no `create_desktop_shortcut`, `[InternetShortcut]`, `.url` write, or WinForms dialog. Cleanup still best-effort deletes leftover `.url`/`.lnk` from older builds.
-- **Browser open:** After server ready, bat logs `[BROWSER]` and runs `start "" "%OPEN_URL%"` plus PowerShell `Start-Process`. Does not rely on `launch_liberty` (still started with `--no-browser`).
-- **DEMO_MODE:** Bat sets `DEMO_MODE=1` (+ TEMP/local flag files). Nav shows prominent **DONE** only when `demo_mode` is true. Smoke: HTML contains `id="demo-done-btn"`.
-- **Web DONE:** `POST /api/demo/done` (alias `/api/demo/uninstall`) schedules `%TEMP%\LibertyDemo_web_cleanup.bat`, writes done flag, then `os._exit` after response. Outer bat waits for launcher PID exit / done flag, then TEMP handoff wipe of `%LOCALAPPDATA%\LibertyBasketballDemo`.
-- **Tests:** `tests/test_demo_mode.py` — 4 passed.
-- **Rebuilt SFX:** `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (26.28 MB, 2026-07-19 ~9:50 AM).
+- **Root cause:** Stock `Program Files\7-Zip\7z.sfx` does **not** support `;!@Install@!` / `RunProgram` (strings absent in the binary). Prior builds concatenated a config that was ignored, so double-click only extracted — no bat, no browser.
+- **Second bug:** Even with LZMA SDK `7zSD.sfx`, `RunProgram="cmd /c …"` without `Directory=""` looks for `cmd` **inside the archive**, not system `cmd.exe`. Fix: `Directory=""` + visible `RunProgram="cmd /c install_and_run.bat"` (never `hidcon`).
+- **Bat:** `@echo off` then `cd /d "%~dp0"`; same-console continue after robocopy (no `start`+exit); `%TEMP%\LibertyDemo_run.log`; port 8080 else 8090; pause on failure; DEMO_MODE + browser open; no Desktop shortcuts.
+- **Proof (2026-07-19 ~10:13 AM):** `LibertyDemo.exe -y` → run log written → HTTP 200 on `:8080` → `[BROWSER]` lines → HTML contains `demo-done-btn`.
+- **Exe:** `dist\LibertyDemo.exe` / `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (~26.26 MB, LastWriteTime 2026-07-19 10:13:13 AM). Vendored `tools\sfx\7zSD.sfx` (LZMA SDK, public domain).
 
 ### Files
 
-- `deploy/install_and_run.bat` — no shortcuts; DEMO_MODE; browser open; wait for server exit
-- `blueprints/demo.py` — DONE/uninstall API
-- `app.py` / `templates/base.html` — demo_mode inject + DONE button
-- `scripts/build_demo_package.ps1` — markers/README updated
-- removed `deploy/demo_done_dialog.ps1`
+- `tools/sfx/7zSD.sfx` + `README.txt` — installer SFX module with RunProgram
+- `scripts/build_demo_package.ps1` — use 7zSD.sfx; require Directory=""; reject hidcon/stock 7z.sfx
+- `deploy/install_and_run.bat` — logging, port fallback, same-console, pause on fail
 
 ### Leave alone
 

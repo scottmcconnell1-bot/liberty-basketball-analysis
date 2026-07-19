@@ -191,7 +191,9 @@ foreach ($marker in @(
     "PERSIST_DIR", "LibertyBasketballDemo", "wipe_session_install",
     "wipe_temp_leftovers", "wait_for_server_exit", "open_browser",
     "DEMO_MODE", "--cleanup-phase", "DEMO RUNNING",
-    "[BROWSER]", "Start-Process"
+    "[BROWSER]", "Start-Process",
+    "LibertyDemo_run.log", "pick_port", "PORT=8090",
+    'cd /d "%~dp0"'
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
@@ -229,6 +231,14 @@ if ($bat -notmatch 'robocopy') {
 if ($bat -notmatch 'wipe_session_install') {
     throw "install_and_run.bat must wipe LocalAppData session install on exit"
 }
+if ($bat -match 'start\s+""\s+"%PERSIST_DIR%\\install_and_run\.bat"') {
+    throw "install_and_run.bat must NOT relaunch via start+exit (keep one visible console)"
+}
+# First executable lines after @echo off must cd to script dir
+$batLines = ($bat -split "`r?`n") | Where-Object { $_.Trim() -ne "" }
+if ($batLines.Count -lt 2 -or $batLines[0] -notmatch '(?i)^@echo off' -or $batLines[1] -notmatch '(?i)^cd /d "%~dp0"') {
+    throw "install_and_run.bat must start with @echo off then cd /d `"%~dp0`""
+}
 
 # App must expose demo DONE API + template button
 $demoPy = Get-Content (Join-Path $Staging "blueprints\demo.py") -Raw
@@ -243,19 +253,27 @@ $appPy = Get-Content (Join-Path $Staging "app.py") -Raw
 if ($appPy -notmatch 'demo_bp' -or $appPy -notmatch 'demo_mode') {
     throw "app.py must register demo_bp and inject demo_mode"
 }
-Write-Host "  OK install_and_run.bat markers (DEMO_MODE + browser open + web DONE + no shortcuts)"
+Write-Host "  OK install_and_run.bat markers (DEMO_MODE + browser + port fallback + same-console + no shortcuts)"
 
-Write-Step "Locating 7-Zip"
+Write-Step "Locating 7-Zip + installer SFX module (7zSD.sfx)"
 $sevenZip = Ensure-7Zip
 Write-Host "7z: $sevenZip"
-$sfx = Join-Path (Split-Path $sevenZip -Parent) "7z.sfx"
+# CRITICAL: Stock Program Files\7-Zip\7z.sfx does NOT support RunProgram / Install config.
+# It only extracts. Use LZMA SDK 7zSD.sfx (vendored under tools\sfx\) so the bat auto-starts.
+$sfx = Join-Path $RepoRoot "tools\sfx\7zSD.sfx"
 if (-not (Test-Path $sfx)) {
-    throw "7z.sfx not found next to 7z.exe ($sfx). Reinstall 7-Zip full package."
+    throw "Missing tools\sfx\7zSD.sfx (LZMA SDK installer module). Stock 7z.sfx ignores RunProgram."
 }
+$sfxBytes = [System.IO.File]::ReadAllBytes($sfx)
+$sfxAscii = [System.Text.Encoding]::GetEncoding(28591).GetString($sfxBytes)
+if ($sfxAscii -notlike "*RunProgram*") {
+    throw "SFX module at $sfx does not embed RunProgram support. Need LZMA SDK 7zSD.sfx."
+}
+$sfxKb = [math]::Round($sfxBytes.Length / 1KB, 0)
+Write-Host "SFX: $sfx ($sfxKb KB, RunProgram=yes)"
 
 Write-Step "Creating 7z archive"
-# Stock 7z.sfx expects a 7z payload (-t7z), NOT zip. Using -tzip produces a broken SFX
-# that fails with "Cannot open the file as [7z] archive / Is not archive".
+# 7zSD.sfx expects a 7z payload (-t7z), NOT zip.
 $archivePath = Join-Path $PackageDir "LibertyDemo.7z"
 if (Test-Path $archivePath) { Remove-Item $archivePath -Force }
 # Archive contents of staging (so SFX extracts install_and_run.bat at top level of extract folder)
@@ -266,20 +284,47 @@ if (-not (Test-Path $archivePath)) { throw "7z archive was not created" }
 
 Write-Step "Building SFX config + LibertyDemo.exe"
 $configPath = Join-Path $PackageDir "config.txt"
-@"
-;!@Install@!UTF-8!
-Title="Liberty Basketball Demo"
-BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nWhen finished, click DONE in the browser top menu to remove all demo files.\nGPU AI weights are not included."
-RunProgram="cmd /c install_and_run.bat"
-;!@InstallEnd@!
-"@ | Set-Content -Path $configPath -Encoding ASCII
+# Visible console: cmd /c (NOT hidcon:). User must see pip/server errors.
+$configBody = @(
+    ';!@Install@!UTF-8!',
+    'Title="Liberty Basketball Demo"',
+    'BeginPrompt="Install and run the Liberty Basketball Analysis demo?\n\nPython 3.12 may be installed via winget if missing (permanent).\nWhen finished, click DONE in the browser top menu to remove all demo files.\nGPU AI weights are not included."',
+    'Directory=""',
+    'RunProgram="cmd /c install_and_run.bat"',
+    ';!@InstallEnd@!'
+) -join "`r`n"
+[System.IO.File]::WriteAllText($configPath, $configBody + "`r`n", [System.Text.Encoding]::ASCII)
+
+$configRaw = Get-Content $configPath -Raw
+if ($configRaw -match '(?i)hidcon') {
+    throw "config.txt must NOT use hidcon (errors must be visible)"
+}
+if ($configRaw -notmatch 'Directory=""') {
+    throw 'config.txt must set Directory="" so cmd resolves to system cmd.exe (not archive-root cmd)'
+}
+if ($configRaw -notmatch 'RunProgram="cmd /c install_and_run\.bat"') {
+    throw 'config.txt must use RunProgram="cmd /c install_and_run.bat"'
+}
 
 $exePath = Join-Path $PackageDir "LibertyDemo.exe"
 if (Test-Path $exePath) { Remove-Item $exePath -Force }
 
-# Use visible 7z.sfx (not 7zCon.sfx / hidcon) so install progress is visible
 cmd /c "copy /b `"$sfx`" + `"$configPath`" + `"$archivePath`" `"$exePath`""
 if (-not (Test-Path $exePath)) { throw "LibertyDemo.exe was not created" }
+
+# Verify the built exe embeds Install config (not stock 7z.sfx padding)
+$exePrefix = New-Object byte[] 200000
+$fs = [System.IO.File]::OpenRead($exePath)
+[void]$fs.Read($exePrefix, 0, 200000)
+$fs.Close()
+$exeAscii = [System.Text.Encoding]::GetEncoding(28591).GetString($exePrefix)
+if ($exeAscii -notlike '*RunProgram="cmd /c install_and_run.bat"*') {
+    throw "Built LibertyDemo.exe missing visible RunProgram=cmd /c install_and_run.bat in SFX config"
+}
+if ($exeAscii -match '(?i)hidcon:') {
+    throw "Built LibertyDemo.exe must not use hidcon"
+}
+Write-Host "  OK SFX config embedded (visible cmd /c, no hidcon)"
 
 $exeMb = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
 Write-Host "LibertyDemo.exe: $exeMb MB"
@@ -293,19 +338,20 @@ $readme = @"
 Liberty Basketball Analysis - Coach Demo
 ========================================
 
-Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
-install_and_run.bat, which:
+Double-click LibertyDemo.exe. Click Yes on the prompt. It extracts to TEMP,
+opens a VISIBLE console, and runs install_and_run.bat, which:
 
   1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\ (session only)
-  2. Relaunches from LocalAppData for the session (NO Desktop shortcut)
+  2. Continues in the SAME console from LocalAppData (NO Desktop shortcut)
   3. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   4. Creates/reuses LocalAppData\.venv and installs requirements.txt
   5. Starts the app with DEMO_MODE=1 (scripts\launch_liberty.py --no-browser)
-  6. Opens the browser to http://127.0.0.1:8080 (bat start + Start-Process)
+  6. Uses port 8080, or 8090 if 8080 is busy; opens the browser to that URL
   7. Coach clicks DONE in the web app top menu → POST /api/demo/done
      schedules TEMP cleanup, stops the server; bat then wipes
      %LOCALAPPDATA%\LibertyBasketballDemo and TEMP LibertyDemo_* leftovers.
      winget Python is NOT uninstalled.
+  Debug log: %TEMP%\LibertyDemo_run.log
 
 Coach blurb
 -----------
@@ -322,14 +368,17 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
 - Excluded: .git, .venv, __pycache__, build, dist, .pytest_cache, logs, uploads,
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
   weights, media files
-- SFX: 7-Zip 7z.sfx + config.txt + LibertyDemo.7z (-t7z; stock sfx requires 7z not zip)
+- SFX: LZMA SDK 7zSD.sfx (tools\sfx\) + config.txt + LibertyDemo.7z
+  (NOT stock 7z.sfx — that module ignores RunProgram and only extracts)
+- RunProgram="cmd /c install_and_run.bat" with Directory="" (system cmd; visible console; never hidcon)
+  Without Directory="", 7zSD looks for "cmd" inside the archive and never starts the bat.
 - Session install: %LOCALAPPDATA%\LibertyBasketballDemo (wiped on DONE)
 - Exit UX: DONE button in web nav (DEMO_MODE); bat waits for server exit then cleans up
 - Known caveats:
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
   * First run needs network for pip wheels
-  * If something already serves port 8080, stop it or change PORT in the bat
+  * If 8080 is busy, demo uses 8090 automatically
 
 Rebuild
 -------
