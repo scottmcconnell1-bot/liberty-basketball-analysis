@@ -743,18 +743,49 @@
     (function () {
       var btn = document.getElementById('demo-done-btn');
       if (!btn) return;
+
+      function postDemoDone() {
+        return fetch('/api/demo/done', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' },
+          cache: 'no-store'
+        }).then(function (r) {
+          return r.json().then(function (j) {
+            if (!r.ok || !j || j.ok !== true) {
+              var msg = (j && j.error) ? j.error : ('HTTP ' + r.status);
+              throw new Error(msg);
+            }
+            return j;
+          }, function () {
+            // Truncated/empty body after a successful status still counts as ok
+            // (server may have begun shutdown while flushing JSON).
+            if (r.ok) return { ok: true };
+            throw new Error('Bad response');
+          });
+        });
+      }
+
+      function showFinished() {
+        btn.textContent = 'Uninstalling…';
+        document.body.innerHTML = '<div style="font-family:sans-serif;max-width:480px;margin:80px auto;padding:24px;text-align:center;">' +
+          '<h1 style="color:#01696f;">Uninstalling…</h1>' +
+          '<p>Liberty demo files are being removed. You can close this window.</p></div>';
+        try { window.close(); } catch (e) {}
+      }
+
       btn.addEventListener('click', function () {
         if (btn.disabled) return;
         if (!window.confirm('Finish demo and remove all Liberty demo files from this PC?')) return;
         btn.disabled = true;
-        btn.textContent = 'Closing…';
-        fetch('/api/demo/done', { method: 'POST', headers: { 'Accept': 'application/json' } })
-          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-          .then(function (res) {
-            btn.textContent = 'Uninstalled';
-            document.body.innerHTML = '<div style="font-family:sans-serif;max-width:480px;margin:80px auto;padding:24px;text-align:center;">' +
-              '<h1 style="color:#01696f;">Demo finished</h1>' +
-              '<p>Liberty demo files are being removed. You can close this browser tab.</p></div>';
+        btn.textContent = 'Uninstalling…';
+        postDemoDone()
+          .catch(function () {
+            // One retry for transient disconnect while the server is shutting down.
+            return new Promise(function (resolve) { setTimeout(resolve, 400); })
+              .then(function () { return postDemoDone(); });
+          })
+          .then(function () {
+            showFinished();
           })
           .catch(function () {
             btn.textContent = 'DONE';

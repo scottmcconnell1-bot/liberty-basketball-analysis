@@ -11,12 +11,14 @@ import os
 import subprocess
 import tempfile
 import threading
-import time
 from pathlib import Path
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, after_this_request, jsonify
 
 demo_bp = Blueprint("demo", __name__)
+
+# Overridable in tests (avoid hard-killing the pytest process).
+_exit_delay_sec = 0.5
 
 
 def demo_mode_enabled() -> bool:
@@ -71,6 +73,7 @@ if exist "%PERSIST_DIR%" (
 echo Removing TEMP LibertyDemo leftovers...
 del /f /q "%TEMP%\\LibertyDemo_*.log" 2>nul
 del /f /q "%TEMP%\\LibertyDemo_*.log.err" 2>nul
+del /f /q "%TEMP%\\LibertyDemo_*.log.server" 2>nul
 del /f /q "%TEMP%\\LibertyDemo_mode.flag" 2>nul
 del /f /q "%TEMP%\\LibertyDemo_done.flag" 2>nul
 for /d %%D in ("%TEMP%\\LibertyDemo_*") do rd /s /q "%%~fD" 2>nul
@@ -84,7 +87,8 @@ exit /b 0
     return bat_path
 
 
-def _schedule_cleanup_and_exit() -> None:
+def _spawn_cleanup_bat() -> Path | None:
+    """Write done flag + start cleanup bat (must happen before process exit)."""
     done_flag = Path(tempfile.gettempdir()) / "LibertyDemo_done.flag"
     try:
         done_flag.write_text("1\n", encoding="ascii")
@@ -108,23 +112,40 @@ def _schedule_cleanup_and_exit() -> None:
         )
     except OSError:
         # Still stop the server; the outer install_and_run.bat will clean up.
-        pass
+        return None
+    return bat
+
+
+def _schedule_hard_exit(delay_sec: float | None = None) -> None:
+    """Exit after delay so the HTTP response can flush to the client first."""
+    wait = _exit_delay_sec if delay_sec is None else delay_sec
 
     def _hard_exit() -> None:
-        time.sleep(0.75)
         os._exit(0)
 
-    threading.Thread(target=_hard_exit, daemon=True).start()
+    threading.Timer(wait, _hard_exit).start()
 
 
 @demo_bp.route("/api/demo/done", methods=["POST"])
 @demo_bp.route("/api/demo/uninstall", methods=["POST"])
 def demo_done():
-    """Schedule uninstall cleanup and stop the Flask server."""
+    """Schedule uninstall cleanup and stop the Flask server.
+
+    Critical ordering: spawn cleanup bat, return JSON 200, THEN exit after a
+    short delay. Exiting before the response is sent makes fetch() fail and
+    shows "Could not reach the demo uninstall API".
+    """
     if not demo_mode_enabled():
         return jsonify({"ok": False, "error": "Demo mode is not active."}), 403
 
-    _schedule_cleanup_and_exit()
+    _spawn_cleanup_bat()
+
+    @after_this_request
+    def _exit_after_response(response):
+        # Timer starts after Flask has prepared the response for send.
+        _schedule_hard_exit(0.5)
+        return response
+
     return jsonify(
         {
             "ok": True,

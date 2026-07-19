@@ -7,7 +7,7 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-sfx-autostart-fix |
+| **id** | demo-done-uninstall-api |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,17 +15,19 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 ### Proven
 
-- **Root cause:** Stock `Program Files\7-Zip\7z.sfx` does **not** support `;!@Install@!` / `RunProgram` (strings absent in the binary). Prior builds concatenated a config that was ignored, so double-click only extracted — no bat, no browser.
-- **Second bug:** Even with LZMA SDK `7zSD.sfx`, `RunProgram="cmd /c …"` without `Directory=""` looks for `cmd` **inside the archive**, not system `cmd.exe`. Fix: `Directory=""` + visible `RunProgram="cmd /c install_and_run.bat"` (never `hidcon`).
-- **Bat:** `@echo off` then `cd /d "%~dp0"`; same-console continue after robocopy (no `start`+exit); `%TEMP%\LibertyDemo_run.log`; port 8080 else 8090; pause on failure; DEMO_MODE + browser open; no Desktop shortcuts.
-- **Proof (2026-07-19 ~10:13 AM):** `LibertyDemo.exe -y` → run log written → HTTP 200 on `:8080` → `[BROWSER]` lines → HTML contains `demo-done-btn`.
-- **Exe:** `dist\LibertyDemo.exe` / `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (~26.26 MB, LastWriteTime 2026-07-19 10:13:13 AM). Vendored `tools\sfx\7zSD.sfx` (LZMA SDK, public domain).
+- **Root cause of DONE alert:** `POST /api/demo/done` scheduled `os._exit` on a background thread *before* Flask finished flushing the JSON response. The browser `fetch` then failed mid-response and showed: "Could not reach the demo uninstall API…" (button stuck on Closing…/Uninstalling…).
+- **Fix:** Spawn cleanup bat first; start `threading.Timer(0.5, os._exit)` only from `@after_this_request` so the HTTP 200 is returned successfully; JS retries once and only shows the network alert after real failure; `launch_liberty.resolve_demo_mode_env()` clears inherited `DEMO_MODE` / stray TEMP flag on main Documents launches (demo package still sets flag + `DEMO_MODE=1`).
+- **SFX not regressed:** Build still uses vendored `tools\sfx\7zSD.sfx` + `Directory=""` + visible `cmd /c install_and_run.bat` (commit 2df9f50).
+- **Tests:** `tests/test_demo_mode.py` — 6 passed (includes return-200-before-exit).
+- **Exe:** `dist\LibertyDemo.exe` / `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (~26.26 MB).
 
 ### Files
 
-- `tools/sfx/7zSD.sfx` + `README.txt` — installer SFX module with RunProgram
-- `scripts/build_demo_package.ps1` — use 7zSD.sfx; require Directory=""; reject hidcon/stock 7z.sfx
-- `deploy/install_and_run.bat` — logging, port fallback, same-console, pause on fail
+- `blueprints/demo.py` — response-before-exit; cleanup spawn before Timer
+- `templates/base.html` — Uninstalling… + one retry
+- `scripts/launch_liberty.py` — clear stale DEMO_MODE on non-demo trees
+- `tests/test_demo_mode.py` — handler ordering test
+- Prior SFX: `tools/sfx/7zSD.sfx`, `scripts/build_demo_package.ps1`, `deploy/install_and_run.bat`
 
 ### Leave alone
 

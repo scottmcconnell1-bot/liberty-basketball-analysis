@@ -34,6 +34,38 @@ WAIT_SECONDS = 90
 FILM_TOOL_TEMPLATE = ROOT / "templates" / "film_tool.html"
 
 
+def resolve_demo_mode_env() -> None:
+    """Enable DEMO_MODE only for a real demo package session.
+
+    The demo bat writes ``.liberty_demo_mode`` in the package dir before launch.
+    A leftover ``DEMO_MODE=1`` in the user environment (or a stray TEMP flag)
+    must not turn on the DONE button for the main Documents Liberty clone.
+    """
+    import tempfile
+
+    local_flag = ROOT / ".liberty_demo_mode"
+    temp_flag = Path(tempfile.gettempdir()) / "LibertyDemo_mode.flag"
+    if local_flag.is_file():
+        os.environ["DEMO_MODE"] = "1"
+        try:
+            temp_flag.write_text("1\n", encoding="ascii")
+        except OSError:
+            pass
+        _log("Demo mode enabled (.liberty_demo_mode present).")
+        return
+
+    # Main / non-demo tree: strip inherited env + stray TEMP flag.
+    if "DEMO_MODE" in os.environ:
+        _log("Clearing inherited DEMO_MODE (not a demo package session).")
+        os.environ.pop("DEMO_MODE", None)
+    if temp_flag.is_file():
+        try:
+            temp_flag.unlink()
+            _log("Removed stray LibertyDemo_mode.flag from TEMP.")
+        except OSError:
+            pass
+
+
 def film_tool_build_info() -> dict[str, bool | str]:
     """Read Film Tool template markers (helps catch stale repo copies)."""
     text = ""
@@ -307,6 +339,8 @@ def main() -> int:
     print(" Liberty Basketball — Local Test Launcher ".center(60))
     print("=" * 60)
     print()
+
+    resolve_demo_mode_env()
 
     force_deps = args.reinstall_deps or args.repair
     if force_deps:
