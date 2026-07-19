@@ -7,7 +7,7 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-done-uninstall-button |
+| **id** | demo-web-done-no-shortcut |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,18 +15,20 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 ### Proven
 
-- **DONE UX:** While the demo runs, console shows `DEMO RUNNING — http://127.0.0.1:8080` and `deploy/demo_done_dialog.ps1` opens a TopMost WinForms dialog with a large **DONE** button. Clicking DONE (or closing the form) continues cleanup. Fallback: type `DONE` (case-insensitive) or press Enter in the console.
-- **On DONE:** stop Liberty by launcher PID / cmdline / port listener → delete Desktop `.url`/`.lnk` from user/OneDrive/Public Desktop → wipe `%LOCALAPPDATA%\LibertyBasketballDemo` via TEMP handoff bat (avoids self-delete race) → sweep `%TEMP%\LibertyDemo_*` logs/dirs → print removed list → explicitly leave winget Python alone → exit.
-- **Cleanup smoke (this machine):** Created dummy `%LOCALAPPDATA%\LibertyBasketballDemo` + Desktop `.url` + TEMP log; ran `install_and_run.bat --cleanup-phase … ok`. AFTER: persist=`False`, url=`False`, log=`False`. Console printed `deleted: …\LibertyBasketballDemo` and Desktop shortcut path.
-- **DONE dialog smoke:** Started `demo_done_dialog.ps1`, found window title `Liberty Basketball Demo`, closed it, process ExitCode=`0`.
-- **Rebuilt SFX (-t7z):** `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (see commit/report for size/timestamp). Staging includes `demo_done_dialog.ps1` + `wait_for_done` markers.
+- **No Desktop shortcuts:** `install_and_run.bat` has no `create_desktop_shortcut`, `[InternetShortcut]`, `.url` write, or WinForms dialog. Cleanup still best-effort deletes leftover `.url`/`.lnk` from older builds.
+- **Browser open:** After server ready, bat logs `[BROWSER]` and runs `start "" "%OPEN_URL%"` plus PowerShell `Start-Process`. Does not rely on `launch_liberty` (still started with `--no-browser`).
+- **DEMO_MODE:** Bat sets `DEMO_MODE=1` (+ TEMP/local flag files). Nav shows prominent **DONE** only when `demo_mode` is true. Smoke: HTML contains `id="demo-done-btn"`.
+- **Web DONE:** `POST /api/demo/done` (alias `/api/demo/uninstall`) schedules `%TEMP%\LibertyDemo_web_cleanup.bat`, writes done flag, then `os._exit` after response. Outer bat waits for launcher PID exit / done flag, then TEMP handoff wipe of `%LOCALAPPDATA%\LibertyBasketballDemo`.
+- **Tests:** `tests/test_demo_mode.py` — 4 passed.
+- **Rebuilt SFX:** `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (26.28 MB, 2026-07-19 ~9:50 AM).
 
 ### Files
 
-- `deploy/install_and_run.bat` — DONE wait + wipe_temp_leftovers + cleanup messaging
-- `deploy/demo_done_dialog.ps1` — WinForms DONE button
-- `scripts/build_demo_package.ps1` — package dialog + markers/README
-- `dist/LibertyDemo.exe` / `dist/README_DEMO.txt` — rebuilt package
+- `deploy/install_and_run.bat` — no shortcuts; DEMO_MODE; browser open; wait for server exit
+- `blueprints/demo.py` — DONE/uninstall API
+- `app.py` / `templates/base.html` — demo_mode inject + DONE button
+- `scripts/build_demo_package.ps1` — markers/README updated
+- removed `deploy/demo_done_dialog.ps1`
 
 ### Leave alone
 

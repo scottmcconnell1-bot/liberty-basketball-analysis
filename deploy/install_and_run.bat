@@ -7,23 +7,19 @@ REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
 REM First run (SFX TEMP extract): copy payload to
 REM   %LOCALAPPDATA%\LibertyBasketballDemo\
-REM create Desktop URL shortcut (.url via cmd echo), then relaunch from that folder.
+REM then relaunch from that folder. NO Desktop shortcuts.
 REM Subsequent runs from LocalAppData: reuse .venv for the session.
 REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
 REM then python on PATH. Winget install is attempted at most ONCE.
-REM Start server with venv python + scripts\launch_liberty.py --no-browser.
-REM Kill only the Liberty process tree (not all python.exe).
-REM Wait for coach DONE (WinForms button, or type DONE / Enter).
-REM Cleanup on DONE: stop server, wipe LocalAppData install, delete TEMP
-REM LibertyDemo_* leftovers, delete Desktop shortcuts.
+REM Start server with DEMO_MODE=1 + venv python + launch_liberty.py --no-browser.
+REM Bat opens the browser after server is ready (does not rely on launch_liberty).
+REM Wait for server process exit (web DONE button stops it), then cleanup.
+REM Cleanup: wipe LocalAppData install, TEMP LibertyDemo_*, leftover shortcuts.
 REM Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
 set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
-set "SHORTCUT_URL=Liberty Basketball Demo.url"
 set "DEMO_URL=http://127.0.0.1:8080"
-set "DESKTOP_DIR="
-set "URL_PATH="
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -40,7 +36,7 @@ if /I "%~1"=="--cleanup-phase" (
   if /I "%~4"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
 )
 
-REM If not already running from the session install, copy + shortcut + relaunch.
+REM If not already running from the session install, copy + relaunch (no shortcut).
 if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
   echo.
   echo ============================================================
@@ -71,14 +67,6 @@ if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
     copy /y "%SCRIPT_DIR%\install_and_run.bat" "%PERSIST_DIR%\install_and_run.bat" >nul
   )
 
-  call :create_desktop_shortcut
-  if errorlevel 1 (
-    echo ERROR: Desktop shortcut creation failed. See messages above.
-    echo Demo install is at %PERSIST_DIR% but no Desktop shortcut was created.
-    pause
-    exit /b 1
-  )
-
   echo.
   echo Launching from session install...
   echo.
@@ -97,6 +85,11 @@ set "PYTHON_EXE="
 set "INSTALL_TRIED=0"
 set "LAUNCHER_PID="
 
+REM Signal demo mode for the web UI (env + flag file)
+set "DEMO_MODE=1"
+echo 1> "%TEMP%\LibertyDemo_mode.flag"
+echo 1> "%PACKAGE_DIR%\.liberty_demo_mode"
+
 echo.
 echo ============================================================
 echo   Liberty Basketball Analysis - Demo
@@ -104,15 +97,13 @@ echo ============================================================
 echo.
 echo Session install: %PACKAGE_DIR%
 echo Log:             %LOG_FILE%
+echo DEMO_MODE:       %DEMO_MODE%
 echo.
 echo NOTE: winget-installed Python ^(if needed^) stays on this PC.
-echo       Click DONE when finished — that wipes LocalAppData files,
-echo       TEMP leftovers, and Desktop shortcut^(s^).
+echo       Click DONE in the browser top menu when finished —
+echo       that stops the server and wipes LocalAppData + TEMP leftovers.
 echo       GPU AI / large model weights / game video are not in this demo.
 echo.
-
-REM Refresh / ensure Desktop URL shortcuts exist for this session
-call :create_desktop_shortcut
 
 if not exist "%PACKAGE_DIR%\app.py" (
   echo ERROR: app.py not found. Run this from the Liberty package root.
@@ -153,17 +144,18 @@ call :install_requirements
 if errorlevel 1 goto :fail
 
 echo.
-echo Starting Liberty on http://127.0.0.1:%PORT% ...
+echo Starting Liberty on http://127.0.0.1:%PORT% ^(DEMO_MODE=1, --no-browser^)...
 echo.
 
 REM Start via venv python (NOT bare "start scripts\launch_liberty.py").
-REM Start-Process is used so we can store the launcher PID for safe cleanup.
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
+REM DEMO_MODE is inherited from this cmd session into PowerShell / child.
+REM Start-Process is used so we can store the launcher PID for wait + cleanup.
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
   set "LAUNCHER_PID=%%P"
 )
 
 if not defined LAUNCHER_PID (
-  echo WARNING: Could not capture launcher PID; will stop by command-line match on exit.
+  echo WARNING: Could not capture launcher PID; will wait for port / done flag.
 ) else (
   echo Launcher PID: !LAUNCHER_PID!
 )
@@ -184,159 +176,99 @@ timeout /t 2 /nobreak >nul
 goto :wait_loop
 
 :server_ready
-echo Server ready.
-start "" "http://127.0.0.1:%PORT%/"
+echo Server ready at http://127.0.0.1:%PORT%/
+call :open_browser
 echo.
 echo ========================================
 echo   DEMO RUNNING — http://127.0.0.1:%PORT%
-echo   Click DONE in the popup window
+echo   Click DONE in the browser top menu
 echo   to uninstall and exit.
-echo   ^(Or click this window and type DONE^)
+echo   ^(Backup: close this window after DONE^)
 echo ========================================
 echo.
-call :wait_for_done
+call :wait_for_server_exit
 goto :cleanup_ok
 
 REM ======================== helpers ========================
 
-:resolve_desktop_dir
-REM Simple Desktop resolve — no PowerShell. Prefer USERPROFILE\Desktop, then OneDrive.
-set "DESKTOP_DIR=%USERPROFILE%\Desktop"
-if not exist "%DESKTOP_DIR%" set "DESKTOP_DIR=%USERPROFILE%\OneDrive\Desktop"
-if not exist "%DESKTOP_DIR%" (
-  echo ERROR: Desktop folder not found.
-  echo Tried: %USERPROFILE%\Desktop
-  echo        %USERPROFILE%\OneDrive\Desktop
-  exit /b 1
-)
-exit /b 0
-
-:create_desktop_shortcut
-REM Create InternetShortcut .url with plain cmd echo (no PowerShell).
-REM Writes to user Desktop and Public Desktop when present.
-REM Echoes ERRORLEVEL + dir listing so the console proves creation.
-set "URL_OK=0"
-
-call :resolve_desktop_dir
-if errorlevel 1 exit /b 1
-
-set "URL_PATH=%DESKTOP_DIR%\%SHORTCUT_URL%"
+:open_browser
+REM Bat MUST open the browser — launch_liberty is started with --no-browser.
+set "OPEN_URL=http://127.0.0.1:%PORT%/"
 echo.
-echo Creating Desktop shortcut ^(InternetShortcut .url^)...
-echo Desktop folder: %DESKTOP_DIR%
-echo Target URL:     %DEMO_URL%
-echo Output file:    %URL_PATH%
-
-(
-  echo [InternetShortcut]
-  echo URL=%DEMO_URL%
-) > "%URL_PATH%"
-echo ERRORLEVEL after write: %ERRORLEVEL%
-if errorlevel 1 (
-  echo ERROR: Failed to write %URL_PATH%
-  echo ERRORLEVEL=%ERRORLEVEL%
-  pause
-  exit /b 1
-)
-if not exist "%URL_PATH%" (
-  echo ERROR: File missing after write: %URL_PATH%
-  pause
-  exit /b 1
-)
-echo Shortcut created:
-dir "%URL_PATH%"
-set "URL_OK=1"
-
-REM Also place on Public Desktop when that folder exists (all-users visibility).
-if exist "%PUBLIC%\Desktop" (
-  set "PUBLIC_URL=%PUBLIC%\Desktop\%SHORTCUT_URL%"
-  echo Also writing Public Desktop: !PUBLIC_URL!
-  (
-    echo [InternetShortcut]
-    echo URL=%DEMO_URL%
-  ) > "!PUBLIC_URL!"
-  echo ERRORLEVEL after Public write: !ERRORLEVEL!
-  if exist "!PUBLIC_URL!" (
-    dir "!PUBLIC_URL!"
-  ) else (
-    echo WARNING: Public Desktop write failed ^(continuing — user Desktop OK^).
-  )
-)
-
-if "!URL_OK!"=="0" exit /b 1
+echo [BROWSER] Opening %OPEN_URL% ...
+echo [BROWSER] Method 1: cmd start "" url
+start "" "%OPEN_URL%"
+echo [BROWSER] cmd start ERRORLEVEL=%ERRORLEVEL%
+echo [BROWSER] Method 2: powershell Start-Process
+powershell -NoProfile -Command "try { Start-Process '%OPEN_URL%'; Write-Host '[BROWSER] Start-Process: OK' } catch { Write-Host ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }"
+echo [BROWSER] Browser open commands finished — check lines above.
 exit /b 0
 
-:wait_for_done
-REM Prefer WinForms DONE button; fall back to typing DONE / Enter in this console.
-set "DONE_SCRIPT=%PACKAGE_DIR%\demo_done_dialog.ps1"
-if not exist "%DONE_SCRIPT%" set "DONE_SCRIPT=%PACKAGE_DIR%\deploy\demo_done_dialog.ps1"
-if not exist "%DONE_SCRIPT%" set "DONE_SCRIPT=%~dp0demo_done_dialog.ps1"
-if exist "%DONE_SCRIPT%" (
-  echo Opening DONE button window...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%DONE_SCRIPT%" -Url "http://127.0.0.1:%PORT%"
-  if !ERRORLEVEL! EQU 0 (
-    echo DONE clicked — uninstalling...
+:wait_for_server_exit
+REM Primary: wait until launcher PID exits (web DONE calls os._exit).
+REM Also accept %TEMP%\LibertyDemo_done.flag from the API.
+echo Waiting for web DONE ^(server process exit^)...
+:wait_exit_loop
+if exist "%TEMP%\LibertyDemo_done.flag" (
+  echo DONE flag detected — proceeding to cleanup...
+  timeout /t 2 /nobreak >nul
+  exit /b 0
+)
+if defined LAUNCHER_PID (
+  powershell -NoProfile -Command "try { Get-Process -Id %LAUNCHER_PID% -ErrorAction Stop | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+  if !ERRORLEVEL! NEQ 0 (
+    echo Launcher PID %LAUNCHER_PID% exited — uninstalling...
     exit /b 0
   )
-  echo WARNING: DONE dialog failed; type DONE in this window instead.
 ) else (
-  echo WARNING: demo_done_dialog.ps1 not found; type DONE in this window.
+  powershell -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort %PORT% -State Listen -ErrorAction SilentlyContinue; if ($c) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+  if !ERRORLEVEL! NEQ 0 (
+    echo Port %PORT% no longer listening — uninstalling...
+    exit /b 0
+  )
 )
-echo.
-echo Type DONE then Enter to uninstall and exit.
-echo ^(Or press Enter alone.^)
-:done_type_loop
-set "DONE_INPUT="
-set /p "DONE_INPUT=DONE> "
-if /I "!DONE_INPUT!"=="DONE" (
-  echo DONE received — uninstalling...
-  exit /b 0
-)
-if "!DONE_INPUT!"=="" (
-  echo Enter received — uninstalling...
-  exit /b 0
-)
-echo Type DONE ^(or press Enter^) to continue.
-goto :done_type_loop
+timeout /t 2 /nobreak >nul
+goto :wait_exit_loop
 
-:remove_desktop_shortcuts
-REM Delete .url (and any leftover .lnk) from known Desktop paths — plain cmd.
-echo Removing Desktop shortcut^(s^)...
+:remove_leftover_shortcuts
+REM Best-effort delete of any leftover .url/.lnk from older demo builds.
+echo Removing leftover Desktop shortcut^(s^) if any...
 set "_REMOVED=0"
 for %%D in (
   "%USERPROFILE%\Desktop"
   "%USERPROFILE%\OneDrive\Desktop"
   "%PUBLIC%\Desktop"
 ) do (
-  if exist "%%~D\%SHORTCUT_URL%" (
-    del /f /q "%%~D\%SHORTCUT_URL%"
-    if not exist "%%~D\%SHORTCUT_URL%" (
-      echo   deleted: %%~D\%SHORTCUT_URL%
+  if exist "%%~D\Liberty Basketball Demo.url" (
+    del /f /q "%%~D\Liberty Basketball Demo.url" 2>nul
+    if not exist "%%~D\Liberty Basketball Demo.url" (
+      echo   deleted: %%~D\Liberty Basketball Demo.url
       set "_REMOVED=1"
-    ) else (
-      echo   FAILED delete: %%~D\%SHORTCUT_URL%
     )
   )
   if exist "%%~D\Liberty Basketball Demo.lnk" (
-    del /f /q "%%~D\Liberty Basketball Demo.lnk"
+    del /f /q "%%~D\Liberty Basketball Demo.lnk" 2>nul
     if not exist "%%~D\Liberty Basketball Demo.lnk" (
       echo   deleted: %%~D\Liberty Basketball Demo.lnk
       set "_REMOVED=1"
     )
   )
 )
-if "!_REMOVED!"=="0" echo   ^(no Desktop shortcuts found to delete^)
+if "!_REMOVED!"=="0" echo   ^(no leftover Desktop shortcuts found^)
 exit /b 0
 
 :wipe_temp_leftovers
-REM Delete TEMP LibertyDemo_* logs / dialog scripts / leftover dirs we created.
+REM Delete TEMP LibertyDemo_* logs / leftover dirs we created.
 REM Do NOT delete this cleanup bat until the very end ^(caller handles that^).
 echo Removing TEMP LibertyDemo leftovers...
 set "_TEMP_REMOVED=0"
 for %%F in (
   "%TEMP%\LibertyDemo_*.log"
   "%TEMP%\LibertyDemo_*.log.err"
+  "%TEMP%\LibertyDemo_mode.flag"
+  "%TEMP%\LibertyDemo_done.flag"
   "%TEMP%\LibertyDemo_wait_done.ps1"
+  "%TEMP%\LibertyDemo_web_cleanup.bat"
 ) do (
   if exist "%%~fF" (
     del /f /q "%%~fF" 2>nul
@@ -616,7 +548,7 @@ if defined LOG_FILE if exist "%LOG_FILE%.err" (
   echo   deleted: %LOG_FILE%.err
 )
 call :wipe_temp_leftovers
-call :remove_desktop_shortcuts
+call :remove_leftover_shortcuts
 call :wipe_session_install
 echo.
 echo ========================================
@@ -625,7 +557,8 @@ echo   Demo files removed from this PC.
 echo   winget Python ^(if installed^) was NOT removed.
 echo ========================================
 echo.
-pause
+echo You can close this window.
+timeout /t 5 /nobreak >nul
 REM Remove TEMP cleanup helper if we are that helper
 if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
 exit /b 0
@@ -641,12 +574,13 @@ if defined LOG_FILE if exist "%LOG_FILE%" (
   echo   ^(no log file^)
 )
 call :wipe_temp_leftovers
-call :remove_desktop_shortcuts
+call :remove_leftover_shortcuts
 call :wipe_session_install
 echo.
 echo Demo files cleaned. ^(winget Python, if installed, was left alone.^)
 echo.
-pause
+echo You can close this window.
+timeout /t 5 /nobreak >nul
 if /I "%~nx0"=="LibertyDemo_cleanup_run.bat" del /f /q "%~f0" 2>nul
 exit /b 1
 
