@@ -10,9 +10,10 @@ REM   %LOCALAPPDATA%\LibertyBasketballDemo\
 REM then CONTINUE in this same visible console (no second window / no shortcut).
 REM Prefer py -3.12 / py -3.13, then common dirs, then PATH. Winget at most ONCE.
 REM Start server with DEMO_MODE=1 + launch_liberty.py --no-browser.
-REM Bat opens the browser after server is ready. Port 8080, else 8090.
+REM Bat opens the browser IMMEDIATELY after Start-Process (no health-check wait).
+REM Demo uses free port 8090+ (never 8080 — reserved for main Liberty app).
 REM Wait for server exit (web DONE), then wipe LocalAppData + TEMP leftovers.
-REM Does NOT uninstall winget Python. NO Desktop shortcuts.
+REM Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
 set "LOG_FILE=%TEMP%\LibertyDemo_run.log"
@@ -31,9 +32,12 @@ if "%PERSIST_DIR:~-1%"=="\" set "PERSIST_DIR=%PERSIST_DIR:~0,-1%"
 REM Cleanup handoff: bat may live under PERSIST_DIR; wipe from a TEMP copy.
 if /I "%~1"=="--cleanup-phase" (
   set "PACKAGE_DIR=%PERSIST_DIR%"
-  set "PORT=8080"
+  set "PORT=8090"
   if not "%~2"=="" set "LOG_FILE=%~2"
   if not "%~3"=="" set "LAUNCHER_PID=%~3"
+  if not "%~4"=="" if /I not "%~4"=="ok" if /I not "%~4"=="fail" set "PORT=%~4"
+  if /I "%~5"=="fail" (goto :cleanup_fail_body)
+  if /I "%~5"=="ok" (goto :cleanup_ok_body)
   if /I "%~4"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
 )
 
@@ -82,7 +86,7 @@ if errorlevel 1 (
 )
 
 set "VENV_DIR=%PACKAGE_DIR%\.venv"
-set "PORT=8080"
+set "PORT=8090"
 set "PYTHON_EXE="
 set "INSTALL_TRIED=0"
 set "LAUNCHER_PID="
@@ -145,6 +149,12 @@ call :pick_port
 if errorlevel 1 goto :fail
 
 call :log .
+call :log "************************************************************"
+call :log "  DEMO PORT CHOSEN: !PORT!"
+call :log "  DEMO URL:         http://127.0.0.1:!PORT!/"
+call :log "  (8080 is reserved for main Liberty — demo never uses it)"
+call :log "************************************************************"
+call :log .
 call :log "Starting Liberty on http://127.0.0.1:!PORT! (DEMO_MODE=1, --no-browser)..."
 call :log .
 
@@ -164,60 +174,48 @@ if not defined LAUNCHER_PID (
   call :log "Launcher PID: !LAUNCHER_PID!"
 )
 
-REM Open browser ASAP: on HTTP 200, or after 3s if PID exists, or at 3s anyway.
-REM Max poll 60s for readiness logging — never block forever before browser.
+REM HARD FIX: open browser IMMEDIATELY — do NOT wait for health check.
+REM launch_liberty may re-pip for minutes; previous builds stuck in the wait
+REM loop and never reached :open_browser (log stopped at "[WAIT] attempt at 2s").
+call :log "Opening browser NOW (before any health poll)..."
+call :open_browser
+set "BROWSER_OPENED=1"
+
+REM Background-style readiness poll (logging only). Re-open browser once ready.
 set /a "WAITED=0"
-set "BROWSER_OPENED=0"
 set "SERVER_READY=0"
-call :log "Polling http://127.0.0.1:!PORT!/ (max 60s; browser opens at 200 or 3s)..."
+call :log "Polling http://127.0.0.1:!PORT!/ for readiness (log only; browser already opened)..."
 
 :wait_loop
 call :log "[WAIT] attempt at !WAITED!s ..."
 powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 2; Write-Output ('[WAIT] HTTP ' + $r.StatusCode); if ($r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { Write-Output ('[WAIT] not ready: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
 if !ERRORLEVEL! EQU 0 (
   set "SERVER_READY=1"
-  call :log "[WAIT] server responded OK at !WAITED!s"
-  if "!BROWSER_OPENED!"=="0" (
-    call :open_browser
-    set "BROWSER_OPENED=1"
-  )
-  goto :after_wait
-)
-
-REM Prefer opening once launcher PID exists even if health check is slow.
-if !WAITED! GEQ 3 if "!BROWSER_OPENED!"=="0" (
-  if defined LAUNCHER_PID (
-    call :log "[WAIT] 3s elapsed with launcher PID — opening browser without waiting for HTTP."
-  ) else (
-    call :log "[WAIT] 3s elapsed — opening browser without waiting for HTTP."
-  )
+  call :log "[WAIT] server responded OK at !WAITED!s — re-opening browser to be sure."
   call :open_browser
-  set "BROWSER_OPENED=1"
   goto :after_wait
 )
 
-if !WAITED! GEQ 60 (
+if !WAITED! GEQ 90 (
   if "!SERVER_READY!"=="0" (
-    call :log "WARNING: No HTTP success within 60s on port !PORT! — continuing anyway."
+    call :log "WARNING: No HTTP success within 90s on port !PORT! — continuing anyway."
     call :log "See log: %LOG_FILE%"
     if exist "%LOG_FILE%.err" (
-      call :log "--- err log ---"
-      type "%LOG_FILE%.err"
+      call :log "--- err log (tail) ---"
+      powershell -NoProfile -Command "Get-Content -LiteralPath '%LOG_FILE%.err' -Tail 40 -ErrorAction SilentlyContinue"
     )
   )
-  if "!BROWSER_OPENED!"=="0" (
-    call :open_browser
-    set "BROWSER_OPENED=1"
-  )
+  call :log "Re-opening browser after poll timeout..."
+  call :open_browser
   goto :after_wait
 )
 
-timeout /t 2 /nobreak >nul
+REM Avoid "timeout" (can hang when stdin is redirected from SFX). Use ping delay.
+ping -n 3 127.0.0.1 >nul 2>&1
 set /a "WAITED+=2"
 goto :wait_loop
 
 :after_wait
-if "!BROWSER_OPENED!"=="0" call :open_browser
 call :log .
 call :log "========================================"
 call :log "  DEMO RUNNING — http://127.0.0.1:!PORT!"
@@ -248,36 +246,76 @@ echo(%~1
 exit /b 0
 
 :pick_port
-REM Prefer 8080; if busy (e.g. main Liberty), use 8090. Fail if both busy.
-set "PORT=8080"
-powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
-if !ERRORLEVEL! EQU 0 (
-  call :log "Port 8080 is free — using it."
-  exit /b 0
+REM Demo NEVER uses 8080 (main Liberty). Find first free port from 8090 upward.
+call :log "Selecting demo port (8090+; 8080 reserved for main app)..."
+powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue) { Write-Output 'NOTE: Port 8080 is in use (likely main Liberty) — demo will not use it.' } else { Write-Output 'NOTE: Port 8080 is free but reserved for main Liberty — demo still uses 8090+.' } } catch { Write-Output 'NOTE: Could not probe 8080; demo uses 8090+.' }" >> "%LOG_FILE%" 2>&1
+for /L %%N in (8090,1,8100) do (
+  set "PORT=%%N"
+  powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort %%N -State Listen -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
+  if !ERRORLEVEL! EQU 0 (
+    call :log "CHOSEN DEMO PORT: %%N  (URL http://127.0.0.1:%%N/)"
+    exit /b 0
+  )
+  call :log "Port %%N is in use — trying next..."
 )
-call :log "Port 8080 is in use — trying 8090..."
-set "PORT=8090"
-powershell -NoProfile -Command "try { if (Get-NetTCPConnection -LocalPort 8090 -State Listen -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
-if !ERRORLEVEL! EQU 0 (
-  call :log "Port 8090 is free — using it."
-  exit /b 0
-)
-call :log "ERROR: Ports 8080 and 8090 are both in use."
-call :log "Stop the other Liberty/app using those ports, then re-run."
+call :log "ERROR: No free demo port in 8090-8100."
+call :log "Stop other apps using those ports, then re-run."
 exit /b 1
 
 :open_browser
 REM Bat MUST open the browser — launch_liberty is started with --no-browser.
+REM Fire multiple methods; some Windows/SFX contexts break one or another.
 set "OPEN_URL=http://127.0.0.1:!PORT!/"
 call :log .
-call :log "[BROWSER] Opening %OPEN_URL% ..."
-call :log "[BROWSER] Method 1: cmd start \"\" url"
-start "" "%OPEN_URL%"
-call :log "[BROWSER] cmd start ERRORLEVEL=!ERRORLEVEL!"
+call :log "[BROWSER] ========================================"
+call :log "[BROWSER] Opening !OPEN_URL! via ALL methods..."
+call :log "[BROWSER] ========================================"
+
+REM Write Desktop .url so user can click even if auto-open fails.
+set "URL_FILE=%USERPROFILE%\Desktop\Liberty Basketball Demo.url"
+(
+  echo [InternetShortcut]
+  echo URL=!OPEN_URL!
+) > "!URL_FILE!" 2>nul
+if exist "!URL_FILE!" (
+  call :log "[BROWSER] Wrote Desktop shortcut: !URL_FILE!"
+) else (
+  set "URL_FILE=%USERPROFILE%\OneDrive\Desktop\Liberty Basketball Demo.url"
+  (
+    echo [InternetShortcut]
+    echo URL=!OPEN_URL!
+  ) > "!URL_FILE!" 2>nul
+  if exist "!URL_FILE!" (
+    call :log "[BROWSER] Wrote OneDrive Desktop shortcut: !URL_FILE!"
+  ) else (
+    call :log "[BROWSER] WARNING: could not write Desktop .url"
+  )
+)
+
+call :log "[BROWSER] Method 1: cmd /c start http://..."
+cmd /c start http://127.0.0.1:!PORT!/ >> "%LOG_FILE%" 2>&1
+call :log "[BROWSER] Method 1 ERRORLEVEL=!ERRORLEVEL!"
+
 call :log "[BROWSER] Method 2: powershell Start-Process"
-powershell -NoProfile -Command "try { Start-Process '%OPEN_URL%'; Write-Output '[BROWSER] Start-Process: OK' } catch { Write-Output ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
-call :log "[BROWSER] powershell Start-Process done"
-call :log "[BROWSER] Browser open commands finished — check lines above."
+powershell -NoProfile -Command "try { Start-Process 'http://127.0.0.1:!PORT!/'; Write-Output '[BROWSER] Start-Process: OK' } catch { Write-Output ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
+call :log "[BROWSER] Method 2 done ERRORLEVEL=!ERRORLEVEL!"
+
+call :log "[BROWSER] Method 3: explorer.exe URL"
+explorer.exe "http://127.0.0.1:!PORT!/" >> "%LOG_FILE%" 2>&1
+call :log "[BROWSER] Method 3 ERRORLEVEL=!ERRORLEVEL!"
+
+call :log "[BROWSER] Method 4: start empty-title quoted URL"
+start "" "!OPEN_URL!"
+call :log "[BROWSER] Method 4 ERRORLEVEL=!ERRORLEVEL!"
+
+if exist "!URL_FILE!" (
+  call :log "[BROWSER] Method 5: explorer Desktop .url"
+  explorer.exe "!URL_FILE!" >> "%LOG_FILE%" 2>&1
+  call :log "[BROWSER] Method 5 ERRORLEVEL=!ERRORLEVEL!"
+)
+
+call :log "[BROWSER] All open commands finished for !OPEN_URL!"
+call :log .
 exit /b 0
 
 :wait_for_server_exit
@@ -607,7 +645,7 @@ if not exist "%CLEANUP_BAT%" (
   echo WARNING: Could not copy cleanup helper to TEMP; wiping in-place.
   if /I "%_CLEANUP_ARG%"=="fail" (goto :cleanup_fail_body) else (goto :cleanup_ok_body)
 )
-"%CLEANUP_BAT%" --cleanup-phase "%LOG_FILE%" "%LAUNCHER_PID%" %_CLEANUP_ARG%
+"%CLEANUP_BAT%" --cleanup-phase "%LOG_FILE%" "%LAUNCHER_PID%" !PORT! %_CLEANUP_ARG%
 exit /b 0
 
 :cleanup_ok_body

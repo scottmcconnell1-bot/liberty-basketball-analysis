@@ -208,13 +208,16 @@ if ($bat -notmatch 'INSTALL_TRIED=1') {
     throw "install_and_run.bat must set INSTALL_TRIED=1 before winget (one-shot install)"
 }
 if ($bat -match 'create_desktop_shortcut' -or $bat -match '(?m)^\s*call\s+:create_desktop_shortcut\b') {
-    throw "install_and_run.bat must NOT create Desktop shortcuts"
+    throw "install_and_run.bat must NOT create Desktop .lnk shortcuts via create_desktop_shortcut"
 }
 if ($bat -match 'WScript\.Shell') {
     throw "install_and_run.bat must NOT use WScript.Shell"
 }
-if ($bat -match '\[InternetShortcut\]') {
-    throw "install_and_run.bat must NOT write InternetShortcut .url files"
+if ($bat -notmatch '\[InternetShortcut\]') {
+    throw "install_and_run.bat must write a Desktop InternetShortcut .url as browser-open fallback"
+}
+if ($bat -notmatch 'Liberty Basketball Demo\.url') {
+    throw "install_and_run.bat must write Liberty Basketball Demo.url on Desktop"
 }
 if ($bat -match 'demo_done_dialog\.ps1' -or $bat -match 'System\.Windows\.Forms') {
     throw "install_and_run.bat must NOT use WinForms DONE dialog (web DONE button instead)"
@@ -224,6 +227,24 @@ if ($bat -notmatch 'DEMO_MODE=1') {
 }
 if ($bat -notmatch 'start\s+""\s+"http://127\.0\.0\.1:%PORT%/"' -and $bat -notmatch 'start\s+""\s+"%OPEN_URL%"' -and $bat -notmatch 'start\s+""\s+"!OPEN_URL!"') {
     throw "install_and_run.bat must open browser via start "" url"
+}
+if ($bat -notmatch 'cmd /c start http://127\.0\.0\.1:!PORT!/') {
+    throw "install_and_run.bat must open browser via cmd /c start http://..."
+}
+if ($bat -notmatch 'Start-Process') {
+    throw "install_and_run.bat must open browser via PowerShell Start-Process"
+}
+if ($bat -notmatch 'explorer\.exe "http://127\.0\.0\.1:!PORT!/"') {
+    throw "install_and_run.bat must open browser via explorer.exe URL"
+}
+if ($bat -notmatch 'Opening browser NOW') {
+    throw "install_and_run.bat must open browser IMMEDIATELY after Start-Process (no health-check gate)"
+}
+if ($bat -notmatch 'CHOSEN DEMO PORT') {
+    throw "install_and_run.bat must log CHOSEN DEMO PORT loudly"
+}
+if ($bat -notmatch 'for /L %%N in \(8090,1,8100\)') {
+    throw "install_and_run.bat must pick demo port from 8090+ (never 8080)"
 }
 if ($bat -notmatch '\[BROWSER\]') {
     throw "install_and_run.bat must log clear [BROWSER] lines when opening the URL"
@@ -352,7 +373,8 @@ opens a VISIBLE console, and runs install_and_run.bat, which:
   3. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   4. Creates/reuses LocalAppData\.venv and installs requirements.txt
   5. Starts the app with DEMO_MODE=1 (scripts\launch_liberty.py --no-browser)
-  6. Uses port 8080, or 8090 if 8080 is busy; opens the browser to that URL
+  6. Uses free port 8090+ (never 8080 — reserved for main Liberty); opens browser
+     IMMEDIATELY via cmd start / Start-Process / explorer (no health-check wait)
   7. Coach clicks DONE in the web app top menu → POST /api/demo/done
      schedules TEMP cleanup, stops the server; bat then wipes
      %LOCALAPPDATA%\LibertyBasketballDemo and TEMP LibertyDemo_* leftovers.
@@ -384,7 +406,8 @@ Build notes ($(Get-Date -Format "yyyy-MM-dd"))
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
   * First run needs network for pip wheels
-  * If 8080 is busy, demo uses 8090 automatically
+  * Demo always uses 8090+ (8080 reserved for main Liberty app)
+  * Browser opens immediately after server Start-Process (before health poll)
 
 Rebuild
 -------

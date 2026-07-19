@@ -9,7 +9,8 @@ opens a VISIBLE console, and runs install_and_run.bat, which:
   3. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   4. Creates/reuses LocalAppData\.venv and installs requirements.txt
   5. Starts the app with DEMO_MODE=1 (scripts\launch_liberty.py --no-browser)
-  6. Uses port 8080, or 8090 if 8080 is busy; opens the browser to that URL
+  6. Uses free port 8090+ (never 8080 ??? reserved for main Liberty); opens browser
+     IMMEDIATELY via cmd start / Start-Process / explorer (no health-check wait)
   7. Coach clicks DONE in the web app top menu ??? POST /api/demo/done
      schedules TEMP cleanup, stops the server; bat then wipes
      %LOCALAPPDATA%\LibertyBasketballDemo and TEMP LibertyDemo_* leftovers.
@@ -26,7 +27,7 @@ analysis in this build (detector weights omitted to keep the download small).
 Build notes (2026-07-19)
 ------------------------
 - Staging: C:\Temp\LibertyDemoPackage\LibertyDemo
-- Demo DB: slim film_analysis.db (1.91 MB) - schema + teams/games/roster/events;
+- Demo DB: slim film_analysis.db (2.92 MB) - schema + teams/games/roster/events;
   omitted heavy detections/review_items (and credentials). Full source DB was ~123 MB.
 - Excluded: .git, .venv, __pycache__, build, dist, .pytest_cache, logs, uploads,
   tag-exports, experiments, benchmarks, .idea, .vscode, videos, large .pt/.task
@@ -41,7 +42,8 @@ Build notes (2026-07-19)
   * winget Python (if installed) remains after cleanup
   * GPU AI / YOLO inference is not in the demo
   * First run needs network for pip wheels
-  * If 8080 is busy, demo uses 8090 automatically
+  * Demo always uses 8090+ (8080 reserved for main Liberty app)
+  * Browser opens immediately after server Start-Process (before health poll)
 
 Rebuild
 -------
