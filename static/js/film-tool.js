@@ -1662,14 +1662,19 @@ function convertAiEventsToStatRows(events, teamName) {
             });
             return;
         }
-        const mapped = {
-            rebound: 'DefRebound',
-            assist: 'Assist',
-            steal: 'Steal',
-            turnover: 'Turnover',
-            block: 'Block',
-            foul: 'Foul',
-        }[eventType];
+        let mapped = null;
+        if (eventType === 'rebound') {
+            const reboundKind = String(details.rebound_type || details.reboundType || '').toLowerCase();
+            mapped = reboundKind.includes('off') ? 'OffRebound' : 'DefRebound';
+        } else {
+            mapped = {
+                assist: 'Assist',
+                steal: 'Steal',
+                turnover: 'Turnover',
+                block: 'Block',
+                foul: 'Foul',
+            }[eventType];
+        }
         if (!mapped) return;
         rows.push({
             eventtype: mapped,

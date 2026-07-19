@@ -1,0 +1,39 @@
+{
+  "analysis_key": "nfhs_gam30b09cbb4f_20260706_173156_trim_20260706_180340_trim_20260706_185339_trim_20260706_191311__rerun_20260718_215754",
+  "manual_action_tags": 53,
+  "ai_comparable_events": 245,
+  "ai_raw_events_in_window": 599,
+  "exact_matches": 22,
+  "manual_only": 17,
+  "ai_only": 209,
+  "disagreements": 14,
+  "precision_exact": 0.0952,
+  "recall_exact": 0.4151,
+  "f1_exact": 0.1549,
+  "match_tolerance_ms": 8000,
+  "q1_end_sec": 871,
+  "baseline": {
+    "exact_matches": 22,
+    "manual_only": 31,
+    "ai_only": 2726,
+    "precision_exact": 0.008,
+    "recall_exact": 0.4151,
+    "f1_exact": 0.0157
+  },
+  "gates": {
+    "min_precision": 0.08,
+    "min_recall": 0.3,
+    "min_exact": 15,
+    "max_ai_only": 350,
+    "passed": true,
+    "failures": []
+  },
+  "delta_vs_baseline": {
+    "exact_matches": 0,
+    "manual_only": -14,
+    "ai_only": -2517,
+    "precision_exact": 0.0872,
+    "recall_exact": 0.0,
+    "f1_exact": 0.1392
+  }
+}

@@ -470,3 +470,89 @@ def test_classify_all_shots_uses_detection_filter(tmp_path):
     assert results[0]["shot_type"] in {"2pt", "3pt", "ft"}
     conn.close()
 
+
+def test_postprocess_ai_events_dedupes_shot_flood_and_drops_low_conf_noise():
+    from event_generator import postprocess_ai_events
+
+    events = []
+    # Impossible 2PT Miss flood every 400ms
+    for i in range(20):
+        ts = i * 400
+        events.append(
+            {
+                "game_id": "g",
+                "player": "1",
+                "event_type": "shot",
+                "shot_result": "miss",
+                "timestamp_ms": ts,
+                "confidence": 0.52,
+                "details_json": '{"secondary_pass": true, "shot_type": "2pt"}',
+            }
+        )
+        events.append(
+            {
+                "game_id": "g",
+                "player": "2",
+                "event_type": "rebound",
+                "shot_result": None,
+                "timestamp_ms": ts + 80,
+                "confidence": 0.5,
+                "details_json": "{}",
+            }
+        )
+        events.append(
+            {
+                "game_id": "g",
+                "player": "2",
+                "event_type": "block",
+                "shot_result": None,
+                "timestamp_ms": ts + 80,
+                "confidence": 0.32,
+                "details_json": "{}",
+            }
+        )
+    # One strong primary shot that should survive
+    events.append(
+        {
+            "game_id": "g",
+            "player": "3",
+            "event_type": "shot",
+            "shot_result": "make",
+            "timestamp_ms": 50000,
+            "confidence": 0.58,
+            "details_json": '{"secondary_pass": false, "shot_type": "2pt"}',
+        }
+    )
+    events.append(
+        {
+            "game_id": "g",
+            "player": "4",
+            "event_type": "assist",
+            "shot_result": None,
+            "timestamp_ms": 50000,
+            "confidence": 0.45,
+            "details_json": "{}",
+        }
+    )
+    # Auto foul noise
+    events.append(
+        {
+            "game_id": "g",
+            "player": "1",
+            "event_type": "foul",
+            "shot_result": None,
+            "timestamp_ms": 1000,
+            "confidence": 0.18,
+            "details_json": "{}",
+        }
+    )
+
+    cleaned = postprocess_ai_events(events)
+    types = [e["event_type"] for e in cleaned]
+    shots = [e for e in cleaned if e["event_type"] == "shot"]
+    assert "foul" not in types
+    assert "block" not in types  # low-confidence blocks dropped
+    assert len(shots) <= 6  # rate+NMS collapse the flood
+    assert any(e["timestamp_ms"] == 50000 and e["shot_result"] == "make" for e in shots)
+    assert any(e["event_type"] == "assist" for e in cleaned)
+

@@ -135,6 +135,210 @@ def append_unique_event(events, seen_keys, event):
     events.append(event)
 
 
+# Post-filter floors / NMS windows tuned against manual Q1 Wilder ground truth
+# (tag-exports/manual_vs_ai_q1_side_by_side.md). Goal: cut AI-only flood while
+# preserving real shot / rebound / steal / turnover / assist matches.
+EVENT_MIN_CONFIDENCE = {
+    "shot": 0.50,
+    "make": 0.42,
+    "miss": 0.42,
+    "rebound": 0.50,
+    "block": 0.95,  # effectively disable speculative blocks (all were AI-only on Q1)
+    "assist": 0.42,
+    "steal": 0.45,
+    "turnover": 0.45,
+    "foul": 0.50,
+    "possession_change": 0.55,
+}
+
+# Keep highest-confidence event of each type within this window (ms).
+# Shot window collapses near-duplicates; rate cap handles sustained flood.
+EVENT_NMS_WINDOW_MS = {
+    "shot": 3000,
+    "make": 3000,
+    "miss": 3000,
+    "rebound": 3500,
+    "block": 8000,
+    "assist": 6000,
+    "steal": 6000,
+    "turnover": 6000,
+    "foul": 10000,
+    "possession_change": 2000,
+}
+
+# Hard rate cap: ~1 FGA / 10s; putbacks within the window compete by confidence.
+MAX_SHOTS_PER_WINDOW = 1
+SHOT_RATE_WINDOW_MS = 10000
+
+
+def _event_details(event):
+    raw = event.get("details_json") or "{}"
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+
+
+def postprocess_ai_events(events):
+    """
+    Precision-oriented cleanup of expanded generator output.
+
+    - Drop events below type-specific confidence floors
+    - Temporal NMS (keep highest confidence per type in a window)
+    - Cap impossible shot rates (dozens of FGA in a few seconds)
+    - Prefer primary-pass shots over secondary-pass heuristics
+    """
+    if not events:
+        return []
+
+    kept = []
+    for event in events:
+        et = str(event.get("event_type") or "").lower()
+        conf = float(event.get("confidence") or 0.0)
+        min_conf = EVENT_MIN_CONFIDENCE.get(et, 0.35)
+        if conf < min_conf:
+            continue
+        details = _event_details(event)
+        # Secondary-pass shots are noisy; require higher confidence to survive.
+        if et == "shot" and details.get("secondary_pass") and conf < 0.55:
+            continue
+        kept.append(event)
+
+    # Prefer primary shots: boost ranking key for non-secondary.
+    def _rank(event):
+        details = _event_details(event)
+        conf = float(event.get("confidence") or 0.0)
+        secondary_penalty = 0.15 if details.get("secondary_pass") else 0.0
+        return conf - secondary_penalty
+
+    by_type = {}
+    for event in kept:
+        et = str(event.get("event_type") or "").lower()
+        by_type.setdefault(et, []).append(event)
+
+    nms_kept = []
+    for et, group in by_type.items():
+        window = EVENT_NMS_WINDOW_MS.get(et, 3000)
+        group = sorted(group, key=lambda e: (int(e.get("timestamp_ms") or 0), -_rank(e)))
+        selected = []
+        for event in group:
+            ts = int(event.get("timestamp_ms") or 0)
+            # Compete with recently selected events of same type.
+            conflict = False
+            for prev in selected:
+                prev_ts = int(prev.get("timestamp_ms") or 0)
+                if abs(ts - prev_ts) <= window:
+                    # Keep higher-ranked; replace if current is better and close.
+                    if _rank(event) > _rank(prev):
+                        selected.remove(prev)
+                        selected.append(event)
+                    conflict = True
+                    break
+            if not conflict:
+                selected.append(event)
+        nms_kept.extend(selected)
+
+    # Global shot rate limiter across the timeline.
+    shots = [e for e in nms_kept if str(e.get("event_type") or "").lower() == "shot"]
+    other = [e for e in nms_kept if str(e.get("event_type") or "").lower() != "shot"]
+    shots = sorted(shots, key=lambda e: (int(e.get("timestamp_ms") or 0), -_rank(e)))
+    rate_kept_shots = []
+    for event in shots:
+        ts = int(event.get("timestamp_ms") or 0)
+        recent = [
+            s for s in rate_kept_shots
+            if abs(int(s.get("timestamp_ms") or 0) - ts) <= SHOT_RATE_WINDOW_MS
+        ]
+        if len(recent) < MAX_SHOTS_PER_WINDOW:
+            rate_kept_shots.append(event)
+            continue
+        # Replace weakest recent shot if this one ranks higher.
+        weakest = min(recent, key=_rank)
+        if _rank(event) > _rank(weakest):
+            rate_kept_shots.remove(weakest)
+            rate_kept_shots.append(event)
+
+    # Keep satellite make/miss/rebound/assist only when tightly tied to a surviving shot.
+    surviving_shots = sorted(
+        (
+            int(s.get("timestamp_ms") or 0),
+            str(s.get("shot_result") or "").lower(),
+            str(s.get("player") or ""),
+        )
+        for s in rate_kept_shots
+    )
+    surviving_shot_ts = [ts for ts, _, _ in surviving_shots]
+
+    def _nearest_shot(ts):
+        best = None
+        best_dt = None
+        for shot_ts, shot_result, shot_player in surviving_shots:
+            dt = abs(shot_ts - ts)
+            if best_dt is None or dt < best_dt:
+                best = (shot_ts, shot_result, shot_player)
+                best_dt = dt
+            if shot_ts > ts + 8000:
+                break
+        return best, best_dt
+
+    filtered_other = []
+    for event in other:
+        et = str(event.get("event_type") or "").lower()
+        ts = int(event.get("timestamp_ms") or 0)
+        if et in {"make", "miss"}:
+            nearest, dt = _nearest_shot(ts)
+            if nearest is None or dt is None or dt > 250:
+                continue
+            if nearest[1] and nearest[1] != et:
+                continue
+        elif et == "rebound":
+            # Rebound must follow a miss within a few seconds.
+            ok = False
+            for shot_ts, shot_result, _shot_player in surviving_shots:
+                if shot_result != "miss":
+                    continue
+                delta = ts - shot_ts
+                if 0 <= delta <= 4500:
+                    ok = True
+                    break
+                if shot_ts > ts:
+                    break
+            if not ok:
+                continue
+        elif et == "assist":
+            nearest, dt = _nearest_shot(ts)
+            if nearest is None or dt is None or dt > 250:
+                continue
+            if nearest[1] != "make":
+                continue
+        elif et == "block":
+            continue  # speculative blocks disabled
+        filtered_other.append(event)
+
+    # Steal / turnover rate cap — abrupt flips are noisy on this detector.
+    steal_to = [e for e in filtered_other if str(e.get("event_type") or "").lower() in {"steal", "turnover"}]
+    rest = [e for e in filtered_other if str(e.get("event_type") or "").lower() not in {"steal", "turnover"}]
+    steal_to = sorted(steal_to, key=lambda e: (int(e.get("timestamp_ms") or 0), -_rank(e)))
+    kept_st = []
+    for event in steal_to:
+        ts = int(event.get("timestamp_ms") or 0)
+        et = str(event.get("event_type") or "").lower()
+        recent_same = [
+            s for s in kept_st
+            if str(s.get("event_type") or "").lower() == et
+            and abs(int(s.get("timestamp_ms") or 0) - ts) <= 8000
+        ]
+        if recent_same:
+            continue
+        kept_st.append(event)
+
+    result = rate_kept_shots + rest + kept_st
+    result.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), str(e.get("event_type") or "")))
+    return result
+
+
 def build_ball_track(detections_df):
     ball_df = detections_df[detections_df["class_name"] == "ball"].copy()
     if ball_df.empty:
@@ -485,22 +689,35 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     seen_keys = set()
     shot_segments = {}
 
+    # Primary pass: require a clearer arc so possession noise does not flood FGA.
+    PRIMARY_MIN_BALL_RISE = 40
     for index, segment in enumerate(segments):
+        if int(segment.get("duration_frames") or 0) < 4:
+            continue
         next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
-        shot_info = detect_shot_from_segment(segment, ball_track, next_segment_start=next_start)
+        shot_info = detect_shot_from_segment(
+            segment,
+            ball_track,
+            min_ball_rise=PRIMARY_MIN_BALL_RISE,
+            next_segment_start=next_start,
+        )
         if shot_info:
+            # Require some lateral motion to avoid vertical possession noise.
+            if float(shot_info.get("lateral_travel") or 0) < 12:
+                continue
+            shot_info["secondary_pass"] = False
             shot_segments[index] = shot_info
 
-    # Secondary pass: look for shots missed by the primary detector.
-    # The primary detector requires a clear arc pattern, but with sparse ball
-    # detections the arc is often incomplete. This pass uses a wider window
-    # and checks if the ball y_center drops below ball_y_threshold (near the
-    # top of the frame = near the basket) with a lower min_ball_rise.
-    SECONDARY_BALL_Y_THRESHOLD = 550
-    SECONDARY_MIN_BALL_RISE = 10
+    # Secondary pass: very strict fallback only. Loose thresholds previously
+    # invented ~1 false 2PT Miss per second against manual Q1 ground truth.
+    SECONDARY_BALL_Y_THRESHOLD = 280
+    SECONDARY_MIN_BALL_RISE = 70
     for index, segment in enumerate(segments):
         if index in shot_segments:
             continue  # already detected by primary pass
+        # Skip short noise segments — secondary pass over-fires on them.
+        if int(segment.get("duration_frames") or 0) < 6:
+            continue
         next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
         shot_info = detect_shot_from_segment(
             segment, ball_track,
@@ -510,6 +727,10 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
             ball_y_threshold=SECONDARY_BALL_Y_THRESHOLD,
         )
         if shot_info:
+            # Require meaningful lateral travel for secondary shots.
+            if float(shot_info.get("lateral_travel") or 0) < 60:
+                continue
+            shot_info["secondary_pass"] = True
             shot_segments[index] = shot_info
 
     rebound_segment_indices = set()
@@ -520,7 +741,6 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 # Only generate possession change events for segments with meaningful duration
                 # Skip noise segments (less than 0.5 seconds = ~12 frames at stride=10)
                 prev_duration = previous.get("duration_frames", 1)
-                curr_duration = segment.get("duration_frames", 1)
                 gap_frames = segment["start_frame"] - previous["end_frame"]
 
                 # Always record possession change
@@ -542,14 +762,14 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 )
 
                 # Only generate turnover+steal for ABRUPT possession changes:
-                # - Previous segment was very short (< 5 frames)
-                # - AND gap is small (< 20 frames)
+                # - Previous segment was very short
+                # - AND gap is small
                 # - AND previous segment was NOT a shot
                 # - AND ball was far from the previous player (suggesting deflection)
                 is_abrupt = (
-                    prev_duration <= 5
-                    and gap_frames < 20
-                    and previous.get("mean_ball_distance", 0) > 25
+                    prev_duration <= 3
+                    and gap_frames < 12
+                    and previous.get("mean_ball_distance", 0) > 30
                 )
                 if is_abrupt and (index - 1) not in shot_segments:
                     append_unique_event(
@@ -560,7 +780,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                             "turnover",
                             segment["start_timestamp_ms"],
                             player=previous["player"],
-                            confidence=0.42,
+                            confidence=0.48,
                             details={"next_possessor": segment["player"]},
                         ),
                     )
@@ -572,7 +792,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                             "steal",
                             segment["start_timestamp_ms"],
                             player=segment["player"],
-                            confidence=0.4,
+                            confidence=0.46,
                             details={"from_player": previous["player"]},
                         ),
                     )
@@ -583,6 +803,7 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         shot_info = shot_segments[index]
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
+        is_secondary = bool(shot_info.get("secondary_pass"))
 
         # Determine make/miss using gap-based heuristic.
         # At stride=10, possession segments are closely spaced. A gap of > 15 frames
@@ -621,6 +842,11 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         if shot_result == "miss":
             rebound_segment_indices.add(index + 1)
 
+        # Keep shot_type=2pt until court geometry / enhanced analysis classifies
+        # 3PT reliably. Lateral-travel heuristics mislabeled many 2PT as 3PT.
+        shot_type = "2pt"
+        shot_confidence = 0.42 if is_secondary else 0.60
+
         append_unique_event(
             events,
             seen_keys,
@@ -630,11 +856,13 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 shot_info["timestamp_ms"],
                 player=segment["player"],
                 shot_result=shot_result,
-                confidence=0.52,
+                confidence=shot_confidence,
                 details={
                     "ball_rise": round(shot_info["ball_rise"], 1),
                     "lateral_travel": round(shot_info["lateral_travel"], 1),
                     "peak_frame": shot_info["peak_frame"],
+                    "shot_type": shot_type,
+                    "secondary_pass": is_secondary,
                 },
             ),
         )
@@ -646,12 +874,15 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                 shot_result,
                 shot_info["timestamp_ms"],
                 player=segment["player"],
-                confidence=0.45 if shot_result == "miss" else 0.4,
-                details={"derived_from": "shot"},
+                confidence=0.45 if shot_result == "miss" else 0.42,
+                details={"derived_from": "shot", "shot_type": shot_type},
             ),
         )
 
         if shot_result == "miss" and next_segment is not None:
+            rebound_kind = (
+                "offensive" if next_segment["player"] == segment["player"] else "defensive"
+            )
             append_unique_event(
                 events,
                 seen_keys,
@@ -660,28 +891,27 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                     "rebound",
                     next_segment["start_timestamp_ms"],
                     player=next_segment["player"],
-                    confidence=0.5,
-                    details={"shot_player": segment["player"], "gap_frames": next_gap},
+                    confidence=0.55,
+                    details={
+                        "shot_player": segment["player"],
+                        "gap_frames": next_gap,
+                        "rebound_type": rebound_kind,
+                    },
                 ),
             )
-            if next_segment["player"] != segment["player"] and next_gap <= 12:
-                append_unique_event(
-                    events,
-                    seen_keys,
-                    make_event(
-                        game_id,
-                        "block",
-                        next_segment["start_timestamp_ms"],
-                        player=next_segment["player"],
-                        confidence=0.32,
-                        details={"shot_player": segment["player"], "gap_frames": next_gap},
-                    ),
-                )
+            # Blocks are rare and historically all false positives on Q1 —
+            # do not invent them from quick rebound gaps.
 
         if shot_result == "make" and index > 0:
             previous = segments[index - 1]
             assist_gap = segment["start_frame"] - previous["end_frame"]
-            if previous["player"] != segment["player"] and assist_gap <= 40:
+            prev_duration = int(previous.get("duration_frames") or 0)
+            if (
+                previous["player"] != segment["player"]
+                and assist_gap <= 25
+                and prev_duration >= 3
+                and not is_secondary
+            ):
                 append_unique_event(
                     events,
                     seen_keys,
@@ -690,26 +920,14 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
                         "assist",
                         shot_info["timestamp_ms"],
                         player=previous["player"],
-                        confidence=0.28,
+                        confidence=0.45,
                         details={"scorer": segment["player"], "gap_frames": assist_gap},
                     ),
                 )
 
-        if next_segment is None or (next_gap is not None and next_gap >= 90):
-            append_unique_event(
-                events,
-                seen_keys,
-                make_event(
-                    game_id,
-                    "foul",
-                    shot_info["timestamp_ms"],
-                    player=segment["player"],
-                    confidence=0.18,
-                    details={"reason": "long_dead_ball_after_shot", "gap_frames": next_gap},
-                ),
-            )
+        # Do not invent fouls from long dead-ball gaps — historically all false positives.
 
-    return events
+    return postprocess_ai_events(events)
 
 
 def _lookup_event_type_id(conn, event_type):
@@ -723,51 +941,111 @@ def _lookup_event_type_id(conn, event_type):
 
 
 def persist_events(conn, game_id, events, relational_game_id=None):
+    """Replace regenerable AI events, preserving coach-corrected / non-AI rows.
+
+    Auto-accept marks high-confidence AI events human_verified=1, so regenerate
+    must also clear source_type='ai' rows that are not coach-corrected. Otherwise
+    old auto-accepted floods survive and stack on every regenerate.
+    """
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+    has_ai_lifecycle = "source_type" in cols and "review_status" in cols
+
     if relational_game_id is not None:
-        # Delete unverified events that are either linked to the relational game_id
-        # or, for legacy rows where relational_game_id is NULL, match by game_id.
-        conn.execute(
-            """
-            DELETE FROM events
-            WHERE human_verified = 0
-              AND (
-                    relational_game_id = ?
-                    OR (relational_game_id IS NULL AND game_id = ?)
-                  )
-            """,
-            (relational_game_id, game_id),
-        )
+        if has_ai_lifecycle:
+            conn.execute(
+                """
+                DELETE FROM events
+                WHERE (
+                        human_verified = 0
+                        OR (
+                            source_type = 'ai'
+                            AND COALESCE(review_status, 'pending') != 'corrected'
+                        )
+                      )
+                  AND (
+                        relational_game_id = ?
+                        OR (relational_game_id IS NULL AND game_id = ?)
+                      )
+                """,
+                (relational_game_id, game_id),
+            )
+        else:
+            conn.execute(
+                """
+                DELETE FROM events
+                WHERE human_verified = 0
+                  AND (
+                        relational_game_id = ?
+                        OR (relational_game_id IS NULL AND game_id = ?)
+                      )
+                """,
+                (relational_game_id, game_id),
+            )
     else:
-        # Legacy behavior: delete only unverified events matching game_id
-        conn.execute(
-            "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
-            (game_id,),
-        )
+        if has_ai_lifecycle:
+            conn.execute(
+                """
+                DELETE FROM events
+                WHERE game_id = ?
+                  AND (
+                        human_verified = 0
+                        OR (
+                            source_type = 'ai'
+                            AND COALESCE(review_status, 'pending') != 'corrected'
+                        )
+                      )
+                """,
+                (game_id,),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
+                (game_id,),
+            )
     if not events:
         conn.commit()
         return
 
     cur = conn.cursor()
     for ev in events:
-        event_type_id = _lookup_event_type_id(conn, ev["event_type"])
-        cur.execute(
-            """
-            INSERT INTO events
-               (game_id, relational_game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json, confidence, source_type)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai')
-            """,
-            (
-                ev["game_id"],
-                relational_game_id,
-                ev.get("player"),
-                ev["event_type"],
-                event_type_id,
-                ev.get("shot_result"),
-                ev["timestamp_ms"],
-                ev.get("details_json"),
-                ev.get("confidence"),
-            ),
-        )
+        event_type_id = _lookup_event_type_id(conn, ev["event_type"]) if "event_type_id" in cols else None
+        if "event_type_id" in cols and "source_type" in cols:
+            cur.execute(
+                """
+                INSERT INTO events
+                   (game_id, relational_game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json, confidence, source_type)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai')
+                """,
+                (
+                    ev["game_id"],
+                    relational_game_id,
+                    ev.get("player"),
+                    ev["event_type"],
+                    event_type_id,
+                    ev.get("shot_result"),
+                    ev["timestamp_ms"],
+                    ev.get("details_json"),
+                    ev.get("confidence"),
+                ),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO events
+                   (game_id, relational_game_id, player, event_type, shot_result, timestamp_ms, details_json, confidence)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    ev["game_id"],
+                    relational_game_id,
+                    ev.get("player"),
+                    ev["event_type"],
+                    ev.get("shot_result"),
+                    ev["timestamp_ms"],
+                    ev.get("details_json"),
+                    ev.get("confidence"),
+                ),
+            )
     conn.commit()
 
     # Auto-accept is best-effort; never fail event persistence if review/stats
@@ -812,7 +1090,7 @@ def main(game_id, db_path, relational_game_id=None):
         ball_count_before = len(detections_df[detections_df['class_name'] == 'ball'])
         detections_df = _interpolate_ball(detections_df)
         ball_count_after = len(detections_df[detections_df['class_name'] == 'ball'])
-        print(f"INFO: Ball detections: {ball_count_before} → {ball_count_after} (after interpolation)")
+        print(f"INFO: Ball detections: {ball_count_before} -> {ball_count_after} (after interpolation)")
 
         # Step 2: Cluster players spatially (tracker_ids are unstable at imgsz=320)
         # This must happen BEFORE possession analysis so we have stable player identities
