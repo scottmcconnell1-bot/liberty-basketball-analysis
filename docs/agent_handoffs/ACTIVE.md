@@ -7,7 +7,7 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-done-uninstall-api |
+| **id** | demo-browser-wait-stuck |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,19 +15,17 @@ Branch: `cursor/demo-done-uninstall-ac1f`
 
 ### Proven
 
-- **Root cause of DONE alert:** `POST /api/demo/done` scheduled `os._exit` on a background thread *before* Flask finished flushing the JSON response. The browser `fetch` then failed mid-response and showed: "Could not reach the demo uninstall API…" (button stuck on Closing…/Uninstalling…).
-- **Fix:** Spawn cleanup bat first; start `threading.Timer(0.5, os._exit)` only from `@after_this_request` so the HTTP 200 is returned successfully; JS retries once and only shows the network alert after real failure; `launch_liberty.resolve_demo_mode_env()` clears inherited `DEMO_MODE` / stray TEMP flag on main Documents launches (demo package still sets flag + `DEMO_MODE=1`).
-- **SFX not regressed:** Build still uses vendored `tools\sfx\7zSD.sfx` + `Directory=""` + visible `cmd /c install_and_run.bat` (commit 2df9f50).
-- **Tests:** `tests/test_demo_mode.py` — 6 passed (includes return-200-before-exit).
-- **Exe:** `dist\LibertyDemo.exe` / `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` (~26.26 MB).
+- **Stuck console after "ECHO is off.":** `call :log ""` with bare `echo %~1` under `@echo off` prints `ECHO is off.` Blank-line calls looked like a hang and hid the next steps.
+- **Browser never opened:** wait loop required HTTP success before `:open_browser` (up to 180s) and used `%ERRORLEVEL%` (stale) instead of `!ERRORLEVEL!`. Server could be up (minimized python window) while the bat never reached browser open.
+- **8080 now:** Not listening (DOWN; only TimeWait). Prior `.server` log showed Flask had started successfully on an earlier run.
+- **Fix:** Safe `:log` blank lines; poll with `[WAIT]` lines to `LibertyDemo_run.log` (max 60s); open browser on HTTP 200 **or** after ~3s (PID preferred); dual `start ""` + PowerShell `Start-Process` with `[BROWSER]` logs; then "Demo running — use DONE" and wait for PID/done flag.
+- **Exe:** rebuilt to `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe`.
 
 ### Files
 
-- `blueprints/demo.py` — response-before-exit; cleanup spawn before Timer
-- `templates/base.html` — Uninstalling… + one retry
-- `scripts/launch_liberty.py` — clear stale DEMO_MODE on non-demo trees
-- `tests/test_demo_mode.py` — handler ordering test
-- Prior SFX: `tools/sfx/7zSD.sfx`, `scripts/build_demo_package.ps1`, `deploy/install_and_run.bat`
+- `deploy/install_and_run.bat` — empty-echo fix; early browser; 60s poll
+- `scripts/build_demo_package.ps1` — smoke checks for `[BROWSER]` / `[WAIT]`
+- Prior DONE API fix still on this branch (`blueprints/demo.py`, etc.)
 
 ### Leave alone
 

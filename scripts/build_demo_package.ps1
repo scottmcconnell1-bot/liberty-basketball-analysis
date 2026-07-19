@@ -222,8 +222,14 @@ if ($bat -match 'demo_done_dialog\.ps1' -or $bat -match 'System\.Windows\.Forms'
 if ($bat -notmatch 'DEMO_MODE=1') {
     throw "install_and_run.bat must set DEMO_MODE=1 for the web UI"
 }
-if ($bat -notmatch 'start\s+""\s+"http://127\.0\.0\.1:%PORT%/"' -and $bat -notmatch 'start\s+""\s+"%OPEN_URL%"') {
+if ($bat -notmatch 'start\s+""\s+"http://127\.0\.0\.1:%PORT%/"' -and $bat -notmatch 'start\s+""\s+"%OPEN_URL%"' -and $bat -notmatch 'start\s+""\s+"!OPEN_URL!"') {
     throw "install_and_run.bat must open browser via start "" url"
+}
+if ($bat -notmatch '\[BROWSER\]') {
+    throw "install_and_run.bat must log clear [BROWSER] lines when opening the URL"
+}
+if ($bat -notmatch '\[WAIT\]') {
+    throw "install_and_run.bat must log [WAIT] poll attempts"
 }
 if ($bat -notmatch 'robocopy') {
     throw "install_and_run.bat must robocopy payload to LocalAppData session dir"

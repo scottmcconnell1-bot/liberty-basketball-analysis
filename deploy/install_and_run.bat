@@ -144,56 +144,107 @@ if errorlevel 1 goto :fail
 call :pick_port
 if errorlevel 1 goto :fail
 
-call :log ""
+call :log .
 call :log "Starting Liberty on http://127.0.0.1:!PORT! (DEMO_MODE=1, --no-browser)..."
-call :log ""
+call :log .
 
 REM Start via venv python (NOT bare "start scripts\launch_liberty.py").
 REM DEMO_MODE is inherited from this cmd session into PowerShell / child.
 REM Start-Process is used so we can store the launcher PID for wait + cleanup.
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','%PORT%') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%.server' -RedirectStandardError '%LOG_FILE%.err'; $p.Id"`) do (
+REM Do NOT use start /wait — that would block this console on python.
+del /f /q "%LOG_FILE%.server" "%LOG_FILE%.err" 2>nul
+set "LAUNCHER_PID="
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$env:DEMO_MODE='1'; $p = Start-Process -FilePath '%VENV_PY%' -ArgumentList @('scripts\launch_liberty.py','--no-browser','--port','!PORT!') -WorkingDirectory '%PACKAGE_DIR%' -WindowStyle Minimized -PassThru -RedirectStandardOutput '%LOG_FILE%.server' -RedirectStandardError '%LOG_FILE%.err'; Write-Output $p.Id"`) do (
   set "LAUNCHER_PID=%%P"
 )
 
 if not defined LAUNCHER_PID (
-  call :log "WARNING: Could not capture launcher PID; will wait for port / done flag."
+  call :log "WARNING: Could not capture launcher PID; will poll port / done flag."
 ) else (
   call :log "Launcher PID: !LAUNCHER_PID!"
 )
 
-call :log "Waiting for server..."
+REM Open browser ASAP: on HTTP 200, or after 3s if PID exists, or at 3s anyway.
+REM Max poll 60s for readiness logging — never block forever before browser.
 set /a "WAITED=0"
+set "BROWSER_OPENED=0"
+set "SERVER_READY=0"
+call :log "Polling http://127.0.0.1:!PORT!/ (max 60s; browser opens at 200 or 3s)..."
+
 :wait_loop
-powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:%PORT%/' -TimeoutSec 2; if ($r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
-if %ERRORLEVEL% EQU 0 goto :server_ready
-set /a "WAITED+=2"
-if !WAITED! GEQ 180 (
-  call :log "ERROR: Server did not become ready within 180s on port %PORT%."
-  call :log "See log: %LOG_FILE%"
-  if exist "%LOG_FILE%.err" type "%LOG_FILE%.err"
-  goto :cleanup_fail
+call :log "[WAIT] attempt at !WAITED!s ..."
+powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 2; Write-Output ('[WAIT] HTTP ' + $r.StatusCode); if ($r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { Write-Output ('[WAIT] not ready: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
+if !ERRORLEVEL! EQU 0 (
+  set "SERVER_READY=1"
+  call :log "[WAIT] server responded OK at !WAITED!s"
+  if "!BROWSER_OPENED!"=="0" (
+    call :open_browser
+    set "BROWSER_OPENED=1"
+  )
+  goto :after_wait
 )
+
+REM Prefer opening once launcher PID exists even if health check is slow.
+if !WAITED! GEQ 3 if "!BROWSER_OPENED!"=="0" (
+  if defined LAUNCHER_PID (
+    call :log "[WAIT] 3s elapsed with launcher PID — opening browser without waiting for HTTP."
+  ) else (
+    call :log "[WAIT] 3s elapsed — opening browser without waiting for HTTP."
+  )
+  call :open_browser
+  set "BROWSER_OPENED=1"
+  goto :after_wait
+)
+
+if !WAITED! GEQ 60 (
+  if "!SERVER_READY!"=="0" (
+    call :log "WARNING: No HTTP success within 60s on port !PORT! — continuing anyway."
+    call :log "See log: %LOG_FILE%"
+    if exist "%LOG_FILE%.err" (
+      call :log "--- err log ---"
+      type "%LOG_FILE%.err"
+    )
+  )
+  if "!BROWSER_OPENED!"=="0" (
+    call :open_browser
+    set "BROWSER_OPENED=1"
+  )
+  goto :after_wait
+)
+
 timeout /t 2 /nobreak >nul
+set /a "WAITED+=2"
 goto :wait_loop
 
-:server_ready
-call :log "Server ready at http://127.0.0.1:%PORT%/"
-call :open_browser
-call :log ""
+:after_wait
+if "!BROWSER_OPENED!"=="0" call :open_browser
+call :log .
 call :log "========================================"
-call :log "  DEMO RUNNING — http://127.0.0.1:%PORT%"
+call :log "  DEMO RUNNING — http://127.0.0.1:!PORT!"
 call :log "  Click DONE in the browser top menu"
 call :log "  to uninstall and exit."
 call :log "========================================"
-call :log ""
+call :log .
+call :log "Demo running — use DONE in the web UI."
 call :wait_for_server_exit
 goto :cleanup_ok
 
 REM ======================== helpers ========================
 
 :log
-echo %~1
->>"%LOG_FILE%" echo %~1
+REM Empty args / blank marker must not use bare "echo" (prints "ECHO is off.").
+if "%~1"=="" (
+  echo.
+  >>"%LOG_FILE%" echo.
+  exit /b 0
+)
+if "%~1"=="." (
+  echo.
+  >>"%LOG_FILE%" echo.
+  exit /b 0
+)
+echo(%~1
+>>"%LOG_FILE%" echo(%~1
 exit /b 0
 
 :pick_port
@@ -217,14 +268,15 @@ exit /b 1
 
 :open_browser
 REM Bat MUST open the browser — launch_liberty is started with --no-browser.
-set "OPEN_URL=http://127.0.0.1:%PORT%/"
-call :log ""
+set "OPEN_URL=http://127.0.0.1:!PORT!/"
+call :log .
 call :log "[BROWSER] Opening %OPEN_URL% ..."
 call :log "[BROWSER] Method 1: cmd start \"\" url"
 start "" "%OPEN_URL%"
-call :log "[BROWSER] cmd start ERRORLEVEL=%ERRORLEVEL%"
+call :log "[BROWSER] cmd start ERRORLEVEL=!ERRORLEVEL!"
 call :log "[BROWSER] Method 2: powershell Start-Process"
-powershell -NoProfile -Command "try { Start-Process '%OPEN_URL%'; Write-Host '[BROWSER] Start-Process: OK' } catch { Write-Host ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }"
+powershell -NoProfile -Command "try { Start-Process '%OPEN_URL%'; Write-Output '[BROWSER] Start-Process: OK' } catch { Write-Output ('[BROWSER] Start-Process FAILED: ' + $_.Exception.Message); exit 1 }" >> "%LOG_FILE%" 2>&1
+call :log "[BROWSER] powershell Start-Process done"
 call :log "[BROWSER] Browser open commands finished — check lines above."
 exit /b 0
 
