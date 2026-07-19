@@ -1,13 +1,13 @@
-# Active Task
+﻿# Active Task
 
 Updated: 2026-07-19
-Branch: `cursor/demo-desktop-shortcut-ac1f`
+Branch: `cursor/fix-app-context-postprocess-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-desktop-shortcut-url-fix |
+| **id** | fix-app-context-postprocess |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,17 +15,14 @@ Branch: `cursor/demo-desktop-shortcut-ac1f`
 
 ### Proven
 
-- **Root cause:** Prior shortcut path used fragile multi-line `powershell -Command ^` + WScript.Shell / `[IO.File]::WriteAllText` with nested `\"` quoting. Failures were soft-warned (`WARNING: ... Demo will still run`) so the demo appeared to work with no Desktop icon. Complex Desktop resolve via PowerShell was unnecessary on this PC (`C:\Users\scott\Desktop` exists and is writable).
-- **Fix:** Plain cmd `(echo [InternetShortcut] & echo URL=...) > "%DESKTOP%\Liberty Basketball Demo.url"` — no PowerShell for create. Also attempts `%PUBLIC%\Desktop` (Access Denied without admin is non-fatal). Failures now `pause` + hard exit (not swallowed).
-- **Live proof on Scott's machine:** `dir` shows `C:\Users\scott\Desktop\Liberty Basketball Demo.url` (47 bytes, 2026-07-18 11:37 PM) with contents `[InternetShortcut]` / `URL=http://127.0.0.1:8080`. Left in place for user to see.
-- **Rebuilt:** `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` — 27,491,724 bytes, LastWriteTime 2026-07-18 11:38:26 PM. Extracted SFX `install_and_run.bat` contains new `echo [InternetShortcut]` / `echo URL=` lines and has **no** WScript.
+- **Root cause (215754):** After event generation, `auto_accept_high_confidence_events` → `refresh_game_stats` → `feature_enabled()` → Flask `current_app` with no app context in the AI worker subprocess. Log: `logs/ai-*215754*.log` ends with events written then `Working outside of application context` (no stack in log because post-process raises outside the detection `try/except`).
+- **Fix:** `helpers.refresh_game_stats` uses `has_app_context()` / DB settings; `event_generator.persist_events` best-effort wraps auto-accept; `review_actions` guards RuntimeError; `ai_analyzer` prints traceback on failure.
+- **DB repair:** Marked `__rerun_20260718_215754` (id=22) `status=completed` (4741 events, dets 0–871000ms) without re-running GPU.
+- **Conflict:** Another agent had started `__rerun_20260719_152408` (id=23) at ~2–4%; stopped to avoid duplicate GPU work. Events already exist on 215754.
+- **KPIs unchanged:** exact 22 / manual-only 31 / AI-only 2726 — next issue is precision, not coverage.
+- **Side-by-side:** regenerated; run_status=`completed`.
 
 ### Files
 
-- `deploy/install_and_run.bat` — cmd .url shortcut create/remove
-- `scripts/build_demo_package.ps1` — markers + README_DEMO for .url-only path
-- `dist/LibertyDemo.exe` / `dist/README_DEMO.txt` — rebuilt package
-
-### Leave alone
-
-- GPU AI / Q1 rerun job — not touched
+- `helpers.py`, `event_generator.py`, `review_actions.py`, `ai_analyzer.py`
+- `tests/test_refresh_game_stats_no_app_context.py`

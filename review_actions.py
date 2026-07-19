@@ -229,5 +229,10 @@ def auto_accept_high_confidence_events(
         from helpers import refresh_game_stats
 
         db.commit()
-        refresh_game_stats(db, game_id)
+        # AI worker subprocess may have no Flask app context.
+        try:
+            refresh_game_stats(db, game_id)
+        except RuntimeError as exc:
+            if "application context" not in str(exc).lower():
+                raise
     return accepted

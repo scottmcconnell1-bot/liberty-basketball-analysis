@@ -1277,7 +1277,9 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
 
         if content and os.path.exists(log_path):
             age_seconds = time.time() - os.path.getmtime(log_path)
-            if age_seconds > 1800:
+            # GPU Q1 windows can go several minutes between progress flushes;
+            # 90 min avoids false-failing healthy long cuda jobs.
+            if age_seconds > 5400:
                 db.execute(
                     """UPDATE analysis_runs
                        SET status='failed',
@@ -1340,10 +1342,31 @@ def start_analysis_subprocess(game_id, video_path):
 
     log_file = open(log_path, "w", encoding="utf-8")
     try:
+        child_env = os.environ.copy()
+        child_env.setdefault("PYTHONUNBUFFERED", "1")
+        # Hide incompatible GPUs (e.g. RTX 50xx sm_120) when settings force CPU,
+        # so torch/ultralytics never probe CUDA and crash the worker.
+        try:
+            device = (
+                load_all_settings(
+                    feature_defaults={},
+                    analysis_defaults={},
+                    ai_defaults=AI_DEFAULTS,
+                    db_path=db_path,
+                )
+                .get("ai", {})
+                .get("inference_device", "auto")
+            )
+        except Exception:
+            device = "auto"
+        if str(device).strip().lower() == "cpu":
+            child_env["CUDA_VISIBLE_DEVICES"] = ""
+            child_env["HIP_VISIBLE_DEVICES"] = ""
         popen_kwargs = {
             "stdout": log_file,
             "stderr": subprocess.STDOUT,
             "cwd": os.path.dirname(os.path.abspath(__file__)),
+            "env": child_env,
         }
         if os.name != "nt":
             popen_kwargs["start_new_session"] = True
@@ -1359,6 +1382,11 @@ def start_analysis_subprocess(game_id, video_path):
             log_file.write(f"[launcher] Log file: {log_path}\n")
             log_file.write(f"[launcher] Video: {video_path}\n")
             log_file.write(f"[launcher] Database: {db_path}\n")
+            if "CUDA_VISIBLE_DEVICES" in child_env:
+                log_file.write(
+                    f"[launcher] inference_device={device!r}; "
+                    f"CUDA_VISIBLE_DEVICES={child_env.get('CUDA_VISIBLE_DEVICES')!r}\n"
+                )
             log_file.flush()
 
             def _watch_process() -> None:
@@ -3248,7 +3276,19 @@ def render_practices_page(*, error=None, message=None, filters=None, edit_practi
 
 
 def refresh_game_stats(db, game_id):
-    if not feature_enabled("ENABLE_AUTO_STATS_M1"):
+    # AI worker subprocess has no Flask app context; never call feature_enabled() there.
+    try:
+        from flask import has_app_context
+
+        if has_app_context():
+            enabled = feature_enabled("ENABLE_AUTO_STATS_M1")
+        else:
+            settings = load_all_settings({}, {}, AI_DEFAULTS, db=db)
+            enabled = bool(settings.get("features", {}).get("ENABLE_AUTO_STATS_M1", False))
+    except RuntimeError:
+        settings = load_all_settings({}, {}, AI_DEFAULTS, db=db)
+        enabled = bool(settings.get("features", {}).get("ENABLE_AUTO_STATS_M1", False))
+    if not enabled:
         return
     from stats import refresh_stats
 

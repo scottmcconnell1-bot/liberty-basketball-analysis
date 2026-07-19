@@ -407,8 +407,11 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 elapsed = frame_number / fps
                 pct = frame_number / total_frames * 100 if total_frames > 0 else 0
                 step = f"Detecting objects: frame {frame_number}/{total_frames}"
-                print(f"[AI] Frame {frame_number}/{total_frames} ({pct:.0f}%) "
-                      f"@ {elapsed:.0f}s, {len(tracks)} active, {next_tracker_id-1} total IDs")
+                print(
+                    f"[AI] Frame {frame_number}/{total_frames} ({pct:.0f}%) "
+                    f"@ {elapsed:.0f}s, {len(tracks)} active, {next_tracker_id-1} total IDs",
+                    flush=True,
+                )
                 # Write progress to DB
                 try:
                     _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)
@@ -569,6 +572,9 @@ if __name__ == '__main__':
         _conn.close()
         print(f"[AI] analysis_runs updated to 'completed' for {game_id}")
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         _conn = sqlite3.connect(db_path)
         _conn.execute(
             "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE analysis_key=?",
@@ -576,5 +582,5 @@ if __name__ == '__main__':
         )
         _conn.commit()
         _conn.close()
-        print(f"[AI] analysis_runs updated to 'failed' for {game_id}: {e}")
+        print(f"[AI] analysis_runs updated to 'failed' for {game_id}: {e}", flush=True)
         sys.exit(1)

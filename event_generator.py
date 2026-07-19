@@ -770,13 +770,18 @@ def persist_events(conn, game_id, events, relational_game_id=None):
         )
     conn.commit()
 
-    from review_actions import auto_accept_high_confidence_events
+    # Auto-accept is best-effort; never fail event persistence if review/stats
+    # helpers need Flask context (AI worker subprocess has none).
+    try:
+        from review_actions import auto_accept_high_confidence_events
 
-    auto_accept_high_confidence_events(
-        conn,
-        game_id,
-        relational_game_id=relational_game_id,
-    )
+        auto_accept_high_confidence_events(
+            conn,
+            game_id,
+            relational_game_id=relational_game_id,
+        )
+    except Exception as exc:
+        print(f"WARNING: auto_accept_high_confidence_events skipped: {exc}")
 
 
 def main(game_id, db_path, relational_game_id=None):
