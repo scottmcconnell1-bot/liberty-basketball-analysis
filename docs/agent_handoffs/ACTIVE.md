@@ -1,13 +1,13 @@
 # Active Task
 
-Updated: 2026-07-18
+Updated: 2026-07-19
 Branch: `cursor/demo-desktop-shortcut-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | demo-desktop-shortcut-cleanup |
+| **id** | demo-desktop-shortcut-url-fix |
 | **status** | `done` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,17 +15,16 @@ Branch: `cursor/demo-desktop-shortcut-ac1f`
 
 ### Proven
 
-- Prior build kept LocalAppData forever and only used `[Environment]::GetFolderPath('Desktop')` (+ `%USERPROFILE%\Desktop` fallback). That missed OneDrive/registry Desktop on some PCs, and cleanup left install + shortcut behind.
-- Now resolves Desktop via GetFolderPath, `$HOME\Desktop`, `$HOME\OneDrive\Desktop`, and registry `User Shell Folders\Desktop`; picks first existing writable path; echoes full shortcut paths.
-- Creates **Liberty Basketball Demo.lnk** (cmd `start` → `http://127.0.0.1:8080`) and **Liberty Basketball Demo.url** (`[InternetShortcut]`).
-- On keypress: PID-based Liberty stop → delete TEMP logs → delete Desktop .lnk/.url on all candidate Desktops → wipe `%LOCALAPPDATA%\LibertyBasketballDemo` (via TEMP bat handoff so self-delete works). Winget Python left alone.
-- On this machine Desktop candidates: only `C:\Users\scott\Desktop` (exists+writable); OneDrive\Desktop absent. Shortcut create/delete smoke passed.
-- Rebuilt: `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` and `dist\LibertyDemo.exe` (~26.22 MB).
+- **Root cause:** Prior shortcut path used fragile multi-line `powershell -Command ^` + WScript.Shell / `[IO.File]::WriteAllText` with nested `\"` quoting. Failures were soft-warned (`WARNING: ... Demo will still run`) so the demo appeared to work with no Desktop icon. Complex Desktop resolve via PowerShell was unnecessary on this PC (`C:\Users\scott\Desktop` exists and is writable).
+- **Fix:** Plain cmd `(echo [InternetShortcut] & echo URL=...) > "%DESKTOP%\Liberty Basketball Demo.url"` — no PowerShell for create. Also attempts `%PUBLIC%\Desktop` (Access Denied without admin is non-fatal). Failures now `pause` + hard exit (not swallowed).
+- **Live proof on Scott's machine:** `dir` shows `C:\Users\scott\Desktop\Liberty Basketball Demo.url` (47 bytes, 2026-07-18 11:37 PM) with contents `[InternetShortcut]` / `URL=http://127.0.0.1:8080`. Left in place for user to see.
+- **Rebuilt:** `dist\LibertyDemo.exe` and `C:\Temp\LibertyDemoPackage\LibertyDemo.exe` — 27,491,724 bytes, LastWriteTime 2026-07-18 11:38:26 PM. Extracted SFX `install_and_run.bat` contains new `echo [InternetShortcut]` / `echo URL=` lines and has **no** WScript.
 
 ### Files
 
-- `deploy/install_and_run.bat` — multi-path Desktop URL shortcuts + full wipe on exit
-- `scripts/build_demo_package.ps1` — markers + README_DEMO for session wipe behavior
+- `deploy/install_and_run.bat` — cmd .url shortcut create/remove
+- `scripts/build_demo_package.ps1` — markers + README_DEMO for .url-only path
+- `dist/LibertyDemo.exe` / `dist/README_DEMO.txt` — rebuilt package
 
 ### Leave alone
 

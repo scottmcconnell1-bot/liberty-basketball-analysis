@@ -5,11 +5,10 @@ Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
 install_and_run.bat, which:
 
   1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\ (session only)
-  2. Creates Desktop URL shortcuts that open http://127.0.0.1:8080
-       - Liberty Basketball Demo.lnk
-       - Liberty Basketball Demo.url  (InternetShortcut; more reliable for URLs)
-     Desktop is resolved via GetFolderPath, %HOME%\Desktop,
-     %HOME%\OneDrive\Desktop, and registry User Shell Folders
+  2. Creates Desktop InternetShortcut .url (plain cmd echo, no PowerShell):
+       %USERPROFILE%\Desktop\Liberty Basketball Demo.url
+       (also %PUBLIC%\Desktop when writable; OneDrive\Desktop fallback)
+     Opens http://127.0.0.1:8080
   3. Relaunches from LocalAppData for the session
   4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   5. Creates/reuses LocalAppData\.venv and installs requirements.txt

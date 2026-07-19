@@ -187,14 +187,17 @@ $bat = Get-Content (Join-Path $Staging "install_and_run.bat") -Raw
 foreach ($marker in @(
     "find_python", "install_requirements", "stop_liberty_tree", "launch_liberty.py",
     "VENV_DIR", "INSTALL_TRIED", "PYTHON_EXE", "refresh_path", "probe_common_python",
-    "PERSIST_DIR", "LibertyBasketballDemo", "create_desktop_shortcut", "WScript.Shell",
+    "PERSIST_DIR", "LibertyBasketballDemo", "create_desktop_shortcut",
     "resolve_desktop_dir", "remove_desktop_shortcuts", "wipe_session_install",
-    "InternetShortcut", "OneDrive", "User Shell Folders",
+    "InternetShortcut", "OneDrive", "PUBLIC",
     "--cleanup-phase"
 )) {
     if ($bat -notmatch [regex]::Escape($marker)) {
         throw "install_and_run.bat missing expected marker: $marker"
     }
+}
+if ($bat -notmatch '%PUBLIC%\\Desktop') {
+    throw "install_and_run.bat must also write shortcut to %PUBLIC%\Desktop when present"
 }
 # Reject real restart loops (not comments that mention the forbidden pattern).
 $gotoLines = ($bat -split "`r?`n") | Where-Object { $_ -match '(?i)^\s*goto\s+:(find_python|check_python)\b' }
@@ -204,11 +207,14 @@ if ($gotoLines) {
 if ($bat -notmatch 'INSTALL_TRIED=1') {
     throw "install_and_run.bat must set INSTALL_TRIED=1 before winget (one-shot install)"
 }
-if ($bat -notmatch 'Liberty Basketball Demo\.lnk') {
-    throw "install_and_run.bat must create Desktop shortcut Liberty Basketball Demo.lnk"
+if ($bat -match 'WScript\.Shell') {
+    throw "install_and_run.bat must NOT use WScript.Shell for Desktop shortcuts (use plain .url echo)"
 }
 if ($bat -notmatch 'Liberty Basketball Demo\.url') {
     throw "install_and_run.bat must create Desktop InternetShortcut Liberty Basketball Demo.url"
+}
+if ($bat -notmatch '\[InternetShortcut\]') {
+    throw "install_and_run.bat must write [InternetShortcut] via cmd echo"
 }
 if ($bat -notmatch 'robocopy') {
     throw "install_and_run.bat must robocopy payload to LocalAppData session dir"
@@ -270,11 +276,10 @@ Double-click LibertyDemo.exe. It extracts a TEMP copy and runs
 install_and_run.bat, which:
 
   1. Copies the demo to %LOCALAPPDATA%\LibertyBasketballDemo\ (session only)
-  2. Creates Desktop URL shortcuts that open http://127.0.0.1:8080
-       - Liberty Basketball Demo.lnk
-       - Liberty Basketball Demo.url  (InternetShortcut; more reliable for URLs)
-     Desktop is resolved via GetFolderPath, %HOME%\Desktop,
-     %HOME%\OneDrive\Desktop, and registry User Shell Folders
+  2. Creates Desktop InternetShortcut .url (plain cmd echo, no PowerShell):
+       %USERPROFILE%\Desktop\Liberty Basketball Demo.url
+       (also %PUBLIC%\Desktop when writable; OneDrive\Desktop fallback)
+     Opens http://127.0.0.1:8080
   3. Relaunches from LocalAppData for the session
   4. Finds Python 3.12/3.13 or installs 3.12 via winget (once)
   5. Creates/reuses LocalAppData\.venv and installs requirements.txt

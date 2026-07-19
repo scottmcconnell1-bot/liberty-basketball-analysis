@@ -7,7 +7,7 @@ REM ---------------------------------------------------------------------------
 REM Liberty Demo launcher (Windows)
 REM First run (SFX TEMP extract): copy payload to
 REM   %LOCALAPPDATA%\LibertyBasketballDemo\
-REM create Desktop URL shortcuts (.lnk + .url), then relaunch from that folder.
+REM create Desktop URL shortcut (.url via cmd echo), then relaunch from that folder.
 REM Subsequent runs from LocalAppData: reuse .venv for the session.
 REM Prefer py -3.12 / py -3.13 (resolve to full path), then common install dirs,
 REM then python on PATH. Winget install is attempted at most ONCE.
@@ -18,11 +18,9 @@ REM delete Desktop shortcuts. Does NOT uninstall winget Python.
 REM ---------------------------------------------------------------------------
 
 set "PERSIST_DIR=%LOCALAPPDATA%\LibertyBasketballDemo"
-set "SHORTCUT_LNK=Liberty Basketball Demo.lnk"
 set "SHORTCUT_URL=Liberty Basketball Demo.url"
 set "DEMO_URL=http://127.0.0.1:8080"
 set "DESKTOP_DIR="
-set "LNK_PATH="
 set "URL_PATH="
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
@@ -73,7 +71,10 @@ if /I not "%SCRIPT_DIR%"=="%PERSIST_DIR%" (
 
   call :create_desktop_shortcut
   if errorlevel 1 (
-    echo WARNING: Desktop shortcut could not be created. Demo will still run.
+    echo ERROR: Desktop shortcut creation failed. See messages above.
+    echo Demo install is at %PERSIST_DIR% but no Desktop shortcut was created.
+    pause
+    exit /b 1
   )
 
   echo.
@@ -198,124 +199,99 @@ goto :cleanup_ok
 REM ======================== helpers ========================
 
 :resolve_desktop_dir
-REM Resolve Desktop via ALL known locations; pick first that exists and is writable.
-REM Sets DESKTOP_DIR. Exit 0 on success, 1 on failure.
-set "DESKTOP_DIR="
-for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command ^
-  "$cands = New-Object System.Collections.Generic.List[string];" ^
-  "try { $p = [Environment]::GetFolderPath('Desktop'); if ($p) { [void]$cands.Add($p) } } catch {};" ^
-  "foreach ($p in @((Join-Path $HOME 'Desktop'), (Join-Path $HOME 'OneDrive\Desktop'))) { if ($p -and (Test-Path -LiteralPath $p)) { [void]$cands.Add($p) } };" ^
-  "try {" ^
-  "  $reg = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Desktop -ErrorAction Stop).Desktop;" ^
-  "  if ($reg) { [void]$cands.Add([Environment]::ExpandEnvironmentVariables($reg)) }" ^
-  "} catch {};" ^
-  "$seen = @{};" ^
-  "foreach ($d in $cands) {" ^
-  "  if (-not $d) { continue };" ^
-  "  $full = [IO.Path]::GetFullPath($d);" ^
-  "  if ($seen.ContainsKey($full.ToLowerInvariant())) { continue };" ^
-  "  $seen[$full.ToLowerInvariant()] = $true;" ^
-  "  if (-not (Test-Path -LiteralPath $full)) { continue };" ^
-  "  try {" ^
-  "    $t = Join-Path $full ('_liberty_desk_test_' + [guid]::NewGuid().ToString('N') + '.tmp');" ^
-  "    [IO.File]::WriteAllText($t, 'ok');" ^
-  "    Remove-Item -LiteralPath $t -Force -ErrorAction SilentlyContinue;" ^
-  "    Write-Output $full;" ^
-  "    exit 0" ^
-  "  } catch { continue }" ^
-  "};" ^
-  "exit 1"`) do set "DESKTOP_DIR=%%D"
-if not defined DESKTOP_DIR exit /b 1
-if not exist "%DESKTOP_DIR%" exit /b 1
+REM Simple Desktop resolve — no PowerShell. Prefer USERPROFILE\Desktop, then OneDrive.
+set "DESKTOP_DIR=%USERPROFILE%\Desktop"
+if not exist "%DESKTOP_DIR%" set "DESKTOP_DIR=%USERPROFILE%\OneDrive\Desktop"
+if not exist "%DESKTOP_DIR%" (
+  echo ERROR: Desktop folder not found.
+  echo Tried: %USERPROFILE%\Desktop
+  echo        %USERPROFILE%\OneDrive\Desktop
+  exit /b 1
+)
 exit /b 0
 
 :create_desktop_shortcut
-REM Create URL shortcuts on the resolved Desktop:
-REM   1) Liberty Basketball Demo.lnk  (WScript URL shortcut)
-REM   2) Liberty Basketball Demo.url  (InternetShortcut — more reliable for URLs)
-REM Echoes the full path(s) created.
-call :resolve_desktop_dir
-if errorlevel 1 (
-  echo ERROR: Could not resolve a writable Desktop folder.
-  echo Tried: GetFolderPath, %%HOME%%\Desktop, %%HOME%%\OneDrive\Desktop, registry User Shell Folders.
-  exit /b 1
-)
-
-set "LNK_PATH=%DESKTOP_DIR%\%SHORTCUT_LNK%"
-set "URL_PATH=%DESKTOP_DIR%\%SHORTCUT_URL%"
-echo Desktop folder: %DESKTOP_DIR%
-
-set "LNK_OK=0"
+REM Create InternetShortcut .url with plain cmd echo (no PowerShell).
+REM Writes to user Desktop and Public Desktop when present.
+REM Echoes ERRORLEVEL + dir listing so the console proves creation.
 set "URL_OK=0"
 
-powershell -NoProfile -Command ^
-  "$lnk = '%LNK_PATH%';" ^
-  "$url = '%URL_PATH%';" ^
-  "$target = '%DEMO_URL%';" ^
-  "$okLnk = $false; $okUrl = $false;" ^
-  "try {" ^
-  "  $ws = New-Object -ComObject WScript.Shell;" ^
-  "  $s = $ws.CreateShortcut($lnk);" ^
-  "  $s.TargetPath = $env:SystemRoot + '\System32\cmd.exe';" ^
-  "  $s.Arguments = '/c start ' + [char]34 + [char]34 + ' ' + [char]34 + $target + [char]34;" ^
-  "  $s.WindowStyle = 7;" ^
-  "  $s.Description = 'Liberty Basketball Analysis Demo';" ^
-  "  $s.Save();" ^
-  "  if (Test-Path -LiteralPath $lnk) { $okLnk = $true }" ^
-  "} catch { Write-Host ('  .lnk failed: ' + $_.Exception.Message) }" ^
-  "try {" ^
-  "  $body = \"[InternetShortcut]`r`nURL=$target`r`n\";" ^
-  "  [IO.File]::WriteAllText($url, $body);" ^
-  "  if (Test-Path -LiteralPath $url) { $okUrl = $true }" ^
-  "} catch { Write-Host ('  .url failed: ' + $_.Exception.Message) }" ^
-  "if ($okLnk) { Write-Host ('SHORTCUT_LNK_OK=' + $lnk) }" ^
-  "if ($okUrl) { Write-Host ('SHORTCUT_URL_OK=' + $url) }" ^
-  "if (-not $okLnk -and -not $okUrl) { exit 1 }; exit 0"
+call :resolve_desktop_dir
+if errorlevel 1 exit /b 1
 
+set "URL_PATH=%DESKTOP_DIR%\%SHORTCUT_URL%"
+echo.
+echo Creating Desktop shortcut ^(InternetShortcut .url^)...
+echo Desktop folder: %DESKTOP_DIR%
+echo Target URL:     %DEMO_URL%
+echo Output file:    %URL_PATH%
+
+(
+  echo [InternetShortcut]
+  echo URL=%DEMO_URL%
+) > "%URL_PATH%"
+echo ERRORLEVEL after write: %ERRORLEVEL%
 if errorlevel 1 (
-  echo ERROR: Failed to create Desktop shortcut files.
+  echo ERROR: Failed to write %URL_PATH%
+  echo ERRORLEVEL=%ERRORLEVEL%
+  pause
   exit /b 1
 )
+if not exist "%URL_PATH%" (
+  echo ERROR: File missing after write: %URL_PATH%
+  pause
+  exit /b 1
+)
+echo Shortcut created:
+dir "%URL_PATH%"
+set "URL_OK=1"
 
-if exist "%LNK_PATH%" (
-  echo Shortcut created: %LNK_PATH%
-  set "LNK_OK=1"
+REM Also place on Public Desktop when that folder exists (all-users visibility).
+if exist "%PUBLIC%\Desktop" (
+  set "PUBLIC_URL=%PUBLIC%\Desktop\%SHORTCUT_URL%"
+  echo Also writing Public Desktop: !PUBLIC_URL!
+  (
+    echo [InternetShortcut]
+    echo URL=%DEMO_URL%
+  ) > "!PUBLIC_URL!"
+  echo ERRORLEVEL after Public write: !ERRORLEVEL!
+  if exist "!PUBLIC_URL!" (
+    dir "!PUBLIC_URL!"
+  ) else (
+    echo WARNING: Public Desktop write failed ^(continuing — user Desktop OK^).
+  )
 )
-if exist "%URL_PATH%" (
-  echo Shortcut created: %URL_PATH%
-  set "URL_OK=1"
-)
-if "!LNK_OK!"=="0" if "!URL_OK!"=="0" exit /b 1
+
+if "!URL_OK!"=="0" exit /b 1
 exit /b 0
 
 :remove_desktop_shortcuts
-REM Delete .lnk and .url from every candidate Desktop path (not only the one we used).
+REM Delete .url (and any leftover .lnk) from known Desktop paths — plain cmd.
 echo Removing Desktop shortcut^(s^)...
-powershell -NoProfile -Command ^
-  "$names = @('Liberty Basketball Demo.lnk','Liberty Basketball Demo.url');" ^
-  "$cands = New-Object System.Collections.Generic.List[string];" ^
-  "try { $p = [Environment]::GetFolderPath('Desktop'); if ($p) { [void]$cands.Add($p) } } catch {};" ^
-  "foreach ($p in @((Join-Path $HOME 'Desktop'), (Join-Path $HOME 'OneDrive\Desktop'))) { if ($p) { [void]$cands.Add($p) } };" ^
-  "try {" ^
-  "  $reg = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Desktop -ErrorAction Stop).Desktop;" ^
-  "  if ($reg) { [void]$cands.Add([Environment]::ExpandEnvironmentVariables($reg)) }" ^
-  "} catch {};" ^
-  "if ($env:DESKTOP_DIR) { [void]$cands.Add($env:DESKTOP_DIR) };" ^
-  "$seen = @{}; $deleted = 0;" ^
-  "foreach ($d in $cands) {" ^
-  "  if (-not $d) { continue };" ^
-  "  try { $full = [IO.Path]::GetFullPath($d) } catch { continue };" ^
-  "  $key = $full.ToLowerInvariant();" ^
-  "  if ($seen.ContainsKey($key)) { continue }; $seen[$key] = $true;" ^
-  "  foreach ($n in $names) {" ^
-  "    $f = Join-Path $full $n;" ^
-  "    if (Test-Path -LiteralPath $f) {" ^
-  "      try { Remove-Item -LiteralPath $f -Force; Write-Host ('  deleted: ' + $f); $deleted++ }" ^
-  "      catch { Write-Host ('  FAILED delete: ' + $f + ' — ' + $_.Exception.Message) }" ^
-  "    }" ^
-  "  }" ^
-  "};" ^
-  "if ($deleted -eq 0) { Write-Host '  (no Desktop shortcuts found to delete)' }"
+set "_REMOVED=0"
+for %%D in (
+  "%USERPROFILE%\Desktop"
+  "%USERPROFILE%\OneDrive\Desktop"
+  "%PUBLIC%\Desktop"
+) do (
+  if exist "%%~D\%SHORTCUT_URL%" (
+    del /f /q "%%~D\%SHORTCUT_URL%"
+    if not exist "%%~D\%SHORTCUT_URL%" (
+      echo   deleted: %%~D\%SHORTCUT_URL%
+      set "_REMOVED=1"
+    ) else (
+      echo   FAILED delete: %%~D\%SHORTCUT_URL%
+    )
+  )
+  if exist "%%~D\Liberty Basketball Demo.lnk" (
+    del /f /q "%%~D\Liberty Basketball Demo.lnk"
+    if not exist "%%~D\Liberty Basketball Demo.lnk" (
+      echo   deleted: %%~D\Liberty Basketball Demo.lnk
+      set "_REMOVED=1"
+    )
+  )
+)
+if "!_REMOVED!"=="0" echo   ^(no Desktop shortcuts found to delete^)
 exit /b 0
 
 :wipe_session_install
