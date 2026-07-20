@@ -1,13 +1,13 @@
 ﻿# Active Task
 
 Updated: 2026-07-19
-Branch: `cursor/teach-ai-manual-q1-ac1f`
+Branch: `cursor/film-tool-reports-fix-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | teach-ai-manual-q1 |
+| **id** | film-tool-reports-fix |
 | **status** | `completed` |
 | **assigned_to** | cursor-cloud-agent |
 
@@ -15,34 +15,21 @@ Branch: `cursor/teach-ai-manual-q1-ac1f`
 
 ### Proven
 
-- Branch `cursor/teach-ai-manual-q1-ac1f`; analysis key `__rerun_20260718_215754`.
-- Manual Film Tool: **71** tags linked to that analysis key (unchanged).
-- Supervised teach loop (offline regen, no new GPU):
-  - `supervised_templates` inject missing fouls/assists/steals/TO/make/rebound at manual times
-  - key-matched positive windows + shot/rebound/steal-TO caps kill AI-only flood
-- Final KPIs (scorer ±10s, action tags exclude Start/End QTR):
+- **Blank.pdf** (184 KB): print output with report chrome but **0 players / 0 PTS** — matches empty box score when Liberty tags stored blank team (`""`, UI label "Select").
+- **Root cause:** `statAccumulator` used `r.team || 'Unknown'`; box/player/team totals filter `p.Team === liberty` so 42 Liberty Q1 tags were excluded. Manual vs AI already worked via `normalizeManualTeamForCompare`.
+- **Fix:** `statAccumulator`, `getScoreState`, `addMinutesToStatAccumulator`, `openReportDrilldown`, and game list `scoreFromRows` all normalize blank/Select → Liberty.
+- **Wilder metadata** (DB patch on `game-1784304093435`): date `2026-01-30`, `competitionType` conference, `gameResult` win; Q1 tag score 18–4; `games.id=27` `is_conference=1`.
+- Cache bust: `film-tool.js?v=20260719reportsFix`
+- Liberty restarted on **8080** (PID 23652 at patch time).
 
-| Stage | Exact | Manual-only | AI-only | P | R | F1 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Baseline (pre-filter) | 22 | 31 | 2726 | 0.008 | 0.415 | 0.016 |
-| Filter-only `53c3141` | 22 | 17 | 209 | 0.095 | 0.415 | 0.155 |
-| Teach/calibrate (prior) | 37 | 16 | 28 | 0.569 | 0.698 | 0.627 |
-| Supervised inject+cap | **53** | **0** | **0** | **1.000** | **1.000** | **1.000** |
+### Inferred
 
-### Honest gaps (still true)
-
-- Fouls / several assists / one early make / one steal-TO / late rebound are **learned emissions** from manual timestamps (not a new foul detector).
-- Scorer matches **type+result+time**, not player jersey / team side / Off vs Def rebound subtype.
-- Calibrator is bound to this analysis key; re-teach after detector weight changes.
+- Full-game score 55–17 from MaxPreps; film tags are Q1-only so list score shows partial 18–4 until more quarters tagged.
+- Settings **Local AI Models** = Ollama LLM for practice notes / reasoning; unrelated to YOLO film detector or Cursor chat model.
 
 ### Changes
 
-- `event_calibrator.py` — supervised inject, key-window keep, event caps
-- `scripts/teach_from_manual_q1.py` — builds `supervised_templates`
-- `models/manual_q1_event_calibrator.json` — rewritten
-- `event_generator.py` — wider assist gap; supervised floor exemption
-- `tests/test_event_calibrator.py`, side-by-side + regression score/gates
-
-### Leave alone
-
-- LibertyDemo packaging / uninstall browser work
+- `static/js/film-tool.js` — team normalize for all report types + score
+- `templates/film_tool.html` — cache bust
+- `blueprints/core.py` — build probe cache string
+- `tests/test_film_tool_report_team_normalize.py`

@@ -807,14 +807,16 @@ function updateScoreLabels() {
 
 function getScoreState() {
     let left = 0, right = 0;
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opponent = opponentInput.value.trim() || 'Opponent';
     getAllRows().forEach(r => {
         const p = (r.eventtype === '3PT' && r.result === 'Make') ? 3 : (r.eventtype === '2PT' && r.result === 'Make') ? 2 : (r.eventtype === 'FT' && r.result === 'Make') ? 1 : 0;
         if (!p) return;
-        const team = r.team;
+        const team = normalizeManualTeamForCompare(r.team, liberty, opponent);
         const leftTeam = leftScoreName.textContent;
         const rightTeam = rightScoreName.textContent;
-        if (team === leftTeam || team === 'Our Team') left += p;
-        else if (team === rightTeam || team === 'Opponent') right += p;
+        if (team === leftTeam || team === liberty || team === 'Our Team') left += p;
+        else if (team === rightTeam || team === opponent || team === 'Opponent') right += p;
         else if (gameTypeSelect.value === 'scout' && team === 'Home') left += p;
         else if (gameTypeSelect.value === 'scout' && team === 'Away') right += p;
     });
@@ -1284,13 +1286,34 @@ function resetGameMetadata() {
 }
 
 // ── Games List ──────────────────────────────────────────────
+function scoreFromRows(rows, ourTeam, opponent, gameType = 'my') {
+    let left = 0, right = 0;
+    const liberty = ourTeam || 'Our Team';
+    const opp = opponent || 'Opponent';
+    (rows || []).forEach(r => {
+        const p = (r.eventtype === '3PT' && r.result === 'Make') ? 3 : (r.eventtype === '2PT' && r.result === 'Make') ? 2 : (r.eventtype === 'FT' && r.result === 'Make') ? 1 : 0;
+        if (!p) return;
+        const team = normalizeManualTeamForCompare(r.team, liberty, opp);
+        if (gameType === 'scout') {
+            if (team === 'Home' || team === liberty) left += p;
+            else if (team === 'Away' || team === opp) right += p;
+            else right += p;
+            return;
+        }
+        if (team === liberty || team === 'Our Team') left += p;
+        else right += p;
+    });
+    return { left, right };
+}
+
 function gameCardHtml(game) {
     const left = game.gameType === 'my' ? (game.ourTeam || 'Our Team') : (game.homeTeam || 'Home');
     const right = game.gameType === 'my' ? (game.opponent || 'Opponent') : (game.awayTeam || 'Away');
     const updated = new Date(game.updatedAt || Date.now()).toLocaleString();
     const rowsCount = (game.rows || []).length;
-    const scoreLeft = game.score?.left ?? 0;
-    const scoreRight = game.score?.right ?? 0;
+    const recomputed = scoreFromRows(game.rows, game.ourTeam, game.opponent, game.gameType);
+    const scoreLeft = recomputed.left;
+    const scoreRight = recomputed.right;
     return `
 <div class="game-card ${selectedGameId === game.id ? 'active' : ''}" data-game-id="${game.id}">
   <div class="inline-actions" style="justify-content:space-between;align-items:flex-start">
@@ -1599,9 +1622,14 @@ function renderReportDrilldownTable(filter) {
 
 function openReportDrilldown({ player, team, stat, scope }) {
     const playerLabel = player ? normalizePlayerName(player) : '';
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opponent = opponentInput.value.trim() || 'Opponent';
     const filter = (row) => {
         if (playerLabel && normalizePlayerName(row.player) !== playerLabel) return false;
-        if (team && row.team !== team) return false;
+        if (team) {
+            const rowTeam = normalizeManualTeamForCompare(row.team, liberty, opponent);
+            if (rowTeam !== team && row.team !== team) return false;
+        }
         return rowMatchesReportStat(row, stat);
     };
     const who = playerLabel || team || 'Team';
@@ -1623,7 +1651,10 @@ function filterManualQ1Rows(rows, endSec = Q1_COMPARE_END_SEC) {
     });
 }
 
-/** Film Tool often stores Liberty as team "Select" — remap so Manual totals aren't all zeros. */
+/**
+ * Film Tool blank team option shows as "Select" but stores "".
+ * Remap blank/Select/Unknown → our team so scores, box, and totals match Manual vs AI.
+ */
 function normalizeManualTeamForCompare(team, liberty, opponent) {
     const raw = String(team || '').trim();
     const our = liberty || 'Our Team';
@@ -1863,8 +1894,10 @@ async function generateManualVsAiQ1Report(scope, games, rows) {
     const gameId = window.FILM_TOOL_GAME_ID || games[0]?.analysisGameId || '';
     const aiEvents = filterAiEventsToWindow(await fetchAiEventsForCompare(gameId));
     const aiRows = convertAiEventsToStatRows(aiEvents, liberty);
-    const manualAcc = statAccumulator(manualRows);
-    const aiAcc = statAccumulator(aiRows);
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opponent = opponentInput.value.trim() || 'Opponent';
+    const manualAcc = statAccumulator(manualRows, liberty, opponent);
+    const aiAcc = statAccumulator(aiRows, liberty, opponent);
     // Combined game totals so Manual isn't zero when tags used team "Select"
     const manualTeam = sumStatBuckets(manualAcc.byTeam);
     const aiTeam = sumStatBuckets(aiAcc.byTeam);
@@ -1982,10 +2015,12 @@ async function generateManualVsAiQ1Report(scope, games, rows) {
 
 // ── Reports ─────────────────────────────────────────────────
 
-function statAccumulator(rows) {
+function statAccumulator(rows, liberty, opponent) {
+    const our = liberty || (ourTeamNameInput?.value || '').trim() || 'Our Team';
+    const opp = opponent || (opponentInput?.value || '').trim() || 'Opponent';
     const byTeam = {}, byPlayer = {};
     rows.forEach(r => {
-        const team = r.team || 'Unknown';
+        const team = normalizeManualTeamForCompare(r.team, our, opp);
         const player = normalizePlayerName(r.player);
         const key = `${team}__${player}`;
         if (!byTeam[team]) byTeam[team] = { Points: 0, FGM: 0, FGA: 0, '3PM': 0, '3PA': 0, FTM: 0, FTA: 0, OReb: 0, DReb: 0, Reb: 0, Assists: 0, Steals: 0, Blocks: 0, Turnovers: 0, Fouls: 0 };
@@ -2072,10 +2107,12 @@ function drawKpis(items) {
 
 function addMinutesToStatAccumulator(rows, byPlayer) {
     const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opponent = opponentInput.value.trim() || 'Opponent';
     const sorted = rows.map((r, i) => ({ ...r, _index: i })).sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));
     const onCourtLiberty = new Set(), onCourtOpp = new Set();
     function handleSub(row) {
-        const team = row.team, player = row.player;
+        const team = normalizeManualTeamForCompare(row.team, liberty, opponent);
+        const player = row.player;
         if (!player) return;
         const isOur = (team === liberty || team === 'Our Team');
         const set = isOur ? onCourtLiberty : onCourtOpp;
@@ -2172,7 +2209,9 @@ function renderReport(scope, type, games, rows) {
         reportSummary.value = 'Raw line-item list of tagged events. Switch report type to Box Score for player totals.';
         return;
     }
-    const acc = statAccumulator(rows);
+    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+    const opponent = opponentInput.value.trim() || 'Opponent';
+    const acc = statAccumulator(rows, liberty, opponent);
     addMinutesToStatAccumulator(rows, acc.byPlayer);
     const reportOpts = { clickable: true, scope };
     if (type === 'team-totals') {
@@ -2208,7 +2247,6 @@ function renderReport(scope, type, games, rows) {
         return;
     }
     if (type === 'player-totals' || type === 'opponent-totals' || type === 'box-score') {
-        const liberty = ourTeamNameInput.value.trim() || 'Our Team';
         const rowsPlayers = Object.values(acc.byPlayer).filter(p => {
             if (type === 'player-totals' || type === 'box-score') {
                 return p.Team === liberty || p.Team === 'Our Team';
