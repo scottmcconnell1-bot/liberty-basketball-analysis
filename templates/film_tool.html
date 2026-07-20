@@ -714,7 +714,8 @@
 
         <!-- Video Player -->
         <div class="ft-video-wrap" id="filmReviewGrid">
-          <video id="video" controls></video>
+          <video id="video" controls preload="auto" playsinline></video>
+          <div class="tiny" id="filmVideoLoadHint" style="display:none;padding:.4rem .6rem;color:#94a3b8;background:#111;"></div>
         </div>
         <div class="ft-focus-dock">
         <div class="ft-video-bar">
@@ -798,8 +799,8 @@
           </div>
           <div class="info-grid">
             <div class="field">
-              <label for="ourTeamName">Our Team</label>
-              <input id="ourTeamName" value="Liberty">
+              <label for="ourTeamName">Our Team (Liberty)</label>
+              <input id="ourTeamName" value="Liberty" title="Used as the default team when tagging Liberty plays">
             </div>
             <div class="field">
               <label for="opponent">Opponent</label>
@@ -1391,5 +1392,5 @@
   window.FILM_TOOL_CLIENT_GAME_ID = {{ client_game_id|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260717a"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260720filmOpen"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260720filmVideoTeam"></script>
 {% endblock %}

@@ -71,7 +71,14 @@ def test_film_tool_template_bootstraps_client_game_and_opponent():
     text = Path("templates/film_tool.html").read_text(encoding="utf-8")
     assert "FILM_TOOL_CLIENT_GAME_ID" in text
     assert "FILM_TOOL_VIDEO_OPPONENT" in text
-    assert "js/film-tool.js') }}?v=20260720filmOpen" in text
+    assert "js/film-tool.js') }}?v=20260720filmVideoTeam" in text
+
+
+def test_film_tool_js_team_and_video_helpers():
+    text = Path("static/js/film-tool.js").read_text(encoding="utf-8")
+    assert "function syncTeamVocabulary" in text
+    assert "function ensureHostedVideoLoaded" in text
+    assert "resolveTeamSelectValue" in text
 
 
 def test_film_route_injects_client_game_for_opponent(client, app, db):

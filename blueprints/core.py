@@ -1694,7 +1694,7 @@ def film_tool_build_info():
             and "◀ 5s" in text
             and "data-skip=\"-30\"" not in text
         ),
-        "film_tool_js_cache_bust": "film-tool.js?v=20260720filmOpen" in text,
+        "film_tool_js_cache_bust": "film-tool.js?v=20260720filmVideoTeam" in text,
     })
 
 

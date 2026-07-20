@@ -87,13 +87,15 @@ const TEAM_STAT_KEY_MAP = {
 // ── Vocabulary (tagging terms) ──────────────────────────────
 const vocabulary = {
     quarter: ['Q1', 'Q2', 'Q3', 'Q4', 'OT'],
-    team: ['Our Team', 'Opponent', 'Home', 'Away'],
+    // Real game names (Liberty / opponent) are synced via syncTeamVocabulary().
+    team: ['Liberty', 'Opponent', 'Our Team', 'Home', 'Away'],
     side: ['Offense', 'Defense', 'Neutral'],
     category: ['ATO', 'Defense', 'Offense', 'Substitution', 'Transition', 'BLOB', 'SLOB', 'Quarter'],
     eventtype: ['2PT', '3PT', 'Assist', 'BLOB', 'Block', 'DefRebound', 'EndQTR', 'FT', 'Foul', 'JumpBall', 'OB', 'OffRebound', 'SLOB', 'StartQTR', 'Steal', 'SubOut', 'SubIn', 'TimeOut', 'Tip', 'Turnover', 'Violation'],
     result: ['Make', 'Miss', 'NA'],
     player: []
 };
+const EVENT_TYPES_ALLOW_BLANK_TEAM = new Set(['EndQTR', 'StartQTR', 'JumpBall']);
 const lockedFields = ['quarter', 'team', 'side', 'category', 'eventtype', 'result'];
 
 // ── Event Definitions (tag buttons) ─────────────────────────
@@ -485,10 +487,57 @@ function sortPlayers(list) {
 }
 
 function getTeamChoices() {
-    if (gameTypeSelect.value === 'my') {
-        return [ourTeamNameInput.value.trim() || 'Our Team', opponentInput.value.trim() || 'Opponent'];
+    if (gameTypeSelect?.value === 'my') {
+        return [ourTeamNameInput?.value.trim() || 'Liberty', opponentInput?.value.trim() || 'Opponent'];
     }
-    return [homeTeamNameInput.value.trim() || 'Home', awayTeamNameInput.value.trim() || 'Away'];
+    return [homeTeamNameInput?.value.trim() || 'Home', awayTeamNameInput?.value.trim() || 'Away'];
+}
+
+/** Keep team dropdown options aligned with Our Team / Opponent names. */
+function syncTeamVocabulary() {
+    const choices = getTeamChoices().filter(Boolean);
+    const aliases = ['Liberty', 'Our Team', 'Opponent', 'Home', 'Away'];
+    const merged = [];
+    choices.forEach(name => {
+        if (name && !merged.includes(name)) merged.push(name);
+    });
+    aliases.forEach(name => {
+        if (name && !merged.includes(name)) merged.push(name);
+    });
+    vocabulary.team = merged;
+}
+
+function defaultOurTeamName() {
+    return ourTeamNameInput?.value.trim() || 'Liberty';
+}
+
+function defaultOpponentName() {
+    return opponentInput?.value.trim() || 'Opponent';
+}
+
+/**
+ * Map stored team values onto the live Our/Opponent names so the row
+ * dropdown selects the right option (Liberty vs "Our Team" mismatch).
+ */
+function resolveTeamSelectValue(selected, eventtype = '') {
+    const raw = String(selected || '').trim();
+    const our = defaultOurTeamName();
+    const opp = defaultOpponentName();
+    if (!raw || raw === 'Select') {
+        if (EVENT_TYPES_ALLOW_BLANK_TEAM.has(String(eventtype || ''))) return '';
+        return our;
+    }
+    if (/^our\s*team$/i.test(raw) || raw.toLowerCase() === 'liberty') return our;
+    if (/^opp(onent)?$/i.test(raw)) return opp;
+    if (raw.toLowerCase() === our.toLowerCase()) return our;
+    if (raw.toLowerCase() === opp.toLowerCase()) return opp;
+    return raw;
+}
+
+function repairRowTeamFields(data = {}) {
+    const next = { ...data };
+    next.team = resolveTeamSelectValue(next.team, next.eventtype);
+    return next;
 }
 
 function mapTeamToRosterKey(team) {
@@ -705,18 +754,30 @@ async function importGameJsonToServer(payload, analysisGameId) {
 }
 
 // ── Row Management (tagged events table) ────────────────────
-function createSelect(field, selected) {
+function createSelect(field, selected, rowData = {}) {
+    if (field === 'team') syncTeamVocabulary();
     const select = document.createElement('select');
     select.dataset.field = field;
+    let value = selected;
+    if (field === 'team') {
+        value = resolveTeamSelectValue(selected, rowData.eventtype);
+        select.title = 'Team that performed this action (Liberty vs Opponent)';
+        select.setAttribute('aria-label', 'Team');
+    }
     const blank = document.createElement('option');
-    blank.value = ''; blank.textContent = 'Select';
+    blank.value = '';
+    blank.textContent = field === 'team' ? '— Team —' : 'Select';
     select.appendChild(blank);
-    (vocabulary[field] || []).forEach(term => {
+    const terms = [...(vocabulary[field] || [])];
+    if (value && !terms.includes(value)) terms.unshift(value);
+    let matched = false;
+    terms.forEach(term => {
         const opt = document.createElement('option');
         opt.value = term; opt.textContent = term;
-        if (term === selected) opt.selected = true;
+        if (term === value) { opt.selected = true; matched = true; }
         select.appendChild(opt);
     });
+    if (!matched) blank.selected = true;
     select.addEventListener('change', handleRowsChanged);
     return select;
 }
@@ -753,6 +814,7 @@ function updateEventCount() {
 }
 
 function addRow(data = {}) {
+    const row = repairRowTeamFields(data);
     const tr = document.createElement('tr');
     tr.innerHTML = '<td class="row-number"></td>';
     const defs = [
@@ -771,9 +833,9 @@ function addRow(data = {}) {
     defs.forEach(def => {
         const td = document.createElement('td');
         let control;
-        if (def.kind === 'select') control = createSelect(def.key, data[def.key]);
-        else if (def.kind === 'textarea') control = createInput('textarea', data[def.key]);
-        else control = createInput(def.type, data[def.key]);
+        if (def.kind === 'select') control = createSelect(def.key, row[def.key], row);
+        else if (def.kind === 'textarea') control = createInput('textarea', row[def.key]);
+        else control = createInput(def.type, row[def.key]);
         control.dataset.key = def.key;
         td.appendChild(control);
         tr.appendChild(td);
@@ -798,8 +860,9 @@ function addRow(data = {}) {
 
 // ── Score ───────────────────────────────────────────────────
 function updateScoreLabels() {
+    syncTeamVocabulary();
     if (gameTypeSelect.value === 'my') {
-        leftScoreName.textContent = ourTeamNameInput.value.trim() || 'Our Team';
+        leftScoreName.textContent = ourTeamNameInput.value.trim() || 'Liberty';
         rightScoreName.textContent = opponentInput.value.trim() || 'Opponent';
     } else {
         leftScoreName.textContent = homeTeamNameInput.value.trim() || 'Home';
@@ -882,15 +945,19 @@ function renderEventButtons() {
 
 // ── Quick Tag Dialog ────────────────────────────────────────
 function commitTag(def, { team = '', player = '' }) {
+    const resolvedTeam = resolveTeamSelectValue(
+        team || (def.teamMode === 'event-only' ? '' : defaultOurTeamName()),
+        def.eventtype,
+    );
     addRow({
-        label: def.label, player, quarter: currentQuarter(), team,
+        label: def.label, player, quarter: currentQuarter(), team: resolvedTeam,
         side: def.side, category: def.category, eventtype: def.eventtype, result: def.result,
         start: formatTime(video.currentTime || 0), duration: '0:05.0', notes: ''
     });
     quickTagDialog.close();
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
-    setStatus(`Tagged ${def.label}.`);
+    setStatus(`Tagged ${def.label}${resolvedTeam ? ` (${resolvedTeam})` : ''}.`);
 }
 
 function commitStartQuarterTag(def, quarter) {
@@ -947,9 +1014,17 @@ function openQuickTag(def) {
     if (def.teamMode === 'team-only') {
         const wrap = document.createElement('div');
         wrap.className = 'pill-buttons';
-        getTeamChoices().forEach(team => {
+        const hint = document.createElement('div');
+        hint.className = 'tiny';
+        hint.textContent = 'Team for this action';
+        hint.style.marginBottom = '.35rem';
+        quickTagBody.appendChild(hint);
+        getTeamChoices().forEach((team, idx) => {
             const btn = document.createElement('button');
-            btn.type = 'button'; btn.className = 'btn'; btn.textContent = team;
+            btn.type = 'button';
+            btn.className = idx === 0 ? 'btn btn-primary' : 'btn';
+            btn.textContent = team;
+            btn.title = idx === 0 ? 'Our team (Liberty)' : 'Opponent';
             btn.addEventListener('click', () => commitTag(def, { team, player: '' }));
             wrap.appendChild(btn);
         });
@@ -959,13 +1034,17 @@ function openQuickTag(def) {
     }
 
     const title = document.createElement('div');
-    title.className = 'tiny'; title.textContent = 'Select team';
+    title.className = 'tiny';
+    title.innerHTML = '<strong>Team</strong> — who did this action?';
     quickTagBody.appendChild(title);
     const wrap = document.createElement('div');
     wrap.className = 'pill-buttons';
-    getTeamChoices().forEach(team => {
+    getTeamChoices().forEach((team, idx) => {
         const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn'; btn.textContent = team;
+        btn.type = 'button';
+        btn.className = idx === 0 ? 'btn btn-primary' : 'btn';
+        btn.textContent = team;
+        btn.title = idx === 0 ? 'Our team (default for Liberty plays)' : 'Opponent';
         btn.addEventListener('click', () => {
             if (def.teamMode === 'special-steal') showStealPlayers(def, team);
             else showPlayerSelection(def, team);
@@ -1183,7 +1262,7 @@ function getGameMeta() {
     return {
         id: selectedGameId || `game-${Date.now()}`, gameType: gameTypeSelect.value,
         competitionType: competitionTypeSelect.value, date: gameDateInput.value.trim(),
-        ourTeam: ourTeamNameInput.value.trim() || 'Our Team', opponent: opponentInput.value.trim(),
+        ourTeam: ourTeamNameInput.value.trim() || 'Liberty', opponent: opponentInput.value.trim(),
         gameResult: gameResultSelect.value, homeTeam: homeTeamNameInput.value.trim(),
         awayTeam: awayTeamNameInput.value.trim(), outputDir: outputDirInput.value.trim(),
         analysisGameId,
@@ -1224,11 +1303,19 @@ function loadGameIntoUI(game) {
         linkedAnalysisGameId = game.analysisGameId || linkedAnalysisGameId || '';
     }
     rowsBody.innerHTML = '';
+    syncTeamVocabulary();
     (game.rows || []).forEach(addRow);
     autosavePaused = false;
     handleRowsChanged();
     renderGames();
-    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Reload video to continue tagging.`);
+    // Keep server video attached when loading a saved tag game.
+    const hostedUrl = uploadedVideoUrl || window.FILM_TOOL_UPLOADED_VIDEO_URL || '';
+    if (hostedUrl) {
+        loadHostedVideo(hostedUrl, uploadedVideoName || window.FILM_TOOL_UPLOADED_VIDEO_NAME || '');
+        setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''} (${(game.rows || []).length} tags) + video.`);
+    } else {
+        setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Open from Videos to attach film.`);
+    }
     // Persist relink so Videos → Film Tool keeps finding this game after reruns.
     if (window.FILM_TOOL_GAME_ID && game.analysisGameId !== window.FILM_TOOL_GAME_ID) {
         queueAutosave();
@@ -3222,9 +3309,54 @@ async function fetchAndRenderAIEvents(gameId) {
 
 // ── Video ───────────────────────────────────────────────────
 function loadHostedVideo(url, name) {
+    if (!url || !video) return;
+    const absolute = (() => {
+        try { return new URL(url, window.location.origin).href; }
+        catch (_err) { return url; }
+    })();
+    const hint = document.getElementById('filmVideoLoadHint');
+    const setHint = (text, show = true) => {
+        if (!hint) return;
+        hint.textContent = text || '';
+        hint.style.display = show && text ? 'block' : 'none';
+    };
+    video.setAttribute('preload', 'auto');
+    video.setAttribute('playsinline', '');
+    // Avoid resetting an already-correct src (would flash black / restart buffer).
+    if (video.currentSrc !== absolute && video.src !== absolute) {
+        video.src = url;
+    } else if (!video.getAttribute('src') && !video.currentSrc) {
+        video.src = url;
+    }
+    const paintFirstFrame = () => {
+        try {
+            if ((video.currentTime || 0) === 0 && video.readyState >= 1) {
+                video.currentTime = 0.001;
+            }
+        } catch (_err) { /* ignore seek errors before ready */ }
+    };
+    video.addEventListener('loadedmetadata', () => {
+        paintFirstFrame();
+        const dur = Number.isFinite(video.duration) ? formatTime(video.duration) : '…';
+        setHint('');
+        setStatus(`Loaded uploaded video: ${name || 'server video'} (${dur}). Press Play if the frame is still black.`);
+    }, { once: true });
+    video.addEventListener('loadeddata', paintFirstFrame, { once: true });
+    video.addEventListener('error', () => {
+        const code = video.error?.code;
+        const msg = `Video failed to load (error ${code || '?'}). URL: ${url}`;
+        setHint(msg);
+        setStatus(msg);
+    }, { once: true });
+    try { video.load(); } catch (_err) { /* ignore */ }
+    setHint(`Loading ${name || 'server video'} from ${url}…`);
+    setStatus(`Loading video: ${name || 'server video'}…`);
+}
+
+function ensureHostedVideoLoaded() {
+    const url = uploadedVideoUrl || window.FILM_TOOL_UPLOADED_VIDEO_URL || '';
     if (!url) return;
-    video.src = url; video.load();
-    setStatus(`Loaded uploaded video: ${name || 'server video'}`);
+    loadHostedVideo(url, uploadedVideoName || window.FILM_TOOL_UPLOADED_VIDEO_NAME || '');
 }
 
 function handleVideoFile(e) {
@@ -4110,9 +4242,13 @@ function init() {
 
     uploadedVideoUrl = window.FILM_TOOL_UPLOADED_VIDEO_URL || '';
     uploadedVideoName = window.FILM_TOOL_UPLOADED_VIDEO_NAME || '';
+    if (window.FILM_TOOL_VIDEO_OPPONENT && opponentInput && !opponentInput.value.trim()) {
+        opponentInput.value = window.FILM_TOOL_VIDEO_OPPONENT;
+    }
 
     loadTheme();
     loadStores();
+    syncTeamVocabulary();
     ensureRosterSeasonsLoaded().then(() => {
         restoreRosterFilters();
         return loadRosterFromServer();
@@ -4122,6 +4258,8 @@ function init() {
     attachEventHandlers();
     initFilmKeyboardShortcuts();
     initManualTagFocus();
+    // Attach server film immediately (don't wait on games API).
+    ensureHostedVideoLoaded();
     ensureServerGamesLoaded().then(() => {
         renderGames();
         return applyFilmToolDeepLinks();
@@ -4133,6 +4271,7 @@ function init() {
             const matched = findSavedGameForAnalysisId(activeGameId);
             if (matched) loadGameIntoUI(matched);
         }
+        ensureHostedVideoLoaded();
     });
     updateScoreLabels();
     renderScore();
@@ -4144,8 +4283,6 @@ function init() {
         || new URLSearchParams(window.location.search).get('client_game_id')
     );
     if (!deepLinkOpen) initFromAutosave();
-
-    if (uploadedVideoUrl) loadHostedVideo(uploadedVideoUrl, uploadedVideoName);
 
     // Collapsible sections
     document.getElementById('ftAiUploadToggle')?.addEventListener('click', function() {
@@ -4160,6 +4297,18 @@ function init() {
       this.classList.toggle('open');
       document.getElementById('ftGameInfoBody').classList.toggle('open');
     });
+    const syncTeamsFromGameInfo = () => {
+        syncTeamVocabulary();
+        updateScoreLabels();
+        renderScore();
+    };
+    ourTeamNameInput?.addEventListener('change', syncTeamsFromGameInfo);
+    ourTeamNameInput?.addEventListener('input', syncTeamsFromGameInfo);
+    opponentInput?.addEventListener('change', syncTeamsFromGameInfo);
+    opponentInput?.addEventListener('input', syncTeamsFromGameInfo);
+    homeTeamNameInput?.addEventListener('change', syncTeamsFromGameInfo);
+    awayTeamNameInput?.addEventListener('change', syncTeamsFromGameInfo);
+    gameTypeSelect?.addEventListener('change', syncTeamsFromGameInfo);
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game_id');
