@@ -1694,7 +1694,7 @@ def film_tool_build_info():
             and "◀ 5s" in text
             and "data-skip=\"-30\"" not in text
         ),
-        "film_tool_js_cache_bust": "film-tool.js?v=20260719reportsFix" in text,
+        "film_tool_js_cache_bust": "film-tool.js?v=20260720filmOpen" in text,
     })
 
 
@@ -1710,11 +1710,13 @@ def film(filename=None):
     possession_summary = None
     video_id = None
     analysis_status = None
+    video_opponent = None
+    client_game_id = (request.args.get("client_game_id") or "").strip() or None
     if filename:
         db = get_db()
         latest_run = latest_analysis_run_id_subquery()
         video_row = db.execute(
-            f"""SELECT v.id, v.game_id,
+            f"""SELECT v.id, v.game_id, v.opponent,
                       ar.status AS analysis_status, ar.analysis_key
                FROM videos v
                LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
@@ -1724,6 +1726,7 @@ def film(filename=None):
         if video_row:
             video_id = video_row["id"]
             analysis_status = video_row["analysis_status"] or "not_started"
+            video_opponent = (video_row["opponent"] or "").strip() or None
             if not game_id:
                 game_id = video_row["analysis_key"] or video_row["game_id"]
         elif not game_id:
@@ -1739,6 +1742,26 @@ def film(filename=None):
                 analysis_status = run_row["status"]
                 if run_row["analysis_key"]:
                     game_id = run_row["analysis_key"]
+        # Resolve saved manual-tag game for this video (exact / rerun family / opponent).
+        if not client_game_id:
+            ft = None
+            if game_id:
+                base = str(game_id).split("__rerun_")[0]
+                ft = db.execute(
+                    """SELECT client_game_id FROM film_tool_games
+                        WHERE analysis_key = ? OR analysis_key = ? OR analysis_key LIKE ?
+                        ORDER BY tag_count DESC, updated_at DESC LIMIT 1""",
+                    (game_id, base, f"{base}__rerun_%"),
+                ).fetchone()
+            if not ft and video_opponent:
+                ft = db.execute(
+                    """SELECT client_game_id FROM film_tool_games
+                        WHERE opponent = ?
+                        ORDER BY tag_count DESC, updated_at DESC LIMIT 1""",
+                    (video_opponent,),
+                ).fetchone()
+            if ft:
+                client_game_id = ft["client_game_id"]
     if game_id:
         db = get_db()
         relational_game_id = _resolve_relational_game_id(db, game_id)
@@ -1813,6 +1836,8 @@ def film(filename=None):
         analysis_status=analysis_status,
         ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
+        video_opponent=video_opponent,
+        client_game_id=client_game_id,
         shot_summary=shot_summary,
         player_effect_data=player_effect_data,
         player_minutes_data=player_minutes_data,

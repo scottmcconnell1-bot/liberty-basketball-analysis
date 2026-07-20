@@ -70,8 +70,13 @@ def list_film_tool_games(db, *, analysis_key=None, game_type=None) -> list[dict]
     clauses = []
     params: list = []
     if analysis_key:
-        clauses.append("analysis_key = ?")
-        params.append(str(analysis_key).strip())
+        key = str(analysis_key).strip()
+        base = key.split("__rerun_")[0]
+        # Match exact key, base key, or any rerun sibling for the same film.
+        clauses.append(
+            "(analysis_key = ? OR analysis_key = ? OR analysis_key LIKE ?)"
+        )
+        params.extend([key, base, f"{base}__rerun_%"])
     if game_type:
         game_type = str(game_type).strip().lower()
         if game_type not in VALID_GAME_TYPES:
@@ -114,16 +119,20 @@ def save_film_tool_game(db, data: dict, *, created_by_user_id=None) -> dict:
     analysis_key = (
         str(payload.get("analysisGameId") or payload.get("analysis_key") or "").strip() or None
     )
+    existing = db.execute(
+        "SELECT id, analysis_key FROM film_tool_games WHERE client_game_id = ?",
+        (client_game_id,),
+    ).fetchone()
+    # Never wipe a linked analysis_key with an empty payload (bare /film autosave).
+    if not analysis_key and existing and existing["analysis_key"]:
+        analysis_key = existing["analysis_key"]
+        payload["analysisGameId"] = analysis_key
     relational_game_id = _resolve_relational_game_id(db, analysis_key) if analysis_key else None
     tag_count = len(payload.get("rows") or [])
     state_json = json.dumps(payload, ensure_ascii=False)
     game_date = (payload.get("date") or "").strip() or None
     our_team = (payload.get("ourTeam") or "").strip() or None
     opponent = (payload.get("opponent") or "").strip() or None
-    existing = db.execute(
-        "SELECT id FROM film_tool_games WHERE client_game_id = ?",
-        (client_game_id,),
-    ).fetchone()
     if existing:
         db.execute(
             """

@@ -19,4 +19,4 @@ def test_film_tool_js_score_state_uses_team_normalize():
 def test_film_tool_template_cache_bust_bumped():
     text = Path("templates/film_tool.html").read_text(encoding="utf-8")
     assert "js/film-tool.js" in text
-    assert "?v=20260719reportsFix" in text
+    assert "?v=20260720filmOpen" in text

@@ -173,6 +173,8 @@ let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
 let startersDialog, startersDialogTitle, starterQuarterTabs, libertyStartersList, opponentStartersList, startersHelp;
 let uploadedVideoUrl = '';
 let uploadedVideoName = '';
+/** Persisted analysis_key for the loaded manual-tag game (survives bare /film opens). */
+let linkedAnalysisGameId = '';
 
 // ── Helpers ─────────────────────────────────────────────────
 const setStatus = t => { if (statusText) statusText.textContent = t; };
@@ -1169,10 +1171,15 @@ function exportGameData() {
 // ── Game Save / Load / Autosave ─────────────────────────────
 function getGameMeta() {
     const score = getScoreState();
-    const analysisGameId = window.FILM_TOOL_GAME_ID
+    // Prefer the open video's analysis key, but never wipe a linked key when
+    // opening bare /film (FILM_TOOL_GAME_ID empty) — that caused Wilder tags
+    // to become unfindable from Videos → Film Tool.
+    const fromContext = window.FILM_TOOL_GAME_ID
         || document.getElementById('gameId')?.value?.trim()
         || new URLSearchParams(window.location.search).get('game_id')
         || '';
+    const analysisGameId = fromContext || linkedAnalysisGameId || '';
+    if (analysisGameId) linkedAnalysisGameId = analysisGameId;
     return {
         id: selectedGameId || `game-${Date.now()}`, gameType: gameTypeSelect.value,
         competitionType: competitionTypeSelect.value, date: gameDateInput.value.trim(),
@@ -1210,12 +1217,22 @@ function loadGameIntoUI(game) {
     quarterStarters = game.quarterStarters || { Q1: null, Q2: null, Q3: null, Q4: null };
     if (currentStarters?.liberty) currentLineups.liberty = new Set(currentStarters.liberty);
     if (currentStarters?.opponent) currentLineups.opponent = new Set(currentStarters.opponent);
+    // Relink to the video currently open in Film Tool when possible.
+    if (window.FILM_TOOL_GAME_ID) {
+        linkedAnalysisGameId = window.FILM_TOOL_GAME_ID;
+    } else {
+        linkedAnalysisGameId = game.analysisGameId || linkedAnalysisGameId || '';
+    }
     rowsBody.innerHTML = '';
     (game.rows || []).forEach(addRow);
     autosavePaused = false;
     handleRowsChanged();
     renderGames();
     setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Reload video to continue tagging.`);
+    // Persist relink so Videos → Film Tool keeps finding this game after reruns.
+    if (window.FILM_TOOL_GAME_ID && game.analysisGameId !== window.FILM_TOOL_GAME_ID) {
+        queueAutosave();
+    }
 }
 
 function autosaveCurrentGame() {
@@ -1256,6 +1273,7 @@ function newGame() {
     if (selectedGameId && !confirm('Start a new game? Save current work first if needed.')) return;
     autosavePaused = true;
     selectedGameId = `game-${Date.now()}`;
+    linkedAnalysisGameId = window.FILM_TOOL_GAME_ID || '';
     rowsBody.innerHTML = '';
     gameTypeSelect.value = 'my';
     competitionTypeSelect.value = 'non-conference';
@@ -1363,15 +1381,72 @@ function normalizePlayerName(player) {
     return value;
 }
 
+function analysisKeyBase(key) {
+    return String(key || '').split('__rerun_')[0];
+}
+
+function pickRichestGame(gamesList) {
+    if (!gamesList?.length) return null;
+    return [...gamesList].sort((a, b) => (b.rows || []).length - (a.rows || []).length)[0];
+}
+
 function findSavedGameForAnalysisId(analysisGameId) {
-    if (!analysisGameId) return null;
-    const exact = savedGames.find(g => g.analysisGameId === analysisGameId || g.id === analysisGameId);
-    if (exact) return exact;
-    const slug = String(analysisGameId).toLowerCase();
-    return savedGames.find(g => {
-        const opponent = String(g.opponent || g.awayTeam || '').toLowerCase();
-        return opponent && slug.includes(opponent.replace(/\s+/g, '_'));
-    }) || null;
+    const clientId = window.FILM_TOOL_CLIENT_GAME_ID
+        || new URLSearchParams(window.location.search).get('client_game_id');
+    if (clientId) {
+        const byClient = savedGames.find(g => g.id === clientId);
+        if (byClient) return byClient;
+    }
+    if (!analysisGameId && !window.FILM_TOOL_VIDEO_OPPONENT && !uploadedVideoName) return null;
+
+    if (analysisGameId) {
+        const exact = savedGames.find(g => g.analysisGameId === analysisGameId || g.id === analysisGameId);
+        if (exact) return exact;
+
+        // Rerun family: base key and any __rerun_ sibling share one film.
+        const base = analysisKeyBase(analysisGameId);
+        if (base) {
+            const family = savedGames.filter(g => {
+                const ak = String(g.analysisGameId || '');
+                return ak && (ak === base || analysisKeyBase(ak) === base);
+            });
+            const richest = pickRichestGame(family);
+            if (richest) return richest;
+        }
+
+        const slug = String(analysisGameId).toLowerCase();
+        const byOppInSlug = savedGames.find(g => {
+            const opponent = String(g.opponent || g.awayTeam || '').toLowerCase();
+            return opponent && slug.includes(opponent.replace(/\s+/g, '_'));
+        });
+        if (byOppInSlug) return byOppInSlug;
+    }
+
+    // Video stem (nfhs_gam30b09cbb4f.mp4) appears inside analysis keys.
+    const videoStem = String(uploadedVideoName || window.FILM_TOOL_UPLOADED_VIDEO_NAME || '')
+        .replace(/\.[^.]+$/, '')
+        .toLowerCase();
+    if (videoStem.length >= 8) {
+        const byStem = savedGames.filter(g => {
+            const ak = String(g.analysisGameId || '').toLowerCase();
+            return ak.includes(videoStem);
+        });
+        const richest = pickRichestGame(byStem);
+        if (richest) return richest;
+    }
+
+    // Unlinked games (empty analysisGameId): match video opponent from server.
+    const oppHint = String(window.FILM_TOOL_VIDEO_OPPONENT || '').trim().toLowerCase();
+    if (oppHint) {
+        const token = oppHint.split(/\s+/)[0];
+        const byOpp = savedGames.filter(g => {
+            const opponent = String(g.opponent || g.awayTeam || '').toLowerCase();
+            return opponent && (opponent === oppHint || opponent.includes(token));
+        });
+        const richest = pickRichestGame(byOpp);
+        if (richest) return richest;
+    }
+    return null;
 }
 
 function gameReportLabel(game) {
@@ -2898,22 +2973,20 @@ async function applyFilmToolDeepLinks() {
         loadVocabulary();
         termDialog?.showModal();
     }
-    const analysisGameId = params.get('game_id');
+    const analysisGameId = params.get('game_id') || window.FILM_TOOL_GAME_ID || '';
+    const matched = findSavedGameForAnalysisId(analysisGameId);
+    if (matched) {
+        loadGameIntoUI(matched);
+    } else if (analysisGameId) {
+        const serverMatches = await fetchGamesFromServer(analysisGameId);
+        if (serverMatches.length) {
+            loadGameIntoUI(pickRichestGame(serverMatches) || serverMatches[0]);
+        }
+    }
     if (tab === 'reports') {
         refreshReportScopeOptions();
         if (reportType) reportType.value = 'box-score';
-        const matched = findSavedGameForAnalysisId(analysisGameId);
-        if (matched) {
-            loadGameIntoUI(matched);
-            reportScope.value = `game:${matched.id}`;
-        } else if (analysisGameId) {
-            const serverMatches = await fetchGamesFromServer(analysisGameId);
-            if (serverMatches.length) {
-                const best = serverMatches[0];
-                loadGameIntoUI(best);
-                reportScope.value = `game:${best.id}`;
-            }
-        }
+        if (selectedGameId) reportScope.value = `game:${selectedGameId}`;
         generateReport();
     }
 }
@@ -4056,14 +4129,21 @@ function init() {
         const activeGameId = window.FILM_TOOL_GAME_ID
             || new URLSearchParams(window.location.search).get('game_id')
             || '';
-        if (activeGameId && !getAllRows().length) {
+        if (!getAllRows().length) {
             const matched = findSavedGameForAnalysisId(activeGameId);
             if (matched) loadGameIntoUI(matched);
         }
     });
     updateScoreLabels();
     renderScore();
-    initFromAutosave();
+    // Only restore autosave when not opening a specific video/game from Videos.
+    const deepLinkOpen = Boolean(
+        window.FILM_TOOL_UPLOADED_VIDEO_URL
+        || window.FILM_TOOL_CLIENT_GAME_ID
+        || new URLSearchParams(window.location.search).get('game_id')
+        || new URLSearchParams(window.location.search).get('client_game_id')
+    );
+    if (!deepLinkOpen) initFromAutosave();
 
     if (uploadedVideoUrl) loadHostedVideo(uploadedVideoUrl, uploadedVideoName);
 

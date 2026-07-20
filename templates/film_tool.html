@@ -1387,7 +1387,9 @@
   window.FILM_TOOL_VIDEO_ID = {{ video_id|tojson|safe }};
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
+  window.FILM_TOOL_VIDEO_OPPONENT = {{ video_opponent|tojson|safe }};
+  window.FILM_TOOL_CLIENT_GAME_ID = {{ client_game_id|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}?v=20260717a"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260719reportsFix"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=20260720filmOpen"></script>
 {% endblock %}
