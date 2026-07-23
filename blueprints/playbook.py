@@ -398,6 +398,104 @@ def playbook_api_play(play_id):
     })
 
 
+@playbook_bp.route("/api/playbook/play/<int:play_id>/digitize", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_digitize_play(play_id):
+    """Auto-detect O/X markers on imported step PNGs and write positions_json."""
+    import os
+    from pathlib import Path
+
+    from playbook_digitize import digitize_play_steps
+
+    data = request.get_json(silent=True) or {}
+    force = bool(data.get("force"))
+    dry_run = bool(data.get("dry_run"))
+    min_markers = int(data.get("min_markers") or 3)
+
+    upload_root = current_app.config.get("UPLOAD_FOLDER") or os.environ.get(
+        "LIBERTY_UPLOAD_FOLDER", "uploads"
+    )
+    # Resolve DB path the same way helpers use (cwd film_analysis.db)
+    db_path = Path(current_app.root_path) / "film_analysis.db"
+    if not db_path.is_file():
+        db_path = Path("film_analysis.db")
+
+    try:
+        report = digitize_play_steps(
+            db_path,
+            play_id,
+            upload_root=upload_root,
+            write=not dry_run,
+            force=force,
+            min_markers=min_markers,
+        )
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    status = 200 if report.get("ok") else 404
+    return jsonify(report), status
+
+
+@playbook_bp.route("/api/playbook/digitize-all", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_digitize_all():
+    """Batch digitize image-only plays (optional limit)."""
+    import os
+    from pathlib import Path
+
+    from playbook_digitize import digitize_play_steps, list_image_only_play_ids
+
+    data = request.get_json(silent=True) or {}
+    force = bool(data.get("force"))
+    dry_run = bool(data.get("dry_run"))
+    limit = int(data.get("limit") or 0)
+    min_markers = int(data.get("min_markers") or 3)
+
+    upload_root = current_app.config.get("UPLOAD_FOLDER") or os.environ.get(
+        "LIBERTY_UPLOAD_FOLDER", "uploads"
+    )
+    db_path = Path(current_app.root_path) / "film_analysis.db"
+    if not db_path.is_file():
+        db_path = Path("film_analysis.db")
+
+    ids = list_image_only_play_ids(db_path)
+    if limit > 0:
+        ids = ids[:limit]
+
+    reports = []
+    accepted_plays = 0
+    for pid in ids:
+        report = digitize_play_steps(
+            db_path,
+            pid,
+            upload_root=upload_root,
+            write=not dry_run,
+            force=force,
+            min_markers=min_markers,
+        )
+        reports.append(
+            {
+                "play_id": pid,
+                "name": report.get("name"),
+                "accepted_steps": report.get("accepted_steps", 0),
+                "ok": report.get("ok"),
+                "error": report.get("error"),
+            }
+        )
+        if report.get("accepted_steps", 0) > 0:
+            accepted_plays += 1
+
+    return jsonify(
+        {
+            "ok": True,
+            "play_count": len(ids),
+            "accepted_plays": accepted_plays,
+            "dry_run": dry_run,
+            "plays": reports,
+        }
+    )
+
+
 @playbook_bp.route("/api/playbook/categories")
 @require_feature("ENABLE_PRACTICES")
 def playbook_categories_api():
