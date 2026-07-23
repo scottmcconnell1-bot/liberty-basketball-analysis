@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit{% else %}New{% endif %} Recruiting Profile – Liberty Basketball{% endblock %}
+
+{% block content %}
+{% set p = profile or defaults or {} %}
+<div class="page-header">
+  <h2>{% if mode == 'edit' %}Edit Profile{% else %}New Recruiting Profile{% endif %}</h2>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('recruiting.recruiting_page') }}">← Back</a>
+</div>
+
+<div class="card" style="max-width:820px;">
+  <form id="recruiting-form">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label for="player_id">Link roster player (optional)</label>
+        <select class="form-control" id="player_id" name="player_id">
+          <option value="">— Not linked —</option>
+          {% for player in players %}
+          <option value="{{ player.id }}"
+            {% if p.player_id and p.player_id == player.id %}selected{% endif %}>
+            {{ player.name }}{% if player.jersey_number %} #{{ player.jersey_number }}{% endif %}
+            {% if player.level %} ({{ player.level }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="display_name">Athlete name *</label>
+        <input class="form-control" id="display_name" name="display_name" required
+               value="{{ p.display_name or '' }}">
+      </div>
+      <div class="form-group">
+        <label for="grad_year">Graduation year</label>
+        <input class="form-control" id="grad_year" name="grad_year" type="number" min="2000" max="2100"
+               value="{{ p.grad_year or '' }}" placeholder="e.g. 2027">
+      </div>
+      <div class="form-group">
+        <label for="position">Position</label>
+        <input class="form-control" id="position" name="position" value="{{ p.position or '' }}" placeholder="G / F / C">
+      </div>
+      <div class="form-group">
+        <label for="height">Height</label>
+        <input class="form-control" id="height" name="height" value="{{ p.height or '' }}" placeholder="5'10&quot;">
+      </div>
+      <div class="form-group">
+        <label for="school_program">School / program</label>
+        <input class="form-control" id="school_program" name="school_program"
+               value="{{ p.school_program or 'Liberty Charter' }}">
+      </div>
+      <div class="form-group">
+        <label for="program_level">Program level</label>
+        <select class="form-control" id="program_level" name="program_level">
+          <option value="">—</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if p.program_level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label for="contact_email">Contact email</label>
+        <input class="form-control" id="contact_email" name="contact_email" type="email"
+               value="{{ p.contact_email or '' }}" placeholder="coach or family contact">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label for="highlight_url">Highlight / film URL</label>
+        <input class="form-control" id="highlight_url" name="highlight_url"
+               value="{{ p.highlight_url or '' }}" placeholder="https://…">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label for="film_links">Additional film links (one URL per line)</label>
+        <textarea class="form-control" id="film_links" name="film_links" rows="3" placeholder="https://…">{% if p.film_links %}{% for link in p.film_links %}{{ link.url }}
+{% endfor %}{% endif %}</textarea>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label for="bio">Bio / notes for coaches</label>
+        <textarea class="form-control" id="bio" name="bio" rows="3">{{ p.bio or '' }}</textarea>
+      </div>
+      <div class="form-group">
+        <label for="season_summary">Season summary</label>
+        <textarea class="form-control" id="season_summary" name="season_summary" rows="3"
+                  placeholder="Auto-filled from stats when linked">{{ p.season_summary or '' }}</textarea>
+      </div>
+      <div class="form-group">
+        <label for="career_summary">Career summary</label>
+        <textarea class="form-control" id="career_summary" name="career_summary" rows="3">{{ p.career_summary or '' }}</textarea>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <label style="display:flex;gap:8px;align-items:center;">
+          <input type="checkbox" id="is_published" name="is_published" style="width:auto;"
+                 {% if p.is_published %}checked{% endif %}>
+          Mark as ready to share
+        </label>
+      </div>
+    </div>
+
+    <div id="stats-preview" class="text-muted" style="margin:12px 0;font-size:0.9rem;">
+      {% if p.stats and p.stats.games %}
+      Linked stats: {{ p.stats.games }} GP · {{ p.stats.ppg }} PPG · {{ p.stats.rpg }} RPG · {{ p.stats.apg }} APG
+      {% endif %}
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+      <button class="btn btn-primary" type="submit">{% if mode == 'edit' %}Save profile{% else %}Create profile{% endif %}</button>
+      {% if mode == 'edit' and profile %}
+      <button class="btn btn-secondary" type="button" id="btn-share">Create / copy share link</button>
+      {% if profile.share_url %}
+      <a class="btn btn-secondary" href="{{ profile.share_url }}" target="_blank" rel="noopener">Open public view</a>
+      <a class="btn btn-secondary" href="{{ profile.print_url }}" target="_blank" rel="noopener">Print view</a>
+      {% endif %}
+      <button class="btn btn-secondary" type="button" id="btn-delete" style="margin-left:auto;color:var(--color-danger);">Delete</button>
+      {% endif %}
+    </div>
+    <p id="form-status" class="text-muted" style="margin-top:12px;"></p>
+  </form>
+</div>
+
+<script>
+(function () {
+  var mode = {{ mode|tojson }};
+  var profileId = {{ (profile.id if profile else none)|tojson }};
+  var form = document.getElementById('recruiting-form');
+  var statusEl = document.getElementById('form-status');
+  var playerSelect = document.getElementById('player_id');
+
+  function filmLinksPayload() {
+    return (document.getElementById('film_links').value || '')
+      .split(/\r?\n/)
+      .map(function (line) { return line.trim(); })
+      .filter(Boolean)
+      .map(function (url) { return { url: url, label: '' }; });
+  }
+
+  function payloadFromForm() {
+    return {
+      player_id: playerSelect.value || null,
+      display_name: document.getElementById('display_name').value,
+      grad_year: document.getElementById('grad_year').value || null,
+      position: document.getElementById('position').value,
+      height: document.getElementById('height').value,
+      school_program: document.getElementById('school_program').value,
+      program_level: document.getElementById('program_level').value,
+      contact_email: document.getElementById('contact_email').value,
+      highlight_url: document.getElementById('highlight_url').value,
+      film_links: filmLinksPayload(),
+      bio: document.getElementById('bio').value,
+      season_summary: document.getElementById('season_summary').value,
+      career_summary: document.getElementById('career_summary').value,
+      is_published: document.getElementById('is_published').checked
+    };
+  }
+
+  playerSelect.addEventListener('change', async function () {
+    var id = playerSelect.value;
+    if (!id) return;
+    try {
+      var resp = await fetch('/api/recruiting/player-defaults/' + id);
+      if (!resp.ok) return;
+      var data = await resp.json();
+      if (!document.getElementById('display_name').value) {
+        document.getElementById('display_name').value = data.display_name || '';
+      }
+      if (!document.getElementById('position').value) {
+        document.getElementById('position').value = data.position || '';
+      }
+      if (!document.getElementById('school_program').value) {
+        document.getElementById('school_program').value = data.school_program || '';
+      }
+      if (!document.getElementById('program_level').value && data.program_level) {
+        document.getElementById('program_level').value = data.program_level;
+      }
+      if (data.season_summary && !document.getElementById('season_summary').value) {
+        document.getElementById('season_summary').value = data.season_summary;
+      }
+      if (data.career_summary && !document.getElementById('career_summary').value) {
+        document.getElementById('career_summary').value = data.career_summary;
+      }
+      var preview = document.getElementById('stats-preview');
+      if (data.stats && data.stats.games) {
+        preview.textContent = 'Linked stats: ' + data.stats.games + ' GP · ' +
+          data.stats.ppg + ' PPG · ' + data.stats.rpg + ' RPG · ' + data.stats.apg + ' APG';
+      } else {
+        preview.textContent = 'No game stats found for this player yet.';
+      }
+    } catch (e) { /* ignore */ }
+  });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    statusEl.textContent = 'Saving…';
+    var body = payloadFromForm();
+    try {
+      var url = mode === 'edit' ? ('/api/recruiting/' + profileId) : '/api/recruiting';
+      var resp = await fetch(url, {
+        method: mode === 'edit' ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Save failed');
+      statusEl.textContent = 'Saved.';
+      if (mode === 'create') {
+        window.location.href = '/recruiting/' + data.id + '/edit';
+      }
+    } catch (err) {
+      statusEl.textContent = err.message || String(err);
+    }
+  });
+
+  var shareBtn = document.getElementById('btn-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async function () {
+      try {
+        var resp = await fetch('/api/recruiting/' + profileId + '/share', { method: 'POST' });
+        var data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Share failed');
+        if (navigator.clipboard && data.url) {
+          await navigator.clipboard.writeText(data.url);
+          statusEl.textContent = 'Share link copied.';
+        } else {
+          prompt('Share URL', data.url);
+        }
+      } catch (err) {
+        statusEl.textContent = err.message || String(err);
+      }
+    });
+  }
+
+  var delBtn = document.getElementById('btn-delete');
+  if (delBtn) {
+    delBtn.addEventListener('click', async function () {
+      if (!confirm('Delete this recruiting profile?')) return;
+      var resp = await fetch('/api/recruiting/' + profileId, { method: 'DELETE' });
+      if (resp.ok) window.location.href = '/recruiting?message=Profile+deleted';
+    });
+  }
+})();
+</script>
+{% endblock %}
