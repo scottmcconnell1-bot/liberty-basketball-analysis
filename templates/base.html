@@ -689,6 +689,9 @@
     <div class="nav-dropdown">
       <a href="javascript:void(0)" role="button" tabindex="0">More</a>
       <div class="dropdown-menu">
+        {% if features.ENABLE_RECRUITING %}
+        <a href="/recruiting" {% if nav_active('recruiting.*') %}class="active"{% endif %}>Recruiting</a>
+        {% endif %}
         {% if features.ENABLE_NFHS_MATCHING %}
         <a href="/nfhs-matches" {% if nav_active('games.nfhs_matches_page', 'games.nfhs_matches_confirm_page', 'games.nfhs_matches_reject_page') %}class="active"{% endif %}>NFHS Matches</a>
         {% endif %}

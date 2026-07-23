@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.display_name }} – Recruiting Profile{% endblock %}
+
+{% block content %}
+<style>
+  .recruit-public { max-width: 820px; margin: 0 auto; }
+  .recruit-public .hero {
+    background: linear-gradient(135deg, #01696f 0%, #014f53 100%);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    margin-bottom: 16px;
+  }
+  .recruit-public .hero h1 { font-size: 1.75rem; margin-bottom: 6px; }
+  .recruit-public .meta { display: flex; flex-wrap: wrap; gap: 10px 18px; color: rgba(255,255,255,0.9); font-size: 0.95rem; }
+  .recruit-public .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .recruit-public .stat-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+  }
+  .recruit-public .stat-box {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 14px; text-align: center;
+  }
+  .recruit-public .stat-box .num { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); }
+  .recruit-public .stat-box .lbl { font-size: 0.75rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .recruit-public .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .recruit-public a.film-link { word-break: break-all; }
+  @media (max-width: 640px) {
+    .recruit-public .grid, .recruit-public .stat-strip { grid-template-columns: 1fr 1fr; }
+  }
+  @media print {
+    nav, .report-link, .recruit-actions, .report-drawer, .report-drawer-backdrop { display: none !important; }
+    body { background: #fff; }
+    main { padding: 0 !important; }
+    .recruit-public .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  {% if print_mode %}
+  @media screen {
+    nav { display: none !important; }
+    body { background: #fff; }
+    .recruit-print-bar {
+      position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1px solid var(--color-border);
+      padding: 10px 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between;
+    }
+  }
+  {% endif %}
+</style>
+
+{% if print_mode %}
+<div class="recruit-print-bar recruit-actions">
+  <span class="text-muted">Print-friendly recruiting profile</span>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-primary btn-sm" type="button" onclick="window.print()">Print</button>
+    <a class="btn btn-secondary btn-sm" href="{{ share_url }}">Public view</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="recruit-public">
+  <div class="hero">
+    <div style="font-size:0.8rem;opacity:0.85;margin-bottom:4px;">Liberty Basketball · Recruiting Profile</div>
+    <h1>{{ profile.display_name }}</h1>
+    <div class="meta">
+      {% if profile.program_level_label %}<span>{{ profile.program_level_label }}</span>{% endif %}
+      {% if profile.position %}<span>{{ profile.position }}</span>{% endif %}
+      {% if profile.height %}<span>{{ profile.height }}</span>{% endif %}
+      {% if profile.grad_year %}<span>Class of {{ profile.grad_year }}</span>{% endif %}
+      {% if profile.school_program %}<span>{{ profile.school_program }}</span>{% endif %}
+      {% if profile.player_jersey %}<span>#{{ profile.player_jersey }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% if not print_mode %}
+  <div class="actions recruit-actions">
+    <a class="btn btn-secondary btn-sm" href="{{ print_url }}">Print / export</a>
+    <button class="btn btn-secondary btn-sm" type="button" onclick="navigator.clipboard && navigator.clipboard.writeText({{ share_url|tojson }}).then(function(){this.textContent='Copied!';}.bind(this))">Copy link</button>
+  </div>
+  {% endif %}
+
+  {% if profile.stats and profile.stats.games %}
+  <div class="stat-strip">
+    <div class="stat-box"><div class="num">{{ profile.stats.ppg }}</div><div class="lbl">PPG</div></div>
+    <div class="stat-box"><div class="num">{{ profile.stats.rpg }}</div><div class="lbl">RPG</div></div>
+    <div class="stat-box"><div class="num">{{ profile.stats.apg }}</div><div class="lbl">APG</div></div>
+    <div class="stat-box"><div class="num">{{ profile.stats.games }}</div><div class="lbl">Games</div></div>
+  </div>
+  {% endif %}
+
+  <div class="grid">
+    <div class="card">
+      <h3 style="margin-bottom:8px;font-size:1rem;">Season</h3>
+      <p style="white-space:pre-wrap;line-height:1.5;">{{ profile.season_summary or profile.stats_blurb or '—' }}</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:8px;font-size:1rem;">Career</h3>
+      <p style="white-space:pre-wrap;line-height:1.5;">{{ profile.career_summary or profile.stats_blurb or '—' }}</p>
+    </div>
+  </div>
+
+  {% if profile.bio %}
+  <div class="card" style="margin-top:14px;">
+    <h3 style="margin-bottom:8px;font-size:1rem;">About</h3>
+    <p style="white-space:pre-wrap;line-height:1.55;">{{ profile.bio }}</p>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:14px;">
+    <h3 style="margin-bottom:8px;font-size:1rem;">Film</h3>
+    {% if profile.highlight_url %}
+    <p><a class="film-link" href="{{ profile.highlight_url }}" target="_blank" rel="noopener">{{ profile.highlight_url }}</a></p>
+    {% endif %}
+    {% if profile.film_links %}
+    <ul style="margin:8px 0 0 18px;line-height:1.6;">
+      {% for link in profile.film_links %}
+      <li><a class="film-link" href="{{ link.url }}" target="_blank" rel="noopener">{% if link.label %}{{ link.label }} — {% endif %}{{ link.url }}</a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if not profile.highlight_url and not profile.film_links %}
+    <p class="text-muted">No film links provided.</p>
+    {% endif %}
+  </div>
+
+  {% if profile.contact_email %}
+  <div class="card" style="margin-top:14px;">
+    <h3 style="margin-bottom:8px;font-size:1rem;">Contact</h3>
+    <p><a href="mailto:{{ profile.contact_email }}">{{ profile.contact_email }}</a></p>
+  </div>
+  {% endif %}
+
+  {% if profile.stats and profile.stats.games %}
+  <div class="card" style="margin-top:14px;">
+    <h3 style="margin-bottom:8px;font-size:1rem;">Box-score totals (app)</h3>
+    <p class="text-muted" style="font-size:0.9rem;line-height:1.5;">
+      {{ profile.stats.pts }} PTS · {{ profile.stats.fgm }}/{{ profile.stats.fga }} FG ·
+      {{ profile.stats.threes_made }}/{{ profile.stats.threes_att }} 3PT ·
+      {{ profile.stats.reb }} REB · {{ profile.stats.ast }} AST ·
+      {{ profile.stats.stl }} STL · {{ profile.stats.blk }} BLK ·
+      {{ profile.stats.tov }} TO
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

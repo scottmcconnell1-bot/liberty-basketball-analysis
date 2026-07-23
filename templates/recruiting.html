@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Recruiting Station – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Recruiting Station</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a class="btn btn-primary btn-sm" href="{{ url_for('recruiting.recruiting_new_page') }}">+ New Profile</a>
+  </div>
+</div>
+
+<p class="text-muted" style="margin:-8px 0 16px;max-width:720px;line-height:1.5;">
+  Create shareable recruiting profiles for next-level coaches. Link a roster player when possible,
+  add film links, then copy a public URL or open the print view.
+</p>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:16px;">
+  <form method="get" action="{{ url_for('recruiting.recruiting_page') }}" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+    <div class="form-group" style="margin:0;min-width:180px;">
+      <label for="filter-level">Program level</label>
+      <select class="form-control" id="filter-level" name="level">
+        <option value="">All levels</option>
+        {% for value, label in level_options %}
+        <option value="{{ value }}" {% if filter_level == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead>
+      <tr>
+        <th>Athlete</th>
+        <th>Level</th>
+        <th>Grad</th>
+        <th>Pos</th>
+        <th>School</th>
+        <th>Stats</th>
+        <th>Share</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if profiles %}
+        {% for profile in profiles %}
+        <tr>
+          <td>
+            <strong>{{ profile.display_name }}</strong>
+            {% if profile.player_jersey %}
+            <span class="text-muted">#{{ profile.player_jersey }}</span>
+            {% endif %}
+          </td>
+          <td>{{ profile.program_level_label or "–" }}</td>
+          <td>{{ profile.grad_year or "–" }}</td>
+          <td>{{ profile.position or "–" }}</td>
+          <td>{{ profile.school_program or "–" }}</td>
+          <td style="font-size:0.85rem;">{{ profile.stats_blurb or "–" }}</td>
+          <td>
+            {% if profile.share_token %}
+            <span class="badge" style="background:#dcfce7;color:#166534;">Published</span>
+            {% else %}
+            <span class="text-muted">Private</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('recruiting.recruiting_edit_page', profile_id=profile.id) }}">Edit</a>
+            {% if profile.share_url %}
+            <a class="btn btn-secondary btn-sm" href="{{ profile.share_url }}" target="_blank" rel="noopener">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ profile.print_url }}" target="_blank" rel="noopener">Print</a>
+            {% endif %}
+            <button class="btn btn-primary btn-sm" type="button" data-share-id="{{ profile.id }}">Share link</button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="8" class="text-muted" style="padding:24px;text-align:center;">No recruiting profiles yet. Create one to get started.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-share-id]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var id = btn.getAttribute('data-share-id');
+      btn.disabled = true;
+      try {
+        var resp = await fetch('/api/recruiting/' + id + '/share', { method: 'POST' });
+        var data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Share failed');
+        if (navigator.clipboard && data.url) {
+          await navigator.clipboard.writeText(data.url);
+          btn.textContent = 'Copied!';
+        } else {
+          prompt('Share URL', data.url);
+          btn.textContent = 'Shared';
+        }
+        setTimeout(function () { window.location.reload(); }, 600);
+      } catch (err) {
+        alert(err.message || String(err));
+        btn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

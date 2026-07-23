@@ -2509,6 +2509,26 @@ def _ensure_migration_columns(db):
             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (uploaded_by) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS recruiting_profiles (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id        INTEGER REFERENCES players(id),
+            display_name     TEXT NOT NULL,
+            grad_year        INTEGER,
+            position         TEXT,
+            height           TEXT,
+            school_program   TEXT,
+            program_level    TEXT,
+            contact_email    TEXT,
+            highlight_url    TEXT,
+            film_links_json  TEXT,
+            bio              TEXT,
+            season_summary   TEXT,
+            career_summary   TEXT,
+            share_token      TEXT UNIQUE,
+            is_published     INTEGER NOT NULL DEFAULT 0,
+            created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
     """)
     # ── New columns on existing tables ──────────────────────
     col_migrations = [

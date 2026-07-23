@@ -12,6 +12,7 @@ class Features:
     ENABLE_PLAYER_DEVELOPMENT = True
     ENABLE_PRACTICE_PLAYLISTS = True
     ENABLE_ASSISTANT_READ_ONLY = True
+    ENABLE_RECRUITING = True  # Recruiting Station MVP — Scott: toggle off in Settings if needed
     ENABLE_WEEKLY_PACKET = False
     ENABLE_SEASON_REVIEW = False
 
