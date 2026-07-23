@@ -8,6 +8,8 @@
     <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">📥 Bulk Import</a>
+    <button class="btn btn-secondary btn-sm" type="button" onclick="digitizeAllPlays()"
+            title="Auto-detect O/X on all image-only imported plays">✨ Digitize all</button>
     <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
            id="playSearch" oninput="filterPlays(this.value)">
   </div>
@@ -124,8 +126,10 @@
         <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
         <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
         <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
-        {% if is_readonly %}
         <button class="btn btn-primary btn-sm" onclick="playAnimation()">▶ Play All</button>
+        {% if editing_play and editing_play.id and view_mode != "share" %}
+        <button class="btn btn-secondary btn-sm" type="button" id="digitizeBtn"
+                onclick="digitizePlay()" title="Detect O/X from imported diagram PNGs">✨ Digitize</button>
         {% endif %}
       </div>
     </div>
@@ -458,24 +462,43 @@ function toggleCourt() {
 }
 
 // ── Player Rendering ─────────────────────────────────────
+function stepHasCanvasPositions(step) {
+  const pos = step?.positions || {};
+  return Object.keys(pos).some((key) => {
+    const p = pos[key];
+    return p && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y));
+  });
+}
+
 function renderStep() {
   const step = steps[currentStep];
   const playerLayer = document.getElementById('playerLayer');
   const arrowLayer = document.getElementById('arrowLayer');
   if (!step || !playerLayer || !arrowLayer) return;
   playerLayer.innerHTML = '';
-  // Render players
-  for (let i = 0; i < 5; i++) {
-    const pid = 'o' + (i + 1);
-    const pos = step.positions[pid] || defaultOffensePos(i);
-    renderPlayerToken(playerLayer, pid, pos, PLAYER_COLORS[i], PLAYER_LABELS[i], 'offense');
-  }
-
-  // Render defensive players (1-5)
-  for (let i = 0; i < 5; i++) {
-    const pid = 'd' + (i + 1);
-    const pos = step.positions[pid] || defaultDefensePos(i);
-    renderPlayerToken(playerLayer, pid, pos, DEFENSE_COLORS[i], PLAYER_LABELS[i], 'defense');
+  const hasCanvas = stepHasCanvasPositions(step);
+  // Digitized / partial sets: only draw tokens that exist (do not invent defaults).
+  // Empty positions (new blank play): show full O/X defaults for editing.
+  if (hasCanvas) {
+    for (let i = 0; i < 5; i++) {
+      const pid = 'o' + (i + 1);
+      if (!step.positions[pid]) continue;
+      renderPlayerToken(playerLayer, pid, step.positions[pid], PLAYER_COLORS[i], PLAYER_LABELS[i], 'offense');
+    }
+    for (let i = 0; i < 5; i++) {
+      const pid = 'd' + (i + 1);
+      if (!step.positions[pid]) continue;
+      renderPlayerToken(playerLayer, pid, step.positions[pid], DEFENSE_COLORS[i], PLAYER_LABELS[i], 'defense');
+    }
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const pid = 'o' + (i + 1);
+      renderPlayerToken(playerLayer, pid, defaultOffensePos(i), PLAYER_COLORS[i], PLAYER_LABELS[i], 'offense');
+    }
+    for (let i = 0; i < 5; i++) {
+      const pid = 'd' + (i + 1);
+      renderPlayerToken(playerLayer, pid, defaultDefensePos(i), DEFENSE_COLORS[i], PLAYER_LABELS[i], 'defense');
+    }
   }
 
   // Render arrows for this step
@@ -1055,16 +1078,19 @@ function animateToStep(targetIndex, durationMs = 700, onFrame) {
     updateMovementList();
     return Promise.resolve();
   }
-  const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions));
-  const toPositions = steps[targetIndex].positions;
+  const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions || {}));
+  const toPositions = JSON.parse(JSON.stringify(steps[targetIndex].positions || {}));
+  const ids = new Set([...Object.keys(fromPositions), ...Object.keys(toPositions)]);
   const start = performance.now();
   return new Promise((resolve) => {
     function frame(now) {
       const t = Math.min(1, (now - start) / durationMs);
       const blended = {};
-      Object.keys(toPositions).forEach((pid) => {
-        const from = fromPositions[pid] || toPositions[pid];
-        blended[pid] = lerpPosition(from, toPositions[pid], t);
+      ids.forEach((pid) => {
+        const to = toPositions[pid];
+        const from = fromPositions[pid] || to;
+        if (!to || !from) return;
+        blended[pid] = lerpPosition(from, to, t);
       });
       steps[targetIndex].positions = blended;
       renderStep();
@@ -1082,6 +1108,60 @@ function animateToStep(targetIndex, durationMs = 700, onFrame) {
     }
     animFrame = requestAnimationFrame(frame);
   });
+}
+
+async function digitizePlay(force) {
+  if (!playId) {
+    alert('Save the play first, then Digitize.');
+    return;
+  }
+  const btn = document.getElementById('digitizeBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Digitizing…';
+  }
+  try {
+    const res = await fetch(`/api/playbook/play/${playId}/digitize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ force: Boolean(force) }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert(data.error || 'Digitize failed');
+      return;
+    }
+    const accepted = data.accepted_steps || 0;
+    alert(`Digitized ${accepted} of ${data.step_count || 0} step(s). Reload to see court tokens, then Play All.`);
+    location.reload();
+  } catch (err) {
+    alert(err.message || String(err));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '✨ Digitize';
+    }
+  }
+}
+
+async function digitizeAllPlays() {
+  if (!confirm('Digitize all image-only imported plays? This may take several minutes.')) return;
+  try {
+    const res = await fetch('/api/playbook/digitize-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert(data.error || 'Digitize all failed');
+      return;
+    }
+    alert(`Digitized ${data.accepted_plays || 0} of ${data.play_count || 0} plays.`);
+    location.reload();
+  } catch (err) {
+    alert(err.message || String(err));
+  }
 }
 
 async function playAnimation() {
