@@ -12,6 +12,7 @@ class Features:
     ENABLE_PLAYER_DEVELOPMENT = True
     ENABLE_PRACTICE_PLAYLISTS = True
     ENABLE_ASSISTANT_READ_ONLY = True
+    ENABLE_COACH_PORTAL = True  # Approach A — Scott: default True intentional; toggle off in Settings if needed
     ENABLE_WEEKLY_PACKET = False
     ENABLE_SEASON_REVIEW = False
 
@@ -23,6 +24,8 @@ class AnalysisConfig:
 class Config:
     DATABASE = os.environ.get("LIBERTY_DATABASE", "film_analysis.db")
     UPLOAD_FOLDER = os.environ.get("LIBERTY_UPLOAD_FOLDER", "uploads")
+    # Shared coach portal password (env only — no schema.sql / DB storage).
+    COACH_PASSWORD = os.environ.get("LIBERTY_COACH_PASSWORD", "")
     FEATURES = {
         name: getattr(Features, name)
         for name in dir(Features)

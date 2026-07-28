@@ -25,6 +25,7 @@
   cursor: pointer;
   font-size: 0.82rem;
   border: 1px solid transparent;
+  min-height: 36px;
 }
 .playbook-tree-item:hover {
   background: #f3f4f6;
@@ -62,5 +63,15 @@
   }
   .playbook-sidebar {
     position: static;
+  }
+}
+@media (max-width: 768px) {
+  .playbook-tree-item {
+    min-height: 44px;
+    font-size: 0.95rem;
+    padding: 10px 10px;
+  }
+  .playbook-tree {
+    max-height: none;
   }
 }
