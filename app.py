@@ -13,10 +13,11 @@ Blueprint modules:
   player_dev - Player development clips, practice playlists
   ai         - Video upload, AI analysis, video management
   scouting   - Scouting reports, NFHS download, opponent analysis
+  coach      - Coach portal shared-password soft gate
 """
 
 import os
-from flask import Flask, g, jsonify, request
+from flask import Flask, g, jsonify, request, session
 
 from config import Config
 
@@ -45,6 +46,7 @@ from blueprints.messaging import messaging_bp
 from blueprints.users import users_bp, _current_user
 from blueprints.scouting import scouting_bp
 from blueprints.bulk_import import bulk_import_bp
+from blueprints.coach import coach_bp, enforce_coach_ops_denylist
 
 app.register_blueprint(messaging_bp)
 app.register_blueprint(users_bp)
@@ -58,6 +60,7 @@ app.register_blueprint(ai_bp)
 app.register_blueprint(playbook_bp)
 app.register_blueprint(scouting_bp)
 app.register_blueprint(bulk_import_bp)
+app.register_blueprint(coach_bp)
 
 # ── Template Context Processors ──────────────────────────────
 from helpers import get_runtime_settings
@@ -65,9 +68,13 @@ from helpers import get_runtime_settings
 @app.context_processor
 def inject_feature_flags():
     settings = get_runtime_settings()
+    coach_portal = bool(session.get("coach_portal"))
     return {
         "features": settings["features"],
         "analysis_config": settings["analysis"],
+        "coach_portal": coach_portal,
+        # Alias for templates that hide Save/Delete/Create in coach mode
+        "coach_readonly": coach_portal,
     }
 
 
@@ -122,6 +129,12 @@ def require_auth_for_api():
     pass  # No auth enforced yet — will be enabled in a future phase
 
 
+@app.before_request
+def coach_portal_ops_gate():
+    """Soft denylist for coach portal sessions (does not enable global auth)."""
+    return enforce_coach_ops_denylist()
+
+
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess
 from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
@@ -141,9 +154,9 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    import os
     _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=5000, debug=_debug, use_reloader=False)
+    _port = int(os.environ.get("PORT", "8080"))
+    app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)
 
 
 @app.route("/sw.js")

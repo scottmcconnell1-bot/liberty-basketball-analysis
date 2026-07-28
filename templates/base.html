@@ -24,11 +24,31 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: var(--color-bg);
       color: var(--color-text);
       min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.45;
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+
+    img, video {
+      max-width: 100%;
+      height: auto;
+    }
+
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* ── Nav ───────────────────────────── */
@@ -340,6 +360,34 @@
     .badge-win  { background: #dcfce7; color: #166534; }
     .badge-loss { background: #fee2e2; color: #991b1b; }
     .badge-scheduled { background: #f3f4f6; color: #4b5563; }
+    .coach-view-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      white-space: nowrap;
+      flex-shrink: 1;
+      max-width: 100%;
+    }
+    .coach-readonly-banner {
+      background: #ecfdf5;
+      color: #065f46;
+      border-bottom: 1px solid #a7f3d0;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
 
     /* ── Utility ────────────────────────── */
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
@@ -442,38 +490,109 @@
     @media (max-width: 768px) {
       /* Nav: hamburger */
       nav { padding: 0 10px; height: 52px; }
-      nav .brand { font-size: 0.85rem; }
+      nav .brand { font-size: 0.9rem; }
       nav .brand-logo { height: 22px; }
       .nav-hamburger { display: flex !important; }
-      .nav-links { display: none; position: absolute; top: 52px; left: 0; right: 0; background: var(--color-primary); flex-direction: column; padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 299; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 52px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: var(--color-primary);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 0 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        z-index: 299;
+        max-height: calc(100vh - 52px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .nav-links.open { display: flex; }
-      .nav-links a { padding: 10px 16px; font-size: 0.85rem; white-space: normal; }
-      .nav-links .nav-dropdown { flex-direction: column; align-items: stretch; }
-      .nav-links .nav-dropdown > a { padding: 10px 16px; }
-      .nav-links .nav-dropdown .dropdown-menu { position: static; display: none; box-shadow: none; background: rgba(0,0,0,0.15); border-radius: 0; min-width: 0; }
+      .nav-links a {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        font-size: 1rem;
+        min-height: 44px;
+        white-space: normal;
+        flex-shrink: 1;
+      }
+      .nav-links .nav-dropdown { flex-direction: column; align-items: stretch; width: 100%; }
+      .nav-links .nav-dropdown > a { padding: 12px 16px; min-height: 44px; }
+      .nav-links .nav-dropdown .dropdown-menu { position: static; display: none; box-shadow: none; background: rgba(0,0,0,0.15); border-radius: 0; min-width: 0; width: 100%; }
       .nav-links .nav-dropdown.open .dropdown-menu { display: block; }
-      .nav-links .nav-dropdown .dropdown-menu a { padding: 8px 24px; font-size: 0.8rem; }
+      .nav-links .nav-dropdown .dropdown-menu a { padding: 12px 24px; font-size: 0.95rem; min-height: 44px; }
       .nav-links .spacer { display: none; }
-      .nav-links .report-link { margin: 4px 16px; text-align: center; }
+      .nav-links .report-link { margin: 4px 16px; text-align: center; justify-content: center; }
+      .nav-links .coach-view-badge {
+        margin: 8px 16px;
+        align-self: flex-start;
+        white-space: normal;
+        line-height: 1.3;
+      }
+
+      /* Coach banner: compact, wraps */
+      .coach-readonly-banner {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        line-height: 1.35;
+      }
 
       /* Main */
-      main { margin: 16px auto; padding: 0 12px; }
+      main { margin: 12px auto; padding: 0 10px; max-width: 100%; }
 
       /* Cards */
-      .card { padding: 14px 16px; margin-bottom: 12px; }
+      .card { padding: 12px 14px; margin-bottom: 12px; max-width: 100%; }
 
       /* Buttons */
-      .btn { padding: 10px 14px; font-size: 0.85rem; min-height: 44px; }
-      .btn-sm { padding: 8px 12px; font-size: 0.8rem; min-height: 36px; }
+      .btn { padding: 10px 14px; font-size: 0.9rem; min-height: 44px; }
+      .btn-sm { padding: 8px 12px; font-size: 0.85rem; min-height: 40px; }
 
-      /* Tables → card layout */
+      /* Inline multi-column grids (filters/forms) → stack */
+      main [style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Tables → card layout when wrapped */
+      .table-responsive { max-width: 100%; }
       .table-responsive table { min-width: 0; }
       .table-responsive thead { display: none; }
       .table-responsive tbody tr { display: block; margin-bottom: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; background: var(--color-surface); }
-      .table-responsive tbody td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border: none; text-align: right; font-size: 0.82rem; }
-      .table-responsive tbody td::before { content: attr(data-label); font-weight: 600; color: var(--color-muted); font-size: 0.72rem; text-transform: uppercase; text-align: left; margin-right: 12px; flex-shrink: 0; }
+      .table-responsive tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 8px 0;
+        border: none;
+        text-align: right;
+        font-size: 0.9rem;
+        word-break: break-word;
+      }
+      .table-responsive tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        text-align: left;
+        margin-right: 12px;
+        flex-shrink: 0;
+        max-width: 42%;
+      }
       .table-responsive tbody td:last-child { border-bottom: none; }
       .table-responsive tbody td:last-child::before { display: none; }
+
+      /* Bare tables (not card-layout) still scroll instead of crushing */
+      .card > table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
 
       /* Stat grid */
       .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -482,20 +601,40 @@
 
       /* Team grid */
       .team-grid { grid-template-columns: 1fr; }
+      .team-card { padding: 14px; }
+      .team-name { font-size: 1rem; }
+      .sched-opp { white-space: normal; }
 
       /* Page header */
-      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-      .page-header h2 { font-size: 1.1rem; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .page-header h2 { font-size: 1.2rem; }
+      .page-header .form-control { width: 100% !important; max-width: 100%; }
+      .page-header > div { width: 100%; }
 
-      /* Forms */
+      /* Forms — 16px+ avoids iOS zoom */
       .form-control { font-size: 16px; padding: 10px 12px; }
+      .form-group label { font-size: 0.9rem; }
 
       /* Modals */
-      .modal { padding: 20px; margin: 10px; width: calc(100% - 20px); }
+      .modal { padding: 20px; margin: 10px; width: calc(100% - 20px); max-width: 100%; }
 
-      /* Schedule rows */
-      .sched-row { grid-template-columns: 100px 1fr 24px; gap: 8px; }
-      .sched-date { font-size: 0.72rem; }
+      /* Schedule rows: date on its own line so opponent isn't crushed */
+      .sched-row {
+        grid-template-columns: 1fr 28px;
+        gap: 4px 8px;
+        padding: 8px 0;
+      }
+      .sched-date {
+        grid-column: 1 / -1;
+        text-align: left;
+        border-right: none;
+        font-size: 0.8rem;
+        white-space: normal;
+        padding-bottom: 2px;
+        margin-bottom: 2px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .sched-opp { font-size: 0.95rem; }
 
       /* Report drawer */
       .report-drawer { width: 100%; }
@@ -504,10 +643,29 @@
     @media (max-width: 480px) {
       .stat-grid { grid-template-columns: 1fr; }
       nav .brand span { display: none; }
+      main { padding: 0 8px; }
+      .card { padding: 12px; }
+      .coach-readonly-banner { font-size: 0.75rem; padding: 5px 8px; }
     }
 
     /* ── Hamburger button (hidden on desktop) ── */
-    .nav-hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; margin-left: auto; align-items: center; justify-content: center; }
+    .nav-hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin-left: auto;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 310;
+      min-width: 44px;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
   {% block head %}{% endblock %}
   {% block styles %}{% endblock %}
@@ -525,18 +683,23 @@
         if (btn) btn.textContent = on ? '🏷 Hide Labels' : '🏷 Show Labels';
       }
 
-      // Inject toggle button
+      // Inject toggle only when a top-level nav report anchor exists (direct child of nav).
+      // Skip coach portal / nested anchors so we do not append a competing
+      // margin-left:auto control beside the hamburger.
       function injectToggle() {
         if (document.getElementById('frame-label-toggle')) return;
         const nav = document.querySelector('nav');
         if (!nav) return;
+        const reportLink = nav.querySelector('.report-link');
+        // Must be a direct child of nav for insertBefore; coach portal has no report link.
+        if (!reportLink || reportLink.parentElement !== nav) return;
         const btn = document.createElement('button');
         btn.id = 'frame-label-toggle';
         btn.className = 'btn btn-sm';
         btn.style.cssText = 'background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:2px 8px;font-size:0.7rem;margin-left:auto;';
         btn.textContent = labelsActive ? '🏷 Hide Labels' : '🏷 Show Labels';
         btn.addEventListener('click', () => toggleLabels(!labelsActive));
-        nav.insertBefore(btn, nav.querySelector('.report-link'));
+        nav.insertBefore(btn, reportLink);
         if (labelsActive) {
           // Auto-activate after DOM ready
           setTimeout(() => toggleLabels(true), 100);
@@ -643,7 +806,7 @@
 <body data-report-source-default="{% if compose_source is defined and compose_source %}{{ compose_source }}{% else %}{{ request.full_path if request.query_string else request.path }}{% endif %}">
   <nav>
     <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> <span>Liberty Basketball</span></a>
-    <button class="nav-hamburger" type="button" aria-label="Toggle navigation" onclick="document.getElementById('nav-links').classList.toggle('open')">☰</button>
+    <button class="nav-hamburger" type="button" id="nav-hamburger" aria-label="Toggle navigation" aria-controls="nav-links" aria-expanded="false">☰</button>
     <div class="nav-links" id="nav-links">
     <a href="/" {% if nav_active('core.index') %}class="active"{% endif %}>Dashboard</a>
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
@@ -686,20 +849,31 @@
     <a href="/playbook" {% if nav_active('playbook.*') %}class="active"{% endif %}>Playbook</a>
     <a href="/messages" {% if nav_active('messaging.*') %}class="active"{% endif %}>💬 Messages</a>
     {% endif %}
+    {% if coach_portal and features.get('ENABLE_RECRUITING') %}
+    <a href="/recruiting" {% if nav_active('recruiting.*') %}class="active"{% endif %}>Recruiting</a>
+    {% endif %}
+    {% if not coach_portal %}
     <div class="nav-dropdown">
       <a href="javascript:void(0)" role="button" tabindex="0">More</a>
       <div class="dropdown-menu">
+        {% if features.get('ENABLE_RECRUITING') %}
+        <a href="/recruiting" {% if nav_active('recruiting.*') %}class="active"{% endif %}>Recruiting</a>
+        {% endif %}
         {% if features.ENABLE_NFHS_MATCHING %}
         <a href="/nfhs-matches" {% if nav_active('games.nfhs_matches_page', 'games.nfhs_matches_confirm_page', 'games.nfhs_matches_reject_page') %}class="active"{% endif %}>NFHS Matches</a>
-        {% endif %}
         <div class="dropdown-divider"></div>
+        {% endif %}
         <a href="/settings" {% if nav_active('core.settings_page', 'core.custom_weights_guide_page') %}class="active"{% endif %}>Settings</a>
         <a href="/users" {% if nav_active('core.users_page') %}class="active"{% endif %}>Users</a>
         <a href="/debug" {% if nav_active('core.debug_page') %}class="active"{% endif %}>Debug / Issues</a>
       </div>
     </div>
+    {% endif %}
     <span class="spacer"></span>
-    {% if session.get('user_id') %}
+    {% if coach_portal %}
+    <span class="coach-view-badge" title="Browse only — changes are not saved in Coach view">Coach view · read only</span>
+    <a href="{{ url_for('coach.coach_logout') }}">Sign out</a>
+    {% elif session.get('user_id') %}
     <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-badge" style="display:none;">0</span></a>
     <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
     <a href="{{ url_for('users.logout') }}">Logout</a>
@@ -707,12 +881,18 @@
     <a href="{{ url_for('users.login') }}">Sign In</a>
     <a href="{{ url_for('users.register') }}">Register</a>
     {% endif %}
+    {% if not coach_portal %}
     <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+    {% endif %}
     </div>
   </nav>
+  {% if coach_portal or coach_readonly %}
+  <div class="coach-readonly-banner" role="status">Coach view — read only</div>
+  {% endif %}
   <main>
     {% block content %}{% endblock %}
   </main>
+  {% if not coach_portal %}
   <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
   <aside class="report-drawer" id="report-drawer" aria-hidden="true">
     <div class="report-drawer-header">
@@ -760,8 +940,10 @@
       </div>
     </form>
   </aside>
+  {% endif %}
   {% block scripts %}{% endblock %}
 
+  {% if not coach_portal %}
   {# — Report Drawer — #}
   <script>
   (function initReportDrawer() {
@@ -878,6 +1060,7 @@
     })();
 
   </script>
+  {% endif %}
 
   {# — Service Worker + Push Subscription — #}
   <script>
@@ -991,13 +1174,35 @@
     // ── Mobile nav dropdown toggle ───────────
     (function() {
       var navLinks = document.getElementById('nav-links');
+      var hamburger = document.getElementById('nav-hamburger');
       if (!navLinks) return;
+
+      function setNavOpen(open) {
+        navLinks.classList.toggle('open', open);
+        if (hamburger) hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) {
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(dd) {
+            dd.classList.remove('open');
+          });
+        }
+      }
+
+      // Hamburger is a sibling of #nav-links (not inside it). Must stopPropagation
+      // so the document "click outside" handler does not immediately close the menu.
+      if (hamburger) {
+        hamburger.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          setNavOpen(!navLinks.classList.contains('open'));
+        });
+      }
+
       // Close hamburger when clicking a top-level link
       navLinks.querySelectorAll('a[href]').forEach(function(a) {
         a.addEventListener('click', function() {
           // Only close if it's a direct link (not a dropdown toggle)
           if (!a.parentElement.classList.contains('nav-dropdown')) {
-            navLinks.classList.remove('open');
+            setNavOpen(false);
           }
         });
       });
@@ -1005,6 +1210,7 @@
       navLinks.querySelectorAll('.nav-dropdown > a').forEach(function(toggle) {
         toggle.addEventListener('click', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           var dd = toggle.parentElement;
           // Close other open dropdowns
           navLinks.querySelectorAll('.nav-dropdown').forEach(function(other) {
@@ -1013,13 +1219,12 @@
           dd.classList.toggle('open');
         });
       });
-      // Close dropdowns when clicking outside
+      // Close menu when clicking outside nav chrome (hamburger is outside #nav-links)
       document.addEventListener('click', function(e) {
-        if (!navLinks.contains(e.target)) {
-          navLinks.classList.remove('open');
-          navLinks.querySelectorAll('.nav-dropdown').forEach(function(dd) {
-            dd.classList.remove('open');
-          });
+        var inNavChrome = navLinks.contains(e.target) ||
+          (hamburger && (e.target === hamburger || hamburger.contains(e.target)));
+        if (!inNavChrome) {
+          setNavOpen(false);
         }
       });
     })();
