@@ -1,0 +1,109 @@
+# Liberty Master Project Outline — FINAL
+
+## Context & Instructions for Rex
+
+Rex, you do not have access to Google Docs, so this Markdown file is the **single source of truth** for the Liberty project.[file:54] Read it carefully and follow the phases in order. Every new feature should be:
+
+- Implemented in **small, reviewable steps**.
+- Guarded by a **feature flag** so it can be turned off without migrations.
+- Designed to match how I actually coach and how much time I have in-season.
+
+If something in this outline conflicts with the codebase, the outline wins unless we explicitly update it.
+
+---
+
+## Changelog
+
+- **2026-04-28**
+  - Clarified Phase 2.2 to include `scheduled_games` CRUD + `/schedule` UI.[file:54]
+  - Expanded Phase 3.1 (Games) with result fields (`home_score`, `away_score`, `result`, `is_conference`).[file:54]
+  - Added Phase 6 – Practices & Practice Reports (plans, coach notes, AI notes, date-range summaries).[file:54]
+
+- **2026-05-01**
+  - Clarified that the `/schedule` page uses a **server-rendered** games table as the primary flow; JS-based loading is optional and disabled by default.[file:54]
+  - Confirmed that the **practices data model** (Phase 6) is the source of truth for all practice features; no changes needed.[file:54]
+
+- **2026-05-04**
+  - Added **Phase 2.5 – Manual Tagging & Bookmarks MVP** as an optional, feature-flagged phase.
+  - Clarified that **dribbling is not a tracked stat**; dribble detection is optional internal logic only.
+  - Introduced a **feature flag pattern** (`Features.*`, `AnalysisConfig.*`) so every major feature can be turned off without DB changes.
+  - Split CV work into M1/M2 milestones, with flags to enable/disable extended events.
+
+---
+
+## Owner & Assistants
+
+- **Owner:** Me (coach + builder)[file:54]  
+- **Assistants:** Perplexity (design/brain), Rex (repo/code agent)[file:54]
+
+---
+
+## Core Idea
+
+Build a basketball film and analytics system that matches how I actually coach: schedules, games, film sources (NFHS/Pixellot/manual), stats, development, practices, and practice cut-ups, built in **small, safe steps**.[file:54] The system should give me **usable value in-season**, not just be a lab project.
+
+---
+
+## Phase 0 — Foundation & Principles
+
+### 0.1 Goals
+
+- Build a **long-term tool I actually use** as a coach, not a toy demo.[file:54]
+- Keep everything reviewable: small tasks, clear diffs, and my approval between phases.[file:54]
+- Favor simple, robust features over clever complexity.[file:54]
+
+### 0.2 Constraints & Practices
+
+- **Database:** SQLite, with `schema.sql` as the single source of truth.[file:54]
+- Avoid heavy new dependencies early; add CV and LLM pieces deliberately.[file:54][file:55]
+- **Rex:**
+  - Proposes small tasks.
+  - Edits code/schema.
+  - Stops after each task and shows diffs.
+- **Me:**
+  - Own the data model, terminology, and workflow.
+  - Approve or adjust before Rex moves on.[file:54]
+
+### 0.3 Time & Stress Reality (Coach Instructions)
+
+- Assume **limited in-season time** (minutes, not hours, per day).
+- Any new feature should:
+  - Be usable in under 5 minutes on a game night.
+  - Have a fallback if automation fails (I can still watch film and take notes).
+- If a feature is not used in **10 games or 10 practices**, we either remove it or rethink it.
+
+### 0.4 Feature Flags & Compartmentalization
+
+Add a shared configuration pattern (example; actual code in `config.py`):
+
+```python
+class Features:
+    ENABLE_MANUAL_TAG_MVP = True
+    ENABLE_AUTO_STATS_M1 = True
+    ENABLE_EXTENDED_EVENTS_M2 = False
+    ENABLE_WEEKLY_PACKET = False
+    ENABLE_SEASON_REVIEW = False
+
+class AnalysisConfig:
+    USE_DRIBBLE_EVENTS = False      # default: no dribble events as stats
+    USE_DRIBBLE_HEURISTICS = True   # internal only, if needed
+```
+
+Rules:
+
+- Every major feature/phase is behind a **single flag** so it can be disabled with minimal impact.
+- Optional features get their own routes/templates/modules so they can be removed or refactored safely.
+
+---
+
+## Phase 1 — Data Model & Schema
+
+### 1.1 Existing Analysis Tables
+
+Existing tables supporting tagging/analysis:[file:54]
+
+- `events`: in-game events (possessions, shots, etc.).
+- `analysis_runs`: status of video analysis runs.
+- `detections`: per-frame detection data.
+
+Rex must **not** drop or fundamentally change these without an explicit 

@@ -1,0 +1,11 @@
+# Container / production AI analysis stack (Python 3.12).
+# PyTorch/torchvision are installed in Dockerfile before this file.
+# Local dev/tests: use requirements.txt instead.
+
+-r requirements-dev.txt
+
+opencv-python-headless>=4.8,<5
+ultralytics>=8.0,<9
+scikit-learn>=1.4,<2
+gunicorn>=21.0,<24
+Pillow>=10.0,<12

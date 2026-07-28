@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#01696f" />
+  <title>{% block title %}Liberty Basketball{% endblock %}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --color-primary:   #01696f;
+      --color-primary-d: #015558;
+      --color-bg:        #f7f6f2;
+      --color-surface:   #ffffff;
+      --color-border:    #e2e0da;
+      --color-text:      #1a1a1a;
+      --color-muted:     #6b7280;
+      --color-success:   #059669;
+      --color-danger:    #dc2626;
+      --radius:          8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+
+    /* ── Nav ───────────────────────────── */
+    nav {
+      background: var(--color-primary);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 8px;
+      flex-wrap: nowrap;
+      position: relative;
+      z-index: 300;
+    }
+
+    nav .brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    nav .brand-logo {
+      height: 28px;
+      width: auto;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    nav a {
+      color: rgba(255,255,255,0.82);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 4px 6px;
+      border-radius: var(--radius);
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    nav .spacer { flex: 1 0 auto; }
+
+    /* ── Nav links container (desktop: horizontal flex) ── */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1 0 auto;
+      min-width: 0;
+    }
+
+    /* ── Dropdown menus ─────────────────── */
+    .nav-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-dropdown > a {
+      cursor: pointer;
+    }
+
+    .nav-dropdown > a::after {
+      content: '▾';
+      font-size: 0.65rem;
+      margin-left: 3px;
+      opacity: 0.7;
+    }
+
+    .nav-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: var(--color-primary-d);
+      border-radius: 0 0 var(--radius) var(--radius);
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 400;
+      padding: 4px 0;
+    }
+
+    .nav-dropdown .dropdown-menu a {
+      display: block;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.85);
+      border-radius: 0;
+      white-space: nowrap;
+    }
+
+    .nav-dropdown .dropdown-menu a:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    .nav-dropdown .dropdown-menu .dropdown-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+      margin: 4px 0;
+    }
+
+    .nav-dropdown:hover .dropdown-menu,
+    .nav-dropdown:focus-within .dropdown-menu,
+    .nav-dropdown.open .dropdown-menu {
+      display: block;
+    }
+
+    .nav-dropdown:hover > a,
+    .nav-dropdown:focus-within > a,
+    .nav-dropdown.open > a {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    .report-link {
+      background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+      color: #fff !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35);
+      animation: reportPulse 1.8s ease-in-out infinite;
+      font-weight: 700;
+    }
+
+    .report-link:hover,
+    .report-link.active {
+      background: linear-gradient(135deg, #f97316, #dc2626, #db2777);
+      color: #fff;
+    }
+
+    @keyframes reportPulse {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35); }
+      50% { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,255,255,0.18), 0 12px 28px rgba(245,158,11,0.45); }
+    }
+
+    /* ── Main layout ────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+
+    /* ── Card ───────────────────────────── */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    /* ── Buttons ────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover { background: var(--color-primary-d); }
+
+    .btn-secondary { background: var(--color-border); color: var(--color-text); }
+    .btn-secondary:hover { background: #d0cec8; }
+
+    .btn-danger { background: var(--color-danger); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+    /* ── Forms ──────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 4px; color: var(--color-muted); }
+    .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .form-control:focus { outline: none; border-color: var(--color-primary); }
+
+    /* ── Table ──────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-responsive table { min-width: 100%; }
+    thead th { padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--color-border); }
+    tbody td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); word-break: break-word; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(1,105,111,0.04); }
+
+    /* ── Modal ──────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: 18px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+    /* ── Stat boxes ─────────────────────── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 16px; }
+    .stat-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 18px 20px; overflow-wrap: break-word; }
+    .stat-box .label { font-size: 0.78rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--color-primary); overflow-wrap: break-word; }
+
+    /* ── Team Dashboard ──────────────────── */
+    .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; gap: 16px; }
+    .team-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; min-width: 0; }
+    .team-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+    .team-name { font-size: 0.95rem; font-weight: 700; flex-shrink: 0; }
+    .team-season-row { margin-bottom: 8px; }
+    .team-season-select {
+      width: 100%;
+      font-size: 0.78rem;
+      padding: 5px 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--color-text);
+    }
+    .team-records { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .record-block { display: flex; flex-direction: column; align-items: center; }
+    .record-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); }
+    .record-val { font-size: 1.15rem; font-weight: 700; color: var(--color-primary); }
+    .last-game { font-size: 0.78rem; color: var(--color-muted); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .last-game .result-win { color: #166534; font-weight: 600; }
+    .last-game .result-loss { color: #991b1b; font-weight: 600; }
+    .team-ranking { text-align: right; min-height: 48px; flex-shrink: 0; }
+    .team-ranking-empty { min-height: 48px; }
+    .rank-row { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .team-rank { font-size: 1.1rem; font-weight: 700; color: #b45309; }
+    .team-rank.rank-na { color: var(--color-muted); font-size: 0.9rem; }
+    .rank-link { font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
+    .rank-link:hover { color: var(--color-primary); }
+    .rank-date { font-size: 0.65rem; color: var(--color-muted); margin-top: 2px; }
+    .rank-update-btn { font-size: 0.65rem; padding: 2px 6px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; color: var(--color-muted); }
+    .rank-update-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .rank-update-btn:disabled { opacity: 0.5; cursor: wait; }
+    .schedule-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 6px; }
+    .schedule-list { display: grid; grid-template-columns: 1fr; gap: 0; }
+    .sched-row { display: grid; grid-template-columns: 150px 1fr 28px; gap: 12px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--color-border); }
+    .sched-date { font-weight: 600; font-size: 0.78rem; white-space: nowrap; text-align: right; color: var(--color-text); border-right: 2px solid var(--color-border); }
+    .sched-opp { font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sched-row .loc-badge { justify-self: center; font-weight: 700; }
+    .loc-home { background: #dcfce7; color: #166534; }
+    .loc-away { background: #dbeafe; color: #1e40af; }
+    .loc-tournament { background: #fef9c3; color: #854d0e; }
+    .no-games { font-size: 0.8rem; color: var(--color-muted); padding: 4px 0; }
+
+    /* ── Team Photos ─────────────────────── */
+    .team-photos-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .team-photos-controls { display: flex; align-items: center; gap: 10px; }
+    .team-photos-select-label { font-size: 0.82rem; color: var(--color-muted); display: flex; align-items: center; gap: 6px; }
+    .team-photos-select { font-size: 0.82rem; padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); }
+    .team-photos-grid { width: 100%; }
+    .team-photo-strip { display: flex; flex-direction: column; gap: 12px; }
+    .photo-thumb { position: relative; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); background: #f8f8f8; }
+    .photo-thumb img { width: 100%; height: auto; max-height: 400px; object-fit: contain; display: block; cursor: zoom-in; background: #f0f0f0; }
+    .photo-thumb .photo-caption { font-size: 0.78rem; color: var(--color-muted); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .photo-thumb .photo-actions { display: flex; gap: 6px; justify-content: flex-end; padding: 4px 8px 8px; }
+    .photo-thumb .photo-actions .btn { font-size: 0.7rem; padding: 3px 10px; }
+    .no-photos { font-size: 0.82rem; color: var(--color-muted); font-style: italic; padding: 12px 0; }
+
+    /* ── Badge ──────────────────────────── */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; }
+    .badge-home { background: #dcfce7; color: #166534; }
+    .badge-away { background: #dbeafe; color: #1e40af; }
+    .badge-tournament { background: #fef9c3; color: #854d0e; }
+    .badge-win  { background: #dcfce7; color: #166534; }
+    .badge-loss { background: #fee2e2; color: #991b1b; }
+    .badge-scheduled { background: #f3f4f6; color: #4b5563; }
+
+    /* ── Utility ────────────────────────── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+    .page-header h2 { font-size: 1.25rem; font-weight: 700; overflow-wrap: break-word; }
+    .text-muted { color: var(--color-muted); font-size: 0.85rem; overflow-wrap: break-word; }
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+    .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 14px; }
+    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .report-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+      z-index: 110;
+    }
+    .report-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(460px, 100vw);
+      background: var(--color-surface);
+      box-shadow: -18px 0 48px rgba(15, 23, 42, 0.2);
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      z-index: 111;
+      display: flex;
+      flex-direction: column;
+    }
+    .report-drawer.open { transform: translateX(0); }
+    .report-drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .report-drawer-header,
+    .report-drawer-footer {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .report-drawer-footer {
+      border-top: 1px solid var(--color-border);
+      border-bottom: none;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .report-drawer-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .report-drawer-close {
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--color-muted);
+    }
+    .report-status-copy {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-top: 8px;
+    }
+    .report-drawer-note {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-bottom: 14px;
+    }
+    body.report-drawer-open {
+      overflow: hidden;
+    }
+
+    /* ── Frame Labels (Review Mode) ─────────── */
+    .frame-label {
+      display: none;
+      position: absolute;
+      top: -8px;
+      right: -4px;
+      z-index: 10;
+      background: #dc2626;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1.2;
+      pointer-events: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .frame-label.active { display: block; }
+    .card, .modal, .stat-box, .form-group, table, .table-responsive {
+      position: relative;
+    }
+
+    /* ── Mobile Responsive ─────────────────── */
+    @media (max-width: 768px) {
+      /* Nav: hamburger */
+      nav { padding: 0 10px; height: 52px; }
+      nav .brand { font-size: 0.85rem; }
+      nav .brand-logo { height: 22px; }
+      .nav-hamburger { display: flex !important; }
+      .nav-links { display: none; position: absolute; top: 52px; left: 0; right: 0; background: var(--color-primary); flex-direction: column; padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 299; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 10px 16px; font-size: 0.85rem; white-space: normal; }
+      .nav-links .nav-dropdown { flex-direction: column; align-items: stretch; }
+      .nav-links .nav-dropdown > a { padding: 10px 16px; }
+      .nav-links .nav-dropdown .dropdown-menu { position: static; display: none; box-shadow: none; background: rgba(0,0,0,0.15); border-radius: 0; min-width: 0; }
+      .nav-links .nav-dropdown.open .dropdown-menu { display: block; }
+      .nav-links .nav-dropdown .dropdown-menu a { padding: 8px 24px; font-size: 0.8rem; }
+      .nav-links .spacer { display: none; }
+      .nav-links .report-link { margin: 4px 16px; text-align: center; }
+
+      /* Main */
+      main { margin: 16px auto; padding: 0 12px; }
+
+      /* Cards */
+      .card { padding: 14px 16px; margin-bottom: 12px; }
+
+      /* Buttons */
+      .btn { padding: 10px 14px; font-size: 0.85rem; min-height: 44px; }
+      .btn-sm { padding: 8px 12px; font-size: 0.8rem; min-height: 36px; }
+
+      /* Tables → card layout */
+      .table-responsive table { min-width: 0; }
+      .table-responsive thead { display: none; }
+      .table-responsive tbody tr { display: block; margin-bottom: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; background: var(--color-surface); }
+      .table-responsive tbody td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border: none; text-align: right; font-size: 0.82rem; }
+      .table-responsive tbody td::before { content: attr(data-label); font-weight: 600; color: var(--color-muted); font-size: 0.72rem; text-transform: uppercase; text-align: left; margin-right: 12px; flex-shrink: 0; }
+      .table-responsive tbody td:last-child { border-bottom: none; }
+      .table-responsive tbody td:last-child::before { display: none; }
+
+      /* Stat grid */
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-box { padding: 12px 14px; }
+      .stat-box .value { font-size: 1.5rem; }
+
+      /* Team grid */
+      .team-grid { grid-template-columns: 1fr; }
+
+      /* Page header */
+      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-header h2 { font-size: 1.1rem; }
+
+      /* Forms */
+      .form-control { font-size: 16px; padding: 10px 12px; }
+
+      /* Modals */
+      .modal { padding: 20px; margin: 10px; width: calc(100% - 20px); }
+
+      /* Schedule rows */
+      .sched-row { grid-template-columns: 100px 1fr 24px; gap: 8px; }
+      .sched-date { font-size: 0.72rem; }
+
+      /* Report drawer */
+      .report-drawer { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      nav .brand span { display: none; }
+    }
+
+    /* ── Hamburger button (hidden on desktop) ── */
+    .nav-hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; margin-left: auto; align-items: center; justify-content: center; }
+  </style>
+  {% block head %}{% endblock %}
+  {% block styles %}{% endblock %}
+  <script>
+    // ── Frame Label Review Mode ──────────────
+    (function() {
+      const STORAGE_KEY = 'liberty-frame-labels';
+      let labelsActive = localStorage.getItem(STORAGE_KEY) === '1';
+
+      function toggleLabels(on) {
+        labelsActive = on;
+        localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+        document.querySelectorAll('.frame-label').forEach(el => el.classList.toggle('active', on));
+        const btn = document.getElementById('frame-label-toggle');
+        if (btn) btn.textContent = on ? '🏷 Hide Labels' : '🏷 Show Labels';
+      }
+
+      // Inject toggle button
+      function injectToggle() {
+        if (document.getElementById('frame-label-toggle')) return;
+        const nav = document.querySelector('nav');
+        if (!nav) return;
+        const btn = document.createElement('button');
+        btn.id = 'frame-label-toggle';
+        btn.className = 'btn btn-sm';
+        btn.style.cssText = 'background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:2px 8px;font-size:0.7rem;margin-left:auto;';
+        btn.textContent = labelsActive ? '🏷 Hide Labels' : '🏷 Show Labels';
+        btn.addEventListener('click', () => toggleLabels(!labelsActive));
+        nav.insertBefore(btn, nav.querySelector('.report-link'));
+        if (labelsActive) {
+          // Auto-activate after DOM ready
+          setTimeout(() => toggleLabels(true), 100);
+        }
+      }
+
+      // Auto-inject labels on elements with data-frame
+      function processFrames() {
+        document.querySelectorAll('[data-frame]').forEach(el => {
+          if (el.querySelector('.frame-label')) return;
+          const label = document.createElement('span');
+          label.className = 'frame-label' + (labelsActive ? ' active' : '');
+          label.textContent = el.getAttribute('data-frame');
+          el.style.position = 'relative';
+          el.appendChild(label);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { injectToggle(); processFrames(); });
+      } else {
+        injectToggle();
+        processFrames();
+      }
+      // For dynamically added content
+      window.libertyProcessFrameLabels = processFrames;
+    })();
+  </script>
+  <script>
+    (function initLibertyIssueReporter() {
+      if (window.LibertyIssueReporter) return;
+
+      const entries = [];
+      const maxEntries = 80;
+      const maxChunkLength = 600;
+
+      function serialize(value) {
+        if (value == null) return String(value);
+        if (value instanceof Error) return value.stack || value.message || String(value);
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        try {
+          return JSON.stringify(value);
+        } catch (_err) {
+          return String(value);
+        }
+      }
+
+      function record(level, args) {
+        const text = args.map((arg) => serialize(arg).slice(0, maxChunkLength)).join(' ');
+        entries.push({
+          at: new Date().toISOString(),
+          level,
+          text,
+        });
+        if (entries.length > maxEntries) {
+          entries.splice(0, entries.length - maxEntries);
+        }
+      }
+
+      ['log', 'info', 'warn', 'error', 'debug'].forEach((level) => {
+        const original = console[level] ? console[level].bind(console) : null;
+        console[level] = (...args) => {
+          record(level, args);
+          if (original) original(...args);
+        };
+      });
+
+      window.addEventListener('error', (event) => {
+        record('error', [
+          event.message,
+          event.filename ? `${event.filename}:${event.lineno || 0}:${event.colno || 0}` : '',
+          event.error && event.error.stack ? event.error.stack : '',
+        ]);
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        record('error', ['Unhandled promise rejection', event.reason]);
+      });
+
+      window.LibertyIssueReporter = {
+        getConsoleText() {
+          return entries.map((entry) => `[${entry.at}] ${entry.level.toUpperCase()} ${entry.text}`).join('\n');
+        },
+        getCurrentPagePath() {
+          return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        },
+      };
+    })();
+  </script>
+  <script>
+    // Global HTML escape function to prevent XSS in innerHTML concatenations
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</head>
+<body data-report-source-default="{% if compose_source is defined and compose_source %}{{ compose_source }}{% else %}{{ request.full_path if request.query_string else request.path }}{% endif %}">
+  <nav>
+    <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> <span>Liberty Basketball</span></a>
+    <button class="nav-hamburger" type="button" aria-label="Toggle navigation" onclick="document.getElementById('nav-links').classList.toggle('open')">☰</button>
+    <div class="nav-links" id="nav-links">
+    <a href="/" {% if nav_active('core.index') %}class="active"{% endif %}>Dashboard</a>
+    {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">Teams</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_SEASONS_SCHEDULE %}
+        <a href="/schedule" {% if nav_active('core.schedule') %}class="active"{% endif %}>Schedule</a>
+        {% endif %}
+        {% if features.ENABLE_PRACTICES %}
+        <a href="/practices" {% if nav_active('practice.practices_page', 'practice.practice_report_page', 'practice.practice_summary_page') %}class="active"{% endif %}>Practices</a>
+        {% endif %}
+        {% if features.ENABLE_PRACTICE_PLAYLISTS %}
+        <div class="dropdown-divider"></div>
+        <a href="/practice-playlists" {% if nav_active('player_dev.practice_playlists_page') %}class="active"{% endif %} style="padding-left:22px;font-size:0.76rem;color:rgba(255,255,255,0.7);">└ Practice Plans</a>
+        {% endif %}
+        {% if features.ENABLE_PLAYER_DEVELOPMENT %}
+        <a href="/player-development" {% if nav_active('player_dev.player_development_page') %}class="active"{% endif %}>Player Dev</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if features.ENABLE_AUTO_STATS_M1 or features.ENABLE_MANUAL_TAG_MVP %}
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">Film & Stats</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_MANUAL_TAG_MVP %}
+        <a href="/film" {% if nav_active('core.film') %}class="active"{% endif %}>Film Tool</a>
+        {% endif %}
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <a href="/videos" {% if nav_active('core.videos_page') %}class="active"{% endif %}>Videos</a>
+        {% endif %}
+        {% if features.ENABLE_ASSISTANT_READ_ONLY %}
+        <a href="/assistant" {% if nav_active('ai.assistant_workflow_page') %}class="active"{% endif %}>Assistant</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if features.ENABLE_PRACTICES %}
+    <a href="/playbook" {% if nav_active('playbook.*') %}class="active"{% endif %}>Playbook</a>
+    <a href="/messages" {% if nav_active('messaging.*') %}class="active"{% endif %}>💬 Messages</a>
+    {% endif %}
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">More</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_NFHS_MATCHING %}
+        <a href="/nfhs-matches" {% if nav_active('games.nfhs_matches_page', 'games.nfhs_matches_confirm_page', 'games.nfhs_matches_reject_page') %}class="active"{% endif %}>NFHS Matches</a>
+        {% endif %}
+        <div class="dropdown-divider"></div>
+        <a href="/settings" {% if nav_active('core.settings_page', 'core.custom_weights_guide_page') %}class="active"{% endif %}>Settings</a>
+        <a href="/users" {% if nav_active('core.users_page') %}class="active"{% endif %}>Users</a>
+        <a href="/debug" {% if nav_active('core.debug_page') %}class="active"{% endif %}>Debug / Issues</a>
+      </div>
+    </div>
+    <span class="spacer"></span>
+    {% if session.get('user_id') %}
+    <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-badge" style="display:none;">0</span></a>
+    <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
+    <a href="{{ url_for('users.logout') }}">Logout</a>
+    {% else %}
+    <a href="{{ url_for('users.login') }}">Sign In</a>
+    <a href="{{ url_for('users.register') }}">Register</a>
+    {% endif %}
+    <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+    </div>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
+  <aside class="report-drawer" id="report-drawer" aria-hidden="true">
+    <div class="report-drawer-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <h3 style="margin:0;">Report Bug / Idea</h3>
+          <div class="report-status-copy">Stay on the page, describe what happened, and the browser console will be attached automatically.</div>
+        </div>
+        <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
+      </div>
+    </div>
+    <form id="report-drawer-form" method="post" action="{{ url_for('core.create_issue_report') }}" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+      <div class="report-drawer-body">
+        <div id="report-drawer-message" class="alert" style="display:none;"></div>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;">
+          <div class="form-group">
+            <label for="report-entry-type">Type</label>
+            <select class="form-control" id="report-entry-type" name="entry_type">
+              <option value="bug">Bug</option>
+              <option value="issue" selected>Issue</option>
+              <option value="recommendation">Recommendation</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="report-title">Title</label>
+            <input class="form-control" id="report-title" name="title" placeholder="Short title for the problem or idea">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="report-details">Details</label>
+          <textarea class="form-control" id="report-details" name="details" rows="6" placeholder="What happened, what you expected, or what you want to improve."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="report-source-path">Source Page</label>
+          <input class="form-control" id="report-source-path" name="source_path">
+        </div>
+        <div class="report-drawer-note">Browser console output is captured when you submit.</div>
+        <input type="hidden" id="report-browser-console" name="browser_console">
+        <input type="hidden" id="report-return-to" name="return_to">
+      </div>
+      <div class="report-drawer-footer">
+        <button class="btn btn-secondary" type="button" id="report-drawer-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
+      </div>
+    </form>
+  </aside>
+  {% block scripts %}{% endblock %}
+
+  {# — Report Drawer — #}
+  <script>
+  (function initReportDrawer() {
+    const drawer = document.getElementById('report-drawer');
+      const backdrop = document.getElementById('report-drawer-backdrop');
+      const form = document.getElementById('report-drawer-form');
+      const message = document.getElementById('report-drawer-message');
+      const closeButton = document.getElementById('report-drawer-close');
+      const cancelButton = document.getElementById('report-drawer-cancel');
+      const submitButton = document.getElementById('report-drawer-submit');
+      const sourceInput = document.getElementById('report-source-path');
+      const returnToInput = document.getElementById('report-return-to');
+      const consoleInput = document.getElementById('report-browser-console');
+      const detailsInput = document.getElementById('report-details');
+      if (!drawer || !backdrop || !form || !sourceInput || !returnToInput || !consoleInput) return;
+
+      function getPreferredSourcePath() {
+        const configuredSource = document.body.dataset.reportSourceDefault || '';
+        const currentPath = window.LibertyIssueReporter?.getCurrentPagePath?.() || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (window.location.pathname === '/debug' && configuredSource && configuredSource !== currentPath) {
+          return configuredSource;
+        }
+        return currentPath;
+      }
+
+      function setReportMessage(kind, text) {
+        if (!message) return;
+        if (!text) {
+          message.style.display = 'none';
+          message.textContent = '';
+          message.className = 'alert';
+          return;
+        }
+        message.textContent = text;
+        message.className = `alert ${kind === 'error' ? 'alert-error' : 'alert-success'}`;
+        message.style.display = 'block';
+      }
+
+      function syncReportContext() {
+        const sourcePath = getPreferredSourcePath();
+        sourceInput.value = sourcePath;
+        returnToInput.value = sourcePath;
+        consoleInput.value = window.LibertyIssueReporter?.getConsoleText?.() || '';
+      }
+
+      function openDrawer() {
+        syncReportContext();
+        setReportMessage(null, '');
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        backdrop.classList.add('open');
+        document.body.classList.add('report-drawer-open');
+        window.setTimeout(() => detailsInput?.focus(), 0);
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        backdrop.classList.remove('open');
+        document.body.classList.remove('report-drawer-open');
+      }
+
+      document.querySelectorAll('[data-open-report-overlay]').forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          openDrawer();
+        });
+      });
+
+      [backdrop, closeButton, cancelButton].forEach((el) => {
+        el?.addEventListener('click', closeDrawer);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && drawer.classList.contains('open')) {
+          closeDrawer();
+        }
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        syncReportContext();
+        setReportMessage(null, '');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving…';
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+          const result = await response.json();
+          if (!response.ok || result.status !== 'ok') {
+            throw new Error(result.message || 'Unable to save report.');
+          }
+          setReportMessage('success', result.message || 'Report saved.');
+          form.reset();
+          document.getElementById('report-entry-type').value = 'issue';
+          syncReportContext();
+          window.setTimeout(closeDrawer, 700);
+        } catch (error) {
+          setReportMessage('error', error.message || 'Unable to save report.');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Save Report';
+        }
+      });
+
+      if (new URLSearchParams(window.location.search).get('compose') === '1') {
+        openDrawer();
+      }
+    })();
+
+  </script>
+
+  {# — Service Worker + Push Subscription — #}
+  <script>
+  (function() {
+    var userId = {{ session.get('user_id') or 'null' }};
+    if (!userId) return;
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    }
+
+    // Subscribe to push notifications
+    function subscribePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      navigator.serviceWorker.ready.then(function(reg) {
+        reg.pushManager.getSubscription().then(function(sub) {
+          if (sub) return; // already subscribed
+          // Get VAPID public key from server
+          fetch('/api/push/vapid-public-key')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.key) return;
+              return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(data.key),
+              });
+            })
+            .then(function(sub) {
+              return fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(sub.toJSON()),
+              });
+            })
+            .catch(function() {});
+        });
+      });
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      var rawData = window.atob(base64);
+      var outputArray = new Uint8Array(rawData.length);
+      for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Auto-subscribe on load (browser will prompt permission)
+    if (Notification.permission === 'granted') {
+      subscribePush();
+    }
+  })();
+  </script>
+
+  {# — Notification polling (logged-in users) — #}
+  <script>
+  (function() {
+    var userId = {{ session.get('user_id') or 'null' }};
+    if (!userId) return;
+
+    function pollNotifications() {
+      fetch('/api/notifications')
+        .then(function(r) { return r.json(); })
+        .then(function(notifs) {
+          var badge = document.getElementById('nav-msg-badge');
+          if (!badge) return;
+          var unread = notifs.length;
+          if (unread > 0) {
+            badge.textContent = unread > 9 ? '9+' : unread;
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        })
+        .catch(function() {});
+    }
+    pollNotifications();
+    setInterval(pollNotifications, 30000);
+    })();
+  </script>
+  <script>
+    // ── Mobile table card layout ─────────────
+    (function() {
+      function initMobileTables() {
+        document.querySelectorAll('.table-responsive').forEach(function(wrapper) {
+          var headers = wrapper.querySelectorAll('thead th');
+          if (!headers.length) return;
+          var labels = Array.from(headers).map(function(th) { return th.textContent.trim(); });
+          wrapper.querySelectorAll('tbody tr').forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            cells.forEach(function(td, i) {
+              if (i < labels.length && labels[i]) {
+                td.setAttribute('data-label', labels[i]);
+              }
+            });
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMobileTables);
+      } else {
+        initMobileTables();
+      }
+    })();
+  </script>
+  <script>
+    // ── Mobile nav dropdown toggle ───────────
+    (function() {
+      var navLinks = document.getElementById('nav-links');
+      if (!navLinks) return;
+      // Close hamburger when clicking a top-level link
+      navLinks.querySelectorAll('a[href]').forEach(function(a) {
+        a.addEventListener('click', function() {
+          // Only close if it's a direct link (not a dropdown toggle)
+          if (!a.parentElement.classList.contains('nav-dropdown')) {
+            navLinks.classList.remove('open');
+          }
+        });
+      });
+      // Toggle dropdown on click (works on both desktop and mobile)
+      navLinks.querySelectorAll('.nav-dropdown > a').forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          var dd = toggle.parentElement;
+          // Close other open dropdowns
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(other) {
+            if (other !== dd) other.classList.remove('open');
+          });
+          dd.classList.toggle('open');
+        });
+      });
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!navLinks.contains(e.target)) {
+          navLinks.classList.remove('open');
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(dd) {
+            dd.classList.remove('open');
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

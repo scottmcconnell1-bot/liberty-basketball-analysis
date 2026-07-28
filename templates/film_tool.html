@@ -1,0 +1,1043 @@
+{% extends "base.html" %}
+
+{% block title %}Film Tool — Liberty Basketball{% endblock %}
+
+{% block head %}
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/film-tool.css') }}">
+<style>
+  /* ── Tagger View Redesign ────────────────────────────────── */
+  .ft-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+    gap: .75rem;
+    align-items: start;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .ft-layout > * {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Scoreboard */
+  .ft-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+  .ft-score-team {
+    text-align: center;
+    min-width: 120px;
+  }
+  .ft-score-team .ft-team-name {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .ft-score-team .ft-team-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-top: .25rem;
+  }
+  .ft-score-vs {
+    font-size: .75rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    padding: .5rem;
+  }
+
+  /* Video Area */
+  .ft-video-wrap {
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: .75rem;
+  }
+  .ft-video-wrap video {
+    width: 100%;
+    max-height: 65vh;
+    display: block;
+  }
+  .ft-video-bar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    background: #111;
+    color: #e2e8f0;
+    font-size: .8rem;
+  }
+  .ft-video-bar .ft-time {
+    font-family: monospace;
+    font-size: .9rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .ft-video-bar .ft-last-tag {
+    margin-left: auto;
+    color: #94a3b8;
+    font-size: .75rem;
+  }
+
+  /* Video Controls */
+  .ft-vid-controls {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: .35rem;
+    padding: .5rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .ft-vid-controls::-webkit-scrollbar { display: none; }
+  .ft-vid-controls .btn {
+    padding: .3rem .5rem;
+    min-height: 30px;
+    font-size: .75rem;
+    flex-shrink: 1;
+    white-space: nowrap;
+  }
+  .ft-vid-controls .btn.btn-primary {
+    padding: .3rem .65rem;
+  }
+
+  /* Game Info Collapsible */
+  .ft-game-info-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 0;
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-divider);
+    margin-bottom: .75rem;
+  }
+  .ft-game-info-toggle:hover { color: var(--color-text); }
+  .ft-game-info-toggle .ft-chevron { transition: transform .2s; }
+  .ft-game-info-toggle.open .ft-chevron { transform: rotate(90deg); }
+  .ft-game-info-body {
+    display: none;
+    margin-bottom: 1rem;
+  }
+  .ft-game-info-body.open { display: block; }
+
+  /* Tagging Panel */
+  .ft-tag-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .ft-tag-panel-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ft-tag-panel-header h3 {
+    font-size: .95rem;
+    font-weight: 600;
+  }
+  .ft-tag-panel-header .ft-event-count {
+    font-size: .75rem;
+    color: var(--color-text-muted);
+  }
+  .ft-tag-groups {
+    padding: .75rem;
+  }
+  .ft-tag-group {
+    margin-bottom: .75rem;
+  }
+  .ft-tag-group:last-child { margin-bottom: 0; }
+  .ft-tag-group-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-text-muted);
+    margin-bottom: .35rem;
+    padding-left: .25rem;
+  }
+  .ft-tag-group-label.flow { color: #6366f1; }
+  .ft-tag-group-label.offense { color: #10b981; }
+  .ft-tag-group-label.defense { color: #f59e0b; }
+
+  .ft-tag-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .3rem;
+  }
+  .ft-tag-grid .btn {
+    padding: .5rem .4rem;
+    min-height: 2.4rem;
+    font-size: .8rem;
+    border-radius: var(--radius-sm);
+    justify-content: flex-start;
+  }
+  .ft-tag-grid .btn .ft-hotkey {
+    margin-left: auto;
+    font-size: .65rem;
+    opacity: .6;
+    font-weight: 600;
+  }
+
+  /* Tag action bar */
+  .ft-tag-actions {
+    display: flex;
+    gap: .35rem;
+    padding: .5rem .75rem;
+    border-top: 1px solid var(--color-divider);
+    background: var(--color-surface-offset);
+  }
+  .ft-tag-actions .btn {
+    padding: .35rem .6rem;
+    min-height: 30px;
+    font-size: .75rem;
+  }
+
+  /* Bookmarks compact */
+  .ft-bookmarks {
+    margin-top: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .ft-bookmarks-header {
+    padding: .6rem 1rem;
+    border-bottom: 1px solid var(--color-divider);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ft-bookmarks-header h3 { font-size: .85rem; font-weight: 600; }
+  .ft-bookmarks-body { padding: .75rem; }
+
+  /* Top bar redesign */
+  .ft-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+  .ft-tabs {
+    display: flex;
+    gap: .25rem;
+    background: var(--color-surface-offset);
+    border-radius: var(--radius-full);
+    padding: .2rem;
+  }
+  .ft-tabs .btn {
+    padding: .4rem 1rem;
+    min-height: 34px;
+    font-size: .85rem;
+    border-radius: var(--radius-full);
+    background: transparent;
+    box-shadow: none;
+  }
+  .ft-tabs .btn.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .ft-topbar-actions {
+    display: flex;
+    gap: .35rem;
+  }
+  .ft-topbar-actions .btn {
+    padding: .4rem .75rem;
+    min-height: 34px;
+    font-size: .8rem;
+  }
+
+  /* AI Upload collapsible */
+  .ft-ai-upload-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    margin-bottom: .75rem;
+    background: var(--color-surface-offset);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--color-text-muted);
+  }
+  .ft-ai-upload-toggle:hover { color: var(--color-text); }
+  .ft-ai-upload-body { display: none; margin-bottom: 1rem; }
+  .ft-ai-upload-body.open { display: block; }
+
+  /* AI Upload form alignment */
+  #film-tool-root .ft-ai-upload-body .split {
+    align-items: stretch;
+  }
+  #film-tool-root .ft-ai-upload-body .field {
+    display: flex;
+    flex-direction: column;
+  }
+  #film-tool-root .ft-ai-upload-body .field input[type="text"],
+  #film-tool-root .ft-ai-upload-body .field input[type="file"] {
+    height: 42px;
+    box-sizing: border-box;
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .ft-layout { grid-template-columns: 1fr; }
+    .ft-tag-panel { order: -1; }
+    .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .ft-scoreboard { padding: .75rem; gap: .75rem; }
+    .ft-score-team .ft-team-score { font-size: 1.75rem; }
+    .ft-tag-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
+
+  <!-- ═══════════════════════════════════════════════════════
+       TOP BAR
+       ═══════════════════════════════════════════════════════ -->
+  <div class="ft-topbar">
+    <div class="ft-tabs">
+      <button class="btn tab-btn active" data-tab="taggerView" type="button">🎬 Tagger</button>
+      <button class="btn tab-btn" data-tab="gamesView" type="button">📋 Games</button>
+      <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
+    </div>
+    <div class="ft-topbar-actions">
+      <button class="btn" id="resumeLastBtn" type="button">↩ Resume</button>
+      <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
+      <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
+      <a class="btn" href="{{ url_for('core.settings_page') }}#film-tool">⚙ Setup</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TAGGER VIEW
+       ═══════════════════════════════════════════════════════ -->
+  <section id="taggerView" class="view active" data-frame="5.2">
+
+    <!-- Scoreboard -->
+    <div class="ft-scoreboard">
+      <div class="ft-score-team">
+        <div class="ft-team-name" id="leftScoreName">Our Team</div>
+        <div class="ft-team-score" id="leftScoreValue">0</div>
+      </div>
+      <div class="ft-score-vs">VS</div>
+      <div class="ft-score-team">
+        <div class="ft-team-name" id="rightScoreName">Opponent</div>
+        <div class="ft-team-score" id="rightScoreValue">0</div>
+      </div>
+    </div>
+
+    <div class="ft-layout">
+
+      <!-- ── Left: Video + Controls + Bookmarks ────────────── -->
+      <div>
+
+        <!-- AI Upload (collapsible) -->
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <div class="ft-ai-upload-toggle" id="ftAiUploadToggle">
+          <span class="ft-chevron">▶</span>
+          <span>🤖 Upload Video — Tag manually or run AI analysis</span>
+        </div>
+        <div class="ft-ai-upload-body" id="ftAiUploadBody">
+          <form enctype="multipart/form-data" method="post" id="aiUploadForm">
+            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Original quality is preserved — large files upload in chunks automatically.</p>
+            <div class="split ai-upload-fields">
+              <div class="field">
+                <label for="aiVideoFile">Video File</label>
+                <input type="file" id="aiVideoFile" name="video" accept="video/mp4,video/*" required>
+                <span class="tiny" id="fileSizeInfo" style="color:var(--color-text-muted);margin-top:.25rem;"></span>
+              </div>
+              <div class="field">
+                <label for="aiOpponent">Opponent</label>
+                <input type="text" id="aiOpponent" name="opponent" placeholder="Enter Opponent Name">
+              </div>
+            </div>
+            <div class="split" style="margin-top:.75rem;gap:.5rem;">
+              <button type="button" class="btn btn-secondary" id="uploadTagBtn">📝 Upload for Tagging</button>
+              <button type="button" class="btn btn-primary" id="uploadAiBtn">🤖 Upload & AI Analyze</button>
+            </div>
+            <div class="upload-progress-shell" id="uploadProgressShell">
+              <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
+              <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting…</div>
+            </div>
+            <!-- Analysis Progress (shown after upload during AI analysis) -->
+            <div class="upload-progress-shell" id="analysisProgressShell" style="display:none;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="font-size:.85rem;font-weight:600;">🤖 AI Analysis</span>
+                <span class="tiny" id="analysisProgressPct">0%</span>
+              </div>
+              <div class="upload-progress-bar"><span id="analysisProgressBar" style="width:0%"></span></div>
+              <div class="tiny" id="analysisProgressText" style="margin-top:.4rem;">Starting…</div>
+            </div>
+          </form>
+        </div>
+
+        <div class="ft-ai-upload-toggle" id="ftNfhsToggle">
+          <span class="ft-chevron">▶</span>
+          <span>📥 Download from NFHS — your games or opponents</span>
+        </div>
+        <div class="ft-ai-upload-body" id="ftNfhsBody">
+          {% set nfhs_prefix = 'ft-nfhs-' %}
+          {% include 'partials/nfhs_download_panel.html' %}
+        </div>
+        {% endif %}
+
+        <!-- Video Player -->
+        <div class="ft-video-wrap" id="filmReviewGrid">
+          <video id="video" controls></video>
+        </div>
+        <div class="ft-video-bar">
+          <span class="ft-time" id="timeDisplay">0:00.0</span>
+          <span style="flex:1"></span>
+          <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+        </div>
+        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
+        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
+          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
+            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">🤖 Run AI Analysis</button>
+          </div>
+          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
+            <div class="ft-run-analysis-progress-head">
+              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
+              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
+            </div>
+            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
+            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="tiny" style="padding:.25rem 0 .5rem;">
+          {% if uploaded_video_url %}
+          Server video <code>{{ filename }}</code> will auto-load below.
+          {% if features.ENABLE_AUTO_STATS_M1 %}
+          Use <strong>Run AI Analysis</strong> above to detect events automatically, or tag manually.
+          {% endif %}
+          {% else %}
+          Load a video from your computer, or open a saved video from the Video Library.
+          {% endif %}
+        </div>
+
+        <!-- Video Controls -->
+        <div class="ft-vid-controls no-print">
+          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
+          <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">▶ / ⏸</button>
+          <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
+          <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
+          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
+        </div>
+
+        <!-- Game Info (collapsible) -->
+        <div class="ft-game-info-toggle" id="ftGameInfoToggle">
+          <span class="ft-chevron">▶</span>
+          <span>📝 Game Info</span>
+        </div>
+        <div class="ft-game-info-body" id="ftGameInfoBody">
+          <div class="info-grid">
+            <div class="field">
+              <label for="gameType">Game Type</label>
+              <select id="gameType">
+                <option value="my">My Game</option>
+                <option value="scout">Scout Game</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="competitionType">Competition</label>
+              <select id="competitionType">
+                <option value="non-conference">Non-Conference</option>
+                <option value="conference">Conference</option>
+                <option value="tournament">Tournament</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="gameDate">Game date</label>
+              <input id="gameDate" placeholder="e.g. 2026-01-15">
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="field">
+              <label for="ourTeamName">Our Team</label>
+              <input id="ourTeamName" value="Liberty">
+            </div>
+            <div class="field">
+              <label for="opponent">Opponent</label>
+              <input id="opponent" placeholder="e.g. Riverstone">
+            </div>
+            <div class="field">
+              <label for="gameResult">Result</label>
+              <select id="gameResult">
+                <option value="">Not set</option>
+                <option value="win">Win</option>
+                <option value="loss">Loss</option>
+              </select>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="field">
+              <label for="homeTeamName">Home team</label>
+              <input id="homeTeamName" placeholder="e.g. Liberty">
+            </div>
+            <div class="field">
+              <label for="awayTeamName">Away team</label>
+              <input id="awayTeamName" placeholder="e.g. Riverstone">
+            </div>
+            <div class="field">
+              <label for="outputDir">Output Folder</label>
+              <div class="inline-actions">
+                <input id="outputDir" placeholder="e.g. G:/My Drive/film-analysis">
+                <button class="btn" id="chooseOutputBtn" type="button">Select</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bookmarks -->
+        <div class="ft-bookmarks">
+          <div class="ft-bookmarks-header">
+            <h3>🔖 Bookmarks</h3>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button" style="padding:.25rem .5rem;min-height:26px;font-size:.75rem;">Refresh</button>
+            </div>
+          </div>
+          <div class="ft-bookmarks-body">
+            <div class="field">
+              <label for="bookmarkGameId">Game ID</label>
+              <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
+            </div>
+            <div class="split">
+              <div class="field">
+                <label for="bookmarkLabel">Label</label>
+                <input id="bookmarkLabel" placeholder="e.g. Press break">
+              </div>
+              <div class="field">
+                <label for="bookmarkNote">Note</label>
+                <input id="bookmarkNote" placeholder="Optional">
+              </div>
+            </div>
+            <button class="btn btn-primary" id="saveBookmarkBtn" type="button" style="margin-top:.5rem;">Save Current Time</button>
+            <span class="tiny" id="bookmarkStatus" style="margin-left:.5rem;">No bookmarks loaded.</span>
+            <div class="list-stack" id="manualBookmarksList" style="margin-top:.75rem;">
+              <div class="empty-state">Choose a game ID to load bookmarks.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status" id="statusText" style="margin-top:.75rem;">Ready.</div>
+      </div>
+
+      <!-- ── Right: Tagging Buttons ─────────────────────────── -->
+      <div>
+        <div class="ft-tag-panel">
+          <div class="ft-tag-panel-header">
+            <h3>Tag Events</h3>
+            <span class="ft-event-count" id="eventCountText">0 tagged</span>
+          </div>
+          <div class="ft-tag-groups">
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label flow">⚡ Possession / Flow</div>
+              <div class="ft-tag-grid" id="groupFlow"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label offense">🏀 Scoring / Offense</div>
+              <div class="ft-tag-grid" id="groupOffense"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label defense">🛡 Defense / Misc</div>
+              <div class="ft-tag-grid" id="groupDefense"></div>
+            </div>
+          </div>
+          <div class="ft-tag-actions">
+            <button class="btn btn-ghost" id="undoBtn" type="button">↩ Undo</button>
+            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
+            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
+            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+          </div>
+        </div>
+
+        <!-- AI Events Panel -->
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <div class="panel" id="aiEventsPanel" style="margin-top:1rem;">
+          <div class="panel-head">
+            <div>
+              <h2>🤖 AI Events</h2>
+              <p>Independent scrolling event timeline that syncs to the current video position.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="ai-events-summary">
+              <span class="badge" id="aiEventsCount">0 events</span>
+              <span class="tiny" id="aiCurrentEventLabel">No active event</span>
+            </div>
+            <div class="ai-events-scroll" id="aiEventsScroller">
+              <div class="list-stack" id="aiEventsList">
+                <div class="empty-state">No AI events yet. Run analysis to see results.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         ANALYSIS RESULTS
+         ═══════════════════════════════════════════════════════ -->
+    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data or possession_summary) %}
+    <section class="ft-analysis-results" style="margin-top:1.5rem;">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>📊 Analysis Results</h2>
+            <p>Shot classifications, possessions, player effect, and minutes from AI analysis.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+
+          <div class="split" style="gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+
+            <!-- Possession Summary -->
+            {% if possession_summary and possession_summary.events_total > 0 %}
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">🏀 Possessions</div>
+              <div class="checklist-summary" style="display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;">
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.total_possessions }}</strong>
+                  <span class="text-muted">total possessions</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.scoring_possessions }}</strong>
+                  <span class="text-muted">scoring</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.points_per_possession }}</strong>
+                  <span class="text-muted">pts / poss</span>
+                </div>
+                <div class="checklist-pill">
+                  <strong>{{ possession_summary.turnover_rate }}</strong>
+                  <span class="text-muted">TO rate</span>
+                </div>
+              </div>
+              <div class="text-muted" style="font-size:.82rem;margin-bottom:.5rem;">
+                {{ possession_summary.events_linked }} of {{ possession_summary.events_total }} events linked to possessions
+                {% if possession_summary.events_unlinked > 0 %}
+                  ({{ possession_summary.events_unlinked }} unlinked)
+                {% endif %}
+              </div>
+              {% if possession_summary.top_outcomes %}
+              <div class="text-muted" style="font-size:.82rem;">
+                Top outcomes:
+                {% for row in possession_summary.top_outcomes %}
+                  <span style="margin-right:.5rem;">{{ row.outcome }} ({{ row.count }})</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Shot Summary -->
+            {% if shot_summary %}
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">🎯 Shot Summary</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th style="text-align:right;">Makes</th>
+                      <th style="text-align:right;">Misses</th>
+                      <th style="text-align:right;">Total</th>
+                      <th style="text-align:right;">FG%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in shot_summary %}
+                    <tr>
+                      <td>
+                        {% if row.shot_type == '2pt' %}
+                          <span class="ft-badge ft-badge-2pt">2PT</span>
+                        {% elif row.shot_type == '3pt' %}
+                          <span class="ft-badge ft-badge-3pt">3PT</span>
+                        {% elif row.shot_type == 'ft' %}
+                          <span class="ft-badge ft-badge-ft">FT</span>
+                        {% else %}
+                          <span class="ft-badge">{{ row.shot_type }}</span>
+                        {% endif %}
+                      </td>
+                      <td style="text-align:right;font-weight:600;color:#22c55e;">{{ row.makes }}</td>
+                      <td style="text-align:right;color:#ef4444;">{{ row.misses }}</td>
+                      <td style="text-align:right;">{{ row.total }}</td>
+                      <td style="text-align:right;font-weight:600;">{{ row.pct }}%</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                  {% set total_makes = shot_summary|sum(attribute='makes') %}
+                  {% set total_misses = shot_summary|sum(attribute='misses') %}
+                  {% set total_shots = shot_summary|sum(attribute='total') %}
+                  {% set total_pct = (total_makes / total_shots * 100) if total_shots > 0 else 0 %}
+                  <tfoot>
+                    <tr style="background:var(--color-surface-offset);font-weight:700;border-top:2px solid var(--color-divider);">
+                      <td>Total</td>
+                      <td style="text-align:right;color:#22c55e;">{{ total_makes }}</td>
+                      <td style="text-align:right;color:#ef4444;">{{ total_misses }}</td>
+                      <td style="text-align:right;">{{ total_shots }}</td>
+                      <td style="text-align:right;">{{ "%.1f"|format(total_pct) }}%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Player Effect -->
+            {% if player_effect_data %}
+            <div class="ft-report-card" style="flex:1;min-width:260px;">
+              <div class="ft-report-card-title">⚡ Player Effect</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pos</th>
+                      <th style="text-align:right;">Poss</th>
+                      <th style="text-align:right;">Pts</th>
+                      <th style="text-align:right;">ORTG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in player_effect_data %}
+                    <tr>
+                      <td><strong>{{ row.tracker_id }}</strong></td>
+                      <td style="text-align:right;">{{ row.possessions_on }}</td>
+                      <td style="text-align:right;">{{ row.points_for }}</td>
+                      <td style="text-align:right;">
+                        {% if row.ortg is not none %}
+                          <span style="font-weight:600;color:{% if row.ortg > 100 %}#22c55e{% elif row.ortg < 80 %}#ef4444{% else %}var(--color-text){% endif %};">
+                            {{ "%.1f"|format(row.ortg) }}
+                          </span>
+                        {% else %}
+                          <span style="color:var(--color-text-muted);">N/A</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Player Minutes -->
+            {% if player_minutes_data %}
+            <div class="ft-report-card" style="flex:1;min-width:180px;">
+              <div class="ft-report-card-title">⏱ Player Minutes</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Player</th>
+                      <th style="text-align:right;">Min</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in player_minutes_data %}
+                    <tr>
+                      <td><strong>{% if row.player_name %}{{ row.player_name }}{% else %}Pos {{ row.tracker_id }}{% endif %}</strong></td>
+                      <td style="text-align:right;font-weight:600;">{{ "%.1f"|format(row.minutes_played) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+          </div><!-- /split -->
+        </div><!-- /panel-body -->
+      </div><!-- /panel -->
+    </section>
+    {% endif %}
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       GAMES VIEW
+       ═══════════════════════════════════════════════════════ -->
+  <section id="gamesView" class="view" data-frame="5.8">
+    <div class="split">
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>📋 My Games</h2><p>Saved games for Liberty.</p></div>
+          <button class="btn btn-primary" id="exportBtn" type="button">Export tags</button>
+        </div>
+        <div class="panel-body"><div class="games-grid" id="myGamesList"></div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h2>🔍 Scout Games</h2><p>Separate to keep coach clutter down.</p></div></div>
+        <div class="panel-body"><div class="games-grid" id="scoutGamesList"></div></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       REPORTS VIEW
+       ═══════════════════════════════════════════════════════ -->
+  <section id="reportsView" class="view" data-frame="5.9">
+    <div class="list-stack">
+      <section class="panel print-target" id="reportPrintArea">
+        <div class="panel-head">
+          <div><h2>📊 Reports</h2><p>Box scores, player totals, and quick team stats.</p></div>
+          <div class="report-actions no-print">
+            <button class="btn" id="saveReportBtn" type="button">Save</button>
+            <button class="btn" id="printReportBtn" type="button">Print</button>
+          </div>
+        </div>
+        <div class="panel-body list-stack">
+          <div class="filters no-print">
+            <select id="reportScope">
+              <option value="selected">Selected Game</option>
+              <option value="my-season">My Games Season to Date</option>
+              <option value="scout-season">Scout Games Season to Date</option>
+              <option value="all-season">All Saved Games</option>
+            </select>
+            <select id="reportType">
+              <option value="team-totals">Team Totals</option>
+              <option value="player-totals">Individual Totals</option>
+              <option value="opponent-totals">Opponent Totals</option>
+              <option value="record-summary">Team Record</option>
+              <option value="box-score">Box Score</option>
+              <option value="raw-data">Raw Data</option>
+            </select>
+            <button class="btn btn-primary" id="generateReportBtn" type="button">Generate Report</button>
+          </div>
+          <div class="report-card">
+            <div class="tiny">Report title</div>
+            <div id="reportTitle" style="margin-top:.45rem;font-size:1.2rem">No report generated yet.</div>
+          </div>
+          <div class="report-card">
+            <div class="tiny">Summary</div>
+            <textarea id="reportSummary" readonly></textarea>
+          </div>
+          <div class="split">
+            <div class="report-card">
+              <div class="tiny">Main table</div>
+              <div class="table-wrap" style="margin-top:.6rem;max-height:420px">
+                <table><thead><tr id="reportHeadRow"></tr></thead><tbody id="reportTableBody"></tbody></table>
+              </div>
+            </div>
+            <div class="report-card">
+              <div class="tiny">Quick stats</div>
+              <div class="kpi-grid" id="reportKpiGrid" style="margin-top:.6rem"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h2>Current tagged rows</h2><p>Editable event table for the active tagging game.</p></div></div>
+        <div class="panel-body">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Label</th><th>Player</th><th>Quarter</th><th>Team</th><th>Side</th><th>Category</th><th>Event Type</th><th>Result</th><th>Start</th><th>Duration</th><th>Notes</th><th>Row</th></tr></thead>
+              <tbody id="rowsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODALS
+       ═══════════════════════════════════════════════════════ -->
+  <dialog id="termDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Manage terms</h2></div>
+      <div class="modal-body">
+        <div class="field"><label for="termFieldSelect">Field</label><select id="termFieldSelect"></select></div>
+        <div class="field"><label for="newTermInput">Add new term</label><input id="newTermInput" placeholder="Example Horns"><button class="btn btn-primary" id="saveNewTermBtn" type="button">Add Term</button></div>
+        <div class="term-list" id="termList"></div>
+      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="rosterDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Manage rosters</h2></div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="rosterSeasonSelect">Season</label>
+          <select id="rosterSeasonSelect" required>
+            <option value="">Loading seasons…</option>
+          </select>
+          <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
+        </div>
+        <div class="split">
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
+        </div>
+        <div class="pill-buttons" style="margin:.5rem 0 1rem">
+          <button class="btn roster-side-btn active" type="button" data-side="our">Our</button>
+          <button class="btn roster-side-btn" type="button" data-side="opp">Opp</button>
+          <button class="btn roster-side-btn" type="button" data-side="home">Home</button>
+          <button class="btn roster-side-btn" type="button" data-side="away">Away</button>
+        </div>
+        <div class="field">
+          <label for="rosterFileTypeSelect">Roster file type</label>
+          <select id="rosterFileTypeSelect">
+            <option value="auto">Auto-detect</option>
+            <option value="csv">CSV</option>
+            <option value="excel">Excel (.xlsx)</option>
+            <option value="pdf">PDF</option>
+            <option value="maxpreps_pdf">MaxPreps PDF</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rosterFileInput">Import roster file</label>
+          <input id="rosterFileInput" type="file" accept=".csv,.xlsx,.xlsm,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <span class="tiny">CSV or Excel (POS,#,NAME,GRADE), school PDF, or MaxPreps printable roster PDF.</span>
+        </div>
+        <div class="term-list" id="playerList"></div>
+        <div id="rosterSlotHint" class="tiny" style="display:none;margin:.35rem 0 .75rem;color:var(--color-orange);"></div>
+        <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" id="addPlayerBtn" type="button">Add player</button>
+          <button class="btn btn-danger" id="clearRosterBtn" type="button">Clear roster</button>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="rosterImportDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Import roster</h2></div>
+      <div class="modal-body">
+        <p class="tiny" id="rosterImportFileLabel"></p>
+        <div class="field">
+          <label for="rosterImportSeasonSelect">Season</label>
+          <select id="rosterImportSeasonSelect" required></select>
+        </div>
+        <div class="split">
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importGender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="importGender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="importGender" value="coed"> Coed</label></div></div>
+        </div>
+        <div class="pill-buttons" style="margin:.35rem 0 .75rem">
+          <button class="btn roster-import-side-btn active" type="button" data-side="our">Our</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="opp">Opp</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="home">Home</button>
+          <button class="btn roster-import-side-btn" type="button" data-side="away">Away</button>
+        </div>
+        <p class="tiny" id="rosterImportTargetLabel" style="margin-bottom:.5rem;color:var(--color-muted);"></p>
+        <div class="field">
+          <label class="tiny"><input type="checkbox" id="rosterImportReplace" checked> Replace existing players for this season / team</label>
+        </div>
+        <p class="tiny">Uncheck to add imported players without removing anyone already on this roster.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="rosterImportCancelBtn">Cancel</button>
+        <button class="btn btn-primary" type="button" id="rosterImportConfirmBtn">Import</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="playerDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Add player</h2></div>
+      <div class="modal-body split">
+        <div class="field"><label for="playerPosInput">POS</label><input id="playerPosInput" placeholder="G, F, C"></div>
+        <div class="field"><label for="playerNumInput">#</label><input id="playerNumInput" type="number" min="0" max="99"></div>
+        <div class="field"><label for="playerNameInput">Name</label><input id="playerNameInput" placeholder="Jasper Musgrave"></div>
+        <div class="field"><label for="playerGradeInput">Grade</label><input id="playerGradeInput" placeholder="8"></div>
+      </div>
+      <div class="modal-foot"><button class="btn" type="button" id="playerCancelBtn">Cancel</button><button class="btn btn-primary" type="button" id="playerSaveBtn">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="quickTagDialog">
+    <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
+    <div class="modal-body" id="quickTagBody"></div>
+    <div class="modal-foot"><span class="tiny">Select what applies, then tag.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+  </dialog>
+
+  <dialog id="startersDialog">
+    <form method="dialog">
+      <div class="modal-head"><h2>Select Liberty starters</h2></div>
+      <div class="modal-body">
+        <p class="tiny" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent is optional.</p>
+        <div class="split" style="margin-top:.75rem">
+          <div class="field"><label>Liberty starters</label><div class="term-list" id="libertyStartersList"></div></div>
+          <div class="field"><label>Opponent starters (optional)</label><div class="term-list" id="opponentStartersList"></div></div>
+        </div>
+        <p class="tiny" style="margin-top:.75rem">This records who starts; minutes still come from SUB tags.</p>
+      </div>
+      <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
+    </form>
+  </div>
+
+  <!-- Report Drawer -->
+  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
+  <div class="report-drawer" id="report-drawer" aria-hidden="true">
+    <div class="report-drawer-header">
+      <h2>Report Bug / Idea</h2>
+      <button class="report-drawer-close" id="report-drawer-close" type="button">&times;</button>
+    </div>
+    <div class="report-drawer-body" style="flex:1;overflow-y:auto;padding:18px 20px;">
+      <form id="report-drawer-form" action="{{ url_for('core.debug_page', compose='1') }}" method="post" enctype="multipart/form-data">
+        <div class="field"><label for="report-entry-type">Type</label><select id="report-entry-type" name="entry_type"><option value="issue">Bug / Issue</option><option value="idea">Idea / Feature</option></select></div>
+        <div class="field"><label for="report-details">Details</label><textarea id="report-details" name="details" placeholder="Describe the issue or idea..."></textarea></div>
+        <div class="field"><label for="report-source-path">Page</label><input id="report-source-path" name="source_path" readonly></div>
+        <input type="hidden" id="report-return-to" name="return_to">
+        <div class="field"><label for="report-browser-console">Browser Console</label><textarea id="report-browser-console" name="browser_console" readonly style="height:120px;font-family:monospace;font-size:.7rem;"></textarea></div>
+        <div id="report-drawer-message" class="report-status-copy" style="display:none;"></div>
+    </div>
+    <div class="report-drawer-footer">
+      <button class="btn" type="button" id="report-drawer-cancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
+    </div>
+    </form>
+  </div>
+
+</div><!-- /#film-tool-root -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.ENABLE_AUTO_STATS_M1 = {{ "true" if features.ENABLE_AUTO_STATS_M1 else "false" }};
+  window.FILM_TOOL_UPLOADED_VIDEO_URL = {{ uploaded_video_url|tojson|safe }};
+  window.FILM_TOOL_UPLOADED_VIDEO_NAME = {{ filename|tojson|safe }};
+  window.FILM_TOOL_GAME_ID = {{ game_id|tojson|safe }};
+  window.FILM_TOOL_VIDEO_ID = {{ video_id|tojson|safe }};
+  window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
+  window.FILM_TOOL_DETECTION_COUNT = {{ detection_count|tojson|safe }};
+  window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
+</script>
+<script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
+{% endblock %}

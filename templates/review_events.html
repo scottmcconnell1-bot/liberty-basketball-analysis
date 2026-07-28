@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% block title %}Review Queue - Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header review-header">
+  <div>
+    <h2>Review Queue</h2>
+    <div class="text-muted">Accept, correct, or reject event facts before they feed coach-facing analysis.</div>
+  </div>
+  <div class="review-count" aria-live="polite">
+    <span id="review-count">0</span>
+    <span id="review-count-label">pending</span>
+  </div>
+</div>
+
+<div class="alert alert-success" style="margin-bottom:16px;">
+  Review now happens in context: use <strong>Film Tool</strong> (AI Events panel) or <strong>Analysis Results</strong> (Event Explorer) to accept/reject while watching film.
+  High-confidence AI events are auto-accepted after analysis. This queue remains for batch review and corrections.
+</div>
+
+<section class="review-filters" aria-label="Review filters">
+  <label>
+    Status
+    <select id="filter-review-status">
+      <option value="pending">Pending</option>
+      <option value="accepted">Accepted</option>
+      <option value="corrected">Corrected</option>
+      <option value="rejected">Rejected</option>
+      <option value="all">All</option>
+    </select>
+  </label>
+  <label>
+    Game ID
+    <input id="filter-game-id" type="text" inputmode="numeric" placeholder="Any">
+  </label>
+  <label>
+    Event Type
+    <input id="filter-event-type" type="text" placeholder="Any">
+  </label>
+  <label>
+    Source
+    <input id="filter-source-type" type="text" placeholder="manual, ai">
+  </label>
+  <label>
+    Player
+    <input id="filter-player" type="text" placeholder="Any">
+  </label>
+  <label>
+    Min Confidence
+    <input id="filter-min-confidence" type="number" min="0" max="1" step="0.01" placeholder="0.00">
+  </label>
+  <label>
+    Max Confidence
+    <input id="filter-max-confidence" type="number" min="0" max="1" step="0.01" placeholder="1.00">
+  </label>
+  <button class="btn btn-primary" id="review-apply-filters" type="button">Apply</button>
+</section>
+
+<div class="review-layout">
+  <section class="card review-list-card" aria-labelledby="review-list-title">
+    <div class="review-card-header">
+      <h3 id="review-list-title">Events</h3>
+      <span id="review-filter-summary" class="text-muted">Pending events</span>
+    </div>
+    <div id="review-loading" class="text-muted review-state">Loading review queue...</div>
+    <div id="review-empty" class="text-muted review-state" hidden>No matching events.</div>
+    <div class="review-table-wrap">
+      <table class="review-table" id="review-events-table">
+        <thead>
+          <tr>
+            <th>Game</th>
+            <th>Time</th>
+            <th>Event</th>
+            <th>Player</th>
+            <th>Status</th>
+            <th>Conf.</th>
+          </tr>
+        </thead>
+        <tbody id="review-events-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card review-detail-card" aria-labelledby="review-detail-title">
+    <div class="review-card-header">
+      <h3 id="review-detail-title">Selected Event</h3>
+      <span id="review-selected-status" class="status-pill">None</span>
+    </div>
+    <div id="review-no-selection" class="text-muted review-state">Select an event to review.</div>
+    <form id="review-detail-form" hidden>
+      <div class="review-detail-grid">
+        <label>
+          Event ID
+          <input id="review-event-id" type="text" readonly>
+        </label>
+        <label>
+          Game ID
+          <input id="review-game-id" type="text" readonly>
+        </label>
+        <label>
+          Timestamp (ms)
+          <input id="review-timestamp-ms" type="number" min="0" step="1">
+        </label>
+        <label>
+          Source
+          <input id="review-source-type" type="text" readonly>
+        </label>
+        <label>
+          Event Type
+          <input id="review-event-type" type="text">
+        </label>
+        <label>
+          Player
+          <input id="review-player" type="text">
+        </label>
+        <label>
+          Shot Result
+          <input id="review-shot-result" type="text">
+        </label>
+        <label>
+          Confidence
+          <input id="review-confidence" type="number" min="0" max="1" step="0.01">
+        </label>
+      </div>
+      <label class="review-wide-field">
+        Details JSON
+        <textarea id="review-details-json" rows="6" spellcheck="false"></textarea>
+      </label>
+      <label class="review-wide-field">
+        Notes
+        <textarea id="review-notes" rows="3" placeholder="Optional review note"></textarea>
+      </label>
+      <div id="review-message" class="review-message" role="status" aria-live="polite"></div>
+      <div class="review-actions">
+        <button class="btn btn-primary" id="review-accept" type="button">Accept</button>
+        <button class="btn btn-secondary" id="review-correct" type="button">Correct</button>
+        <button class="btn btn-danger" id="review-reject" type="button">Reject</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const state = { events: [], selectedId: null };
+  const fields = {
+    status: document.getElementById('filter-review-status'),
+    gameId: document.getElementById('filter-game-id'),
+    eventType: document.getElementById('filter-event-type'),
+    sourceType: document.getElementById('filter-source-type'),
+    player: document.getElementById('filter-player'),
+    minConfidence: document.getElementById('filter-min-confidence'),
+    maxConfidence: document.getElementById('filter-max-confidence'),
+  };
+
+  function selectedEvent() {
+    return state.events.find((event) => Number(event.id) === Number(state.selectedId));
+  }
+
+  function formatTime(ms) {
+    const value = Number(ms || 0);
+    const totalSeconds = Math.floor(value / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
+  function confidenceText(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : String(value);
+  }
+
+  function setMessage(text, isError = false) {
+    const el = document.getElementById('review-message');
+    el.textContent = text || '';
+    el.classList.toggle('error', Boolean(isError));
+  }
+
+  function buildQuery() {
+    const params = new URLSearchParams();
+    params.set('review_status', fields.status.value);
+    [
+      ['game_id', fields.gameId.value],
+      ['event_type', fields.eventType.value],
+      ['source_type', fields.sourceType.value],
+      ['player', fields.player.value],
+      ['min_confidence', fields.minConfidence.value],
+      ['max_confidence', fields.maxConfidence.value],
+    ].forEach(([key, value]) => {
+      const cleaned = String(value || '').trim();
+      if (cleaned) params.set(key, cleaned);
+    });
+    return params;
+  }
+
+  function updateSummary() {
+    const status = fields.status.options[fields.status.selectedIndex].text;
+    document.getElementById('review-filter-summary').textContent = `${status} events`;
+    document.getElementById('review-count').textContent = state.events.length;
+    document.getElementById('review-count-label').textContent = fields.status.value === 'all' ? 'events' : fields.status.value;
+  }
+
+  function renderTable() {
+    const body = document.getElementById('review-events-body');
+    body.innerHTML = '';
+    state.events.forEach((event) => {
+      const row = document.createElement('tr');
+      row.dataset.eventId = event.id;
+      row.className = Number(event.id) === Number(state.selectedId) ? 'selected' : '';
+      row.innerHTML = `
+        <td><code>${escapeHtml(event.game_id)}</code></td>
+        <td>${escapeHtml(formatTime(event.timestamp_ms))}</td>
+        <td>${escapeHtml(event.event_type || '-')}</td>
+        <td>${escapeHtml(event.player || '-')}</td>
+        <td><span class="status-pill">${escapeHtml(event.review_status || 'pending')}</span></td>
+        <td>${escapeHtml(confidenceText(event.confidence))}</td>
+      `;
+      row.addEventListener('click', () => selectEvent(event.id));
+      body.appendChild(row);
+    });
+    document.getElementById('review-empty').hidden = state.events.length !== 0;
+    updateSummary();
+  }
+
+  function selectEvent(eventId) {
+    state.selectedId = eventId;
+    renderTable();
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const event = selectedEvent();
+    const form = document.getElementById('review-detail-form');
+    const empty = document.getElementById('review-no-selection');
+    if (!event) {
+      form.hidden = true;
+      empty.hidden = false;
+      document.getElementById('review-selected-status').textContent = 'None';
+      return;
+    }
+    form.hidden = false;
+    empty.hidden = true;
+    document.getElementById('review-selected-status').textContent = event.review_status || 'pending';
+    document.getElementById('review-event-id').value = event.id || '';
+    document.getElementById('review-game-id').value = event.game_id || '';
+    document.getElementById('review-timestamp-ms').value = event.timestamp_ms || 0;
+    document.getElementById('review-source-type').value = event.source_type || '';
+    document.getElementById('review-event-type').value = event.event_type || '';
+    document.getElementById('review-player').value = event.player || '';
+    document.getElementById('review-shot-result').value = event.shot_result || '';
+    document.getElementById('review-confidence').value = event.confidence ?? '';
+    document.getElementById('review-details-json').value = event.details_json || '';
+    document.getElementById('review-notes').value = event.review_notes || '';
+    setMessage('');
+  }
+
+  async function loadEvents() {
+    document.getElementById('review-loading').hidden = false;
+    document.getElementById('review-empty').hidden = true;
+    try {
+      const response = await fetch(`/api/review/events?${buildQuery().toString()}`);
+      if (!response.ok) throw new Error(`Queue request failed (${response.status})`);
+      state.events = await response.json();
+      if (!state.events.some((event) => Number(event.id) === Number(state.selectedId))) {
+        state.selectedId = state.events.length ? state.events[0].id : null;
+      }
+      renderTable();
+      renderDetail();
+    } catch (error) {
+      state.events = [];
+      renderTable();
+      setMessage(error.message || 'Could not load review queue.', true);
+    } finally {
+      document.getElementById('review-loading').hidden = true;
+    }
+  }
+
+  async function postAction(path, payload) {
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Review action failed (${response.status})`);
+    return data;
+  }
+
+  async function acceptSelected() {
+    const event = selectedEvent();
+    if (!event) return;
+    await postAction(`/api/review/events/${event.id}/accept`, {
+      notes: document.getElementById('review-notes').value,
+    });
+    setMessage('Event accepted.');
+    await loadEvents();
+  }
+
+  async function rejectSelected() {
+    const event = selectedEvent();
+    if (!event) return;
+    await postAction(`/api/review/events/${event.id}/reject`, {
+      notes: document.getElementById('review-notes').value,
+    });
+    setMessage('Event rejected.');
+    await loadEvents();
+  }
+
+  async function correctSelected() {
+    const event = selectedEvent();
+    if (!event) return;
+    const payload = {
+      player: document.getElementById('review-player').value,
+      event_type: document.getElementById('review-event-type').value,
+      shot_result: document.getElementById('review-shot-result').value,
+      timestamp_ms: Number(document.getElementById('review-timestamp-ms').value || 0),
+      confidence: document.getElementById('review-confidence').value === '' ? null : Number(document.getElementById('review-confidence').value),
+      details_json: document.getElementById('review-details-json').value,
+      notes: document.getElementById('review-notes').value,
+    };
+    await postAction(`/api/review/events/${event.id}/correct`, payload);
+    setMessage('Event corrected.');
+    await loadEvents();
+  }
+
+  document.getElementById('review-apply-filters').addEventListener('click', () => {
+    state.selectedId = null;
+    loadEvents();
+  });
+  document.getElementById('review-accept').addEventListener('click', () => acceptSelected().catch((error) => setMessage(error.message, true)));
+  document.getElementById('review-reject').addEventListener('click', () => rejectSelected().catch((error) => setMessage(error.message, true)));
+  document.getElementById('review-correct').addEventListener('click', () => correctSelected().catch((error) => setMessage(error.message, true)));
+
+  loadEvents();
+})();
+</script>
+
+<style>
+.review-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+.review-count {
+  min-width: 112px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  text-align: right;
+  background: #fff;
+}
+.review-count span:first-child {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.review-count span:last-child {
+  display: block;
+  color: #6b7280;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+.review-filters {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+.review-filters label,
+.review-detail-grid label,
+.review-wide-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+.review-filters input,
+.review-filters select,
+.review-detail-grid input,
+.review-wide-field textarea {
+  width: 100%;
+  font: inherit;
+  padding: 8px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+}
+.review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.85fr);
+  gap: 16px;
+  align-items: start;
+}
+.review-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.review-card-header h3 {
+  margin: 0;
+}
+.review-state {
+  padding: 12px 0;
+}
+.review-table-wrap {
+  overflow: auto;
+  max-height: 620px;
+}
+.review-table {
+  width: 100%;
+}
+.review-table tr {
+  cursor: pointer;
+}
+.review-table tr.selected {
+  background: #ecfdf5;
+}
+.review-table th,
+.review-table td {
+  white-space: nowrap;
+}
+.status-pill {
+  display: inline-block;
+  min-width: 74px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: center;
+}
+.review-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.review-wide-field {
+  margin-top: 10px;
+}
+.review-message {
+  min-height: 20px;
+  margin-top: 10px;
+  color: #047857;
+  font-weight: 700;
+}
+.review-message.error {
+  color: #b91c1c;
+}
+.review-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.btn-danger {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #991b1b;
+}
+@media (max-width: 980px) {
+  .review-filters,
+  .review-layout,
+  .review-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .review-count {
+    text-align: left;
+  }
+}
+</style>
+{% endblock %}

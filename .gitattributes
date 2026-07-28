@@ -1,0 +1,4 @@
+runs/** filter=lfs diff=lfs merge=lfs -text
+models/*.pt filter=lfs diff=lfs merge=lfs -text
+ball_finetune/runs/**/weights/*.pt filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,7 @@
+variant,conf,tp,fp,fn,precision,recall,f1
+threshold_only,0.25,106,74,2,0.5889,0.9815,0.7361
+threshold_top1,0.25,67,52,41,0.563,0.6204,0.5903
+threshold_nms,0.25,106,72,2,0.5955,0.9815,0.7413
+threshold_mask,0.25,106,74,2,0.5889,0.9815,0.7361
+threshold_nms_mask,0.25,106,72,2,0.5955,0.9815,0.7413
+threshold_nms_mask_top1,0.25,67,52,41,0.563,0.6204,0.5903

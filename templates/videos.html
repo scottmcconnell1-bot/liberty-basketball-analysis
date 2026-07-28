@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Video Library – Liberty Basketball{% endblock %}
+
+{% block content %}
+<style>
+  #videos-card {
+    padding: 1.25rem 1.5rem;
+  }
+  #videos-card .table-responsive {
+    margin: 0 -0.25rem;
+  }
+  #videos-card .video-table {
+    table-layout: auto;
+    width: 100%;
+  }
+  #videos-card .video-table th,
+  #videos-card .video-table td {
+    vertical-align: middle;
+    padding: 12px 14px;
+  }
+  #videos-card .video-table .col-game {
+    min-width: 12rem;
+    max-width: 18rem;
+    word-break: break-word;
+  }
+  #videos-card .video-table .col-team { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-date { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-size { min-width: 4.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-status { min-width: 7rem; }
+  #videos-card .video-table .col-status span {
+    white-space: nowrap;
+    display: inline-block;
+  }
+  #videos-card .video-table .col-count {
+    min-width: 3.75rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+  #videos-card .video-table thead .col-count {
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+  }
+  #videos-card .video-table .col-actions { min-width: 17rem; }
+  #videos-card .video-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  #videos-card .video-actions .btn-sm { margin: 0 !important; }
+</style>
+<div class="page-header" data-frame="4.1">
+  <h2>📹 Video Library</h2>
+  <div style="display:flex;gap:10px;">
+    <a href="/film" class="btn btn-primary">+ Upload New Video</a>
+    <button class="btn btn-danger" onclick="confirmClearAll()">🗑 Clear All Videos</button>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;padding:14px 20px;background:#f0fdfb;border-color:#99d4d6;">
+  <strong>ℹ️ How it works:</strong>
+  Each upload gets a unique timestamped filename so you can re-upload the same game multiple times.
+  Duplicates are flagged automatically. Click <em>Open in Film Tool</em> to tag events or view AI detections.
+  Use <em>✂️ Trim</em> to cut NFHS padding (previous game, warmups, empty gym) before analysis.
+  <strong>Rebuild</strong> only works when detections are already saved — if Dets is 0, open <em>Film Tool</em> and click <em>Run AI Analysis</em> (or use <em>Re-run AI</em>).
+  Use the 🗑 button on any row to permanently delete a video and its analysis data.
+</div>
+
+<div class="card" id="videos-card" data-frame="4.2">
+  <div id="loading" style="color:#6b7280;padding:20px 0;">Loading videos…</div>
+  <div class="table-responsive">
+  <table id="video-table" class="video-table" style="display:none;" data-frame="4.2t">
+    <thead>
+      <tr>
+        <th class="col-game">Game</th>
+        <th class="col-team">Team</th>
+        <th class="col-date">Game Date</th>
+        <th class="col-size">Size</th>
+        <th class="col-status">AI Status</th>
+        <th class="col-count" title="Detections">Dets</th>
+        <th class="col-count" title="Events">Evts</th>
+        <th class="col-count" title="Analysis runs">Runs</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="video-tbody"></tbody>
+  </table>
+  </div>
+  <div id="empty-msg" style="display:none;color:#6b7280;padding:20px 0;text-align:center;">
+    No videos uploaded yet. <a href="/film">Upload your first video →</a>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;" data-frame="4.3">
+  <div style="background:#fff;border-radius:8px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 12px;font-size:1rem;">Delete video?</h3>
+    <p id="delete-modal-desc" style="color:#4b5563;font-size:.9rem;margin-bottom:20px;"></p>
+    <p style="color:#dc2626;font-size:.82rem;margin-bottom:20px;">⚠️ This will permanently remove the file and all AI analysis data for this video.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Delete permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm clear-all modal -->
+<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;" data-frame="4.4">
+  <div style="background:#fff;border-radius:8px;padding:28px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 12px;font-size:1rem;">Clear all videos?</h3>
+    <p style="color:#4b5563;font-size:.9rem;margin-bottom:16px;">This will permanently delete <strong>every video file and all AI analysis data</strong> (detections, events, analysis runs). Season and schedule data will be kept.</p>
+    <p style="color:#dc2626;font-size:.82rem;margin-bottom:20px;">⚠️ This cannot be undone.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeClearModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doResetAll()">Yes, clear everything</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const STATUS_COLORS = {
+  completed:   { bg: '#dcfce7', color: '#166534', label: '✅ Completed' },
+  running:     { bg: '#dbeafe', color: '#1e40af', label: '⏳ Running' },
+  pending:     { bg: '#fef9c3', color: '#854d0e', label: '🕐 Pending' },
+  failed:      { bg: '#fee2e2', color: '#991b1b', label: '❌ Failed' },
+  not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
+};
+
+function statusBadge(status, detectionCount, errorMessage, eventCount) {
+  const dets = detectionCount ?? 0;
+  const evts = eventCount ?? 0;
+  if (status === 'completed' && dets === 0 && evts === 0) {
+    const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
+    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
+  }
+  if (status === 'completed' && dets === 0 && evts > 0) {
+    const hint = 'Events exist but no saved detections — Rebuild cannot run. Use Re-run AI or Film Tool → Run AI Analysis.';
+    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
+  }
+  const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
+  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
+}
+
+function formatBytes(b) {
+  if (!b) return '—';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatGameDate(value) {
+  if (!value) return '—';
+  const d = new Date(value.includes('T') ? value : `${value}T12:00:00`);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Delete single video ─────────────────────────────────
+let pendingDeleteId = null;
+
+function confirmDelete(id, name) {
+  pendingDeleteId = id;
+  document.getElementById('delete-modal-desc').textContent = `"${name}"`;
+  const m = document.getElementById('delete-modal');
+  m.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+  try {
+    const r = await fetch(`/api/videos/${pendingDeleteId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    closeDeleteModal();
+    loadVideos();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Delete permanently';
+  }
+});
+
+// ── Clear all videos ────────────────────────────────────
+function confirmClearAll() {
+  document.getElementById('clear-modal').style.display = 'flex';
+}
+function closeClearModal() {
+  document.getElementById('clear-modal').style.display = 'none';
+}
+
+async function doResetAll() {
+  closeClearModal();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('video-table').style.display = 'none';
+  document.getElementById('empty-msg').style.display = 'none';
+  try {
+    const r = await fetch('/api/admin/reset', { method: 'POST' });
+    if (!r.ok) throw new Error('Reset failed');
+    loadVideos();
+  } catch (e) {
+    alert('Error during reset: ' + e.message);
+    loadVideos();
+  }
+}
+
+// ── Load video list ─────────────────────────────────────
+async function loadVideos() {
+  const resp = await fetch('/api/videos');
+  const videos = await resp.json();
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (!videos.length) {
+    document.getElementById('video-table').style.display = 'none';
+    document.getElementById('empty-msg').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('empty-msg').style.display = 'none';
+  const tbody = document.getElementById('video-tbody');
+  tbody.innerHTML = '';
+
+  for (const v of videos) {
+    const dupBadge = v.is_duplicate
+      ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">Dup</span>`
+      : '';
+    const gameLabel = escHtml(v.display_game || v.opponent || 'Liberty');
+    const teamLabel = escHtml(v.team_label || '—');
+    const gameDate = formatGameDate(v.game_date);
+    const deleteLabel = escHtml(v.display_game || v.opponent || v.stored_filename || 'this video');
+
+    const tr = document.createElement('tr');
+    tr.id = `video-row-${v.id}`;
+    tr.innerHTML = `
+      <td class="col-game" data-label="Game">
+        <strong>${gameLabel}</strong>${dupBadge}
+      </td>
+      <td class="col-team" data-label="Team">${teamLabel}</td>
+      <td class="col-date" data-label="Game Date">${gameDate}</td>
+      <td class="col-size" data-label="Size">${formatBytes(v.file_size_bytes)}</td>
+      <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count)}</td>
+      <td class="col-count" data-label="Detections">${v.detection_count ?? 0}</td>
+      <td class="col-count" data-label="Events">${v.event_count ?? 0}</td>
+      <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
+      <td class="col-actions" data-label="Actions">
+        <div class="video-actions">
+          <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
+          <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
+          ${(v.detection_count ?? 0) > 0 ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
+          ${(v.detection_count ?? 0) === 0 && v.analysis_status !== 'running' && v.analysis_status !== 'pending' ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>` : ''}
+          <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
+          <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
+          <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
+          <button class="btn btn-danger btn-sm"
+            onclick="confirmDelete(${v.id}, '${deleteLabel.replace(/'/g,"\\'")}')">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('video-table').style.display = 'table';
+}
+
+loadVideos();
+setInterval(loadVideos, 10000);
+
+async function regenerateEvents(videoId) {
+  if (!confirm('Rebuild events from saved detections? This re-clusters players and regenerates events from existing YOLO data (no full video re-run).')) return;
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Rebuilding…'; }
+  const started = Date.now();
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/regenerate-events', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) {
+      const extra = data.code === 'sklearn_missing'
+        ? '\n\nPull latest code and retry Rebuild (numpy fallback). For full AI stack use Python 3.12 or 3.13.'
+        : (data.code === 'no_detections'
+          ? '\n\nRun full AI analysis on this video first — Rebuild only works when detections are already saved.'
+          : '');
+      throw new Error((data.error || 'Failed to regenerate events') + extra);
+    }
+    const elapsed = Math.round((Date.now() - started) / 1000);
+    alert((data.message || 'Events regenerated.') + (elapsed ? ` (${elapsed}s)` : ''));
+    loadVideos();
+  } catch (err) {
+    alert('Could not regenerate events: ' + err.message);
+    loadVideos();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Rebuild'; }
+  }
+}
+
+async function startVideoAnalysis(videoId) {
+  if (!confirm('Run full AI analysis on this video? This runs YOLO detection and may take a while.')) return;
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+  try {
+    const resp = await fetch('/api/videos/' + videoId + '/analyze', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
+    alert(data.message || 'AI analysis started. Refresh this page to watch progress.');
+    loadVideos();
+  } catch (err) {
+    alert('Could not start analysis: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-run AI'; }
+  }
+}
+</script>
+{% endblock %}

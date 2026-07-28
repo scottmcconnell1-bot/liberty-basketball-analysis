@@ -1,0 +1,21 @@
+# Lightweight development dependencies for the Windows/Codex workstation.
+# This file is for Flask routes, schema work, docs, and unit tests.
+# Heavy CV/ML dependencies such as opencv-python, torch, torchvision, and
+# ultralytics should stay on the Linux/Hermes environment unless explicitly
+# needed on this laptop.
+
+Flask>=3.0,<4
+Werkzeug>=3.0,<4
+Jinja2>=3.1,<4
+click>=8.1,<9
+pytest>=8.0,<9
+requests>=2.31,<3
+beautifulsoup4>=4.12,<5
+pdfplumber>=0.11,<1
+pymupdf>=1.24,<2
+openpyxl>=3.1,<4
+yt-dlp>=2024.1,<2026
+numpy>=1.26,<3
+pandas>=2.2,<3
+scipy>=1.12,<2
+scikit-learn>=1.4,<2

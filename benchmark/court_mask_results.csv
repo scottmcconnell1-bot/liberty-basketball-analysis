@@ -1,0 +1,9 @@
+variant,conf,tp,fp,fn,precision,recall,f1,total_removed,frames_with_removals
+baseline,0.25,106,74,2,0.5889,0.9815,0.7361,0,0
+baseline_nms,0.25,106,72,2,0.5955,0.9815,0.7413,0,0
+court_mask_neg_only,0.25,106,61,2,0.6347,0.9815,0.7709,13,10
+court_mask_neg_only_nms,0.25,106,59,2,0.6424,0.9815,0.7766,13,10
+court_mask_adaptive,0.25,106,33,2,0.7626,0.9815,0.8583,41,34
+court_mask_adaptive_nms,0.25,106,31,2,0.7737,0.9815,0.8653,41,34
+court_mask_strict,0.25,20,15,88,0.5714,0.1852,0.2797,145,104
+court_mask_strict_nms,0.25,20,13,88,0.6061,0.1852,0.2837,145,104

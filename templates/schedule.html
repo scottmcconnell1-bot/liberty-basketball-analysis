@@ -1,0 +1,790 @@
+{% extends "base.html" %}
+{% block title %}Schedule – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header" data-frame="2.1">
+  <h2>Schedule</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule') }}">Clear Filters</a>
+    <a class="btn btn-primary btn-sm" href="#schedule-game-form">+ Add Game</a>
+    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pdf-upload-input').click()">📄 Import PDF</button>
+    <input type="file" id="pdf-upload-input" accept=".pdf" style="display:none" onchange="importPdf(this)">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule_export_maxpreps') }}" target="_blank">📤 Export MaxPreps</a>
+    <span id="pdf-import-health" class="tiny" style="color:#6b7280;"></span>
+  </div>
+</div>
+
+<!-- PDF Import Team Selector Modal -->
+<div id="pdf-team-modal" class="modal-backdrop" data-frame="2.2">
+  <div class="modal pdf-modal pdf-modal--narrow">
+    <h3 style="margin-bottom:12px;">Import Schedule from PDF</h3>
+    <p class="text-muted" style="margin-bottom:8px;">Which program is this schedule for?</p>
+    <p class="pdf-help-text">Choose <strong>Jr High Boys</strong> or <strong>Jr High Girls</strong> for A/B team schedules. Choose <strong>Boys/Girls High School</strong> for varsity/JV/frosh times.</p>
+    <div class="form-group">
+      <label for="pdf-team-select">Program</label>
+      <select class="form-control" id="pdf-team-select">
+        {% for value, label in team_options %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closePdfTeamModal()">Cancel</button>
+      <button class="btn btn-primary" id="pdf-upload-btn" type="button" onclick="uploadPdfWithTeam()">Upload PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Import Preview Modal -->
+<div id="pdf-import-modal" class="modal-backdrop" data-frame="2.3">
+  <div class="modal pdf-modal pdf-modal--wide">
+    <h3 style="margin-bottom:12px;">Review Imported Games</h3>
+    <p class="text-muted" style="margin-bottom:16px;">Edit any field, then click Import All Games. Jr High uses <strong>B Team</strong> and <strong>A Team</strong> times (not varsity/JV).</p>
+    <div id="pdf-season-info" style="margin-bottom:12px;"></div>
+    <div id="pdf-preview-area" class="pdf-preview-scroll"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closePdfImportModal()">Cancel</button>
+      <button class="btn btn-primary" id="pdf-import-btn" onclick="submitPdfImport()">Import All Games</button>
+    </div>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+
+<div class="card" data-frame="2.4">
+  <form method="get" action="{{ url_for('core.schedule') }}">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
+      <div class="form-group">
+        <label for="season_id">Season</label>
+        <select class="form-control" id="season_id" name="season_id">
+          <option value="">All Seasons</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if filters.season_id == season.id %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="level">Level</label>
+        <select class="form-control" id="level" name="level">
+          <option value="">All Levels</option>
+          {% for value, label in level_options %}
+          <option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="gender">Gender</label>
+        <select class="form-control" id="gender" name="gender">
+          <option value="">All Genders</option>
+          {% for value, label in gender_options %}
+          <option value="{{ value }}" {% if filters.gender == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select class="form-control" id="status" name="status">
+          <option value="">All Statuses</option>
+          {% for value, label in status_options %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="padding:0;" data-frame="2.5">
+<div class="table-responsive">
+  <table class="schedule-table" data-frame="2.5t">
+    <thead><tr>
+      <th style="min-width:120px;">DATE</th>
+      <th>OPPONENT</th>
+      <th style="min-width:130px;">TIMES</th>
+      <th style="min-width:150px;">RESULT</th>
+      <th style="min-width:70px;"></th>
+    </tr></thead>
+    <tbody>
+      {% if games %}
+        {% for game in games %}
+        <tr>
+          <!-- Date column -->
+          <td>
+            <div style="font-weight:600;">{{ game.game_date }}</div>
+            {% if game.tournament_name %}
+            <div style="font-size:0.72rem;color:#2563eb;margin-top:2px;">{{ game.tournament_name }}</div>
+            {% endif %}
+            <div style="margin-top:3px;">
+              <span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:0.65rem;">{{ game.season_name }}</span>
+            </div>
+          </td>
+          <!-- Opponent column: name + (H)/(A) + badges -->
+          <td>
+            <div style="font-weight:600;">
+              {{ game.opponent_name }}
+              {% if game.location_type == 'home' %}
+              <span style="color:#059669;font-size:0.8rem;margin-left:4px;">(H)</span>
+              {% elif game.location_type == 'away' %}
+              <span style="color:#dc2626;font-size:0.8rem;margin-left:4px;">(A)</span>
+              {% elif game.location_type == 'neutral' %}
+              <span style="color:#6b7280;font-size:0.8rem;margin-left:4px;">(N)</span>
+              {% endif %}
+            </div>
+            <div style="margin-top:3px;">
+              {% if game.level == 'varsity' %}
+              <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:0.65rem;">Varsity</span>
+              {% elif game.level == 'jv' %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:0.65rem;">JV</span>
+              {% elif game.level == 'jr_high' %}
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.65rem;">Jr High</span>
+              {% endif %}
+              {% if game.gender == 'girls' %}
+              <span class="badge" style="background:#fce7f3;color:#9d174d;font-size:0.65rem;margin-left:2px;">Girls</span>
+              {% elif game.gender == 'boys' %}
+              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:0.65rem;margin-left:2px;">Boys</span>
+              {% endif %}
+            </div>
+            {% if game.notes %}
+            <div style="font-size:0.75rem;color:#9ca3af;margin-top:3px;">{{ game.notes }}</div>
+            {% endif %}
+          </td>
+          <!-- Times column: JV / Frosh / Varsity -->
+          <td>
+            {% set times = [] %}
+            {% if game.jv_game_time %}{% set _ = times.append(game.jv_game_time) %}{% endif %}
+            {% if game.frosh_game_time %}{% set _ = times.append(game.frosh_game_time) %}{% endif %}
+            {% if game.game_time %}{% set _ = times.append(game.game_time) %}{% endif %}
+            {% if times %}
+            <div style="font-weight:600;font-size:0.9rem;letter-spacing:0.3px;">
+              {{ times | join(' / ') }}
+            </div>
+            <div style="font-size:0.68rem;color:#9ca3af;margin-top:2px;">
+              {% if game.level == 'jr_high' %}
+                {% if game.jv_game_time and game.frosh_game_time and game.game_time %}
+                  B / A / V
+                {% elif game.jv_game_time and game.game_time %}
+                  B / A
+                {% elif game.game_time and not game.jv_game_time %}
+                  A only
+                {% elif game.jv_game_time and not game.game_time %}
+                  B only
+                {% endif %}
+              {% else %}
+                {% if game.jv_game_time and game.game_time %}
+                  JV / Varsity
+                {% elif game.jv_game_time and game.frosh_game_time and game.game_time %}
+                  JV / Frosh / Varsity
+                {% elif game.game_time and not game.jv_game_time %}
+                  Varsity only
+                {% elif game.jv_game_time and not game.game_time %}
+                  JV only
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if game.status == 'completed' %}
+            <span class="badge badge-completed" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Completed</span>
+            {% elif game.status == 'cancelled' %}
+            <span class="badge badge-cancelled" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Cancelled</span>
+            {% elif game.status == 'rescheduled' %}
+            <span class="badge badge-rescheduled" style="font-size:0.65rem;margin-top:3px;display:inline-block;">Rescheduled</span>
+            {% endif %}
+            {% else %}
+            <span style="color:#9ca3af;">TBD</span>
+            {% endif %}
+          </td>
+          <!-- Result column: score, record form, film/stats links -->
+          <td>
+            {% if game.liberty_score is not none and game.opponent_score is not none %}
+            <div style="font-weight:600;font-size:0.9rem;">
+              {% if game.result == 'win' %}
+              <span style="color:#059669;">W</span>
+              {% elif game.result == 'loss' %}
+              <span style="color:#dc2626;">L</span>
+              {% elif game.result == 'tie' %}
+              <span style="color:#6b7280;">T</span>
+              {% endif %}
+              {{ game.liberty_score }}-{{ game.opponent_score }}
+            </div>
+            {% if game.is_conference %}
+            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:0.62rem;margin-top:2px;display:inline-block;">Conf</span>
+            {% endif %}
+            {% else %}
+            <span style="color:#9ca3af;font-size:0.8rem;">No score</span>
+            {% endif %}
+            <form method="post" action="{{ url_for('core.schedule_record_game', game_id=game.id) }}" style="margin-top:6px;">
+              <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+              <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+              <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+              <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+              <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                <input type="number" name="liberty_score" class="form-control" style="width:52px;padding:4px 6px;font-size:0.8rem;" min="0" placeholder="Us" value="{{ game.liberty_score if game.liberty_score is not none else '' }}" title="Liberty score">
+                <span style="color:#9ca3af;font-size:0.75rem;">–</span>
+                <input type="number" name="opponent_score" class="form-control" style="width:52px;padding:4px 6px;font-size:0.8rem;" min="0" placeholder="Opp" value="{{ game.opponent_score if game.opponent_score is not none else '' }}" title="Opponent score">
+                <label style="display:flex;align-items:center;gap:3px;font-size:0.68rem;color:#6b7280;white-space:nowrap;">
+                  <input type="checkbox" name="is_conference" value="1" {% if game.is_conference %}checked{% endif %} style="width:auto;margin:0;">
+                  Conf
+                </label>
+                <button class="btn btn-primary btn-sm" type="submit" style="padding:3px 8px;font-size:0.72rem;">Save</button>
+              </div>
+            </form>
+            {% if game.analysis_key or game.video_filename %}
+            <div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">
+              {% if game.video_filename and game.analysis_key %}
+              <a class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:0.68rem;" href="{{ url_for('core.film', filename=game.video_filename, game_id=game.analysis_key) }}">Film</a>
+              {% endif %}
+              {% if game.analysis_key %}
+              <a class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:0.68rem;" href="/analysis/{{ game.analysis_key | urlencode }}">Stats</a>
+              {% endif %}
+            </div>
+            {% elif game.game_record_id %}
+            <div style="margin-top:4px;">
+              <a href="/videos" style="font-size:0.68rem;color:#6b7280;">Upload film →</a>
+            </div>
+            {% endif %}
+          </td>
+          <!-- Actions -->
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_game_id=game.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('core.schedule_delete_game', game_id=game.id) }}" style="display:inline;">
+              <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+              <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+              <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+              <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="5" class="text-muted" style="padding:24px;text-align:center;">No games match the current filters.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
+  <div class="card" id="schedule-game-form" data-frame="2.6">
+    <h3 style="margin-bottom:18px;">{% if editing_game %}Edit Scheduled Game{% else %}Add Scheduled Game{% endif %}</h3>
+    {% if editing_game %}
+    <script>window.addEventListener('load',function(){document.getElementById('schedule-game-form').scrollIntoView({behavior:'smooth'});});</script>
+    {% endif %}
+    <form method="post" action="{{ url_for('core.schedule_save_game') }}">
+      <input type="hidden" name="game_id" value="{{ game_form.id }}">
+      <input type="hidden" name="filter_season_id" value="{{ filters.season_id or '' }}">
+      <input type="hidden" name="filter_level" value="{{ filters.level or '' }}">
+      <input type="hidden" name="filter_gender" value="{{ filters.gender or '' }}">
+      <input type="hidden" name="filter_status" value="{{ filters.status or '' }}">
+      <div class="form-group">
+        <label for="game-season">Season</label>
+        <select class="form-control" id="game-season" name="season_id" required>
+          <option value="" {% if not seasons %}selected{% endif %}>Select a season</option>
+          {% for season in seasons %}
+          <option value="{{ season.id }}" {% if game_form.season_id|string == season.id|string %}selected{% endif %}>{{ season.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="program_name">Program</label>
+          <input class="form-control" id="program_name" name="program_name" value="{{ game_form.program_name }}">
+        </div>
+        <div class="form-group">
+          <label for="team-select">Team</label>
+          <select class="form-control" id="team-select" name="team">
+            {% for value, label in team_options %}
+            <option value="{{ value }}" {% if game_form.team == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="level-select">Level</label>
+          <select class="form-control" id="level-select" name="level">
+            {% for value, label in level_options %}
+            <option value="{{ value }}" {% if game_form.level == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="gender-select">Gender</label>
+          <select class="form-control" id="gender-select" name="gender">
+            {% for value, label in gender_options %}
+            <option value="{{ value }}" {% if game_form.gender == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="location_type">Location</label>
+          <select class="form-control" id="location_type" name="location_type">
+            {% for value, label in location_options %}
+            <option value="{{ value }}" {% if game_form.location_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <!-- Date + Times row -->
+      <div class="form-group">
+        <label for="game_date">Date</label>
+        <input type="date" class="form-control" id="game_date" name="game_date" value="{{ game_form.game_date }}" required>
+      </div>
+      <!-- Times: JV / Frosh / Varsity -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="jv_game_time">JV Time</label>
+          <input type="time" class="form-control" id="jv_game_time" name="jv_game_time" value="{{ game_form.get('jv_game_time', '') }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Leave blank if no JV</div>
+        </div>
+        <div class="form-group">
+          <label for="frosh_game_time">Frosh Time</label>
+          <input type="time" class="form-control" id="frosh_game_time" name="frosh_game_time" value="{{ game_form.get('frosh_game_time', '') }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Optional</div>
+        </div>
+        <div class="form-group">
+          <label for="game_time">Varsity Time</label>
+          <input type="time" class="form-control" id="game_time" name="game_time" value="{{ game_form.game_time }}">
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">Primary game time</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="opponent_name">Opponent</label>
+        <input class="form-control" id="opponent_name" name="opponent_name" value="{{ game_form.opponent_name }}" required>
+      </div>
+      <div class="form-group">
+        <label for="tournament_name">Tournament (optional)</label>
+        <input class="form-control" id="tournament_name" name="tournament_name" value="{{ game_form.tournament_name }}">
+      </div>
+      <div class="form-group">
+        <label for="game-status">Status</label>
+        <select class="form-control" id="game-status" name="status">
+          {% for value, label in status_options %}
+          <option value="{{ value }}" {% if game_form.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea class="form-control" id="notes" name="notes" rows="3">{{ game_form.notes }}</textarea>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <a class="btn btn-secondary" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Reset</a>
+        <button class="btn btn-primary" type="submit">Save Game</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" data-frame="2.7">
+    <div class="page-header" style="margin-bottom:14px;">
+      <h3 style="font-size:1rem;">Manage Seasons</h3>
+      {% if editing_season %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None) }}">Cancel Edit</a>
+      {% endif %}
+    </div>
+    <table data-frame="2.7t" style="margin-bottom:18px;">
+      <thead><tr><th>Name</th><th>Type</th><th>Start</th><th>End</th><th></th></tr></thead>
+      <tbody>
+        {% if seasons %}
+          {% for season in seasons %}
+          <tr>
+            <td>{{ season.name }}</td>
+            <td>{{ 'Summer' if season.season_type == 'summer' else 'Regular' }}</td>
+            <td>{{ season.start_date }}</td>
+            <td>{{ season.end_date }}</td>
+            <td style="white-space:nowrap;">
+              <a class="btn btn-secondary btn-sm" href="{{ url_for('core.schedule', season_id=filters.season_id, level=filters.level or None, gender=filters.gender or None, status=filters.status or None, edit_season_id=season.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('core.schedule_delete_season', season_id=season.id) }}" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="5" class="text-muted">No seasons yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <form method="post" action="{{ url_for('core.schedule_save_season') }}" data-frame="2.8">
+      <input type="hidden" name="season_id" value="{{ season_form.id }}">
+      <div class="form-group">
+        <label for="season-name">Season Name</label>
+        <input class="form-control" id="season-name" name="name" placeholder="e.g. 2025-26 Boys HS or Summer 2026" value="{{ season_form.name }}" required>
+      </div>
+      <div class="form-group">
+        <label for="season-type">Program Type</label>
+        <select class="form-control" id="season-type" name="season_type" onchange="applySeasonTypeDefaults()">
+          {% for value, label in season_type_options %}
+          <option value="{{ value }}" {% if season_form.season_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px;">
+          Summer program is for out-of-season tournaments (typically Jun–Aug).
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="season-start">Start Date</label>
+          <input type="date" class="form-control" id="season-start" name="start_date" value="{{ season_form.start_date }}" required>
+        </div>
+        <div class="form-group">
+          <label for="season-end">End Date</label>
+          <input type="date" class="form-control" id="season-end" name="end_date" value="{{ season_form.end_date }}" required>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn btn-primary" type="submit">{% if editing_season %}Update Season{% else %}Add Season{% endif %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+  .badge-rescheduled { background: #fef3c7; color: #92400e; }
+  .badge-completed { background: #dbeafe; color: #1d4ed8; }
+  .pdf-modal--wide { max-width: min(1100px, 96vw); width: 100%; }
+  .pdf-modal--narrow { max-width: 480px; width: 100%; }
+  .pdf-help-text { font-size: 0.85rem; color: #6b7280; margin-bottom: 16px; line-height: 1.5; }
+  .pdf-preview-scroll { max-height: 55vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+  .pdf-preview-table { width: 100%; min-width: 920px; font-size: 0.875rem; border-collapse: collapse; }
+  .schedule-table { font-size:0.875rem; }
+  .schedule-table th {
+    background:#f8fafc;
+    color:#374151;
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    padding:10px 12px;
+    border-bottom:2px solid #e5e7eb;
+  }
+  .schedule-table td {
+    padding:12px;
+    border-bottom:1px solid #f3f4f6;
+    vertical-align:top;
+  }
+  .schedule-table tr:hover { background:#fafbfc; }
+  .schedule-table tr:last-child td { border-bottom:none; }
+  .pdf-preview-table th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    color: #374151;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 8px;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .pdf-preview-table td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
+  .pdf-preview-table input,
+  .pdf-preview-table select { min-width: 0; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const scheduleTeamOptions = {{ team_options | tojson }};
+const scheduleLevelOptions = {{ level_options | tojson }};
+const scheduleGenderOptions = {{ gender_options | tojson }};
+const scheduleLocationOptions = {{ location_options | tojson }};
+
+function escapeHtml(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildSelectOptions(options, selectedValue) {
+  return options.map(([value, label]) =>
+    '<option value="' + escapeHtml(value) + '"' + (value === selectedValue ? ' selected' : '') + '>' + escapeHtml(label) + '</option>'
+  ).join('');
+}
+
+// ── PDF Import ──────────────────────────────────────────
+let pdfExtractedGames = [];
+let pdfSelectedTeam = 'boys_hs';
+let pdfUploadInput = null;
+let pdfDetectedSeason = null;
+
+function importPdf(input) {
+  pdfUploadInput = input;
+  // Show team selector first
+  document.getElementById('pdf-team-modal').classList.add('open');
+}
+
+function closePdfTeamModal() {
+  document.getElementById('pdf-team-modal').classList.remove('open');
+  // Don't clear pdfUploadInput here — uploadPdfWithTeam needs the file
+}
+
+function uploadPdfWithTeam() {
+  const teamSelect = document.getElementById('pdf-team-select');
+  pdfSelectedTeam = teamSelect.value;
+  closePdfTeamModal();
+
+  const input = pdfUploadInput;
+  const uploadBtn = document.getElementById('pdf-upload-btn');
+  if (!input) { alert('No file input — pick the PDF again.'); return; }
+  const file = input.files[0];
+  if (!file) { alert('No file selected. Please choose the PDF again.'); return; }
+
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Parsing PDF…';
+  }
+
+  const formData = new FormData();
+  formData.append('pdf', file);
+  formData.append('team', pdfSelectedTeam);
+  fetch('/api/schedule/import-pdf', {
+    method: 'POST',
+    body: formData,
+  })
+  .then(async (r) => {
+    const data = await r.json();
+    if (!r.ok) {
+      let msg = data.error || ('Import failed (HTTP ' + r.status + ')');
+      if (data.health && !data.health.ready) {
+        msg += '\n\nServer status: ' + (data.health.message || 'parser not ready');
+      }
+      throw new Error(msg);
+    }
+    return data;
+  })
+  .then(data => {
+    if (data.error) { alert('Error: ' + data.error); return; }
+    pdfExtractedGames = data.games || [];
+    pdfDetectedSeason = data.season || null;
+    const looksLikeFooterJunk = pdfExtractedGames.some(g =>
+      (g.opponent_name || '').toLowerCase().includes('printable')
+    );
+    if (looksLikeFooterJunk || (pdfExtractedGames.length > 0 && pdfExtractedGames.length < 5 && data.parser !== 'maxpreps')) {
+      alert(
+        'Schedule import failed — the server parsed PDF footer junk instead of games.\n\n'
+        + 'On the AI workstation run:\n'
+        + '  git pull origin jason-5-may-updates\n'
+        + '  pip install pdfplumber\n'
+        + 'Then restart the app and try again.\n\n'
+        + 'Check status: /api/schedule/import-health'
+      );
+      return;
+    }
+    if ((data.count || pdfExtractedGames.length) < 5) {
+      const proceed = confirm(
+        `Only ${data.count || pdfExtractedGames.length} games were found. `
+        + 'If this is a full varsity schedule, cancel and update/restart the server before importing.'
+      );
+      if (!proceed) return;
+    }
+    renderPdfPreview();
+    renderPdfSeasonInfo();
+    document.getElementById('pdf-import-modal').classList.add('open');
+  })
+  .catch(err => alert('Import failed: ' + err.message))
+  .finally(() => {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload PDF';
+    }
+    input.value = '';
+    pdfUploadInput = null;
+  });
+}
+
+function refreshPdfImportHealth() {
+  const el = document.getElementById('pdf-import-health');
+  if (!el) return;
+  fetch('/api/schedule/import-health')
+    .then(r => r.json())
+    .then(data => {
+      if (data.ready) {
+        el.textContent = '✓ MaxPreps PDF import ready';
+        el.style.color = '#166534';
+      } else {
+        el.textContent = '⚠ PDF import needs update — pull code + restart app';
+        el.style.color = '#b45309';
+        el.title = data.message || '';
+      }
+    })
+    .catch(() => {
+      el.textContent = '⚠ Could not check PDF import status';
+      el.style.color = '#b45309';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', refreshPdfImportHealth);
+
+function renderPdfPreview() {
+  const area = document.getElementById('pdf-preview-area');
+  if (!pdfExtractedGames.length) {
+    area.innerHTML = '<p class="text-muted" style="padding:16px;">No games found in PDF.</p>';
+    return;
+  }
+  pdfExtractedGames.forEach((g, i) => {
+    if (!g._original_date) g._original_date = g.game_date;
+    if (pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_')) {
+      g.level = 'jr_high';
+      g.team = pdfSelectedTeam;
+      // Legacy misparsed rows may have A team in frosh_game_time — promote to game_time.
+      if (!g.game_time && g.frosh_game_time) {
+        g.game_time = g.frosh_game_time;
+        g.frosh_game_time = '';
+      }
+    }
+  });
+
+  const isJrHigh = pdfSelectedTeam && pdfSelectedTeam.startsWith('jr_');
+  const time1Label = isJrHigh ? 'B Team' : 'JV';
+  const time2Label = isJrHigh ? 'A Team' : 'Frosh';
+  const time3Label = isJrHigh ? '' : 'Varsity';
+
+  let html = '<table class="pdf-preview-table"><thead><tr>' +
+    '<th>Date</th><th>' + time1Label + '</th><th>' + time2Label + '</th>' +
+    (time3Label ? '<th>' + time3Label + '</th>' : '') +
+    '<th>Opponent</th><th>Program</th>' + (isJrHigh ? '' : '<th>Level</th>') +
+    '<th>Gender</th><th>Location</th></tr></thead><tbody>';
+
+  pdfExtractedGames.forEach((g, i) => {
+    const aTeamValue = isJrHigh ? (g.game_time || '') : (g.frosh_game_time || '');
+    const aTeamField = isJrHigh ? 'game_time' : 'frosh_game_time';
+    html += '<tr>' +
+      '<td><input type="date" class="form-control" value="' + escapeHtml(g.game_date || '') + '" onchange="pdfExtractedGames[' + i + '].game_date=this.value"></td>' +
+      '<td><input type="time" class="form-control" value="' + escapeHtml(g.jv_game_time || '') + '" onchange="pdfExtractedGames[' + i + '].jv_game_time=this.value"></td>' +
+      '<td><input type="time" class="form-control" value="' + escapeHtml(aTeamValue) + '" onchange="pdfExtractedGames[' + i + '].' + aTeamField + '=this.value"></td>';
+    if (!isJrHigh) {
+      html += '<td><input type="time" class="form-control" value="' + escapeHtml(g.game_time || '') + '" onchange="pdfExtractedGames[' + i + '].game_time=this.value"></td>';
+    }
+    html +=
+      '<td><input type="text" class="form-control" value="' + escapeHtml(g.opponent_name || '') + '" onchange="pdfExtractedGames[' + i + '].opponent_name=this.value"></td>' +
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].team=this.value">' +
+        buildSelectOptions(scheduleTeamOptions, g.team || pdfSelectedTeam) +
+      '</select></td>';
+    if (!isJrHigh) {
+      html += '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].level=this.value">' +
+        buildSelectOptions(scheduleLevelOptions, g.level || 'varsity') +
+      '</select></td>';
+    }
+    html +=
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].gender=this.value">' +
+        buildSelectOptions(scheduleGenderOptions, g.gender || 'boys') +
+      '</select></td>' +
+      '<td><select class="form-control" onchange="pdfExtractedGames[' + i + '].location_type=this.value">' +
+        buildSelectOptions(scheduleLocationOptions, g.location_type || 'home') +
+      '</select></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  area.innerHTML = html;
+}
+
+function renderPdfSeasonInfo() {
+  const el = document.getElementById('pdf-season-info');
+  const detected = pdfDetectedSeason;
+  // Default dates: if detected use those, else guess from current date
+  let startDate = detected ? detected.start_date : '';
+  let endDate = detected ? detected.end_date : '';
+  let seasonName = detected ? detected.name : '';
+
+  el.innerHTML = `
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:4px;">
+      <div style="font-weight:600;color:#0369a1;margin-bottom:10px;font-size:0.9rem;">📅 Confirm Season for Imported Games</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Name</label>
+          <input type="text" id="pdf-season-name" value="${seasonName}" class="form-control">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Program</label>
+          <input type="text" id="pdf-team-display" value="${pdfSelectedTeam}" disabled class="form-control" style="background:#f9fafb;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season Start Date</label>
+          <input type="date" id="pdf-season-start" value="${startDate}" class="form-control">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:3px;">Season End Date</label>
+          <input type="date" id="pdf-season-end" value="${endDate}" class="form-control">
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:#9ca3af;">Detected: ${detected ? detected.name + ' (' + detected.start_date + ' → ' + detected.end_date + ')' : 'none — please set manually'}</div>
+    </div>
+  `;
+}
+
+function closePdfImportModal() {
+  document.getElementById('pdf-import-modal').classList.remove('open');
+  pdfExtractedGames = [];
+  pdfDetectedSeason = null;
+}
+
+function submitPdfImport() {
+  const btn = document.getElementById('pdf-import-btn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  // Read user-confirmed season info from the form
+  const seasonName = document.getElementById('pdf-season-name').value.trim();
+  const seasonStart = document.getElementById('pdf-season-start').value;
+  const seasonEnd = document.getElementById('pdf-season-end').value;
+
+  if (!seasonName || !seasonStart || !seasonEnd) {
+    alert('Please fill in season name, start date, and end date.');
+    btn.disabled = false;
+    btn.textContent = 'Import All Games';
+    return;
+  }
+
+  const confirmedSeason = {
+    name: seasonName,
+    start_date: seasonStart,
+    end_date: seasonEnd,
+  };
+
+  // Extract raw date strings for server-side re-parsing with confirmed dates
+  // Also send original parsed dates so server knows if user edited them
+  const rawDates = pdfExtractedGames.map(g => g.raw_date || '');
+  const originalDates = pdfExtractedGames.map(g => g._original_date || g.game_date || '');
+
+  fetch('/api/schedule/import-pdf/confirm', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({games: pdfExtractedGames, team: pdfSelectedTeam, season: confirmedSeason, raw_dates: rawDates, original_dates: originalDates}),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert('Error: ' + data.error); return; }
+    closePdfImportModal();
+    window.location.reload();
+  })
+  .catch(err => alert('Import failed: ' + err.message))
+  .finally(() => { btn.disabled = false; btn.textContent = 'Import All Games'; });
+}
+
+function applySeasonTypeDefaults() {
+  const typeEl = document.getElementById('season-type');
+  const nameEl = document.getElementById('season-name');
+  const startEl = document.getElementById('season-start');
+  const endEl = document.getElementById('season-end');
+  if (!typeEl || !startEl || !endEl) return;
+  const year = new Date().getFullYear();
+  if (typeEl.value === 'summer') {
+    if (nameEl && !nameEl.value.trim()) nameEl.value = `Summer ${year}`;
+    if (!startEl.value) startEl.value = `${year}-06-01`;
+    if (!endEl.value) endEl.value = `${year}-08-31`;
+  }
+}
+</script>
+{% endblock %}

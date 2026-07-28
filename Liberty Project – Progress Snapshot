@@ -1,0 +1,215 @@
+# Liberty Project – Progress Snapshot  
+**Date:** 2026-04-28, ~10:10 AM MDT
+
+This file captures the state of the Liberty film/analytics project and
+Hermes’ work as of the date above. Use it to quickly recover context if
+chat history is lost.
+
+---
+
+## 1. High-Level Goal
+
+Build a long-term basketball film and analytics system for my own
+coaching:
+
+- Track **seasons, schedules, games, and video sources** (NFHS, Pixellot, manual).
+- Later: stats, player development, and practice cut‑ups.
+- Build in **small, reviewable steps** with Hermes editing the repo and
+  me approving each step.
+
+Roles:
+
+- **Me** – coach, product owner, and high-level architect.
+- **Perplexity** – helps design schema, phases, and Hermes prompts.
+- **Hermes** – code agent that edits files, shows diffs, and pauses.
+
+---
+
+## 2. Core Constraints
+
+- Database: **SQLite**, with `schema.sql` as the single source of truth.
+- Existing tables that must not be broken:
+  - `events` – in-game events (possessions, dribbles, shots).
+  - `analysis_runs` – status of video analysis runs.
+  - `detections` – detection data per frame.
+- Early phases: **no heavy new dependencies** (no big CV/tracking libs).
+- Hermes must:
+  - Work in **small, scoped tasks**.
+  - Treat `schema.sql` + project outline as **constraints**.
+  - Stop after each task and show diffs.
+
+---
+
+## 3. Schema State (as of 2026-04-28)
+
+These tables are **implemented in `schema.sql`** using
+`CREATE TABLE IF NOT EXISTS` and are considered the foundation.
+
+### 3.1 `seasons`
+
+Represents each basketball season.
+
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT  
+- `name` TEXT NOT NULL UNIQUE  (e.g. `2025-26`)  
+- `start_date` DATE NOT NULL  
+- `end_date` DATE NOT NULL  
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+
+### 3.2 `scheduled_games`
+
+Represents the **official schedule**.
+
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT  
+- `season_id` INTEGER NOT NULL REFERENCES `seasons(id)`  
+- `program_name` TEXT NOT NULL  (e.g. `Liberty`)  
+- `gender` TEXT NOT NULL  (`boys` / `girls`)  
+- `level` TEXT NOT NULL  (`varsity`, `jv`, `jr_high`)  
+- `game_date` DATE NOT NULL  
+- `game_time` TIME NOT NULL  
+- `location_type` TEXT NOT NULL  (`home`, `away`, `neutral`)  
+- `opponent_name` TEXT NOT NULL  
+- `tournament_name` TEXT  
+- `status` TEXT NOT NULL DEFAULT `scheduled`
+  (`scheduled`, `cancelled`, `rescheduled`, `completed`)  
+- `notes` TEXT  
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+
+### 3.3 `games`
+
+Represents **actual game instances**, which may be linked to the
+schedule or be standalone scouting games.
+
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT  
+- `scheduled_game_id` INTEGER REFERENCES `scheduled_games(id)`  (nullable)  
+- `start_time` TIMESTAMP  
+- `end_time` TIMESTAMP  
+- `source_type` TEXT NOT NULL  (`pixellot`, `nfhs`, `manual`)  
+- `source_key` TEXT NOT NULL  (NFHS ID, Pixellot ID, or file path)  
+- `nfhs_game_id` TEXT  
+- `nfhs_url` TEXT  
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+
+### 3.4 `nfhs_matches`
+
+Represents candidate and confirmed matches between scheduled games and
+NFHS games.
+
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT  
+- `scheduled_game_id` INTEGER NOT NULL REFERENCES `scheduled_games(id)`  
+- `nfhs_game_id` TEXT NOT NULL  
+- `nfhs_url` TEXT NOT NULL  
+- `match_status` TEXT NOT NULL DEFAULT `candidate`
+  (`candidate`, `confirmed`, `rejected`)  
+- `confidence` REAL  
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+
+### 3.5 `sources`
+
+Allows multiple **video sources** per game.
+
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT  
+- `game_id` INTEGER NOT NULL REFERENCES `games(id)`  
+- `source_type` TEXT NOT NULL  (`nfhs_vod`, `manual_upload`, `local_file`, etc.)  
+- `source_path` TEXT NOT NULL  (file path or URL)  
+- `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+- `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+
+These 5 tables are **locked in** as the basis for schedule/game/film
+features, alongside the pre-existing `events`, `analysis_runs`,
+`detections`.
+
+---
+
+## 4. Project Outline (Short Version)
+
+The “Liberty Master Project Outline” (also in a Google Doc) defines
+phases:
+
+- **Phase 0** – Foundation & principles.
+- **Phase 1** – Data model & schema (above tables) – **DONE**.
+- **Phase 2** – Core Schedule & Season Management.
+  - Seasons CRUD.
+  - `scheduled_games` CRUD tied to seasons.
+- **Phase 3** – Games & film sources.
+  - `games` instances.
+  - `sources` per game.
+- **Phase 4** – NFHS matching & light automation.
+- **Phase 5** – Stats & event usage.
+- **Phase 6** – Player development & practice engine.
+
+Hermes must follow this outline and stop after each phase chunk for review.
+
+---
+
+## 5. Hermes Work Completed So Far
+
+### 5.1 Schema Updates
+
+Hermes has already:
+
+- Added `seasons`, `scheduled_games`, `games`, `nfhs_matches`, and
+  `sources` to `schema.sql` using the definitions above.
+- Changed `scheduled_games` from a `season TEXT` column to
+  `season_id INTEGER NOT NULL REFERENCES seasons(id)`.
+
+### 5.2 Seasons CRUD (`season_management.py`)
+
+Hermes created `season_management.py` with basic Seasons CRUD using
+Python’s built‑in `sqlite3`:
+
+- `get_db_connection(db_path)`  
+  - Returns `sqlite3.connect(db_path)`.
+
+- `create_season(conn, name, start_date, end_date)`  
+  - Inserts into `seasons`.
+
+- `list_seasons(conn)`  
+  - Prints all seasons ordered by `start_date` DESC.
+
+- `edit_season(conn, season_id, new_name=None, new_start_date=None, new_end_date=None)`  
+  - Builds an UPDATE statement based on supplied fields.
+  - If nothing to update, prints “No updates to apply.”
+
+- Demo block (`if __name__ == "__main__":`):
+  - Opens `film_analysis.db`.
+  - Calls `create_season("2026-27", "2026-08-01", "2027-05-31")`.
+  - Calls `list_seasons()`.
+  - Calls `edit_season(1, new_name="2025-26 Updated")`.
+  - Closes the connection.
+
+As of this snapshot, **only Seasons CRUD is implemented in code**.
+
+---
+
+## 6. Next Intended Steps for Hermes
+
+When rate limits and schedule allow, the next instructions to Hermes
+should roughly be:
+
+1. Keep `season_management.py` as a helper module.
+2. Implement **`scheduled_games` CRUD**:
+   - Functions to:
+     - Create scheduled games (linked to a `season_id`).
+     - List scheduled games (with filters: season, level, gender).
+     - Edit and delete scheduled games.
+   - Optional small demo block showing usage.
+3. Do **not** modify `schema.sql`.
+4. After `scheduled_games` CRUD and basic filtering are working:
+   - STOP.
+   - Show diffs for all changed files.
+   - Provide a short “how to use” summary.
+
+---
+
+## 7. How to Use This File
+
+If chat history is lost:
+
+- You (or a future assistant) can read this file to:
+  - Understand the **current schema**.
+  - See what Hermes has already built.
+  - See what the **next Hermes task** should be.
+- You can also paste this into a new Perplexity chat and say:
+  - “This is the latest progress README from my Liberty project. Please continue from here and help me write the next instruction for Hermes.”

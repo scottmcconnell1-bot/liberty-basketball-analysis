@@ -1,0 +1,81 @@
+{# NFHS download panel. Set nfhs_prefix before include (e.g. "nfhs-" or "ft-nfhs-"). #}
+{% set p = nfhs_prefix|default('nfhs-') %}
+<p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">
+  Download <strong>your Liberty games</strong> or <strong>opponent film</strong> from NFHS Network.
+  Paste a Game ID or full NFHS URL, preview on NFHS, then set start/end before downloading.
+</p>
+
+<div id="{{ p }}logged-in" style="display:none;margin-bottom:.75rem;">
+  <p class="text-success small" style="margin:0 0 .5rem;">✅ Logged in as <span id="{{ p }}user-email"></span></p>
+  <button class="btn btn-sm btn-secondary" type="button" id="{{ p }}logout-btn">Log Out</button>
+</div>
+
+<div id="{{ p }}login-form">
+  <div class="field">
+    <label for="{{ p }}email">NFHS Email</label>
+    <input type="email" id="{{ p }}email" class="form-control" placeholder="your@email.com">
+  </div>
+  <div class="field">
+    <label for="{{ p }}password">NFHS Password</label>
+    <input type="password" id="{{ p }}password" class="form-control" placeholder="Password">
+  </div>
+  <button class="btn btn-primary btn-sm" type="button" id="{{ p }}login-btn">Log In to NFHS</button>
+  <div id="{{ p }}login-status" class="tiny" style="margin-top:.5rem;"></div>
+</div>
+
+<div id="{{ p }}lookup-section" style="display:none;margin-top:1rem;">
+  <div class="field">
+    <label for="{{ p }}game-id">NFHS Game ID or URL</label>
+    <input type="text" id="{{ p }}game-id" class="form-control" placeholder="e.g. gam12d9559efc or https://www.nfhsnetwork.com/events/.../gam...">
+  </div>
+  <div style="margin-top:.5rem;">
+    <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}lookup-btn">🔍 Step 1: Look Up Game</button>
+  </div>
+  <div id="{{ p }}game-info" class="tiny" style="margin-top:.5rem;"></div>
+
+  <div id="{{ p }}download-options" style="display:none;margin-top:1rem;padding:12px;border:1px solid var(--color-border,#333);border-radius:8px;background:var(--color-surface,#1a1a2e);">
+    <p class="tiny" style="margin:0 0 .75rem;font-weight:600;">Step 2: Preview on NFHS, then set game start/end</p>
+    <p class="tiny" style="margin:0 0 .75rem;color:var(--color-text-muted);">
+      Open <strong>Preview on NFHS</strong> above, scrub to tip-off and final buzzer, then enter those times below.
+      This avoids downloading 2–3 hours of warmups and empty gym.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;margin-bottom:.75rem;">
+      <div class="field" style="margin:0;">
+        <label for="{{ p }}download-start">Game start</label>
+        <input type="text" id="{{ p }}download-start" class="form-control" placeholder="e.g. 0:15:00">
+      </div>
+      <div class="field" style="margin:0;">
+        <label for="{{ p }}download-end">Game end</label>
+        <input type="text" id="{{ p }}download-end" class="form-control" placeholder="e.g. 1:48:00">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" type="button" id="{{ p }}download-btn" disabled>📥 Step 3: Download Game Clip</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="{{ p }}download-full-btn" disabled>Download Full File…</button>
+    </div>
+    <p id="{{ p }}download-help" class="tiny text-muted" style="margin:.5rem 0 0;">Tip: enter both start and end for a smaller game-only clip. Use <em>Download Full File</em> only if you need the entire recording.</p>
+  </div>
+
+  <style>
+    .nfhs-download-progress { margin-top: .75rem; }
+    .nfhs-download-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .35rem; }
+    .nfhs-download-progress-pct { font-size: 1.35rem; font-weight: 700; line-height: 1; color: var(--color-primary, #0d9488); font-variant-numeric: tabular-nums; }
+    .nfhs-download-progress-phase { font-size: .8rem; color: var(--color-text-muted, #9ca3af); }
+    .nfhs-download-progress .upload-progress-bar { height: 12px; background: var(--color-surface-offset, #e5e7eb); border: 1px solid var(--color-border, #d1d5db); border-radius: 999px; overflow: hidden; }
+    .nfhs-download-progress .upload-progress-bar > span { display: block; height: 100%; width: 0; background: var(--color-primary, #0d9488); transition: width .2s ease; }
+    .nfhs-download-progress-meta { display: flex; gap: .5rem; align-items: center; margin-top: .35rem; flex-wrap: wrap; }
+    .nfhs-download-progress-detail { font-size: .75rem; color: var(--color-text-muted, #9ca3af); flex: 1; }
+  </style>
+  <div id="{{ p }}download-progress" class="nfhs-download-progress" style="display:none;">
+    <div class="nfhs-download-progress-head">
+      <span id="{{ p }}download-progress-pct" class="nfhs-download-progress-pct">—</span>
+      <span id="{{ p }}download-progress-phase" class="nfhs-download-progress-phase">Starting…</span>
+    </div>
+    <div class="upload-progress-bar"><span id="{{ p }}download-progress-bar" style="width:0%"></span></div>
+    <div class="nfhs-download-progress-meta">
+      <div id="{{ p }}download-progress-text" class="nfhs-download-progress-detail"></div>
+      <button type="button" class="btn btn-danger btn-sm" id="{{ p }}download-cancel-btn" style="display:none;">Cancel Download</button>
+    </div>
+  </div>
+  <div id="{{ p }}download-status" class="tiny" style="margin-top:.5rem;"></div>
+</div>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Liberty Basketball Analysis</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background:#f9f9f9; color:#333;}
+        .container {max-width: 800px; margin:auto; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,.1);}
+        h1 {color:#2c3e50;}
+        a {color:#2980b9;}
+        .section {margin-bottom:30px;}
+        pre {background:#f4f4f4; padding:10px; overflow:auto;}
+        .badge {display:inline-block; background:#ecf0f1; padding:3px 8px; border-radius:4px; font-size:0.9em; margin-right:5px;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Liberty Basketball Analysis</h1>
+    <p><span class="badge">Project</span> <a href="https://github.com/scottmcconnell1-bot/liberty-basketball-analysis" target="_blank">GitHub Repository</a></p>
+    <div class="section">
+        <h2>Overview</h2>
+        <p>This is a Flask‑based basketball operations app for Liberty that combines scheduling, games, sources, video upload/review, manual tagging, AI‑assisted event generation, practice planning, debugging, and lightweight local resource monitoring.</p>
+    </div>
+    <div class="section">
+        <h2>Key Features</h2>
+        <ul>
+            <li>Schedule and season management (CRUD)</li>
+            <li>Games and source tracking (manual + NFHS)</li>
+            <li>Film workflow: upload, tagging, bookmarks, AI‑generated events</li>
+            <li>Practice workflows: plans, coach notes, AI notes, summaries</li>
+            <li>Debug & issue reporting: in‑page drawer, issue log, app logs, AI‑failure visibility</li>
+            <li>Runtime telemetry: CPU, memory, GPU, live power data (when exposed)</li>
+        </ul>
+    </div>
+    <div class="section">
+        <h2>Quick Start (local)</h2>
+        <pre>
+# Windows: double‑click Start Liberty.bat
+# Linux/macOS:
+bash scripts/launch_liberty.sh
+        </pre>
+        <p>Or use the setup TUI:</p>
+        <pre>
+python3 scripts/setup_project.py
+        </pre>
+    </div>
+    <div class="section">
+        <h2>Documentation</h2>
+        <p>See the <code>docs/</code> folder for detailed guides on development, deployment, Docker, GPU, and handoff.</p>
+    </div>
+    <div class="section">
+        <h2>Live Demo (GitHub Pages)</h2>
+        <p>This page itself is served via GitHub Pages from the <code>gh-pages</code> branch.</p>
+    </div>
+    <footer style="margin-top:40px;font-size:0.9em;color:#7f8c8d;">
+        Maintained by Scott McConnell <scottmcconnell1@gmail.com>
+    </footer>
+</div>
+</body>
+</html>

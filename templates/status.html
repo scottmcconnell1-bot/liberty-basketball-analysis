@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block title %}Analysis Status - Liberty Basketball{% endblock %}
+{% block head %}
+<meta http-equiv="refresh" content="5">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Analysis Status</h2>
+    <div class="text-muted">Auto-refreshes every 5 seconds.</div>
+  </div>
+</div>
+
+<style>
+  .checklist-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .checklist-pill {
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #f8fafc;
+  }
+  .checklist-pill strong {
+    display: block;
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+  .surface-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .surface-link {
+    display: block;
+    text-align: center;
+    padding: 12px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .surface-link:hover {
+    background: #e2e8f0;
+  }
+  .phase-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .phase-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+    background: #fff;
+  }
+  .phase-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .phase-head h4 {
+    margin: 0;
+  }
+  .phase-badge,
+  .item-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-complete {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .status-in_progress {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  .status-planned {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+  .phase-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .phase-items li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 0;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+  }
+  .phase-items li:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .item-mark {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  .item-copy.complete .item-label {
+    text-decoration: line-through;
+    color: #475569;
+  }
+  .item-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .item-proof {
+    color: #64748b;
+    font-size: 0.86rem;
+  }
+  .entitlement-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .entitlement-team {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+  }
+  .entitlement-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .entitlement-key {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .entitlement-key.enabled {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .entitlement-key.disabled {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .entitlement-key.missing {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+</style>
+
+<div class="card" data-frame="15.0">
+  <h3 style="margin-bottom:8px;">Product Progress Checklist</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    This tracks the full product from first phase to final polish. Completed items are checked and struck through, active work is blue, and future work is gray.
+  </div>
+
+  <div class="surface-links">
+    {% for link in product_surface_links %}
+    <a class="surface-link" href="{{ link.href }}">{{ link.label }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Complete</span>
+      <strong>{{ checklist_summary.complete }}</strong>
+      <span class="text-muted">phases complete</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">In Progress</span>
+      <strong>{{ checklist_summary.in_progress }}</strong>
+      <span class="text-muted">phases active</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Planned</span>
+      <strong>{{ checklist_summary.planned }}</strong>
+      <span class="text-muted">phases ahead</span>
+    </div>
+  </div>
+
+  <div class="phase-grid">
+    {% for phase in product_checklist %}
+    <section class="phase-card">
+      <div class="phase-head">
+        <div>
+          <div class="text-muted" style="font-size:0.8rem;">{{ phase.phase }}</div>
+          <h4>{{ phase.title }}</h4>
+        </div>
+        <span class="phase-badge status-{{ phase.status }}">{{ phase.status.replace('_', ' ') }}</span>
+      </div>
+      <ul class="phase-items">
+        {% for item in phase["items"] %}
+        <li>
+          <span class="item-mark">
+            {% if item.status == "complete" %}&#10003;{% elif item.status == "in_progress" %}&bull;{% else %}&#9675;{% endif %}
+          </span>
+          <div class="item-copy {{ item.status }}">
+            <div class="item-label">{{ item.label }}</div>
+            <div class="item-proof">Proof: {{ item.proof }}</div>
+          </div>
+          <span class="item-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card" data-frame="15.05">
+  <h3 style="margin-bottom:8px;">Module Entitlements</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+  Package modules per team (Stage 6A). Development feature flags in Settings are separate.
+  </div>
+  <div class="entitlement-grid">
+    {% for team in module_entitlement_report.teams %}
+    <section class="entitlement-team">
+      <strong>Team #{{ team.team_id }}</strong>
+      <div class="text-muted" style="font-size:0.85rem;margin-top:4px;">
+        {{ team.row_count }} entitlement row(s) · base platform {% if team.has_base_platform %}enabled{% else %}missing{% endif %}
+      </div>
+      {% if team.enabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Enabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.enabled_module_keys %}
+        <span class="entitlement-key enabled">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.disabled_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Disabled</div>
+      <div class="entitlement-keys">
+        {% for key in team.disabled_module_keys %}
+        <span class="entitlement-key disabled">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if team.missing_module_keys %}
+      <div style="margin-top:10px;font-size:0.85rem;font-weight:600;">Not configured</div>
+      <div class="entitlement-keys">
+        {% for key in team.missing_module_keys %}
+        <span class="entitlement-key missing">{{ key }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card" data-frame="15.06">
+  <h3 style="margin-bottom:8px;">Review &amp; Trust Summary</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    Event ledger review state and open review queue items. Stats prefer accepted events; rejected events are excluded.
+  </div>
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Events</span>
+      <strong>{{ review_summary.events_total }}</strong>
+      <span class="text-muted">total tagged events</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Accepted</span>
+      <strong>{{ review_summary.events_accepted }}</strong>
+      <span class="text-muted">trusted for stats</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Pending</span>
+      <strong>{{ review_summary.events_pending }}</strong>
+      <span class="text-muted">awaiting review</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Corrected</span>
+      <strong>{{ review_summary.events_corrected }}</strong>
+      <span class="text-muted">coach corrected</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Rejected</span>
+      <strong>{{ review_summary.events_rejected }}</strong>
+      <span class="text-muted">excluded from stats</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Queue</span>
+      <strong>{{ review_summary.review_items_open }}</strong>
+      <span class="text-muted">open review items</span>
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <a class="btn btn-secondary btn-sm" href="/videos">Open Videos</a>
+  </div>
+</div>
+
+<div class="card" data-frame="15.07">
+  <h3 style="margin-bottom:8px;">Player Minutes Summary</h3>
+  <div class="text-muted" style="margin-bottom:14px;">
+    Minutes derived from detection presence in film analysis. Visible on film and stats dashboards per game.
+  </div>
+  <div class="checklist-summary">
+    <div class="checklist-pill">
+      <span class="item-badge status-complete">Games</span>
+      <strong>{{ minutes_summary.games_with_minutes }}</strong>
+      <span class="text-muted">with minutes data</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Players</span>
+      <strong>{{ minutes_summary.players_tracked }}</strong>
+      <span class="text-muted">tracked across games</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-in_progress">Minutes</span>
+      <strong>{{ minutes_summary.total_minutes }}</strong>
+      <span class="text-muted">total logged</span>
+    </div>
+    <div class="checklist-pill">
+      <span class="item-badge status-planned">Rows</span>
+      <strong>{{ minutes_summary.player_rows }}</strong>
+      <span class="text-muted">game-player records</span>
+    </div>
+  </div>
+  {% if minutes_summary.top_players %}
+  <div style="margin-top:12px;font-size:0.85rem;">
+    <strong>Top minutes:</strong>
+    {% for row in minutes_summary.top_players %}
+      <span style="margin-right:10px;">#{{ row.tracker_id }} — {{ row.total_minutes }} min ({{ row.games_played }} games)</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" data-frame="15.1">
+  <h3 style="margin-bottom:12px;">Runs</h3>
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Analysis Key</th>
+          <th>Video</th>
+          <th>Status</th>
+          <th>Started</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td>{{ run.id }}</td>
+          <td><code>{{ run.display_analysis_key }}</code></td>
+          <td>{{ run.video_path }}</td>
+          <td>
+            {% set status_colors = {'pending': '#f59e0b', 'running': '#3b82f6', 'completed': '#059669', 'failed': '#dc2626'} %}
+            <strong style="color:{{ status_colors.get(run.status, '#6b7280') }}">{{ run.status }}</strong>
+            {% if run.error_message %}
+            <div style="margin-top:4px;color:#dc2626;font-size:0.82rem;">{{ run.error_message }}</div>
+            {% endif %}
+          </td>
+          <td>{{ run.started_at or '-' }}</td>
+          <td>{{ run.completed_at or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted">No uploads yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;">Detections &amp; Events per Game</h3>
+  <div style="overflow:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Game ID</th>
+          <th>Detections</th>
+          <th>Events Tagged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in detection_rows %}
+        <tr>
+          <td><code>{{ row.game_id }}</code></td>
+          <td>{{ row.detections }}</td>
+          <td>{{ row.events }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="text-muted">No data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

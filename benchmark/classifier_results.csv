@@ -1,0 +1,4 @@
+variant,conf,tp,fp,fn,precision,recall,f1,total_removed,frames_with_removals,threshold
+baseline,0.25,106,74,1,0.5889,0.9907,0.7387,0,0,N/A
+classifier,0.25,104,27,3,0.7939,0.972,0.8739,49,42,0.1
+classifier_nms,0.25,104,25,3,0.8062,0.972,0.8814,51,42,0.1

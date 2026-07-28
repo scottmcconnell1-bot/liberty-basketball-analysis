@@ -1,0 +1,1335 @@
+{% extends "base.html" %}
+{% block title %}Playbook – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header" data-frame="6.1">
+  <h2>Playbook</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">📥 Bulk Import</a>
+    <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
+           id="playSearch" oninput="filterPlays(this.value)">
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
+{% if view_mode == "list" %}
+<div class="playbook-layout" data-frame="6.2">
+  <div class="card playbook-sidebar">
+    <h3 style="margin-bottom:12px;">Categories</h3>
+    <div id="playbookCategoryTree" class="playbook-tree"></div>
+    <div class="playbook-category-actions">
+      <button class="btn btn-secondary btn-sm" type="button" id="addCategoryBtn">+ Add</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="renameCategoryBtn">Rename</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="moveCategoryBtn">Move</button>
+      <button class="btn btn-danger btn-sm" type="button" id="deleteCategoryBtn">Delete</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="playbook-breadcrumb" id="playbookBreadcrumb">All plays</div>
+    <h3 style="margin-bottom:16px;">Plays</h3>
+    {% if plays %}
+    <div class="table-responsive">
+    <table>
+      <thead><tr>
+        <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
+      </tr></thead>
+      <tbody id="playsTableBody" data-frame="6.2t">
+        {% for play in plays %}
+        <tr class="play-row"
+            data-category-id="{{ play.category_id or '' }}"
+            data-category-path="{{ play.category_path or '' }}"
+            data-name="{{ play.name.lower() }}">
+          <td><strong>{{ play.name }}</strong></td>
+          <td><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem;">
+            {{ play.category_path.replace('/', ' · ').replace('_', ' ') if play.category_path else (play.category or 'offense') }}
+          </span></td>
+          <td class="text-muted">{{ play.playbook_name or '—' }}</td>
+          <td class="text-muted">{{ play.step_count or '—' }}</td>
+          <td class="text-muted" style="font-size:0.75rem;">{{ play.updated_at[:16] if play.updated_at else '' }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
+            <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}" style="display:inline;">
+              <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">⧉ Copy</button>
+            </form>
+            <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}" style="display:inline;">
+              <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No plays yet. Pick a category and <a href="{{ url_for('playbook.playbook_create') }}">create your first play</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
+{% if view_mode in ("editor", "view", "share") %}
+{% set is_readonly = view_mode in ("view", "share") %}
+{% if view_mode == "share" %}
+<div class="alert" style="background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;margin-bottom:16px;">
+  Shared play — view and animate only. Use the video button to export a clip for players.
+</div>
+{% endif %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+
+  <!-- Left: Court Canvas -->
+  <div class="card" style="padding:12px;" data-frame="6.3">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        {% if not is_readonly %}
+        <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Add Step</button>
+        <button class="btn btn-secondary btn-sm" onclick="duplicateStep()">Duplicate</button>
+        <button class="btn btn-danger btn-sm" onclick="removeStep()">Remove Step</button>
+        <button class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo (Ctrl+Z)">↩ Undo</button>
+        <button class="btn btn-secondary btn-sm" onclick="redoStep()" title="Redo (Ctrl+Y)">↪ Redo</button>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
+          <option value="select">Select / Move</option>
+          <option value="dribble">Dribble</option>
+          <option value="pass">Pass</option>
+          <option value="cut">Cut</option>
+          <option value="run">Run</option>
+          <option value="screen">Screen</option>
+        </select>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="actionTimingSelect" title="Timing for next action drawn">
+          <option value="sync">Sync</option>
+          <option value="optional">Optional</option>
+        </select>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
+          <option value="offense">Offense (O)</option>
+          <option value="defense">Defense (X)</option>
+        </select>
+        <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="toggleCourt()" title="Toggle half/full court">🏀 Court</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
+        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
+        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
+        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
+        {% if is_readonly %}
+        <button class="btn btn-primary btn-sm" onclick="playAnimation()">▶ Play All</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Court SVG Canvas -->
+    <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
+           xmlns="http://www.w3.org/2000/svg">
+        <!-- Court background and lines rendered by JS -->
+        <g id="courtLayer"></g>
+        <!-- Layer for arrows/connections -->
+        <g id="arrowLayer"></g>
+        <!-- Layer for players (SVG groups: circle + text) -->
+        <g id="playerLayer"></g>
+      </svg>
+    </div>
+
+    <!-- Step Images (for imported plays with source images) -->
+    <div id="stepImages" style="margin-top:12px;display:none;">
+      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:#6b7280;">Play Diagram</h4>
+      <div id="stepImagesList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- Step notes -->
+    <div style="margin-top:10px;">
+      <label for="stepNotes" style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px;">
+        Step Notes
+      </label>
+      <textarea class="form-control" id="stepNotes" rows="2" placeholder="Add notes for this step..."
+                {% if is_readonly %}readonly{% endif %}></textarea>
+    </div>
+  </div>
+
+  <!-- Right: Play Details Panel -->
+  <div>
+    <div class="card" style="margin-bottom:16px;" data-frame="6.4">
+      <h4 style="margin-bottom:12px;">{% if is_readonly %}Play Details{% else %}Save Play{% endif %}</h4>
+      {% if not is_readonly %}
+      <form method="post" action="{{ url_for('playbook.playbook_save') }}" id="playForm">
+        <input type="hidden" name="play_id" value="{{ editing_play.id if editing_play else '' }}">
+        <input type="hidden" name="diagram_json" id="diagramJsonInput" value="">
+        <input type="hidden" name="steps_json" id="stepsJsonInput" value="">
+        <div class="form-group">
+          <label for="playName">Play Name</label>
+          <input class="form-control" id="playName" name="name" required
+                 value="{{ editing_play.name if editing_play else '' }}" placeholder="e.g. Box Zone Entry">
+        </div>
+        <div class="form-group">
+          <label for="playCategoryId">Category</label>
+          <select class="form-control" id="playCategoryId" name="category_id">
+            {% if category_tree %}
+            {# populated by JS for full tree #}
+            {% endif %}
+          </select>
+          <input type="hidden" name="category" id="playCategoryLegacy" value="{{ editing_play.category if editing_play else 'offense' }}">
+        </div>
+        <div class="form-group">
+          <label for="playDescription">Description</label>
+          <textarea class="form-control" id="playDescription" name="description" rows="2"
+                    placeholder="Brief description of the play...">{{ editing_play.description if editing_play else '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="playTags">Tags (comma-separated)</label>
+          <input class="form-control" id="playTags" name="tags"
+                 value="{{ editing_play.tags if editing_play else '' }}" placeholder="e.g. zone, press break">
+        </div>
+        <div class="form-group">
+          <label for="playPlaybook">Add to Playbook</label>
+          <select class="form-control" id="playPlaybook" name="playbook_id">
+            <option value="">— None —</option>
+            {% for pb in playbooks %}
+            <option value="{{ pb.id }}" {% if editing_play and editing_play.playbook_id == pb.id %}selected{% endif %}>{{ pb.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%;">💾 Save Play</button>
+      </form>
+      {% else %}
+      <p style="font-weight:600;font-size:1.1rem;margin-bottom:4px;">{{ editing_play.name }}</p>
+      <p class="text-muted" style="margin-bottom:8px;">{{ editing_play.description or 'No description' }}</p>
+      <span class="badge" style="background:#e0e7ff;color:#3730a3;">{{ editing_play.category or 'offense' }}</span>
+      {% if editing_play.tags %}
+      <div style="margin-top:8px;">
+        {% for tag in editing_play.tags.split(',') %}
+        <span class="badge" style="background:#f3f4f6;color:#6b7280;margin-right:4px;">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        {% if editing_play and editing_play.id and view_mode != "share" %}
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
+        {% endif %}
+        {% if view_mode != "share" %}
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_list') }}">Back to Library</a>
+        {% endif %}
+        {% if editing_play and editing_play.id %}
+        <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Step list -->
+    <div class="card" data-frame="6.5">
+      <h4 style="margin-bottom:12px;">Steps <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
+      <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
+        <!-- Populated by JS -->
+      </div>
+      <div id="movementListWrap" style="margin-top:12px;">
+        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
+        <div id="movementList" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs with other actions · Optional = reads/decisions</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+<style>
+  .player-token {
+    cursor: grab;
+    user-select: none;
+  }
+  .player-token:active {
+    cursor: grabbing;
+  }
+  .player-token circle, .player-token line {
+    transition: stroke-width 0.15s;
+  }
+  .player-token:hover circle, .player-token:hover line {
+    stroke-width: 3;
+  }
+  .step-item {
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .step-item:hover { background: #f3f4f6; }
+  .step-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+  .step-label-input {
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    border-radius: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+  .step-label-input:hover { border-color: #d1d5db; background: #fff; }
+  .step-label-input:focus { border-color: #3b82f6; background: #fff; outline: none; }
+  @media (max-width: 768px) {
+    div[style*="grid-template-columns:1fr 300px"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
+<script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
+<script>
+// ── Playbook Canvas State ────────────────────────────────
+const COURT_W = 500, COURT_H = 470;
+const PLAYER_RADIUS = 16;
+const DEFENSE_RADIUS = 14;
+const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'];
+const PLAYER_LABELS = ['1', '2', '3', '4', '5'];
+const DEFENSE_COLORS = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#7c3aed'];
+
+let steps = [];
+let currentStep = 0;
+let selectedPlayer = null;
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+let currentTool = 'select';
+let currentPlayerType = 'offense';
+let arrowStart = null;
+let isFullCourt = false;
+
+// Undo/Redo stacks
+let undoStack = [];
+let redoStack = [];
+const MAX_UNDO = 50;
+
+// Initialize from server data if editing
+const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
+const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
+const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
+const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
+let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
+let isExportingVideo = false;
+
+function movementQuadControl(from, to, bend = 0.12) {
+  return {
+    mx: (from.x + to.x) / 2 + (to.y - from.y) * bend,
+    my: (from.y + to.y) / 2 - (to.x - from.x) * bend,
+  };
+}
+
+function quadPointAt(from, ctrl, to, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * from.x + 2 * u * t * ctrl.mx + t * t * to.x,
+    y: u * u * from.y + 2 * u * t * ctrl.my + t * t * to.y,
+  };
+}
+
+function appendBallAlongPath(parent, from, ctrl, to, count = 3) {
+  for (let i = 1; i <= count; i++) {
+    const t = i / (count + 1);
+    const pt = quadPointAt(from, ctrl, to, t);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${pt.x}, ${pt.y})`);
+    g.appendChild(makeCircle(0, 0, 5, '#f97316', '#9a3412', 1.5));
+    parent.appendChild(g);
+  }
+}
+
+function movementLabel(m) {
+  const names = { pass: 'Pass', dribble: 'Dribble', cut: 'Cut', run: 'Run', screen: 'Screen' };
+  return names[m.type] || m.type;
+}
+
+function playerShortId(pid) {
+  if (!pid) return '?';
+  const type = pid.startsWith('d') ? 'X' : 'O';
+  return `${type}${pid.replace(/^[od]/, '')}`;
+}
+
+// ── Court Rendering ──────────────────────────────────────
+function renderCourt() {
+  const layer = document.getElementById('courtSvg');
+  const courtLayer = document.getElementById('courtLayer');
+  if (!layer || !courtLayer) return;
+  courtLayer.innerHTML = '';
+
+  if (!isFullCourt) {
+    // Half court
+    layer.setAttribute('viewBox', '0 0 500 470');
+    renderHalfCourt(courtLayer, 0, 0);
+  } else {
+    // Full court (two half-courts stacked vertically, scaled)
+    layer.setAttribute('viewBox', '0 0 500 940');
+    renderHalfCourt(courtLayer, 0, 0);
+    renderHalfCourt(courtLayer, 0, 470);
+    // Midcourt line
+    const mid = makeLine(0, 470, 500, 470, '#333', 3);
+    courtLayer.appendChild(mid);
+    // Center circle (top, at midcourt)
+    const cc = makeCircle(250, 470, 60, 'none', '#333', 2);
+    courtLayer.appendChild(cc);
+  }
+}
+
+function renderHalfCourt(parent, ox, oy) {
+  // Court outline
+  const outline = makeRect(ox, oy, 500, 470, '#fff', '#333', 3);
+  parent.appendChild(outline);
+  // Wood texture border
+  const border = makeRect(ox + 2, oy + 2, 496, 466, 'none', '#c4a882', 2);
+  parent.appendChild(border);
+
+  // Paint / key area
+  const key = makeRect(ox + 170, oy + 310, 160, 160, 'none', '#333', 2);
+  parent.appendChild(key);
+  // Free throw circle
+  const ftCircle = makeCircle(ox + 250, oy + 310, 60, 'none', '#333', 2, '8,4');
+  parent.appendChild(ftCircle);
+
+  // 3-point arc
+  const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  arc.setAttribute('d', `M ${ox + 30} ${oy + 470} L ${ox + 30} ${oy + 140} A 220 220 0 0 0 ${ox + 470} ${oy + 470}`);
+  arc.setAttribute('fill', 'none');
+  arc.setAttribute('stroke', '#333');
+  arc.setAttribute('stroke-width', '2');
+  parent.appendChild(arc);
+
+  // Restricted area
+  const ra = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  ra.setAttribute('d', `M ${ox + 210} ${oy + 470} A 40 40 0 0 1 ${ox + 290} ${oy + 470}`);
+  ra.setAttribute('fill', 'none');
+  ra.setAttribute('stroke', '#333');
+  ra.setAttribute('stroke-width', '2');
+  parent.appendChild(ra);
+
+  // Backboard
+  const bb = makeLine(ox + 230, oy + 465, ox + 270, oy + 465, '#333', 4);
+  parent.appendChild(bb);
+  // Rim
+  const rim = makeCircle(ox + 250, oy + 460, 8, 'none', '#eb5757', 3);
+  parent.appendChild(rim);
+}
+
+function makeRect(x, y, w, h, fill, stroke, sw) {
+  const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  r.setAttribute('x', x); r.setAttribute('y', y);
+  r.setAttribute('width', w); r.setAttribute('height', h);
+  r.setAttribute('fill', fill); r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', sw);
+  return r;
+}
+function makeCircle(cx, cy, r, fill, stroke, sw, dash) {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+  c.setAttribute('fill', fill); c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', sw);
+  if (dash) c.setAttribute('stroke-dasharray', dash);
+  return c;
+}
+function makeLine(x1, y1, x2, y2, stroke, sw) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', stroke); l.setAttribute('stroke-width', sw);
+  return l;
+}
+
+function toggleCourt() {
+  isFullCourt = !isFullCourt;
+  renderCourt();
+  renderStep();
+}
+
+// ── Player Rendering ─────────────────────────────────────
+function renderStep() {
+  const step = steps[currentStep];
+  const playerLayer = document.getElementById('playerLayer');
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!step || !playerLayer || !arrowLayer) return;
+  playerLayer.innerHTML = '';
+  // Render players
+  for (let i = 0; i < 5; i++) {
+    const pid = 'o' + (i + 1);
+    const pos = step.positions[pid] || defaultOffensePos(i);
+    renderPlayerToken(playerLayer, pid, pos, PLAYER_COLORS[i], PLAYER_LABELS[i], 'offense');
+  }
+
+  // Render defensive players (1-5)
+  for (let i = 0; i < 5; i++) {
+    const pid = 'd' + (i + 1);
+    const pos = step.positions[pid] || defaultDefensePos(i);
+    renderPlayerToken(playerLayer, pid, pos, DEFENSE_COLORS[i], PLAYER_LABELS[i], 'defense');
+  }
+
+  // Render arrows for this step
+  renderArrows(step);
+
+  // Ball handler indicator (Hoops Geek style)
+  if (step.ball) {
+    const ballPos = step.positions[step.ball];
+    if (ballPos) renderBallIndicator(playerLayer, ballPos);
+  }
+
+  // Update step label
+  const stepLabel = document.getElementById('stepLabel');
+  const stepNotes = document.getElementById('stepNotes');
+  const stepCount = document.getElementById('stepCount');
+  if (stepLabel) {
+    stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  if (stepNotes) stepNotes.value = step.notes || '';
+  if (stepCount) stepCount.textContent = `(${steps.length})`;
+
+  // Show/hide step images
+  renderStepImages();
+  updateMovementList();
+}
+
+// ── Step Image Rendering (for imported plays) ─────────────
+function renderStepImages() {
+  const container = document.getElementById('stepImages');
+  const list = document.getElementById('stepImagesList');
+  if (!container || !list) return;
+
+  // Collect all steps that have source images
+  const stepsWithImages = steps.filter(s => s.source_image);
+  if (stepsWithImages.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = '';
+  stepsWithImages.forEach((step, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;';
+    const img = document.createElement('img');
+    img.src = step.source_image;
+    img.style.cssText = 'width:100%;height:auto;display:block;';
+    img.alt = step.label || `Step ${idx + 1}`;
+    const caption = document.createElement('div');
+    caption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9fafb;';
+    caption.textContent = step.label || `Step ${idx + 1}`;
+    div.appendChild(img);
+    div.appendChild(caption);
+    list.appendChild(div);
+  });
+}
+
+function defaultOffensePos(i) {
+  const positions = [
+    { x: 250, y: 420 },  // PG top
+    { x: 120, y: 350 },  // SG left wing
+    { x: 380, y: 350 },  // SF right wing
+    { x: 140, y: 250 },  // PF left post
+    { x: 360, y: 250 },  // C right post
+  ];
+  return positions[i];
+}
+
+function defaultDefensePos(i) {
+  const positions = [
+    { x: 250, y: 380 },  // Top of key
+    { x: 150, y: 310 },  // Left wing
+    { x: 350, y: 310 },  // Right wing
+    { x: 170, y: 220 },  // Left post
+    { x: 330, y: 220 },  // Right post
+  ];
+  return positions[i];
+}
+
+function renderPlayerToken(parent, pid, pos, color, label, type) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'player-token');
+  g.setAttribute('data-player', pid);
+  g.setAttribute('data-type', type);
+  g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+
+  if (type === 'defense') {
+    // X shape for defense
+    const r = DEFENSE_RADIUS;
+    const x1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    x1.setAttribute('x1', -r); x1.setAttribute('y1', -r);
+    x1.setAttribute('x2', r); x1.setAttribute('y2', r);
+    x1.setAttribute('stroke', color); x1.setAttribute('stroke-width', '3');
+    x1.setAttribute('stroke-linecap', 'round');
+    const x2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    x2.setAttribute('x1', r); x2.setAttribute('y1', -r);
+    x2.setAttribute('x2', -r); x2.setAttribute('y2', r);
+    x2.setAttribute('stroke', color); x2.setAttribute('stroke-width', '3');
+    x2.setAttribute('stroke-linecap', 'round');
+    g.appendChild(x1);
+    g.appendChild(x2);
+  } else {
+    // Circle for offense
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('r', PLAYER_RADIUS);
+    circle.setAttribute('fill', color);
+    circle.setAttribute('stroke', '#fff');
+    circle.setAttribute('stroke-width', '2');
+    g.appendChild(circle);
+  }
+
+  // Label
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dy', type === 'defense' ? '4' : '5');
+  text.setAttribute('fill', type === 'defense' ? color : '#fff');
+  text.setAttribute('font-size', '11');
+  text.setAttribute('font-weight', '700');
+  text.textContent = label;
+  g.appendChild(text);
+
+  if (!isReadOnly) {
+    g.addEventListener('mousedown', (e) => startDrag(e, pid));
+    g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
+    if (type === 'offense') {
+      g.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        saveUndoState();
+        steps[currentStep].ball = pid;
+        renderStep();
+      });
+    }
+  }
+
+  parent.appendChild(g);
+}
+
+function renderBallIndicator(parent, pos) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'ball-indicator');
+  g.setAttribute('transform', `translate(${pos.x + 14}, ${pos.y - 14})`);
+  const ball = makeCircle(0, 0, 9, '#f97316', '#9a3412', 2);
+  g.appendChild(ball);
+  const seam1 = makeLine(-6, 0, 6, 0, '#9a3412', 1.2);
+  const seam2 = makeLine(0, -6, 0, 6, '#9a3412', 1.2);
+  g.appendChild(seam1);
+  g.appendChild(seam2);
+  parent.appendChild(g);
+}
+
+// ── Arrow Rendering ──────────────────────────────────────
+function renderArrows(step) {
+  const arrowLayer = document.getElementById('arrowLayer');
+  arrowLayer.innerHTML = '';
+  if (!step.movements) return;
+
+  step.movements.forEach((m) => {
+    if (m && m._meta) return;
+    const from = step.positions[m.from];
+    const to = step.positions[m.to];
+    if (!from || !to) return;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let d = '';
+    let ctrl = null;
+    const isOptional = m.timing === 'optional';
+
+    if (m.type === 'pass') {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#3b82f6');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '6,4' : '8,4');
+      path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (m.type === 'dribble') {
+      ctrl = movementQuadControl(from, to, 0.18);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '0');
+      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else if (m.type === 'cut' || m.type === 'run') {
+      ctrl = movementQuadControl(from, to, 0.12);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', m.type === 'cut' ? '#ef4444' : '#16a34a');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : (m.type === 'cut' ? '6,4' : '0'));
+      path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
+    } else if (m.type === 'screen') {
+      ctrl = movementQuadControl(from, to, 0.15);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#f59e0b');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '4,4');
+    }
+
+    if (isOptional) path.setAttribute('opacity', '0.6');
+    path.setAttribute('d', d);
+    arrowLayer.appendChild(path);
+
+    if (m.type === 'dribble' && ctrl) {
+      appendBallAlongPath(arrowLayer, from, ctrl, to, 3);
+    }
+
+    if (isOptional && ctrl) {
+      const mid = quadPointAt(from, ctrl, to, 0.5);
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    } else if (isOptional && m.type === 'pass') {
+      const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    }
+  });
+
+  addArrowheadMarkers();
+}
+
+function addArrowheadMarkers() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || svg.querySelector('#arrowhead-red')) return;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const mkRed = makeArrowhead('arrowhead-red', '#ef4444');
+  const mkBlue = makeArrowhead('arrowhead-blue', '#3b82f6');
+  const mkGreen = makeArrowhead('arrowhead-green', '#16a34a');
+  const mkBlack = makeArrowhead('arrowhead-black', '#111827');
+  defs.appendChild(mkRed);
+  defs.appendChild(mkBlue);
+  defs.appendChild(mkGreen);
+  defs.appendChild(mkBlack);
+  svg.insertBefore(defs, svg.firstChild);
+}
+
+function makeArrowhead(id, color) {
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', id);
+  marker.setAttribute('viewBox', '0 0 10 10');
+  marker.setAttribute('refX', '9');
+  marker.setAttribute('refY', '5');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('orient', 'auto');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', '0 0, 10 5, 0 10');
+  polygon.setAttribute('fill', color);
+  marker.appendChild(polygon);
+  return marker;
+}
+
+// ── Dragging ─────────────────────────────────────────────
+function startDrag(e, pid) {
+  if (currentTool !== 'select') {
+    handleToolClick(e, pid);
+    return;
+  }
+  saveUndoState();
+  isDragging = true;
+  selectedPlayer = pid;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+function startDragTouch(e, pid) {
+  if (e.touches.length !== 1) return;
+  if (currentTool !== 'select') return;
+  saveUndoState();
+  isDragging = true;
+  selectedPlayer = pid;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging || !selectedPlayer) return;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const maxX = COURT_W - PLAYER_RADIUS;
+  const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const maxX = COURT_W - PLAYER_RADIUS;
+  const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('mouseup', () => { isDragging = false; selectedPlayer = null; });
+document.addEventListener('touchend', () => { isDragging = false; selectedPlayer = null; });
+
+// ── Tools (arrows) ───────────────────────────────────────
+function handleToolClick(e, pid) {
+  if (!arrowStart) {
+    arrowStart = pid;
+    highlightPlayer(pid, true);
+  } else if (arrowStart === pid) {
+    highlightPlayer(pid, false);
+    arrowStart = null;
+  } else {
+    saveUndoState();
+    const type = currentTool;
+    if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
+      const timing = document.getElementById('actionTimingSelect')?.value || 'sync';
+      steps[currentStep].movements.push({ from: arrowStart, to: pid, type, timing });
+    }
+    highlightPlayer(arrowStart, false);
+    arrowStart = null;
+    renderStep();
+    updateMovementList();
+  }
+}
+
+function highlightPlayer(pid, on) {
+  const tokens = document.querySelectorAll(`.player-token[data-player="${pid}"]`);
+  tokens.forEach(t => {
+    if (t.dataset.type === 'defense') {
+      t.querySelectorAll('line').forEach(l => l.setAttribute('stroke-width', on ? '5' : '3'));
+    } else {
+      const c = t.querySelector('circle');
+      if (c) c.setAttribute('stroke-width', on ? '4' : '2');
+    }
+  });
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  arrowStart = null;
+  document.getElementById('toolSelect').value = tool;
+}
+
+function setPlayerType(type) {
+  currentPlayerType = type;
+  document.getElementById('playerTypeSelect').value = type;
+}
+
+// ── Undo / Redo ──────────────────────────────────────────
+function saveUndoState() {
+  undoStack.push(JSON.stringify(steps));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack = [];
+}
+
+function undoStep() {
+  if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(steps));
+  steps = JSON.parse(undoStack.pop());
+  renderStep();
+  updateStepList();
+}
+
+function redoStep() {
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(steps));
+  steps = JSON.parse(redoStack.pop());
+  renderStep();
+  updateStepList();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (isReadOnly) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    undoStep();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+    e.preventDefault();
+    redoStep();
+  }
+});
+
+// ── Step Management ──────────────────────────────────────
+function addStep() {
+  saveUndoState();
+  const prevStep = steps[currentStep];
+  steps.push({
+    positions: JSON.parse(JSON.stringify(prevStep.positions)),
+    movements: [],
+    label: '',
+    notes: '',
+    ball: prevStep.ball || 'o1',
+  });
+  currentStep = steps.length - 1;
+  renderStep();
+  updateStepList();
+}
+
+function duplicateStep() {
+  saveUndoState();
+  const src = steps[currentStep];
+  steps.splice(currentStep + 1, 0, {
+    positions: JSON.parse(JSON.stringify(src.positions)),
+    movements: JSON.parse(JSON.stringify(src.movements)),
+    label: src.label ? src.label + ' (copy)' : '',
+    notes: src.notes || '',
+    ball: src.ball || 'o1',
+  });
+  currentStep++;
+  renderStep();
+  updateStepList();
+}
+
+function removeStep() {
+  if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
+  saveUndoState();
+  steps.splice(currentStep, 1);
+  if (currentStep >= steps.length) currentStep = steps.length - 1;
+  renderStep();
+  updateStepList();
+}
+
+function prevStep() {
+  if (currentStep > 0) { saveCurrentStepNotes(); currentStep--; renderStep(); updateStepList(); }
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) { saveCurrentStepNotes(); currentStep++; renderStep(); updateStepList(); }
+}
+
+function saveCurrentStepNotes() {
+  steps[currentStep].notes = document.getElementById('stepNotes').value;
+}
+
+function updateMovementList() {
+  const list = document.getElementById('movementList');
+  const wrap = document.getElementById('movementListWrap');
+  if (!list || !wrap) return;
+  const step = steps[currentStep];
+  const movements = (step?.movements || []).filter((m) => !(m && m._meta));
+  if (!movements.length) {
+    wrap.style.display = isReadOnly ? 'none' : 'block';
+    list.innerHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool and click two players.</div>';
+    return;
+  }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  movements.forEach((m, idx) => {
+    const row = document.createElement('div');
+    row.className = 'movement-item';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#f9fafb;';
+
+    const label = document.createElement('span');
+    label.style.flex = '1';
+    label.textContent = `${playerShortId(m.from)} → ${playerShortId(m.to)} · ${movementLabel(m)}`;
+
+    if (isReadOnly) {
+      const badge = document.createElement('span');
+      badge.textContent = m.timing === 'optional' ? 'Optional' : 'Sync';
+      badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
+      row.appendChild(label);
+      row.appendChild(badge);
+    } else {
+      const timingSelect = document.createElement('select');
+      timingSelect.className = 'form-control';
+      timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+      ['sync', 'optional'].forEach((value) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
+        if ((m.timing || 'sync') === value) opt.selected = true;
+        timingSelect.appendChild(opt);
+      });
+      timingSelect.onchange = () => {
+        saveUndoState();
+        m.timing = timingSelect.value;
+        renderStep();
+      };
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-danger btn-sm';
+      removeBtn.textContent = '×';
+      removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
+      removeBtn.onclick = () => {
+        saveUndoState();
+        step.movements.splice(idx, 1);
+        renderStep();
+        updateMovementList();
+      };
+
+      row.appendChild(label);
+      row.appendChild(timingSelect);
+      row.appendChild(removeBtn);
+    }
+    list.appendChild(row);
+  });
+}
+
+function updateStepList() {
+  const list = document.getElementById('stepList');
+  if (!list) return;
+  list.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-item' + (i === currentStep ? ' active' : '');
+    div.onclick = () => { saveCurrentStepNotes(); currentStep = i; renderStep(); updateStepList(); updateMovementList(); };
+
+    const num = document.createElement('span');
+    num.textContent = `${i + 1}.`;
+    num.style.fontWeight = '600';
+    num.style.minWidth = '22px';
+
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text';
+    labelInput.className = 'step-label-input';
+    labelInput.value = s.label || '';
+    labelInput.placeholder = 'Step label...';
+    labelInput.onclick = (e) => e.stopPropagation();
+    labelInput.onchange = (e) => { steps[i].label = e.target.value; };
+    labelInput.onkeydown = (e) => e.stopPropagation();
+
+    div.appendChild(num);
+    div.appendChild(labelInput);
+    list.appendChild(div);
+  });
+}
+
+// ── Playback animation ───────────────────────────────────
+let animInterval = null;
+let animFrame = null;
+
+function lerpPosition(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+function animateToStep(targetIndex, durationMs = 700, onFrame) {
+  if (targetIndex <= 0 || targetIndex >= steps.length) {
+    currentStep = targetIndex;
+    renderStep();
+    updateStepList();
+    updateMovementList();
+    return Promise.resolve();
+  }
+  const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions));
+  const toPositions = steps[targetIndex].positions;
+  const start = performance.now();
+  return new Promise((resolve) => {
+    function frame(now) {
+      const t = Math.min(1, (now - start) / durationMs);
+      const blended = {};
+      Object.keys(toPositions).forEach((pid) => {
+        const from = fromPositions[pid] || toPositions[pid];
+        blended[pid] = lerpPosition(from, toPositions[pid], t);
+      });
+      steps[targetIndex].positions = blended;
+      renderStep();
+      if (onFrame) onFrame();
+      if (t < 1) {
+        animFrame = requestAnimationFrame(frame);
+      } else {
+        steps[targetIndex].positions = JSON.parse(JSON.stringify(toPositions));
+        currentStep = targetIndex;
+        renderStep();
+        updateStepList();
+        updateMovementList();
+        resolve();
+      }
+    }
+    animFrame = requestAnimationFrame(frame);
+  });
+}
+
+async function playAnimation() {
+  if (animInterval) {
+    clearInterval(animInterval);
+    animInterval = null;
+    if (animFrame) cancelAnimationFrame(animFrame);
+    return;
+  }
+  currentStep = 0;
+  renderStep();
+  updateStepList();
+  for (let i = 1; i < steps.length; i++) {
+    await animateToStep(i, 800);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
+// ── Export as PNG ────────────────────────────────────────
+function exportPng() {
+  const svg = document.getElementById('courtSvg');
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement('canvas');
+  const scale = 2; // 2x for better quality
+  canvas.width = 500 * scale;
+  canvas.height = (isFullCourt ? 940 : 470) * scale;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  img.onload = function () {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    const playName = document.getElementById('playName')?.value || 'play';
+    link.download = playName.replace(/[^a-z0-9]/gi, '_') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+  img.src = url;
+}
+
+async function exportVideo() {
+  if (isExportingVideo || !window.PlaybookExport) {
+    if (!window.PlaybookExport) alert('Video export is not available.');
+    return;
+  }
+  isExportingVideo = true;
+  const btn = document.querySelector('[onclick="exportVideo()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recording…'; }
+  try {
+    await window.PlaybookExport.recordPlayAnimation({
+      svg: document.getElementById('courtSvg'),
+      steps,
+      isFullCourt,
+      playName: document.getElementById('playName')?.value || editingPlay?.name || 'play',
+      animateToStep,
+      renderStep,
+      updateStepList,
+      setCurrentStep: (index) => { currentStep = index; },
+      getCurrentStep: () => currentStep,
+      restorePositions: () => {
+        const snapshot = steps.map((s) => JSON.parse(JSON.stringify(s.positions)));
+        return () => steps.forEach((s, i) => { s.positions = snapshot[i]; });
+      },
+    });
+  } catch (err) {
+    alert(err.message || 'Video export failed.');
+  } finally {
+    isExportingVideo = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🎬 Video'; }
+  }
+}
+
+async function copyPlayShareLink() {
+  if (!playId || !window.PlaybookExport) return;
+  try {
+    shareUrl = await window.PlaybookExport.copyShareLink(playId, shareUrl);
+    alert('Share link copied to clipboard.');
+  } catch (err) {
+    alert(err.message || 'Could not copy share link.');
+  }
+}
+
+// ── Save to hidden form fields ───────────────────────────
+document.getElementById('playForm')?.addEventListener('submit', function() {
+  saveCurrentStepNotes();
+  const playData = {
+    name: document.getElementById('playName').value,
+    category_id: document.getElementById('playCategoryId')?.value || '',
+  };
+  document.getElementById('diagramJsonInput').value = JSON.stringify(playData);
+  document.getElementById('stepsJsonInput').value = JSON.stringify(steps);
+});
+
+const categoryTree = {{ category_tree|tojson if category_tree else '[]' }};
+const selectedCategoryId = {{ selected_category_id|tojson if selected_category_id else 'null' }};
+let activeCategoryId = selectedCategoryId;
+
+function applyPlayFilters() {
+  const q = (document.getElementById('playSearch')?.value || '').toLowerCase();
+  const allowedIds = window.PlaybookTaxonomy
+    ? window.PlaybookTaxonomy.collectDescendantIds(categoryTree, activeCategoryId)
+    : null;
+  document.querySelectorAll('.play-row').forEach((row) => {
+    const matchesSearch = !q || row.dataset.name.includes(q);
+    const matchesCategory = !allowedIds || allowedIds.map(String).includes(String(row.dataset.categoryId));
+    row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+  });
+}
+
+function filterPlays(q) {
+  if (q != null && document.getElementById('playSearch')) {
+    document.getElementById('playSearch').value = q;
+  }
+  applyPlayFilters();
+}
+
+function initPlaybookTaxonomy() {
+  if (!window.PlaybookTaxonomy) return;
+  const treeEl = document.getElementById('playbookCategoryTree');
+  const breadcrumb = document.getElementById('playbookBreadcrumb');
+  const newPlayBtn = document.getElementById('newPlayBtn');
+  const categorySelect = document.getElementById('playCategoryId');
+
+  window.PlaybookTaxonomy.fillCategorySelect(categorySelect, categoryTree, selectedCategoryId);
+  if (!treeEl) return;
+
+  function onCategorySelect(categoryId, node) {
+    activeCategoryId = categoryId;
+    if (breadcrumb) {
+      breadcrumb.textContent = categoryId && node
+        ? node.slug_path.replace(/\//g, ' · ').replace(/_/g, ' ')
+        : 'All plays';
+    }
+    if (newPlayBtn && categoryId) {
+      newPlayBtn.href = `/playbook/create?category_id=${categoryId}`;
+    }
+    window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+    applyPlayFilters();
+  }
+  window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+
+  document.getElementById('addCategoryBtn')?.addEventListener('click', async () => {
+    const name = prompt('New category name');
+    if (!name) return;
+    const parentId = activeCategoryId || null;
+    try {
+      const data = await window.PlaybookTaxonomy.createCategory(parentId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('renameCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const name = prompt('Rename category');
+    if (!name) return;
+    try {
+      await window.PlaybookTaxonomy.renameCategory(activeCategoryId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('moveCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const parentId = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move category under…',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— Top level —',
+    });
+    if (parentId === undefined) return;
+    try {
+      await window.PlaybookTaxonomy.moveCategory(activeCategoryId, parentId);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('deleteCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const reassignTo = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move plays to… (leave blank only if empty)',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— None —',
+    });
+    if (reassignTo === undefined) return;
+    if (!confirm('Delete this category?')) return;
+    try {
+      await window.PlaybookTaxonomy.deleteCategory(activeCategoryId, reassignTo);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  applyPlayFilters();
+}
+
+// ── Init ─────────────────────────────────────────────────
+function initSteps() {
+  if (editingSteps && editingSteps.length > 0) {
+    steps = editingSteps.map(s => ({
+      positions: JSON.parse(s.positions_json || '{}'),
+      movements: JSON.parse(s.movements_json || '[]').filter((m) => !(m && m._meta)),
+      label: s.label || '',
+      notes: s.notes || '',
+      source_image: s.source_image || '',
+      ball: (() => {
+        try {
+          const movements = JSON.parse(s.movements_json || '[]');
+          const meta = movements.find(m => m && m._meta);
+          return meta ? meta._ball : 'o1';
+        } catch (e) { return 'o1'; }
+      })(),
+    }));
+  } else {
+    // Default: single step with 5 offensive + 5 defensive players
+    const positions = {};
+    // Offense
+    [{ x: 250, y: 420 }, { x: 120, y: 350 }, { x: 380, y: 350 }, { x: 140, y: 250 }, { x: 360, y: 250 }].forEach((p, i) => { positions['o' + (i + 1)] = p; });
+    // Defense
+    [{ x: 250, y: 380 }, { x: 150, y: 310 }, { x: 350, y: 310 }, { x: 170, y: 220 }, { x: 330, y: 220 }].forEach((p, i) => { positions['d' + (i + 1)] = p; });
+    steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '', ball: 'o1' }];
+  }
+  renderCourt();
+  renderStep();
+  renderStepImages();
+  updateStepList();
+}
+
+if (document.getElementById('courtSvg')) {
+  initSteps();
+}
+if (document.getElementById('playCategoryId') || document.getElementById('playbookCategoryTree')) {
+  initPlaybookTaxonomy();
+}
+
+// Ctrl+Enter to save
+document.getElementById('stepNotes')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    document.getElementById('playForm')?.requestSubmit?.();
+  }
+});
+</script>
+{% endblock %}
