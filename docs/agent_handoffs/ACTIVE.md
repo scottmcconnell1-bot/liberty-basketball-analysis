@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-07-29 (full-film panel)
+Updated: 2026-07-29 (learning status nightly report)
 
 
 Branch: `cursor/full-film-panel-ac1f`
@@ -17,7 +17,7 @@ Branch: `cursor/full-film-panel-ac1f`
 
 ## Objective
 
-Fixed full-film learning evaluation panel with Scott’s hard targets (100% final score, 100% player points, ≥90% event P/R). Hook into teach loop after each successful teach.
+Fixed full-film learning evaluation panel with Scott’s hard targets (100% final score, 100% player points, ≥90% event P/R). Hook into teach loop after each successful teach. Nightly daily git save restores + emits `docs/LEARNING_STATUS.md`.
 
 
 ## Checklist
@@ -28,6 +28,8 @@ Fixed full-film learning evaluation panel with Scott’s hard targets (100% fina
 - [x] `docs/FULL_FILM_PANEL.md`
 - [x] Lightweight tests
 - [x] Run baseline panel (compare-only)
+- [x] Restore `daily_git_save.ps1` + installer + `DAILY_GIT_SAVE.md`
+- [x] `scripts/generate_learning_status.py` → `docs/LEARNING_STATUS.md`
 - [ ] PR merge when Scott asks
 
 
@@ -37,17 +39,19 @@ Fixed full-film learning evaluation panel with Scott’s hard targets (100% fina
 
 - Targets locked: final_score 1.0, player_points 1.0, event P/R ≥ 0.90
 - All six panel analysis keys have events in DB (Idaho City full rerun present)
-- Horseshoe analysis_launcher + teach loop left running during this work
+- Nightly learning status report generated; Task Scheduler **Liberty Daily Git Save** Ready @ 11:00 PM
+- Teach loop + analysis_launcher + Flask left running during this work
 
 ### Inferred
 
 - Opponent half of final_score is not available from current Liberty-oriented AI events → `final_score_status=partial` until opponent scoring is tagged
+- HUDL remaining ≈ videos/film_tool total − taught hudl_* keys (not guaranteed 1:1 with reruns)
 
 ### Unknown
 
-- Exact wall-clock for Horseshoe `__rerun_20260730_005448` completion
+- Chronological panel trend until ≥2 distinct history snapshots exist
 
 
 ## Ops note
 
-Do not kill Horseshoe `analysis_launcher` or the teach loop. Panel is compare-only.
+Do not kill Horseshoe `analysis_launcher` or the teach loop. Panel is compare-only. Do not run `daily_git_save.ps1` mid-session if you need to inspect uncommitted work first.
