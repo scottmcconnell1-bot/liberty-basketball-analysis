@@ -3,16 +3,24 @@
 
 Reads runtime files under data/hoopsalytics/ and film_analysis.db (read-only-ish).
 Missing inputs become Unknown — still writes a usable report and exits 0 when possible.
+
+Distinguishes live analysis workers (process-backed) from stale/zombie
+analysis_runs rows that still say status='running' with no matching worker.
+Does not mutate the DB.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
+import shlex
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 LATEST_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
@@ -20,6 +28,11 @@ HISTORY_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_history.jsonl"
 TEACH_STATE_PATH = ROOT / "data" / "hoopsalytics" / "teach_loop_state.json"
 DB_PATH = ROOT / "film_analysis.db"
 OUT_PATH = ROOT / "docs" / "LEARNING_STATUS.md"
+
+# Hide console flashes from PowerShell child processes on Windows (same as teach loop)
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
+
+WorkerLister = Callable[[], dict[str, Any]]
 
 SCOTT_TARGETS = {
     "final_score_exact": "100%",
@@ -148,12 +161,395 @@ def connect_db(db_path: Path, *, timeout: float = 30.0) -> sqlite3.Connection:
     return conn
 
 
-def query_analysis_activity(conn: sqlite3.Connection) -> dict[str, Any]:
+def _extract_analysis_key_from_cmdline(cmdline: str) -> str | None:
+    """Parse analysis_key/game_id from analysis_launcher / ai_analyzer argv."""
+    if not cmdline:
+        return None
+    low = cmdline.lower()
+    marker = None
+    for name in ("analysis_launcher.py", "ai_analyzer.py"):
+        if name in low:
+            marker = name
+            break
+    if not marker:
+        return None
+    idx = low.index(marker)
+    rest = cmdline[idx + len(marker) :].strip()
+    if not rest:
+        return None
+    try:
+        parts = shlex.split(rest, posix=False)
+    except ValueError:
+        parts = rest.split()
+    if not parts:
+        return None
+    # launcher/analyzer: <db_path> <video_path> <game_id>
+    return parts[-1].strip() or None
+
+
+def _worker_kind(cmdline: str) -> str | None:
+    low = (cmdline or "").lower()
+    if "hoops_teach_loop" in low:
+        return "teach_loop"
+    if "analysis_launcher" in low:
+        return "analysis_launcher"
+    if "ai_analyzer" in low:
+        return "ai_analyzer"
+    return None
+
+
+def list_analysis_worker_processes() -> dict[str, Any]:
+    """Map live python workers to analysis keys via CIM/PowerShell (Windows).
+
+    Returns:
+      {
+        "ok": bool,
+        "status": "ok" | "unknown" | "unsupported",
+        "workers": [{pid, kind, analysis_key, cmdline, creation_date}, ...],
+        "error": str | None,
+      }
+    Never invents PIDs; permission/probe failures → status unknown.
+    """
+    out: dict[str, Any] = {
+        "ok": False,
+        "status": "unknown",
+        "workers": [],
+        "error": None,
+    }
+    if os.name != "nt":
+        # Best-effort ps-based probe for non-Windows CI; still Unknown if it fails.
+        try:
+            r = subprocess.run(
+                ["ps", "ax", "-o", "pid=,args="],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=15,
+            )
+            if r.returncode != 0:
+                out["error"] = f"ps exit {r.returncode}"
+                out["status"] = "unknown"
+                return out
+            workers = []
+            for line in (r.stdout or "").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                m = re.match(r"^(\d+)\s+(.*)$", line)
+                if not m:
+                    continue
+                pid_s, cmdline = m.group(1), m.group(2)
+                kind = _worker_kind(cmdline)
+                if not kind:
+                    continue
+                workers.append(
+                    {
+                        "pid": int(pid_s),
+                        "kind": kind,
+                        "analysis_key": _extract_analysis_key_from_cmdline(cmdline),
+                        "cmdline": cmdline,
+                        "creation_date": None,
+                    }
+                )
+            out["workers"] = workers
+            out["ok"] = True
+            out["status"] = "ok"
+            return out
+        except Exception as exc:  # noqa: BLE001
+            out["error"] = str(exc)
+            out["status"] = "unknown"
+            return out
+
+    try:
+        r = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" "
+                "| Where-Object { $_.CommandLine -match "
+                "'analysis_launcher|ai_analyzer|hoops_teach_loop' } "
+                "| Select-Object ProcessId, CreationDate, CommandLine "
+                "| ConvertTo-Json -Compress -Depth 3",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=25,
+            creationflags=CREATE_NO_WINDOW,
+        )
+    except Exception as exc:  # noqa: BLE001 — permissions / missing powershell
+        out["error"] = str(exc)
+        out["status"] = "unknown"
+        return out
+
+    if r.returncode != 0:
+        err = (r.stderr or r.stdout or "").strip() or f"exit {r.returncode}"
+        out["error"] = err[:500]
+        out["status"] = "unknown"
+        return out
+
+    raw = (r.stdout or "").strip()
+    if not raw:
+        # Empty list is a successful probe (no matching workers)
+        out["ok"] = True
+        out["status"] = "ok"
+        out["workers"] = []
+        return out
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        out["error"] = f"CIM JSON parse failed: {exc}"
+        out["status"] = "unknown"
+        return out
+
+    if isinstance(payload, dict):
+        rows = [payload]
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        out["error"] = "unexpected CIM JSON shape"
+        out["status"] = "unknown"
+        return out
+
+    workers: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        cmdline = str(row.get("CommandLine") or "")
+        kind = _worker_kind(cmdline)
+        if not kind:
+            continue
+        pid_raw = row.get("ProcessId")
+        try:
+            pid = int(pid_raw) if pid_raw is not None else None
+        except (TypeError, ValueError):
+            pid = None
+        workers.append(
+            {
+                "pid": pid,
+                "kind": kind,
+                "analysis_key": _extract_analysis_key_from_cmdline(cmdline),
+                "cmdline": cmdline,
+                "creation_date": row.get("CreationDate"),
+            }
+        )
+    out["workers"] = workers
+    out["ok"] = True
+    out["status"] = "ok"
+    return out
+
+
+def _lookup_run_by_key(conn: sqlite3.Connection, analysis_key: str) -> dict | None:
+    """Latest analysis_runs row for a key (any status), for progress enrichment."""
+    if not analysis_key or not _table_exists(conn, "analysis_runs"):
+        return None
+    cols = _table_columns(conn, "analysis_runs")
+    if "analysis_key" not in cols:
+        return None
+    select_bits = ["rowid AS _rid"]
+    for c in (
+        "id",
+        "analysis_key",
+        "status",
+        "progress_pct",
+        "progress_step",
+        "started_at",
+        "error_message",
+    ):
+        if c in cols:
+            select_bits.append(c)
+    try:
+        row = conn.execute(
+            f"SELECT {', '.join(select_bits)} FROM analysis_runs "
+            f"WHERE analysis_key=? ORDER BY rowid DESC LIMIT 1",
+            (analysis_key,),
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row:
+        return None
+    colnames = [b.split(" AS ")[-1] if " AS " in b else b for b in select_bits]
+    return dict(zip(colnames, row))
+
+
+def _rank_active(entry: dict) -> tuple:
+    pct = entry.get("progress_pct")
+    try:
+        pct_f = float(pct) if pct is not None else -1.0
+    except (TypeError, ValueError):
+        pct_f = -1.0
+    started = str(entry.get("started_at") or "")
+    created = str(entry.get("creation_date") or "")
+    return (pct_f, started, created)
+
+
+def classify_live_vs_stale(
+    *,
+    running_rows: list[dict],
+    process_probe: dict[str, Any],
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    """Split DB running rows into Active (live worker) vs Stale/zombie candidates.
+
+    Live analysis_launcher / ai_analyzer processes are always Active even when the
+    matching DB row is not status='running' (enrich from latest row when present).
+    """
+    notes: list[str] = []
+    probe_status = process_probe.get("status") or "unknown"
+    workers = list(process_probe.get("workers") or [])
+
+    if probe_status != "ok":
+        err = process_probe.get("error")
+        notes.append(
+            "process mapping Unknown"
+            + (f" ({err})" if err else " — could not inspect live workers")
+        )
+        # Do not invent Active from DB alone; leave current unset / Unknown.
+        return {
+            "process_map_status": "Unknown",
+            "active": [],
+            "stale": [],
+            "stale_count": 0,
+            "live_launcher_count": 0,
+            "teach_loop_pids": [],
+            "current": None,
+            "notes": notes,
+            "running_db_count": len(running_rows),
+        }
+
+    analysis_workers = [
+        w
+        for w in workers
+        if w.get("kind") in ("analysis_launcher", "ai_analyzer")
+    ]
+    teach_pids = [
+        w.get("pid")
+        for w in workers
+        if w.get("kind") == "teach_loop" and w.get("pid") is not None
+    ]
+
+    live_keys: set[str] = set()
+    active: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+    for w in analysis_workers:
+        key = w.get("analysis_key")
+        db_row = None
+        if key and conn is not None:
+            db_row = _lookup_run_by_key(conn, key)
+        if key:
+            live_keys.add(key)
+            seen_keys.add(key)
+        entry = {
+            "analysis_key": key,
+            "status": "Active (live worker)",
+            "db_status": (db_row or {}).get("status"),
+            "progress_pct": (db_row or {}).get("progress_pct"),
+            "progress_step": (db_row or {}).get("progress_step"),
+            "started_at": (db_row or {}).get("started_at"),
+            "pid": w.get("pid"),
+            "kind": w.get("kind"),
+            "creation_date": w.get("creation_date"),
+            "source": "live process + analysis_runs"
+            if db_row
+            else "live process (no matching analysis_runs row)",
+            "primary": False,
+        }
+        # Prefer progress from a matching status=running DB row when present
+        if key:
+            for rr in running_rows:
+                if rr.get("analysis_key") == key:
+                    entry["progress_pct"] = rr.get("progress_pct", entry["progress_pct"])
+                    entry["progress_step"] = rr.get(
+                        "progress_step", entry["progress_step"]
+                    )
+                    entry["started_at"] = rr.get("started_at", entry["started_at"])
+                    entry["db_status"] = "running"
+                    break
+        active.append(entry)
+
+    stale: list[dict[str, Any]] = []
+    for rr in running_rows:
+        key = rr.get("analysis_key")
+        if key and key in live_keys:
+            continue
+        stale.append(
+            {
+                "id": rr.get("id"),
+                "analysis_key": key,
+                "progress_pct": rr.get("progress_pct"),
+                "progress_step": rr.get("progress_step"),
+                "started_at": rr.get("started_at"),
+                "status": "Stale/zombie candidate (DB running, no live worker)",
+            }
+        )
+
+    current = None
+    if active:
+        primary = max(active, key=_rank_active)
+        for a in active:
+            a["primary"] = False
+        primary["primary"] = True
+        current = {
+            "analysis_key": primary.get("analysis_key"),
+            "status": primary.get("status"),
+            "progress_pct": primary.get("progress_pct"),
+            "progress_step": primary.get("progress_step"),
+            "started_at": primary.get("started_at"),
+            "pid": primary.get("pid"),
+            "kind": primary.get("kind"),
+            "source": primary.get("source"),
+            "db_status": primary.get("db_status"),
+        }
+
+    if teach_pids:
+        notes.append(
+            "hoops_teach_loop live PID(s): "
+            + ", ".join(str(p) for p in teach_pids)
+        )
+    if len(active) > 1:
+        notes.append(
+            f"multiple live analysis workers ({len(active)}); "
+            "primary marked below (highest progress, then newest start)"
+        )
+    if stale:
+        notes.append(
+            f"{len(stale)} DB status=running row(s) have no matching live worker "
+            "(stale/zombie candidates; not reclaimed by this report)"
+        )
+
+    return {
+        "process_map_status": "ok",
+        "active": active,
+        "stale": stale,
+        "stale_count": len(stale),
+        "live_launcher_count": len(active),
+        "teach_loop_pids": teach_pids,
+        "current": current,
+        "notes": notes,
+        "running_db_count": len(running_rows),
+    }
+
+
+def query_analysis_activity(
+    conn: sqlite3.Connection,
+    *,
+    process_lister: WorkerLister | None = None,
+) -> dict[str, Any]:
     """Current analysis_runs progress + status counts. Robust to missing schema."""
     out: dict[str, Any] = {
         "available": False,
         "status_counts": {},
         "running": [],
+        "active": [],
+        "stale": [],
+        "stale_count": 0,
+        "live_launcher_count": 0,
+        "process_map_status": "Unknown",
+        "teach_loop_pids": [],
         "current": None,
         "failed_count": None,
         "notes": [],
@@ -208,25 +604,33 @@ def query_analysis_activity(conn: sqlite3.Connection) -> dict[str, Any]:
     colnames = [b.split(" AS ")[-1] if " AS " in b else b for b in select_bits]
     running = [dict(zip(colnames, r)) for r in rows]
     out["running"] = running
-    if running:
-        # Prefer highest progress_pct among running, else newest
-        def _rank(r: dict) -> tuple:
-            pct = r.get("progress_pct")
-            try:
-                pct_f = float(pct) if pct is not None else -1.0
-            except (TypeError, ValueError):
-                pct_f = -1.0
-            return (pct_f, str(r.get("started_at") or ""))
 
-        current = max(running, key=_rank)
-        out["current"] = {
-            "analysis_key": current.get("analysis_key"),
-            "status": current.get("status"),
-            "progress_pct": current.get("progress_pct"),
-            "progress_step": current.get("progress_step"),
-            "started_at": current.get("started_at"),
-            "source": "analysis_runs",
+    lister = process_lister or list_analysis_worker_processes
+    try:
+        probe = lister()
+    except Exception as exc:  # noqa: BLE001
+        probe = {
+            "ok": False,
+            "status": "unknown",
+            "workers": [],
+            "error": str(exc),
         }
+
+    classified = classify_live_vs_stale(
+        running_rows=running, process_probe=probe, conn=conn
+    )
+    out["active"] = classified["active"]
+    out["stale"] = classified["stale"]
+    out["stale_count"] = classified["stale_count"]
+    out["live_launcher_count"] = classified["live_launcher_count"]
+    out["process_map_status"] = classified["process_map_status"]
+    out["teach_loop_pids"] = classified["teach_loop_pids"]
+    out["current"] = classified["current"]
+    out["notes"] = list(out.get("notes") or []) + list(classified.get("notes") or [])
+    if classified["process_map_status"] == "Unknown":
+        # Keep Proven for DB counts, but activity classification is Unknown
+        if out["provenance"] == "Proven":
+            out["provenance"] = "Inferred"
     return out
 
 
@@ -341,15 +745,26 @@ def query_hudl_queue(
 def infer_activity_from_teach(
     teach_state: dict | None, activity: dict[str, Any]
 ) -> dict[str, Any]:
-    """If no running analysis_runs, lightly infer from teach state."""
-    if activity.get("current"):
+    """If no live Active workers, lightly infer from teach state."""
+    if activity.get("current") or activity.get("active"):
+        return activity
+    # If process map failed, do not invent an Active primary from teach state alone
+    # when DB still has running rows — leave Unknown (stale already listed separately).
+    if (
+        activity.get("process_map_status") == "Unknown"
+        and activity.get("running")
+    ):
+        activity["notes"] = list(activity.get("notes") or []) + [
+            "live vs stale Unknown — not inferring current from teach state "
+            "while DB has status=running rows"
+        ]
         return activity
     if not isinstance(teach_state, dict):
         return activity
     scores = teach_state.get("scores") or []
     if not scores:
         activity["notes"] = list(activity.get("notes") or []) + [
-            "no running analysis_runs; teach scores empty"
+            "no live analysis workers; teach scores empty"
         ]
         return activity
     last = scores[-1] if isinstance(scores[-1], dict) else None
@@ -357,14 +772,14 @@ def infer_activity_from_teach(
         return activity
     activity["current"] = {
         "analysis_key": last.get("analysis_key") or last.get("key"),
-        "status": "inferred_from_teach_state (no running analysis_runs)",
+        "status": "inferred_from_teach_state (no live analysis worker)",
         "progress_pct": None,
         "progress_step": f"last scored: {last.get('name') or last.get('key')}",
         "started_at": None,
         "source": "teach_loop_state (Inferred)",
     }
     activity["notes"] = list(activity.get("notes") or []) + [
-        "process status unavailable — used last teach_loop score as hint only"
+        "no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only"
     ]
     if activity.get("provenance") == "Proven":
         activity["provenance"] = "Inferred"
@@ -511,25 +926,91 @@ def render_report(
     )
     lines.append("")
 
-    # Current activity
+    # Current activity — live workers vs stale DB rows
     lines.append("## Current learning activity")
     lines.append("")
+    map_status = activity.get("process_map_status") or "Unknown"
+    lines.append(f"- **Process map:** {map_status}")
+    active = list(activity.get("active") or [])
+    stale = list(activity.get("stale") or [])
+    stale_count = activity.get("stale_count")
+    if stale_count is None:
+        stale_count = len(stale)
+    live_n = activity.get("live_launcher_count")
+    if live_n is None:
+        live_n = len(active)
+
+    if active:
+        lines.append(f"- **Active (live worker-backed):** {live_n}")
+        for a in active:
+            pct = a.get("progress_pct")
+            pct_s = "Unknown" if pct is None else f"{pct}%"
+            key = a.get("analysis_key") or "Unknown"
+            pid = a.get("pid")
+            pid_s = str(pid) if pid is not None else "Unknown"
+            primary = " **(primary)**" if a.get("primary") else ""
+            db_st = a.get("db_status")
+            db_bit = f", db_status={db_st}" if db_st else ""
+            lines.append(
+                f"  - `{key}`{primary}: {pct_s}, "
+                f"step={a.get('progress_step') or 'Unknown'}, "
+                f"PID={pid_s}, kind={a.get('kind') or 'Unknown'}{db_bit}"
+            )
+    elif map_status == "Unknown":
+        lines.append("- **Active (live worker-backed):** Unknown (process mapping failed)")
+    else:
+        lines.append("- **Active (live worker-backed):** 0")
+
     cur = activity.get("current")
-    if cur:
+    if cur and not active:
+        # Teach-state inference only
         pct = cur.get("progress_pct")
         pct_s = "Unknown" if pct is None else f"{pct}%"
-        lines.append(f"- **Game / key:** `{cur.get('analysis_key') or 'Unknown'}`")
+        lines.append(f"- **Hint / key:** `{cur.get('analysis_key') or 'Unknown'}`")
         lines.append(f"- **Status:** {cur.get('status') or 'Unknown'}")
         lines.append(f"- **Progress:** {pct_s}")
         lines.append(f"- **Step:** {cur.get('progress_step') or 'Unknown'}")
         lines.append(f"- **Source:** {cur.get('source') or 'Unknown'}")
+    elif not cur and not active and map_status != "Unknown":
+        lines.append(
+            "- **Status:** idle (no live analysis workers; no teach hint)"
+        )
+
+    if map_status == "Unknown" and (activity.get("running") or stale):
+        lines.append(
+            f"- **DB status=running rows:** "
+            f"{len(activity.get('running') or stale)} "
+            "(live vs stale Unknown — not classifying as Active)"
+        )
     else:
-        lines.append("- **Status:** Unknown (no running analysis_runs and no teach hint)")
+        lines.append(f"- **Stale/zombie candidates (DB running, no worker):** {stale_count}")
+        if stale:
+            preview = stale[:5]
+            for s in preview:
+                pct = s.get("progress_pct")
+                pct_s = "Unknown" if pct is None else f"{pct}%"
+                lines.append(
+                    f"  - `{s.get('analysis_key') or 'Unknown'}`: {pct_s}, "
+                    f"step={s.get('progress_step') or 'Unknown'}, "
+                    f"started={s.get('started_at') or 'Unknown'}"
+                )
+            if len(stale) > 5:
+                lines.append(f"  - … +{len(stale) - 5} more")
+
+    teach_pids = activity.get("teach_loop_pids") or []
+    if teach_pids:
+        lines.append(
+            "- **Teach loop PID(s):** " + ", ".join(str(p) for p in teach_pids)
+        )
+
     if activity.get("status_counts"):
         counts = ", ".join(
             f"{k}={v}" for k, v in sorted(activity["status_counts"].items())
         )
-        lines.append(f"- **analysis_runs counts:** {counts}")
+        lines.append(
+            f"- **analysis_runs counts (raw DB):** {counts} "
+            "(running includes stale/zombie candidates until reclaimed)"
+        )
     for n in activity.get("notes") or []:
         lines.append(f"- Note: {n}")
     if db_err:
@@ -716,6 +1197,10 @@ def render_report(
         lines.append("- Panel metrics from `full_film_panel_latest.json`")
     if activity.get("provenance") == "Proven" and activity.get("available"):
         lines.append("- `analysis_runs` status/progress from `film_analysis.db`")
+    if activity.get("process_map_status") == "ok":
+        lines.append(
+            "- Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list"
+        )
     if queue.get("hudl_taught_keys") is not None:
         lines.append("- HUDL taught key count from `teach_loop_state.json`")
     if queue.get("hudl_film_tool_total") is not None:
@@ -728,6 +1213,7 @@ def render_report(
         [
             latest and not latest_err,
             activity.get("provenance") == "Proven",
+            activity.get("process_map_status") == "ok",
             queue.get("hudl_taught_keys") is not None,
         ]
     ):
@@ -736,7 +1222,12 @@ def render_report(
     lines.append("### Inferred")
     lines.append("")
     if cur and "Inferred" in str(cur.get("source") or ""):
-        lines.append("- Current activity inferred from last teach score (no running row)")
+        lines.append("- Current activity inferred from last teach score (no live worker)")
+    if activity.get("stale_count"):
+        lines.append(
+            "- Stale/zombie candidates = DB status=running with no matching live worker "
+            "(report does not reclaim)"
+        )
     if queue.get("remaining_vs_videos") is not None or queue.get("remaining_vs_film_tool") is not None:
         lines.append("- Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)")
     if trend.get("available"):
@@ -744,6 +1235,7 @@ def render_report(
     if not any(
         [
             cur and "Inferred" in str(cur.get("source") or ""),
+            activity.get("stale_count"),
             queue.get("remaining_vs_videos") is not None,
             trend.get("available"),
         ]
@@ -761,6 +1253,8 @@ def render_report(
         unknowns.append(f"DB: {db_err}")
     if history_err:
         unknowns.append(f"History: {history_err}")
+    if activity.get("process_map_status") == "Unknown":
+        unknowns.append("Live vs stale classification (process mapping failed)")
     if not trend.get("available"):
         unknowns.append("Chronological trend (need ≥2 distinct panel snapshots)")
     # Opponent AI points commonly Unknown
@@ -793,6 +1287,7 @@ def gather(
     history_path: Path = HISTORY_PATH,
     teach_path: Path = TEACH_STATE_PATH,
     db_path: Path = DB_PATH,
+    process_lister: WorkerLister | None = None,
 ) -> dict[str, Any]:
     latest, latest_err = load_json(latest_path)
     if latest is not None and not isinstance(latest, dict):
@@ -811,6 +1306,12 @@ def gather(
         "available": False,
         "status_counts": {},
         "running": [],
+        "active": [],
+        "stale": [],
+        "stale_count": 0,
+        "live_launcher_count": 0,
+        "process_map_status": "Unknown",
+        "teach_loop_pids": [],
         "current": None,
         "notes": [],
         "provenance": "Unknown",
@@ -828,10 +1329,35 @@ def gather(
 
     if not db_path.exists():
         db_err = f"missing {db_path.name}"
+        lister = process_lister or list_analysis_worker_processes
+        try:
+            probe = lister()
+        except Exception as exc:  # noqa: BLE001
+            probe = {
+                "ok": False,
+                "status": "unknown",
+                "workers": [],
+                "error": str(exc),
+            }
+        classified = classify_live_vs_stale(
+            running_rows=[], process_probe=probe, conn=None
+        )
+        activity.update(
+            {
+                "active": classified["active"],
+                "stale": classified["stale"],
+                "stale_count": classified["stale_count"],
+                "live_launcher_count": classified["live_launcher_count"],
+                "process_map_status": classified["process_map_status"],
+                "teach_loop_pids": classified["teach_loop_pids"],
+                "current": classified["current"],
+                "notes": list(activity.get("notes") or [])
+                + list(classified.get("notes") or []),
+            }
+        )
         activity = infer_activity_from_teach(
             teach_state if isinstance(teach_state, dict) else None, activity
         )
-        # Still count taught from state
         if isinstance(teach_state, dict):
             taught_keys = [
                 k
@@ -844,7 +1370,9 @@ def gather(
         try:
             conn = connect_db(db_path)
             try:
-                activity = query_analysis_activity(conn)
+                activity = query_analysis_activity(
+                    conn, process_lister=process_lister
+                )
                 activity = infer_activity_from_teach(
                     teach_state if isinstance(teach_state, dict) else None, activity
                 )

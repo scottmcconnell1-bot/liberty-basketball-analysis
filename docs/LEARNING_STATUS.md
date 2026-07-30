@@ -1,17 +1,27 @@
 # Learning Status
 
-Generated (local): **2026-07-29 22:30:53 Mountain Daylight Time**
+Generated (local): **2026-07-29 22:39:53 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
 ## Current learning activity
 
-- **Game / key:** `hudl_greenleaf_away_regular_greeleaf`
-- **Status:** running
-- **Progress:** 50.0%
-- **Step:** Regenerating events…
-- **Source:** analysis_runs
-- **analysis_runs counts:** completed=17, failed=8, running=8
+- **Process map:** ok
+- **Active (live worker-backed):** 2
+  - `hudl_horseshoe_bend_away_regular_horseshoe_bend__rerun_20260730_005448` **(primary)**: 28.0%, step=Failed, PID=20180, kind=analysis_launcher, db_status=failed
+  - `hudl_idaho_city_away_regular_idaho_city`: 6.0%, step=Failed, PID=7780, kind=analysis_launcher, db_status=failed
+- **Stale/zombie candidates (DB running, no worker):** 8
+  - `hudl_greenleaf_away_regular_greeleaf`: 50.0%, step=Regenerating events…, started=2026-07-29 15:12:54
+  - `hudl_glenns_ferry_away_regular_glenns_ferry__rerun_20260729_000620`: 50.0%, step=Regenerating events…, started=2026-07-29 00:06:20
+  - `hudl_glenns_ferry_away_regular_glenns_ferry`: 50.0%, step=Regenerating events…, started=2026-07-28 13:44:22
+  - `hudl_gem_state_away_regular_gem_state`: 50.0%, step=Regenerating events…, started=2026-07-28 11:54:10
+  - `hudl_dietrich_away_regular_dietrich`: 50.0%, step=Regenerating events…, started=2026-07-28 09:40:29
+  - … +3 more
+- **Teach loop PID(s):** 20120
+- **analysis_runs counts (raw DB):** completed=17, failed=8, running=8 (running includes stale/zombie candidates until reclaimed)
+- Note: hoops_teach_loop live PID(s): 20120
+- Note: multiple live analysis workers (2); primary marked below (highest progress, then newest start)
+- Note: 8 DB status=running row(s) have no matching live worker (stale/zombie candidates; not reclaimed by this report)
 
 ## Queue summary
 
@@ -66,6 +76,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 - Panel metrics from `full_film_panel_latest.json`
 - `analysis_runs` status/progress from `film_analysis.db`
+- Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list
 - HUDL taught key count from `teach_loop_state.json`
 - HUDL film_tool game count from DB
 - HUDL video count from DB
@@ -73,6 +84,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 ### Inferred
 
+- Stale/zombie candidates = DB status=running with no matching live worker (report does not reclaim)
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
 
 ### Unknown

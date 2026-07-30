@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_learning_status import (  # noqa: E402
+    _extract_analysis_key_from_cmdline,
+    classify_live_vs_stale,
     compute_trend,
     find_prior_snapshot,
     gather,
@@ -97,6 +99,100 @@ def test_compute_trend_deltas():
     assert abs(trend["delta_mean_recall"] - 0.1) < 1e-9
 
 
+def test_extract_analysis_key_from_cmdline():
+    cmd = (
+        r"C:\Python\python.exe analysis_launcher.py film_analysis.db "
+        r"C:\repo\uploads\hudl_x.mp4 hudl_demo_key__rerun_1"
+    )
+    assert _extract_analysis_key_from_cmdline(cmd) == "hudl_demo_key__rerun_1"
+    assert _extract_analysis_key_from_cmdline("python hoops_teach_loop.py") is None
+
+
+def test_classify_live_vs_stale_separates_workers():
+    running = [
+        {
+            "id": 1,
+            "analysis_key": "stale_a",
+            "progress_pct": 50.0,
+            "progress_step": "Regenerating events…",
+            "started_at": "2026-07-20",
+        },
+        {
+            "id": 2,
+            "analysis_key": "live_key",
+            "progress_pct": 42.0,
+            "progress_step": "Detecting",
+            "started_at": "2026-07-29",
+        },
+        {
+            "id": 3,
+            "analysis_key": "stale_b",
+            "progress_pct": 50.0,
+            "progress_step": "Regenerating events…",
+            "started_at": "2026-07-21",
+        },
+    ]
+    probe = {
+        "ok": True,
+        "status": "ok",
+        "workers": [
+            {
+                "pid": 111,
+                "kind": "analysis_launcher",
+                "analysis_key": "live_key",
+                "cmdline": "python analysis_launcher.py db vid live_key",
+                "creation_date": None,
+            },
+            {
+                "pid": 222,
+                "kind": "teach_loop",
+                "analysis_key": None,
+                "cmdline": "python hoops_teach_loop.py",
+                "creation_date": None,
+            },
+            {
+                "pid": 333,
+                "kind": "analysis_launcher",
+                "analysis_key": "other_live",
+                "cmdline": "python analysis_launcher.py db vid other_live",
+                "creation_date": None,
+            },
+        ],
+        "error": None,
+    }
+    classified = classify_live_vs_stale(
+        running_rows=running, process_probe=probe, conn=None
+    )
+    assert classified["process_map_status"] == "ok"
+    assert classified["stale_count"] == 2
+    assert {s["analysis_key"] for s in classified["stale"]} == {"stale_a", "stale_b"}
+    assert classified["live_launcher_count"] == 2
+    keys = {a["analysis_key"] for a in classified["active"]}
+    assert keys == {"live_key", "other_live"}
+    assert classified["current"]["analysis_key"] == "live_key"  # higher progress
+    assert sum(1 for a in classified["active"] if a.get("primary")) == 1
+    assert 222 in classified["teach_loop_pids"]
+
+
+def test_classify_unknown_on_probe_failure():
+    classified = classify_live_vs_stale(
+        running_rows=[
+            {"analysis_key": "zombie", "progress_pct": 50, "progress_step": "x"}
+        ],
+        process_probe={
+            "ok": False,
+            "status": "unknown",
+            "workers": [],
+            "error": "access denied",
+        },
+        conn=None,
+    )
+    assert classified["process_map_status"] == "Unknown"
+    assert classified["active"] == []
+    assert classified["current"] is None
+    assert any("Unknown" in n for n in classified["notes"])
+
+
 def test_render_report_contains_sections(tmp_path: Path):
     latest = _sample_panel(prec=0.71, rec=0.52, generated_at="2026-07-29T12:00:00+00:00")
     prior = _sample_panel(prec=0.70, rec=0.50, generated_at="2026-07-28T12:00:00+00:00")
@@ -112,14 +208,40 @@ def test_render_report_contains_sections(tmp_path: Path):
         teach_err=None,
         activity={
             "available": True,
-            "status_counts": {"running": 1, "completed": 2},
+            "status_counts": {"running": 3, "completed": 2},
             "running": [],
+            "process_map_status": "ok",
+            "active": [
+                {
+                    "analysis_key": "hudl_demo",
+                    "status": "Active (live worker)",
+                    "progress_pct": 42,
+                    "progress_step": "Detecting",
+                    "pid": 999,
+                    "kind": "analysis_launcher",
+                    "primary": True,
+                    "db_status": "running",
+                    "source": "live process + analysis_runs",
+                }
+            ],
+            "stale": [
+                {
+                    "analysis_key": "stale_key",
+                    "progress_pct": 50,
+                    "progress_step": "Regenerating events…",
+                    "started_at": "2026-07-20",
+                }
+            ],
+            "stale_count": 1,
+            "live_launcher_count": 1,
+            "teach_loop_pids": [888],
             "current": {
                 "analysis_key": "hudl_demo",
-                "status": "running",
+                "status": "Active (live worker)",
                 "progress_pct": 42,
                 "progress_step": "Detecting",
-                "source": "analysis_runs",
+                "source": "live process + analysis_runs",
+                "pid": 999,
             },
             "notes": [],
             "provenance": "Proven",
@@ -145,6 +267,12 @@ def test_render_report_contains_sections(tmp_path: Path):
     assert "# Learning Status" in md
     assert "Current learning activity" in md
     assert "hudl_demo" in md
+    assert "Active (live worker-backed)" in md
+    assert "Stale/zombie candidates" in md
+    assert "stale_key" in md
+    assert "PID=999" in md
+    assert "Teach loop PID(s)" in md
+    assert "888" in md
     assert "Fixed-panel gate summary" in md
     assert "Per-game panel" in md
     assert "Idaho City" in md
@@ -202,6 +330,8 @@ def test_gather_with_fixture_json_and_temp_db(tmp_path: Path):
         );
         INSERT INTO analysis_runs (analysis_key, status, progress_pct, progress_step, started_at)
         VALUES ('hudl_demo_key', 'running', 33.0, 'Detecting players', '2026-07-29 10:00:00');
+        INSERT INTO analysis_runs (analysis_key, status, progress_pct, progress_step, started_at)
+        VALUES ('stale_zombie_key', 'running', 50.0, 'Regenerating events…', '2026-07-20 10:00:00');
         INSERT INTO analysis_runs (analysis_key, status, progress_pct, progress_step)
         VALUES ('hudl_fail_key', 'failed', 6.0, 'Failed');
         INSERT INTO film_tool_games (client_game_id, analysis_key) VALUES
@@ -215,17 +345,48 @@ def test_gather_with_fixture_json_and_temp_db(tmp_path: Path):
     )
     conn.close()
 
+    def fake_lister():
+        return {
+            "ok": True,
+            "status": "ok",
+            "workers": [
+                {
+                    "pid": 4242,
+                    "kind": "analysis_launcher",
+                    "analysis_key": "hudl_demo_key",
+                    "cmdline": (
+                        "python analysis_launcher.py film_analysis.db "
+                        "vid.mp4 hudl_demo_key"
+                    ),
+                    "creation_date": None,
+                },
+                {
+                    "pid": 5151,
+                    "kind": "teach_loop",
+                    "analysis_key": None,
+                    "cmdline": "python scripts/hoops_teach_loop.py",
+                    "creation_date": None,
+                },
+            ],
+            "error": None,
+        }
+
     result = gather(
         latest_path=latest_path,
         history_path=history_path,
         teach_path=teach_path,
         db_path=db_path,
+        process_lister=fake_lister,
     )
     out_path.write_text(result["markdown"], encoding="utf-8")
     md = result["markdown"]
     assert "hudl_demo_key" in md
     assert "33" in md or "33.0" in md
     assert "Detecting players" in md
+    assert "Active (live worker-backed)" in md
+    assert "PID=4242" in md
+    assert "stale_zombie_key" in md
+    assert "Stale/zombie candidates" in md
     assert "FAIL" in md
     assert "Δ mean precision" in md or "delta" in md.lower() or "Trend" in md
     assert "Proven" in md
@@ -234,7 +395,15 @@ def test_gather_with_fixture_json_and_temp_db(tmp_path: Path):
 def test_query_helpers_missing_tables(tmp_path: Path):
     db_path = tmp_path / "empty.db"
     conn = sqlite3.connect(str(db_path))
-    activity = query_analysis_activity(conn)
+    activity = query_analysis_activity(
+        conn,
+        process_lister=lambda: {
+            "ok": True,
+            "status": "ok",
+            "workers": [],
+            "error": None,
+        },
+    )
     assert activity["available"] is False
     queue = query_hudl_queue(conn, {"taught_keys": ["hudl_a"]})
     assert queue["hudl_taught_keys"] == 1
@@ -248,6 +417,12 @@ def test_gather_missing_runtime_still_writes_unknowns(tmp_path: Path):
         history_path=tmp_path / "missing_history.jsonl",
         teach_path=tmp_path / "missing_teach.json",
         db_path=tmp_path / "missing.db",
+        process_lister=lambda: {
+            "ok": True,
+            "status": "ok",
+            "workers": [],
+            "error": None,
+        },
     )
     md = result["markdown"]
     assert "Unknown" in md
