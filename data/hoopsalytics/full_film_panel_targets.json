@@ -1,0 +1,6 @@
+{
+  "final_score_exact": 1.0,
+  "player_points_exact": 1.0,
+  "event_precision_min": 0.90,
+  "event_recall_min": 0.90
+}

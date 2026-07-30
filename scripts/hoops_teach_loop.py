@@ -84,6 +84,10 @@ def all_games(conn: sqlite3.Connection) -> list[tuple]:
 
 TAUGHT = set()
 STATE_PATH = ROOT / "data" / "hoopsalytics" / "teach_loop_state.json"
+PANEL_SCRIPT = ROOT / "scripts" / "score_full_film_panel.py"
+# Full-film panel cadence: every teach for Hoops; every N teaches for HUDL (default 2)
+PANEL_EVERY_HOOPS = int(os.environ.get("LIBERTY_PANEL_EVERY_HOOPS", "1"))
+PANEL_EVERY_HUDL = int(os.environ.get("LIBERTY_PANEL_EVERY_HUDL", "2"))
 
 
 def load_state() -> dict:
@@ -308,6 +312,60 @@ def needs_full(conn: sqlite3.Connection, video_id: int, gid: str) -> bool:
     return mx < 1_200_000
 
 
+def _panel_due(state: dict, *, is_hudl: bool) -> bool:
+    """Return True when the fixed full-film panel should run after this teach."""
+    every = PANEL_EVERY_HUDL if is_hudl else PANEL_EVERY_HOOPS
+    every = max(1, int(every or 1))
+    n = int(state.get("teaches_since_panel") or 0) + 1
+    state["teaches_since_panel"] = n
+    return n >= every
+
+
+def run_full_film_panel(state: dict) -> None:
+    """Compare-only panel scorecard (minutes, not hours). Never blocks forever."""
+    if not PANEL_SCRIPT.exists():
+        print(f"PANEL skip — missing {PANEL_SCRIPT}", flush=True)
+        return
+    print("PANEL running full-film evaluation…", flush=True)
+    # Soft timeout via wall clock logging only; script itself is compare-only.
+    rc = run([PY, str(PANEL_SCRIPT.relative_to(ROOT))])
+    latest = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
+    if latest.exists():
+        try:
+            data = json.loads(latest.read_text(encoding="utf-8"))
+            ev = data.get("evaluation") or {}
+            overall = "PASS" if ev.get("overall_pass") else "FAIL"
+            print(
+                f"PANEL overall={overall}  "
+                f"mean_prec={ev.get('mean_precision')}  mean_rec={ev.get('mean_recall')}  "
+                f"script_rc={rc}",
+                flush=True,
+            )
+            for key, gate in (ev.get("gates") or {}).items():
+                status = "PASS" if gate.get("pass") else "FAIL"
+                print(
+                    f"PANEL [{status}] {key}: actual={gate.get('actual')} "
+                    f"required={gate.get('required')}",
+                    flush=True,
+                )
+            for g in data.get("games") or []:
+                print(
+                    f"PANEL game {g.get('name')}: prec={g.get('precision')} "
+                    f"rec={g.get('recall')} final_exact={g.get('final_score_exact')} "
+                    f"player_exact={g.get('player_points_exact')} "
+                    f"status_final={g.get('final_score_status')} "
+                    f"status_player={g.get('player_points_status')}",
+                    flush=True,
+                )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            print(f"PANEL could not parse latest results: {exc}", flush=True)
+    else:
+        print(f"PANEL no results file after rc={rc}", flush=True)
+    state["teaches_since_panel"] = 0
+    state["last_panel_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    save_state(state)
+
+
 def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> None:
     print(f"\n=== TEACH after {name} ({analysis_key}) ===", flush=True)
     is_hudl = str(analysis_key).startswith("hudl_")
@@ -362,6 +420,15 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
         f"mode={score.get('mode')}",
         flush=True,
     )
+    if _panel_due(state, is_hudl=is_hudl):
+        run_full_film_panel(state)
+    else:
+        save_state(state)
+        print(
+            f"PANEL deferred (teaches_since_panel={state.get('teaches_since_panel')} "
+            f"hudl={is_hudl})",
+            flush=True,
+        )
 
 
 def main() -> int:
