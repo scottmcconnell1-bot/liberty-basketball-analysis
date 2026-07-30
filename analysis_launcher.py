@@ -8,8 +8,14 @@ import sys
 import traceback
 
 
+def _connect(db_path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    conn.execute("PRAGMA busy_timeout=60000")
+    return conn
+
+
 def _mark_failed(db_path: str, game_id: str, message: str) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     try:
         conn.execute(
             """UPDATE analysis_runs
@@ -34,7 +40,7 @@ def _mark_failed(db_path: str, game_id: str, message: str) -> None:
 
 
 def _mark_running(db_path: str, game_id: str) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     try:
         conn.execute(
             """UPDATE analysis_runs
@@ -67,8 +73,13 @@ def main() -> int:
         _mark_running(db_path, game_id)
         import runpy
 
+        from app import app
+
         sys.argv = ["ai_analyzer.py", db_path, video_path, game_id]
-        runpy.run_path("ai_analyzer.py", run_name="__main__")
+        # Workers are not HTTP requests; push app context so auto_accept →
+        # refresh_game_stats → feature_enabled / current_app paths work.
+        with app.app_context():
+            runpy.run_path("ai_analyzer.py", run_name="__main__")
         return 0
     except SystemExit as exc:
         code = exc.code if exc.code is not None else 0

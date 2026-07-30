@@ -3295,7 +3295,26 @@ def render_practices_page(*, error=None, message=None, filters=None, edit_practi
 
 
 def refresh_game_stats(db, game_id):
-    if not feature_enabled("ENABLE_AUTO_STATS_M1"):
+    """Refresh derived stats after review/auto-accept.
+
+    Safe outside Flask app context (analysis_launcher / regenerate_events CLI):
+    feature flag is resolved from Config + DB settings when current_app is absent.
+    """
+    from flask import has_app_context
+
+    if has_app_context():
+        enabled = feature_enabled("ENABLE_AUTO_STATS_M1")
+    else:
+        from config import Config
+
+        settings = load_all_settings(
+            feature_defaults=dict(Config.FEATURES),
+            analysis_defaults=dict(Config.ANALYSIS_CONFIG),
+            ai_defaults=AI_DEFAULTS,
+            db=db,
+        )
+        enabled = bool(settings["features"].get("ENABLE_AUTO_STATS_M1", False))
+    if not enabled:
         return
     from stats import refresh_stats
 

@@ -18,39 +18,47 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video", help="Optional video path for enhanced analysis FPS lookup")
     args = parser.parse_args(argv)
 
-    conn = sqlite3.connect(args.db)
+    conn = sqlite3.connect(args.db, timeout=60.0)
+    conn.execute("PRAGMA busy_timeout=60000")
     conn.row_factory = sqlite3.Row
     row = conn.execute(
         "SELECT game_id FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
         (args.analysis_key,),
     ).fetchone()
     relational_game_id = row["game_id"] if row else None
+    # Do not flip a live detector run to "Regenerating…" — that stalls the teach loop.
     conn.execute(
         """UPDATE analysis_runs
            SET status='running', progress_pct=50, progress_step='Regenerating events…'
-           WHERE analysis_key=?""",
+           WHERE analysis_key=?
+             AND NOT (status='running' AND COALESCE(progress_step,'') LIKE 'Detecting%')""",
         (args.analysis_key,),
     )
     conn.commit()
     conn.close()
 
+    from app import app
     from event_generator import main as generate_events
 
     print(f"Regenerating events for {args.analysis_key}...", flush=True)
-    if generate_events(args.analysis_key, args.db, relational_game_id=relational_game_id) is False:
-        print("Event generation failed.", file=sys.stderr)
-        return 1
+    with app.app_context():
+        if generate_events(
+            args.analysis_key, args.db, relational_game_id=relational_game_id
+        ) is False:
+            print("Event generation failed.", file=sys.stderr)
+            return 1
 
-    if args.video:
-        import cv2
-        from film_analysis import run_enhanced_analysis
+        if args.video:
+            import cv2
+            from film_analysis import run_enhanced_analysis
 
-        cap = cv2.VideoCapture(args.video, cv2.CAP_FFMPEG)
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-        cap.release()
-        run_enhanced_analysis(args.db, args.analysis_key, fps)
+            cap = cv2.VideoCapture(args.video, cv2.CAP_FFMPEG)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            cap.release()
+            run_enhanced_analysis(args.db, args.analysis_key, fps)
 
-    conn = sqlite3.connect(args.db)
+    conn = sqlite3.connect(args.db, timeout=60.0)
+    conn.execute("PRAGMA busy_timeout=60000")
     event_count = conn.execute(
         "SELECT COUNT(*) FROM events WHERE game_id=?",
         (args.analysis_key,),
@@ -59,7 +67,8 @@ def main(argv: list[str] | None = None) -> int:
         """UPDATE analysis_runs
            SET status='completed', progress_pct=100, progress_step='Done',
                completed_at=CURRENT_TIMESTAMP
-           WHERE analysis_key=?""",
+           WHERE analysis_key=?
+             AND NOT (status='running' AND COALESCE(progress_step,'') LIKE 'Detecting%')""",
         (args.analysis_key,),
     )
     conn.commit()
