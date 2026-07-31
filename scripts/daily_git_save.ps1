@@ -137,13 +137,14 @@ Automated Liberty daily snapshot: learning status report + safe source changes (
 "@
     Invoke-Git @("commit", "-m", $msg)
 
-    $upstream = & git rev-parse --abbrev-ref "@{u}" 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $upstream) {
-        Write-Log "No upstream - pushing -u origin $branch"
+    # Prefer explicit push -u; PowerShell can mangle @{u} upstream checks.
+    $tracking = & git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $tracking -or $tracking -notmatch '^origin/') {
+        Write-Log "No usable origin upstream - pushing -u origin HEAD"
         Invoke-Git @("push", "-u", "origin", "HEAD")
     } else {
-        Write-Log "Pushing to $upstream"
-        Invoke-Git @("push")
+        Write-Log "Pushing to $tracking"
+        Invoke-Git @("push", "origin", "HEAD")
     }
 
     Write-Log "=== daily_git_save done ==="
