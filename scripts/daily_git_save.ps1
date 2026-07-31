@@ -42,7 +42,7 @@ function Invoke-PySoft([string]$Label, [string[]]$PyArgs, [switch]$RetryOnSqlite
         return
     }
     if ($RetryOnSqliteLock) {
-        Write-Log ("{0} exit {1} — retrying once (possible SQLite lock)" -f $Label, $code)
+        Write-Log ("{0} exit {1} - retrying once (possible SQLite lock)" -f $Label, $code)
         Start-Sleep -Seconds 3
         & py -3.12 @PyArgs
         $code = $LASTEXITCODE
@@ -51,7 +51,7 @@ function Invoke-PySoft([string]$Label, [string[]]$PyArgs, [switch]$RetryOnSqlite
             return
         }
     }
-    Write-Log ("WARNING: {0} failed with exit {1} — continuing daily save" -f $Label, $code)
+    Write-Log ("WARNING: {0} failed with exit {1} - continuing daily save" -f $Label, $code)
 }
 
 try {
@@ -63,7 +63,7 @@ try {
     Ensure-GitIdentityEnv
 
     $branch = (& git branch --show-current).Trim()
-    if (-not $branch) { throw "Detached HEAD — skip daily save" }
+    if (-not $branch) { throw "Detached HEAD - skip daily save" }
     Write-Log "branch=$branch"
 
     # Refresh panel + learning status before staging (soft-fail so source work is not lost).
@@ -139,7 +139,7 @@ Automated Liberty daily snapshot: learning status report + safe source changes (
 
     $upstream = & git rev-parse --abbrev-ref "@{u}" 2>$null
     if ($LASTEXITCODE -ne 0 -or -not $upstream) {
-        Write-Log "No upstream — pushing -u origin $branch"
+        Write-Log "No upstream - pushing -u origin $branch"
         Invoke-Git @("push", "-u", "origin", "HEAD")
     } else {
         Write-Log "Pushing to $upstream"

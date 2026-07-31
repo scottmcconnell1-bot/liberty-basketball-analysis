@@ -1,0 +1,6 @@
+{
+  "source": "teach_from_boxscore",
+  "principle": "If AI event totals disagree with the Hoopsalytics/MaxPreps box score, the AI is wrong. Cap detections to box-score counts (keep highest confidence).",
+  "boxscore_by_game": {},
+  "game_count": 0
+}
