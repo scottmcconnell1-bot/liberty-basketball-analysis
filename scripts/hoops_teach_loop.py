@@ -30,8 +30,8 @@ def _connect_db() -> sqlite3.Connection:
     return conn
 
 
-def _retry_locked(op, *, retries: int = 2, label: str = "db"):
-    """Retry once/twice on transient SQLite 'database is locked'."""
+def _retry_locked(op, *, retries: int = 5, label: str = "db"):
+    """Retry on transient SQLite 'database is locked' (Flask/GPU writers compete)."""
     last = None
     for attempt in range(retries + 1):
         try:
@@ -40,8 +40,11 @@ def _retry_locked(op, *, retries: int = 2, label: str = "db"):
             last = exc
             if "locked" not in str(exc).lower() or attempt >= retries:
                 raise
-            wait = 2.0 * (attempt + 1)
-            print(f"[{label}] database is locked; retry {attempt + 1}/{retries} in {wait:.0f}s", flush=True)
+            wait = min(30.0, 2.0 * (attempt + 1))
+            print(
+                f"[{label}] database is locked; retry {attempt + 1}/{retries} in {wait:.0f}s",
+                flush=True,
+            )
             time.sleep(wait)
     raise last  # pragma: no cover
 
@@ -433,82 +436,114 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
 
 def main() -> int:
     state = load_state()
-    print("Hoops+HUDL teach loop starting…", flush=True)
-    conn0 = _connect_db()
+    print("Hoops+HUDL teach loop starting...", flush=True)
     try:
-        nfix = _retry_locked(lambda: recover_interrupted_runs(conn0), retries=2, label="recover")
-    finally:
-        conn0.close()
-    if nfix:
-        print(f"[recover] adjusted {nfix} interrupted analysis_runs", flush=True)
+        conn0 = _connect_db()
+        try:
+            nfix = _retry_locked(
+                lambda: recover_interrupted_runs(conn0), retries=5, label="recover"
+            )
+        finally:
+            conn0.close()
+        if nfix:
+            print(f"[recover] adjusted {nfix} interrupted analysis_runs", flush=True)
+    except Exception as exc:
+        # Never die at startup — watchdog / next cycle will keep going.
+        print(f"[recover] skipped after error: {exc}", flush=True)
+
+    consecutive_errors = 0
     while True:
-        conn = _connect_db()
-        # Every cycle: never wait on dead workers
-        n_z = reclaim_zombie_runs(conn, stale_minutes=15)
-        if n_z:
-            print(f"[zombie] reclaimed {n_z} stuck run(s)", flush=True)
-        games = all_games(conn)
-        running = None
-        for vid, film, gid, name in games:
-            runrow = latest_run(conn, vid, gid)
-            if runrow and runrow[1] == "running":
-                running = (name, runrow)
-                break
-        if running:
-            name, runrow = running
-            # If no worker, reclaim again immediately instead of sleeping forever
-            if not analysis_worker_alive():
-                reclaim_zombie_runs(conn, stale_minutes=0)
+        try:
+            conn = _connect_db()
+            # Every cycle: never wait on dead workers
+            n_z = reclaim_zombie_runs(conn, stale_minutes=15)
+            if n_z:
+                print(f"[zombie] reclaimed {n_z} stuck run(s)", flush=True)
+            games = all_games(conn)
+            running = None
+            for vid, film, gid, name in games:
+                runrow = latest_run(conn, vid, gid)
+                if runrow and runrow[1] == "running":
+                    running = (name, runrow)
+                    break
+            if running:
+                name, runrow = running
+                # If no worker, reclaim again immediately instead of sleeping forever
+                if not analysis_worker_alive():
+                    reclaim_zombie_runs(conn, stale_minutes=0)
+                    conn.close()
+                    time.sleep(5)
+                    consecutive_errors = 0
+                    continue
+                print(
+                    f"[wait] {name} {runrow[2]}% - {runrow[3]}",
+                    flush=True,
+                )
                 conn.close()
-                time.sleep(5)
+                consecutive_errors = 0
+                time.sleep(90)
                 continue
+
+            # Teach any newly completed game not yet in state
+            for vid, film, gid, name in games:
+                runrow = latest_run(conn, vid, gid)
+                if not runrow or runrow[1] != "completed":
+                    continue
+                key = runrow[4] or gid
+                if det_max_ms(conn, key) < 50_000:
+                    continue
+                if key in (state.get("taught_keys") or []):
+                    continue
+                conn.close()
+                teach_and_score(key, film, name, state)
+                conn = _connect_db()
+                games = all_games(conn)
+
+            # Queue next needed full game
+            nxt = None
+            for vid, film, gid, name in games:
+                if needs_full(conn, vid, gid):
+                    nxt = (vid, film, gid, name)
+                    break
+            conn.close()
+            if not nxt:
+                print(
+                    "[done] All Hoops + HUDL games analyzed + taught at least once.",
+                    flush=True,
+                )
+                run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
+                run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
+                break
+
+            vid, film, gid, name = nxt
+            label = f"full teach - {name}"
+            print(f"[start] {name} video={vid}", flush=True)
+            try:
+                resp = post_analyze(vid, label)
+                print(json.dumps(resp, indent=2), flush=True)
+            except Exception as exc:
+                print(f"start failed: {exc}", flush=True)
+                time.sleep(60)
+                consecutive_errors = 0
+                continue
+            consecutive_errors = 0
+            time.sleep(90)
+        except sqlite3.OperationalError as exc:
+            consecutive_errors += 1
+            wait = min(120, 15 * consecutive_errors)
             print(
-                f"[wait] {name} {runrow[2]}% — {runrow[3]}",
+                f"[loop] SQLite error (survive, retry in {wait}s): {exc}",
                 flush=True,
             )
-            conn.close()
-            time.sleep(90)
-            continue
-
-        # Teach any newly completed game not yet in state
-        for vid, film, gid, name in games:
-            runrow = latest_run(conn, vid, gid)
-            if not runrow or runrow[1] != "completed":
-                continue
-            key = runrow[4] or gid
-            if det_max_ms(conn, key) < 50_000:
-                continue
-            if key in (state.get("taught_keys") or []):
-                continue
-            conn.close()
-            teach_and_score(key, film, name, state)
-            conn = _connect_db()
-            games = all_games(conn)
-
-        # Queue next needed full game
-        nxt = None
-        for vid, film, gid, name in games:
-            if needs_full(conn, vid, gid):
-                nxt = (vid, film, gid, name)
-                break
-        conn.close()
-        if not nxt:
-            print("[done] All Hoops + HUDL games analyzed + taught at least once.", flush=True)
-            run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
-            run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
-            break
-
-        vid, film, gid, name = nxt
-        label = f"full teach — {name}"
-        print(f"[start] {name} video={vid}", flush=True)
-        try:
-            resp = post_analyze(vid, label)
-            print(json.dumps(resp, indent=2), flush=True)
+            time.sleep(wait)
         except Exception as exc:
-            print(f"start failed: {exc}", flush=True)
-            time.sleep(60)
-            continue
-        time.sleep(90)
+            consecutive_errors += 1
+            wait = min(180, 30 * consecutive_errors)
+            print(
+                f"[loop] unexpected error (survive, retry in {wait}s): {exc}",
+                flush=True,
+            )
+            time.sleep(wait)
 
     return 0
 
