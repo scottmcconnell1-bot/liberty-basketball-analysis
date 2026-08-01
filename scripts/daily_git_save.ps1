@@ -27,9 +27,23 @@ function Ensure-GitIdentityEnv {
 }
 
 function Invoke-Git([string[]]$GitArgs) {
-    & git @GitArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "git $($GitArgs -join ' ') failed with exit $LASTEXITCODE"
+    # Native git stderr must not trip $ErrorActionPreference=Stop.
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & git @GitArgs 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                Write-Host $_.Exception.Message
+            } else {
+                Write-Host $_
+            }
+        }
+        if ($LASTEXITCODE -ne 0) {
+            throw "git $($GitArgs -join ' ') failed with exit $LASTEXITCODE"
+        }
+    }
+    finally {
+        $ErrorActionPreference = $prev
     }
 }
 
@@ -137,15 +151,11 @@ Automated Liberty daily snapshot: learning status report + safe source changes (
 "@
     Invoke-Git @("commit", "-m", $msg)
 
-    # Prefer explicit push -u; PowerShell can mangle @{u} upstream checks.
-    $tracking = & git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $tracking -or $tracking -notmatch '^origin/') {
-        Write-Log "No usable origin upstream - pushing -u origin HEAD"
-        Invoke-Git @("push", "-u", "origin", "HEAD")
-    } else {
-        Write-Log "Pushing to $tracking"
-        Invoke-Git @("push", "origin", "HEAD")
-    }
+    # Always push explicitly to origin. Do NOT probe @{u}: with
+    # $ErrorActionPreference=Stop, a failed rev-parse aborts before fallback.
+    # -u keeps tracking healthy for interactive git use.
+    Write-Log "Pushing HEAD to origin (set upstream)"
+    Invoke-Git @("push", "-u", "origin", "HEAD")
 
     Write-Log "=== daily_git_save done ==="
     exit 0
