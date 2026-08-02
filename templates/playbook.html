@@ -2,6 +2,151 @@
 {% block title %}Playbook – Liberty Basketball{% endblock %}
 
 {% block content %}
+<!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
+{% if view_mode == "list" %}
+<div class="page-header" data-frame="6.1">
+  <div>
+    <h2>Playbook</h2>
+    <p class="text-muted" style="margin-top:4px;">Offense / Defense / Press / Press Break (Man · Zone), Transition, BLOB, SLOB — Opponents opens scout playbooks.</p>
+  </div>
+  <div class="playbook-page-actions">
+    {% if not coach_readonly %}
+    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
+    {% endif %}
+    <input type="text" class="form-control" placeholder="Search plays…"
+           id="playSearch" oninput="filterPlays(this.value)">
+  </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="playbook-layout" data-frame="6.2">
+  <div class="card playbook-sidebar">
+    <h3>Categories</h3>
+    <div id="playbookCategoryTree" class="playbook-tree"></div>
+    {% if not coach_readonly %}
+    <div class="playbook-category-actions">
+      <button class="btn btn-secondary btn-sm" type="button" id="addCategoryBtn">+ Add</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="renameCategoryBtn">Rename</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="moveCategoryBtn">Move</button>
+      <button class="btn btn-danger btn-sm" type="button" id="deleteCategoryBtn">Delete</button>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card playbook-main">
+    <div class="playbook-main-head">
+      <h3>Plays</h3>
+      <div class="playbook-breadcrumb" id="playbookBreadcrumb">All plays</div>
+    </div>
+    {% if plays %}
+    <div class="playbook-list" id="playsTableBody" data-frame="6.2t"
+         data-readonly="{{ '1' if coach_readonly else '0' }}">
+      {% if not coach_readonly %}
+      <p class="playbook-dnd-hint text-muted">Click to select · Ctrl/Cmd multi · Shift range · Drag to reorder · Drag onto a category (left) to move · Double-click to open</p>
+      {% endif %}
+      <div class="playbook-list-items" data-group="root">
+      {% for play in plays %}
+      {% set path = play.category_path or play.category or 'offense' %}
+      {% set parts = path.replace('_', ' ').split('/') %}
+      {% set progressions = play.progressions or [] %}
+      {% set can_collapse = progressions|length > 1 %}
+      <div class="play-list-item play-row play-dnd-item {% if progressions %}has-progressions{% endif %}{% if can_collapse %} is-collapsible is-collapsed{% endif %}"
+           data-play-id="{{ play.id }}"
+           data-group="root"
+           data-view-href="{{ url_for('playbook.playbook_view', play_id=play.id) }}"
+           data-category-id="{{ play.category_id or '' }}"
+           data-category-path="{{ play.category_path or '' }}"
+           data-name="{{ play.search_blob or play.name.lower() }}">
+        <div class="play-list-item-main">
+          <div class="play-list-item-heading">
+            {% if can_collapse %}
+            <button type="button" class="play-collapse-toggle" aria-expanded="false" aria-label="Expand progressions" title="Show/hide progressions">▸</button>
+            {% elif progressions %}
+            <span class="play-collapse-toggle-spacer" aria-hidden="true"></span>
+            {% endif %}
+            <div class="play-list-item-heading-text">
+              {% if coach_readonly %}
+              <a class="play-list-item-title" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">{{ play.name }}</a>
+              {% else %}
+              <div class="play-list-item-title play-dnd-handle" title="Click to select, drag to move, double-click to open">{{ play.name }}</div>
+              {% endif %}
+              <div class="play-list-item-meta">
+                <span class="play-cat-chip" title="{{ parts|join(' · ') }}">
+                  {% if parts|length > 1 %}
+                    <span class="muted">{{ parts[:-1]|join(' · ') }}</span>
+                    <span>·</span>
+                  {% endif %}
+                  <span>{{ parts[-1] }}</span>
+                </span>
+                {% if progressions %}
+                <span class="play-progression-count">{{ progressions|length }} progressions</span>
+                {% elif play.step_count %}
+                <span>{{ play.step_count }} steps</span>
+                {% endif %}
+                {% if play.playbook_name %}<span>{{ play.playbook_name }}</span>{% endif %}
+                {% if play.updated_at %}<span>{{ play.updated_at[:10] }}</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          {% if progressions %}
+          <div class="play-progressions" data-group="parent:{{ play.id }}" {% if can_collapse %}hidden{% endif %}>
+            {% for prog in progressions %}
+            <div class="play-progression-row play-dnd-item"
+                 data-play-id="{{ prog.id }}"
+                 data-group="parent:{{ play.id }}"
+                 data-view-href="{{ url_for('playbook.playbook_view', play_id=prog.id) }}">
+              {% if coach_readonly %}
+              <a class="play-progression-link" href="{{ url_for('playbook.playbook_view', play_id=prog.id) }}">
+                <span class="play-progression-name">{{ prog.name }}</span>
+                {% if prog.step_count %}<span class="text-muted">{{ prog.step_count }} steps</span>{% endif %}
+              </a>
+              {% else %}
+              <div class="play-progression-link play-dnd-handle" title="Click to select, drag to move, double-click to open">
+                <span class="play-progression-name">{{ prog.name }}</span>
+                {% if prog.step_count %}<span class="text-muted">{{ prog.step_count }} steps</span>{% endif %}
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="play-row-actions">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
+          {% if not coach_readonly %}
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
+          <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}">
+            <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">Copy</button>
+          </form>
+          <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}">
+            <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
+          </form>
+          {% else %}
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">No plays yet.{% if not coach_readonly %} Pick a category and <a href="{{ url_for('playbook.playbook_create') }}">create your first play</a>.{% endif %}</p>
+    {% endif %}
+    <p class="text-muted" id="playbookFilterEmpty" style="display:none;margin-top:12px;">No plays in this category.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- keep original page-header block from being duplicated: list mode owns header above -->
+{% if view_mode != "list" %}
 <div class="page-header" data-frame="6.1">
   <h2>Playbook</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -19,63 +164,6 @@
 {% if error %}
 <div class="alert alert-error">{{ error }}</div>
 {% endif %}
-
-<!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
-{% if view_mode == "list" %}
-<div class="playbook-layout" data-frame="6.2">
-  <div class="card playbook-sidebar">
-    <h3 style="margin-bottom:12px;">Categories</h3>
-    <div id="playbookCategoryTree" class="playbook-tree"></div>
-    <div class="playbook-category-actions">
-      <button class="btn btn-secondary btn-sm" type="button" id="addCategoryBtn">+ Add</button>
-      <button class="btn btn-secondary btn-sm" type="button" id="renameCategoryBtn">Rename</button>
-      <button class="btn btn-secondary btn-sm" type="button" id="moveCategoryBtn">Move</button>
-      <button class="btn btn-danger btn-sm" type="button" id="deleteCategoryBtn">Delete</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="playbook-breadcrumb" id="playbookBreadcrumb">All plays</div>
-    <h3 style="margin-bottom:16px;">Plays</h3>
-    {% if plays %}
-    <div class="table-responsive">
-    <table>
-      <thead><tr>
-        <th>Name</th><th>Category</th><th>Playbook</th><th>Steps</th><th>Updated</th><th></th>
-      </tr></thead>
-      <tbody id="playsTableBody" data-frame="6.2t">
-        {% for play in plays %}
-        <tr class="play-row"
-            data-category-id="{{ play.category_id or '' }}"
-            data-category-path="{{ play.category_path or '' }}"
-            data-name="{{ play.name.lower() }}">
-          <td><strong>{{ play.name }}</strong></td>
-          <td><span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem;">
-            {{ play.category_path.replace('/', ' · ').replace('_', ' ') if play.category_path else (play.category or 'offense') }}
-          </span></td>
-          <td class="text-muted">{{ play.playbook_name or '—' }}</td>
-          <td class="text-muted">{{ play.step_count or '—' }}</td>
-          <td class="text-muted" style="font-size:0.75rem;">{{ play.updated_at[:16] if play.updated_at else '' }}</td>
-          <td style="white-space:nowrap;">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
-            <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}" style="display:inline;">
-              <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">⧉ Copy</button>
-            </form>
-            <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}" style="display:inline;">
-              <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
-    {% else %}
-    <p class="text-muted">No plays yet. Pick a category and <a href="{{ url_for('playbook.playbook_create') }}">create your first play</a>.</p>
-    {% endif %}
-  </div>
-</div>
 {% endif %}
 
 <!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
@@ -84,6 +172,23 @@
 {% if view_mode == "share" %}
 <div class="alert" style="background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;margin-bottom:16px;">
   Shared play — view and animate only. Use the video button to export a clip for players.
+</div>
+{% endif %}
+{% if parent_play or (child_progressions|default([])|length) %}
+{% set prog_parent = parent_play if parent_play else editing_play %}
+{% set prog_slides = sibling_progressions|default([]) if parent_play else child_progressions|default([]) %}
+{% set prog_endpoint = 'playbook.playbook_view' if is_readonly else 'playbook.playbook_edit' %}
+<div class="play-progression-bar">
+  <a href="{{ url_for('playbook.playbook_list') }}">Playbook</a>
+  <span>/</span>
+  <strong>{{ prog_parent.name }}</strong>
+  <span class="text-muted">slides:</span>
+  <a class="play-progression-chip {% if editing_play and prog_parent.id == editing_play.id %}active{% endif %}"
+     href="{{ url_for(prog_endpoint, play_id=prog_parent.id) }}">Overview</a>
+  {% for prog in prog_slides %}
+  <a class="play-progression-chip {% if editing_play and prog.id == editing_play.id %}active{% endif %}"
+     href="{{ url_for(prog_endpoint, play_id=prog.id) }}">{{ prog.name }}</a>
+  {% endfor %}
 </div>
 {% endif %}
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
@@ -112,13 +217,17 @@
         </select>
         <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
           <option value="offense">Offense (O)</option>
-          <option value="defense">Defense (X)</option>
+          <option value="defense">Defense (x)</option>
         </select>
         <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span>
         {% endif %}
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <button class="btn btn-secondary btn-sm" onclick="toggleCourt()" title="Toggle half/full court">🏀 Court</button>
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="courtModeSelect"
+                onchange="setCourtMode(this.value)" title="Court size">
+          <option value="half" selected>Half Court</option>
+          <option value="full">Full Court</option>
+        </select>
         <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
         <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
         <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
@@ -130,22 +239,28 @@
       </div>
     </div>
 
-    <!-- Court SVG Canvas -->
+    <!-- Animated court FIRST; play sheet source below -->
     <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
+        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;">Animated court</div>
+        <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+      </div>
       <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
            xmlns="http://www.w3.org/2000/svg">
-        <!-- Court background and lines rendered by JS -->
         <g id="courtLayer"></g>
-        <!-- Layer for arrows/connections -->
+        <g id="sheetUnderlayLayer"></g>
         <g id="arrowLayer"></g>
-        <!-- Layer for players (SVG groups: circle + text) -->
         <g id="playerLayer"></g>
       </svg>
+      <div id="stepSourceImageWrap" style="display:none;padding:8px;border-top:1px solid #e5e7eb;background:#f9fafb;">
+        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Play sheet (source)</div>
+        <img id="stepSourceImage" alt="Play sheet" style="width:100%;height:auto;display:block;border-radius:6px;border:1px solid #e5e7eb;">
+      </div>
     </div>
 
-    <!-- Step Images (for imported plays with source images) -->
+    <!-- All step images (collapsed helper list) -->
     <div id="stepImages" style="margin-top:12px;display:none;">
-      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:#6b7280;">Play Diagram</h4>
+      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:#6b7280;">All imported pages</h4>
       <div id="stepImagesList" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
@@ -166,7 +281,8 @@
       {% if not is_readonly %}
       <form method="post" action="{{ url_for('playbook.playbook_save') }}" id="playForm">
         <input type="hidden" name="play_id" value="{{ editing_play.id if editing_play else '' }}">
-        <input type="hidden" name="diagram_json" id="diagramJsonInput" value="">
+        <input type="hidden" name="diagram_json" id="diagramJsonInput"
+               value="{{ (editing_play.diagram_json if editing_play and editing_play.diagram_json else '{}')|e }}">
         <input type="hidden" name="steps_json" id="stepsJsonInput" value="">
         <div class="form-group">
           <label for="playName">Play Name</label>
@@ -228,11 +344,19 @@
       {% endif %}
     </div>
 
-    <!-- Step list -->
+    <!-- Step list (play sheets) -->
     <div class="card" data-frame="6.5">
-      <h4 style="margin-bottom:12px;">Steps <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
+      <h4 style="margin-bottom:4px;">Play sheets <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
+      {% if not is_readonly %}
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reorder · click a label to rename · Save Play to keep changes</p>
+      {% else %}
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Open <strong>Edit</strong> to reorder sheets or change labels</p>
+      {% endif %}
       <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
         <!-- Populated by JS -->
+      </div>
+      <div id="stepsDirtyBanner" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.75rem;">
+        Sheet order/labels changed — click <strong>Save Play</strong> to keep them.
       </div>
       <div id="movementListWrap" style="margin-top:12px;">
         <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
@@ -256,35 +380,74 @@
   .player-token:active {
     cursor: grabbing;
   }
-  .player-token circle, .player-token line {
+  .player-token circle {
     transition: stroke-width 0.15s;
   }
-  .player-token:hover circle, .player-token:hover line {
+  .player-token:hover circle {
     stroke-width: 3;
   }
   .step-item {
-    padding: 6px 10px;
+    padding: 6px 8px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
-    transition: background 0.15s;
+    transition: background 0.15s, box-shadow 0.15s;
     display: flex;
     align-items: center;
     gap: 6px;
+    border: 1px solid transparent;
+    background: #fff;
   }
   .step-item:hover { background: #f3f4f6; }
-  .step-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
-  .step-label-input {
-    border: 1px solid transparent;
-    background: transparent;
-    font-size: 0.8rem;
+  .step-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; border-color: #93c5fd; }
+  .step-item.step-dragging { opacity: 0.45; }
+  .step-item.step-drag-over { border-color: #0f766e; box-shadow: inset 0 0 0 1px #0f766e; }
+  .step-drag-handle {
+    cursor: grab;
+    color: #9ca3af;
+    font-size: 0.85rem;
     padding: 2px 4px;
-    border-radius: 3px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .step-drag-handle:active { cursor: grabbing; }
+  .step-label-input {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    font-size: 0.8rem;
+    padding: 4px 6px;
+    border-radius: 4px;
     flex: 1;
     min-width: 0;
+    color: inherit;
+    font-weight: inherit;
   }
-  .step-label-input:hover { border-color: #d1d5db; background: #fff; }
-  .step-label-input:focus { border-color: #3b82f6; background: #fff; outline: none; }
+  .step-label-input:hover { border-color: #d1d5db; }
+  .step-label-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+  .step-label-input:read-only {
+    border-color: transparent;
+    background: transparent;
+    cursor: pointer;
+    padding-left: 0;
+  }
+  .step-move-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex-shrink: 0;
+  }
+  .step-move-btns button {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    font-size: 0.65rem;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .step-move-btns button:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+  .step-move-btns button:disabled { opacity: 0.35; cursor: default; }
   @media (max-width: 768px) {
     div[style*="grid-template-columns:1fr 300px"] {
       grid-template-columns: 1fr !important;
@@ -295,12 +458,13 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
+<script src="{{ url_for('static', filename='js/playbook-dnd.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
 <script>
 // ── Playbook Canvas State ────────────────────────────────
 const COURT_W = 500, COURT_H = 470;
 const PLAYER_RADIUS = 16;
-const DEFENSE_RADIUS = 14;
+const DEFENSE_RADIUS = 7;
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'];
 const PLAYER_LABELS = ['1', '2', '3', '4', '5'];
 const DEFENSE_COLORS = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#7c3aed'];
@@ -314,6 +478,8 @@ let currentTool = 'select';
 let currentPlayerType = 'offense';
 let arrowStart = null;
 let isFullCourt = false;
+let isAnimating = false;
+let playAllRunning = false;
 
 // Undo/Redo stacks
 let undoStack = [];
@@ -366,6 +532,8 @@ function playerShortId(pid) {
 }
 
 // ── Court Rendering ──────────────────────────────────────
+// PDF / playbook diagrams: basket at TOP. Draw that orientation directly
+// (do not scale-flip — negative Y scale reverses SVG arc sweep direction).
 function renderCourt() {
   const layer = document.getElementById('courtSvg');
   const courtLayer = document.getElementById('courtLayer');
@@ -373,60 +541,69 @@ function renderCourt() {
   courtLayer.innerHTML = '';
 
   if (!isFullCourt) {
-    // Half court
     layer.setAttribute('viewBox', '0 0 500 470');
-    renderHalfCourt(courtLayer, 0, 0);
+    renderHalfCourt(courtLayer, 0, 0, 'top');
   } else {
-    // Full court (two half-courts stacked vertically, scaled)
     layer.setAttribute('viewBox', '0 0 500 940');
-    renderHalfCourt(courtLayer, 0, 0);
-    renderHalfCourt(courtLayer, 0, 470);
-    // Midcourt line
-    const mid = makeLine(0, 470, 500, 470, '#333', 3);
-    courtLayer.appendChild(mid);
-    // Center circle (top, at midcourt)
-    const cc = makeCircle(250, 470, 60, 'none', '#333', 2);
-    courtLayer.appendChild(cc);
+    renderHalfCourt(courtLayer, 0, 0, 'top');
+    renderHalfCourt(courtLayer, 0, 470, 'bottom');
+    courtLayer.appendChild(makeLine(0, 470, 500, 470, '#333', 3));
+    courtLayer.appendChild(makeCircle(250, 470, 60, 'none', '#333', 2));
   }
+  const modeSelect = document.getElementById('courtModeSelect');
+  if (modeSelect) modeSelect.value = isFullCourt ? 'full' : 'half';
 }
 
-function renderHalfCourt(parent, ox, oy) {
-  // Court outline
-  const outline = makeRect(ox, oy, 500, 470, '#fff', '#333', 3);
-  parent.appendChild(outline);
-  // Wood texture border
-  const border = makeRect(ox + 2, oy + 2, 496, 466, 'none', '#c4a882', 2);
-  parent.appendChild(border);
+function drawHalfCourtMarks(g, ox, oy, basketEnd) {
+  const top = basketEnd === 'top';
+  g.appendChild(makeRect(ox, oy, 500, 470, '#fff', '#333', 3));
+  g.appendChild(makeRect(ox + 2, oy + 2, 496, 466, 'none', '#c4a882', 2));
 
-  // Paint / key area
-  const key = makeRect(ox + 170, oy + 310, 160, 160, 'none', '#333', 2);
-  parent.appendChild(key);
-  // Free throw circle
-  const ftCircle = makeCircle(ox + 250, oy + 310, 60, 'none', '#333', 2, '8,4');
-  parent.appendChild(ftCircle);
+  const keyY = top ? oy : oy + 310;
+  const ftY = top ? oy + 160 : oy + 310;
+  const rimY = top ? oy + 15 : oy + 460;
+  const boardY = top ? oy + 8 : oy + 465;
+  const baseY = top ? oy : oy + 470;
+  // Corner stub ends where the arc (r≈220 around rim) meets x=40 / x=460.
+  const stubY = top ? oy + 82 : oy + 388;
 
-  // 3-point arc
-  const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  arc.setAttribute('d', `M ${ox + 30} ${oy + 470} L ${ox + 30} ${oy + 140} A 220 220 0 0 0 ${ox + 470} ${oy + 470}`);
-  arc.setAttribute('fill', 'none');
-  arc.setAttribute('stroke', '#333');
-  arc.setAttribute('stroke-width', '2');
-  parent.appendChild(arc);
+  // Lane / paint
+  g.appendChild(makeRect(ox + 170, keyY, 160, 160, 'none', '#333', 2));
+  // Free-throw circle (dashed) centered on the foul line
+  g.appendChild(makeCircle(ox + 250, ftY, 60, 'none', '#333', 2, '8,4'));
 
-  // Restricted area
+  // 3-point: short corner stubs + arc around the rim (bulges toward midcourt).
+  // sweep-flag 0 = CCW; with basket at top that runs through midcourt, not over the rim.
+  const three = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  three.setAttribute(
+    'd',
+    `M ${ox + 40} ${baseY} L ${ox + 40} ${stubY} A 220 220 0 0 0 ${ox + 460} ${stubY} L ${ox + 460} ${baseY}`
+  );
+  three.setAttribute('fill', 'none');
+  three.setAttribute('stroke', '#333');
+  three.setAttribute('stroke-width', '2');
+  g.appendChild(three);
+
+  // Restricted area under the rim (into the court)
   const ra = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  ra.setAttribute('d', `M ${ox + 210} ${oy + 470} A 40 40 0 0 1 ${ox + 290} ${oy + 470}`);
+  if (top) {
+    ra.setAttribute('d', `M ${ox + 210} ${baseY} A 40 40 0 0 0 ${ox + 290} ${baseY}`);
+  } else {
+    ra.setAttribute('d', `M ${ox + 210} ${baseY} A 40 40 0 0 1 ${ox + 290} ${baseY}`);
+  }
   ra.setAttribute('fill', 'none');
   ra.setAttribute('stroke', '#333');
   ra.setAttribute('stroke-width', '2');
-  parent.appendChild(ra);
+  g.appendChild(ra);
 
-  // Backboard
-  const bb = makeLine(ox + 230, oy + 465, ox + 270, oy + 465, '#333', 4);
-  parent.appendChild(bb);
-  // Rim
-  const rim = makeCircle(ox + 250, oy + 460, 8, 'none', '#eb5757', 3);
-  parent.appendChild(rim);
+  g.appendChild(makeLine(ox + 230, boardY, ox + 270, boardY, '#333', 4));
+  g.appendChild(makeCircle(ox + 250, rimY, 8, 'none', '#eb5757', 3));
+}
+
+function renderHalfCourt(parent, ox, oy, basketEnd) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  drawHalfCourtMarks(g, ox, oy, basketEnd);
+  parent.appendChild(g);
 }
 
 function makeRect(x, y, w, h, fill, stroke, sw) {
@@ -451,10 +628,136 @@ function makeLine(x1, y1, x2, y2, stroke, sw) {
   return l;
 }
 
-function toggleCourt() {
-  isFullCourt = !isFullCourt;
+function setCourtMode(mode) {
+  isFullCourt = mode === 'full';
   renderCourt();
   renderStep();
+}
+
+function toggleCourt() {
+  setCourtMode(isFullCourt ? 'half' : 'full');
+}
+
+function flipPositionsY(positions, height = COURT_H) {
+  const out = {};
+  Object.keys(positions || {}).forEach((k) => {
+    const p = positions[k];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      out[k] = { x: p.x, y: height - p.y };
+    }
+  });
+  return out;
+}
+
+// Legacy imports were drawn on a bottom-basket court (small y = midcourt).
+// Decide once per play — never per-step — so slides share one coordinate space.
+function shouldFlipLegacyBottomBasket(allStepPositions) {
+  const list = Array.isArray(allStepPositions) ? allStepPositions : [allStepPositions];
+  for (const positions of list) {
+    const o1 = positions && positions.o1;
+    if (o1 && typeof o1.y === 'number') return o1.y < 200;
+  }
+  for (const positions of list) {
+    const ys = Object.keys(positions || {})
+      .filter((k) => String(k).startsWith('o'))
+      .map((k) => positions[k]?.y)
+      .filter((y) => typeof y === 'number');
+    if (ys.length && Math.min(...ys) > 200) return true;
+  }
+  return false;
+}
+
+function manDefenseOffset(offensePos) {
+  // Small color-matched x parked just beside the offense token (not a second big chip).
+  return {
+    x: Math.max(16, Math.min(484, offensePos.x + 18)),
+    y: Math.max(16, Math.min(454, offensePos.y - 14)),
+  };
+}
+
+function positionsThrough(stepIndex, options = {}) {
+  // forwardOnly (default): carry positions 0..stepIndex only.
+  // Never seed from later pages — that made Step 1 look like the final frame.
+  const merged = {};
+  for (let i = 0; i <= stepIndex && i < steps.length; i += 1) {
+    const src = steps[i].positions || {};
+    Object.keys(src).forEach((k) => {
+      const p = src[k];
+      if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+        merged[k] = { x: p.x, y: p.y };
+      }
+    });
+  }
+  // OCR gaps: park missing offense on defaults (not later-step coords).
+  if (options.fillDefaults !== false) {
+    for (let i = 1; i <= 5; i += 1) {
+      const oid = 'o' + i;
+      if (!merged[oid]) merged[oid] = defaultOffensePos(i - 1);
+    }
+  }
+  return merged;
+}
+
+/** Alias — animation and static view share the same chronological positions. */
+function positionsForAnim(stepIndex) {
+  return positionsThrough(stepIndex, { fillDefaults: true });
+}
+
+function positionsAlmostEqual(a, b, eps = 2) {
+  const ids = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const id of ids) {
+    if (!String(id).startsWith('o')) continue;
+    const p = a[id];
+    const q = b[id];
+    if (!p || !q) return false;
+    if (Math.abs(p.x - q.x) > eps || Math.abs(p.y - q.y) > eps) return false;
+  }
+  return true;
+}
+
+function showStepSourceImage(index) {
+  const currentWrap = document.getElementById('stepSourceImageWrap');
+  const currentImg = document.getElementById('stepSourceImage');
+  if (!currentWrap || !currentImg) return;
+  const step = steps[index];
+  if (step && step.source_image) {
+    if (currentImg.getAttribute('src') !== step.source_image) {
+      currentImg.src = step.source_image;
+    }
+    currentImg.alt = step.label || `Step ${index + 1}`;
+    currentWrap.style.display = 'block';
+  } else {
+    currentWrap.style.display = 'none';
+  }
+}
+
+function withManDefense(positions) {
+  const src = positions || {};
+  const out = {};
+  Object.keys(src).forEach((k) => {
+    const p = src[k];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
+  });
+  const hasDefense = Object.keys(out).some((k) => String(k).startsWith('d'));
+  if (!hasDefense) {
+    for (let i = 1; i <= 5; i += 1) {
+      const o = out['o' + i];
+      if (o) out['d' + i] = manDefenseOffset(o);
+    }
+  }
+  return out;
+}
+
+function playerColor(pid) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  const idx = Number.isFinite(num) && num >= 1 ? num - 1 : 0;
+  return PLAYER_COLORS[idx] || PLAYER_COLORS[0];
+}
+
+function playerLabel(pid) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  const idx = Number.isFinite(num) && num >= 1 ? num - 1 : 0;
+  return PLAYER_LABELS[idx] || String(num || '?');
 }
 
 // ── Player Rendering ─────────────────────────────────────
@@ -463,70 +766,118 @@ function renderStep() {
   const playerLayer = document.getElementById('playerLayer');
   const arrowLayer = document.getElementById('arrowLayer');
   if (!step || !playerLayer || !arrowLayer) return;
-  playerLayer.innerHTML = '';
-  // Render players
-  for (let i = 0; i < 5; i++) {
-    const pid = 'o' + (i + 1);
-    const pos = step.positions[pid] || defaultOffensePos(i);
-    renderPlayerToken(playerLayer, pid, pos, PLAYER_COLORS[i], PLAYER_LABELS[i], 'offense');
+
+  if (!isAnimating) {
+    arrowLayer.innerHTML = '';
+    renderArrows(step);
   }
 
-  // Render defensive players (1-5)
-  for (let i = 0; i < 5; i++) {
-    const pid = 'd' + (i + 1);
-    const pos = step.positions[pid] || defaultDefensePos(i);
-    renderPlayerToken(playerLayer, pid, pos, DEFENSE_COLORS[i], PLAYER_LABELS[i], 'defense');
-  }
+  // Carry forward players across sparse OCR steps so slide N keeps the full set.
+  syncPlayerTokens(withManDefense(positionsThrough(currentStep)), step.ball);
 
-  // Render arrows for this step
-  renderArrows(step);
-
-  // Ball handler indicator (Hoops Geek style)
-  if (step.ball) {
-    const ballPos = step.positions[step.ball];
-    if (ballPos) renderBallIndicator(playerLayer, ballPos);
-  }
-
-  // Update step label
   const stepLabel = document.getElementById('stepLabel');
   const stepNotes = document.getElementById('stepNotes');
   const stepCount = document.getElementById('stepCount');
   if (stepLabel) {
     stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
   }
-  if (stepNotes) stepNotes.value = step.notes || '';
+  if (stepNotes && !isAnimating) stepNotes.value = step.notes || '';
   if (stepCount) stepCount.textContent = `(${steps.length})`;
 
-  // Show/hide step images
-  renderStepImages();
-  updateMovementList();
+  if (!isAnimating) {
+    renderStepImages();
+    updateMovementList();
+  }
+}
+
+function syncPlayerTokens(positions, ballPid) {
+  const playerLayer = document.getElementById('playerLayer');
+  if (!playerLayer) return;
+  const seen = new Set();
+
+  Object.keys(positions || {}).forEach((pid) => {
+    const pos = positions[pid];
+    if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
+    seen.add(pid);
+    const isDefense = String(pid).startsWith('d');
+    let g = playerLayer.querySelector(`[data-player="${pid}"]`);
+    if (!g) {
+      renderPlayerToken(
+        playerLayer,
+        pid,
+        pos,
+        playerColor(pid),
+        playerLabel(pid),
+        isDefense ? 'defense' : 'offense'
+      );
+      g = playerLayer.querySelector(`[data-player="${pid}"]`);
+    }
+    if (g) g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+  });
+
+  playerLayer.querySelectorAll('.player-token').forEach((g) => {
+    if (!seen.has(g.dataset.player)) g.remove();
+  });
+
+  let ball = playerLayer.querySelector('.ball-indicator');
+  if (ballPid && positions[ballPid]) {
+    const bpos = positions[ballPid];
+    if (!ball) {
+      renderBallIndicator(playerLayer, bpos);
+    } else {
+      ball.setAttribute('transform', `translate(${bpos.x + 14}, ${bpos.y - 14})`);
+    }
+  } else if (ball) {
+    ball.remove();
+  }
 }
 
 // ── Step Image Rendering (for imported plays) ─────────────
 function renderStepImages() {
+  const currentWrap = document.getElementById('stepSourceImageWrap');
+  const currentImg = document.getElementById('stepSourceImage');
   const container = document.getElementById('stepImages');
   const list = document.getElementById('stepImagesList');
-  if (!container || !list) return;
+  const step = steps[currentStep];
 
-  // Collect all steps that have source images
-  const stepsWithImages = steps.filter(s => s.source_image);
-  if (stepsWithImages.length === 0) {
+  if (currentWrap && currentImg) {
+    if (step && step.source_image) {
+      currentImg.src = step.source_image;
+      currentImg.alt = step.label || `Step ${currentStep + 1}`;
+      currentWrap.style.display = 'block';
+    } else {
+      currentWrap.style.display = 'none';
+      currentImg.removeAttribute('src');
+    }
+  }
+
+  if (!container || !list) return;
+  const stepsWithImages = steps.filter((s) => s.source_image);
+  if (stepsWithImages.length <= 1) {
     container.style.display = 'none';
     return;
   }
 
   container.style.display = 'block';
   list.innerHTML = '';
-  stepsWithImages.forEach((step, idx) => {
+  stepsWithImages.forEach((s) => {
+    const idx = steps.indexOf(s);
     const div = document.createElement('div');
-    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;';
+    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer;'
+      + (idx === currentStep ? 'outline:2px solid #0f766e;' : '');
+    div.onclick = () => {
+      saveCurrentStepNotes();
+      currentStep = idx;
+      renderStep();
+      updateStepList();
+    };
     const img = document.createElement('img');
-    img.src = step.source_image;
+    img.src = s.source_image;
     img.style.cssText = 'width:100%;height:auto;display:block;';
-    img.alt = step.label || `Step ${idx + 1}`;
+    img.alt = s.label || `Step ${idx + 1}`;
     const caption = document.createElement('div');
     caption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9fafb;';
-    caption.textContent = step.label || `Step ${idx + 1}`;
+    caption.textContent = s.label || `Step ${idx + 1}`;
     div.appendChild(img);
     div.appendChild(caption);
     list.appendChild(div);
@@ -534,25 +885,19 @@ function renderStepImages() {
 }
 
 function defaultOffensePos(i) {
+  // Basket at top — point at bottom, posts near rim.
   const positions = [
-    { x: 250, y: 420 },  // PG top
-    { x: 120, y: 350 },  // SG left wing
-    { x: 380, y: 350 },  // SF right wing
-    { x: 140, y: 250 },  // PF left post
-    { x: 360, y: 250 },  // C right post
+    { x: 250, y: 400 },
+    { x: 100, y: 300 },
+    { x: 400, y: 300 },
+    { x: 170, y: 140 },
+    { x: 330, y: 140 },
   ];
   return positions[i];
 }
 
 function defaultDefensePos(i) {
-  const positions = [
-    { x: 250, y: 380 },  // Top of key
-    { x: 150, y: 310 },  // Left wing
-    { x: 350, y: 310 },  // Right wing
-    { x: 170, y: 220 },  // Left post
-    { x: 330, y: 220 },  // Right post
-  ];
-  return positions[i];
+  return manDefenseOffset(defaultOffensePos(i));
 }
 
 function renderPlayerToken(parent, pid, pos, color, label, type) {
@@ -562,39 +907,27 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   g.setAttribute('data-type', type);
   g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
 
-  if (type === 'defense') {
-    // X shape for defense
-    const r = DEFENSE_RADIUS;
-    const x1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    x1.setAttribute('x1', -r); x1.setAttribute('y1', -r);
-    x1.setAttribute('x2', r); x1.setAttribute('y2', r);
-    x1.setAttribute('stroke', color); x1.setAttribute('stroke-width', '3');
-    x1.setAttribute('stroke-linecap', 'round');
-    const x2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    x2.setAttribute('x1', r); x2.setAttribute('y1', -r);
-    x2.setAttribute('x2', -r); x2.setAttribute('y2', r);
-    x2.setAttribute('stroke', color); x2.setAttribute('stroke-width', '3');
-    x2.setAttribute('stroke-linecap', 'round');
-    g.appendChild(x1);
-    g.appendChild(x2);
-  } else {
-    // Circle for offense
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('r', PLAYER_RADIUS);
-    circle.setAttribute('fill', color);
-    circle.setAttribute('stroke', '#fff');
-    circle.setAttribute('stroke-width', '2');
-    g.appendChild(circle);
-  }
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
+  circle.setAttribute('fill', color);
+  circle.setAttribute('stroke', '#fff');
+  circle.setAttribute('stroke-width', '2');
+  g.appendChild(circle);
 
-  // Label
   const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('dy', type === 'defense' ? '4' : '5');
-  text.setAttribute('fill', type === 'defense' ? color : '#fff');
-  text.setAttribute('font-size', '11');
+  text.setAttribute('fill', '#fff');
   text.setAttribute('font-weight', '700');
-  text.textContent = label;
+  if (type === 'defense') {
+    // Color-matched man defender — tiny x mark only (no jersey number).
+    text.setAttribute('dy', '3');
+    text.setAttribute('font-size', '9');
+    text.textContent = '×';
+  } else {
+    text.setAttribute('dy', '5');
+    text.setAttribute('font-size', '11');
+    text.textContent = label;
+  }
   g.appendChild(text);
 
   if (!isReadOnly) {
@@ -631,11 +964,12 @@ function renderArrows(step) {
   const arrowLayer = document.getElementById('arrowLayer');
   arrowLayer.innerHTML = '';
   if (!step.movements) return;
+  const pos = positionsThrough(Math.max(0, steps.indexOf(step)));
 
   step.movements.forEach((m) => {
     if (m && m._meta) return;
-    const from = step.positions[m.from];
-    const to = step.positions[m.to];
+    const from = pos[m.from] || step.positions[m.from];
+    const to = pos[m.to] || step.positions[m.to];
     if (!from || !to) return;
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -902,9 +1236,11 @@ function addStep() {
     movements: [],
     label: '',
     notes: '',
+    source_image: '',
     ball: prevStep.ball || 'o1',
   });
   currentStep = steps.length - 1;
+  markStepsDirty();
   renderStep();
   updateStepList();
 }
@@ -917,9 +1253,11 @@ function duplicateStep() {
     movements: JSON.parse(JSON.stringify(src.movements)),
     label: src.label ? src.label + ' (copy)' : '',
     notes: src.notes || '',
+    source_image: src.source_image || '',
     ball: src.ball || 'o1',
   });
   currentStep++;
+  markStepsDirty();
   renderStep();
   updateStepList();
 }
@@ -929,6 +1267,7 @@ function removeStep() {
   saveUndoState();
   steps.splice(currentStep, 1);
   if (currentStep >= steps.length) currentStep = steps.length - 1;
+  markStepsDirty();
   renderStep();
   updateStepList();
 }
@@ -942,7 +1281,15 @@ function nextStep() {
 }
 
 function saveCurrentStepNotes() {
-  steps[currentStep].notes = document.getElementById('stepNotes').value;
+  const el = document.getElementById('stepNotes');
+  if (!el || isReadOnly || !steps[currentStep]) return;
+  const next = el.value;
+  if ((steps[currentStep].notes || '') !== next) {
+    steps[currentStep].notes = next;
+    markStepsDirty();
+  } else {
+    steps[currentStep].notes = next;
+  }
 }
 
 function updateMovementList() {
@@ -1010,6 +1357,38 @@ function updateMovementList() {
   });
 }
 
+let stepsDirty = false;
+let stepDragFrom = null;
+
+function markStepsDirty() {
+  if (isReadOnly) return;
+  stepsDirty = true;
+  const banner = document.getElementById('stepsDirtyBanner');
+  if (banner) banner.style.display = 'block';
+}
+
+function clearStepsDirty() {
+  stepsDirty = false;
+  const banner = document.getElementById('stepsDirtyBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+function moveStep(fromIdx, toIdx) {
+  if (isReadOnly) return;
+  if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+  if (fromIdx >= steps.length || toIdx >= steps.length) return;
+  saveCurrentStepNotes();
+  const [item] = steps.splice(fromIdx, 1);
+  steps.splice(toIdx, 0, item);
+  if (currentStep === fromIdx) currentStep = toIdx;
+  else if (fromIdx < currentStep && toIdx >= currentStep) currentStep -= 1;
+  else if (fromIdx > currentStep && toIdx <= currentStep) currentStep += 1;
+  markStepsDirty();
+  renderStep();
+  updateStepList();
+  updateMovementList();
+}
+
 function updateStepList() {
   const list = document.getElementById('stepList');
   if (!list) return;
@@ -1017,24 +1396,109 @@ function updateStepList() {
   steps.forEach((s, i) => {
     const div = document.createElement('div');
     div.className = 'step-item' + (i === currentStep ? ' active' : '');
-    div.onclick = () => { saveCurrentStepNotes(); currentStep = i; renderStep(); updateStepList(); updateMovementList(); };
+    div.dataset.stepIndex = String(i);
+    div.onclick = () => {
+      saveCurrentStepNotes();
+      currentStep = i;
+      renderStep();
+      updateStepList();
+      updateMovementList();
+    };
+
+    if (!isReadOnly) {
+      const handle = document.createElement('span');
+      handle.className = 'step-drag-handle';
+      handle.title = 'Drag to reorder';
+      handle.textContent = '☰';
+      handle.draggable = true;
+      handle.addEventListener('click', (e) => e.stopPropagation());
+      handle.addEventListener('dragstart', (e) => {
+        stepDragFrom = i;
+        div.classList.add('step-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(i));
+      });
+      handle.addEventListener('dragend', () => {
+        stepDragFrom = null;
+        list.querySelectorAll('.step-item').forEach((el) => {
+          el.classList.remove('step-dragging', 'step-drag-over');
+        });
+      });
+      div.appendChild(handle);
+
+      div.addEventListener('dragover', (e) => {
+        if (stepDragFrom === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        div.classList.add('step-drag-over');
+      });
+      div.addEventListener('dragleave', () => div.classList.remove('step-drag-over'));
+      div.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        div.classList.remove('step-drag-over');
+        const from = stepDragFrom;
+        stepDragFrom = null;
+        if (from === null || from === i) return;
+        moveStep(from, i);
+      });
+    }
 
     const num = document.createElement('span');
     num.textContent = `${i + 1}.`;
     num.style.fontWeight = '600';
     num.style.minWidth = '22px';
+    num.style.flexShrink = '0';
 
     const labelInput = document.createElement('input');
     labelInput.type = 'text';
     labelInput.className = 'step-label-input';
     labelInput.value = s.label || '';
-    labelInput.placeholder = 'Step label...';
+    labelInput.placeholder = isReadOnly ? 'Untitled sheet' : 'Sheet label (e.g. Pass to 2)…';
+    labelInput.readOnly = isReadOnly;
+    labelInput.title = isReadOnly ? '' : 'Edit sheet wording';
     labelInput.onclick = (e) => e.stopPropagation();
-    labelInput.onchange = (e) => { steps[i].label = e.target.value; };
-    labelInput.onkeydown = (e) => e.stopPropagation();
+    labelInput.onmousedown = (e) => e.stopPropagation();
+    labelInput.onchange = (e) => {
+      steps[i].label = e.target.value;
+      markStepsDirty();
+      const stepLabel = document.getElementById('stepLabel');
+      if (i === currentStep && stepLabel) {
+        stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${steps[i].label ? ' — ' + steps[i].label : ''}`;
+      }
+    };
+    labelInput.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        labelInput.blur();
+      }
+    };
 
     div.appendChild(num);
     div.appendChild(labelInput);
+
+    if (!isReadOnly) {
+      const movers = document.createElement('div');
+      movers.className = 'step-move-btns';
+      movers.addEventListener('click', (e) => e.stopPropagation());
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.textContent = '▲';
+      up.title = 'Move up';
+      up.disabled = i === 0;
+      up.onclick = () => moveStep(i, i - 1);
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.textContent = '▼';
+      down.title = 'Move down';
+      down.disabled = i === steps.length - 1;
+      down.onclick = () => moveStep(i, i + 1);
+      movers.appendChild(up);
+      movers.appendChild(down);
+      div.appendChild(movers);
+    }
+
     list.appendChild(div);
   });
 }
@@ -1047,36 +1511,249 @@ function lerpPosition(a, b, t) {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function animateToStep(targetIndex, durationMs = 700, onFrame) {
-  if (targetIndex <= 0 || targetIndex >= steps.length) {
-    currentStep = targetIndex;
-    renderStep();
-    updateStepList();
-    updateMovementList();
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function isDefaultOffensePos(pid, pos) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  if (!Number.isFinite(num) || num < 1 || !pos) return false;
+  const d = defaultOffensePos(num - 1);
+  return Math.abs(d.x - pos.x) < 1.5 && Math.abs(d.y - pos.y) < 1.5;
+}
+
+function buildAnimPositions(fromRaw, toRaw, t) {
+  const fromOffense = {};
+  const toOffense = {};
+  Object.keys(fromRaw || {}).forEach((k) => {
+    if (String(k).startsWith('o') && fromRaw[k]) fromOffense[k] = fromRaw[k];
+  });
+  Object.keys(toRaw || {}).forEach((k) => {
+    if (String(k).startsWith('o') && toRaw[k]) toOffense[k] = toRaw[k];
+  });
+  // Keep players on court across steps when OCR drops a token (no blink-out).
+  Object.keys(fromOffense).forEach((k) => {
+    if (!toOffense[k]) toOffense[k] = fromOffense[k];
+  });
+  // New / previously-default tokens: appear at destination — don't invent a fake run from a default spot.
+  Object.keys(toOffense).forEach((k) => {
+    if (!fromOffense[k] || (isDefaultOffensePos(k, fromOffense[k]) && !isDefaultOffensePos(k, toOffense[k]))) {
+      fromOffense[k] = toOffense[k];
+    }
+  });
+
+  const e = easeInOutCubic(Math.max(0, Math.min(1, t)));
+  const pos = {};
+  const ids = new Set([...Object.keys(fromOffense), ...Object.keys(toOffense)]);
+  ids.forEach((oid) => {
+    const a = fromOffense[oid] || toOffense[oid];
+    const b = toOffense[oid] || fromOffense[oid];
+    if (!a || !b) return;
+    pos[oid] = lerpPosition(a, b, e);
+  });
+
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const did = 'd' + i;
+    if (!pos[oid]) continue;
+    if (fromRaw[did] && toRaw[did]
+        && !isDefaultOffensePos(oid, fromRaw[oid] || {})
+        && !isDefaultOffensePos(oid, toRaw[oid] || {})) {
+      pos[did] = lerpPosition(fromRaw[did], toRaw[did], e);
+    } else {
+      pos[did] = manDefenseOffset(pos[oid]);
+    }
+  }
+  return pos;
+}
+
+function setPlayAllButton(running) {
+  const btn = document.querySelector('[onclick="playAnimation()"]');
+  if (!btn) return;
+  btn.textContent = running ? '⏹ Stop' : '▶ Play All';
+  btn.classList.toggle('btn-danger', running);
+  btn.classList.toggle('btn-primary', !running);
+}
+
+function setSheetAnimHint(text) {
+  const el = document.getElementById('sheetAnimHint');
+  if (el) el.textContent = text || '';
+}
+
+function playHasSheets() {
+  return steps.some((s) => s && s.source_image);
+}
+
+function delayMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function updateStepChrome(index) {
+  currentStep = index;
+  const step = steps[index];
+  const stepLabel = document.getElementById('stepLabel');
+  if (stepLabel && step) {
+    stepLabel.textContent = `Step ${index + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  showStepSourceImage(index);
+  updateStepList();
+}
+
+function clearSheetUnderlay() {
+  const layer = document.getElementById('sheetUnderlayLayer');
+  if (layer) layer.innerHTML = '';
+}
+
+function showSheetUnderlay(stepIndex) {
+  const layer = document.getElementById('sheetUnderlayLayer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const url = steps[stepIndex] && steps[stepIndex].source_image;
+  if (!url) return;
+  // Ghost the play-sheet ink on the court so its lines are visible under tokens.
+  const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  img.setAttribute('href', url);
+  img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
+  img.setAttribute('x', '0');
+  img.setAttribute('y', '0');
+  img.setAttribute('width', String(isFullCourt ? 500 : COURT_W));
+  img.setAttribute('height', String(isFullCourt ? 940 : COURT_H));
+  img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  img.setAttribute('opacity', '0.28');
+  img.style.pointerEvents = 'none';
+  layer.appendChild(img);
+}
+
+/** Build travel paths: stored movements first, else players who moved between sheets. */
+function buildTravelPaths(fromRaw, toRaw, step) {
+  const paths = [];
+  const moves = (step && step.movements) || [];
+  let usedStored = false;
+
+  moves.forEach((m) => {
+    if (!m || m._meta) return;
+    const a = fromRaw[m.from] || toRaw[m.from];
+    const b = toRaw[m.to] || fromRaw[m.to];
+    if (!a || !b) return;
+    usedStored = true;
+    const isPass = m.type === 'pass';
+    const ctrl = isPass ? null : movementQuadControl(a, b, m.type === 'dribble' ? 0.18 : 0.12);
+    paths.push({
+      pid: isPass ? null : m.to,
+      ballOnly: isPass,
+      from: a,
+      to: b,
+      ctrl,
+      type: m.type || 'cut',
+      fromPid: m.from,
+      toPid: m.to,
+    });
+  });
+
+  if (usedStored) return paths;
+
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const a = fromRaw[oid];
+    const b = toRaw[oid];
+    if (!a || !b) continue;
+    if (isDefaultOffensePos(oid, a) && !isDefaultOffensePos(oid, b)) {
+      // Newly tagged — appear at destination, no fake path from default.
+      continue;
+    }
+    if (Math.hypot(a.x - b.x, a.y - b.y) < 10) continue;
+    const ctrl = movementQuadControl(a, b, 0.12);
+    paths.push({ pid: oid, ballOnly: false, from: a, to: b, ctrl, type: 'cut' });
+  }
+  return paths;
+}
+
+function drawTravelPaths(paths) {
+  addArrowheadMarkers();
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!arrowLayer) return;
+  arrowLayer.innerHTML = '';
+  paths.forEach((p) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let d;
+    if (p.ctrl) {
+      d = `M ${p.from.x} ${p.from.y} Q ${p.ctrl.mx} ${p.ctrl.my} ${p.to.x} ${p.to.y}`;
+    } else {
+      d = `M ${p.from.x} ${p.from.y} L ${p.to.x} ${p.to.y}`;
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-width', p.ballOnly || p.type === 'pass' ? '2.5' : '3');
+    if (p.type === 'pass' || p.ballOnly) {
+      path.setAttribute('stroke', '#3b82f6');
+      path.setAttribute('stroke-dasharray', '8,4');
+      path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (p.type === 'dribble') {
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else {
+      path.setAttribute('stroke', '#ef4444');
+      path.setAttribute('marker-end', 'url(#arrowhead-red)');
+    }
+    arrowLayer.appendChild(path);
+  });
+}
+
+function pointAlongTravel(p, t) {
+  const e = easeInOutCubic(Math.max(0, Math.min(1, t)));
+  if (p.ctrl) return quadPointAt(p.from, p.ctrl, p.to, e);
+  return lerpPosition(p.from, p.to, e);
+}
+
+function animateAlongPaths(fromRaw, toRaw, paths, ballPid, durationMs) {
+  if (!paths.length) {
+    syncPlayerTokens(toRaw, ballPid);
     return Promise.resolve();
   }
-  const fromPositions = JSON.parse(JSON.stringify(steps[targetIndex - 1].positions));
-  const toPositions = steps[targetIndex].positions;
+  isAnimating = true;
   const start = performance.now();
   return new Promise((resolve) => {
     function frame(now) {
+      if (!isAnimating && !playAllRunning) {
+        resolve();
+        return;
+      }
       const t = Math.min(1, (now - start) / durationMs);
-      const blended = {};
-      Object.keys(toPositions).forEach((pid) => {
-        const from = fromPositions[pid] || toPositions[pid];
-        blended[pid] = lerpPosition(from, toPositions[pid], t);
+      const pos = {};
+      Object.keys(fromRaw || {}).forEach((k) => {
+        if (fromRaw[k]) pos[k] = { x: fromRaw[k].x, y: fromRaw[k].y };
       });
-      steps[targetIndex].positions = blended;
-      renderStep();
-      if (onFrame) onFrame();
+      Object.keys(toRaw || {}).forEach((k) => {
+        if (!pos[k] && toRaw[k]) pos[k] = { x: toRaw[k].x, y: toRaw[k].y };
+      });
+      // Still players stay; movers follow their line.
+      paths.forEach((p) => {
+        if (p.ballOnly || !p.pid) return;
+        pos[p.pid] = pointAlongTravel(p, t);
+      });
+      for (let i = 1; i <= 5; i += 1) {
+        const oid = 'o' + i;
+        const did = 'd' + i;
+        if (pos[oid]) pos[did] = manDefenseOffset(pos[oid]);
+      }
+      let ballAt = ballPid;
+      const pass = paths.find((p) => p.ballOnly || p.type === 'pass');
+      if (pass) {
+        const bpos = pointAlongTravel(pass, t);
+        // Temporary ball carrier slot for indicator.
+        pos._ballPath = bpos;
+        syncPlayerTokens(pos, ballPid);
+        const playerLayer = document.getElementById('playerLayer');
+        let ball = playerLayer && playerLayer.querySelector('.ball-indicator');
+        if (ball) ball.setAttribute('transform', `translate(${bpos.x + 14}, ${bpos.y - 14})`);
+      } else {
+        syncPlayerTokens(pos, ballAt);
+      }
       if (t < 1) {
         animFrame = requestAnimationFrame(frame);
       } else {
-        steps[targetIndex].positions = JSON.parse(JSON.stringify(toPositions));
-        currentStep = targetIndex;
-        renderStep();
-        updateStepList();
-        updateMovementList();
+        isAnimating = false;
+        syncPlayerTokens(toRaw, ballPid);
         resolve();
       }
     }
@@ -1084,19 +1761,105 @@ function animateToStep(targetIndex, durationMs = 700, onFrame) {
   });
 }
 
+function animateToStep(targetIndex, durationMs = 1400, onFrame) {
+  // Kept for video export / single-step callers — path-based when possible.
+  if (targetIndex < 0 || targetIndex >= steps.length) return Promise.resolve();
+  if (targetIndex === 0) {
+    isAnimating = false;
+    updateStepChrome(0);
+    showSheetUnderlay(0);
+    syncPlayerTokens(withManDefense(positionsForAnim(0)), steps[0]?.ball || 'o1');
+    if (!playAllRunning) { renderStep(); updateMovementList(); }
+    return Promise.resolve();
+  }
+  updateStepChrome(targetIndex);
+  showSheetUnderlay(targetIndex);
+  const fromRaw = withManDefense(positionsForAnim(targetIndex - 1));
+  const toRaw = withManDefense(positionsForAnim(targetIndex));
+  const ballPid = steps[targetIndex].ball || steps[targetIndex - 1].ball || 'o1';
+  const paths = buildTravelPaths(fromRaw, toRaw, steps[targetIndex - 1]);
+  drawTravelPaths(paths);
+  if (onFrame) onFrame();
+  return animateAlongPaths(fromRaw, toRaw, paths, ballPid, durationMs).then(() => {
+    if (!playAllRunning) { renderStep(); updateMovementList(); }
+  });
+}
+
+/**
+ * Play All: for each sheet — show lines, move SVG along those lines, then next sheet.
+ * Animated court stays primary (first); source sheet tracks below.
+ */
 async function playAnimation() {
-  if (animInterval) {
-    clearInterval(animInterval);
-    animInterval = null;
+  if (playAllRunning) {
+    playAllRunning = false;
+    isAnimating = false;
     if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = null;
+    setPlayAllButton(false);
+    setSheetAnimHint('');
+    clearSheetUnderlay();
+    renderStep();
     return;
   }
-  currentStep = 0;
-  renderStep();
-  updateStepList();
-  for (let i = 1; i < steps.length; i++) {
-    await animateToStep(i, 800);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  if (!steps.length) return;
+
+  playAllRunning = true;
+  setPlayAllButton(true);
+  addArrowheadMarkers();
+
+  const lineHoldMs = 900;
+  const moveMs = 1400;
+  const endHoldMs = 700;
+
+  // Start on sheet 1 — show lines, then move along them, then next sheet.
+  updateStepChrome(0);
+  showSheetUnderlay(0);
+  const startPos = withManDefense(positionsForAnim(0));
+  syncPlayerTokens(startPos, steps[0]?.ball || 'o1');
+  setSheetAnimHint(steps.length > 1 ? `Sheet 1 / ${steps.length} — lines` : 'Sheet 1 — lines');
+
+  if (steps.length === 1) {
+    renderArrows(steps[0]);
+    await delayMs(lineHoldMs);
+  } else {
+    for (let i = 0; i < steps.length - 1; i += 1) {
+      if (!playAllRunning) break;
+      const fromRaw = withManDefense(positionsForAnim(i));
+      const toRaw = withManDefense(positionsForAnim(i + 1));
+      const ballPid = steps[i + 1].ball || steps[i].ball || 'o1';
+
+      updateStepChrome(i);
+      showSheetUnderlay(i);
+      syncPlayerTokens(fromRaw, steps[i].ball || 'o1');
+      const paths = buildTravelPaths(fromRaw, toRaw, steps[i]);
+      drawTravelPaths(paths);
+      setSheetAnimHint(`Sheet ${i + 1} / ${steps.length} — lines`);
+      await delayMs(lineHoldMs);
+      if (!playAllRunning) break;
+
+      setSheetAnimHint(`Sheet ${i + 1} / ${steps.length} — move`);
+      await animateAlongPaths(fromRaw, toRaw, paths, ballPid, moveMs);
+      if (!playAllRunning) break;
+
+      updateStepChrome(i + 1);
+      showSheetUnderlay(i + 1);
+      syncPlayerTokens(toRaw, ballPid);
+      const arrowLayer = document.getElementById('arrowLayer');
+      if (arrowLayer) arrowLayer.innerHTML = '';
+      setSheetAnimHint(`Sheet ${i + 2} / ${steps.length}`);
+      await delayMs(endHoldMs);
+    }
+  }
+
+  playAllRunning = false;
+  isAnimating = false;
+  setPlayAllButton(false);
+  setSheetAnimHint('');
+  if (steps.length) {
+    currentStep = steps.length - 1;
+    clearSheetUnderlay();
+    renderStep();
+    updateStepList();
   }
 }
 
@@ -1171,27 +1934,109 @@ async function copyPlayShareLink() {
 // ── Save to hidden form fields ───────────────────────────
 document.getElementById('playForm')?.addEventListener('submit', function() {
   saveCurrentStepNotes();
-  const playData = {
-    name: document.getElementById('playName').value,
-    category_id: document.getElementById('playCategoryId')?.value || '',
-  };
-  document.getElementById('diagramJsonInput').value = JSON.stringify(playData);
+  // Preserve import/progression metadata in diagram_json — never replace with a stub.
+  let diagram = {};
+  try {
+    diagram = JSON.parse(document.getElementById('diagramJsonInput').value || '{}') || {};
+  } catch (err) {
+    diagram = {};
+  }
+  if (typeof diagram !== 'object' || Array.isArray(diagram)) diagram = {};
+  diagram.name = document.getElementById('playName').value;
+  if (document.getElementById('playCategoryId')?.value) {
+    diagram.category_id = document.getElementById('playCategoryId').value;
+  }
+  document.getElementById('diagramJsonInput').value = JSON.stringify(diagram);
   document.getElementById('stepsJsonInput').value = JSON.stringify(steps);
+  clearStepsDirty();
+});
+
+window.addEventListener('beforeunload', (e) => {
+  if (!stepsDirty || isReadOnly) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+document.getElementById('stepNotes')?.addEventListener('change', () => {
+  if (!isReadOnly) markStepsDirty();
 });
 
 const categoryTree = {{ category_tree|tojson if category_tree else '[]' }};
 const selectedCategoryId = {{ selected_category_id|tojson if selected_category_id else 'null' }};
 let activeCategoryId = selectedCategoryId;
 
+function replaceCategoryTree(nextTree) {
+  categoryTree.splice(0, categoryTree.length, ...(nextTree || []));
+}
+
 function applyPlayFilters() {
   const q = (document.getElementById('playSearch')?.value || '').toLowerCase();
   const allowedIds = window.PlaybookTaxonomy
     ? window.PlaybookTaxonomy.collectDescendantIds(categoryTree, activeCategoryId)
     : null;
+  let visibleCount = 0;
   document.querySelectorAll('.play-row').forEach((row) => {
-    const matchesSearch = !q || row.dataset.name.includes(q);
-    const matchesCategory = !allowedIds || allowedIds.map(String).includes(String(row.dataset.categoryId));
-    row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+    const matchesSearch = !q || (row.dataset.name || '').includes(q);
+    const rowCat = String(row.dataset.categoryId || '');
+    const matchesCategory = !allowedIds || allowedIds.map(String).includes(rowCat);
+    const visible = matchesSearch && matchesCategory;
+    row.style.display = visible ? '' : 'none';
+    if (visible) visibleCount += 1;
+    // When filtering by category (or searching), expand nested progressions so slides stay visible.
+    if (visible && row.classList.contains('is-collapsible') && (q || activeCategoryId)) {
+      setPlayProgressionsExpanded(row, true, { persist: false });
+    }
+  });
+  const emptyEl = document.getElementById('playbookFilterEmpty');
+  if (emptyEl) {
+    emptyEl.style.display = visibleCount === 0 ? '' : 'none';
+  }
+}
+
+function setPlayProgressionsExpanded(row, expanded, { persist = true } = {}) {
+  if (!row || !row.classList.contains('is-collapsible')) return;
+  const toggle = row.querySelector('.play-collapse-toggle');
+  const panel = row.querySelector('.play-progressions');
+  row.classList.toggle('is-collapsed', !expanded);
+  if (panel) {
+    if (expanded) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+  }
+  if (toggle) {
+    toggle.textContent = expanded ? '▾' : '▸';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggle.setAttribute('aria-label', expanded ? 'Collapse progressions' : 'Expand progressions');
+  }
+  if (persist) {
+    const key = 'liberty.playbook.playExpanded';
+    let state = {};
+    try { state = JSON.parse(sessionStorage.getItem(key) || '{}') || {}; } catch (err) { state = {}; }
+    state[String(row.dataset.playId)] = !!expanded;
+    try { sessionStorage.setItem(key, JSON.stringify(state)); } catch (err) { /* ignore */ }
+  }
+}
+
+function initPlayProgressionCollapse() {
+  const list = document.getElementById('playsTableBody');
+  if (!list) return;
+  const key = 'liberty.playbook.playExpanded';
+  let state = {};
+  try { state = JSON.parse(sessionStorage.getItem(key) || '{}') || {}; } catch (err) { state = {}; }
+
+  list.querySelectorAll('.play-row.is-collapsible').forEach((row) => {
+    const id = String(row.dataset.playId);
+    const expanded = Object.prototype.hasOwnProperty.call(state, id) ? !!state[id] : false;
+    setPlayProgressionsExpanded(row, expanded, { persist: false });
+  });
+
+  list.addEventListener('click', (e) => {
+    const toggle = e.target.closest('.play-collapse-toggle');
+    if (!toggle || !list.contains(toggle)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = toggle.closest('.play-row');
+    if (!row) return;
+    setPlayProgressionsExpanded(row, row.classList.contains('is-collapsed'));
   });
 }
 
@@ -1225,6 +2070,10 @@ function initPlaybookTaxonomy() {
     window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
     applyPlayFilters();
   }
+  window.refreshPlaybookCategoryTree = function refreshPlaybookCategoryTree() {
+    window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+    applyPlayFilters();
+  };
   window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
 
   document.getElementById('addCategoryBtn')?.addEventListener('click', async () => {
@@ -1288,29 +2137,49 @@ function initPlaybookTaxonomy() {
 // ── Init ─────────────────────────────────────────────────
 function initSteps() {
   if (editingSteps && editingSteps.length > 0) {
-    steps = editingSteps.map(s => ({
-      positions: JSON.parse(s.positions_json || '{}'),
-      movements: JSON.parse(s.movements_json || '[]').filter((m) => !(m && m._meta)),
-      label: s.label || '',
-      notes: s.notes || '',
-      source_image: s.source_image || '',
-      ball: (() => {
-        try {
-          const movements = JSON.parse(s.movements_json || '[]');
-          const meta = movements.find(m => m && m._meta);
-          return meta ? meta._ball : 'o1';
-        } catch (e) { return 'o1'; }
-      })(),
+    const sorted = editingSteps.slice().sort((a, b) => {
+      const an = Number(a.step_number);
+      const bn = Number(b.step_number);
+      if (Number.isFinite(an) && Number.isFinite(bn) && an !== bn) return an - bn;
+      return 0;
+    });
+    const parsed = sorted.map(s => {
+      let positions = {};
+      try { positions = JSON.parse(s.positions_json || '{}') || {}; } catch (e) { positions = {}; }
+      return {
+        positions,
+        movements: (() => {
+          try {
+            return JSON.parse(s.movements_json || '[]').filter((m) => !(m && m._meta));
+          } catch (e) { return []; }
+        })(),
+        label: s.label || '',
+        notes: s.notes || '',
+        source_image: s.source_image || '',
+        ball: (() => {
+          try {
+            const movements = JSON.parse(s.movements_json || '[]');
+            const meta = movements.find(m => m && m._meta);
+            return meta ? meta._ball : 'o1';
+          } catch (e) { return 'o1'; }
+        })(),
+      };
+    });
+    const flipAll = shouldFlipLegacyBottomBasket(parsed.map((s) => s.positions));
+    steps = parsed.map((s) => ({
+      ...s,
+      positions: flipAll ? flipPositionsY(s.positions) : s.positions,
     }));
   } else {
-    // Default: single step with 5 offensive + 5 defensive players
+    // Default: single step with 5 offensive + color-matched man defenders (basket at top).
     const positions = {};
-    // Offense
-    [{ x: 250, y: 420 }, { x: 120, y: 350 }, { x: 380, y: 350 }, { x: 140, y: 250 }, { x: 360, y: 250 }].forEach((p, i) => { positions['o' + (i + 1)] = p; });
-    // Defense
-    [{ x: 250, y: 380 }, { x: 150, y: 310 }, { x: 350, y: 310 }, { x: 170, y: 220 }, { x: 330, y: 220 }].forEach((p, i) => { positions['d' + (i + 1)] = p; });
+    for (let i = 0; i < 5; i += 1) {
+      positions['o' + (i + 1)] = defaultOffensePos(i);
+      positions['d' + (i + 1)] = defaultDefensePos(i);
+    }
     steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '', ball: 'o1' }];
   }
+  currentStep = 0;
   renderCourt();
   renderStep();
   renderStepImages();
@@ -1322,6 +2191,20 @@ if (document.getElementById('courtSvg')) {
 }
 if (document.getElementById('playCategoryId') || document.getElementById('playbookCategoryTree')) {
   initPlaybookTaxonomy();
+}
+initPlayProgressionCollapse();
+if (document.getElementById('playsTableBody') && window.PlaybookDragDrop) {
+  window.PlaybookDragDrop.init(document.getElementById('playsTableBody'), {
+    categoryTree: document.getElementById('playbookCategoryTree'),
+    onCategoryMoved(data) {
+      if (data && data.tree) replaceCategoryTree(data.tree);
+      if (typeof window.refreshPlaybookCategoryTree === 'function') {
+        window.refreshPlaybookCategoryTree();
+      } else {
+        applyPlayFilters();
+      }
+    },
+  });
 }
 
 // Ctrl+Enter to save

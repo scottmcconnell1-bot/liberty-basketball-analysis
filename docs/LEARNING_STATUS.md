@@ -1,23 +1,21 @@
 # Learning Status
 
-Generated (local): **2026-08-01 01:43:27 Mountain Daylight Time**
+Generated (local): **2026-08-01 23:00:06 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
 ## Current learning activity
 
 - **Process map:** ok
-- **Active (live worker-backed):** 0
-- **Hint / key:** `hudl_idaho_city_away_regular_idaho_city`
-- **Status:** inferred_from_teach_state (no live analysis worker)
-- **Progress:** Unknown
-- **Step:** last scored: HUDL Idaho City
-- **Source:** teach_loop_state (Inferred)
+- **Active (live worker-backed):** 3
+  - `hudl_marsing_away_regular_marsing`: 75.0%, step=Failed, PID=26584, kind=analysis_launcher, db_status=failed
+  - `hudl_murtaugh_away_regular_murtaugh`: 75.0%, step=Failed, PID=37916, kind=analysis_launcher, db_status=failed
+  - `hudl_north_star_charter_away_regular_north_star` **(primary)**: 75.0%, step=Running enhanced analysis…, PID=31412, kind=analysis_launcher, db_status=running
 - **Stale/zombie candidates (DB running, no worker):** 0
 - **Teach loop PID(s):** 1096
-- **analysis_runs counts (raw DB):** completed=32, failed=2 (running includes stale/zombie candidates until reclaimed)
+- **analysis_runs counts (raw DB):** completed=32, failed=4, running=1 (running includes stale/zombie candidates until reclaimed)
 - Note: hoops_teach_loop live PID(s): 1096
-- Note: no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only
+- Note: multiple live analysis workers (3); primary marked below (highest progress, then newest start)
 
 ## Queue summary
 
@@ -26,7 +24,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 - **HUDL videos (total):** 43 (Proven (videos.game_id LIKE hudl_%))
 - **Remaining (vs videos, inferred):** 32
 - **Remaining (vs film_tool, inferred):** 33
-- **Failed HUDL analysis_runs:** 0 (Proven (analysis_runs))
+- **Failed HUDL analysis_runs:** 2 (Proven (analysis_runs))
 - **All taught keys (Hoops+HUDL):** 22
 - Note: remaining_vs_film_tool = film_tool HUDL games − taught hudl_* keys (keys/film ids are related but not guaranteed 1:1)
 - Note: remaining_vs_videos = videos hudl_* − taught hudl_* keys (closer to teach-loop queue, still not guaranteed 1:1 with reruns)
@@ -41,7 +39,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 52.6% | FAIL |
 
 **Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-08-01T07:43:26.053651+00:00`
+- Panel snapshot: `2026-08-02T05:00:05.453924+00:00`
 
 ## Per-game panel
 
@@ -71,6 +69,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 ### Proven
 
 - Panel metrics from `full_film_panel_latest.json`
+- `analysis_runs` status/progress from `film_analysis.db`
 - Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list
 - HUDL taught key count from `teach_loop_state.json`
 - HUDL film_tool game count from DB
@@ -79,7 +78,6 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 ### Inferred
 
-- Current activity inferred from last teach score (no live worker)
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
 
 ### Unknown

@@ -70,22 +70,436 @@ def _load_playbook_taxonomy(db):
 
 
 def _plays_query(db):
+    _ensure_play_progression_columns(db)
     return db.execute(
         """SELECT p.*, pb.name as playbook_name,
                   pc.name as category_name,
                   pc.slug_path as category_path,
-                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
+                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count,
+                  (SELECT COUNT(*) FROM plays child WHERE child.parent_play_id = p.id) as progression_count
            FROM plays p
            LEFT JOIN playbooks pb ON pb.id = p.playbook_id
            LEFT JOIN play_categories pc ON pc.id = p.category_id
-           ORDER BY p.updated_at DESC"""
+           ORDER BY
+             CASE WHEN p.list_order IS NULL THEN 1 ELSE 0 END,
+             p.list_order ASC,
+             p.updated_at DESC"""
     ).fetchall()
+
+
+def _ensure_play_progression_columns(db):
+    cols = {row[1] for row in db.execute("PRAGMA table_info(plays)").fetchall()}
+    if "parent_play_id" not in cols:
+        db.execute(
+            "ALTER TABLE plays ADD COLUMN parent_play_id INTEGER REFERENCES plays(id) ON DELETE SET NULL"
+        )
+    if "progression_order" not in cols:
+        db.execute(
+            "ALTER TABLE plays ADD COLUMN progression_order INTEGER NOT NULL DEFAULT 0"
+        )
+    if "list_order" not in cols:
+        db.execute("ALTER TABLE plays ADD COLUMN list_order INTEGER")
+    # Backfill top-level list_order once so drag-reorder has a stable baseline.
+    missing = db.execute(
+        """SELECT COUNT(*) AS c FROM plays
+            WHERE (parent_play_id IS NULL OR parent_play_id = 0)
+              AND list_order IS NULL"""
+    ).fetchone()["c"]
+    if missing:
+        rows = db.execute(
+            """SELECT id FROM plays
+                WHERE parent_play_id IS NULL OR parent_play_id = 0
+                ORDER BY updated_at DESC, id DESC"""
+        ).fetchall()
+        for index, row in enumerate(rows):
+            db.execute("UPDATE plays SET list_order = ? WHERE id = ?", (index, row["id"]))
+        db.commit()
+
+
+def _group_plays_for_list(db, plays):
+    """Nest progression children under their parent; hide orphans' children from top level."""
+    _ensure_play_progression_columns(db)
+    play_dicts = [dict(p) for p in plays]
+    by_id = {p["id"]: p for p in play_dicts}
+    for p in play_dicts:
+        p["progressions"] = []
+        p["search_blob"] = (p.get("name") or "").lower()
+
+    for p in play_dicts:
+        parent_id = p.get("parent_play_id")
+        if parent_id and parent_id in by_id:
+            by_id[parent_id]["progressions"].append(p)
+            by_id[parent_id]["search_blob"] += " " + (p.get("name") or "").lower()
+
+    for p in play_dicts:
+        if p["progressions"]:
+            p["progressions"].sort(
+                key=lambda child: (
+                    child.get("progression_order") or 0,
+                    child.get("name") or "",
+                )
+            )
+
+    top = [
+        p
+        for p in play_dicts
+        if not p.get("parent_play_id") or p.get("parent_play_id") not in by_id
+    ]
+    top.sort(
+        key=lambda p: (
+            1 if p.get("list_order") is None else 0,
+            p.get("list_order") if p.get("list_order") is not None else 10**9,
+            (p.get("name") or "").lower(),
+        )
+    )
+    return top
+
+
+def reorder_plays(db, *, ordered_ids, parent_play_id=None):
+    """Persist a new order for top-level plays or progressions under one parent."""
+    _ensure_play_progression_columns(db)
+    ids = []
+    for raw in ordered_ids or []:
+        try:
+            ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    if not ids:
+        raise ValueError("No plays to reorder")
+
+    if parent_play_id in ("", None):
+        parent_play_id = None
+    else:
+        parent_play_id = int(parent_play_id)
+
+    for index, play_id in enumerate(ids):
+        if parent_play_id is None:
+            row = db.execute(
+                "SELECT id, parent_play_id FROM plays WHERE id = ?",
+                (play_id,),
+            ).fetchone()
+            if not row or row["parent_play_id"]:
+                raise ValueError("Top-level reorder includes a progression play")
+            db.execute(
+                "UPDATE plays SET list_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (index, play_id),
+            )
+        else:
+            row = db.execute(
+                "SELECT id, parent_play_id FROM plays WHERE id = ?",
+                (play_id,),
+            ).fetchone()
+            if not row or row["parent_play_id"] != parent_play_id:
+                raise ValueError("Progression reorder includes a play from another group")
+            db.execute(
+                """UPDATE plays
+                      SET progression_order = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?""",
+                (index, play_id),
+            )
+    db.commit()
+    return ids
+
+
+def move_plays_to_category(db, *, play_ids, category_id):
+    """Assign top-level plays (and their progressions) to a leaf category."""
+    from playbook_taxonomy import legacy_category_from_id
+
+    _ensure_play_progression_columns(db)
+    try:
+        category_id = int(category_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid category") from exc
+
+    cat = db.execute(
+        "SELECT id, name, slug_path FROM play_categories WHERE id = ?",
+        (category_id,),
+    ).fetchone()
+    if not cat:
+        raise ValueError("Category not found")
+    if (cat["slug_path"] or "") == "opponents":
+        raise ValueError("Opponents is not a play category — open Opponent Playbooks instead")
+    has_child = db.execute(
+        "SELECT 1 FROM play_categories WHERE parent_id = ? LIMIT 1",
+        (category_id,),
+    ).fetchone()
+    if has_child:
+        raise ValueError("Drop onto a specific category (e.g. Man or Zone), not a parent folder")
+
+    ids = []
+    for raw in play_ids or []:
+        try:
+            ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    if not ids:
+        raise ValueError("No plays to move")
+
+    legacy = legacy_category_from_id(db, category_id)
+    moved = []
+    for play_id in ids:
+        row = db.execute(
+            "SELECT id, parent_play_id FROM plays WHERE id = ?",
+            (play_id,),
+        ).fetchone()
+        if not row:
+            continue
+        # Progressions follow their parent; skip direct progression moves.
+        if row["parent_play_id"]:
+            continue
+        db.execute(
+            """UPDATE plays
+                  SET category_id = ?, category = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?""",
+            (category_id, legacy, play_id),
+        )
+        db.execute(
+            """UPDATE plays
+                  SET category_id = ?, category = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE parent_play_id = ?""",
+            (category_id, legacy, play_id),
+        )
+        moved.append(play_id)
+
+    if not moved:
+        raise ValueError("No top-level plays to move")
+    db.commit()
+    return {
+        "moved_ids": moved,
+        "category_id": category_id,
+        "category_path": cat["slug_path"] or "",
+        "category_name": cat["name"] or "",
+    }
+
+
+def ensure_cycle_spots_progressions(db):
+    """One-time: fold PDF-split Cycle Spots sequences under one parent play."""
+    _ensure_play_progression_columns(db)
+    existing = db.execute(
+        "SELECT id FROM plays WHERE name = ? AND (parent_play_id IS NULL OR parent_play_id = 0)",
+        ("Cycle Spots",),
+    ).fetchone()
+    progression_names = [
+        "4 Flash",
+        "5-1-2",
+        "5-1-2-4",
+        "5-1-3",
+        "Finish the Cycle",
+        "Last Leg",
+    ]
+    children = []
+    for name in progression_names:
+        row = db.execute(
+            """SELECT id, category_id, category, playbook_id
+                 FROM plays
+                WHERE name = ?
+                  AND (parent_play_id IS NULL OR parent_play_id = 0)
+                ORDER BY id
+                LIMIT 1""",
+            (name,),
+        ).fetchone()
+        if row:
+            children.append(dict(row))
+    if len(children) < 2:
+        return existing["id"] if existing else None
+
+    if existing:
+        parent_id = existing["id"]
+    else:
+        template = children[0]
+        import json as _json
+
+        diagram = _json.dumps(
+            {
+                "source": "progression_group",
+                "group": "cycle_spots",
+                "progression_names": progression_names,
+            }
+        )
+        cur = db.execute(
+            """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "Cycle Spots",
+                "Progressions: " + ", ".join(progression_names),
+                template.get("category") or "offense",
+                template.get("category_id"),
+                "cycle spots, progressions",
+                template.get("playbook_id"),
+                diagram,
+            ),
+        )
+        parent_id = cur.lastrowid
+
+    for index, child in enumerate(children):
+        db.execute(
+            """UPDATE plays
+                  SET parent_play_id = ?, progression_order = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?""",
+            (parent_id, index, child["id"]),
+        )
+    db.commit()
+    return parent_id
+
+
+def ensure_horns_progressions(db):
+    """Attach Horns If/Then option pages as progressions of Horns (not Cycle Spots)."""
+    _ensure_play_progression_columns(db)
+    parent = db.execute(
+        """SELECT id FROM plays
+            WHERE name = ?
+              AND (parent_play_id IS NULL OR parent_play_id = 0)
+            ORDER BY id
+            LIMIT 1""",
+        ("Horns",),
+    ).fetchone()
+    if not parent:
+        return None
+    parent_id = parent["id"]
+
+    # Only the Horns option pages — never Cycle Spots sequences.
+    progression_names = [
+        "If 1 to 2",
+        "If 2 to 4",
+        "Then 4 to 3",
+        "If 2 to 3",
+        "Then 2 and 4 exchange",
+    ]
+    linked = 0
+    for index, name in enumerate(progression_names):
+        row = db.execute(
+            """SELECT id, parent_play_id FROM plays
+                WHERE name = ?
+                ORDER BY id
+                LIMIT 1""",
+            (name,),
+        ).fetchone()
+        if not row:
+            continue
+        # Skip if already under a different parent (e.g. somehow mis-linked)
+        if row["parent_play_id"] and row["parent_play_id"] != parent_id:
+            continue
+        db.execute(
+            """UPDATE plays
+                  SET parent_play_id = ?, progression_order = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?""",
+            (parent_id, index, row["id"]),
+        )
+        linked += 1
+
+    if linked:
+        db.execute(
+            """UPDATE plays
+                  SET description = ?,
+                      tags = CASE
+                        WHEN tags IS NULL OR tags = '' THEN 'horns, progressions'
+                        WHEN instr(lower(tags), 'progression') > 0 THEN tags
+                        ELSE tags || ', progressions'
+                      END,
+                      updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?""",
+            (
+                "Progressions: " + ", ".join(progression_names),
+                parent_id,
+            ),
+        )
+        db.commit()
+    return parent_id if linked else parent_id
+
+
+def ensure_zone_23_progressions(db):
+    """Defense>Zone teaching pages without a number nest under 2-3 Zone.
+
+    Numbered zone sets (1-2-2, 1-3-1, 2-3 Zone, 3-2 Zone) stay top-level.
+    Unnumbered pages (Basic Startup, areas of responsibility, defending cuts, …)
+    become progressions of 2-3 Zone.
+    """
+    import re
+
+    from playbook_taxonomy import resolve_category_id_by_path
+
+    _ensure_play_progression_columns(db)
+    zone_id = resolve_category_id_by_path(db, "defense/zone")
+    if not zone_id:
+        return None
+
+    parent = db.execute(
+        """SELECT id FROM plays
+            WHERE name = ?
+              AND (parent_play_id IS NULL OR parent_play_id = 0)
+              AND (category_id = ? OR category_id IS NULL OR category_id = 0)
+            ORDER BY id
+            LIMIT 1""",
+        ("2-3 Zone", zone_id),
+    ).fetchone()
+    if not parent:
+        parent = db.execute(
+            """SELECT id FROM plays
+                WHERE name = ?
+                  AND (parent_play_id IS NULL OR parent_play_id = 0)
+                ORDER BY id
+                LIMIT 1""",
+            ("2-3 Zone",),
+        ).fetchone()
+    if not parent:
+        return None
+
+    parent_id = parent["id"]
+    db.execute(
+        """UPDATE plays
+              SET category_id = ?, category = 'defense', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?""",
+        (zone_id, parent_id),
+    )
+
+    candidates = db.execute(
+        """SELECT id, name FROM plays
+            WHERE id != ?
+              AND category_id = ?
+              AND (
+                    parent_play_id IS NULL
+                 OR parent_play_id = 0
+                 OR parent_play_id = ?
+              )
+            ORDER BY name COLLATE NOCASE ASC, id ASC""",
+        (parent_id, zone_id, parent_id),
+    ).fetchall()
+
+    unnumbered = [
+        dict(row)
+        for row in candidates
+        if not re.search(r"\d", row["name"] or "")
+    ]
+    if not unnumbered:
+        db.commit()
+        return parent_id
+
+    for index, child in enumerate(unnumbered):
+        db.execute(
+            """UPDATE plays
+                  SET parent_play_id = ?,
+                      progression_order = ?,
+                      category_id = ?,
+                      category = 'defense',
+                      updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?""",
+            (parent_id, index, zone_id, child["id"]),
+        )
+    db.commit()
+    return parent_id
+
+
+def ensure_known_play_progressions(db):
+    """Apply known PDF-split progression groupings."""
+    ensure_cycle_spots_progressions(db)
+    ensure_horns_progressions(db)
+    ensure_zone_23_progressions(db)
 
 
 def _default_category_id(db):
     from playbook_taxonomy import resolve_category_id_by_path
 
-    return resolve_category_id_by_path(db, "offense/man/plays")
+    return resolve_category_id_by_path(db, "offense/man")
 
 
 def _share_url_for_play(play):
@@ -101,11 +515,14 @@ def playbook_list():
     """Playbook list / plays library page."""
     db = get_db()
     category_tree = _load_playbook_taxonomy(db)
-    plays = _plays_query(db)
-    playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
+    ensure_known_play_progressions(db)
+    plays = _group_plays_for_list(db, _plays_query(db))
+    playbooks = db.execute(
+        "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
+    ).fetchall()
     return render_template(
         "playbook.html",
-        plays=[dict(p) for p in plays],
+        plays=plays,
         playbooks=[dict(p) for p in playbooks],
         categories=PLAYBOOK_CATEGORIES,
         category_tree=category_tree,
@@ -116,25 +533,162 @@ def playbook_list():
     )
 
 
+@playbook_bp.route("/playbook/opponents")
+@require_feature("ENABLE_PRACTICES")
+def playbook_opponents():
+    """Opponent playbooks — scout what other teams run."""
+    db = get_db()
+    from playbook_taxonomy import list_opponent_playbooks
+
+    _load_playbook_taxonomy(db)
+    opponents = list_opponent_playbooks(db)
+    return render_template(
+        "playbook_opponents.html",
+        opponents=opponents,
+        opponent=None,
+        plays=[],
+    )
+
+
+@playbook_bp.route("/playbook/opponents", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_opponents_create():
+    db = get_db()
+    from playbook_taxonomy import create_opponent_playbook
+
+    _load_playbook_taxonomy(db)
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    try:
+        opp_id = create_opponent_playbook(db, name=name, description=description)
+        db.commit()
+        flash(f"Opponent playbook created for {name}.", "success")
+        return redirect(url_for("playbook.playbook_opponent_detail", playbook_id=opp_id))
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("playbook.playbook_opponents"))
+
+
+@playbook_bp.route("/playbook/opponents/<int:playbook_id>")
+@require_feature("ENABLE_PRACTICES")
+def playbook_opponent_detail(playbook_id):
+    """Plays for one opponent playbook."""
+    db = get_db()
+    from playbook_taxonomy import ensure_playbooks_opponent_columns, list_opponent_playbooks
+
+    _load_playbook_taxonomy(db)
+    ensure_playbooks_opponent_columns(db)
+    opponent = db.execute(
+        "SELECT * FROM playbooks WHERE id = ? AND kind = 'opponent'",
+        (playbook_id,),
+    ).fetchone()
+    if not opponent:
+        flash("Opponent playbook not found.", "error")
+        return redirect(url_for("playbook.playbook_opponents"))
+    _ensure_play_progression_columns(db)
+    plays = db.execute(
+        """SELECT p.*,
+                  (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
+             FROM plays p
+            WHERE p.playbook_id = ?
+            ORDER BY CASE WHEN p.list_order IS NULL THEN 1 ELSE 0 END,
+                     p.list_order ASC,
+                     p.name ASC""",
+        (playbook_id,),
+    ).fetchall()
+    return render_template(
+        "playbook_opponents.html",
+        opponents=list_opponent_playbooks(db),
+        opponent=dict(opponent),
+        plays=[dict(p) for p in plays],
+    )
+
+
 @playbook_bp.route("/playbook/create")
 @require_feature("ENABLE_PRACTICES")
 def playbook_create():
     """Create new play — opens the canvas editor."""
     db = get_db()
+    from playbook_taxonomy import ensure_playbooks_opponent_columns
+
     category_tree = _load_playbook_taxonomy(db)
-    playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
+    ensure_playbooks_opponent_columns(db)
+    playbooks = db.execute(
+        "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
+    ).fetchall()
     selected_category_id = request.args.get("category_id", type=int) or _default_category_id(db)
+    opponent_playbook_id = request.args.get("playbook_id", type=int)
+    editing_play = None
+    playbooks_out = [dict(p) for p in playbooks]
+    if opponent_playbook_id:
+        opp = db.execute(
+            "SELECT * FROM playbooks WHERE id = ? AND kind = 'opponent'",
+            (opponent_playbook_id,),
+        ).fetchone()
+        if opp:
+            playbooks_out = [dict(opp)] + playbooks_out
+            editing_play = {
+                "id": None,
+                "name": "",
+                "description": "",
+                "category": "offense",
+                "category_id": selected_category_id,
+                "tags": "",
+                "playbook_id": opponent_playbook_id,
+                "diagram_json": "{}",
+            }
     return render_template(
         "playbook.html",
         plays=[],
-        playbooks=playbooks,
+        playbooks=playbooks_out,
         categories=PLAYBOOK_CATEGORIES,
         category_tree=category_tree,
-        editing_play=None,
+        editing_play=editing_play,
         editing_steps=[],
         view_mode="editor",
         selected_category_id=selected_category_id,
     )
+
+
+def _progression_nav_context(db, play):
+    """Parent/sibling/child progression chips for view + edit screens."""
+    _ensure_play_progression_columns(db)
+    play = dict(play)
+    parent_play = None
+    sibling_progressions = []
+    child_progressions = [
+        dict(r)
+        for r in db.execute(
+            """SELECT id, name, progression_order,
+                      (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = plays.id) as step_count
+                 FROM plays
+                WHERE parent_play_id = ?
+                ORDER BY progression_order ASC, name ASC""",
+            (play["id"],),
+        ).fetchall()
+    ]
+    if play.get("parent_play_id"):
+        parent_play = db.execute(
+            "SELECT id, name FROM plays WHERE id = ?",
+            (play["parent_play_id"],),
+        ).fetchone()
+        sibling_progressions = [
+            dict(r)
+            for r in db.execute(
+                """SELECT id, name, progression_order,
+                          (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = plays.id) as step_count
+                     FROM plays
+                    WHERE parent_play_id = ?
+                    ORDER BY progression_order ASC, name ASC""",
+                (play["parent_play_id"],),
+            ).fetchall()
+        ]
+        parent_play = dict(parent_play) if parent_play else None
+    return {
+        "parent_play": parent_play,
+        "sibling_progressions": sibling_progressions,
+        "child_progressions": child_progressions,
+    }
 
 
 @playbook_bp.route("/playbook/play/<int:play_id>")
@@ -142,10 +696,22 @@ def playbook_create():
 def playbook_view(play_id):
     """View a play with step-by-step animation."""
     db = get_db()
+    _ensure_play_progression_columns(db)
     play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
     if not play:
         flash("Play not found.", "error")
         return redirect(url_for("playbook.playbook_list"))
+
+    nav = _progression_nav_context(db, play)
+    # Empty parent shell → open first progression, which still shows the full chip bar.
+    step_count = db.execute(
+        "SELECT COUNT(*) AS c FROM play_steps WHERE play_id = ?", (play_id,)
+    ).fetchone()["c"]
+    if nav["child_progressions"] and step_count == 0:
+        return redirect(
+            url_for("playbook.playbook_view", play_id=nav["child_progressions"][0]["id"])
+        )
+
     steps = db.execute(
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
     ).fetchall()
@@ -162,6 +728,9 @@ def playbook_view(play_id):
         view_mode="view",
         selected_category_id=play["category_id"],
         share_url=_share_url_for_play(play),
+        parent_play=nav["parent_play"],
+        sibling_progressions=nav["sibling_progressions"],
+        child_progressions=nav["child_progressions"],
     )
 
 
@@ -203,6 +772,7 @@ def playbook_share(token):
 def playbook_edit(play_id):
     """Edit an existing play."""
     db = get_db()
+    _ensure_play_progression_columns(db)
     play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
     if not play:
         flash("Play not found.", "error")
@@ -212,6 +782,7 @@ def playbook_edit(play_id):
     ).fetchall()
     playbooks = db.execute("SELECT * FROM playbooks ORDER BY name").fetchall()
     category_tree = _load_playbook_taxonomy(db)
+    nav = _progression_nav_context(db, play)
     return render_template(
         "playbook.html",
         plays=[],
@@ -223,7 +794,101 @@ def playbook_edit(play_id):
         view_mode="editor",
         selected_category_id=play["category_id"],
         share_url=_share_url_for_play(play),
+        parent_play=nav["parent_play"],
+        sibling_progressions=nav["sibling_progressions"],
+        child_progressions=nav["child_progressions"],
     )
+
+
+@playbook_bp.route("/api/playbook/reorder", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_reorder_api():
+    """Reorder top-level plays or progressions (drag-and-drop / multi-move)."""
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    ordered_ids = payload.get("ordered_ids") or []
+    parent_raw = payload.get("parent_play_id", None)
+    try:
+        ids = reorder_plays(db, ordered_ids=ordered_ids, parent_play_id=parent_raw)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"ok": True, "ordered_ids": ids})
+
+
+@playbook_bp.route("/api/playbook/move-category", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_move_category_api():
+    """Move one or more top-level plays onto a category (sidebar drop)."""
+    from playbook_taxonomy import build_category_tree
+
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = move_plays_to_category(
+            db,
+            play_ids=payload.get("play_ids") or [],
+            category_id=payload.get("category_id"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    result["ok"] = True
+    result["tree"] = build_category_tree(db)
+    return jsonify(result)
+
+@playbook_bp.route("/playbook/play/<int:play_id>/progression-move", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_progression_move(play_id):
+    """Move a progression up/down within its parent play."""
+    db = get_db()
+    _ensure_play_progression_columns(db)
+    direction = (request.form.get("direction") or "").strip().lower()
+    play = db.execute(
+        "SELECT id, parent_play_id, progression_order, name FROM plays WHERE id = ?",
+        (play_id,),
+    ).fetchone()
+    if not play or not play["parent_play_id"]:
+        flash("That play is not a progression.", "error")
+        return redirect(url_for("playbook.playbook_list"))
+
+    siblings = [
+        dict(r)
+        for r in db.execute(
+            """SELECT id, progression_order, name FROM plays
+                WHERE parent_play_id = ?
+                ORDER BY progression_order ASC, name ASC""",
+            (play["parent_play_id"],),
+        ).fetchall()
+    ]
+    for index, sibling in enumerate(siblings):
+        if sibling["progression_order"] != index:
+            db.execute(
+                "UPDATE plays SET progression_order = ? WHERE id = ?",
+                (index, sibling["id"]),
+            )
+            sibling["progression_order"] = index
+
+    idx = next((i for i, s in enumerate(siblings) if s["id"] == play_id), None)
+    if idx is None:
+        return redirect(url_for("playbook.playbook_list"))
+
+    swap_with = None
+    if direction == "up" and idx > 0:
+        swap_with = siblings[idx - 1]
+    elif direction == "down" and idx < len(siblings) - 1:
+        swap_with = siblings[idx + 1]
+
+    if swap_with:
+        db.execute(
+            "UPDATE plays SET progression_order = ? WHERE id = ?",
+            (swap_with["progression_order"], play_id),
+        )
+        db.execute(
+            "UPDATE plays SET progression_order = ? WHERE id = ?",
+            (idx, swap_with["id"]),
+        )
+        db.commit()
+        flash(f"Moved “{play['name']}”.", "success")
+    return redirect(url_for("playbook.playbook_list"))
 
 
 @playbook_bp.route("/playbook/play/<int:play_id>/delete", methods=["POST"])
@@ -305,7 +970,7 @@ def playbook_save():
         except ValueError:
             category_id = None
     if not category_id:
-        category_id = resolve_category_id_by_path(db, "offense/man/plays")
+        category_id = resolve_category_id_by_path(db, "offense/man")
     category = legacy_category_from_id(db, category_id)
 
     if play_id:
@@ -618,7 +1283,7 @@ def playbook_import_save():
         except ValueError:
             category_id = None
     if not category_id:
-        category_id = resolve_category_id_by_path(db, "offense/man/plays")
+        category_id = resolve_category_id_by_path(db, "offense/man")
     category = legacy_category_from_id(db, category_id)
 
     cur = db.execute(

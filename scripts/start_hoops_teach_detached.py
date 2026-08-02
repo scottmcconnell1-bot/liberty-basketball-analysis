@@ -101,19 +101,98 @@ def _pid_alive(pid: int | None) -> bool:
         return False
 
 
+def _load_dotenv_into(env: dict) -> dict:
+    """Merge repo .env into env dict without overriding existing keys."""
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        return env
+    try:
+        text = env_path.read_text(encoding="utf-8")
+    except OSError:
+        return env
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key or key in env:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        env[key] = value
+    return env
+
+
+def _python_with_ai() -> str:
+    """Prefer an interpreter that can import cv2+ultralytics (needed for /analyze).
+
+    The project .venv often lacks the AI stack while system Python 3.12 has it.
+    launch_liberty.py always starts .venv app.py, which then reports 503
+    ai_packages_unavailable — so teach cannot queue the next HUDL game.
+    """
+    candidates: list[str] = [sys.executable]
+    venv_py = ROOT / ".venv" / "Scripts" / "python.exe"
+    if venv_py.exists():
+        candidates.append(str(venv_py))
+    # de-dupe preserving order
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for c in candidates:
+        key = os.path.normcase(c)
+        if key not in seen:
+            seen.add(key)
+            ordered.append(c)
+    for py in ordered:
+        try:
+            r = subprocess.run(
+                [py, "-c", "import cv2, ultralytics"],
+                cwd=str(ROOT),
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+            if r.returncode == 0:
+                return py
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return sys.executable
+
+
 def ensure_server(pids: dict) -> dict:
     if _port_open():
         print(f"[detached] Liberty already listening on :{PORT}")
         return pids
-    print("[detached] Starting Liberty server (no browser)...")
-    pid = _spawn(
-        [sys.executable, str(ROOT / "scripts" / "launch_liberty.py"), "--no-browser"],
-        "detached_liberty",
-    )
-    pids["liberty_pid"] = pid
+    py = _python_with_ai()
+    print(f"[detached] Starting Liberty server (no browser) with {py} ...")
+    # Start app.py directly with PORT so we do not depend on .venv having AI deps.
+    env = _load_dotenv_into(os.environ.copy())
+    env["PORT"] = str(PORT)
+    env.setdefault("LIBERTY_DATABASE", str(ROOT / "film_analysis.db"))
+    env.setdefault("LIBERTY_UPLOAD_FOLDER", str(ROOT / "uploads"))
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    out = open(LOG_DIR / "detached_liberty.out.log", "a", encoding="utf-8")
+    err = open(LOG_DIR / "detached_liberty.err.log", "a", encoding="utf-8")
+    out.write(f"\n--- spawn {time.strftime('%Y-%m-%d %H:%M:%S')} python={py} ---\n")
+    out.flush()
+    popen_kwargs: dict = {
+        "cwd": str(ROOT),
+        "stdin": subprocess.DEVNULL,
+        "stdout": out,
+        "stderr": err,
+        "env": env,
+        "close_fds": True,
+    }
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = _flags()
+    else:
+        popen_kwargs["start_new_session"] = True
+    proc = subprocess.Popen([py, "app.py"], **popen_kwargs)
+    pids["liberty_pid"] = int(proc.pid)
     for _ in range(60):
         if _port_open():
-            print(f"[detached] Liberty up (pid={pid})")
+            print(f"[detached] Liberty up (pid={proc.pid})")
             return pids
         time.sleep(1)
     print("[detached] WARNING: server did not open :8080 within 60s — check logs")

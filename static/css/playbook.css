@@ -1,12 +1,21 @@
 .playbook-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(200px, 240px) 1fr;
+  gap: 20px;
   align-items: start;
 }
 .playbook-sidebar {
   position: sticky;
   top: 12px;
+  padding: 14px 12px;
+}
+.playbook-sidebar h3 {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
 }
 .playbook-tree {
   display: flex;
@@ -14,47 +23,330 @@
   gap: 2px;
   max-height: 70vh;
   overflow: auto;
-  padding-right: 4px;
+  padding-right: 2px;
 }
 .playbook-tree-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 8px;
+  padding: 7px 8px 7px calc(8px + (var(--tree-depth, 0) * 12px));
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   border: 1px solid transparent;
+  color: #1f2937;
+}
+.playbook-tree-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.playbook-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.playbook-tree-toggle,
+.playbook-tree-toggle-spacer {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+.playbook-tree-toggle:hover {
+  color: #0f766e;
+}
+.playbook-tree-item.has-children .playbook-tree-name {
+  font-weight: 600;
+}
+.playbook-tree-children {
+  margin-left: 18px;
+  border-left: 1px solid #e5e7eb;
+  padding-left: 4px;
 }
 .playbook-tree-item:hover {
   background: #f3f4f6;
 }
 .playbook-tree-item.active {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1d4ed8;
+  background: #ecfeff;
+  border-color: #99f6e4;
+  color: #0f766e;
   font-weight: 600;
+}
+.playbook-tree-item.playbook-tree-drop.drag-over-category {
+  background: #99f6e4;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+}
+body.playbook-dragging-plays .playbook-tree-item.playbook-tree-drop {
+  outline: 1px dashed #99f6e4;
 }
 .playbook-tree-item .count {
   margin-left: auto;
-  color: #6b7280;
-  font-size: 0.72rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5rem;
+  text-align: right;
 }
-.playbook-tree-children {
-  margin-left: 14px;
-  border-left: 1px solid #e5e7eb;
-  padding-left: 6px;
+.playbook-tree-item.active .count {
+  color: #0f766e;
 }
 .playbook-category-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+.playbook-main {
+  padding: 16px 18px;
+}
+.playbook-main-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.playbook-main-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
 }
 .playbook-breadcrumb {
   color: #6b7280;
   font-size: 0.85rem;
-  margin-bottom: 10px;
+}
+.playbook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.playbook-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.playbook-dnd-hint {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+}
+.play-list-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.play-list-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.play-dnd-item {
+  cursor: grab;
+  user-select: none;
+}
+.play-dnd-item:active {
+  cursor: grabbing;
+}
+.play-dnd-item.is-selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+  background: #f0fdfa;
+}
+.play-dnd-item.is-dragging {
+  opacity: 0.45;
+}
+.play-dnd-item.drag-over {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.35);
+}
+.play-progression-row.play-dnd-item.is-selected {
+  outline: 2px solid rgba(15, 118, 110, 0.45);
+  outline-offset: 1px;
+  border-radius: 8px;
+}
+.play-progression-row.play-dnd-item.drag-over .play-progression-link {
+  background: #99f6e4;
+}
+.play-list-item-main {
+  min-width: 0;
+}
+.play-list-item-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.play-list-item-heading-text {
+  min-width: 0;
+  flex: 1;
+}
+.play-collapse-toggle,
+.play-collapse-toggle-spacer {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #0f766e;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+  border-radius: 6px;
+}
+.play-collapse-toggle {
+  cursor: pointer;
+}
+.play-collapse-toggle:hover {
+  background: #ccfbf1;
+}
+.play-list-item-title {
+  font-weight: 650;
+  font-size: 0.98rem;
+  color: #111827;
+  margin: 0 0 4px;
+}
+.play-list-item-title.play-dnd-handle {
+  cursor: grab;
+}
+.play-progression-link.play-dnd-handle {
+  cursor: grab;
+}
+.play-list-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+.play-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.play-cat-chip .muted {
+  color: #5eead4;
+  font-weight: 500;
+}
+.play-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.play-row-actions form {
+  display: inline;
+  margin: 0;
+}
+.play-list-item.has-progressions {
+  align-items: start;
+}
+.play-list-item.is-collapsible.is-collapsed .play-progressions {
+  display: none;
+}
+.play-progressions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding-left: 2px;
+  border-left: 2px solid #99f6e4;
+  margin-left: 24px;
+}
+.play-progression-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+.play-progression-row .play-progression-link {
+  flex: 1;
+  margin-left: 0;
+}
+.play-progression-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  margin-left: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #0f766e;
+  font-size: 0.88rem;
+  background: #f0fdfa;
+}
+.play-progression-link:hover {
+  background: #ccfbf1;
+}
+.play-progression-name {
+  font-weight: 600;
+}
+.play-progression-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+.play-progression-chip {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #99f6e4;
+  color: #0f766e;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.play-progression-chip.active,
+.play-progression-chip:hover {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
+.playbook-page-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.playbook-page-actions .form-control {
+  width: min(220px, 100%);
 }
 @media (max-width: 900px) {
   .playbook-layout {
@@ -62,5 +354,11 @@
   }
   .playbook-sidebar {
     position: static;
+  }
+  .play-list-item {
+    grid-template-columns: 1fr;
+  }
+  .play-row-actions {
+    justify-content: flex-start;
   }
 }
