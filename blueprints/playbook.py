@@ -19,6 +19,7 @@ Routes included:
 """
 
 import json
+from pathlib import Path
 
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, current_app
 
@@ -1061,6 +1062,66 @@ def playbook_api_play(play_id):
         "play": _serialize(dict(play)),
         "steps": [_serialize(dict(s)) for s in steps],
     })
+
+
+@playbook_bp.route("/api/playbook/sheet-align", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_sheet_align_api():
+    """Detect court crop + digit positions for a play-sheet source image.
+
+    Body JSON: { \"image_url\": \"/uploads/.../page_XXXX.png\" }
+    Returns court_frac (normalized crop) and positions o1..o5 in SVG court space.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    image_url = (data.get("image_url") or data.get("source_image") or "").strip()
+    if not image_url:
+        return jsonify({"error": "image_url required"}), 400
+    try:
+        from playbook_sheet_align import analyze_sheet_image, resolve_upload_path
+
+        path = resolve_upload_path(image_url, current_app.root_path)
+        cache_base = Path(current_app.root_path) / "data" / "playbook"
+        result = analyze_sheet_image(path, cache_base=cache_base)
+        return jsonify({
+            "ok": True,
+            "image_url": image_url,
+            "court_frac": result.get("court_frac"),
+            "positions": result.get("positions") or {},
+            "size": result.get("size"),
+        })
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except Exception as exc:
+        return jsonify({"error": f"sheet align failed: {exc}"}), 500
+
+
+@playbook_bp.route("/api/playbook/sheet-paths", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_sheet_paths_api():
+    """Trace ink polylines on a sheet from from_positions → to_positions.
+
+    Body JSON: {
+      \"image_url\": \"/uploads/...png\",
+      \"from_positions\": {\"o1\": {\"x\":..,\"y\":..}, ...},
+      \"to_positions\": {\"o1\": {\"x\":..,\"y\":..}, ...}
+    }
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    image_url = (data.get("image_url") or data.get("source_image") or "").strip()
+    from_positions = data.get("from_positions") or {}
+    to_positions = data.get("to_positions") or {}
+    if not image_url:
+        return jsonify({"error": "image_url required"}), 400
+    try:
+        from playbook_sheet_align import resolve_upload_path, trace_paths_for_transition
+
+        path = resolve_upload_path(image_url, current_app.root_path)
+        paths = trace_paths_for_transition(path, from_positions, to_positions)
+        return jsonify({"ok": True, "image_url": image_url, "paths": paths})
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except Exception as exc:
+        return jsonify({"error": f"sheet paths failed: {exc}"}), 500
 
 
 @playbook_bp.route("/api/playbook/categories")
