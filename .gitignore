@@ -94,6 +94,17 @@ detect_*.log
 train.log
 v*.log
 codex_preview_server*.log
+data/hoopsalytics/*.log
+data/hoopsalytics/*.err.log
+data/hoopsalytics/*.out.log
+data/hoopsalytics/detached_pids.json
+data/hoopsalytics/coach_*.txt
+data/hoopsalytics/improve_pass*
+data/hoopsalytics/compare_*.json
+
+# Runtime teach state (regenerated locally)
+# keep teach_loop_state.json out of auto daily noise — still may be force-added intentionally
+data/hoopsalytics/detached_*.json
 
 # Model weights in root
 yolo*.pt

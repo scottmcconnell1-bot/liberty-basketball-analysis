@@ -12,7 +12,7 @@ class Features:
     ENABLE_PLAYER_DEVELOPMENT = True
     ENABLE_PRACTICE_PLAYLISTS = True
     ENABLE_ASSISTANT_READ_ONLY = True
-    ENABLE_COACH_PORTAL = True  # Approach A — default True intentional; toggle off in Settings if needed
+    ENABLE_COACH_PORTAL = True  # Approach A — Scott: default True intentional; toggle off in Settings if needed
     ENABLE_WEEKLY_PACKET = False
     ENABLE_SEASON_REVIEW = False
 

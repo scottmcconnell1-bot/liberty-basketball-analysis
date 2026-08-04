@@ -18,7 +18,6 @@ Blueprint modules:
 
 import os
 from pathlib import Path
-
 from flask import Flask, g, jsonify, request, session
 
 from config import Config
@@ -106,6 +105,7 @@ def inject_feature_flags():
         "features": settings["features"],
         "analysis_config": settings["analysis"],
         "coach_portal": coach_portal,
+        # Alias for templates that hide Save/Delete/Create in coach mode
         "coach_readonly": coach_portal,
     }
 
@@ -167,6 +167,12 @@ def require_auth_for_api():
     pass  # No auth enforced yet — will be enabled in a future phase
 
 
+@app.before_request
+def coach_portal_ops_gate():
+    """Soft denylist for coach portal sessions (does not enable global auth)."""
+    return enforce_coach_ops_denylist()
+
+
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess
 from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
@@ -186,7 +192,6 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    import os
     _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
     # launch_liberty.py / teach loop expect PORT (default 8080); do not hardcode 5000
     _port = int(os.environ.get("PORT", "8080"))
