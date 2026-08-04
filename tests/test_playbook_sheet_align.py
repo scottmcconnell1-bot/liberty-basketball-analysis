@@ -8,10 +8,19 @@ import pytest
 cv2 = pytest.importorskip("cv2")
 np = pytest.importorskip("numpy")
 
-from playbook_sheet_align import analyze_sheet_image, find_court_bbox, resolve_upload_path
+from playbook_sheet_align import (
+    analyze_sheet_image,
+    find_court_bbox,
+    resolve_upload_path,
+    trace_ink_polyline,
+    _morph_skeleton,
+    _path_ink_fraction,
+    _stroke_mask,
+)
 
 
 FIXTURE = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0087.png")
+PLAYBOOK_HTML = Path("templates/playbook.html")
 
 
 @pytest.mark.skipif(not FIXTURE.is_file(), reason="Rub page_0087 fixture not present")
@@ -81,3 +90,73 @@ def test_trace_paths_end_on_destination_digits():
         assert poly[0]["y"] == a["positions"][pid]["y"]
         assert poly[-1]["x"] == b["positions"][pid]["x"]
         assert poly[-1]["y"] == b["positions"][pid]["y"]
+
+
+def _poly_len(poly):
+    total = 0.0
+    for i in range(1, len(poly)):
+        total += (
+            (poly[i]["x"] - poly[i - 1]["x"]) ** 2
+            + (poly[i]["y"] - poly[i - 1]["y"]) ** 2
+        ) ** 0.5
+    return total
+
+
+def test_trace_ink_polyline_hugs_curved_stroke():
+    """Synthetic curved ink — path must follow the stroke, not chord white space."""
+    h, w = 400, 500
+    gray = np.full((h, w), 255, np.uint8)
+    pts = []
+    for i in range(80):
+        t = i / 79.0
+        x = int(50 + t * 400)
+        y = int(200 + 80 * np.sin(t * np.pi))
+        pts.append((x, y))
+    for i in range(1, len(pts)):
+        cv2.line(gray, pts[i - 1], pts[i], 0, 3)
+
+    start_svg = {"x": 50.0 / w * 500.0, "y": 200.0 / h * 470.0}
+    end_svg = {"x": 450.0 / w * 500.0, "y": 200.0 / h * 470.0}
+    poly = trace_ink_polyline(gray, start_svg, end_svg)
+    assert len(poly) >= 8
+    assert poly[0]["x"] == pytest.approx(start_svg["x"])
+    assert poly[0]["y"] == pytest.approx(start_svg["y"])
+    assert poly[-1]["x"] == pytest.approx(end_svg["x"])
+    assert poly[-1]["y"] == pytest.approx(end_svg["y"])
+
+    straight = (
+        (end_svg["x"] - start_svg["x"]) ** 2 + (end_svg["y"] - start_svg["y"]) ** 2
+    ) ** 0.5
+    ratio = _poly_len(poly) / max(straight, 1.0)
+    assert ratio >= 1.08, f"expected curved detour, got ratio={ratio:.3f}"
+
+    path_px = [
+        (int(round(p["x"] / 500.0 * w)), int(round(p["y"] / 470.0 * h))) for p in poly
+    ]
+    skel = _morph_skeleton(_stroke_mask(gray))
+    ink = _path_ink_fraction(skel, path_px, radius=5)
+    assert ink >= 0.7, f"expected ink hug >=0.7, got {ink:.3f}"
+
+
+def test_trace_ink_rejects_endpoint_only_on_digit_blobs():
+    """Two isolated blobs alone must not score as a high-ink curved stroke."""
+    h, w = 300, 400
+    gray = np.full((h, w), 255, np.uint8)
+    cv2.circle(gray, (60, 150), 8, 0, -1)
+    cv2.circle(gray, (340, 150), 8, 0, -1)
+    start_svg = {"x": 60.0 / w * 500.0, "y": 150.0 / h * 470.0}
+    end_svg = {"x": 340.0 / w * 500.0, "y": 150.0 / h * 470.0}
+    poly = trace_ink_polyline(gray, start_svg, end_svg)
+    straight = (
+        (end_svg["x"] - start_svg["x"]) ** 2 + (end_svg["y"] - start_svg["y"]) ** 2
+    ) ** 0.5
+    # Without a real connecting stroke, keep near-chord (no fake long ink detour).
+    assert _poly_len(poly) / max(straight, 1.0) < 1.35
+
+
+def test_playbook_html_does_not_invent_synthetic_passes():
+    html = PLAYBOOK_HTML.read_text(encoding="utf-8")
+    assert "Do NOT invent synthetic passes" in html
+    assert "inferPassReceiver" not in html
+    assert "Classic wing: o1 → o2" not in html
+    assert "function buildActionBeats" in html

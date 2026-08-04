@@ -1942,41 +1942,12 @@ function distPos(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-/** Infer pass receiver when sheet ink / movements don't label a pass. */
-function inferPassReceiver(fromRaw, toRaw, paths, ballPid) {
-  const ball = ballPid || 'o1';
-  if (!fromRaw[ball]) return null;
-  // Handler path ending near a teammate → that teammate
-  const handlerPath = (paths || []).find((p) => p.pid === ball && !p.ballOnly);
-  if (handlerPath && handlerPath.to) {
-    let best = null;
-    let bestD = 55;
-    offenseIdsAt(fromRaw).forEach((oid) => {
-      if (oid === ball) return;
-      const d = distPos(handlerPath.to, fromRaw[oid]);
-      if (d < bestD) { bestD = d; best = oid; }
-    });
-    if (best) return best;
-  }
-  // Classic wing: o1 → o2 if both present
-  if (ball === 'o1' && fromRaw.o2) return 'o2';
-  // Else nearest teammate at from
-  let nearest = null;
-  let nearestD = 1e9;
-  offenseIdsAt(fromRaw).forEach((oid) => {
-    if (oid === ball) return;
-    const d = distPos(fromRaw[ball], fromRaw[oid]);
-    if (d < nearestD) { nearestD = d; nearest = oid; }
-  });
-  return nearest;
-}
-
 /**
  * Coach teaching beats for one sheet transition.
  * Order: pass → screen (hold) → cut off screen → off-ball relocates one-by-one.
  *
  * Heuristics when movements_json empty:
- * - pass: ball handler → inferred receiver (even if digits don't move)
+ * - pass: ONLY from stored movements / explicit pass paths (never invent o1→o2)
  * - screen: short move ending near a longer-path teammate's start
  * - cut: that longer path (or longest remaining)
  * - relocate: remaining movers by length desc

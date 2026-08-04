@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-03 (dual-machine sync protocol)
+Updated: 2026-08-04 (sheet ink mid-path scoring + dual-machine protocol)
 
 
 Branch: `cursor/full-film-panel-ac1f`
@@ -10,58 +10,81 @@ Branch: `cursor/full-film-panel-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | dual-machine-sync |
-| **status** | `implemented` |
+| **id** | playbook-sheet-align |
+| **status** | `implemented` (awaiting Scott Play All confirm) |
 | **assigned_to** | cursor-agent |
 
 
 ## Objective
 
-Home and work PCs interchangeable for code/docs: one shared branch, pull on arrive, push on leave, ACTIVE.md as truth. Local-only: DB, uploads, .env.
+Sheet Play All: red travel paths + tokens hug black sheet ink; no invented passes; one beat at a time; white underlay; reset sheet 1.
 
 
-## Prior task (still awaiting Scott confirm)
+## Scott recording complaint (2026-08-01 233251)
 
-**playbook-sheet-align** — ink path hug + no synthetic pass — status was `implemented`; Scott confirm of Play All still open. Code already on this branch.
+1. Red SVG travel paths did **not** follow black sheet ink.
+2. Players did not follow black sheet lines either.
+3. Extra Pass #1→#2 (synthetic) should not be there.
 
 
-## Dual-machine protocol
+## Fix (this slice + prior)
 
-- Shared branch: `cursor/full-film-panel-ac1f` (tracks `origin/cursor/full-film-panel-ac1f`)
-- Arrive: `pwsh -File scripts/sync_liberty_work.ps1`
-- Leave: commit safe code/docs → `git push -u origin HEAD`
-- Details: `docs/DUAL_MACHINE.md`
-- Does **not** sync: `.env`, `film_analysis.db`, `uploads/`, teach/panel runtime logs
+### A) Ink tracing (`playbook_sheet_align.py`, cache `v9`)
+
+- Stroke mask minus thick court lines; morphological **skeleton** centerline.
+- A* + greedy ink walk + corridor snap candidates.
+- **2026-08-04:** pick by **mid-path** skeleton ink (spatial margin from endpoints so digit blobs cannot fake a stroke). No connecting ink → prefer short chord.
+- Prior home Rub 0089→0090: o2 ratio **1.83**, o3 ratio **1.62** (curved).
+
+### B) No synthetic passes (`templates/playbook.html`)
+
+- Removed `inferPassReceiver` (dead helper deleted 2026-08-04).
+- Pass beats only from stored movements / explicit pass paths.
+- Regression guard in `tests/test_playbook_sheet_align.py`.
 
 
 ## Checklist
 
-- [x] Confirm shared branch from ACTIVE / current HEAD
-- [x] Ensure upstream tracking (`git push -u origin HEAD`)
-- [x] Commit shared code/docs + sheet_align_cache; exclude secrets/DB/panel runtime
-- [x] Push to origin
-- [x] Add `scripts/sync_liberty_work.ps1`
-- [x] Add `docs/DUAL_MACHINE.md` + ORCHESTRATION pointer
-- [ ] Scott runs sync on work PC once and confirms clean pull
+- [x] Recording frames reviewed (`_review_frames3`)
+- [x] Synthetic pass removed; `inferPassReceiver` gone
+- [x] Flask-only restart on **home** only (teach/`analysis_launcher` left running) — prior session
+- [x] Cloud: synthetic ink-hug + no-fake-detour + HTML guard tests (4 passed / 4 skipped without Rub uploads)
+- [x] Dual-machine sync docs/script on branch (`docs/DUAL_MACHINE.md`, `scripts/sync_liberty_work.ps1`)
+- [ ] Scott confirms red hugs black on Play All + no extra pass
+- [ ] Scott runs sync on work PC once (`pwsh -File scripts/sync_liberty_work.ps1`)
+
+
+## Dual-machine (home ↔ work)
+
+- Shared branch: `cursor/full-film-panel-ac1f`
+- Arrive: `pwsh -File scripts/sync_liberty_work.ps1` — Leave: push safe code/docs
+- Does **not** sync: `.env`, `film_analysis.db`, `uploads/`, teach/panel runtime
+- Details: `docs/DUAL_MACHINE.md`
 
 
 ## Report
 
 ### Proven
 
-- Branch `cursor/full-film-panel-ac1f` is the ACTIVE shared branch; playbook/coach code already committed here
-- Sync helper and dual-machine docs added this session
+- Playbook HTML: no `inferPassReceiver` / no “Classic wing: o1 → o2”; has “Do NOT invent synthetic passes”
+- Cloud tests: curved stroke ratio ≥1.08 + mid ink ≥0.7; two digit blobs alone → near-chord
+- Live DB/uploads/teach state are **home-only** (not in Cloud Agent checkout)
+- Dual-machine helper + docs committed on this branch
+- Nightly `docs/LEARNING_STATUS.md` (2026-08-02): panel gates still FAIL — separate slice
 
 ### Inferred
 
-- Work PC needs only `git pull` / sync script after this push; no DB copy required for code/docs handoff
+- Sheet1 dashed ink 1→2 is a real drawn pass; no synthetic means that beat won’t animate until ink-pass detection exists
+- Mid-path ink scoring should reduce white-chord / blob-wander on real Rub sheets like synthetics
 
 ### Unknown
 
-- Whether work PC clone already has this remote branch checked out
-- Scott Play All visual confirm for sheet-align (carried from prior handoff)
+- Whether Scott wants ink-detected pass animation on sheet1 without inventing from jersey geometry
+- Whether home Rub 0089→0090 still matches prior ratios after mid-ink change (home re-check; do not restart teach)
+- Whether work PC clone already tracks this remote branch
 
 
 ## Ops note
 
 Do not kill `analysis_launcher` / `hoops_teach_loop` when restarting Flask.
+Flask-only restarts: **home learning PC only**. This Cloud Agent does not touch home processes.

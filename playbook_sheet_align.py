@@ -496,34 +496,48 @@ def trace_ink_polyline(
         detour = _path_len(pts) / straight_len
         return detour <= 3.4
 
+    def _mid_ink(pts) -> float:
+        """Ink hit away from endpoints — ignores start/end digit blobs."""
+        if not pts or len(pts) < 3:
+            return 0.0
+        # Spatial margin so OCR digit disks / blob wander don't fake a stroke.
+        r2 = 28 * 28
+        mid = [
+            (x, y)
+            for (x, y) in pts
+            if (x - sx) * (x - sx) + (y - sy) * (y - sy) > r2
+            and (x - ex) * (x - ex) + (y - ey) * (y - ey) > r2
+        ]
+        if len(mid) < 2:
+            return 0.0
+        return _path_ink_fraction(skel, mid, radius=5)
+
     # Prefer the path that hugs the skeleton most, among reasonable-length options.
-    inked = [
-        (pts, _path_ink_fraction(skel, pts, radius=5))
-        for pts in candidates
-        if _ok(pts)
-    ]
+    inked = [(pts, _mid_ink(pts)) for pts in candidates if _ok(pts)]
+    short = min(
+        (pts for pts in candidates if pts and len(pts) >= 2),
+        key=_path_len,
+        default=corridor,
+    )
     if inked:
-        # High ink + longer path wins (follows the curve). Low ink: prefer shorter.
+        # High mid-ink + longer path wins (follows the curve). Low mid-ink: prefer shorter.
         def _rank(t):
             pts, ink = t
             plen = _path_len(pts)
-            if ink >= 0.7 and plen >= straight_len * 1.12:
+            if ink >= 0.55 and plen >= straight_len * 1.12:
                 return (ink, plen)
-            if ink >= 0.7 and len(pts) <= 2:
-                return (ink - 0.25, plen)  # endpoints-only on digit blobs ≠ real stroke
             return (ink, -plen)
 
         best_ink = max(inked, key=_rank)
-        if best_ink[1] >= 0.35:
+        # Require real mid-path ink before accepting a curved detour.
+        if best_ink[1] >= 0.45 and _path_len(best_ink[0]) >= straight_len * 1.08:
             path_px = best_ink[0]
         else:
-            path_px = min(
-                (pts for pts in candidates if pts and len(pts) >= 2),
-                key=_path_len,
-                default=corridor,
-            )
+            path_px = short
     else:
-        path_px = corridor if len(corridor) >= 2 else [(sx, sy), (ex, ey)]
+        path_px = short if short and len(short) >= 2 else (
+            corridor if len(corridor) >= 2 else [(sx, sy), (ex, ey)]
+        )
 
     if len(path_px) < 2:
         path_px = [(sx, sy), (ex, ey)]
