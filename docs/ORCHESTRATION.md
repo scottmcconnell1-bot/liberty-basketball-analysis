@@ -129,7 +129,7 @@ On $20 Pro, treat agent runs like a finite resource:
 
 Scott may switch PCs. Use **one shared feature branch** (see `ACTIVE.md`; currently `cursor/full-film-panel-ac1f`).
 
-- Arrive: `pwsh -File scripts/sync_liberty_work.ps1` (fetch, checkout, `pull --ff-only`)
+- Arrive: `powershell -File scripts/sync_liberty_work.ps1` (fetch, checkout, `pull --ff-only`)
 - Leave: commit safe code/docs, then `git push -u origin HEAD`
 - Full protocol: `docs/DUAL_MACHINE.md`
 - Never expect `.env`, `film_analysis.db`, or `uploads/` to sync via git

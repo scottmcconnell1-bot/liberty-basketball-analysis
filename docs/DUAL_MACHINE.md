@@ -16,17 +16,19 @@ Work interchangeably on home and work PCs. **Git is the handoff.** Same branch, 
 ## Arrive (either machine)
 
 ```powershell
-pwsh -File scripts/sync_liberty_work.ps1
+powershell -File scripts/sync_liberty_work.ps1
 ```
 
-That script: `fetch` → checkout shared branch → `pull --ff-only` → print status → remind to push before leaving.
+That script: ensure `origin` fetches all branches → `fetch` → checkout shared branch → `pull --ff-only` → print status → remind to push before leaving.
 
 Manual equivalent:
 
 ```powershell
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 git fetch origin
 git checkout cursor/full-film-panel-ac1f
 git pull --ff-only origin cursor/full-film-panel-ac1f
+git branch --set-upstream-to=origin/cursor/full-film-panel-ac1f
 git status -sb
 ```
 
@@ -42,7 +44,7 @@ git push -u origin HEAD
 Optional overnight/home snapshot (already skips unsafe paths):
 
 ```powershell
-pwsh -File scripts/daily_git_save.ps1
+powershell -File scripts/daily_git_save.ps1
 ```
 
 ## Source of truth

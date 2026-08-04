@@ -47,34 +47,36 @@ Sheet Play All: red travel paths + tokens hug black sheet ink; no invented passe
 
 - [x] Recording frames reviewed (`_review_frames3`)
 - [x] Synthetic pass removed; `inferPassReceiver` gone
-- [x] Flask-only restart on **home** only (teach/`analysis_launcher` left running) — prior session
+- [x] Flask-only restart on **home** only (teach/`analysis_launcher` left running) - prior session
 - [x] Cloud: synthetic ink-hug + no-fake-detour + HTML guard tests (4 passed / 4 skipped without Rub uploads)
 - [x] Dual-machine sync docs/script on branch (`docs/DUAL_MACHINE.md`, `scripts/sync_liberty_work.ps1`)
 - [ ] Scott confirms red hugs black on Play All + no extra pass
-- [ ] Scott runs sync on work PC once (`pwsh -File scripts/sync_liberty_work.ps1`)
+- [ ] Scott runs sync on work PC once (`powershell -File scripts/sync_liberty_work.ps1`)
 
 
 ## Dual-machine (home ↔ work)
 
-- Shared branch: `cursor/full-film-panel-ac1f`
-- Arrive: `pwsh -File scripts/sync_liberty_work.ps1` — Leave: push safe code/docs
-- Does **not** sync: `.env`, `film_analysis.db`, `uploads/`, teach/panel runtime
+- Shared branch: `cursor/full-film-panel-ac1f` (tracks `origin/cursor/full-film-panel-ac1f`)
+- Arrive: `powershell -File scripts/sync_liberty_work.ps1`
+- Leave: commit safe code/docs → `git push -u origin HEAD`
+- Does **not** sync: `.env`, `film_analysis.db`, `uploads/`, teach/panel runtime logs
 - Details: `docs/DUAL_MACHINE.md`
+- Sync script auto-repairs narrowed `remote.origin.fetch` to `+refs/heads/*:refs/remotes/origin/*`
 
 
 ## Report
 
 ### Proven
 
-- Playbook HTML: no `inferPassReceiver` / no “Classic wing: o1 → o2”; has “Do NOT invent synthetic passes”
+- Playbook HTML: no `inferPassReceiver` / no "Classic wing: o1 → o2"; has "Do NOT invent synthetic passes"
 - Cloud tests: curved stroke ratio ≥1.08 + mid ink ≥0.7; two digit blobs alone → near-chord
 - Live DB/uploads/teach state are **home-only** (not in Cloud Agent checkout)
-- Dual-machine helper + docs committed on this branch
-- Nightly `docs/LEARNING_STATUS.md` (2026-08-02): panel gates still FAIL — separate slice
+- Dual-machine helper + docs on this branch; home clone had narrowed `remote.origin.fetch` (single branch) — restored wildcard fetch; sync script auto-fixes
+- Nightly `docs/LEARNING_STATUS.md` (2026-08-02): panel gates still FAIL - separate slice
 
 ### Inferred
 
-- Sheet1 dashed ink 1→2 is a real drawn pass; no synthetic means that beat won’t animate until ink-pass detection exists
+- Sheet1 dashed ink 1→2 is a real drawn pass; no synthetic means that beat won't animate until ink-pass detection exists
 - Mid-path ink scoring should reduce white-chord / blob-wander on real Rub sheets like synthetics
 
 ### Unknown
