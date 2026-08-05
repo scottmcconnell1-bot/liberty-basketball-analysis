@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-08-03 23:00:11 Mountain Daylight Time**
+Generated (local): **2026-08-04 23:00:13 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -8,7 +8,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 - **Process map:** ok
 - **Active (live worker-backed):** 1
-  - `hudl_riverstone_away_regular_riverstone` **(primary)**: 20.0%, step=Detecting objects: frame 35500/173709, PID=28028, kind=analysis_launcher, db_status=running
+  - `hudl_riverstone_away_regular_riverstone` **(primary)**: 75.0%, step=Running enhanced analysis…, PID=28028, kind=analysis_launcher, db_status=running
 - **Stale/zombie candidates (DB running, no worker):** 32
   - `hudl_rimrock_away_regular_rimrock`: 50.0%, step=Regenerating events…, started=2026-08-02 23:19:34
   - `hudl_raft_river_unknown_regular_raft_river`: 50.0%, step=Regenerating events…, started=2026-08-02 06:06:12
@@ -43,7 +43,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 52.6% | FAIL |
 
 **Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-08-04T05:00:09.203565+00:00`
+- Panel snapshot: `2026-08-05T05:00:12.133338+00:00`
 
 ## Per-game panel
 
