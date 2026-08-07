@@ -1,92 +1,70 @@
 ﻿# Active Task
 
-Updated: 2026-08-04 (sheet ink mid-path scoring + dual-machine protocol)
-
+Updated: 2026-08-06 (teach tool verdict + hung restart + panel-first)
 
 Branch: `cursor/full-film-panel-ac1f`
-
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-sheet-align |
-| **status** | `implemented` (awaiting Scott Play All confirm) |
+| **id** | teach-tool-hung-panel-priority |
+| **status** | `implemented` (ops healthy; hung+panel-first shipped; Rimrock advancing) |
 | **assigned_to** | cursor-agent |
-
 
 ## Objective
 
-Sheet Play All: red travel paths + tokens hug black sheet ink; no invented passes; one beat at a time; white underlay; reset sheet 1.
+Scott asked: best teaching tool? Can we do better? Fix hung ops without approval; align curriculum to full-film panel gates.
 
+## Verdict (chat-ready)
 
-## Scott recording complaint (2026-08-01 233251)
+**Best available tool in-repo for panel gates: `scripts/hoops_teach_loop.py`** (orchestrator), not a replacement.
 
-1. Red SVG travel paths did **not** follow black sheet ink.
-2. Players did not follow black sheet lines either.
-3. Extra Pass #1→#2 (synthetic) should not be there.
+| Tool | Role vs panel goal |
+| --- | --- |
+| `hoops_teach_loop` | **Primary** — analyze → teach → regenerate-all → score → panel |
+| `teach_from_hoops_pbp` | Teaching signal for Hoops/panel games (called by loop) |
+| `teach_from_boxscore` | Caps for HUDL/team totals (called by loop) |
+| Manual analyze API / one-off scripts | Ops only — no curriculum |
+| Devin / parallel cloud VMs | Out of scope (Cursor Pro only) |
 
+Gaps that mattered: (1) hung GPU workers sat forever, (2) queue was Hoops-list then HUDL FIFO — not worst panel recall first. Mid-film resume still absent (full re-queue after fail).
 
-## Fix (this slice + prior)
+## Live health (Proven @ session)
 
-### A) Ink tracing (`playbook_sheet_align.py`, cache `v9`)
+- Flask `:8080` alive; teach loop restarted onto new code; **Rimrock launcher advancing** (detections growing) — **not killed**.
+- Per-game zombie reclaim live: **36** stuck runs cleared while Rimrock ran.
+- Panel still **FAIL** (P≈70.6% R≈52.6%; score/points exact 0%).
 
-- Stroke mask minus thick court lines; morphological **skeleton** centerline.
-- A* + greedy ink walk + corridor snap candidates.
-- **2026-08-04:** pick by **mid-path** skeleton ink (spatial margin from endpoints so digit blobs cannot fake a stroke). No connecting ink → prefer short chord.
-- Prior home Rub 0089→0090: o2 ratio **1.83**, o3 ratio **1.62** (curved).
+## Shipped this slice
 
-### B) No synthetic passes (`templates/playbook.html`)
+1. **Hung-launcher auto-restart** — same `progress_pct|step` for ≥45m (`LIBERTY_HUNG_STALE_SEC`) → kill that key’s PID only → mark failed → re-queue.
+2. **Panel-first curriculum** — fixed panel bases, worst recall first, ahead of HUDL FIFO.
+3. **`scripts/teach_ops_status.py`** — one-shot status + optional LEARNING_STATUS refresh.
+4. Tests: `tests/test_hoops_teach_reclaim.py` (**8 passed**).
+5. Docs: `TEACH_LOOP_SURVIVAL.md`, this handoff.
 
-- Removed `inferPassReceiver` (dead helper deleted 2026-08-04).
-- Pass beats only from stored movements / explicit pass paths.
-- Regression guard in `tests/test_playbook_sheet_align.py`.
+## Recommended path forward
 
-
-## Checklist
-
-- [x] Recording frames reviewed (`_review_frames3`)
-- [x] Synthetic pass removed; `inferPassReceiver` gone
-- [x] Flask-only restart on **home** only (teach/`analysis_launcher` left running) - prior session
-- [x] Cloud: synthetic ink-hug + no-fake-detour + HTML guard tests (4 passed / 4 skipped without Rub uploads)
-- [x] Dual-machine sync docs/script on branch (`docs/DUAL_MACHINE.md`, `scripts/sync_liberty_work.ps1`)
-- [ ] Scott confirms red hugs black on Play All + no extra pass
-- [ ] Scott runs sync on work PC once (`powershell -File scripts/sync_liberty_work.ps1`)
-
-
-## Dual-machine (home ↔ work)
-
-- Shared branch: `cursor/full-film-panel-ac1f` (tracks `origin/cursor/full-film-panel-ac1f`)
-- Arrive: `powershell -File scripts/sync_liberty_work.ps1`
-- Leave: commit safe code/docs → `git push -u origin HEAD`
-- Does **not** sync: `.env`, `film_analysis.db`, `uploads/`, teach/panel runtime logs
-- Details: `docs/DUAL_MACHINE.md`
-- Sync script auto-repairs narrowed `remote.origin.fetch` to `+refs/heads/*:refs/remotes/origin/*`
-
+1. Keep **`hoops_teach_loop`** as the overnight driver (watchdog installed).
+2. Let hung restart + reclaim prevent silent idle; do not babysit restarts.
+3. After more teaches, watch panel: Idaho City / Melba / Camas recall are the largest holes.
+4. Next engineering (optional): mid-film resume; panel-only re-teach cadence when HUDL queue is long but panel still FAIL.
 
 ## Report
 
 ### Proven
 
-- Playbook HTML: no `inferPassReceiver` / no "Classic wing: o1 → o2"; has "Do NOT invent synthetic passes"
-- Cloud tests: curved stroke ratio ≥1.08 + mid ink ≥0.7; two digit blobs alone → near-chord
-- Live DB/uploads/teach state are **home-only** (not in Cloud Agent checkout)
-- Dual-machine helper + docs on this branch; home clone had narrowed `remote.origin.fetch` (single branch) — restored wildcard fetch; sync script auto-fixes
-- Nightly `docs/LEARNING_STATUS.md` (2026-08-02): panel gates still FAIL - separate slice
+- Rimrock live + advancing; teach wait logs show reclaim + `[wait]`.
+- `hoops_teach_loop` is the only end-to-end panel pipeline in-repo.
+- Hung + panel-first tests pass; teach restarted with new code (GPU left alone).
 
 ### Inferred
 
-- Sheet1 dashed ink 1→2 is a real drawn pass; no synthetic means that beat won't animate until ink-pass detection exists
-- Mid-path ink scoring should reduce white-chord / blob-wander on real Rub sheets like synthetics
+- More HUDL film still helps boxscore caps, but panel P/R is dominated by Hoops PBP teach + regenerate on the six panel keys.
+- 45m hung threshold is safe for healthy frame-advancing jobs.
 
 ### Unknown
 
-- Whether Scott wants ink-detected pass animation on sheet1 without inventing from jersey geometry
-- Whether home Rub 0089→0090 still matches prior ratios after mid-ink change (home re-check; do not restart teach)
-- Whether work PC clone already tracks this remote branch
-
-
-## Ops note
-
-Do not kill `analysis_launcher` / `hoops_teach_loop` when restarting Flask.
-Flask-only restarts: **home learning PC only**. This Cloud Agent does not touch home processes.
+- Exact North Star launcher exit cause earlier today.
+- Whether mid-film resume is worth the risk vs full re-queue.
