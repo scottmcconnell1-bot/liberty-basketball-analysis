@@ -1113,11 +1113,17 @@ def playbook_sheet_paths_api():
     if not image_url:
         return jsonify({"error": "image_url required"}), 400
     try:
-        from playbook_sheet_align import resolve_upload_path, trace_paths_for_transition
+        from playbook_sheet_align import resolve_upload_path, trace_marked_paths_for_transition
 
         path = resolve_upload_path(image_url, current_app.root_path)
-        paths = trace_paths_for_transition(path, from_positions, to_positions)
-        return jsonify({"ok": True, "image_url": image_url, "paths": paths})
+        marked = trace_marked_paths_for_transition(path, from_positions, to_positions)
+        return jsonify({
+            "ok": True,
+            "image_url": image_url,
+            "paths": marked.get("paths") or {},
+            "marks": marked.get("marks") or {},
+            "passes": marked.get("passes") or [],
+        })
     except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
     except Exception as exc:

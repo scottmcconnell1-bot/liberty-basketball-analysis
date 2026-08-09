@@ -373,3 +373,16 @@ body.playbook-dragging-plays .playbook-tree-item.playbook-tree-drop {
     max-height: none;
   }
 }
+
+
+/* Digit mask layer kept for DOM compatibility; animation view no longer
+   paints white cover disks (underlay ink is not composited). */
+.sheet-digit-mask-layer {
+  pointer-events: none;
+}
+.sheet-digit-mask {
+  fill: #ffffff;
+}
+body.playbook-show-sheet-digits .sheet-digit-mask-layer {
+  display: none;
+}

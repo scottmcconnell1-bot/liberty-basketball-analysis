@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-06 (teach tool verdict + hung restart + panel-first)
+Updated: 2026-08-08 (Pitt 5 polish: straight screen, spacing, around cut, no T-bar)
 
 Branch: `cursor/full-film-panel-ac1f`
 
@@ -8,63 +8,64 @@ Branch: `cursor/full-film-panel-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | teach-tool-hung-panel-priority |
-| **status** | `implemented` (ops healthy; hung+panel-first shipped; Rimrock advancing) |
+| **id** | playbook-pitt5-choreography |
+| **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
-## Objective
+## Decision (Scott)
 
-Scott asked: best teaching tool? Can we do better? Fix hung ops without approval; align curriculum to full-film panel gates.
+Pitt 5 (play **137**):
 
-## Verdict (chat-ready)
+1. Pages: real sheets **172** (formation) + **173** (action) — keep multi-page.
+2. Sequence: **1 passes to 5**; **1 left corner**; **2 right corner**; then screen action:
+   - **4 sets a screen about at the 3-point line** (straight slide; hold with spacing from #5).
+   - **5 goes around 4 to the right block** (curl path, not through screener).
+   - **After 5 clears the screen**, **4 drops to the left block and stays** (`heldLandings` / no OCR snap-back).
+3. Clean court — no sheet underlay ink, no black screen T-bar stroke. Do not regress Rip 125 or Triangle 127. No commit.
 
-**Best available tool in-repo for panel gates: `scripts/hoops_teach_loop.py`** (orchestrator), not a replacement.
+## Approach
 
-| Tool | Role vs panel goal |
-| --- | --- |
-| `hoops_teach_loop` | **Primary** — analyze → teach → regenerate-all → score → panel |
-| `teach_from_hoops_pbp` | Teaching signal for Hoops/panel games (called by loop) |
-| `teach_from_boxscore` | Caps for HUDL/team totals (called by loop) |
-| Manual analyze API / one-off scripts | Ops only — no curriculum |
-| Devin / parallel cloud VMs | Out of scope (Cursor Pro only) |
+- `apply_pitt5_sequence_routes`: straight 2-pt Screen `o4` → tip (≥65px from #5); 4-pt around Cut `o5` → right block; straight `o4_drop` tip→left block.
+- Frontend: skip `drawScreenMarker` on Pitt 5; `normalizeAnimPath` trusts `pitt5Drop` / multi-point paths (no OCR yank on drop).
 
-Gaps that mattered: (1) hung GPU workers sat forever, (2) queue was Hoops-list then HUDL FIFO — not worst panel recall first. Mid-film resume still absent (full re-queue after fail).
+## Files
 
-## Live health (Proven @ session)
+- `playbook_sheet_align.py`
+- `templates/playbook.html`
+- `tests/test_playbook_sheet_align.py`
+- `docs/agent_handoffs/ACTIVE.md`
 
-- Flask `:8080` alive; teach loop restarted onto new code; **Rimrock launcher advancing** (detections growing) — **not killed**.
-- Per-game zombie reclaim live: **36** stuck runs cleared while Rimrock ran.
-- Panel still **FAIL** (P≈70.6% R≈52.6%; score/points exact 0%).
+## Verify
 
-## Shipped this slice
+Hard refresh: `http://127.0.0.1:8080/playbook/play/137`
 
-1. **Hung-launcher auto-restart** — same `progress_pct|step` for ≥45m (`LIBERTY_HUNG_STALE_SEC`) → kill that key’s PID only → mark failed → re-queue.
-2. **Panel-first curriculum** — fixed panel bases, worst recall first, ahead of HUDL FIFO.
-3. **`scripts/teach_ops_status.py`** — one-shot status + optional LEARNING_STATUS refresh.
-4. Tests: `tests/test_hoops_teach_reclaim.py` (**8 passed**).
-5. Docs: `TEACH_LOOP_SURVIVAL.md`, this handoff.
+Expect Play All:
 
-## Recommended path forward
+1. Pass #1 → #5
+2. Cut #1 (left corner)
+3. Cut #2 (right corner)
+4. Screen #4 → tip ≈(208.5, 232.2) straight 2-pt; gap from #5 ≈66; no black T-bar
+5. Cut #5 → around mid ≈(258.5, 214.2) → right block ≈(323.5, 97.9)
+6. Cut #4 drop → left block ≈(176.5, 97.9) and **hold**
 
-1. Keep **`hoops_teach_loop`** as the overnight driver (watchdog installed).
-2. Let hung restart + reclaim prevent silent idle; do not babysit restarts.
-3. After more teaches, watch panel: Idaho City / Melba / Camas recall are the largest holes.
-4. Next engineering (optional): mid-film resume; panel-only re-teach cadence when HUDL queue is long but panel still FAIL.
+Flask restarted on :8080. Teach ports left alone.
 
 ## Report
 
 ### Proven
 
-- Rimrock live + advancing; teach wait logs show reclaim + `[wait]`.
-- `hoops_teach_loop` is the only end-to-end panel pipeline in-repo.
-- Hung + panel-first tests pass; teach restarted with new code (GPU left alone).
+- Squiggle cause: `trace_ink_polyline` along printed T-bar stem for `o4` screen approach → replaced with straight 2-point path.
+- Black line cause: `drawScreenMarker` black T-bar (`#111827`) after screen hold → no-op on Pitt 5; DOM `.screen-marker` count = 0.
+- Spacing: screen tip pulled to ≥65px from #5 (live gap 66.2); tip (208.5, 232.2).
+- Around path: `o5` 4-point polyline with mid right of screener (258.5, 214.2) → right block; not the old through-screen chord.
+- #4 holds left block: live end `o4`=(176.5, 97.9) after drop; `normalizeAnimPath` keeps `pitt5Drop` destination (avoids OCR yank to right-block seed).
+- Pages 172+173; `isPitt5=true`; underlayKids=0; maskCircles=0.
+- Unit tests: `pitt5` + Rip + Triangle sheet-align suite green (9 passed).
 
 ### Inferred
 
-- More HUDL film still helps boxscore caps, but panel P/R is dominated by Hoops PBP teach + regenerate on the six panel keys.
-- 45m hung threshold is safe for healthy frame-advancing jobs.
+- Travel path stroke during the beat (red) is intentional motion cue; Scott’s “black line” was the T-bar marker, not underlay.
 
-### Unknown
+### Unknown / remaining
 
-- Exact North Star launcher exit cause earlier today.
-- Whether mid-film resume is worth the risk vs full re-queue.
+- Scott visual sign-off on around-path smoothness / screen tip placement on hard refresh.
