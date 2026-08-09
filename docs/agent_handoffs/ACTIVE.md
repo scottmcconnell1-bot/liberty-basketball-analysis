@@ -1,69 +1,43 @@
-# Active Task
+﻿# Active Task
 
-Updated: 2026-07-28 (Coach Portal mobile layout / readability)
+Updated: 2026-08-09 (videos fast list)
 
-
-Branch: `cursor/coach-portal-ac1f`
-
+Branch: `cursor/videos-fast-list-ac1f`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | coach-portal-mobile-layout |
-| **status** | `implemented` (ready for Scott PR when asked) |
+| **id** | videos-fast-list |
+| **status** | `done` |
 | **assigned_to** | cursor-agent |
 
+## Decision
 
-## Objective
+Videos nav (`/videos`) was slow because `/api/videos` ran per-video `COUNT(*)` on ~53M `detections` (no useful index) for every row, and polled every 10s. List-first with light metadata is the fix; Film Tool already loads one video.
 
-Coaches open a **permanent** URL, use the **real app with real data**, stay updated — without ops surfaces, and **without permanent writes** (Option 1 read-only coach mode). Soft password gate via `LIBERTY_COACH_PASSWORD`. Scott keeps PC on. **Phone layout must be readable** (not scrunched); hamburger must open the page menu.
+## Changes
 
+- `GET /api/videos?light=1&sort=title` — skip detection/event counts; sort A–Z by title
+- `GET /api/videos/<id>` — full counts for one video
+- `/videos` UI uses light list; optional **Load counts** per row; poll only while runs are active
 
-## Checklist
+## Try
 
-- [x] Branch `cursor/coach-portal-ac1f` off `origin/jason-5-may-updates`
-- [x] `ENABLE_COACH_PORTAL` feature flag (**default True** — intentional per Scott)
-- [x] `GET/POST /coach` (+ `/coach/login`) shared password; setup copy if env unset
-- [x] `session["coach_portal"]`; `/coach/logout`; ops denylist `before_request` (global auth untouched)
-- [x] **Read-only gate**: coach sessions allow GET/HEAD/OPTIONS; block POST/PUT/PATCH/DELETE except auth paths
-- [x] Nav surgery: hide Settings/Users/Debug/NFHS/Report Bug; **Coach view · read only** badge + banner + Sign out
-- [x] **Mobile nav fix**: hamburger `stopPropagation` + outside-click treats hamburger as nav chrome; skip frame-label inject on coach
-- [x] **Mobile layout**: viewport ok; stack filter grids; table overflow / card layout; 16px base; 44px tap targets; coach banner wraps; practices `.table-responsive`
-- [x] Docs: `docs/COACH_PORTAL.md` (read-only section), tunnel setup scripts
-- [x] Tests: `tests/test_coach_portal.py` (prior slice)
-- [x] Flask `app.py` restarted (teach/analysis left running); Funnel → 8080
-- [ ] PR when Scott asks (not auto-opened this slice)
-
+- `/videos`
+- Film Tool deep links unchanged: `/film/<filename>?game_id=…`
 
 ## Report
 
 ### Proven
 
-- Viewport meta was already present (`width=device-width, initial-scale=1.0`); not the root cause
-- Scrunch causes: multi-column **inline** filter/form grids (schedule/practices/etc.) stayed multi-col on phone; practices table lacked `.table-responsive`; dashboard `sched-row` kept a fixed date column; nav link padding under ~44px; coach badge `nowrap`
-- Global fix in `templates/base.html` (+ practices wrap); desktop media queries unchanged above 768px
-- Prior hamburger bug (sibling outside-click) remains fixed
+- Local DB: 54 videos, ~52.8M detections, ~618k events; full `COUNT(*)` on detections ~45s table-wide.
+- Light list skips those counts; detail endpoint loads one video’s counts.
 
 ### Inferred
 
-- Scott’s “scrunched / hard to read” report is layout density after Funnel phone use, not another hamburger regression
+- Prior UI felt multi‑minute / hang because list × N counts + 10s refresh.
 
 ### Unknown
 
-- Whether Scott wants Save buttons visually disabled beyond banner/badge
-
-
-## Try locally
-
-| Step | URL / action |
-| --- | --- |
-| Hard refresh phone | Funnel URL → pull-to-refresh or clear cache → Dashboard / Schedule / Playbook / Practices |
-| Local | http://127.0.0.1:8080/coach (narrow DevTools ≤768px) |
-
-
-## Prior completed (reference)
-
-- Coach portal read-only Option 1 + mobile hamburger fix (same branch)
-- Recruiting Station MVP lived on `cursor/recruiting-station-ac1f` (PR #134) — not on this branch base; merge separately if needed
-- Rebuild events / playbook export merges on `jason-5-may-updates`
+- Whether denormalized counts on `analysis_runs` or detections indexes are wanted later (schema gate).

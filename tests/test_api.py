@@ -1674,6 +1674,47 @@ def test_api_videos_counts_detections_via_relational_game_id(client, db):
     assert payload[0]["analysis_status"] == "completed"
 
 
+def test_api_videos_light_skips_counts_and_sorts_by_title(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("z.mp4", "z.mp4", "uploads/z.mp4", 100, "Zebra", "g_zebra"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("a.mp4", "a.mp4", "uploads/a.mp4", 100, "Alpha", "g_alpha"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, base_analysis_key, status)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("g_alpha", "uploads/a.mp4", 2, "g_alpha", "completed"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("g_alpha", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    light = client.get("/api/videos?light=1&sort=title").get_json()
+    assert [row["display_game"] for row in light] == [
+        "Liberty vs Alpha",
+        "Liberty vs Zebra",
+    ]
+    assert light[0]["detection_count"] is None
+    assert light[0]["event_count"] is None
+    assert light[0]["analysis_status"] == "completed"
+
+    detail = client.get("/api/videos/2").get_json()
+    assert detail["detection_count"] == 1
+    assert detail["analysis_status"] == "completed"
+
+
 def test_compare_video_analysis_keeps_run_specific_counts(client, db):
     db.execute(
         """INSERT INTO videos

@@ -5,9 +5,8 @@ Routes:
   GET  /api/analysis_status/<game_id>  - Analysis status for an analysis key
   GET  /api/stats/<game_id>            - Stats for a game/analysis key
   POST /api/upload_video               - Upload a video file
-  GET  /api/videos                     - List all videos
-  GET  /videos/<int:vid_id>/compare    - Compare video analysis
-  POST /videos/<int:vid_id>/rerun      - Re-run video analysis
+  GET  /api/videos                     - List all videos (?light=1 skips detection/event counts)
+  GET  /api/videos/<int:vid_id>        - One video with full counts
   POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
   DELETE /api/videos/<int:vid_id>      - Delete a video
@@ -96,7 +95,7 @@ def _lookup_video_schedule_context(db, *, relational_game_id=None, game_id=None)
     return None
 
 
-def _enrich_video_list_row(db, row):
+def _enrich_video_list_row(db, row, *, light=False):
     payload = dict(row)
     opponent = (payload.get("opponent") or "").strip()
     if not opponent or opponent.lower() == "unknown":
@@ -117,6 +116,17 @@ def _enrich_video_list_row(db, row):
         payload["team_label"] = None
 
     payload["display_game"] = f"Liberty vs {opponent}" if opponent else "Liberty"
+
+    # Light list: keep joined analysis_status / analysis_key from the list query.
+    # Skip per-row COUNT(*) on detections/events (tens of millions of rows, no index).
+    if light:
+        if payload.get("analysis_status") is None:
+            payload["analysis_status"] = "not_started"
+        if not payload.get("analysis_key"):
+            payload["analysis_key"] = payload.get("game_id")
+        payload["detection_count"] = None
+        payload["event_count"] = None
+        return payload
 
     clause = _video_analysis_runs_clause()
     run_row = db.execute(
@@ -148,6 +158,17 @@ def _enrich_video_list_row(db, row):
         )
 
     return payload
+
+
+def _sort_videos_by_title(payloads):
+    """Sort video list A–Z by display title, then newer id first as tiebreak."""
+    return sorted(
+        payloads,
+        key=lambda v: (
+            (v.get("display_game") or v.get("opponent") or v.get("stored_filename") or "").lower(),
+            -(v.get("id") or 0),
+        ),
+    )
 
 
 def _resolve_analysis_relational_game_id(db, game_id):
@@ -808,8 +829,16 @@ def upload_chunk():
 @ai_bp.route("/api/videos")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_videos():
-    """Return all videos from the DB with their analysis status."""
+    """Return all videos from the DB with their analysis status.
+
+    Query params:
+      light=1  – skip per-video detection/event COUNT(*) (fast list for /videos).
+                 Counts are null; open Film Tool or GET /api/videos/<id> for one video.
+      sort=title (default for light) | id – list order.
+    """
     db = get_db()
+    light = str(request.args.get("light", "")).lower() in {"1", "true", "yes"}
+    sort = (request.args.get("sort") or ("title" if light else "id")).strip().lower()
     latest_run = latest_analysis_run_id_subquery()
     rows = db.execute(f"""
         SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
@@ -835,7 +864,54 @@ def api_videos():
             ORDER BY v.id DESC
         """).fetchall()
 
-    return jsonify([_enrich_video_list_row(db, r) for r in rows])
+    payloads = [_enrich_video_list_row(db, r, light=light) for r in rows]
+    if sort == "title":
+        payloads = _sort_videos_by_title(payloads)
+    return jsonify(payloads)
+
+
+@ai_bp.route("/api/videos/<int:vid_id>", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_detail(vid_id):
+    """Return one video with full analysis status + detection/event counts."""
+    db = get_db()
+    latest_run = latest_analysis_run_id_subquery()
+    row = db.execute(
+        f"""
+        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
+               (SELECT COUNT(*) FROM analysis_runs ar2
+                 WHERE ar2.source_video_id = v.id
+                    OR ar2.base_analysis_key = v.game_id
+                    OR ar2.analysis_key = v.game_id
+                    OR ar2.video_path = v.file_path) as analysis_run_count
+        FROM videos v
+        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+        WHERE v.id = ?
+        """,
+        (vid_id,),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "Video not found"}), 404
+
+    analysis_key = row["analysis_key"] or row["game_id"]
+    if row["analysis_status"] == "running" and analysis_key:
+        reconcile_stuck_analysis_run(db, analysis_key)
+        row = db.execute(
+            f"""
+            SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
+                   (SELECT COUNT(*) FROM analysis_runs ar2
+                     WHERE ar2.source_video_id = v.id
+                        OR ar2.base_analysis_key = v.game_id
+                        OR ar2.analysis_key = v.game_id
+                        OR ar2.video_path = v.file_path) as analysis_run_count
+            FROM videos v
+            LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+            WHERE v.id = ?
+            """,
+            (vid_id,),
+        ).fetchone()
+
+    return jsonify(_enrich_video_list_row(db, row, light=False))
 
 
 @ai_bp.route("/videos/<int:vid_id>/compare")
