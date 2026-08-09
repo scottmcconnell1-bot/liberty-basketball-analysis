@@ -1297,14 +1297,36 @@ def playbook_api_play(play_id):
 def playbook_sheet_align_api():
     """Detect court crop + digit positions for a play-sheet source image.
 
+    Prefer FastDraw vector PDF operators when the sibling PDF exists; OCR is
+    the draft fallback for raster sheets.
+
     Body JSON: { \"image_url\": \"/uploads/.../page_XXXX.png\" }
     Returns court_frac (normalized crop) and positions o1..o5 in SVG court space.
     """
     data = request.get_json(force=True, silent=True) or {}
     image_url = (data.get("image_url") or data.get("source_image") or "").strip()
+    force_ocr = bool(data.get("force_ocr"))
     if not image_url:
         return jsonify({"error": "image_url required"}), 400
     try:
+        if not force_ocr:
+            from playbook_vector_extract import extract_sheet_from_image_url
+
+            vec = extract_sheet_from_image_url(
+                image_url, app_root=current_app.root_path
+            )
+            if vec and (vec.get("positions") or {}):
+                return jsonify({
+                    "ok": True,
+                    "image_url": image_url,
+                    "source": "vector",
+                    "court_frac": vec.get("court_frac"),
+                    "positions": vec.get("positions") or {},
+                    "ink": vec.get("ink"),
+                    "title": vec.get("title"),
+                    "page": vec.get("page"),
+                })
+
         from playbook_sheet_align import analyze_sheet_image, resolve_upload_path
 
         path = resolve_upload_path(image_url, current_app.root_path)
@@ -1313,6 +1335,7 @@ def playbook_sheet_align_api():
         return jsonify({
             "ok": True,
             "image_url": image_url,
+            "source": "ocr",
             "court_frac": result.get("court_frac"),
             "positions": result.get("positions") or {},
             "size": result.get("size"),
@@ -1323,10 +1346,74 @@ def playbook_sheet_align_api():
         return jsonify({"error": f"sheet align failed: {exc}"}), 500
 
 
+@playbook_bp.route("/api/playbook/sheet-extract", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_sheet_extract_api():
+    """Stage 1 extract: structured play JSON from vector PDF (OCR fallback).
+
+    Body JSON: {
+      \"image_url\": \"/uploads/.../page_XXXX.png\",
+      \"to_positions\": {optional next-step tips for path attribution}
+    }
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    image_url = (data.get("image_url") or data.get("source_image") or "").strip()
+    to_positions = data.get("to_positions") or None
+    force_ocr = bool(data.get("force_ocr"))
+    if not image_url:
+        return jsonify({"error": "image_url required"}), 400
+    try:
+        if not force_ocr:
+            from playbook_vector_extract import extract_sheet_from_image_url
+
+            vec = extract_sheet_from_image_url(
+                image_url,
+                app_root=current_app.root_path,
+                next_positions=to_positions,
+            )
+            if vec and (vec.get("positions") or {}):
+                ink = vec.get("ink") or {}
+                return jsonify({
+                    "ok": True,
+                    "image_url": image_url,
+                    "source": "vector",
+                    "court_frac": vec.get("court_frac"),
+                    "positions": vec.get("positions") or {},
+                    "ink": {
+                        "paths": ink.get("paths") or {},
+                        "marks": ink.get("marks") or {},
+                        "passes": ink.get("passes") or [],
+                    },
+                    "title": vec.get("title"),
+                    "page": vec.get("page"),
+                })
+
+        from playbook_sheet_align import analyze_sheet_image, resolve_upload_path
+
+        path = resolve_upload_path(image_url, current_app.root_path)
+        cache_base = Path(current_app.root_path) / "data" / "playbook"
+        result = analyze_sheet_image(path, cache_base=cache_base)
+        return jsonify({
+            "ok": True,
+            "image_url": image_url,
+            "source": "ocr",
+            "court_frac": result.get("court_frac"),
+            "positions": result.get("positions") or {},
+            "ink": {"paths": {}, "marks": {}, "passes": []},
+            "size": result.get("size"),
+        })
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except Exception as exc:
+        return jsonify({"error": f"sheet extract failed: {exc}"}), 500
+
+
 @playbook_bp.route("/api/playbook/sheet-paths", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def playbook_sheet_paths_api():
     """Trace ink polylines on a sheet from from_positions → to_positions.
+
+    Prefer vector PDF stroke extraction; OCR/ink-trace is the fallback.
 
     Body JSON: {
       \"image_url\": \"/uploads/...png\",
@@ -1338,9 +1425,30 @@ def playbook_sheet_paths_api():
     image_url = (data.get("image_url") or data.get("source_image") or "").strip()
     from_positions = data.get("from_positions") or {}
     to_positions = data.get("to_positions") or {}
+    force_ocr = bool(data.get("force_ocr"))
     if not image_url:
         return jsonify({"error": "image_url required"}), 400
     try:
+        if not force_ocr:
+            from playbook_vector_extract import extract_sheet_from_image_url
+
+            vec = extract_sheet_from_image_url(
+                image_url,
+                app_root=current_app.root_path,
+                next_positions=to_positions or None,
+            )
+            if vec:
+                ink = vec.get("ink") or {}
+                if ink.get("paths") or ink.get("passes"):
+                    return jsonify({
+                        "ok": True,
+                        "image_url": image_url,
+                        "source": "vector",
+                        "paths": ink.get("paths") or {},
+                        "marks": ink.get("marks") or {},
+                        "passes": ink.get("passes") or [],
+                    })
+
         from playbook_sheet_align import resolve_upload_path, trace_marked_paths_for_transition
 
         path = resolve_upload_path(image_url, current_app.root_path)
@@ -1348,6 +1456,7 @@ def playbook_sheet_paths_api():
         return jsonify({
             "ok": True,
             "image_url": image_url,
+            "source": "ocr",
             "paths": marked.get("paths") or {},
             "marks": marked.get("marks") or {},
             "passes": marked.get("passes") or [],

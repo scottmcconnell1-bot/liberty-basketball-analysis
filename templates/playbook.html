@@ -283,12 +283,12 @@
         <span id="sheetAlignBannerText">Ready</span>
         <span id="choreographyActions" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;">
           <button type="button" id="saveChoreographyBtn" class="btn btn-secondary btn-sm"
-                  onclick="saveStickyChoreography()" title="Save current spots + paths so Play All stops re-guessing OCR">
+                  onclick="saveStickyChoreography()" title="Save corrected play data so Play All reads sticky JSON, not a fresh extract">
             💾 Save choreography
           </button>
           <button type="button" id="clearChoreographyBtn" class="btn btn-secondary btn-sm"
-                  onclick="clearStickyChoreography()" title="Delete sticky model and re-run OCR">
-            Reset OCR
+                  onclick="clearStickyChoreography()" title="Delete sticky model and re-extract (vector PDF if available, else OCR)">
+            Reset extract
           </button>
         </span>
       </div>
@@ -585,6 +585,8 @@ let sheetSessionInkByStep = [];
 let sheetUsingStickyChoreography = false;
 /** True after drag/edit until Save choreography. */
 let choreographyDirty = false;
+/** Draft extract source for current sheet load: 'vector' | 'ocr' | null. */
+let sheetExtractSource = null;
 /** True while play-sheet underlay replaces SVG court markings (white bg only). */
 let sheetCourtMode = false;
 /** Bumps each one-player move so stale rAF frames cannot move extra tokens. */
@@ -1921,9 +1923,11 @@ function updateChoreographyChrome() {
       if (choreographyDirty) {
         hint.textContent = 'Spots edited — Save choreography so the next load keeps them.';
       } else if (sheetUsingStickyChoreography) {
-        hint.textContent = 'Using saved choreography (sticky). Drag tokens to tweak; Save to update. Reset OCR to re-guess.';
+        hint.textContent = 'Using saved choreography (sticky). Drag tokens to tweak; Save to update. Reset extract to re-run.';
+      } else if (sheetExtractSource === 'vector') {
+        hint.textContent = 'Vector draft from FastDraw PDF (no OCR). Drag tokens to correct data, then Save choreography.';
       } else {
-        hint.textContent = 'OCR draft loaded. Drag tokens to fix spacing, Play All once, then Save choreography so paths stick.';
+        hint.textContent = 'OCR draft loaded. Drag tokens to fix spacing, then Save choreography so Play All stops re-guessing.';
       }
     }
   }
@@ -2184,7 +2188,7 @@ async function saveStickyChoreography() {
 async function clearStickyChoreography() {
   if (!playId || !viewModeAllowsChoreoEdit()) return;
   if (isPlaybackActive()) return;
-  if (!window.confirm('Clear saved choreography and re-run OCR on the sheets?')) return;
+  if (!window.confirm('Clear saved choreography and re-extract sheets (vector PDF if available, else OCR)?')) return;
   try {
     await fetch(`/api/playbook/choreography/${playId}`, { method: 'DELETE' });
   } catch (err) {
@@ -2192,6 +2196,7 @@ async function clearStickyChoreography() {
   }
   sheetUsingStickyChoreography = false;
   choreographyDirty = false;
+  sheetExtractSource = null;
   sheetStickyInkByStep = [];
   sheetSessionInkByStep = [];
   sheetAlignByStep = [];
@@ -2199,8 +2204,8 @@ async function clearStickyChoreography() {
   sheetAlignPromise = null;
   sheetInkPathCache.clear();
   invalidatePlaybarTimeline();
-  setSheetAlignStatus('aligning', 'Re-aligning from OCR…');
-  await ensureSheetAlignment({ forceOcr: true });
+  setSheetAlignStatus('aligning', 'Re-extracting sheets…');
+  await ensureSheetAlignment({ forceExtract: true });
 }
 
 async function ensureSessionInkCaptured() {
@@ -2218,8 +2223,8 @@ async function ensureSessionInkCaptured() {
 }
 
 async function ensureSheetAlignment(options = {}) {
-  const forceOcr = !!options.forceOcr;
-  // Opt-in slideshow skips OCR; default animation always aligns imported sheets.
+  const forceExtract = !!(options.forceExtract || options.forceOcr);
+  // Opt-in slideshow skips extract; default animation always aligns imported sheets.
   if (useSheetSlideshowMode()) {
     sheetAlignByStep = [];
     sheetAlignReady = true;
@@ -2232,7 +2237,7 @@ async function ensureSheetAlignment(options = {}) {
     setSheetAlignStatus('ready', 'Ready to play');
     return;
   }
-  if (!forceOcr && sheetAlignReady && sheetAlignByStep.length === steps.length) {
+  if (!forceExtract && sheetAlignReady && sheetAlignByStep.length === steps.length) {
     setSheetAlignStatus(
       'ready',
       sheetUsingStickyChoreography
@@ -2244,11 +2249,13 @@ async function ensureSheetAlignment(options = {}) {
   if (sheetAlignPromise) return sheetAlignPromise;
 
   setSheetAlignStatus('aligning');
-  setSheetAnimHint('Aligning sheets…');
+  setSheetAnimHint('Extracting play data…');
   sheetAlignPromise = (async () => {
-    if (!forceOcr) {
+    // Stage 2 sticky review wins over Stage 1 extract.
+    if (!forceExtract) {
       const sticky = await loadStickyChoreographyDoc();
       if (sticky && applyStickyChoreographyDoc(sticky)) {
+        sheetExtractSource = null;
         setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
         setSheetAnimHint('Using saved choreography');
         if (!isPlaybackActive()) {
@@ -2263,41 +2270,83 @@ async function ensureSheetAlignment(options = {}) {
 
     sheetUsingStickyChoreography = false;
     sheetStickyInkByStep = [];
+    // Stage 1: vector PDF extract (preferred) → OCR draft fallback.
     const results = await Promise.all(steps.map(async (step, idx) => {
-      if (!step.source_image) return { index: idx, court_frac: null, positions: {} };
+      if (!step.source_image) {
+        return { index: idx, court_frac: null, positions: {}, ink: null, source: null };
+      }
       try {
-        const resp = await fetch('/api/playbook/sheet-align', {
+        const resp = await fetch('/api/playbook/sheet-extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: step.source_image }),
         });
         const data = await resp.json();
         if (!resp.ok || !data.ok) {
-          console.warn('sheet-align failed', step.source_image, data);
-          return { index: idx, court_frac: null, positions: {} };
+          console.warn('sheet-extract failed', step.source_image, data);
+          return { index: idx, court_frac: null, positions: {}, ink: null, source: null };
         }
         return {
           index: idx,
           court_frac: data.court_frac || null,
           positions: data.positions || {},
+          ink: data.ink || null,
+          source: data.source || null,
         };
       } catch (err) {
-        console.warn('sheet-align error', err);
-        return { index: idx, court_frac: null, positions: {} };
+        console.warn('sheet-extract error', err);
+        return { index: idx, court_frac: null, positions: {}, ink: null, source: null };
       }
     }));
+    // Second pass: re-extract ink with next-step tips when vector draft exists.
+    for (let idx = 0; idx < results.length - 1; idx += 1) {
+      const cur = results[idx];
+      const nxt = results[idx + 1];
+      if (!cur || cur.source !== 'vector' || !steps[idx].source_image) continue;
+      if (!nxt || !nxt.positions || !Object.keys(nxt.positions).length) continue;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const resp = await fetch('/api/playbook/sheet-extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: steps[idx].source_image,
+            to_positions: nxt.positions,
+          }),
+        });
+        const data = await resp.json();
+        if (resp.ok && data.ok && data.ink) {
+          cur.ink = data.ink;
+        }
+      } catch (err) {
+        console.warn('sheet-extract tip pass', err);
+      }
+    }
     sheetAlignByStep = results.map((r) => ({
       court_frac: r.court_frac,
       positions: r.positions || {},
     }));
-    sheetSessionInkByStep = steps.map(() => null);
+    sheetSessionInkByStep = results.map((r) => {
+      if (!r.ink) return null;
+      return {
+        paths: r.ink.paths || {},
+        marks: r.ink.marks || {},
+        passes: r.ink.passes || [],
+      };
+    });
+    const sources = results.map((r) => r.source).filter(Boolean);
+    sheetExtractSource = sources.includes('vector')
+      ? 'vector'
+      : (sources.includes('ocr') ? 'ocr' : null);
     choreographyDirty = false;
     const anyPos = sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
     const anyFrac = sheetAlignByStep.some((a) => a.court_frac);
     if (!anyPos && !anyFrac) {
       setSheetAlignStatus('error');
+    } else if (sheetExtractSource === 'vector') {
+      setSheetAlignStatus('ready', 'Ready — vector extract draft (Save to stick)');
     } else {
-      setSheetAlignStatus('ready', 'Ready to play — OCR draft (Save to stick)');
+      setSheetAlignStatus('ready', 'Ready — OCR draft (Save to stick)');
     }
     setSheetAnimHint('');
     // Refresh tokens/underlay now that digits map to the court.
@@ -5154,6 +5203,7 @@ function initSteps() {
   sheetSessionInkByStep = [];
   sheetUsingStickyChoreography = false;
   choreographyDirty = false;
+  sheetExtractSource = null;
   updateCourtPanelLabel();
   renderCourt();
   renderStep();
@@ -5163,7 +5213,7 @@ function initSteps() {
     setSheetAlignStatus('ready', 'Ready — sheet slideshow (opt-in)');
   } else if (playHasSheets()) {
     setSheetAlignStatus('aligning');
-    // Imported sheets: sticky choreography if present, else OCR digit map.
+    // Imported sheets: sticky choreography if present, else vector/OCR extract.
     ensureSheetAlignment();
   } else {
     setSheetAlignStatus('ready', 'Ready to play');

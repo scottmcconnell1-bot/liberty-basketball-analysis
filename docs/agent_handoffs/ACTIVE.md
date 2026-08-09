@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (sticky choreography)
+Updated: 2026-08-09 (extract → review → render)
 
 Branch: `cursor/sticky-choreography-ac1f`
 
@@ -8,52 +8,60 @@ Branch: `cursor/sticky-choreography-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-sticky-choreography |
+| **id** | playbook-extract-review-render |
 | **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
 ## Decision (Scott)
 
-Competitors animate from authored vector models. Liberty re-OCRs PDF sheets every load. Persist sticky choreography JSON (positions + ink) so Scott can correct once and Play All stops re-guessing.
+1. Check whether source PDFs are vector or raster (OCR may be unnecessary).
+2. Separate pipeline: extract structured play data → human review/correct → render animation. Scott corrects **data**, not animations.
 
 ## Approach
 
-- JSON file store `data/playbook/choreography/{play_id}.json` (no schema.sql).
-- API GET/PUT/DELETE `/api/playbook/choreography/<id>`.
-- View UI: drag tokens update `sheetAlignByStep`; **Save choreography** / **Reset OCR**.
-- Play All prefers sticky positions + outbound ink when present.
+Three-stage pipeline (no `schema.sql`):
+
+1. **Extract** — FastDraw vector PDF ops → structured JSON; OCR only as draft fallback.
+2. **Review** — sticky choreography JSON + drag UI; Save/Reset persist across reloads.
+3. **Render** — Play All reads sticky/corrected data only when present.
 
 ## Files
 
+- `playbook_vector_extract.py`
 - `playbook_choreography.py`
 - `blueprints/playbook.py`
 - `templates/playbook.html`
+- `tests/test_playbook_vector_extract.py`
 - `tests/test_playbook_choreography.py`
+- `docs/playbook_pipeline.md`
 - `docs/playbook_sticky_choreography.md`
 - `docs/agent_handoffs/ACTIVE.md`
 
 ## Verify
 
-- Hard refresh sheet plays → Save choreography → refresh again → banner “saved choreography”
-- Drag o-tokens → Save → Play All uses new spots
-- Rip 125 / Triangle 127 / Pitt 5 137 / 1-Game 98 still Play All without sticky file
-- pytest playbook_choreography + sheet_align
+- Vector classify: Fast Scout PDF → kind=vector, 0 image xrefs
+- `/api/playbook/sheet-extract` on 1-Game page_0032 → source=vector, o1..o5
+- Hard refresh sheet play → Save choreography → sticky banner
+- Play All prefers sticky; Reset extract re-runs Stage 1
+- pytest `test_playbook_vector_extract` + `test_playbook_choreography`
 
 ## Report
 
 ### Proven
 
-- CoachCanvas: draw in-browser; Free plan imports FastDraw library; PDF is export, not import-for-animation.
-- HoopCoach: coach draws movements (cut/pass/screen); animates those steps; PDF/GIF export; no PDF→vector import.
-- Basketball Tactic Board (`com.jenda.basketballboard`): frame-by-frame authored animation; import/export proprietary tactic/animation files between devices — not PDF OCR.
-- Liberty already has `positions_json`/`movements_json` for canvas plays; sheet Play All ignored coach drags (OCR path).
+- Source PDF `Fast Scout Plays 2021-2022.pdf` (and bulk_imports copies): creator FastDraw, PDF 1.4, 380 pages, **0** embedded images, text on all pages, drawings on 373 pages → **vector**.
+- Digit glyphs `1`–`5` extractable with positions via PyMuPDF `get_text("words")`.
+- Cut/pass/dribble strokes present as thicker draw paths (width ~2.92); court geometry is thinner (~1.46).
+- Sticky choreography JSON + Save/Reset UI already on this branch; Play All prefers sticky ink/positions.
+- Vector extract wired as Stage 1 preferred path (`sheet-extract` / sheet-align / sheet-paths).
 
 ### Inferred
 
-- Industry “import” almost always means FastDraw `.fdb` or same-app proprietary frames, never reliable OCR of printed playbooks.
-- Sticky JSON is the practical bridge until an exchange format exists.
+- Vector digit centers will be more stable than OCR for FastDraw imports; ink attribution (which stroke belongs to which player) still needs Scott review on complex pages.
+- Industry import remains FastDraw `.fdb` / authored frames; PDF vector extract is the practical bridge for Liberty’s existing library.
 
 ### Unknown / remaining
 
-- Scott visual sign-off after Save on 1-Game / Rip.
-- Path-handle editor + FastDraw `.fdb` adapter (next slice).
+- Scott visual sign-off: Save on 1-Game / Rip after vector draft.
+- Path-handle editor + `.fdb` adapter (next slice).
+- Whether every bulk-imported play still has the sibling `.pdf` beside rendered PNGs (1-Game/Rip/Triangle/Pitt 5 do).
