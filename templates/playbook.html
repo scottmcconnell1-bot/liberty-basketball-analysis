@@ -279,7 +279,22 @@
 
     <div id="sheetAlignBanner" role="status" aria-live="polite"
          style="display:none;margin:0 0 8px;padding:10px 14px;border-radius:8px;font-size:0.9rem;font-weight:700;letter-spacing:0.01em;border:2px solid transparent;">
-      <span id="sheetAlignBannerText">Ready</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;">
+        <span id="sheetAlignBannerText">Ready</span>
+        <span id="choreographyActions" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;">
+          <button type="button" id="saveChoreographyBtn" class="btn btn-secondary btn-sm"
+                  onclick="saveStickyChoreography()" title="Save current spots + paths so Play All stops re-guessing OCR">
+            💾 Save choreography
+          </button>
+          <button type="button" id="clearChoreographyBtn" class="btn btn-secondary btn-sm"
+                  onclick="clearStickyChoreography()" title="Delete sticky model and re-run OCR">
+            Reset OCR
+          </button>
+        </span>
+      </div>
+      <div id="choreographyHint" style="display:none;margin-top:6px;font-size:0.72rem;font-weight:500;opacity:0.9;">
+        Drag tokens to fix spacing — then Save choreography. Play All will reuse saved spots/paths.
+      </div>
     </div>
 
     <!-- Animated court (sheet underlay + tokens); source image also listed below -->
@@ -562,6 +577,14 @@ let sheetAlignReady = false;
 let sheetAlignPromise = null;
 /** Client cache for /api/playbook/sheet-paths keyed by step+endpoints */
 const sheetInkPathCache = new Map();
+/** Sticky outbound ink bundles keyed by step index (from saved choreography). */
+let sheetStickyInkByStep = [];
+/** Session ink from last OCR/trace — used when saving choreography. */
+let sheetSessionInkByStep = [];
+/** True when positions come from sticky JSON rather than live OCR. */
+let sheetUsingStickyChoreography = false;
+/** True after drag/edit until Save choreography. */
+let choreographyDirty = false;
 /** True while play-sheet underlay replaces SVG court markings (white bg only). */
 let sheetCourtMode = false;
 /** Bumps each one-player move so stale rAF frames cannot move extra tokens. */
@@ -613,6 +636,7 @@ const MAX_UNDO = 50;
 const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
 const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
 const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
+const viewMode = {{ view_mode|tojson if view_mode is defined else '"editor"' }};
 const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
 let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
 let isExportingVideo = false;
@@ -1327,6 +1351,7 @@ function startDrag(e, pid) {
     handleToolClick(e, pid);
     return;
   }
+  if (viewMode === 'share') return;
   saveUndoState();
   isDragging = true;
   selectedPlayer = pid;
@@ -1334,8 +1359,16 @@ function startDrag(e, pid) {
   const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
   const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const live = positionsThrough(currentStep) || {};
   const step = steps[currentStep];
-  const pos = step.positions[pid];
+  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
+  if (!pos) {
+    isDragging = false;
+    selectedPlayer = null;
+    return;
+  }
+  if (!step.positions) step.positions = {};
+  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
   e.preventDefault();
 }
@@ -1346,6 +1379,7 @@ function startDragTouch(e, pid) {
     handleToolClick(e, pid);
     return;
   }
+  if (viewMode === 'share') return;
   saveUndoState();
   isDragging = true;
   selectedPlayer = pid;
@@ -1354,41 +1388,63 @@ function startDragTouch(e, pid) {
   const pt = svg.createSVGPoint();
   pt.x = touch.clientX; pt.y = touch.clientY;
   const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const live = positionsThrough(currentStep) || {};
   const step = steps[currentStep];
-  const pos = step.positions[pid];
+  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
+  if (!pos) {
+    isDragging = false;
+    selectedPlayer = null;
+    return;
+  }
+  if (!step.positions) step.positions = {};
+  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
   e.preventDefault();
 }
 
-document.addEventListener('mousemove', (e) => {
+function applyTokenDrag(clientX, clientY) {
   if (!isDragging || !selectedPlayer) return;
   const svg = document.getElementById('courtSvg');
+  if (!svg || !svg.getScreenCTM()) return;
   const pt = svg.createSVGPoint();
-  pt.x = e.clientX; pt.y = e.clientY;
+  pt.x = clientX;
+  pt.y = clientY;
   const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
   const maxX = COURT_W - PLAYER_RADIUS;
   const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
-  steps[currentStep].positions[selectedPlayer] = {
+  const next = {
     x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
     y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
   };
+  if (!steps[currentStep].positions) steps[currentStep].positions = {};
+  steps[currentStep].positions[selectedPlayer] = next;
+  // Sheet Play All reads sheetAlignByStep — keep it in sync so drags stick.
+  if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
+    if (!sheetAlignByStep[currentStep]) {
+      sheetAlignByStep[currentStep] = { court_frac: null, positions: {} };
+    }
+    if (!sheetAlignByStep[currentStep].positions) {
+      sheetAlignByStep[currentStep].positions = {};
+    }
+    sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
+    choreographyDirty = true;
+    sheetInkPathCache.clear();
+    // Drop sticky ink for this sheet — endpoints changed; re-trace or re-save.
+    if (sheetStickyInkByStep[currentStep]) sheetStickyInkByStep[currentStep] = null;
+    if (sheetSessionInkByStep[currentStep]) sheetSessionInkByStep[currentStep] = null;
+    updateChoreographyChrome();
+    invalidatePlaybarTimeline();
+  }
   renderStep();
+}
+
+document.addEventListener('mousemove', (e) => {
+  applyTokenDrag(e.clientX, e.clientY);
 });
 
 document.addEventListener('touchmove', (e) => {
   if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
-  const touch = e.touches[0];
-  const svg = document.getElementById('courtSvg');
-  const pt = svg.createSVGPoint();
-  pt.x = touch.clientX; pt.y = touch.clientY;
-  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const maxX = COURT_W - PLAYER_RADIUS;
-  const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
-  steps[currentStep].positions[selectedPlayer] = {
-    x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
-    y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
-  };
-  renderStep();
+  applyTokenDrag(e.touches[0].clientX, e.touches[0].clientY);
   e.preventDefault();
 }, { passive: false });
 
@@ -1852,6 +1908,44 @@ function setPlayAllButton(running) {
   updatePlaybarPlayButton();
 }
 
+function updateChoreographyChrome() {
+  const actions = document.getElementById('choreographyActions');
+  const hint = document.getElementById('choreographyHint');
+  const saveBtn = document.getElementById('saveChoreographyBtn');
+  const clearBtn = document.getElementById('clearChoreographyBtn');
+  const show = playHasSheets() && !useSheetSlideshowMode() && !!playId && viewModeAllowsChoreoEdit();
+  if (actions) actions.style.display = show ? 'inline-flex' : 'none';
+  if (hint) {
+    hint.style.display = show ? 'block' : 'none';
+    if (show) {
+      if (choreographyDirty) {
+        hint.textContent = 'Spots edited — Save choreography so the next load keeps them.';
+      } else if (sheetUsingStickyChoreography) {
+        hint.textContent = 'Using saved choreography (sticky). Drag tokens to tweak; Save to update. Reset OCR to re-guess.';
+      } else {
+        hint.textContent = 'OCR draft loaded. Drag tokens to fix spacing, Play All once, then Save choreography so paths stick.';
+      }
+    }
+  }
+  if (saveBtn) {
+    saveBtn.textContent = choreographyDirty ? '💾 Save choreography ★' : '💾 Save choreography';
+    saveBtn.disabled = isPlaybackActive();
+  }
+  if (clearBtn) {
+    clearBtn.style.display = sheetUsingStickyChoreography || choreographyDirty ? '' : 'none';
+    clearBtn.disabled = isPlaybackActive();
+  }
+}
+
+function viewModeAllowsChoreoEdit() {
+  // View + editor can correct spots; public share links stay read-only.
+  return viewMode !== 'share';
+}
+
+function viewModeName() {
+  return viewMode;
+}
+
 function setSheetAlignStatus(state, detail) {
   const banner = document.getElementById('sheetAlignBanner');
   const text = document.getElementById('sheetAlignBannerText');
@@ -1863,6 +1957,7 @@ function setSheetAlignStatus(state, detail) {
     banner.style.display = 'none';
     sheetAlignReady = true;
     setPlayAllButton(playAllRunning);
+    updateChoreographyChrome();
     return;
   }
   if (useSheetSlideshowMode()) {
@@ -1874,6 +1969,7 @@ function setSheetAlignStatus(state, detail) {
     text.textContent = detail || 'Ready — sheet slideshow (opt-in)';
     sheetAlignReady = true;
     setPlayAllButton(playAllRunning);
+    updateChoreographyChrome();
     return;
   }
   banner.style.display = 'block';
@@ -1898,6 +1994,7 @@ function setSheetAlignStatus(state, detail) {
   }
   setPlayAllButton(playAllRunning);
   updatePlaybarUI();
+  updateChoreographyChrome();
 }
 
 function setSheetAnimHint(text) {
@@ -1980,7 +2077,148 @@ function showSheetUnderlay(stepIndex) {
   layer.appendChild(img);
 }
 
-async function ensureSheetAlignment() {
+async function loadStickyChoreographyDoc() {
+  if (!playId) return null;
+  try {
+    const resp = await fetch(`/api/playbook/choreography/${playId}`);
+    const data = await resp.json();
+    if (!resp.ok || !data.ok || !data.sticky || !data.choreography) return null;
+    return data.choreography;
+  } catch (err) {
+    console.warn('choreography load error', err);
+    return null;
+  }
+}
+
+function applyStickyChoreographyDoc(doc) {
+  const stickySteps = (doc && doc.steps) || [];
+  if (!stickySteps.length) return false;
+  sheetAlignByStep = steps.map((step, idx) => {
+    const match = stickySteps.find((s) => Number(s.step_index) === idx)
+      || stickySteps[idx]
+      || null;
+    if (!match) return { court_frac: null, positions: {} };
+    return {
+      court_frac: match.court_frac || null,
+      positions: match.positions || {},
+    };
+  });
+  sheetStickyInkByStep = steps.map((_, idx) => {
+    const match = stickySteps.find((s) => Number(s.step_index) === idx)
+      || stickySteps[idx]
+      || null;
+    return (match && match.ink) ? match.ink : null;
+  });
+  sheetSessionInkByStep = sheetStickyInkByStep.map((ink) => (ink ? {
+    paths: ink.paths || {},
+    marks: ink.marks || {},
+    passes: ink.passes || [],
+  } : null));
+  sheetUsingStickyChoreography = true;
+  choreographyDirty = false;
+  return sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
+}
+
+function buildChoreographyPayload(source) {
+  const stepsOut = steps.map((step, idx) => {
+    const align = sheetAlignByStep[idx] || {};
+    const ink = sheetSessionInkByStep[idx] || sheetStickyInkByStep[idx] || null;
+    const entry = {
+      step_index: idx,
+      source_image: step.source_image || '',
+      court_frac: align.court_frac || null,
+      positions: align.positions || {},
+    };
+    if (ink && (ink.paths || ink.marks || ink.passes)) {
+      entry.ink = {
+        paths: ink.paths || {},
+        marks: ink.marks || {},
+        passes: ink.passes || [],
+      };
+    }
+    return entry;
+  });
+  return { source: source || 'user_save', steps: stepsOut };
+}
+
+async function saveStickyChoreography() {
+  if (!playId || !viewModeAllowsChoreoEdit()) return;
+  if (isPlaybackActive()) {
+    setSheetAnimHint('Pause Play All before saving choreography');
+    return;
+  }
+  const btn = document.getElementById('saveChoreographyBtn');
+  if (btn) btn.disabled = true;
+  setSheetAnimHint('Saving choreography…');
+  try {
+    // Prefer session ink from a prior Play All; if missing, pull once now.
+    if (playHasSheets() && !sheetSessionInkByStep.some(Boolean)) {
+      await ensureSessionInkCaptured();
+    }
+    const payload = buildChoreographyPayload(
+      sheetUsingStickyChoreography && !choreographyDirty ? 'sticky_refresh' : 'user_save'
+    );
+    const resp = await fetch(`/api/playbook/choreography/${playId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      throw new Error((data && data.error) || 'save failed');
+    }
+    sheetUsingStickyChoreography = true;
+    choreographyDirty = false;
+    if (data.choreography) applyStickyChoreographyDoc(data.choreography);
+    setSheetAlignStatus('ready', 'Saved choreography — sticky for next load');
+    setSheetAnimHint('Choreography saved');
+  } catch (err) {
+    console.warn('save choreography', err);
+    setSheetAnimHint(`Save failed: ${err.message || err}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    updateChoreographyChrome();
+  }
+}
+
+async function clearStickyChoreography() {
+  if (!playId || !viewModeAllowsChoreoEdit()) return;
+  if (isPlaybackActive()) return;
+  if (!window.confirm('Clear saved choreography and re-run OCR on the sheets?')) return;
+  try {
+    await fetch(`/api/playbook/choreography/${playId}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('clear choreography', err);
+  }
+  sheetUsingStickyChoreography = false;
+  choreographyDirty = false;
+  sheetStickyInkByStep = [];
+  sheetSessionInkByStep = [];
+  sheetAlignByStep = [];
+  sheetAlignReady = false;
+  sheetAlignPromise = null;
+  sheetInkPathCache.clear();
+  invalidatePlaybarTimeline();
+  setSheetAlignStatus('aligning', 'Re-aligning from OCR…');
+  await ensureSheetAlignment({ forceOcr: true });
+}
+
+async function ensureSessionInkCaptured() {
+  if (!playHasSheets() || !steps.length) return;
+  for (let i = 0; i < steps.length; i += 1) {
+    if (sheetSessionInkByStep[i] || sheetStickyInkByStep[i]) continue;
+    const fromRaw = withManDefense(positionsForAnim(i));
+    const toRaw = i >= steps.length - 1
+      ? fromRaw
+      : withManDefense(positionsForAnim(i + 1));
+    // eslint-disable-next-line no-await-in-loop
+    const bundle = await fetchSheetInkPaths(i, fromRaw, toRaw, { skipSticky: true });
+    sheetSessionInkByStep[i] = bundle;
+  }
+}
+
+async function ensureSheetAlignment(options = {}) {
+  const forceOcr = !!options.forceOcr;
   // Opt-in slideshow skips OCR; default animation always aligns imported sheets.
   if (useSheetSlideshowMode()) {
     sheetAlignByStep = [];
@@ -1994,8 +2232,13 @@ async function ensureSheetAlignment() {
     setSheetAlignStatus('ready', 'Ready to play');
     return;
   }
-  if (sheetAlignReady && sheetAlignByStep.length === steps.length) {
-    setSheetAlignStatus('ready', 'Ready to play');
+  if (!forceOcr && sheetAlignReady && sheetAlignByStep.length === steps.length) {
+    setSheetAlignStatus(
+      'ready',
+      sheetUsingStickyChoreography
+        ? 'Ready — saved choreography'
+        : (choreographyDirty ? 'Ready — unsaved edits' : 'Ready to play')
+    );
     return;
   }
   if (sheetAlignPromise) return sheetAlignPromise;
@@ -2003,6 +2246,23 @@ async function ensureSheetAlignment() {
   setSheetAlignStatus('aligning');
   setSheetAnimHint('Aligning sheets…');
   sheetAlignPromise = (async () => {
+    if (!forceOcr) {
+      const sticky = await loadStickyChoreographyDoc();
+      if (sticky && applyStickyChoreographyDoc(sticky)) {
+        setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
+        setSheetAnimHint('Using saved choreography');
+        if (!isPlaybackActive()) {
+          showSheetUnderlay(currentStep);
+          renderStep();
+          invalidatePlaybarTimeline();
+          ensurePlaybarTimeline();
+        }
+        return;
+      }
+    }
+
+    sheetUsingStickyChoreography = false;
+    sheetStickyInkByStep = [];
     const results = await Promise.all(steps.map(async (step, idx) => {
       if (!step.source_image) return { index: idx, court_frac: null, positions: {} };
       try {
@@ -2030,12 +2290,14 @@ async function ensureSheetAlignment() {
       court_frac: r.court_frac,
       positions: r.positions || {},
     }));
+    sheetSessionInkByStep = steps.map(() => null);
+    choreographyDirty = false;
     const anyPos = sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
     const anyFrac = sheetAlignByStep.some((a) => a.court_frac);
     if (!anyPos && !anyFrac) {
       setSheetAlignStatus('error');
     } else {
-      setSheetAlignStatus('ready', 'Ready to play');
+      setSheetAlignStatus('ready', 'Ready to play — OCR draft (Save to stick)');
     }
     setSheetAnimHint('');
     // Refresh tokens/underlay now that digits map to the court.
@@ -2229,10 +2491,21 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
   return paths;
 }
 
-async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw) {
+async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
   const step = steps[stepIndex];
   if (!step || !step.source_image || !playHasSheets()) {
     return { paths: {}, marks: {}, passes: [] };
+  }
+  const skipSticky = !!options.skipSticky;
+  if (!skipSticky && sheetStickyInkByStep[stepIndex]) {
+    const sticky = sheetStickyInkByStep[stepIndex];
+    const bundle = {
+      paths: sticky.paths || {},
+      marks: sticky.marks || {},
+      passes: sticky.passes || [],
+    };
+    sheetSessionInkByStep[stepIndex] = bundle;
+    return bundle;
   }
   // Ink tracing anchors: prefer THIS sheet's OCR only (not carry-forward from
   // earlier pages — that invented false passes toward stale digit spots).
@@ -2267,7 +2540,9 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw) {
     t: toOffense,
   });
   if (sheetInkPathCache.has(cacheKey)) {
-    return sheetInkPathCache.get(cacheKey);
+    const cached = sheetInkPathCache.get(cacheKey);
+    sheetSessionInkByStep[stepIndex] = cached;
+    return cached;
   }
 
   try {
@@ -2288,6 +2563,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw) {
       passes: data.passes || [],
     };
     sheetInkPathCache.set(cacheKey, bundle);
+    sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
   } catch (err) {
     console.warn('sheet-paths error', err);
@@ -4874,6 +5150,10 @@ function initSteps() {
   sheetAlignReady = !playHasSheets() || useSheetSlideshowMode();
   sheetAlignPromise = null;
   sheetInkPathCache.clear();
+  sheetStickyInkByStep = [];
+  sheetSessionInkByStep = [];
+  sheetUsingStickyChoreography = false;
+  choreographyDirty = false;
   updateCourtPanelLabel();
   renderCourt();
   renderStep();
@@ -4883,7 +5163,7 @@ function initSteps() {
     setSheetAlignStatus('ready', 'Ready — sheet slideshow (opt-in)');
   } else if (playHasSheets()) {
     setSheetAlignStatus('aligning');
-    // Imported sheets: OCR digit map + ink paths for token Play All.
+    // Imported sheets: sticky choreography if present, else OCR digit map.
     ensureSheetAlignment();
   } else {
     setSheetAlignStatus('ready', 'Ready to play');

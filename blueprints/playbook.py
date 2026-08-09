@@ -1358,6 +1358,66 @@ def playbook_sheet_paths_api():
         return jsonify({"error": f"sheet paths failed: {exc}"}), 500
 
 
+def _choreography_base() -> Path:
+    return Path(current_app.root_path) / "data" / "playbook"
+
+
+@playbook_bp.route("/api/playbook/choreography/<int:play_id>", methods=["GET"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_choreography_get(play_id):
+    """Load sticky choreography JSON for a play (positions + ink overrides)."""
+    from playbook_choreography import load_choreography
+
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    doc = load_choreography(play_id, base=_choreography_base())
+    if not doc:
+        return jsonify({"ok": True, "sticky": False, "choreography": None})
+    return jsonify({"ok": True, "sticky": True, "choreography": doc})
+
+
+@playbook_bp.route("/api/playbook/choreography/<int:play_id>", methods=["PUT", "POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_choreography_save(play_id):
+    """Persist sticky choreography so Play All stops re-guessing OCR/ink."""
+    from playbook_choreography import save_choreography
+
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    source = (data.get("source") or "user_save").strip() or "user_save"
+    try:
+        doc = save_choreography(
+            play_id,
+            data,
+            base=_choreography_base(),
+            source=source,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except OSError as exc:
+        return jsonify({"error": f"save failed: {exc}"}), 500
+    return jsonify({"ok": True, "sticky": True, "choreography": doc})
+
+
+@playbook_bp.route("/api/playbook/choreography/<int:play_id>", methods=["DELETE"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_choreography_delete(play_id):
+    """Clear sticky choreography — next Play All re-runs OCR + ink trace."""
+    from playbook_choreography import delete_choreography
+
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    deleted = delete_choreography(play_id, base=_choreography_base())
+    return jsonify({"ok": True, "deleted": deleted, "sticky": False})
+
+
 @playbook_bp.route("/api/playbook/categories")
 @require_feature("ENABLE_PRACTICES")
 def playbook_categories_api():
