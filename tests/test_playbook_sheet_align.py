@@ -507,7 +507,7 @@ def test_pitt5_screen_sheet_routes():
     reason="1-Game page_0032 fixture not present",
 )
 def test_game_opening_pops_and_pass():
-    """1-Game page 32: 4+5 pop, 3 to left block, Pass 1→5."""
+    """1-Game page 32: 4+5 pop, 3 to left block, Pass 1→5 (PDF landmarks)."""
     from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
 
     base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
@@ -528,13 +528,14 @@ def test_game_opening_pops_and_pass():
     assert paths["o4"][-1]["x"] < 160
     assert paths["o5"][-1]["x"] > 340
     assert paths["o3"][-1]["y"] < 70
-    # Straight pop slides (2-point).
-    assert len(paths["o4"]) == 2
-    assert len(paths["o5"]) == 2
-    # Opening formation sits near FT line (not high toward midcourt).
-    assert pos["o4"]["y"] < 185
-    assert pos["o5"]["y"] < 185
-    assert pos["o2"]["y"] < 150
+    assert len(paths["o4"]) >= 2
+    assert len(paths["o5"]) >= 2
+    # OCR wing stays near printed digit (do not force toward corner).
+    assert 180 < pos["o2"]["y"] < 240
+    # Elbows near FT band; left wing mirrors o2 height.
+    assert 160 < pos["o4"]["y"] < 210
+    assert 160 < pos["o5"]["y"] < 210
+    assert abs(pos["o3"]["y"] - pos["o2"]["y"]) < 25
     # Pass is straight to #5 pop tip (no ink midpoints past the token).
     p15 = next(
         p for p in (marked.get("passes") or [])
@@ -559,9 +560,11 @@ def test_game_screen14_routes():
     paths = marked.get("paths") or {}
     assert marks.get("o1") == "screen"
     assert marks.get("o4") == "cut"
-    assert len(paths["o1"]) == 2
+    assert len(paths["o1"]) >= 2
     assert paths["o4"][-1]["y"] > 270
     assert len(paths["o4"]) >= 3  # curl around screener
+    # Midcourt-side of screen (not baseline-side).
+    assert max(p["y"] for p in paths["o4"][:-1]) > paths["o1"][-1]["y"]
 
 
 @pytest.mark.skipif(
@@ -586,10 +589,12 @@ def test_game_reverse_passes_and_cross_screen():
     paths = marked.get("paths") or {}
     assert marks.get("o3") == "screen"
     assert marks.get("o5") == "cut"
-    assert len(paths["o3"]) == 2
+    assert len(paths["o3"]) >= 2
     assert paths["o5"][-1]["x"] < 220
     assert paths["o5"][-1]["y"] < 70
     assert len(paths["o5"]) >= 3
+    # Printed #3 on this sheet sits mid-paint (OCR), not rim-line.
+    assert 80 < pos["o3"]["y"] < 130
     for frm, to in (("o5", "o4"), ("o4", "o1")):
         pp = next(
             p for p in (marked.get("passes") or [])
@@ -618,9 +623,11 @@ def test_game_downscreen_routes():
     paths = marked.get("paths") or {}
     assert marks.get("o4") == "screen"
     assert marks.get("o3") == "cut"
-    assert len(paths["o4"]) == 2
+    assert len(paths["o4"]) >= 2
     assert paths["o3"][-1]["y"] > 270
     assert len(paths["o3"]) >= 3
+    # OCR o1 stays on printed wing (not forced further left).
+    assert pos["o1"]["x"] > 90
 
 
 @pytest.mark.skipif(
@@ -645,14 +652,17 @@ def test_game_finish_routes():
     paths = marked.get("paths") or {}
     assert marks.get("o4") == "screen"
     assert marks.get("o5") == "cut"
-    assert len(paths["o4"]) == 2
+    assert len(paths["o4"]) >= 2
     assert paths["o5"][-1]["x"] > 280
     assert paths["o5"][-1]["y"] < 70
     assert len(paths["o5"]) >= 3
     # 5 curls ABOVE the screen (midcourt side) before dropping to the block.
-    assert paths["o5"][1]["y"] > paths["o4"][-1]["y"]
+    assert max(p["y"] for p in paths["o5"][:-1]) > paths["o4"][-1]["y"]
     # 4's screen is low (basket-side).
     assert paths["o4"][-1]["y"] < 130
+    # OCR o1 / o4 kept; #5 gap-filled at left post (not rim y=48 seed).
+    assert pos["o1"]["x"] > 90
+    assert 80 < pos["o5"]["y"] < 130
     for frm, to in (("o1", "o3"), ("o3", "o5")):
         pp = next(
             p for p in (marked.get("passes") or [])
@@ -671,28 +681,27 @@ def test_game_finish_routes():
     assert gap >= 60.0
 
 
-def test_game_opening_seeds_ft_line_and_basket_blocks_without_fixture():
-    """Scott spacing: FT-line 2/3/4/5, basket-line blocks, midcourt-side curls."""
+def test_game_opening_seeds_prefer_ocr_and_pdf_landmarks_without_fixture():
+    """Gap-fill elbows/wings from PDF landmarks; never overwrite OCR o2."""
     from playbook_sheet_align import (
         apply_game_sequence_routes,
         seed_game_sheet_positions,
         _LEFT_BLOCK,
         _RIGHT_BLOCK,
+        _ELBOW_L,
+        _POP_L,
+        _POP_R,
     )
 
-    # Opening: force FT-line formation even when OCR parks wings high.
     opening = {
         "o1": {"x": 254.6, "y": 301.0},
-        "o2": {"x": 433.5, "y": 209.2},
-        "o3": {"x": 68.0, "y": 215.0},
-        "o4": {"x": 185.0, "y": 205.0},
-        "o5": {"x": 315.0, "y": 205.0},
+        "o2": {"x": 433.5, "y": 209.2},  # OCR wing — must stick
     }
     seed_game_sheet_positions(opening, image_path="page_0032.png")
-    assert opening["o2"]["y"] < 150
-    assert opening["o3"]["y"] < 185
-    assert opening["o4"]["y"] < 185
-    assert opening["o5"]["y"] < 185
+    assert opening["o2"]["y"] == 209.2
+    assert abs(opening["o4"]["x"] - _ELBOW_L["x"]) < 1
+    assert abs(opening["o4"]["y"] - _ELBOW_L["y"]) < 1
+    assert "o3" in opening and "o5" in opening
 
     paths, marks, passes = {}, {}, []
     apply_game_sequence_routes(
@@ -700,17 +709,17 @@ def test_game_opening_seeds_ft_line_and_basket_blocks_without_fixture():
     )
     assert marks["o4"] == "cut" and marks["o5"] == "cut" and marks["o3"] == "cut"
     assert paths["o3"][-1]["y"] <= _LEFT_BLOCK["y"] + 1
-    assert paths["o4"][-1]["x"] < 160
-    assert paths["o5"][-1]["x"] > 340
+    assert abs(paths["o4"][-1]["x"] - _POP_L["x"]) < 1
+    assert abs(paths["o5"][-1]["x"] - _POP_R["x"]) < 1
     assert any(p.get("fromPid") == "o1" and p.get("toPid") == "o5" for p in passes)
 
     # Screen14: 4 goes above screen (higher y) toward top.
     screen14 = {
         "o1": {"x": 254.6, "y": 301.0},
-        "o2": {"x": 433.5, "y": 125.0},
-        "o3": dict(_LEFT_BLOCK),
-        "o4": {"x": 118.0, "y": 200.0},
-        "o5": {"x": 382.0, "y": 200.0},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 178.1, "y": 99.8},
+        "o4": dict(_POP_L),
+        "o5": dict(_POP_R),
     }
     paths, marks, passes = {}, {}, []
     apply_game_sequence_routes(
@@ -720,20 +729,21 @@ def test_game_opening_seeds_ft_line_and_basket_blocks_without_fixture():
     assert paths["o4"][1]["y"] > paths["o1"][-1]["y"]
     assert paths["o4"][-1]["y"] > 270
 
-    # Finish: low screen + 5 above then right block.
+    # Finish: keep OCR o1; low screen + 5 above then right block.
     finish = {
-        "o1": {"x": 72.0, "y": 250.0},
-        "o2": {"x": 433.5, "y": 125.0},
+        "o1": {"x": 101.1, "y": 250.3},
+        "o2": {"x": 433.5, "y": 209.2},
         "o3": {"x": 248.9, "y": 292.1},
-        "o4": {"x": 290.0, "y": 155.0},
-        "o5": dict(_LEFT_BLOCK),
+        "o4": {"x": 298.1, "y": 179.5},
+        "o5": {"x": 178.0, "y": 100.0},
     }
     paths, marks, passes = {}, {}, []
     apply_game_sequence_routes(
         None, finish, paths, marks, passes, image_path="page_0036.png"
     )
+    assert finish["o1"]["x"] == 101.1  # not forced to 72
     assert marks["o4"] == "screen" and marks["o5"] == "cut"
     assert paths["o4"][-1]["y"] < 130
-    assert paths["o5"][1]["y"] > paths["o4"][-1]["y"]
+    assert max(p["y"] for p in paths["o5"][:-1]) > paths["o4"][-1]["y"]
     assert abs(paths["o5"][-1]["x"] - _RIGHT_BLOCK["x"]) < 2
     assert abs(paths["o5"][-1]["y"] - _RIGHT_BLOCK["y"]) < 2
