@@ -16,6 +16,7 @@ Routes included:
 - schedule_record_game (/schedule/games/<int:game_id>/record POST)
 - videos_page (/videos)              – Video listing page
 - film (/film, /film/<filename>)    – Film tool page
+- assisted_stat_sample (/film/assisted-stat-sample) – SAMPLE prototype (delete me)
 - uploaded_file (/uploads/<filename>) – Serve uploaded files
 - settings_page (/settings GET POST) – Application settings
 - custom_weights_guide_page (/settings/custom-weights)
@@ -1667,6 +1668,13 @@ def video_trim_page(vid_id):
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def review_page():
     return render_template("review_events.html")
+
+
+@core.route("/film/assisted-stat-sample")
+def assisted_stat_sample():
+    """SAMPLE / DELETE ME — static AI-assisted stating prototype (fake data)."""
+    root = os.path.abspath(os.path.join(current_app.root_path, "docs", "prototypes"))
+    return send_from_directory(root, "assisted_stat_sample.html")
 
 
 @core.route("/film")

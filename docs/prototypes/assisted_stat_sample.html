@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAMPLE — Assisted Stat UI — Liberty Basketball</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --color-primary:   #01696f;
+      --color-primary-d: #015558;
+      --color-bg:        #f7f6f2;
+      --color-surface:   #ffffff;
+      --color-border:    #e2e0da;
+      --color-text:      #1a1a1a;
+      --color-muted:     #6b7280;
+      --color-success:   #059669;
+      --color-danger:    #dc2626;
+      --color-warn:      #d97706;
+      --radius:          8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .sample-banner {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #7c2d12;
+      color: #fff7ed;
+      text-align: center;
+      padding: 10px 16px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-size: 0.85rem;
+      border-bottom: 3px solid #fb923c;
+    }
+    .sample-banner code {
+      background: rgba(0,0,0,0.25);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    nav.fake-nav {
+      background: var(--color-primary);
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      color: #fff;
+    }
+    nav.fake-nav .brand { font-weight: 700; }
+    nav.fake-nav .pill {
+      margin-left: auto;
+      background: #fb923c;
+      color: #7c2d12;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.06em;
+    }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .tabs button {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--color-muted);
+    }
+    .tabs button.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+    .tabs .sample-tag {
+      align-self: center;
+      font-size: 0.75rem;
+      color: #c2410c;
+      font-weight: 700;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    h1 { font-size: 1.35rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin-bottom: 8px; }
+    .muted { color: var(--color-muted); }
+    .sample-label {
+      display: inline-block;
+      background: #ffedd5;
+      color: #9a3412;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    table.games {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    table.games th, table.games td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.9rem;
+    }
+    table.games th { color: var(--color-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.games tr:hover td { background: #f0fdfa; }
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover { background: var(--color-primary-d); }
+    .btn-ghost { background: #fff; border: 1px solid var(--color-border); color: var(--color-text); }
+    .btn-accept { background: var(--color-success); color: #fff; }
+    .btn-correct { background: var(--color-warn); color: #fff; }
+    .btn-reject { background: var(--color-danger); color: #fff; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .scoreboard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+    }
+    .score-team { text-align: center; min-width: 110px; }
+    .score-team .name { font-size: 0.75rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .score-team .pts { font-size: 2.2rem; font-weight: 700; line-height: 1.1; margin-top: 2px; }
+    .score-vs { font-size: 0.7rem; color: var(--color-muted); }
+
+    .gate {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border: 1px solid #a7f3d0;
+      background: #ecfdf5;
+      color: #065f46;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .gate.bad {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .video-ph {
+      background: #0f172a;
+      border-radius: 10px;
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      color: #94a3b8;
+      position: relative;
+      overflow: hidden;
+    }
+    .video-ph::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(1,105,111,0.35), transparent 45%),
+        repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(148,163,184,0.06) 28px, rgba(148,163,184,0.06) 29px);
+    }
+    .video-ph .inner { position: relative; text-align: center; z-index: 1; }
+    .video-ph .play {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.35);
+      display: grid; place-items: center;
+      margin: 0 auto 10px;
+      font-size: 1.25rem; color: #fff;
+    }
+    .video-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; background: #111; color: #e2e8f0;
+      border-radius: 0 0 10px 10px; margin-top: -6px; font-size: 0.8rem;
+      font-family: ui-monospace, monospace;
+    }
+
+    .candidate {
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .candidate:hover, .candidate.active {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(1, 105, 111, 0.12);
+    }
+    .candidate.done-accept { opacity: 0.55; border-color: #a7f3d0; }
+    .candidate.done-reject { opacity: 0.4; border-color: #fecaca; text-decoration: line-through; }
+    .candidate .meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: var(--color-muted); }
+    .candidate .title { font-weight: 700; font-size: 1rem; }
+    .candidate .prefill { margin-top: 6px; font-size: 0.85rem; }
+    .conf {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: #ecfdf5;
+      color: #047857;
+    }
+    .conf.mid { background: #fffbeb; color: #b45309; }
+    .conf.low { background: #fef2f2; color: #b91c1c; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .actions .btn { padding: 12px 8px; font-size: 0.9rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #134e4a;
+      color: #ecfdf5;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 2000;
+    }
+    .toast.show { opacity: 1; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      width: min(440px, 100%);
+      padding: 18px;
+      border: 2px dashed #fb923c;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin-bottom: 4px; }
+    .modal .fields { display: grid; gap: 10px; margin: 14px 0; }
+    .modal label { display: grid; gap: 4px; font-size: 0.8rem; font-weight: 600; color: var(--color-muted); }
+    .modal input, .modal select {
+      padding: 9px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font: inherit;
+      color: var(--color-text);
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .note {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--color-primary);
+      background: #f0fdfa;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+      color: #134e4a;
+    }
+  </style>
+</head>
+<body>
+  <div class="sample-banner">
+    SAMPLE / DELETE ME — AI-assisted manual stating prototype · fake data only ·
+    open via <code>/film/assisted-stat-sample</code> or this file
+  </div>
+
+  <nav class="fake-nav" aria-label="Sample nav">
+    <span class="brand">Liberty Basketball</span>
+    <span class="muted" style="color:rgba(255,255,255,0.75);font-size:0.85rem;">Film → Assisted Stat</span>
+    <span class="pill">SAMPLE</span>
+  </nav>
+
+  <div class="wrap">
+    <h1>Assisted stating <span class="sample-label">SAMPLE</span></h1>
+    <p class="muted" style="margin-bottom:14px;">
+      CV / teach-loop drafts candidates. Coach confirms. Overnight detection can keep running — product priority is this review UI.
+    </p>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="active" data-tab="games" role="tab">a. Game list</button>
+      <button type="button" data-tab="workspace" role="tab">b. Assisted workspace</button>
+      <button type="button" data-tab="correct" role="tab">c. Correct modal</button>
+      <span class="sample-tag">All screens = SAMPLE</span>
+    </div>
+
+    <!-- A: Game list -->
+    <section id="panel-games" class="panel active" role="tabpanel">
+      <div class="card">
+        <h2>Pick a game to stat <span class="sample-label">SAMPLE</span></h2>
+        <p class="muted">Fake queue — candidates come from overnight / batch detection drafts.</p>
+        <table class="games">
+          <thead>
+            <tr>
+              <th>Game</th>
+              <th>Date</th>
+              <th>Draft events</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Liberty vs Summit</strong></td>
+              <td>2026-01-14</td>
+              <td>42 pending</td>
+              <td>Q1–Q2 drafts ready</td>
+              <td><button class="btn btn-primary" type="button" data-open-workspace>Stat this game</button></td>
+            </tr>
+            <tr>
+              <td><strong>Liberty vs Mountain View</strong></td>
+              <td>2026-01-21</td>
+              <td>18 pending</td>
+              <td>Detection running…</td>
+              <td><button class="btn btn-ghost" type="button" disabled>Waiting</button></td>
+            </tr>
+            <tr>
+              <td><strong>Liberty vs Corner Canyon</strong></td>
+              <td>2026-02-04</td>
+              <td>0 pending</td>
+              <td>Coach confirmed</td>
+              <td><button class="btn btn-ghost" type="button">View ledger</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="note">
+          Reuses existing games / film list patterns. Real MVP would list games with unreviewed <code>events</code> rows (source=ai draft).
+        </div>
+      </div>
+    </section>
+
+    <!-- B: Workspace -->
+    <section id="panel-workspace" class="panel" role="tabpanel">
+      <div class="scoreboard">
+        <div class="score-team">
+          <div class="name">Liberty <span class="sample-label">SAMPLE</span></div>
+          <div class="pts" id="score-home">18</div>
+        </div>
+        <div class="score-vs">RUNNING SCORE</div>
+        <div class="score-team">
+          <div class="name">Summit</div>
+          <div class="pts" id="score-away">14</div>
+        </div>
+      </div>
+
+      <div class="gate" id="quarter-gate">
+        <span>Quarter gate: video <strong>18</strong> — you <strong id="gate-you">18</strong> ✓</span>
+        <span class="muted" style="color:inherit;opacity:0.85;font-weight:500;">Mismatch blocks next quarter until fixed</span>
+      </div>
+
+      <div class="workspace">
+        <div>
+          <div class="video-ph" aria-label="Video placeholder">
+            <div class="inner">
+              <div class="play">▶</div>
+              <div style="color:#fff;font-weight:700;">Video placeholder</div>
+              <div style="font-size:0.8rem;margin-top:4px;">No real video wired — SAMPLE</div>
+            </div>
+          </div>
+          <div class="video-bar">
+            <span>Q2 · 04:12</span>
+            <span style="margin-left:auto;color:#94a3b8;">Seek on candidate select</span>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px;">
+          <h2>Candidate events <span class="sample-label">SAMPLE</span></h2>
+          <p class="muted" style="margin-bottom:10px;font-size:0.85rem;">AI draft · jersey + type prefilled · Accept / Correct / Reject</p>
+
+          <div id="candidates"></div>
+
+          <div class="actions">
+            <button class="btn btn-accept" type="button" id="btn-accept">Accept</button>
+            <button class="btn btn-correct" type="button" id="btn-correct">Correct</button>
+            <button class="btn btn-reject" type="button" id="btn-reject">Reject</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        Layout mirrors Film Tool (video left, AI events right) from <code>templates/film_tool.html</code> + review Accept/Correct/Reject from <code>review_events.html</code>.
+      </div>
+    </section>
+
+    <!-- C: Correct modal (also opened from workspace) -->
+    <section id="panel-correct" class="panel" role="tabpanel">
+      <div class="card">
+        <h2>Correct modal <span class="sample-label">SAMPLE</span></h2>
+        <p class="muted" style="margin-bottom:12px;">Change event type / jersey / points before writing a correction.</p>
+        <button class="btn btn-correct" type="button" id="btn-open-modal-demo">Open Correct modal</button>
+        <div class="note">
+          Real MVP: update <code>events</code> + optional <code>human_corrections</code> row (see <code>docs/REVIEW_WORKFLOW_PLAN.md</code>). No new schema required for a thin confirm UI.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="correct-modal" role="dialog" aria-modal="true" aria-labelledby="correct-title">
+    <div class="modal">
+      <h3 id="correct-title">Correct event <span class="sample-label">SAMPLE</span></h3>
+      <p class="muted" style="font-size:0.85rem;">Prefill from AI draft — coach overrides.</p>
+      <div class="fields">
+        <label>Event type
+          <select id="fix-type">
+            <option>2PT Make</option>
+            <option>3PT Make</option>
+            <option>2PT Miss</option>
+            <option>3PT Miss</option>
+            <option>Free Throw Make</option>
+            <option>Turnover</option>
+            <option>Rebound</option>
+            <option>Foul</option>
+          </select>
+        </label>
+        <label>Jersey #
+          <input id="fix-jersey" type="text" value="23" />
+        </label>
+        <label>Points
+          <input id="fix-points" type="number" min="0" max="3" value="2" />
+        </label>
+        <label>Note (optional)
+          <input id="fix-note" type="text" placeholder="e.g. tip-in, not pull-up" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" type="button" id="btn-modal-save">Save correction</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (function () {
+      const FAKE = [
+        { t: "04:18", type: "2PT Make", jersey: "23", pts: 2, conf: 0.91, team: "home" },
+        { t: "03:52", type: "3PT Miss", jersey: "11", pts: 0, conf: 0.74, team: "home" },
+        { t: "03:41", type: "Rebound", jersey: "5", pts: 0, conf: 0.62, team: "away" },
+        { t: "03:12", type: "2PT Make", jersey: "32", pts: 2, conf: 0.88, team: "away" },
+        { t: "02:55", type: "Turnover", jersey: "23", pts: 0, conf: 0.55, team: "home" },
+      ];
+
+      let selected = 0;
+      let home = 18;
+      let away = 14;
+      let youScore = 18;
+
+      const list = document.getElementById("candidates");
+      const toast = document.getElementById("toast");
+      const modal = document.getElementById("correct-modal");
+
+      function confClass(c) {
+        if (c >= 0.85) return "conf";
+        if (c >= 0.65) return "conf mid";
+        return "conf low";
+      }
+
+      function render() {
+        list.innerHTML = FAKE.map((e, i) => {
+          const done = e._status ? ` done-${e._status}` : "";
+          const active = i === selected ? " active" : "";
+          return (
+            `<div class="candidate${active}${done}" data-i="${i}">` +
+            `<div class="meta"><span>${e.t}</span><span class="${confClass(e.conf)}">${Math.round(e.conf * 100)}% draft</span></div>` +
+            `<div class="title">${e.type}</div>` +
+            `<div class="prefill">Jersey <strong>#${e.jersey}</strong> · ${e.pts} pts · ${e.team === "home" ? "Liberty" : "Summit"}</div>` +
+            (e._status ? `<div class="muted" style="margin-top:6px;font-size:0.75rem;">${e._status.toUpperCase()}</div>` : "") +
+            `</div>`
+          );
+        }).join("");
+        document.getElementById("score-home").textContent = home;
+        document.getElementById("score-away").textContent = away;
+        document.getElementById("gate-you").textContent = youScore;
+        const gate = document.getElementById("quarter-gate");
+        const ok = youScore === 18;
+        gate.classList.toggle("bad", !ok);
+        gate.querySelector("span").innerHTML = ok
+          ? `Quarter gate: video <strong>18</strong> — you <strong>${youScore}</strong> ✓`
+          : `Quarter gate: video <strong>18</strong> — you <strong>${youScore}</strong> ✗ fix before Q3`;
+      }
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.classList.remove("show"), 1600);
+      }
+
+      function current() { return FAKE[selected]; }
+
+      function openModal() {
+        const e = current();
+        if (!e || e._status) return;
+        document.getElementById("fix-type").value = e.type;
+        document.getElementById("fix-jersey").value = e.jersey;
+        document.getElementById("fix-points").value = e.pts;
+        document.getElementById("fix-note").value = "";
+        modal.classList.add("open");
+      }
+
+      function closeModal() { modal.classList.remove("open"); }
+
+      function accept() {
+        const e = current();
+        if (!e || e._status) return;
+        e._status = "accept";
+        if (e.pts && e.team === "home") { home += e.pts; youScore += e.pts; }
+        if (e.pts && e.team === "away") away += e.pts;
+        showToast("SAMPLE: accepted (not saved)");
+        selectNext();
+      }
+
+      function reject() {
+        const e = current();
+        if (!e || e._status) return;
+        e._status = "reject";
+        showToast("SAMPLE: rejected (not saved)");
+        selectNext();
+      }
+
+      function selectNext() {
+        const next = FAKE.findIndex((e, i) => i > selected && !e._status);
+        selected = next >= 0 ? next : FAKE.findIndex((e) => !e._status);
+        if (selected < 0) selected = 0;
+        render();
+      }
+
+      list.addEventListener("click", (ev) => {
+        const row = ev.target.closest(".candidate");
+        if (!row) return;
+        selected = Number(row.dataset.i);
+        render();
+      });
+
+      document.getElementById("btn-accept").addEventListener("click", accept);
+      document.getElementById("btn-reject").addEventListener("click", reject);
+      document.getElementById("btn-correct").addEventListener("click", openModal);
+      document.getElementById("btn-open-modal-demo").addEventListener("click", () => {
+        document.querySelector('[data-tab="workspace"]').click();
+        openModal();
+      });
+      document.getElementById("btn-modal-cancel").addEventListener("click", closeModal);
+      document.getElementById("btn-modal-save").addEventListener("click", () => {
+        const e = current();
+        if (!e || e._status) { closeModal(); return; }
+        const pts = Number(document.getElementById("fix-points").value) || 0;
+        e.type = document.getElementById("fix-type").value;
+        e.jersey = document.getElementById("fix-jersey").value;
+        e.pts = pts;
+        e._status = "accept";
+        if (pts && e.team === "home") { home += pts; youScore += pts; }
+        if (pts && e.team === "away") away += pts;
+        closeModal();
+        showToast("SAMPLE: corrected (not saved)");
+        selectNext();
+      });
+      modal.addEventListener("click", (ev) => { if (ev.target === modal) closeModal(); });
+
+      document.querySelectorAll(".tabs button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+          document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+        });
+      });
+
+      document.querySelectorAll("[data-open-workspace]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelector('[data-tab="workspace"]').click();
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
