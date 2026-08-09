@@ -356,6 +356,40 @@ def _is_court_geometry(pts: list[tuple[float, float]], court: tuple[float, float
     return False
 
 
+# Fast Scout / FastDraw play-stroke snap radii (PDF points).
+# Solid cuts stay tight; dashed passes get a modest bump (Rip p122 start was 66.7).
+_START_DIST_CUT = 60.0
+_START_DIST_PASS = 75.0
+_END_DIST = 60.0
+
+
+def _has_dash_pattern(dashes: Any) -> bool:
+    """True when FastDraw stroke has a non-empty dash array (pass ink in this PDF).
+
+    Proven on Fast Scout Plays: pass = ``[ 5.25 5.25 ] 0``, cut = ``[] 0``.
+    Scott's typical coaching convention (dash=cut, solid=pass) is **inverted**
+    relative to this FastDraw export — we follow the PDF attrs.
+    """
+    if dashes is None:
+        return False
+    if isinstance(dashes, (list, tuple)):
+        try:
+            return any(float(x) > 0 for x in dashes)
+        except (TypeError, ValueError):
+            return len(dashes) > 0
+    s = str(dashes).strip()
+    m = re.match(r"\[\s*([^\]]*)\]", s)
+    if not m:
+        return False
+    inner = m.group(1).strip()
+    if not inner:
+        return False
+    try:
+        return any(float(x) > 0 for x in inner.split())
+    except ValueError:
+        return True
+
+
 def _nearest_oid(
     pt: tuple[float, float],
     positions_pdf: dict[str, tuple[float, float]],
@@ -405,7 +439,7 @@ def _extract_ink(
         if L < 35:
             continue
 
-        # Dribble squiggles: long filled black multi-segment paths.
+        # Dribble squiggles: long filled black multi-segment paths (not stroke dashes).
         if fill and color is None and len(d.get("items") or []) >= 20 and L > 150:
             pts_s = _simplify(pts, min_dist=6.0)
             if _is_court_geometry(pts_s, court, width=3.0):
@@ -421,7 +455,7 @@ def _extract_ink(
             marks[oid] = "dribble"
             continue
 
-        # Play strokes: thicker dashed black lines (cuts / passes / screens).
+        # Play strokes: thicker black lines — dash pattern = pass, solid = cut.
         if color is None or fill:
             continue
         if width is None or width < 2.2:
@@ -432,45 +466,53 @@ def _extract_ink(
         if L < 130 and abs(pts[0][0] - pts[-1][0]) < 8 and abs(pts[0][1] - pts[-1][1]) < 8:
             continue
 
+        is_pass_style = _has_dash_pattern(d.get("dashes"))
+        start_max = _START_DIST_PASS if is_pass_style else _START_DIST_CUT
+
         pts_s = _simplify(pts, min_dist=3.5)
         start, end = pts_s[0], pts_s[-1]
-        # Orient start toward a digit when possible.
-        start_oid = _nearest_oid(start, positions_pdf, max_dist=60.0)
-        end_oid = _nearest_oid(end, positions_pdf, max_dist=60.0)
+        # Attribute by endpoints (not midpoint): mover/passer = start, receiver = end.
+        # Orient from dash/style + endpoints: keep PDF order when start snaps; else
+        # reverse once if only the geometric end is near a digit. Not tip≠start.
+        start_oid = _nearest_oid(start, positions_pdf, max_dist=start_max)
+        end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
         if start_oid is None and end_oid is not None:
             pts_s = list(reversed(pts_s))
             start, end = pts_s[0], pts_s[-1]
-            start_oid, end_oid = end_oid, _nearest_oid(end, positions_pdf, max_dist=60.0)
+            start_oid = end_oid
+            end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
         if start_oid is None:
             continue
 
         svg = [_pdf_to_svg(x, y, court) for x, y in pts_s]
         svg[0] = {"x": float(positions[start_oid]["x"]), "y": float(positions[start_oid]["y"])}
 
-        # Pass heuristic: endpoint near a *different* digit (or next-page tip).
-        tip_oid = end_oid
-        if tip_oid is None and next_positions:
-            # Map next SVG tips into this page PDF space for proximity.
-            tip_oid = _nearest_next(end, next_positions, court)
-
-        kind = "cut"
-        if tip_oid and tip_oid != start_oid:
-            kind = "pass"
-            passes.append(
-                {
-                    "fromPid": start_oid,
-                    "toPid": tip_oid,
-                    "type": "pass",
-                    "points": svg,
-                }
-            )
-            # Still keep a path for the passer so Play All can animate.
+        if is_pass_style:
+            tip_oid = end_oid
+            if tip_oid is None and next_positions:
+                tip_oid = _nearest_next(end, next_positions, court)
+            if tip_oid and tip_oid != start_oid:
+                if tip_oid in positions:
+                    svg[-1] = {
+                        "x": float(positions[tip_oid]["x"]),
+                        "y": float(positions[tip_oid]["y"]),
+                    }
+                passes.append(
+                    {
+                        "fromPid": start_oid,
+                        "toPid": tip_oid,
+                        "type": "pass",
+                        "points": svg,
+                    }
+                )
+            # Keep a path for the passer (Rip p120) or dashed-with-no-tip (Rip p122).
             if start_oid not in paths:
                 paths[start_oid] = svg
                 marks[start_oid] = "pass"
             continue
 
-        # Prefer longer path if multiple strokes attribute to same player.
+        # Solid → cut (never invent passes from tip proximity).
+        kind = "cut"
         prev = paths.get(start_oid)
         if prev is None or _path_len([(p["x"], p["y"]) for p in svg]) > _path_len(
             [(p["x"], p["y"]) for p in prev]

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from playbook_vector_extract import (
+    _has_dash_pattern,
     classify_pdf,
     extract_page,
     extract_sheet_from_image_url,
@@ -56,6 +57,61 @@ def test_extract_rip_page122_has_dribble_or_cut_ink():
     assert ink["paths"] or ink["passes"]
     # At least one attributed path / pass.
     assert len(ink["paths"]) + len(ink["passes"]) >= 1
+
+
+def test_has_dash_pattern_pass_vs_cut_encoding():
+    """This PDF: non-empty dash array = pass; [] = cut (Scott's typical is inverted)."""
+    assert _has_dash_pattern("[ 5.25 5.25 ] 0") is True
+    assert _has_dash_pattern("[5.25 5.25] 0") is True
+    assert _has_dash_pattern("[] 0") is False
+    assert _has_dash_pattern("[]") is False
+    assert _has_dash_pattern(None) is False
+    assert _has_dash_pattern([5.25, 5.25]) is True
+    assert _has_dash_pattern([]) is False
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_vector_dashed_pass_solid_cut_known_sheets():
+    """Dash→pass / solid→cut on Rip, 1-Game, Triangle, Pitt (no tip≠start invents)."""
+    rip120 = extract_page(PDF, 120)
+    pairs120 = {(p["fromPid"], p["toPid"]) for p in rip120["ink"]["passes"]}
+    assert pairs120 == {("o1", "o3")}
+    assert rip120["ink"]["marks"].get("o1") == "pass"
+
+    game32 = extract_page(PDF, 32)
+    pairs32 = {(p["fromPid"], p["toPid"]) for p in game32["ink"]["passes"]}
+    assert pairs32 == {("o1", "o5")}
+    assert game32["ink"]["marks"].get("o3") == "cut"
+    assert game32["ink"]["marks"].get("o1") == "pass"
+
+    tri = extract_page(PDF, 127)
+    pairs_tri = {(p["fromPid"], p["toPid"]) for p in tri["ink"]["passes"]}
+    # Only the dashed stroke is a pass; solids toward other digits stay cuts.
+    assert pairs_tri == {("o1", "o2")}
+    assert ("o5", "o1") not in pairs_tri
+    assert ("o1", "o3") not in pairs_tri
+    assert ("o3", "o5") not in pairs_tri
+    marks_tri = tri["ink"]["marks"]
+    assert marks_tri.get("o5") == "cut"
+    assert marks_tri.get("o3") == "cut"
+
+    pitt = extract_page(PDF, 173)
+    assert pitt["ink"]["passes"] == []
+    marks_pitt = pitt["ink"]["marks"]
+    assert marks_pitt.get("o4") == "cut"
+    assert marks_pitt.get("o5") == "cut"
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_rip122_dashed_stroke_attributed_via_raised_start():
+    """Rip p122 dashed start was 66.7px > old 60 — still attributed after bump."""
+    step = extract_page(PDF, 122)
+    ink = step["ink"]
+    assert ink["marks"].get("o1") == "dribble"
+    assert ink["marks"].get("o2") == "cut"
+    # Dashed stroke near o4 (previously dropped) now owns a pass-marked path.
+    assert ink["marks"].get("o4") == "pass"
+    assert "o4" in ink["paths"]
 
 
 @pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
