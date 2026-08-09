@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (extract → review → render)
+Updated: 2026-08-09 (add/delete sticky roster)
 
 Branch: `cursor/sticky-choreography-ac1f`
 
@@ -8,60 +8,52 @@ Branch: `cursor/sticky-choreography-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-extract-review-render |
+| **id** | playbook-sticky-add-delete-player |
 | **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
 ## Decision (Scott)
 
-1. Check whether source PDFs are vector or raster (OCR may be unnecessary).
-2. Separate pipeline: extract structured play data → human review/correct → render animation. Scott corrects **data**, not animations.
+On play detail / sticky choreography review, Scott must be able to **add** a missing offense token or **delete** an extra/wrong one when extract is wrong, then Save so Play All respects the edited roster.
 
 ## Approach
 
-Three-stage pipeline (no `schema.sql`):
+Stage 2 review chrome (same banner as Save choreography):
 
-1. **Extract** — FastDraw vector PDF ops → structured JSON; OCR only as draft fallback.
-2. **Review** — sticky choreography JSON + drag UI; Save/Reset persist across reloads.
-3. **Render** — Play All reads sticky/corrected data only when present.
+1. **＋ Add player** — next free `o1`–`o5` on the current sheet (prompt 1–5 to re-place if all present); writes `sheetAlignByStep` + step positions; marks dirty.
+2. **× on token** — removes that offense id from **all** sheets’ align positions + sticky/session ink (paths/marks/passes), so carry-forward cannot resurrect it.
+3. Persist via existing PUT `/api/playbook/choreography/<id>` → `data/playbook/choreography/{id}.json`.
+4. View-mode sheet plays can drag tokens (choreography edit), not only editor mode.
+
+Offense 1–5 only (defense still derived via man-mark offsets).
 
 ## Files
 
-- `playbook_vector_extract.py`
-- `playbook_choreography.py`
-- `blueprints/playbook.py`
 - `templates/playbook.html`
-- `tests/test_playbook_vector_extract.py`
-- `tests/test_playbook_choreography.py`
-- `docs/playbook_pipeline.md`
 - `docs/playbook_sticky_choreography.md`
 - `docs/agent_handoffs/ACTIVE.md`
 
 ## Verify
 
-- Vector classify: Fast Scout PDF → kind=vector, 0 image xrefs
-- `/api/playbook/sheet-extract` on 1-Game page_0032 → source=vector, o1..o5
-- Hard refresh sheet play → Save choreography → sticky banner
-- Play All prefers sticky; Reset extract re-runs Stage 1
-- pytest `test_playbook_vector_extract` + `test_playbook_choreography`
+- Hard refresh sheet play → Add player / × visible beside Save choreography
+- Add missing jersey → Save → reload → token still present; Play All includes it
+- × extra token → Save → reload → token gone; Play All does not animate it
+- Multi-team / Copy to / Rip / Triangle / Pitt5 / 1-Game unchanged aside from roster tools
 
 ## Report
 
 ### Proven
 
-- Source PDF `Fast Scout Plays 2021-2022.pdf` (and bulk_imports copies): creator FastDraw, PDF 1.4, 380 pages, **0** embedded images, text on all pages, drawings on 373 pages → **vector**.
-- Digit glyphs `1`–`5` extractable with positions via PyMuPDF `get_text("words")`.
-- Cut/pass/dribble strokes present as thicker draw paths (width ~2.92); court geometry is thinner (~1.46).
-- Sticky choreography JSON + Save/Reset UI already on this branch; Play All prefers sticky ink/positions.
-- Vector extract wired as Stage 1 preferred path (`sheet-extract` / sheet-align / sheet-paths).
+- Sticky JSON already stores sparse `positions` o1–o5; save path needed no schema change.
+- UI wired: Add player + per-token ×; delete clears all steps so `positionsThrough` carry-forward cannot restore the oid.
+- Drag listeners now attach in view mode when sheet choreography edit is allowed (previously editor-only).
 
 ### Inferred
 
-- Vector digit centers will be more stable than OCR for FastDraw imports; ink attribution (which stroke belongs to which player) still needs Scott review on complex pages.
-- Industry import remains FastDraw `.fdb` / authored frames; PDF vector extract is the practical bridge for Liberty’s existing library.
+- Deleting from all sheets is the right default for “extra extract token”; per-sheet-only tombstones were not needed for this slice.
 
 ### Unknown / remaining
 
-- Scott visual sign-off: Save on 1-Game / Rip after vector draft.
+- Scott visual sign-off on a play with a true missing/extra extract token.
 - Path-handle editor + `.fdb` adapter (next slice).
-- Whether every bulk-imported play still has the sibling `.pdf` beside rendered PNGs (1-Game/Rip/Triangle/Pitt 5 do).
+- Defense token authoring (only if extract ever emits defense; not in sticky today).

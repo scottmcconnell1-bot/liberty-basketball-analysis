@@ -282,6 +282,10 @@
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;">
         <span id="sheetAlignBannerText">Ready</span>
         <span id="choreographyActions" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;">
+          <button type="button" id="addPlayerChoreographyBtn" class="btn btn-secondary btn-sm"
+                  onclick="addChoreographyPlayer()" title="Add a missing offense token (1–5) on this sheet">
+            ＋ Add player
+          </button>
           <button type="button" id="saveChoreographyBtn" class="btn btn-secondary btn-sm"
                   onclick="saveStickyChoreography()" title="Save corrected play data so Play All reads sticky JSON, not a fresh extract">
             💾 Save choreography
@@ -293,7 +297,7 @@
         </span>
       </div>
       <div id="choreographyHint" style="display:none;margin-top:6px;font-size:0.72rem;font-weight:500;opacity:0.9;">
-        Drag tokens to fix spacing — then Save choreography. Play All will reuse saved spots/paths.
+        Drag tokens to fix spacing; ＋ Add player or × on a token to fix roster — then Save choreography.
       </div>
     </div>
 
@@ -470,6 +474,17 @@
   .player-token:hover circle {
     stroke-width: 3;
   }
+  .player-token .token-delete-btn {
+    cursor: pointer;
+    opacity: 0.85;
+  }
+  .player-token .token-delete-btn:hover {
+    opacity: 1;
+  }
+  .player-token.token-selected circle {
+    stroke: #fbbf24;
+    stroke-width: 3.5;
+  }
   .step-item {
     padding: 6px 8px;
     border-radius: 6px;
@@ -560,6 +575,8 @@ const DEFENSE_COLORS = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#7c3aed'];
 let steps = [];
 let currentStep = 0;
 let selectedPlayer = null;
+/** Persistent offense selection for choreography delete (survives mouseup). */
+let choreographySelectedPid = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
 let currentTool = 'select';
@@ -1178,6 +1195,9 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   g.setAttribute('data-player', pid);
   g.setAttribute('data-type', type);
   g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+  if (choreographySelectedPid && pid === choreographySelectedPid) {
+    g.classList.add('token-selected');
+  }
 
   const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
@@ -1202,10 +1222,12 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   }
   g.appendChild(text);
 
-  if (!isReadOnly) {
+  const canEditChoreo = canEditSheetChoreography();
+  // View mode blocks normal editor tools, but sheet choreography review must drag.
+  if (!isReadOnly || canEditChoreo) {
     g.addEventListener('mousedown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
-    if (type === 'offense') {
+    if (type === 'offense' && !isReadOnly) {
       g.addEventListener('dblclick', (e) => {
         e.preventDefault();
         saveUndoState();
@@ -1213,6 +1235,43 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
         renderStep();
       });
     }
+  }
+
+  if (canEditChoreo && type === 'offense') {
+    g.addEventListener('click', (e) => {
+      if (isDragging) return;
+      e.stopPropagation();
+      setChoreographySelectedPid(pid);
+    });
+    const del = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    del.setAttribute('class', 'token-delete-btn');
+    del.setAttribute('transform', 'translate(12, -14)');
+    del.setAttribute('role', 'button');
+    del.setAttribute('aria-label', `Remove player ${label}`);
+    const delBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    delBg.setAttribute('r', '7');
+    delBg.setAttribute('fill', '#991b1b');
+    delBg.setAttribute('stroke', '#fff');
+    delBg.setAttribute('stroke-width', '1');
+    const delX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    delX.setAttribute('text-anchor', 'middle');
+    delX.setAttribute('dy', '3.5');
+    delX.setAttribute('font-size', '9');
+    delX.setAttribute('font-weight', '700');
+    delX.setAttribute('fill', '#fff');
+    delX.textContent = '×';
+    del.appendChild(delBg);
+    del.appendChild(delX);
+    del.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      deleteChoreographyPlayer(pid);
+    });
+    g.appendChild(del);
   }
 
   parent.appendChild(g);
@@ -1357,6 +1416,9 @@ function startDrag(e, pid) {
   saveUndoState();
   isDragging = true;
   selectedPlayer = pid;
+  if (canEditSheetChoreography() && String(pid).startsWith('o')) {
+    setChoreographySelectedPid(pid);
+  }
   const svg = document.getElementById('courtSvg');
   const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
@@ -1385,6 +1447,9 @@ function startDragTouch(e, pid) {
   saveUndoState();
   isDragging = true;
   selectedPlayer = pid;
+  if (canEditSheetChoreography() && String(pid).startsWith('o')) {
+    setChoreographySelectedPid(pid);
+  }
   const touch = e.touches[0];
   const svg = document.getElementById('courtSvg');
   const pt = svg.createSVGPoint();
@@ -1422,20 +1487,9 @@ function applyTokenDrag(clientX, clientY) {
   steps[currentStep].positions[selectedPlayer] = next;
   // Sheet Play All reads sheetAlignByStep — keep it in sync so drags stick.
   if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
-    if (!sheetAlignByStep[currentStep]) {
-      sheetAlignByStep[currentStep] = { court_frac: null, positions: {} };
-    }
-    if (!sheetAlignByStep[currentStep].positions) {
-      sheetAlignByStep[currentStep].positions = {};
-    }
+    ensureSheetAlignStep(currentStep);
     sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
-    choreographyDirty = true;
-    sheetInkPathCache.clear();
-    // Drop sticky ink for this sheet — endpoints changed; re-trace or re-save.
-    if (sheetStickyInkByStep[currentStep]) sheetStickyInkByStep[currentStep] = null;
-    if (sheetSessionInkByStep[currentStep]) sheetSessionInkByStep[currentStep] = null;
-    updateChoreographyChrome();
-    invalidatePlaybarTimeline();
+    markSheetChoreographyDirty(currentStep);
   }
   renderStep();
 }
@@ -1915,25 +1969,29 @@ function updateChoreographyChrome() {
   const hint = document.getElementById('choreographyHint');
   const saveBtn = document.getElementById('saveChoreographyBtn');
   const clearBtn = document.getElementById('clearChoreographyBtn');
-  const show = playHasSheets() && !useSheetSlideshowMode() && !!playId && viewModeAllowsChoreoEdit();
+  const addBtn = document.getElementById('addPlayerChoreographyBtn');
+  const show = canEditSheetChoreography();
   if (actions) actions.style.display = show ? 'inline-flex' : 'none';
   if (hint) {
     hint.style.display = show ? 'block' : 'none';
     if (show) {
       if (choreographyDirty) {
-        hint.textContent = 'Spots edited — Save choreography so the next load keeps them.';
+        hint.textContent = 'Roster/spots edited — Save choreography so the next load keeps them.';
       } else if (sheetUsingStickyChoreography) {
-        hint.textContent = 'Using saved choreography (sticky). Drag tokens to tweak; Save to update. Reset extract to re-run.';
+        hint.textContent = 'Using saved choreography (sticky). Drag, Add player, or × a token; Save to update. Reset extract to re-run.';
       } else if (sheetExtractSource === 'vector') {
-        hint.textContent = 'Vector draft from FastDraw PDF (no OCR). Drag tokens to correct data, then Save choreography.';
+        hint.textContent = 'Vector draft from FastDraw PDF. Drag / Add player / × to correct roster, then Save choreography.';
       } else {
-        hint.textContent = 'OCR draft loaded. Drag tokens to fix spacing, then Save choreography so Play All stops re-guessing.';
+        hint.textContent = 'OCR draft loaded. Drag / Add player / × to fix roster, then Save choreography so Play All stops re-guessing.';
       }
     }
   }
   if (saveBtn) {
     saveBtn.textContent = choreographyDirty ? '💾 Save choreography ★' : '💾 Save choreography';
     saveBtn.disabled = isPlaybackActive();
+  }
+  if (addBtn) {
+    addBtn.disabled = isPlaybackActive();
   }
   if (clearBtn) {
     clearBtn.style.display = sheetUsingStickyChoreography || choreographyDirty ? '' : 'none';
@@ -1944,6 +2002,164 @@ function updateChoreographyChrome() {
 function viewModeAllowsChoreoEdit() {
   // View + editor can correct spots; public share links stay read-only.
   return viewMode !== 'share';
+}
+
+function canEditSheetChoreography() {
+  return playHasSheets() && !useSheetSlideshowMode() && !!playId && viewModeAllowsChoreoEdit();
+}
+
+function setChoreographySelectedPid(pid) {
+  choreographySelectedPid = pid || null;
+  const layer = document.getElementById('playerLayer');
+  if (!layer) return;
+  layer.querySelectorAll('.player-token').forEach((g) => {
+    g.classList.toggle('token-selected', !!(choreographySelectedPid && g.dataset.player === choreographySelectedPid));
+  });
+}
+
+function markSheetChoreographyDirty(stepIndex, options = {}) {
+  const idx = typeof stepIndex === 'number' ? stepIndex : currentStep;
+  choreographyDirty = true;
+  sheetInkPathCache.clear();
+  if (!options.keepInk) {
+    if (sheetStickyInkByStep[idx]) sheetStickyInkByStep[idx] = null;
+    if (sheetSessionInkByStep[idx]) sheetSessionInkByStep[idx] = null;
+  }
+  updateChoreographyChrome();
+  invalidatePlaybarTimeline();
+}
+
+function ensureSheetAlignStep(stepIndex) {
+  const idx = typeof stepIndex === 'number' ? stepIndex : currentStep;
+  if (!sheetAlignByStep[idx]) {
+    sheetAlignByStep[idx] = { court_frac: null, positions: {} };
+  }
+  if (!sheetAlignByStep[idx].positions) {
+    sheetAlignByStep[idx].positions = {};
+  }
+  return sheetAlignByStep[idx];
+}
+
+function offenseRosterOnStep(stepIndex) {
+  const idx = typeof stepIndex === 'number' ? stepIndex : currentStep;
+  const align = sheetPositionsForStep(idx) || {};
+  const stepPos = (steps[idx] && steps[idx].positions) || {};
+  const out = {};
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const p = align[oid] || stepPos[oid];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      out[oid] = { x: p.x, y: p.y };
+    }
+  }
+  return out;
+}
+
+function nextFreeOffenseId(positions) {
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    if (!positions[oid]) return oid;
+  }
+  return null;
+}
+
+function stripOidFromInk(ink, oid) {
+  if (!ink || typeof ink !== 'object') return ink;
+  const next = {
+    paths: { ...(ink.paths || {}) },
+    marks: { ...(ink.marks || {}) },
+    passes: Array.isArray(ink.passes) ? ink.passes.slice() : [],
+  };
+  delete next.paths[oid];
+  delete next.marks[oid];
+  next.passes = next.passes.filter((p) => {
+    if (!p || typeof p !== 'object') return false;
+    const fromPid = p.fromPid || p.from;
+    const toPid = p.toPid || p.to;
+    return fromPid !== oid && toPid !== oid;
+  });
+  if (!Object.keys(next.paths).length && !Object.keys(next.marks).length && !next.passes.length) {
+    return null;
+  }
+  return next;
+}
+
+function removeOffenseFromAllSteps(oid) {
+  for (let i = 0; i < steps.length; i += 1) {
+    if (steps[i] && steps[i].positions && steps[i].positions[oid]) {
+      delete steps[i].positions[oid];
+    }
+    if (steps[i] && steps[i].ball === oid) {
+      steps[i].ball = null;
+    }
+    if (sheetAlignByStep[i] && sheetAlignByStep[i].positions) {
+      delete sheetAlignByStep[i].positions[oid];
+    }
+    if (sheetStickyInkByStep[i]) {
+      sheetStickyInkByStep[i] = stripOidFromInk(sheetStickyInkByStep[i], oid);
+    }
+    if (sheetSessionInkByStep[i]) {
+      sheetSessionInkByStep[i] = stripOidFromInk(sheetSessionInkByStep[i], oid);
+    }
+  }
+}
+
+/**
+ * Place a missing offense token (o1–o5) on the current sheet.
+ * Uses the next free jersey; if all five exist, prompts for 1–5 to re-place.
+ */
+function addChoreographyPlayer() {
+  if (!canEditSheetChoreography() || isPlaybackActive()) return;
+  const roster = offenseRosterOnStep(currentStep);
+  let oid = nextFreeOffenseId(roster);
+  if (!oid) {
+    const raw = window.prompt('All jerseys 1–5 are on court. Enter 1–5 to re-place that token:', '1');
+    if (raw == null) return;
+    const n = parseInt(String(raw).trim(), 10);
+    if (!Number.isFinite(n) || n < 1 || n > 5) {
+      setSheetAnimHint('Add player needs jersey 1–5');
+      return;
+    }
+    oid = 'o' + n;
+  }
+  const jersey = parseInt(String(oid).slice(1), 10) - 1;
+  let pos = defaultOffensePos(jersey);
+  // Nudge if something already sits on the default.
+  const clash = Object.keys(roster).some((k) => {
+    if (k === oid) return false;
+    const p = roster[k];
+    return p && Math.hypot(p.x - pos.x, p.y - pos.y) < 28;
+  });
+  if (clash) {
+    pos = { x: Math.min(460, pos.x + 36), y: Math.min(430, pos.y + 24) };
+  }
+  saveUndoState();
+  ensureSheetAlignStep(currentStep);
+  sheetAlignByStep[currentStep].positions[oid] = { x: pos.x, y: pos.y };
+  if (!steps[currentStep].positions) steps[currentStep].positions = {};
+  steps[currentStep].positions[oid] = { x: pos.x, y: pos.y };
+  setChoreographySelectedPid(oid);
+  markSheetChoreographyDirty(currentStep);
+  setSheetAnimHint(`Added player ${oid.slice(1)} — drag into place, then Save`);
+  renderStep();
+}
+
+/** Remove an extra/wrong offense token from sticky roster (all sheets). */
+function deleteChoreographyPlayer(pid) {
+  if (!canEditSheetChoreography() || isPlaybackActive()) return;
+  const oid = pid || choreographySelectedPid;
+  if (!oid || !String(oid).startsWith('o')) {
+    setSheetAnimHint('Select an offense token (or use its ×) to delete');
+    return;
+  }
+  const label = playerLabel(oid);
+  if (!window.confirm(`Remove player ${label} from this play’s sticky roster?`)) return;
+  saveUndoState();
+  removeOffenseFromAllSteps(oid);
+  if (choreographySelectedPid === oid) setChoreographySelectedPid(null);
+  markSheetChoreographyDirty(currentStep, { keepInk: true });
+  setSheetAnimHint(`Removed player ${label} — Save choreography to keep`);
+  renderStep();
 }
 
 function viewModeName() {

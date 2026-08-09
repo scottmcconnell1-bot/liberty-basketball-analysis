@@ -48,9 +48,11 @@ No `schema.sql` change (same pattern as `team_key` / sheet_align_cache).
 
 1. Open a sheet play → wait for Ready (vector draft, OCR draft, or sticky).
 2. Drag tokens to match PDF spacing.
-3. Optional: ▶ Play All once (inspect paths).
-4. Click **Save choreography**.
-5. Hard refresh — banner says “saved choreography”; Play All reuses it.
+3. **Missing token:** click **＋ Add player** (next free jersey 1–5; if all present, prompt to re-place).
+4. **Extra/wrong token:** click the red **×** on that offense chip (removes it from all sheets’ sticky roster/ink).
+5. Optional: ▶ Play All once (inspect paths).
+6. Click **Save choreography**.
+7. Hard refresh — banner says “saved choreography”; Play All reuses the edited roster.
 
 **Reset extract** deletes the sticky file and re-runs Stage 1.
 
