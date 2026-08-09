@@ -349,6 +349,26 @@ body.playbook-dragging-plays .playbook-tree-item.playbook-tree-drop {
 .playbook-page-actions .form-control {
   width: min(220px, 100%);
 }
+.playbook-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f766e;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+.playbook-back-link:hover {
+  color: #115e59;
+  text-decoration: underline;
+}
+a.btn.playbook-back-link {
+  color: inherit;
+  font-weight: 600;
+}
+a.btn.playbook-back-link:hover {
+  text-decoration: none;
+}
 @media (max-width: 900px) {
   .playbook-layout {
     grid-template-columns: 1fr;

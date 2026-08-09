@@ -260,6 +260,25 @@ class TestPlaybookAPI:
 
 
 class TestPlaybookReorder:
+    def test_list_sorts_alphabetically_by_name(self, client, db):
+        """Browse list is A–Z by name even when list_order says otherwise."""
+        from blueprints.playbook import _group_plays_for_list
+
+        rows = []
+        for name, order in (("Zebra", 0), ("alpha", 1), ("Mike", 2)):
+            cur = db.execute(
+                "INSERT INTO plays (name, category, list_order) VALUES (?, ?, ?)",
+                (name, "offense", order),
+            )
+            rows.append(cur.lastrowid)
+        db.commit()
+        plays = db.execute(
+            "SELECT * FROM plays WHERE id IN (?, ?, ?)",
+            rows,
+        ).fetchall()
+        grouped = _group_plays_for_list(db, plays)
+        assert [p["name"] for p in grouped] == ["alpha", "Mike", "Zebra"]
+
     def test_reorder_top_level_plays(self, client, db):
         ids = []
         for name in ("Alpha", "Bravo", "Charlie"):
@@ -285,6 +304,16 @@ class TestPlaybookReorder:
             ids,
         ).fetchall()
         assert [row["id"] for row in rows] == new_order
+
+        # List page still renders A–Z regardless of persisted list_order.
+        page = client.get("/playbook")
+        assert page.status_code == 200
+        html = page.data.decode("utf-8")
+        pos_alpha = html.find("Alpha")
+        pos_bravo = html.find("Bravo")
+        pos_charlie = html.find("Charlie")
+        assert pos_alpha != -1 and pos_bravo != -1 and pos_charlie != -1
+        assert pos_alpha < pos_bravo < pos_charlie
 
     def test_reorder_progressions(self, client, db):
         parent = db.execute(

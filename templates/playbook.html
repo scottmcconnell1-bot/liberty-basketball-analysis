@@ -49,7 +49,7 @@
     <div class="playbook-list" id="playsTableBody" data-frame="6.2t"
          data-readonly="{{ '1' if coach_readonly else '0' }}">
       {% if not coach_readonly %}
-      <p class="playbook-dnd-hint text-muted">Click to select · Ctrl/Cmd multi · Shift range · Drag to reorder · Drag onto a category (left) to move · Double-click to open</p>
+      <p class="playbook-dnd-hint text-muted">Sorted A–Z · Click to select · Ctrl/Cmd multi · Shift range · Drag onto a category (left) to move · Double-click to open</p>
       {% endif %}
       <div class="playbook-list-items" data-group="root">
       {% for play in plays %}
@@ -148,14 +148,19 @@
 <!-- keep original page-header block from being duplicated: list mode owns header above -->
 {% if view_mode != "list" %}
 <div class="page-header" data-frame="6.1">
-  <h2>Playbook</h2>
+  <div>
+    {% if view_mode in ("editor", "view") %}
+    <a class="playbook-back-link" id="backToPlaysLink" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
+    {% endif %}
+    <h2 style="margin-top:4px;">{{ editing_play.name if editing_play and editing_play.name else 'Playbook' }}</h2>
+  </div>
+  {% if view_mode == "editor" and not editing_play %}
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">📥 Import</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">📥 Bulk Import</a>
-    <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
-           id="playSearch" oninput="filterPlays(this.value)">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
   </div>
+  {% endif %}
 </div>
 
 {% if message %}
@@ -179,7 +184,7 @@
 {% set prog_slides = sibling_progressions|default([]) if parent_play else child_progressions|default([]) %}
 {% set prog_endpoint = 'playbook.playbook_view' if is_readonly else 'playbook.playbook_edit' %}
 <div class="play-progression-bar">
-  <a href="{{ url_for('playbook.playbook_list') }}">Playbook</a>
+  <a class="playbook-back-link" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
   <span>/</span>
   <strong>{{ prog_parent.name }}</strong>
   <span class="text-muted">slides:</span>
@@ -365,7 +370,7 @@
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
         {% endif %}
         {% if view_mode != "share" %}
-        <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_list') }}">Back to Library</a>
+        <a class="btn btn-secondary btn-sm playbook-back-link" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
         {% endif %}
         {% if editing_play and editing_play.id %}
         <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
@@ -4139,7 +4144,51 @@ document.getElementById('stepNotes')?.addEventListener('change', () => {
 
 const categoryTree = {{ category_tree|tojson if category_tree else '[]' }};
 const selectedCategoryId = {{ selected_category_id|tojson if selected_category_id else 'null' }};
-let activeCategoryId = selectedCategoryId;
+const PLAYBOOK_LIST_STATE_KEY = 'liberty.playbook.listState';
+let playbookListStateReady = false;
+
+function readPlaybookListState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PLAYBOOK_LIST_STATE_KEY) || 'null');
+  } catch (err) {
+    return null;
+  }
+}
+
+function savePlaybookListState() {
+  if (!document.getElementById('playsTableBody')) return;
+  const prev = readPlaybookListState() || {};
+  const state = {
+    scrollY: window.scrollY || window.pageYOffset || 0,
+    categoryId: activeCategoryId == null ? null : activeCategoryId,
+    search: document.getElementById('playSearch')?.value || '',
+  };
+  // Before scroll restore finishes, keep the prior scrollY if we are still at top.
+  if (!playbookListStateReady && prev.scrollY && !state.scrollY) {
+    state.scrollY = prev.scrollY;
+  }
+  try {
+    sessionStorage.setItem(PLAYBOOK_LIST_STATE_KEY, JSON.stringify(state));
+  } catch (err) { /* ignore quota / private mode */ }
+}
+
+function loadInitialCategoryId() {
+  const saved = readPlaybookListState();
+  if (saved && Object.prototype.hasOwnProperty.call(saved, 'categoryId')) {
+    return saved.categoryId;
+  }
+  return selectedCategoryId;
+}
+
+function restorePlaybookListSearchInput() {
+  const saved = readPlaybookListState();
+  if (saved && typeof saved.search === 'string' && document.getElementById('playSearch')) {
+    document.getElementById('playSearch').value = saved.search;
+  }
+}
+
+let activeCategoryId = loadInitialCategoryId();
+restorePlaybookListSearchInput();
 
 function replaceCategoryTree(nextTree) {
   categoryTree.splice(0, categoryTree.length, ...(nextTree || []));
@@ -4167,6 +4216,7 @@ function applyPlayFilters() {
   if (emptyEl) {
     emptyEl.style.display = visibleCount === 0 ? '' : 'none';
   }
+  if (playbookListStateReady) savePlaybookListState();
 }
 
 function setPlayProgressionsExpanded(row, expanded, { persist = true } = {}) {
@@ -4223,6 +4273,48 @@ function filterPlays(q) {
   applyPlayFilters();
 }
 
+function restorePlaybookListScroll() {
+  if (!document.getElementById('playsTableBody')) return;
+  const saved = readPlaybookListState();
+  if (!saved) return;
+  const y = Number(saved.scrollY) || 0;
+  const applyScroll = () => window.scrollTo(0, y);
+  applyScroll();
+  requestAnimationFrame(applyScroll);
+  setTimeout(applyScroll, 50);
+  setTimeout(applyScroll, 200);
+}
+
+function initPlaybookListPositionMemory() {
+  const listRoot = document.getElementById('playsTableBody');
+  if (!listRoot) return;
+
+  // Persist before navigating into a play (View / title / double-click open).
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href*="/playbook/play/"], a[href*="/playbook/edit/"]');
+    if (link && listRoot.contains(link)) {
+      savePlaybookListState();
+    }
+  }, true);
+
+  listRoot.addEventListener('dblclick', () => {
+    savePlaybookListState();
+  }, true);
+
+  let scrollTimer = null;
+  window.addEventListener('scroll', () => {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(savePlaybookListState, 120);
+  }, { passive: true });
+
+  window.addEventListener('pagehide', savePlaybookListState);
+  window.addEventListener('beforeunload', savePlaybookListState);
+
+  restorePlaybookListScroll();
+  playbookListStateReady = true;
+  savePlaybookListState();
+}
+
 function initPlaybookTaxonomy() {
   if (!window.PlaybookTaxonomy) return;
   const treeEl = document.getElementById('playbookCategoryTree');
@@ -4251,6 +4343,22 @@ function initPlaybookTaxonomy() {
     applyPlayFilters();
   };
   window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+  // Sync breadcrumb for restored category (sessionStorage) without requiring a click.
+  if (breadcrumb && activeCategoryId) {
+    const flat = [];
+    (function walk(nodes) {
+      (nodes || []).forEach((n) => {
+        flat.push(n);
+        walk(n.children);
+      });
+    })(categoryTree);
+    const node = flat.find((n) => String(n.id) === String(activeCategoryId));
+    if (node) {
+      breadcrumb.textContent = (node.slug_path || node.name || '')
+        .replace(/\//g, ' · ')
+        .replace(/_/g, ' ');
+    }
+  }
 
   document.getElementById('addCategoryBtn')?.addEventListener('click', async () => {
     const name = prompt('New category name');
@@ -4383,20 +4491,7 @@ if (document.getElementById('playCategoryId') || document.getElementById('playbo
   initPlaybookTaxonomy();
 }
 initPlayProgressionCollapse();
-if (document.getElementById('playsTableBody') && window.PlaybookDragDrop) {
-  window.PlaybookDragDrop.init(document.getElementById('playsTableBody'), {
-    categoryTree: document.getElementById('playbookCategoryTree'),
-    onCategoryMoved(data) {
-      if (data && data.tree) replaceCategoryTree(data.tree);
-      if (typeof window.refreshPlaybookCategoryTree === 'function') {
-        window.refreshPlaybookCategoryTree();
-      } else {
-        applyPlayFilters();
-      }
-    },
-  });
-}
-initPlayProgressionCollapse();
+initPlaybookListPositionMemory();
 if (document.getElementById('playsTableBody') && window.PlaybookDragDrop) {
   window.PlaybookDragDrop.init(document.getElementById('playsTableBody'), {
     categoryTree: document.getElementById('playbookCategoryTree'),

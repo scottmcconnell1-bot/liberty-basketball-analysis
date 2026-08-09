@@ -295,7 +295,8 @@
       });
     });
 
-    // Category sidebar: drop plays onto leaf categories
+    // Category sidebar: drop plays onto leaf categories — reorder within list is
+    // cosmetic only while the browse index is A–Z by name.
     if (treeEl && treeEl.dataset.playDropReady !== '1') {
       treeEl.dataset.playDropReady = '1';
 

@@ -81,10 +81,7 @@ def _plays_query(db):
            FROM plays p
            LEFT JOIN playbooks pb ON pb.id = p.playbook_id
            LEFT JOIN play_categories pc ON pc.id = p.category_id
-           ORDER BY
-             CASE WHEN p.list_order IS NULL THEN 1 ELSE 0 END,
-             p.list_order ASC,
-             p.updated_at DESC"""
+           ORDER BY p.name COLLATE NOCASE ASC, p.id ASC"""
     ).fetchall()
 
 
@@ -146,13 +143,9 @@ def _group_plays_for_list(db, plays):
         for p in play_dicts
         if not p.get("parent_play_id") or p.get("parent_play_id") not in by_id
     ]
-    top.sort(
-        key=lambda p: (
-            1 if p.get("list_order") is None else 0,
-            p.get("list_order") if p.get("list_order") is not None else 10**9,
-            (p.get("name") or "").lower(),
-        )
-    )
+    # Browse list is always A–Z by name (case-insensitive). list_order remains
+    # for drag-reorder API / progressions; it does not drive the main index.
+    top.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("id") or 0))
     return top
 
 
@@ -592,9 +585,7 @@ def playbook_opponent_detail(playbook_id):
                   (SELECT COUNT(*) FROM play_steps ps WHERE ps.play_id = p.id) as step_count
              FROM plays p
             WHERE p.playbook_id = ?
-            ORDER BY CASE WHEN p.list_order IS NULL THEN 1 ELSE 0 END,
-                     p.list_order ASC,
-                     p.name ASC""",
+            ORDER BY p.name COLLATE NOCASE ASC, p.id ASC""",
         (playbook_id,),
     ).fetchall()
     return render_template(
