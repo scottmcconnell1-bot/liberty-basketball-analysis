@@ -1,0 +1,66 @@
+def test_classify_tbar_screen():
+    from playbook_sheet_align import classify_polyline_mark
+
+    h, w = 300, 400
+    gray = np.full((h, w), 255, np.uint8)
+    # Short stem ending with T-bar
+    cv2.line(gray, (200, 220), (200, 140), 0, 3)
+    cv2.line(gray, (175, 140), (225, 140), 0, 4)
+    poly = [
+        {"x": 200.0 / w * 500.0, "y": 220.0 / h * 470.0},
+        {"x": 200.0 / w * 500.0, "y": 140.0 / h * 470.0},
+    ]
+    assert classify_polyline_mark(gray, poly) == "screen"
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0172.png").is_file(),
+    reason="Pitt 5 page_0172 fixture not present",
+)
+def test_pitt5_opening_pass_and_corner_clears():
+    """Pitt 5 page 172: Pass 1→5, Cut 1 left corner, Relocate 2 right corner."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0172.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0172.png", pos, pos)
+    pairs = {
+        (p["fromPid"], p["toPid"])
+        for p in marked.get("passes") or []
+        if not p.get("orphan")
+    }
+    assert ("o1", "o5") in pairs
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o1") == "cut"
+    assert marks.get("o2") == "cut"
+    assert "o5" not in marks  # receiver stays (no false pass-corridor cut)
+    assert paths["o1"][-1]["x"] < 120
+    assert paths["o1"][-1]["y"] < 160
+    assert paths["o2"][-1]["x"] > 380
+    assert paths["o2"][-1]["y"] < 160
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0173.png").is_file(),
+    reason="Pitt 5 page_0173 fixture not present",
+)
+def test_pitt5_screen_sheet_routes():
+    """Pitt 5 page 173: Screen 4 for 5, Cut 5 to right block, o4_drop to left block."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0173.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0173.png", pos, pos)
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o4") == "screen"
+    assert marks.get("o5") == "cut"
+    assert marks.get("o4_drop") == "cut"
+    assert "o4_drop" in paths
+    # 5 finishes on the right side of the paint / right block.
+    assert paths["o5"][-1]["x"] > 220
+    assert paths["o5"][-1]["y"] < paths["o5"][0]["y"]
+    # 4 drops left after the screen tip.
+    assert paths["o4_drop"][-1]["x"] < 260
+    assert not (marked.get("passes") or [])

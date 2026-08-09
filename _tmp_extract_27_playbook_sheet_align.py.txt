@@ -1,0 +1,7 @@
+    # Triangle (Scott): force Pass-then-Cut order + missing relocates when OCR/ink
+    # invents the wrong set (same class of failure as Rip Pass-then-Cut).
+    apply_triangle_sequence_routes(crop, digit_pos, paths, marks, passes, image_path=path)
+    # Pitt 5 (Scott): Pass 1→5 + corner clears, then 4 screens / 5+4 to blocks.
+    apply_pitt5_sequence_routes(crop, digit_pos, paths, marks, passes, image_path=path)
+
+    return {"paths": paths, "marks": marks, "passes": passes}

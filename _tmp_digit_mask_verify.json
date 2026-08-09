@@ -1,0 +1,50 @@
+[
+  {
+    "playId": 127,
+    "masks": 5,
+    "tokens": 5,
+    "underImg": true,
+    "ready": true,
+    "showPrintedFlag": false,
+    "triangle": true,
+    "ocrKeys": [
+      "o1",
+      "o2",
+      "o3",
+      "o4",
+      "o5"
+    ],
+    "maskRadii": [
+      "40",
+      "40",
+      "40",
+      "40",
+      "40"
+    ],
+    "shot": "_tmp_digit_mask_127.png"
+  },
+  {
+    "playId": 125,
+    "masks": 5,
+    "tokens": 5,
+    "underImg": true,
+    "ready": true,
+    "showPrintedFlag": false,
+    "triangle": false,
+    "ocrKeys": [
+      "o1",
+      "o2",
+      "o3",
+      "o4",
+      "o5"
+    ],
+    "maskRadii": [
+      "40",
+      "40",
+      "40",
+      "40",
+      "40"
+    ],
+    "shot": "_tmp_digit_mask_125.png"
+  }
+]

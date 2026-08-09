@@ -234,6 +234,58 @@ def notify_message_received(db, message_id, conversation_id, sender_id, body):
     db.commit()
 
 
+def notify_issue_report_created(db, report_id, entry_type, title, details=None):
+    """Create in-app notification rows for every admin when a bug/idea is filed.
+
+    Email/push for issue reports is intentionally deferred (see docs backlog).
+    """
+    admins = []
+    try:
+        admins = db.execute(
+            """SELECT id FROM users
+               WHERE coalesce(is_active, 1) = 1
+                 AND lower(coalesce(role, '')) = 'admin'"""
+        ).fetchall()
+    except Exception:
+        admins = []
+    if not admins:
+        try:
+            admins = db.execute(
+                """SELECT id FROM users
+                   WHERE coalesce(is_active, 1) = 1 AND coalesce(is_admin, 0) = 1"""
+            ).fetchall()
+        except Exception:
+            admins = []
+
+    kind = (entry_type or "issue").strip().lower()
+    label = {
+        "bug": "Bug report",
+        "recommendation": "Idea / recommendation",
+        "note": "Note",
+        "issue": "Issue report",
+    }.get(kind, "Issue report")
+    notif_title = f"{label}: {(title or 'Untitled')[:80]}"
+    body_preview = (details or title or "New report submitted")[:160]
+    link = f"/debug/issues?highlight={int(report_id)}"
+
+    for row in admins:
+        uid = row["id"] if hasattr(row, "keys") else row[0]
+        try:
+            db.execute(
+                """INSERT INTO notifications (user_id, type, title, body, link)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (uid, "issue_report", notif_title, body_preview, link),
+            )
+        except Exception as exc:
+            logger.warning("Failed to notify admin %s about issue %s: %s", uid, report_id, exc)
+
+    try:
+        db.commit()
+    except Exception:
+        pass
+    return len(admins)
+
+
 def _in_quiet_hours(prefs):
     """Check if current time is within user's quiet hours."""
     if not prefs or not prefs.get("quiet_hours_start") or not prefs.get("quiet_hours_end"):

@@ -1,0 +1,819 @@
+{
+  "sheets": [
+    {
+      "stepLabel": "Step 1 (Page 120)",
+      "ballPid": "o1",
+      "pathCount": 1,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o1",
+          "toPid": "o3",
+          "orphan": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "nPts": 56
+        }
+      ],
+      "beats": [
+        {
+          "kind": "pass",
+          "label": "Pass #1 → #3",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o1",
+          "toPid": "o3",
+          "orphan": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "ballTo": "o3"
+        }
+      ]
+    },
+    {
+      "stepLabel": "Step 1 (Page 120)",
+      "ballPid": "o1",
+      "pathCount": 1,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o1",
+          "toPid": "o3",
+          "orphan": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "nPts": 56
+        }
+      ],
+      "beats": [
+        {
+          "kind": "pass",
+          "label": "Pass #1 → #3",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o1",
+          "toPid": "o3",
+          "orphan": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "ballTo": "o3"
+        }
+      ]
+    },
+    {
+      "stepLabel": "Step 2 (Page 121)",
+      "ballPid": "o3",
+      "pathCount": 3,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o3",
+          "toPid": "o1",
+          "orphan": false,
+          "from": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "to": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "nPts": 56
+        },
+        {
+          "pid": "o4",
+          "type": "screen",
+          "ballOnly": false,
+          "from": {
+            "x": 374.3,
+            "y": 49.3
+          },
+          "to": {
+            "x": 221.6,
+            "y": 90
+          },
+          "nPts": 2
+        },
+        {
+          "pid": "o5",
+          "type": "screen",
+          "ballOnly": false,
+          "from": {
+            "x": 319.5,
+            "y": 192.9
+          },
+          "to": {
+            "x": 244.3,
+            "y": 192.9
+          },
+          "nPts": 2
+        }
+      ],
+      "beats": [
+        {
+          "kind": "pass",
+          "label": "Pass #3 → #1",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o3",
+          "toPid": "o1",
+          "orphan": false,
+          "from": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "to": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "ballTo": "o1"
+        },
+        {
+          "kind": "screen",
+          "label": "Screen #4",
+          "pid": "o4",
+          "type": "screen",
+          "from": {
+            "x": 374.3,
+            "y": 49.3
+          },
+          "to": {
+            "x": 221.6,
+            "y": 90
+          },
+          "ballTo": null
+        },
+        {
+          "kind": "screen",
+          "label": "Screen #5",
+          "pid": "o5",
+          "type": "screen",
+          "from": {
+            "x": 319.5,
+            "y": 192.9
+          },
+          "to": {
+            "x": 244.3,
+            "y": 192.9
+          },
+          "ballTo": null
+        }
+      ]
+    },
+    {
+      "stepLabel": "Step 3 (Page 122)",
+      "ballPid": "o1",
+      "pathCount": 3,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o1",
+          "toPid": "o2",
+          "orphan": true,
+          "from": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "nPts": 11
+        },
+        {
+          "pid": "o1",
+          "type": "dribble",
+          "ballOnly": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "nPts": 56
+        },
+        {
+          "pid": "o2",
+          "type": "cut",
+          "ballOnly": false,
+          "from": {
+            "x": 431.4,
+            "y": 211.4
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "nPts": 46
+        }
+      ],
+      "beats": [
+        {
+          "kind": "dribble",
+          "label": "Dribble #1",
+          "pid": "o1",
+          "type": "dribble",
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "ballTo": null,
+          "carryBall": true
+        },
+        {
+          "kind": "cut",
+          "label": "Cut #2",
+          "pid": "o2",
+          "type": "cut",
+          "from": {
+            "x": 431.4,
+            "y": 211.4
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "ballTo": null
+        },
+        {
+          "kind": "pass",
+          "label": "Pass #1 → #2",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o1",
+          "toPid": "o2",
+          "orphan": true,
+          "from": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "ballTo": "o2"
+        }
+      ]
+    },
+    {
+      "stepLabel": "Step 2 (Page 121)",
+      "ballPid": "o3",
+      "pathCount": 3,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o3",
+          "toPid": "o1",
+          "orphan": false,
+          "from": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "to": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "nPts": 56
+        },
+        {
+          "pid": "o4",
+          "type": "screen",
+          "ballOnly": false,
+          "from": {
+            "x": 374.3,
+            "y": 49.3
+          },
+          "to": {
+            "x": 221.6,
+            "y": 90
+          },
+          "nPts": 2
+        },
+        {
+          "pid": "o5",
+          "type": "screen",
+          "ballOnly": false,
+          "from": {
+            "x": 319.5,
+            "y": 192.9
+          },
+          "to": {
+            "x": 244.3,
+            "y": 192.9
+          },
+          "nPts": 2
+        }
+      ],
+      "beats": [
+        {
+          "kind": "pass",
+          "label": "Pass #3 → #1",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o3",
+          "toPid": "o1",
+          "orphan": false,
+          "from": {
+            "x": 75.9,
+            "y": 212.7
+          },
+          "to": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "ballTo": "o1"
+        },
+        {
+          "kind": "screen",
+          "label": "Screen #4",
+          "pid": "o4",
+          "type": "screen",
+          "from": {
+            "x": 374.3,
+            "y": 49.3
+          },
+          "to": {
+            "x": 221.6,
+            "y": 90
+          },
+          "ballTo": null
+        },
+        {
+          "kind": "screen",
+          "label": "Screen #5",
+          "pid": "o5",
+          "type": "screen",
+          "from": {
+            "x": 319.5,
+            "y": 192.9
+          },
+          "to": {
+            "x": 244.3,
+            "y": 192.9
+          },
+          "ballTo": null
+        }
+      ]
+    },
+    {
+      "stepLabel": "Step 3 (Page 122)",
+      "ballPid": "o1",
+      "pathCount": 3,
+      "paths": [
+        {
+          "pid": null,
+          "type": "pass",
+          "ballOnly": true,
+          "fromPid": "o1",
+          "toPid": "o2",
+          "orphan": true,
+          "from": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "nPts": 11
+        },
+        {
+          "pid": "o1",
+          "type": "dribble",
+          "ballOnly": false,
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "nPts": 56
+        },
+        {
+          "pid": "o2",
+          "type": "cut",
+          "ballOnly": false,
+          "from": {
+            "x": 431.4,
+            "y": 211.4
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "nPts": 46
+        }
+      ],
+      "beats": [
+        {
+          "kind": "dribble",
+          "label": "Dribble #1",
+          "pid": "o1",
+          "type": "dribble",
+          "from": {
+            "x": 249.2,
+            "y": 302.1
+          },
+          "to": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "ballTo": null,
+          "carryBall": true
+        },
+        {
+          "kind": "cut",
+          "label": "Cut #2",
+          "pid": "o2",
+          "type": "cut",
+          "from": {
+            "x": 431.4,
+            "y": 211.4
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "ballTo": null
+        },
+        {
+          "kind": "pass",
+          "label": "Pass #1 → #2",
+          "pid": null,
+          "type": "pass",
+          "fromPid": "o1",
+          "toPid": "o2",
+          "orphan": true,
+          "from": {
+            "x": 296.4,
+            "y": 96.7
+          },
+          "to": {
+            "x": 422.4,
+            "y": 64.6
+          },
+          "ballTo": "o2"
+        }
+      ]
+    }
+  ],
+  "err": null,
+  "positions": [
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o1",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o2",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    },
+    {
+      "ball": "o2",
+      "snap": {
+        "o1": {
+          "x": 296.4,
+          "y": 96.7
+        },
+        "o2": {
+          "x": 422.4,
+          "y": 64.6
+        },
+        "o3": {
+          "x": 75.9,
+          "y": 212.7
+        },
+        "o4": {
+          "x": 221.6,
+          "y": 90
+        },
+        "o5": {
+          "x": 244.3,
+          "y": 192.9
+        }
+      },
+      "hint": "Pass #1 → #2  ·  3 of 3"
+    }
+  ],
+  "finalTokens": {},
+  "hint": "Pass #1 → #2  ·  3 of 3"
+}

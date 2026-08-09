@@ -1,0 +1,51 @@
+=== 510-535 ===
+510:let dragOffset = { x: 0, y: 0 };
+511:let currentTool = 'select';
+512:let currentPathStyle = 'straight';
+513:let currentPlayerType = 'offense';
+514:let arrowStart = null;
+515:let isFullCourt = false;
+516:let isAnimating = false;
+517:let playAllRunning = false;
+518:let animPlaying = false;
+519:let animFrame = null;
+520:let isAnimating = false;
+521:let playAllRunning = false;
+522:/** Per-step sheet alignment: { court_frac, positions } from /api/playbook/sheet-align */
+523:let sheetAlignByStep = [];
+524:let sheetAlignReady = false;
+525:let sheetAlignPromise = null;
+526:/** Client cache for /api/playbook/sheet-paths keyed by step+endpoints */
+527:const sheetInkPathCache = new Map();
+528:/** True while play-sheet underlay replaces SVG court markings (white bg only). */
+529:let sheetCourtMode = false;
+530:/** Bumps each one-player move so stale rAF frames cannot move extra tokens. */
+531:let sheetMoveGen = 0;
+532:
+533:/**
+534: * Animation timing — tune these for discussion pace.
+535: * One action at a time: MOVE then HOLD, then GAP before the next beat.
+=== 1718-1740 ===
+1718:    }
+1719:
+1720:    list.appendChild(div);
+1721:  });
+1722:}
+1723:
+1724:// ── Playback animation ───────────────────────────────────
+1725:let animInterval = null;
+1726:let animFrame = null;
+1727:
+1728:function lerpPosition(a, b, t) {
+1729:  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+1730:}
+1731:
+1732:function easeInOutCubic(t) {
+1733:  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+1734:}
+1735:
+1736:function isDefaultOffensePos(pid, pos) {
+1737:  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+1738:  if (!Number.isFinite(num) || num < 1 || !pos) return false;
+1739:  const d = defaultOffensePos(num - 1);
+1740:  return Math.abs(d.x - pos.x) < 1.5 && Math.abs(d.y - pos.y) < 1.5;

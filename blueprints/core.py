@@ -2116,12 +2116,20 @@ def create_issue_report():
            VALUES (?, ?, ?, ?, ?, 'open')""",
         (entry_type, title, details, source_path, browser_console),
     )
+    report_id = cursor.lastrowid
     db.commit()
+    try:
+        from services.notifications import notify_issue_report_created
+
+        notify_issue_report_created(db, report_id, entry_type, title, details)
+    except Exception:
+        # Reporting must never fail because of notification wiring.
+        pass
     if wants_json:
         return jsonify({
             "status": "ok",
             "message": "Report saved.",
-            "report_id": cursor.lastrowid,
+            "report_id": report_id,
             "source_path": source_path,
         })
     return redirect(append_query_params(return_to, message="Report saved."))

@@ -1,0 +1,12 @@
+{
+  "errs": [],
+  "info": {
+    "ready": true,
+    "hasEnsure": "function",
+    "hasTriangle": "function",
+    "hasMask": "function",
+    "hasShow": "function",
+    "maskKids": 5,
+    "underKids": 1
+  }
+}

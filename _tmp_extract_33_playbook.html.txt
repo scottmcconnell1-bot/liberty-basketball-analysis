@@ -1,0 +1,9 @@
+function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
+  let beats = buildActionBeats(fromRaw, toRaw, paths || [], ballPid);
+  const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
+  beats = ensurePitt5Beats(beats, fromRaw, toRaw, paths || [], ballPid, idx);
+  if (beats.length) {
+    beats = orderTriangleBeats(beats, idx);
+    beats = orderPitt5Beats(beats, idx);
+    return beats;
+  }

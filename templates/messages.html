@@ -1,12 +1,39 @@
 {% extends "base.html" %}
 {% block title %}Messages — Liberty Basketball{% endblock %}
 {% block content %}
+{# namespace avoids Jinja if-block set scoping (otherwise mi looks unsigned while nav is signed in). #}
+{% set ns = namespace(mi=none) %}
+{% if messaging_identity is defined and messaging_identity and messaging_identity.signed_in %}
+  {% set ns.mi = messaging_identity %}
+{% elif session.get('user_id') %}
+  {% set ns.mi = {
+    "sender_id": session.get('user_id')|string,
+    "display_name": session.get('user_name') or 'Account',
+    "email": none,
+    "role": session.get('user_role') or 'staff',
+    "signed_in": true
+  } %}
+{% elif messaging_identity is defined and messaging_identity %}
+  {% set ns.mi = messaging_identity %}
+{% else %}
+  {% set ns.mi = {"sender_id": "coach", "display_name": "Guest", "signed_in": false, "role": none, "email": none} %}
+{% endif %}
+{% set mi = ns.mi %}
 <div class="msg-layout">
   <!-- Conversation List Sidebar -->
   <div class="msg-sidebar">
     <div class="msg-sidebar-header">
       <h3>💬 Messages</h3>
-      <button class="btn btn-primary btn-sm" onclick="startNewConversation()">+ New Chat</button>
+      <div class="msg-identity" id="msg-identity">
+        {% if mi.signed_in %}
+          Signed in as <strong>{{ mi.display_name }}</strong>{% if mi.role %} · {{ mi.role }}{% endif %}
+        {% else %}
+          Not signed in — <a href="{{ url_for('users.login', next='/messages') }}">Sign in</a> to message as yourself
+        {% endif %}
+      </div>
+      {% if not coach_readonly %}
+      <button type="button" class="btn btn-primary btn-sm" id="new-chat-btn" onclick="openNewChatModal()">+ New Chat</button>
+      {% endif %}
     </div>
     <div class="msg-conv-list" id="conversation-list">
       {% if conversations %}
@@ -18,7 +45,7 @@
         </div>
         {% endfor %}
       {% else %}
-        <div class="msg-empty">No conversations yet.<br>Start a new chat!</div>
+        <div class="msg-empty">No conversations yet.<br>{% if not coach_readonly %}Start a new chat!{% else %}Coach view is read-only.{% endif %}</div>
       {% endif %}
     </div>
   </div>
@@ -33,27 +60,72 @@
 
     <div class="msg-area" id="messages-area">
       {% for msg in active_messages %}
-      <div class="msg-bubble {% if msg.sender_id == 'coach' %}msg-bubble-self{% else %}msg-bubble-other{% endif %}">
+      <div class="msg-bubble {% if msg.sender_id|string == mi.sender_id|string %}msg-bubble-self{% else %}msg-bubble-other{% endif %}">
         <div class="msg-bubble-body">{{ msg.body }}</div>
         <div class="msg-bubble-time">{{ msg.created_at }}</div>
       </div>
       {% endfor %}
     </div>
 
+    {% if not coach_readonly %}
     <div class="msg-input-area">
       <form onsubmit="return sendMessage(event)" class="msg-input-form">
-        <input type="text" id="msg-input" class="form-control" placeholder="Type a message…">
+        <input type="text" id="msg-input" class="form-control" placeholder="Type a message…" autocomplete="off">
         <button type="submit" class="btn btn-primary">Send</button>
       </form>
     </div>
+    {% endif %}
     {% else %}
     <div class="msg-empty-main">
       <div style="font-size:2.5rem;margin-bottom:8px;">💬</div>
       <div>Select a conversation or start a new one</div>
+      {% if not coach_readonly %}
+      <button type="button" class="btn btn-primary btn-sm" onclick="openNewChatModal()" style="margin-top:12px;">+ New Chat</button>
+      {% endif %}
     </div>
     {% endif %}
   </div>
 </div>
+
+{% if not coach_readonly %}
+<!-- New Chat modal (replaces window.prompt) -->
+<div id="new-chat-modal" class="modal-backdrop" data-frame="messages-new-chat">
+  <div class="modal" role="dialog" aria-labelledby="new-chat-title" aria-modal="true">
+    <h3 id="new-chat-title">New Chat</h3>
+    <p class="text-muted" style="margin-bottom:14px;font-size:0.88rem;">
+      {% if mi.signed_in %}
+        From <strong>{{ mi.display_name }}</strong>{% if mi.email %} ({{ mi.email }}){% endif %}
+      {% else %}
+        You are not signed in. Messages will be sent as a guest coach identity.
+        <a href="{{ url_for('users.login', next='/messages') }}">Sign in</a> to use your name.
+      {% endif %}
+    </p>
+    <form id="new-chat-form" onsubmit="return submitNewChat(event)">
+      <div class="form-group">
+        <label for="new-chat-recipient">To</label>
+        <select class="form-control" id="new-chat-recipient" name="recipient_id">
+          <option value="">Start without picking a person…</option>
+          {% for u in directory_users or [] %}
+          <option value="{{ u.id }}">{{ u.display_name }}{% if u.role %} · {{ u.role }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        {% if not directory_users %}
+        <p class="text-muted" style="font-size:0.78rem;margin-top:6px;">No other users in the directory yet — you can still start a conversation.</p>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="new-chat-body">First message</label>
+        <textarea class="form-control" id="new-chat-body" name="body" rows="4" placeholder="Type your first message…" required></textarea>
+      </div>
+      <p id="new-chat-error" class="alert alert-error" style="display:none;margin-bottom:12px;"></p>
+      <div class="modal-actions" style="margin-top:0;">
+        <button type="button" class="btn btn-secondary" onclick="closeNewChatModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="new-chat-submit">Start Chat</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block styles %}
@@ -80,6 +152,12 @@
 .msg-sidebar-header h3 {
   font-size: 0.95rem;
   margin: 0 0 8px 0;
+}
+.msg-identity {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  margin-bottom: 10px;
+  line-height: 1.35;
 }
 .msg-conv-list {
   flex: 1;
@@ -191,11 +269,29 @@
   gap: 8px;
   font-size: 0.9rem;
 }
+@media (max-width: 720px) {
+  .msg-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 420px;
+  }
+  .msg-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 220px;
+  }
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+const MSG_SENDER_ID = {{ (
+  (messaging_identity.sender_id if messaging_identity and messaging_identity.signed_in else none)
+  or (session.get('user_id')|string if session.get('user_id') else none)
+  or 'coach'
+)|tojson }};
+const COACH_READONLY = {{ 'true' if coach_readonly else 'false' }};
 let activeConvId = {{ active_conversation.id if active_conversation else 'null' }};
 let lastMessageId = 0;
 
@@ -203,29 +299,81 @@ function loadConversation(id) {
   window.location.href = '/messages?c=' + id;
 }
 
-function startNewConversation() {
-  const body = prompt('Type your first message:');
-  if (!body || !body.trim()) return;
+function openNewChatModal() {
+  if (COACH_READONLY) return;
+  const modal = document.getElementById('new-chat-modal');
+  if (!modal) return;
+  const err = document.getElementById('new-chat-error');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  const body = document.getElementById('new-chat-body');
+  if (body) body.value = '';
+  const recip = document.getElementById('new-chat-recipient');
+  if (recip) recip.selectedIndex = 0;
+  modal.classList.add('open');
+  if (body) setTimeout(() => body.focus(), 50);
+}
+
+function closeNewChatModal() {
+  const modal = document.getElementById('new-chat-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function submitNewChat(e) {
+  e.preventDefault();
+  if (COACH_READONLY) return false;
+
+  const bodyEl = document.getElementById('new-chat-body');
+  const recipEl = document.getElementById('new-chat-recipient');
+  const errEl = document.getElementById('new-chat-error');
+  const submitBtn = document.getElementById('new-chat-submit');
+  const body = (bodyEl && bodyEl.value || '').trim();
+  const recipientId = (recipEl && recipEl.value || '').trim();
+
+  if (!body) {
+    if (errEl) {
+      errEl.textContent = 'Enter a first message.';
+      errEl.style.display = 'block';
+    }
+    return false;
+  }
+
+  const payload = { body: body, sender_id: MSG_SENDER_ID };
+  if (recipientId) payload.recipient_id = recipientId;
+
+  if (submitBtn) submitBtn.disabled = true;
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
 
   fetch('/api/messages/send', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      conversation_id: Date.now(),
-      body: body.trim(),
-      sender_id: 'coach',
-    }),
+    body: JSON.stringify(payload),
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) { alert(data.error); return; }
+  .then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
+  .then(({ ok, status, data }) => {
+    if (!ok || data.error) {
+      if (errEl) {
+        errEl.textContent = data.error || ('Failed (' + status + ')');
+        errEl.style.display = 'block';
+      }
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
     window.location.href = '/messages?c=' + data.conversation_id;
   })
-  .catch(err => alert('Failed: ' + err.message));
+  .catch(err => {
+    if (errEl) {
+      errEl.textContent = 'Failed: ' + err.message;
+      errEl.style.display = 'block';
+    }
+    if (submitBtn) submitBtn.disabled = false;
+  });
+
+  return false;
 }
 
 function sendMessage(e) {
   e.preventDefault();
+  if (COACH_READONLY) return false;
   const input = document.getElementById('msg-input');
   const body = input.value.trim();
   if (!body || !activeConvId) return false;
@@ -236,7 +384,7 @@ function sendMessage(e) {
     body: JSON.stringify({
       conversation_id: activeConvId,
       body: body,
-      sender_id: 'coach',
+      sender_id: MSG_SENDER_ID,
     }),
   })
   .then(r => r.json())
@@ -256,6 +404,17 @@ function sendMessage(e) {
   return false;
 }
 
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') closeNewChatModal();
+});
+
+const newChatBackdrop = document.getElementById('new-chat-modal');
+if (newChatBackdrop) {
+  newChatBackdrop.addEventListener('click', (ev) => {
+    if (ev.target === newChatBackdrop) closeNewChatModal();
+  });
+}
+
 // Poll for new messages every 5 seconds
 if (activeConvId) {
   setInterval(() => {
@@ -265,6 +424,7 @@ if (activeConvId) {
         if (!msgs.length) return;
         const area = document.getElementById('messages-area');
         msgs.forEach(msg => {
+          if (String(msg.sender_id) === String(MSG_SENDER_ID)) return;
           const bubble = document.createElement('div');
           bubble.className = 'msg-bubble msg-bubble-other';
           bubble.innerHTML = '<div class="msg-bubble-body">' + msg.body.replace(/</g,'&lt;') + '</div><div class="msg-bubble-time">' + msg.created_at + '</div>';

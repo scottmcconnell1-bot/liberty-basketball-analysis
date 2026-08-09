@@ -10,6 +10,76 @@ class TestMessagesPage:
         assert r.status_code == 200
         assert b"Messages" in r.data or b"Conversations" in r.data or b"messaging" in r.data.lower()
 
+    def test_new_chat_uses_in_app_modal_not_window_prompt(self, client):
+        """+ New Chat must open an in-app form, not browser window.prompt."""
+        r = client.get("/messages")
+        assert r.status_code == 200
+        html = r.data.decode("utf-8", errors="replace")
+        assert "prompt(" not in html
+        assert 'id="new-chat-modal"' in html
+        assert 'id="new-chat-body"' in html
+        assert 'id="new-chat-recipient"' in html
+        assert "openNewChatModal" in html
+
+    def test_authenticated_staff_sees_own_identity(self, client, db):
+        """Nav and Messages must agree: session user_id → signed-in as that person."""
+        db.execute(
+            "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+            ("scott@example.com", "x", "Scott McConnell", "admin"),
+        )
+        db.commit()
+        uid = db.execute("SELECT id FROM users WHERE email = ?", ("scott@example.com",)).fetchone()[0]
+
+        with client.session_transaction() as sess:
+            sess["user_id"] = uid
+            sess["user_name"] = "Scott McConnell"
+            sess["user_role"] = "admin"
+
+        r = client.get("/messages")
+        assert r.status_code == 200
+        html = r.data.decode("utf-8", errors="replace")
+        assert "Not signed in" not in html
+        assert "Signed in as" in html
+        assert "Scott McConnell" in html
+        assert "guest coach identity" not in html.lower()
+        # Sender id in JS should be the staff user id, not hardcoded coach guest
+        assert f'const MSG_SENDER_ID = "{uid}"' in html or f"const MSG_SENDER_ID = {uid}" in html
+
+    def test_session_identity_without_users_row_still_signed_in(self, client):
+        """If users row is missing, still mirror nav (session user_name) — not Guest."""
+        with client.session_transaction() as sess:
+            sess["user_id"] = 4242
+            sess["user_name"] = "Scott McConnell"
+            sess["user_role"] = "admin"
+
+        r = client.get("/messages")
+        assert r.status_code == 200
+        html = r.data.decode("utf-8", errors="replace")
+        assert "Not signed in" not in html
+        assert "Scott McConnell" in html
+        assert "Signed in as" in html
+
+    def test_send_api_uses_session_user_as_sender(self, client, db):
+        db.execute(
+            "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+            ("scott2@example.com", "x", "Scott McConnell", "admin"),
+        )
+        db.commit()
+        uid = db.execute("SELECT id FROM users WHERE email = ?", ("scott2@example.com",)).fetchone()[0]
+
+        with client.session_transaction() as sess:
+            sess["user_id"] = uid
+            sess["user_name"] = "Scott McConnell"
+
+        r = client.post(
+            "/api/messages/send",
+            data=json.dumps({"conversation_id": 55, "body": "Hello from Scott", "sender_id": "coach"}),
+            content_type="application/json",
+        )
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert data["sender_id"] == str(uid)
+        assert data["body"] == "Hello from Scott"
 
 class TestMessagesAPIList:
     def test_list_conversations_empty(self, client):
@@ -84,6 +154,38 @@ class TestMessagesSend:
             "sender_id": "coach",
         })
         assert r.status_code == 200
+
+    def test_send_with_recipient_creates_conversation(self, client, db):
+        db.execute(
+            "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+            ("assist@example.com", "x", "Assistant One", "coach"),
+        )
+        db.commit()
+        recip = db.execute("SELECT id FROM users WHERE email = ?", ("assist@example.com",)).fetchone()[0]
+
+        r = client.post(
+            "/api/messages/send",
+            data=json.dumps({
+                "body": "Hello teammate",
+                "sender_id": "coach",
+                "recipient_id": str(recip),
+            }),
+            content_type="application/json",
+        )
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert data["body"] == "Hello teammate"
+        assert data["conversation_id"]
+
+        members = [
+            row[0]
+            for row in db.execute(
+                "SELECT user_id FROM conversation_members WHERE conversation_id = ?",
+                (data["conversation_id"],),
+            ).fetchall()
+        ]
+        assert "coach" in members
+        assert str(recip) in members
 
 
 class TestMessagesPoll:
