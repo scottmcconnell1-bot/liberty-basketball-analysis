@@ -2070,19 +2070,21 @@ function orientSheetPass(pass, ballPid, fromRaw) {
   }
   if (!a || !b) return null;
   let pts = null;
-  if (points && points.length >= 2) {
+  if (orphan && points && points.length >= 2) {
     pts = points.map((pt) => ({ x: pt.x, y: pt.y }));
-    if (!orphan) {
-      pts[0] = { x: a.x, y: a.y };
-      pts[pts.length - 1] = { x: b.x, y: b.y };
-    }
+  } else {
+    // Digit→digit: straight passer→receiver. Ink midpoints overshoot the token.
+    pts = [
+      { x: a.x, y: a.y },
+      { x: b.x, y: b.y },
+    ];
   }
   return {
     pid: null,
     ballOnly: true,
     from: { x: a.x, y: a.y },
     to: { x: b.x, y: b.y },
-    ctrl: pts ? null : movementQuadControl(a, b, 0.08),
+    ctrl: null,
     points: pts,
     type: 'pass',
     fromPid,
@@ -3113,11 +3115,24 @@ function normalizeAnimPath(path, live, toRaw) {
     ctrl: null,
     points: null,
     pitt5Drop: !!path.pitt5Drop,
+    orphan: !!path.orphan,
   };
   const pid = p.pid;
   if (p.ballOnly) {
-    const a = path.from || (p.fromPid && live[p.fromPid]) || path.from;
-    const b = path.to || (p.toPid && (live[p.toPid] || (toRaw && toRaw[p.toPid]))) || path.to;
+    // Orphan tip→tip (Rip dribble→corner): keep ink endpoints.
+    // Digit→digit: aim at LIVE tokens so same-sheet cuts (pops) land the ball
+    // on the receiver — not a stale sheet-start OCR center or ink arrow tip
+    // past the glyph (that overshot then snapped back).
+    let a;
+    let b;
+    if (p.orphan) {
+      a = path.from || (p.fromPid && live && live[p.fromPid]) || path.from;
+      b = path.to || (p.toPid && live && live[p.toPid]) || path.to;
+    } else {
+      a = (p.fromPid && live && live[p.fromPid]) || path.from;
+      b = (p.toPid && live && live[p.toPid]) || path.to
+        || (p.toPid && toRaw && toRaw[p.toPid]);
+    }
     if (!a || !b) return null;
     p.from = { x: a.x, y: a.y };
     p.to = { x: b.x, y: b.y };
@@ -3149,6 +3164,17 @@ function normalizeAnimPath(path, live, toRaw) {
     p.to = { x: b.x, y: b.y };
   } else {
     return null;
+  }
+
+  // Non-orphan passes: never keep ink midpoints — dashed arrow tips often
+  // continue past the receiver; midpoints made the ball overshoot then snap.
+  if (p.ballOnly && !p.orphan) {
+    p.points = [
+      { x: p.from.x, y: p.from.y },
+      { x: p.to.x, y: p.to.y },
+    ];
+    p.ctrl = null;
+    return p;
   }
 
   if (path.points && path.points.length >= 2) {
@@ -3203,12 +3229,18 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
       if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
       if (completed) {
         // Land where the path actually went — do not snap back to a stationary toRaw[pid].
-        if (animPath.pid && animPath.to) {
+        if (animPath.ballOnly || animPath.type === 'pass') {
+          // Leave the ball at the pass tip; ownership transfer is playActionBeats.
+          // syncLiveWithDefense here would yank it back onto the passer.
+        } else if (animPath.pid && animPath.to) {
           live[animPath.pid] = { x: animPath.to.x, y: animPath.to.y };
+          syncLiveWithDefense(live, ballPid);
         } else if (animPath.pid && toRaw && toRaw[animPath.pid]) {
           live[animPath.pid] = { x: toRaw[animPath.pid].x, y: toRaw[animPath.pid].y };
+          syncLiveWithDefense(live, ballPid);
+        } else {
+          syncLiveWithDefense(live, ballPid);
         }
-        syncLiveWithDefense(live, ballPid);
       }
       resolve();
     }
@@ -3293,21 +3325,22 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
     sheetMoveGen += 1;
     const gen = sheetMoveGen;
     clearScreenMarker();
-    // Draw ONLY this beat's path — never all movers at once.
-    drawTravelPaths([path], path);
+    // Retarget pass endpoints onto live tokens before draw + animate.
+    const animPath = normalizeAnimPath(path, live, toRaw) || path;
+    drawTravelPaths([animPath], animPath);
     setSheetAnimHint(`${beat.label}  ·  ${i + 1} of ${beats.length}`);
     // eslint-disable-next-line no-await-in-loop
-    await animateOnePath(live, path, toRaw, ballRef.pid, perPathMs, gen);
+    await animateOnePath(live, animPath, toRaw, ballRef.pid, perPathMs, gen);
     if (!isPlaybackActive()) break;
 
     if (beat.kind === 'pass' && beat.ballTo) {
       ballRef.pid = beat.ballTo;
-      // Orphan corner passes: keep ball on the pass tip until the receiver token
-      // is actually there (avoid yanking the ball back to a wing OCR seed).
-      if (path.orphan && path.to && live[beat.ballTo]) {
+      // Land ball on the receiver token (pass already aimed at live[toPid]).
+      if (live[beat.ballTo] && animPath && animPath.to) {
         const recv = live[beat.ballTo];
-        if (distPos(recv, path.to) > 28) {
-          live[beat.ballTo] = { x: path.to.x, y: path.to.y };
+        // Orphan corner passes: keep tip when receiver token is still far away.
+        if (path.orphan && distPos(recv, animPath.to) > 28) {
+          live[beat.ballTo] = { x: animPath.to.x, y: animPath.to.y };
         }
       }
       syncLiveWithDefense(live, ballRef.pid);
@@ -3592,7 +3625,7 @@ async function buildPlaybarTimeline() {
     let ballPid = startBall;
     for (let bi = 0; bi < beats.length; bi += 1) {
       const beat = beats[bi];
-      const path = beat.path;
+      let path = beat.path;
       if (!path) continue;
       // Land movers on path.to (ink tip) when next-sheet OCR did not move.
       if (path.pid && path.to) {
@@ -3602,6 +3635,12 @@ async function buildPlaybarTimeline() {
         }
       } else if (path.pid && toRaw[path.pid]) {
         live[path.pid] = { x: toRaw[path.pid].x, y: toRaw[path.pid].y };
+      }
+      // Passes: bake live-token endpoints so scrub/playbar matches Play All
+      // (same-sheet pops already applied to live before this beat).
+      if (beat.kind === 'pass') {
+        const retargeted = normalizeAnimPath(path, live, toRaw);
+        if (retargeted) path = retargeted;
       }
       if (beat.kind === 'pass' && beat.ballTo) ballPid = beat.ballTo;
       playbarKeyframes.push({

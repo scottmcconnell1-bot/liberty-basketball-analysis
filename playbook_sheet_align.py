@@ -23,7 +23,7 @@ COURT_H = 470.0
 _CACHE_DIR_NAME = "sheet_align_cache"
 
 
-_CACHE_VERSION = "v11"  # v11: 1-Game formation seeds (pages 32–36)
+_CACHE_VERSION = "v12"  # v12: 1-Game straight passes + 65px screen clearance
 
 
 def _cache_dir(base: str | Path | None = None) -> Path:
@@ -1704,15 +1704,15 @@ _GAME_SHEET_START: dict[str, dict[str, dict[str, float]]] = {
         "o1": {"x": 254.6, "y": 301.0},
         "o2": {"x": 433.5, "y": 209.2},
         "o3": {"x": 178.0, "y": 100.0},
-        "o4": {"x": 125.0, "y": 218.0},
-        "o5": {"x": 370.0, "y": 222.0},
+        "o4": {"x": 118.0, "y": 225.0},
+        "o5": {"x": 382.0, "y": 225.0},
     },
     "reverse": {
-        "o1": {"x": 125.0, "y": 230.0},
+        "o1": {"x": 118.0, "y": 235.0},
         "o2": {"x": 433.5, "y": 209.2},
         "o3": {"x": 178.0, "y": 100.0},
         "o4": {"x": 254.6, "y": 301.0},
-        "o5": {"x": 370.0, "y": 222.0},
+        "o5": {"x": 382.0, "y": 225.0},
     },
     "downscreen": {
         "o1": {"x": 101.1, "y": 250.3},
@@ -1792,7 +1792,13 @@ def apply_game_sequence_routes(
 
     seed_game_sheet_positions(digit_pos, image_path=image_path)
 
-    def _ensure_pass(frm: str, to: str) -> None:
+    def _ensure_pass(frm: str, to: str, tip: dict | None = None) -> None:
+        """Digit→digit pass as a straight 2-point segment.
+
+        Ink-traced dashed arrows often continue past the receiver glyph (arrow
+        tip / orphan corridor). Keeping those midpoints made the ball overshoot
+        the token then snap back. Always land on ``tip`` or the receiver center.
+        """
         nonlocal passes
         if any(
             (not p.get("orphan")) and p.get("fromPid") == frm and p.get("toPid") == to
@@ -1800,15 +1806,13 @@ def apply_game_sequence_routes(
         ):
             return
         a = digit_pos.get(frm)
-        b = digit_pos.get(to)
+        b = tip if _has_xy(tip) else digit_pos.get(to)
         if not _has_xy(a) or not _has_xy(b):
             return
-        poly = trace_ink_polyline(crop_gray, a, b, digit_positions=digit_pos)
-        if len(poly) < 2:
-            poly = [
-                {"x": float(a["x"]), "y": float(a["y"])},
-                {"x": float(b["x"]), "y": float(b["y"])},
-            ]
+        poly = [
+            {"x": float(a["x"]), "y": float(a["y"])},
+            {"x": float(b["x"]), "y": float(b["y"])},
+        ]
         passes[:] = [
             p
             for p in passes
@@ -1870,11 +1874,14 @@ def apply_game_sequence_routes(
         passes[:] = [p for p in passes if p.get("orphan")]
         passes.clear()
 
-    pop4 = {"x": 125.0, "y": 218.0}
-    pop5 = {"x": 370.0, "y": 222.0}
+    # 45° wing pops just outside the 3pt (SVG basket at top). Clear of each
+    # other and of #3's left-block cut.
+    pop4 = {"x": 118.0, "y": 225.0}
+    pop5 = {"x": 382.0, "y": 225.0}
     left_block = {"x": 178.0, "y": 100.0}
     right_block = {"x": 322.0, "y": 100.0}
     top = {"x": 254.6, "y": 301.0}
+    screen_clearance = 65.0  # match Pitt 5 token gap
 
     if role == "opening":
         _clear_all_movers()
@@ -1882,13 +1889,8 @@ def apply_game_sequence_routes(
         _straight("o4", pop4, "cut", min_disp=25.0)
         _straight("o5", pop5, "cut", min_disp=25.0)
         _straight("o3", left_block, "cut", min_disp=40.0)
-        _ensure_pass("o1", "o5")
-        # Keep pass tip on pop destination for #5 (ball arrives after pops).
-        for p in passes:
-            if p.get("fromPid") == "o1" and p.get("toPid") == "o5":
-                pts = p.get("points") or []
-                if len(pts) >= 2:
-                    pts[-1] = {"x": float(pop5["x"]), "y": float(pop5["y"])}
+        # Pass lands on #5's pop spot (frontend retargets to live token after cut).
+        _ensure_pass("o1", "o5", tip=pop5)
         return
 
     if role == "screen14":
@@ -1897,14 +1899,13 @@ def apply_game_sequence_routes(
         o4 = digit_pos.get("o4")
         if not _has_xy(o1) or not _has_xy(o4):
             return
-        # Straight screen approach; hold with clearance from #4.
+        # Straight screen approach; hold with Pitt-5 clearance from #4.
         o1x, o1y = float(o1["x"]), float(o1["y"])
         o4x, o4y = float(o4["x"]), float(o4["y"])
-        clearance = 55.0
         corridor = ((o1x - o4x) ** 2 + (o1y - o4y) ** 2) ** 0.5
         if corridor < 1.0:
             return
-        t_clear = min(0.78, max(0.22, clearance / corridor))
+        t_clear = min(0.78, max(0.22, screen_clearance / corridor))
         screen_spot = {
             "x": o4x + t_clear * (o1x - o4x),
             "y": o4y + t_clear * (o1y - o4y),
@@ -1917,8 +1918,8 @@ def apply_game_sequence_routes(
         # #4 goes around 1 to the top (curl to vacated point).
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
         wp_around = {
-            "x": min(sx + 35.0, (sx + float(top["x"])) * 0.5),
-            "y": max(sy + 25.0, (sy + float(top["y"])) * 0.45),
+            "x": min(sx + 40.0, (sx + float(top["x"])) * 0.5 + 10.0),
+            "y": max(sy + 28.0, (sy + float(top["y"])) * 0.45),
         }
         _curl("o4", [wp_around, top], "cut")
         return
@@ -1927,7 +1928,7 @@ def apply_game_sequence_routes(
         _clear_all_movers()
         # Prefer post-screen landings for 1 (left wing) and 4 (top) when OCR sparse.
         if not _has_xy(digit_pos.get("o1")) or float(digit_pos["o1"]["x"]) > 200:
-            digit_pos["o1"] = {"x": 125.0, "y": 230.0}
+            digit_pos["o1"] = {"x": 118.0, "y": 235.0}
         if not _has_xy(digit_pos.get("o4")) or float(digit_pos["o4"]["y"]) < 250:
             digit_pos["o4"] = dict(top)
         if not _has_xy(digit_pos.get("o5")):
@@ -1940,8 +1941,15 @@ def apply_game_sequence_routes(
         o5 = digit_pos["o5"]
         o3x, o3y = float(o3["x"]), float(o3["y"])
         o5x, o5y = float(o5["x"]), float(o5["y"])
-        # 3 screens across the paint toward 5's cut corridor.
-        screen_spot = {"x": 255.0, "y": 155.0}
+        # 3 screens across the paint toward 5's cut corridor (≥65px from #5 start).
+        screen_spot = {"x": 248.0, "y": 150.0}
+        gap5 = ((screen_spot["x"] - o5x) ** 2 + (screen_spot["y"] - o5y) ** 2) ** 0.5
+        if gap5 < screen_clearance and gap5 > 1.0:
+            u = (screen_clearance - gap5) / gap5
+            screen_spot = {
+                "x": screen_spot["x"] + u * (screen_spot["x"] - o5x),
+                "y": screen_spot["y"] + u * (screen_spot["y"] - o5y),
+            }
         paths["o3"] = [
             {"x": o3x, "y": o3y},
             {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
@@ -1949,8 +1957,11 @@ def apply_game_sequence_routes(
         marks["o3"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
         # 5 curls around 3 (below/left of screen) into the left block.
-        wp1 = {"x": min(sx - 40.0, (o5x + sx) * 0.5), "y": max(130.0, sy - 10.0)}
-        wp2 = {"x": (wp1["x"] + float(left_block["x"])) * 0.5, "y": (wp1["y"] + float(left_block["y"])) * 0.5}
+        wp1 = {"x": min(sx - 45.0, (o5x + sx) * 0.5), "y": max(125.0, sy - 8.0)}
+        wp2 = {
+            "x": (wp1["x"] + float(left_block["x"])) * 0.5,
+            "y": (wp1["y"] + float(left_block["y"])) * 0.5,
+        }
         paths["o5"] = [
             {"x": o5x, "y": o5y},
             wp1,
@@ -1972,11 +1983,10 @@ def apply_game_sequence_routes(
         o3 = digit_pos["o3"]
         o4x, o4y = float(o4["x"]), float(o4["y"])
         o3x, o3y = float(o3["x"]), float(o3["y"])
-        clearance = 55.0
         corridor = ((o4x - o3x) ** 2 + (o4y - o3y) ** 2) ** 0.5
         if corridor < 1.0:
             return
-        t_clear = min(0.78, max(0.22, clearance / corridor))
+        t_clear = min(0.78, max(0.22, screen_clearance / corridor))
         screen_spot = {
             "x": o3x + t_clear * (o4x - o3x),
             "y": o3y + t_clear * (o4y - o3y),
@@ -1988,8 +1998,8 @@ def apply_game_sequence_routes(
         marks["o4"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
         wp_around = {
-            "x": max(sx - 30.0, (sx + float(top["x"])) * 0.5 - 20.0),
-            "y": min(sy + 40.0, (sy + float(top["y"])) * 0.55),
+            "x": max(sx - 35.0, (sx + float(top["x"])) * 0.5 - 25.0),
+            "y": min(sy + 45.0, (sy + float(top["y"])) * 0.55),
         }
         _curl("o3", [wp_around, top], "cut")
         return
@@ -2009,18 +2019,27 @@ def apply_game_sequence_routes(
         o5 = digit_pos["o5"]
         o4x, o4y = float(o4["x"]), float(o4["y"])
         o5x, o5y = float(o5["x"]), float(o5["y"])
-        clearance = 55.0
         corridor = ((o4x - o5x) ** 2 + (o4y - o5y) ** 2) ** 0.5
         if corridor < 1.0:
             return
-        t_clear = min(0.78, max(0.22, clearance / corridor))
+        t_clear = min(0.78, max(0.22, screen_clearance / corridor))
         screen_spot = {
             "x": o5x + t_clear * (o4x - o5x),
             "y": o5y + t_clear * (o4y - o5y),
         }
-        # Prefer a paint-side screen tip (right of left block) with clearance.
-        if float(screen_spot["x"]) < 200:
-            screen_spot = {"x": 240.0, "y": 145.0}
+        # Paint-side screen tip (right of left block) with ≥65px from #5.
+        if float(screen_spot["x"]) < 210:
+            screen_spot = {"x": 245.0, "y": 148.0}
+        gap5 = (
+            (float(screen_spot["x"]) - o5x) ** 2
+            + (float(screen_spot["y"]) - o5y) ** 2
+        ) ** 0.5
+        if gap5 < screen_clearance and gap5 > 1.0:
+            u = (screen_clearance - gap5) / gap5
+            screen_spot = {
+                "x": float(screen_spot["x"]) + u * (float(screen_spot["x"]) - o5x),
+                "y": float(screen_spot["y"]) + u * (float(screen_spot["y"]) - o5y),
+            }
         paths["o4"] = [
             {"x": o4x, "y": o4y},
             {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
@@ -2028,9 +2047,9 @@ def apply_game_sequence_routes(
         marks["o4"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
         # 5 goes around 4 to the right block.
-        wp1 = {"x": min(320.0, sx + 45.0), "y": max(120.0, sy - 15.0)}
+        wp1 = {"x": min(330.0, sx + 50.0), "y": max(118.0, sy - 12.0)}
         wp2 = {
-            "x": (wp1["x"] + float(right_block["x"])) * 0.5 + 10.0,
+            "x": (wp1["x"] + float(right_block["x"])) * 0.5 + 8.0,
             "y": (wp1["y"] + float(right_block["y"])) * 0.5,
         }
         paths["o5"] = [
@@ -2040,12 +2059,8 @@ def apply_game_sequence_routes(
             {"x": float(right_block["x"]), "y": float(right_block["y"])},
         ]
         marks["o5"] = "cut"
-        _ensure_pass("o3", "o5")
-        for p in passes:
-            if p.get("fromPid") == "o3" and p.get("toPid") == "o5":
-                pts = p.get("points") or []
-                if len(pts) >= 2:
-                    pts[-1] = {"x": float(right_block["x"]), "y": float(right_block["y"])}
+        # Pass after the cut: tip is right block (frontend retargets to live #5).
+        _ensure_pass("o3", "o5", tip=right_block)
         return
 
 

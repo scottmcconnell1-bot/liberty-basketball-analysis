@@ -531,6 +531,13 @@ def test_game_opening_pops_and_pass():
     # Straight pop slides (2-point).
     assert len(paths["o4"]) == 2
     assert len(paths["o5"]) == 2
+    # Pass is straight to #5 pop tip (no ink midpoints past the token).
+    p15 = next(
+        p for p in (marked.get("passes") or [])
+        if p.get("fromPid") == "o1" and p.get("toPid") == "o5" and not p.get("orphan")
+    )
+    assert len(p15.get("points") or []) == 2
+    assert p15["points"][-1]["x"] > 340
 
 
 @pytest.mark.skipif(
@@ -579,6 +586,17 @@ def test_game_reverse_passes_and_cross_screen():
     assert paths["o5"][-1]["x"] < 220
     assert paths["o5"][-1]["y"] < 130
     assert len(paths["o5"]) >= 3
+    for frm, to in (("o5", "o4"), ("o4", "o1")):
+        pp = next(
+            p for p in (marked.get("passes") or [])
+            if p.get("fromPid") == frm and p.get("toPid") == to and not p.get("orphan")
+        )
+        assert len(pp.get("points") or []) == 2
+    # Screen holds ≥~65px from #5 start (Pitt 5 clearance).
+    tip = paths["o3"][-1]
+    o5 = pos["o5"]
+    gap = ((tip["x"] - o5["x"]) ** 2 + (tip["y"] - o5["y"]) ** 2) ** 0.5
+    assert gap >= 60.0
 
 
 @pytest.mark.skipif(
@@ -627,3 +645,19 @@ def test_game_finish_routes():
     assert paths["o5"][-1]["x"] > 280
     assert paths["o5"][-1]["y"] < 130
     assert len(paths["o5"]) >= 3
+    for frm, to in (("o1", "o3"), ("o3", "o5")):
+        pp = next(
+            p for p in (marked.get("passes") or [])
+            if p.get("fromPid") == frm and p.get("toPid") == to and not p.get("orphan")
+        )
+        assert len(pp.get("points") or []) == 2
+    # Final pass tip is right block (after #5 cut), not left-block OCR seed.
+    p35 = next(
+        p for p in (marked.get("passes") or [])
+        if p.get("fromPid") == "o3" and p.get("toPid") == "o5" and not p.get("orphan")
+    )
+    assert p35["points"][-1]["x"] > 280
+    tip = paths["o4"][-1]
+    o5 = pos["o5"]
+    gap = ((tip["x"] - o5["x"]) ** 2 + (tip["y"] - o5["y"]) ** 2) ** 0.5
+    assert gap >= 60.0

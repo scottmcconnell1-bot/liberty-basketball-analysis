@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-08 (1-Game Scott choreography)
+Updated: 2026-08-08 (1-Game pass overshoot polish)
 
 Branch: `cursor/full-film-panel-ac1f`
 
@@ -8,19 +8,19 @@ Branch: `cursor/full-film-panel-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-1-game-choreography |
+| **id** | playbook-1-game-pass-polish |
 | **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
 ## Decision (Scott)
 
-Authoritative **1-Game** sequence (4-high → pops → screens/passes → 5 on right block). One-mover-at-a-time: simultaneous sheet actions = same phase, back-to-back beats. Clean court (no digit masks / underlay ink / T-bar markers). Do not regress Rip 125, Triangle 127, Pitt 5 137.
+1-Game play 98 close but not right: **passes overshoot** (ball past receiver then snap back). Spacing/destinations/paths need cleanup. Do not regress Rip 125, Triangle 127, Pitt 5 137.
 
 ## Approach
 
-- `apply_game_sequence_routes` + `seed_game_sheet_positions` (pages 0032–0036) in `playbook_sheet_align.py`.
-- Frontend `isGamePlay` / `orderGameBeats` / `ensureGameBeats`; skip heuristic screens + T-bar markers.
-- Cache bump `v11` for formation seeds (OCR often misses 3/4/5 on these sheets).
+- Root cause: digit→digit passes kept ink midpoints (arrow tip past glyph) while only endpoints snapped; `normalizeAnimPath` preferred stale `path.to` over `live[receiver]` after same-sheet pops.
+- Fix: straight 2-point passes in `apply_game_sequence_routes._ensure_pass`; frontend retargets non-orphan passes onto live tokens and drops ink midpoints; screen clearance ≥65px (Pitt 5); pops wider at 45° above 3pt.
+- Cache bump `v12`.
 
 ## Files
 
@@ -28,37 +28,25 @@ Authoritative **1-Game** sequence (4-high → pops → screens/passes → 5 on r
 - `templates/playbook.html`
 - `tests/test_playbook_sheet_align.py`
 - `docs/agent_handoffs/ACTIVE.md`
-- `docs/agent_handoffs/ARCHIVE/playbook-multi-team-2026-08-08.md`
 
 ## Verify
 
 - Hard refresh: `http://127.0.0.1:8080/playbook/play/98` → **Play All**
-- Headless beat list matches Scott steps (see Report)
-- Smoke: `/playbook/play/125`, `/127`, `/137` still animate
+- Sheet-align tests: 26 passed
+- Headless: all five passes `passGap=0` / `nPts=2`; Rip/Triangle/Pitt 5 still animate
 
 ## Report
 
 ### Proven
 
-- Play **id 98** · pages **32–36** (`page_0032.png` … `page_0036.png`).
-- Sheet-align tests: **26 passed** (includes 5 new 1-Game route tests).
-- Headless Play All: Game beats correct; clean court (`underlay=false`, `maskCircles=0`, `screenMarkers=0`); Rip/Triangle/Pitt 5 still move.
-
-**Final beat list (mapped to Scott):**
-
-| Scott step | Sheet | Beats |
-| --- | --- | --- |
-| 1–2 (+ pass start) | 0 (p32) | Cut #4 pop, Cut #5 pop, Cut #3→left block *(same phase)*, Pass #1→#5 |
-| 3 (screen) | 1 (p33) | Screen #1, Cut #4→top |
-| 4–5 | 2 (p34) | Pass #5→#4, Pass #4→#1, Screen #3, Cut #5 around→left block |
-| 6 | 3 (p35) | Screen #4 down, Cut #3→top |
-| 7–8 | 4 (p36) | Pass #1→#3, Screen #4 *(same phase)*, Cut #5 around→right block, Pass #3→#5 |
+- Pass overshoot: ink polylines had 40–56 midpoints past the receiver; endpoint snap alone left the ball traveling past then yanking back. Straight 2-pt + live-token retarget → `passGap=0` on 1→5, 5→4, 4→1, 1→3, 3→5.
+- Screen clearance bumped to 65px; pop tips (118,225)/(382,225); clean court (`underlay=false`, `maskCircles=0`, `screenMarkers=0`).
+- Tests 26 passed; LIVE_PROOF_OK for 98/125/127/137.
 
 ### Inferred
 
-- Formation seeds fill OCR gaps; ink tips used when present for passes.
-- Concurrent multi-team playbook UI landed in the same working tree; archived separately.
+- Formation seeds still fill OCR gaps on 3/4/5; curl waypoints for “goes around” are geometric (not ink).
 
 ### Unknown / remaining
 
-- Scott visual sign-off on spacing of pop angles / curl paths.
+- Scott visual sign-off on pop angle / curl aesthetics after this pass fix.
