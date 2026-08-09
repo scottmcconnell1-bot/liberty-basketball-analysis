@@ -23,7 +23,7 @@ COURT_H = 470.0
 _CACHE_DIR_NAME = "sheet_align_cache"
 
 
-_CACHE_VERSION = "v12"  # v12: 1-Game straight passes + 65px screen clearance
+_CACHE_VERSION = "v13"  # v13: 1-Game FT-line spacing + basket-line blocks + midcourt-side curls
 
 
 def _cache_dir(base: str | Path | None = None) -> Path:
@@ -1691,43 +1691,61 @@ _GAME_PAGE_ROLES = {
     "0036": "finish",
 }
 
-# Printed start-of-sheet formations (Scott 4-high → through finish).
+# Printed start-of-sheet formations (Scott 4-high at FT line → through finish).
+# Court: basket/rim ≈ y=15, FT line y=160, midcourt toward y=470.
+# Blocks sit on the lane at basket height (in line with the red rim), not mid-paint.
+_LEFT_BLOCK = {"x": 178.0, "y": 48.0}
+_RIGHT_BLOCK = {"x": 322.0, "y": 48.0}
+_TOP = {"x": 254.6, "y": 301.0}
+_FT = 168.0  # free-throw line extended (slightly past printed FT for digit clearance)
+
 _GAME_SHEET_START: dict[str, dict[str, dict[str, float]]] = {
     "opening": {
         "o1": {"x": 254.6, "y": 301.0},
-        "o2": {"x": 433.5, "y": 209.2},
-        "o3": {"x": 68.0, "y": 215.0},
-        "o4": {"x": 185.0, "y": 205.0},
-        "o5": {"x": 315.0, "y": 205.0},
+        # Right wing lower toward the corner (not parked high toward half court).
+        "o2": {"x": 433.5, "y": 125.0},
+        "o3": {"x": 55.0, "y": _FT},
+        "o4": {"x": 185.0, "y": _FT},
+        "o5": {"x": 315.0, "y": _FT},
     },
     "screen14": {
         "o1": {"x": 254.6, "y": 301.0},
-        "o2": {"x": 433.5, "y": 209.2},
-        "o3": {"x": 178.0, "y": 100.0},
-        "o4": {"x": 118.0, "y": 225.0},
-        "o5": {"x": 382.0, "y": 225.0},
+        "o2": {"x": 433.5, "y": 125.0},
+        "o3": dict(_LEFT_BLOCK),
+        "o4": {"x": 118.0, "y": 200.0},
+        "o5": {"x": 382.0, "y": 200.0},
     },
     "reverse": {
-        "o1": {"x": 118.0, "y": 235.0},
-        "o2": {"x": 433.5, "y": 209.2},
-        "o3": {"x": 178.0, "y": 100.0},
-        "o4": {"x": 254.6, "y": 301.0},
-        "o5": {"x": 382.0, "y": 225.0},
+        "o1": {"x": 118.0, "y": 220.0},
+        "o2": {"x": 433.5, "y": 125.0},
+        "o3": dict(_LEFT_BLOCK),
+        "o4": dict(_TOP),
+        "o5": {"x": 382.0, "y": 200.0},
     },
     "downscreen": {
-        "o1": {"x": 101.1, "y": 250.3},
-        "o2": {"x": 433.5, "y": 209.2},
-        "o3": {"x": 290.0, "y": 160.0},
-        "o4": {"x": 254.6, "y": 301.0},
-        "o5": {"x": 178.0, "y": 100.0},
+        # 1 stays further left so 1 and 3 are not stacked at the top.
+        "o1": {"x": 72.0, "y": 250.0},
+        "o2": {"x": 433.5, "y": 125.0},
+        "o3": {"x": 290.0, "y": 140.0},
+        "o4": dict(_TOP),
+        "o5": dict(_LEFT_BLOCK),
     },
     "finish": {
-        "o1": {"x": 101.1, "y": 250.3},
-        "o2": {"x": 433.5, "y": 209.2},
+        "o1": {"x": 72.0, "y": 250.0},
+        "o2": {"x": 433.5, "y": 125.0},
         "o3": {"x": 248.9, "y": 292.1},
-        "o4": {"x": 290.0, "y": 175.0},
-        "o5": {"x": 178.0, "y": 100.0},
+        "o4": {"x": 290.0, "y": 155.0},
+        "o5": dict(_LEFT_BLOCK),
     },
+}
+
+# Always apply these seeds on 1-Game sheets (OCR parks 2/4/5 too high toward midcourt).
+_GAME_FORCE_OIDS: dict[str, frozenset[str]] = {
+    "opening": frozenset({"o1", "o2", "o3", "o4", "o5"}),
+    "screen14": frozenset({"o2"}),
+    "reverse": frozenset({"o2"}),
+    "downscreen": frozenset({"o1", "o2"}),
+    "finish": frozenset({"o1", "o2"}),
 }
 
 
@@ -1742,10 +1760,10 @@ def seed_game_sheet_positions(
     positions: dict,
     image_path: str | Path | None = None,
 ) -> dict:
-    """Fill OCR gaps on 1-Game pages with Scott's printed start formations.
+    """Fill / correct 1-Game formations to Scott's printed spots.
 
-    Prefer real OCR when present; only seed missing o1–o5. Mutates and returns
-    ``positions``.
+    Prefer real OCR when present except for forced oids (wings parked too high).
+    Mutates and returns ``positions``.
     """
     if not isinstance(positions, dict):
         return positions
@@ -1754,8 +1772,9 @@ def seed_game_sheet_positions(
     if not role:
         return positions
     seed = _GAME_SHEET_START.get(role) or {}
+    force = _GAME_FORCE_OIDS.get(role) or frozenset()
     for oid, pt in seed.items():
-        if _has_xy(positions.get(oid)):
+        if oid not in force and _has_xy(positions.get(oid)):
             continue
         positions[oid] = {"x": float(pt["x"]), "y": float(pt["y"])}
     return positions
@@ -1772,16 +1791,15 @@ def apply_game_sequence_routes(
     """Scott's 1-Game sequence when OCR/ink order is wrong or digits are missing.
 
     Pages (bulk import stems):
-      0032 opening — 4+5 pop 45° above 3pt + 3 to left block (same phase,
-        back-to-back beats), then Pass 1→5.
-      0033 screen14 — Screen 1 for 4, Cut 4→top.
-      0034 reverse — Pass 5→4, Pass 4→1, Screen 3 for 5, Cut 5 around to left block.
-      0035 downscreen — Screen 4 down for 3, Cut 3→top.
-      0036 finish — Pass 1→3 + Screen 4 for 5 (same phase), Cut 5 around to
-        right block, Pass 3→5.
+      0032 opening — 4+5 pop together + 3 to left block, then Pass 1→5.
+      0033 screen14 — Screen 1 for 4, Cut 4 above screen → top.
+      0034 reverse — Pass 5→4, Pass 4→1, Screen 3 for 5, Cut 5 to left block.
+      0035 downscreen — Screen 4 down for 3, Cut 3→top (1 held left).
+      0036 finish — Pass 1→3 + Screen 4 low, Cut 5 above screen → right block,
+        Pass 3→5.
 
-    Engine note: one-mover-at-a-time — "simultaneous" sheet actions are encoded
-    as consecutive beats in the same sheet phase (frontend orderGameBeats).
+    Engine note: one-mover-at-a-time except frontend ``parallelGroup`` for the
+    opening 4+5 pop (Scott simultaneous).
     """
     if not isinstance(digit_pos, dict):
         return
@@ -1874,18 +1892,18 @@ def apply_game_sequence_routes(
         passes[:] = [p for p in passes if p.get("orphan")]
         passes.clear()
 
-    # 45° wing pops just outside the 3pt (SVG basket at top). Clear of each
-    # other and of #3's left-block cut.
-    pop4 = {"x": 118.0, "y": 225.0}
-    pop5 = {"x": 382.0, "y": 225.0}
-    left_block = {"x": 178.0, "y": 100.0}
-    right_block = {"x": 322.0, "y": 100.0}
-    top = {"x": 254.6, "y": 301.0}
+    # Wing pops just outside the 3pt (SVG basket at top). Start from FT-line
+    # formation; tips stay clear of #3's left-block cut.
+    pop4 = {"x": 118.0, "y": 200.0}
+    pop5 = {"x": 382.0, "y": 200.0}
+    left_block = dict(_LEFT_BLOCK)
+    right_block = dict(_RIGHT_BLOCK)
+    top = dict(_TOP)
     screen_clearance = 65.0  # match Pitt 5 token gap
 
     if role == "opening":
         _clear_all_movers()
-        # Same phase (Scott step 2): 4 pop, 5 pop, 3 to left block — back-to-back.
+        # Same phase (Scott): 4+5 pop simultaneously, then 3 to left block, Pass 1→5.
         _straight("o4", pop4, "cut", min_disp=25.0)
         _straight("o5", pop5, "cut", min_disp=25.0)
         _straight("o3", left_block, "cut", min_disp=40.0)
@@ -1915,25 +1933,26 @@ def apply_game_sequence_routes(
             {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
         ]
         marks["o1"] = "screen"
-        # #4 goes around 1 to the top (curl to vacated point).
+        # #4 goes ABOVE the screen = center-court / midcourt side (higher y),
+        # not below toward the baseline, then to the top.
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
-        wp_around = {
-            "x": min(sx + 40.0, (sx + float(top["x"])) * 0.5 + 10.0),
-            "y": max(sy + 28.0, (sy + float(top["y"])) * 0.45),
+        wp_above = {
+            "x": (sx + float(top["x"])) * 0.55,
+            "y": max(sy + 40.0, (sy + float(top["y"])) * 0.62),
         }
-        _curl("o4", [wp_around, top], "cut")
+        _curl("o4", [wp_above, top], "cut")
         return
 
     if role == "reverse":
         _clear_all_movers()
         # Prefer post-screen landings for 1 (left wing) and 4 (top) when OCR sparse.
         if not _has_xy(digit_pos.get("o1")) or float(digit_pos["o1"]["x"]) > 200:
-            digit_pos["o1"] = {"x": 118.0, "y": 235.0}
+            digit_pos["o1"] = {"x": 118.0, "y": 220.0}
         if not _has_xy(digit_pos.get("o4")) or float(digit_pos["o4"]["y"]) < 250:
             digit_pos["o4"] = dict(top)
         if not _has_xy(digit_pos.get("o5")):
             digit_pos["o5"] = dict(pop5)
-        if not _has_xy(digit_pos.get("o3")):
+        if not _has_xy(digit_pos.get("o3")) or float(digit_pos["o3"]["y"]) > 70:
             digit_pos["o3"] = dict(left_block)
         _ensure_pass("o5", "o4")
         _ensure_pass("o4", "o1")
@@ -1942,7 +1961,7 @@ def apply_game_sequence_routes(
         o3x, o3y = float(o3["x"]), float(o3["y"])
         o5x, o5y = float(o5["x"]), float(o5["y"])
         # 3 screens across the paint toward 5's cut corridor (≥65px from #5 start).
-        screen_spot = {"x": 248.0, "y": 150.0}
+        screen_spot = {"x": 248.0, "y": 120.0}
         gap5 = ((screen_spot["x"] - o5x) ** 2 + (screen_spot["y"] - o5y) ** 2) ** 0.5
         if gap5 < screen_clearance and gap5 > 1.0:
             u = (screen_clearance - gap5) / gap5
@@ -1956,11 +1975,11 @@ def apply_game_sequence_routes(
         ]
         marks["o3"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
-        # 5 curls around 3 (below/left of screen) into the left block.
-        wp1 = {"x": min(sx - 45.0, (o5x + sx) * 0.5), "y": max(125.0, sy - 8.0)}
+        # 5 curls around 3 all the way down to the basket-line left block.
+        wp1 = {"x": min(sx - 45.0, (o5x + sx) * 0.5), "y": max(90.0, sy - 10.0)}
         wp2 = {
-            "x": (wp1["x"] + float(left_block["x"])) * 0.5,
-            "y": (wp1["y"] + float(left_block["y"])) * 0.5,
+            "x": (wp1["x"] + float(left_block["x"])) * 0.55,
+            "y": (wp1["y"] + float(left_block["y"])) * 0.45,
         }
         paths["o5"] = [
             {"x": o5x, "y": o5y},
@@ -1976,21 +1995,31 @@ def apply_game_sequence_routes(
         if not _has_xy(digit_pos.get("o4")):
             digit_pos["o4"] = dict(top)
         if not _has_xy(digit_pos.get("o3")):
-            digit_pos["o3"] = {"x": 290.0, "y": 160.0}
-        if not _has_xy(digit_pos.get("o5")):
+            digit_pos["o3"] = {"x": 290.0, "y": 140.0}
+        if not _has_xy(digit_pos.get("o5")) or float(digit_pos["o5"]["y"]) > 70:
             digit_pos["o5"] = dict(left_block)
+        # Keep 1 further left of the top so 1 and 3 are spaced.
+        digit_pos["o1"] = {"x": 72.0, "y": 250.0}
         o4 = digit_pos["o4"]
         o3 = digit_pos["o3"]
         o4x, o4y = float(o4["x"]), float(o4["y"])
         o3x, o3y = float(o3["x"]), float(o3["y"])
-        corridor = ((o4x - o3x) ** 2 + (o4y - o3y) ** 2) ** 0.5
-        if corridor < 1.0:
-            return
-        t_clear = min(0.78, max(0.22, screen_clearance / corridor))
+        # Lower screen (toward basket / smaller y) for 3 coming up to the top.
         screen_spot = {
-            "x": o3x + t_clear * (o4x - o3x),
-            "y": o3y + t_clear * (o4y - o3y),
+            "x": (o3x + o4x) * 0.5,
+            "y": min(o3y, o4y) - 10.0 if min(o3y, o4y) > 130 else 145.0,
         }
+        screen_spot["y"] = max(130.0, min(175.0, float(screen_spot["y"])))
+        gap3 = (
+            (float(screen_spot["x"]) - o3x) ** 2
+            + (float(screen_spot["y"]) - o3y) ** 2
+        ) ** 0.5
+        if gap3 < screen_clearance and gap3 > 1.0:
+            u = (screen_clearance - gap3) / gap3
+            screen_spot = {
+                "x": float(screen_spot["x"]) + u * (float(screen_spot["x"]) - o3x),
+                "y": float(screen_spot["y"]) + u * (float(screen_spot["y"]) - o3y),
+            }
         paths["o4"] = [
             {"x": o4x, "y": o4y},
             {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
@@ -1998,38 +2027,28 @@ def apply_game_sequence_routes(
         marks["o4"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
         wp_around = {
-            "x": max(sx - 35.0, (sx + float(top["x"])) * 0.5 - 25.0),
-            "y": min(sy + 45.0, (sy + float(top["y"])) * 0.55),
+            "x": max(sx - 40.0, (sx + float(top["x"])) * 0.5 - 30.0),
+            "y": min(sy + 50.0, (sy + float(top["y"])) * 0.55),
         }
         _curl("o3", [wp_around, top], "cut")
         return
 
     if role == "finish":
         _clear_all_movers()
-        if not _has_xy(digit_pos.get("o1")):
-            digit_pos["o1"] = {"x": 101.1, "y": 250.3}
+        digit_pos["o1"] = {"x": 72.0, "y": 250.0}
         if not _has_xy(digit_pos.get("o3")):
             digit_pos["o3"] = {"x": 248.9, "y": 292.1}
         if not _has_xy(digit_pos.get("o4")):
-            digit_pos["o4"] = {"x": 290.0, "y": 175.0}
-        if not _has_xy(digit_pos.get("o5")):
+            digit_pos["o4"] = {"x": 290.0, "y": 155.0}
+        if not _has_xy(digit_pos.get("o5")) or float(digit_pos["o5"]["y"]) > 70:
             digit_pos["o5"] = dict(left_block)
         _ensure_pass("o1", "o3")
         o4 = digit_pos["o4"]
         o5 = digit_pos["o5"]
         o4x, o4y = float(o4["x"]), float(o4["y"])
         o5x, o5y = float(o5["x"]), float(o5["y"])
-        corridor = ((o4x - o5x) ** 2 + (o4y - o5y) ** 2) ** 0.5
-        if corridor < 1.0:
-            return
-        t_clear = min(0.78, max(0.22, screen_clearance / corridor))
-        screen_spot = {
-            "x": o5x + t_clear * (o4x - o5x),
-            "y": o5y + t_clear * (o4y - o5y),
-        }
-        # Paint-side screen tip (right of left block) with ≥65px from #5.
-        if float(screen_spot["x"]) < 210:
-            screen_spot = {"x": 245.0, "y": 148.0}
+        # 4 goes LOWER (basket-side) to screen for 5.
+        screen_spot = {"x": 240.0, "y": 95.0}
         gap5 = (
             (float(screen_spot["x"]) - o5x) ** 2
             + (float(screen_spot["y"]) - o5y) ** 2
@@ -2046,11 +2065,14 @@ def apply_game_sequence_routes(
         ]
         marks["o4"] = "screen"
         sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
-        # 5 goes around 4 to the right block.
-        wp1 = {"x": min(330.0, sx + 50.0), "y": max(118.0, sy - 12.0)}
+        # 5 goes ABOVE the screen (center-court / midcourt side), then right block.
+        wp1 = {
+            "x": min(330.0, sx + 55.0),
+            "y": max(sy + 35.0, 130.0),
+        }
         wp2 = {
-            "x": (wp1["x"] + float(right_block["x"])) * 0.5 + 8.0,
-            "y": (wp1["y"] + float(right_block["y"])) * 0.5,
+            "x": (wp1["x"] + float(right_block["x"])) * 0.55 + 6.0,
+            "y": (wp1["y"] + float(right_block["y"])) * 0.4,
         }
         paths["o5"] = [
             {"x": o5x, "y": o5y},

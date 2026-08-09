@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-08 (1-Game pass overshoot polish)
+Updated: 2026-08-08 (Copy to… fix + 1-Game spacing)
 
 Branch: `cursor/full-film-panel-ac1f`
 
@@ -8,45 +8,51 @@ Branch: `cursor/full-film-panel-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-1-game-pass-polish |
+| **id** | playbook-copy-and-1game-spacing |
 | **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
 ## Decision (Scott)
 
-1-Game play 98 close but not right: **passes overshoot** (ball past receiver then snap back). Spacing/destinations/paths need cleanup. Do not regress Rip 125, Triangle 127, Pitt 5 137.
+Two required playbook fixes: (A) multi-team **Copy to…** broken on list; (B) 1-Game play 98 spacing/spots still wrong vs imported sheet steps. Do not regress Rip/Triangle/Pitt5. Flask-only restart.
 
 ## Approach
 
-- Root cause: digit→digit passes kept ink midpoints (arrow tip past glyph) while only endpoints snapped; `normalizeAnimPath` preferred stale `path.to` over `live[receiver]` after same-sheet pops.
-- Fix: straight 2-point passes in `apply_game_sequence_routes._ensure_pass`; frontend retargets non-orphan passes onto live tokens and drops ink midpoints; screen clearance ≥65px (Pitt 5); pops wider at 45° above 3pt.
-- Cache bump `v12`.
+### A — Copy to…
+- Root cause: flash used `flash()` but list template never called `get_flashed_messages`; dropdown defaulted to **current** team so same-team copy looked like a no-op; category filter could hide the new row after team switch.
+- Fix: render flashes; require explicit other-team select; reject empty `target_team`; redirect `?copied=<id>` + clear filters/highlight; DnD ignores action controls.
+
+### B — 1-Game spacing
+- FT-line formation for 2/3/4/5; basket-line blocks (y≈48, rim-aligned); 4+5 parallel pop; 4 curls midcourt-side of 1’s screen; 5 to left block; 1 held left on downscreen; 4 low screen then 5 above to right block. Cache `v13`.
 
 ## Files
 
-- `playbook_sheet_align.py`
+- `blueprints/playbook.py`
 - `templates/playbook.html`
+- `static/js/playbook-dnd.js`
+- `static/css/playbook.css`
+- `playbook_sheet_align.py`
+- `tests/test_playbook.py`
 - `tests/test_playbook_sheet_align.py`
 - `docs/agent_handoffs/ACTIVE.md`
 
 ## Verify
 
+- Hard refresh: `http://127.0.0.1:8080/playbook` → Copy to… another team → flash + highlight
 - Hard refresh: `http://127.0.0.1:8080/playbook/play/98` → **Play All**
-- Sheet-align tests: 26 passed
-- Headless: all five passes `passGap=0` / `nPts=2`; Rip/Triangle/Pitt 5 still animate
+- pytest playbook + sheet_align
 
 ## Report
 
 ### Proven
 
-- Pass overshoot: ink polylines had 40–56 midpoints past the receiver; endpoint snap alone left the ball traveling past then yanking back. Straight 2-pt + live-token retarget → `passGap=0` on 1→5, 5→4, 4→1, 1→3, 3→5.
-- Screen clearance bumped to 65px; pop tips (118,225)/(382,225); clean court (`underlay=false`, `maskCircles=0`, `screenMarkers=0`).
-- Tests 26 passed; LIVE_PROOF_OK for 98/125/127/137.
+- Copy endpoint worked server-side; UI failed to show flash / required intentional team choice / highlight.
+- 1-Game seeds were ~y=205 (past FT toward midcourt); blocks at y=100 (mid-paint). Retargeted to FT≈168 and blocks y=48.
 
 ### Inferred
 
-- Formation seeds still fill OCR gaps on 3/4/5; curl waypoints for “goes around” are geometric (not ink).
+- Parallel 4+5 pop via `parallelGroup` + shared rAF matches Scott “same time” better than back-to-back beats.
 
 ### Unknown / remaining
 
-- Scott visual sign-off on pop angle / curl aesthetics after this pass fix.
+- Scott visual sign-off on 1-Game paths after hard refresh (sheet PNGs may be absent locally; routes use seeded geometry).

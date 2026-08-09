@@ -1129,7 +1129,14 @@ def playbook_duplicate(play_id):
 def playbook_copy_to_team(play_id):
     """Deep-copy a play into another (or same) team playbook."""
     db = get_db()
-    target_team = normalize_playbook_team(request.form.get("target_team"))
+    raw_target = (request.form.get("target_team") or "").strip()
+    if not raw_target:
+        flash("Pick a team in the Copy to… dropdown, then click Copy to…", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    if raw_target not in PLAYBOOK_TEAM_KEYS:
+        flash("Unknown team — pick High School / Jr High Boys or Girls.", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    target_team = normalize_playbook_team(raw_target)
     try:
         result = copy_play_to_team(db, play_id, target_team, include_progressions=True)
     except ValueError as exc:
@@ -1138,7 +1145,13 @@ def playbook_copy_to_team(play_id):
     session[_SESSION_TEAM_KEY] = result["target_team"]
     label = playbook_team_label(result["target_team"])
     flash(f"Copied “{result['name']}” to {label}.", "success")
-    return redirect(url_for("playbook.playbook_list", team=result["target_team"]))
+    return redirect(
+        url_for(
+            "playbook.playbook_list",
+            team=result["target_team"],
+            copied=result["new_play_id"],
+        )
+    )
 
 
 @playbook_bp.route("/playbook/save", methods=["POST"])

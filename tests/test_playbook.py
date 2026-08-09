@@ -563,6 +563,7 @@ class TestPlaybookTeams:
         assert r.status_code == 200
         assert b"Jr High Girls" in r.data
         assert b"Rip Source" in r.data
+        assert b"Copied" in r.data
 
         source = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
         assert source["team_key"] == "hs_boys"
@@ -588,6 +589,39 @@ class TestPlaybookTeams:
             "SELECT COUNT(*) AS c FROM play_steps WHERE play_id = ?", (play_id,)
         ).fetchone()
         assert src_steps["c"] == 1
+
+        # Empty target_team is rejected (no silent default to hs_boys).
+        r_bad = client.post(
+            f"/playbook/play/{play_id}/copy-to-team",
+            data={"target_team": ""},
+            follow_redirects=True,
+        )
+        assert r_bad.status_code == 200
+        assert b"Pick a team" in r_bad.data
+        still = db.execute(
+            "SELECT COUNT(*) AS c FROM plays WHERE name = ? AND team_key = ?",
+            ("Rip Source", "jh_girls"),
+        ).fetchone()
+        assert still["c"] == 1
+
+        # List UX: Copy dropdown requires an explicit other-team choice.
+        r_list = client.get("/playbook?team=hs_boys")
+        assert r_list.status_code == 200
+        assert b"play-copy-to-team" in r_list.data
+        assert b"Copy to" in r_list.data
+        assert b"Team" in r_list.data
+        assert b'value=""' in r_list.data
+
+        # Redirect includes copied= for highlight.
+        r_redir = client.post(
+            f"/playbook/play/{play_id}/copy-to-team",
+            data={"target_team": "jh_boys"},
+            follow_redirects=False,
+        )
+        assert r_redir.status_code in (301, 302)
+        loc = r_redir.headers.get("Location") or ""
+        assert "team=jh_boys" in loc
+        assert "copied=" in loc
 
     def test_copy_includes_progressions(self, client, db):
         from blueprints.playbook import _ensure_play_progression_columns, copy_play_to_team

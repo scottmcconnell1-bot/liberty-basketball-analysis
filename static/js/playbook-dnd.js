@@ -180,8 +180,8 @@
       const item = e.target.closest('.play-dnd-item');
       if (!item || !root.contains(item)) return;
 
-      const action = e.target.closest('a, button, form, input, select, textarea');
-      if (action && !action.classList.contains('play-dnd-handle')) {
+      // Never hijack Copy/Delete/View controls inside the row.
+      if (e.target.closest('.play-row-actions, .play-copy-to-team, a, button, form, input, select, textarea, label')) {
         return;
       }
 
@@ -192,7 +192,7 @@
     });
 
     root.addEventListener('dblclick', (e) => {
-      if (e.target.closest('a, button, form, input, select, textarea')) return;
+      if (e.target.closest('.play-row-actions, .play-copy-to-team, a, button, form, input, select, textarea, label')) return;
       const item = e.target.closest('.play-dnd-item');
       if (!item || !root.contains(item)) return;
       const href = item.dataset.viewHref;
@@ -203,7 +203,7 @@
       item.setAttribute('draggable', 'true');
 
       item.addEventListener('dragstart', (e) => {
-        if (e.target.closest('.play-row-actions, button, form, input, select, textarea')) {
+        if (e.target.closest('.play-row-actions, .play-copy-to-team, button, form, input, select, textarea, label, a')) {
           e.preventDefault();
           return;
         }
