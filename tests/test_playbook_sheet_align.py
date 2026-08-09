@@ -199,6 +199,9 @@ def test_playbook_html_has_align_ready_banner():
     assert "orientSheetPass" in html
     assert "orderTriangleBeats" in html
     assert "isTrianglePlay" in html
+    assert "orderGameBeats" in html
+    assert "isGamePlay" in html
+    assert "ensureGameBeats" in html
     assert "heldLandings" in html
     assert "sheetDigitMaskLayer" in html
     # Animation view: no sheet underlay / white digit disks (tokens on SVG court).
@@ -497,3 +500,130 @@ def test_pitt5_screen_sheet_routes():
     assert drop[-1]["x"] < 220
     assert drop[-1]["y"] < 140
     assert not (marked.get("passes") or [])
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0032.png").is_file(),
+    reason="1-Game page_0032 fixture not present",
+)
+def test_game_opening_pops_and_pass():
+    """1-Game page 32: 4+5 pop, 3 to left block, Pass 1→5."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0032.png")["positions"]
+    assert all(f"o{i}" in pos for i in range(1, 6))
+    marked = trace_marked_paths_for_transition(base / "page_0032.png", pos, pos)
+    pairs = {
+        (p["fromPid"], p["toPid"])
+        for p in marked.get("passes") or []
+        if not p.get("orphan")
+    }
+    assert ("o1", "o5") in pairs
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o4") == "cut"
+    assert marks.get("o5") == "cut"
+    assert marks.get("o3") == "cut"
+    assert paths["o4"][-1]["x"] < 160
+    assert paths["o5"][-1]["x"] > 340
+    assert paths["o3"][-1]["y"] < 130
+    # Straight pop slides (2-point).
+    assert len(paths["o4"]) == 2
+    assert len(paths["o5"]) == 2
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0033.png").is_file(),
+    reason="1-Game page_0033 fixture not present",
+)
+def test_game_screen14_routes():
+    """1-Game page 33: Screen 1 for 4, Cut 4 to top."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0033.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0033.png", pos, pos)
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o1") == "screen"
+    assert marks.get("o4") == "cut"
+    assert len(paths["o1"]) == 2
+    assert paths["o4"][-1]["y"] > 270
+    assert len(paths["o4"]) >= 3  # curl around screener
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0034.png").is_file(),
+    reason="1-Game page_0034 fixture not present",
+)
+def test_game_reverse_passes_and_cross_screen():
+    """1-Game page 34: Pass 5→4→1, Screen 3, Cut 5 around to left block."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0034.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0034.png", pos, pos)
+    pairs = {
+        (p["fromPid"], p["toPid"])
+        for p in marked.get("passes") or []
+        if not p.get("orphan")
+    }
+    assert ("o5", "o4") in pairs
+    assert ("o4", "o1") in pairs
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o3") == "screen"
+    assert marks.get("o5") == "cut"
+    assert len(paths["o3"]) == 2
+    assert paths["o5"][-1]["x"] < 220
+    assert paths["o5"][-1]["y"] < 130
+    assert len(paths["o5"]) >= 3
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0035.png").is_file(),
+    reason="1-Game page_0035 fixture not present",
+)
+def test_game_downscreen_routes():
+    """1-Game page 35: Screen 4 down for 3, Cut 3 to top."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0035.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0035.png", pos, pos)
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o4") == "screen"
+    assert marks.get("o3") == "cut"
+    assert len(paths["o4"]) == 2
+    assert paths["o3"][-1]["y"] > 270
+    assert len(paths["o3"]) >= 3
+
+
+@pytest.mark.skipif(
+    not Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0036.png").is_file(),
+    reason="1-Game page_0036 fixture not present",
+)
+def test_game_finish_routes():
+    """1-Game page 36: Pass 1→3, Screen 4, Cut 5 to right block, Pass 3→5."""
+    from playbook_sheet_align import analyze_sheet_image, trace_marked_paths_for_transition
+
+    base = Path("uploads/bulk_imports/d125785a44474042b13589e9aadeca4f")
+    pos = analyze_sheet_image(base / "page_0036.png")["positions"]
+    marked = trace_marked_paths_for_transition(base / "page_0036.png", pos, pos)
+    pairs = {
+        (p["fromPid"], p["toPid"])
+        for p in marked.get("passes") or []
+        if not p.get("orphan")
+    }
+    assert ("o1", "o3") in pairs
+    assert ("o3", "o5") in pairs
+    marks = marked.get("marks") or {}
+    paths = marked.get("paths") or {}
+    assert marks.get("o4") == "screen"
+    assert marks.get("o5") == "cut"
+    assert len(paths["o4"]) == 2
+    assert paths["o5"][-1]["x"] > 280
+    assert paths["o5"][-1]["y"] < 130
+    assert len(paths["o5"]) >= 3

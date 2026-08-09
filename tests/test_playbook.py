@@ -489,3 +489,132 @@ class TestPlaybookDB:
         # Steps should be gone
         steps = db.execute("SELECT * FROM play_steps WHERE play_id = ?", (play_id,)).fetchall()
         assert len(steps) == 0
+
+
+class TestPlaybookTeams:
+    def test_list_filters_by_team(self, client, db):
+        from blueprints.playbook import _ensure_play_progression_columns
+
+        _ensure_play_progression_columns(db)
+        db.execute(
+            "INSERT INTO plays (name, category, team_key) VALUES (?, ?, ?)",
+            ("HS Only Play", "offense", "hs_boys"),
+        )
+        db.execute(
+            "INSERT INTO plays (name, category, team_key) VALUES (?, ?, ?)",
+            ("Girls Only Play", "offense", "hs_girls"),
+        )
+        db.commit()
+
+        r_boys = client.get("/playbook?team=hs_boys")
+        assert r_boys.status_code == 200
+        assert b"HS Only Play" in r_boys.data
+        assert b"Girls Only Play" not in r_boys.data
+        assert b"playbookTeamSelect" in r_boys.data
+        assert b"High School Boys" in r_boys.data
+
+        r_girls = client.get("/playbook?team=hs_girls")
+        assert r_girls.status_code == 200
+        assert b"Girls Only Play" in r_girls.data
+        assert b"HS Only Play" not in r_girls.data
+
+    def test_existing_plays_default_to_hs_boys(self, client, db):
+        from blueprints.playbook import _ensure_play_progression_columns, DEFAULT_PLAYBOOK_TEAM
+
+        _ensure_play_progression_columns(db)
+        cur = db.execute(
+            "INSERT INTO plays (name, category) VALUES (?, ?)",
+            ("Legacy Play", "offense"),
+        )
+        play_id = cur.lastrowid
+        db.commit()
+        # Trigger backfill via ensure
+        _ensure_play_progression_columns(db)
+        db.commit()
+        row = db.execute("SELECT team_key FROM plays WHERE id = ?", (play_id,)).fetchone()
+        assert row["team_key"] == DEFAULT_PLAYBOOK_TEAM
+
+        r = client.get("/playbook")
+        assert r.status_code == 200
+        assert b"Legacy Play" in r.data
+
+    def test_copy_play_to_another_team(self, client, db):
+        from blueprints.playbook import _ensure_play_progression_columns
+
+        _ensure_play_progression_columns(db)
+        cur = db.execute(
+            "INSERT INTO plays (name, category, description, team_key) VALUES (?, ?, ?, ?)",
+            ("Rip Source", "offense", "deep copy me", "hs_boys"),
+        )
+        play_id = cur.lastrowid
+        db.execute(
+            """INSERT INTO play_steps
+               (play_id, step_number, label, positions_json, movements_json, notes, source_image)
+               VALUES (?,?,?,?,?,?,?)""",
+            (play_id, 0, "Sheet 1", '{"o1":{"x":1,"y":2}}', "[]", "note", "/uploads/sheet.png"),
+        )
+        db.commit()
+
+        r = client.post(
+            f"/playbook/play/{play_id}/copy-to-team",
+            data={"target_team": "jh_girls"},
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+        assert b"Jr High Girls" in r.data
+        assert b"Rip Source" in r.data
+
+        source = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+        assert source["team_key"] == "hs_boys"
+
+        copy = db.execute(
+            "SELECT * FROM plays WHERE name = ? AND team_key = ?",
+            ("Rip Source", "jh_girls"),
+        ).fetchone()
+        assert copy is not None
+        assert copy["id"] != play_id
+        assert copy["description"] == "deep copy me"
+
+        steps = db.execute(
+            "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number",
+            (copy["id"],),
+        ).fetchall()
+        assert len(steps) == 1
+        assert steps[0]["label"] == "Sheet 1"
+        assert steps[0]["source_image"] == "/uploads/sheet.png"
+
+        # Source steps untouched
+        src_steps = db.execute(
+            "SELECT COUNT(*) AS c FROM play_steps WHERE play_id = ?", (play_id,)
+        ).fetchone()
+        assert src_steps["c"] == 1
+
+    def test_copy_includes_progressions(self, client, db):
+        from blueprints.playbook import _ensure_play_progression_columns, copy_play_to_team
+
+        _ensure_play_progression_columns(db)
+        parent = db.execute(
+            "INSERT INTO plays (name, category, team_key) VALUES (?, ?, ?)",
+            ("Parent Set", "offense", "hs_boys"),
+        ).lastrowid
+        child = db.execute(
+            """INSERT INTO plays
+               (name, category, team_key, parent_play_id, progression_order)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("Child Option", "offense", "hs_boys", parent, 0),
+        ).lastrowid
+        db.execute(
+            "INSERT INTO play_steps (play_id, step_number, label, positions_json) VALUES (?,?,?,?)",
+            (child, 0, "C1", "{}"),
+        )
+        db.commit()
+
+        result = copy_play_to_team(db, parent, "hs_girls", include_progressions=True)
+        new_parent = result["new_play_id"]
+        kids = db.execute(
+            "SELECT * FROM plays WHERE parent_play_id = ?", (new_parent,)
+        ).fetchall()
+        assert len(kids) == 1
+        assert kids[0]["name"] == "Child Option"
+        assert kids[0]["team_key"] == "hs_girls"
+        assert kids[0]["id"] != child

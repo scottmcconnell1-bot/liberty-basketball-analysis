@@ -23,7 +23,7 @@ COURT_H = 470.0
 _CACHE_DIR_NAME = "sheet_align_cache"
 
 
-_CACHE_VERSION = "v10"  # v10: exact digit match + header trim (no o23 / title digits)
+_CACHE_VERSION = "v11"  # v11: 1-Game formation seeds (pages 32–36)
 
 
 def _cache_dir(base: str | Path | None = None) -> Path:
@@ -1679,6 +1679,376 @@ def apply_pitt5_sequence_routes(
     passes.clear()
 
 
+# --- 1-Game (pages 32–36) -------------------------------------------------
+# SVG court 500×470, basket at top. OCR often misses 3/4/5 on these sheets
+# (digits share ink with pop/screen stems), so we seed Scott's formations.
+
+_GAME_PAGE_ROLES = {
+    "0032": "opening",
+    "0033": "screen14",
+    "0034": "reverse",
+    "0035": "downscreen",
+    "0036": "finish",
+}
+
+# Printed start-of-sheet formations (Scott 4-high → through finish).
+_GAME_SHEET_START: dict[str, dict[str, dict[str, float]]] = {
+    "opening": {
+        "o1": {"x": 254.6, "y": 301.0},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 68.0, "y": 215.0},
+        "o4": {"x": 185.0, "y": 205.0},
+        "o5": {"x": 315.0, "y": 205.0},
+    },
+    "screen14": {
+        "o1": {"x": 254.6, "y": 301.0},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 178.0, "y": 100.0},
+        "o4": {"x": 125.0, "y": 218.0},
+        "o5": {"x": 370.0, "y": 222.0},
+    },
+    "reverse": {
+        "o1": {"x": 125.0, "y": 230.0},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 178.0, "y": 100.0},
+        "o4": {"x": 254.6, "y": 301.0},
+        "o5": {"x": 370.0, "y": 222.0},
+    },
+    "downscreen": {
+        "o1": {"x": 101.1, "y": 250.3},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 290.0, "y": 160.0},
+        "o4": {"x": 254.6, "y": 301.0},
+        "o5": {"x": 178.0, "y": 100.0},
+    },
+    "finish": {
+        "o1": {"x": 101.1, "y": 250.3},
+        "o2": {"x": 433.5, "y": 209.2},
+        "o3": {"x": 248.9, "y": 292.1},
+        "o4": {"x": 290.0, "y": 175.0},
+        "o5": {"x": 178.0, "y": 100.0},
+    },
+}
+
+
+def _game_role_from_stem(stem: str) -> str | None:
+    for key, role in _GAME_PAGE_ROLES.items():
+        if key in stem:
+            return role
+    return None
+
+
+def seed_game_sheet_positions(
+    positions: dict,
+    image_path: str | Path | None = None,
+) -> dict:
+    """Fill OCR gaps on 1-Game pages with Scott's printed start formations.
+
+    Prefer real OCR when present; only seed missing o1–o5. Mutates and returns
+    ``positions``.
+    """
+    if not isinstance(positions, dict):
+        return positions
+    stem = Path(image_path).stem.lower() if image_path else ""
+    role = _game_role_from_stem(stem)
+    if not role:
+        return positions
+    seed = _GAME_SHEET_START.get(role) or {}
+    for oid, pt in seed.items():
+        if _has_xy(positions.get(oid)):
+            continue
+        positions[oid] = {"x": float(pt["x"]), "y": float(pt["y"])}
+    return positions
+
+
+def apply_game_sequence_routes(
+    crop_gray,
+    digit_pos: dict,
+    paths: dict,
+    marks: dict,
+    passes: list,
+    image_path: str | Path | None = None,
+) -> None:
+    """Scott's 1-Game sequence when OCR/ink order is wrong or digits are missing.
+
+    Pages (bulk import stems):
+      0032 opening — 4+5 pop 45° above 3pt + 3 to left block (same phase,
+        back-to-back beats), then Pass 1→5.
+      0033 screen14 — Screen 1 for 4, Cut 4→top.
+      0034 reverse — Pass 5→4, Pass 4→1, Screen 3 for 5, Cut 5 around to left block.
+      0035 downscreen — Screen 4 down for 3, Cut 3→top.
+      0036 finish — Pass 1→3 + Screen 4 for 5 (same phase), Cut 5 around to
+        right block, Pass 3→5.
+
+    Engine note: one-mover-at-a-time — "simultaneous" sheet actions are encoded
+    as consecutive beats in the same sheet phase (frontend orderGameBeats).
+    """
+    if not isinstance(digit_pos, dict):
+        return
+    stem = Path(image_path).stem.lower() if image_path else ""
+    role = _game_role_from_stem(stem)
+    if not role:
+        return
+
+    seed_game_sheet_positions(digit_pos, image_path=image_path)
+
+    def _ensure_pass(frm: str, to: str) -> None:
+        nonlocal passes
+        if any(
+            (not p.get("orphan")) and p.get("fromPid") == frm and p.get("toPid") == to
+            for p in passes
+        ):
+            return
+        a = digit_pos.get(frm)
+        b = digit_pos.get(to)
+        if not _has_xy(a) or not _has_xy(b):
+            return
+        poly = trace_ink_polyline(crop_gray, a, b, digit_positions=digit_pos)
+        if len(poly) < 2:
+            poly = [
+                {"x": float(a["x"]), "y": float(a["y"])},
+                {"x": float(b["x"]), "y": float(b["y"])},
+            ]
+        passes[:] = [
+            p
+            for p in passes
+            if p.get("orphan")
+            or not (
+                {p.get("fromPid"), p.get("toPid")} == {frm, to}
+                or (p.get("fromPid") == frm and p.get("toPid") != to and frm == "o1")
+            )
+        ]
+        passes[:] = [
+            p
+            for p in passes
+            if not (
+                p.get("orphan")
+                and {p.get("fromPid"), p.get("toPid")} == {frm, to}
+            )
+        ]
+        passes.append({
+            "fromPid": frm,
+            "toPid": to,
+            "points": poly,
+            "type": "pass",
+        })
+
+    def _straight(oid: str, dest: dict, kind: str, *, min_disp: float = 30.0) -> None:
+        start = digit_pos.get(oid)
+        if not _has_xy(start) or not _has_xy(dest):
+            return
+        disp = (
+            (float(dest["x"]) - float(start["x"])) ** 2
+            + (float(dest["y"]) - float(start["y"])) ** 2
+        ) ** 0.5
+        if disp < min_disp:
+            return
+        paths[oid] = [
+            {"x": float(start["x"]), "y": float(start["y"])},
+            {"x": float(dest["x"]), "y": float(dest["y"])},
+        ]
+        marks[oid] = kind
+
+    def _curl(oid: str, waypoints: list[dict], kind: str = "cut") -> None:
+        start = digit_pos.get(oid)
+        if not _has_xy(start) or len(waypoints) < 1:
+            return
+        poly = [{"x": float(start["x"]), "y": float(start["y"])}]
+        for wp in waypoints:
+            if _has_xy(wp):
+                poly.append({"x": float(wp["x"]), "y": float(wp["y"])})
+        if len(poly) < 2:
+            return
+        paths[oid] = poly
+        marks[oid] = kind
+
+    def _clear_all_movers() -> None:
+        for oid in list(paths.keys()):
+            if str(oid).startswith("o"):
+                paths.pop(oid, None)
+                marks.pop(oid, None)
+        passes[:] = [p for p in passes if p.get("orphan")]
+        passes.clear()
+
+    pop4 = {"x": 125.0, "y": 218.0}
+    pop5 = {"x": 370.0, "y": 222.0}
+    left_block = {"x": 178.0, "y": 100.0}
+    right_block = {"x": 322.0, "y": 100.0}
+    top = {"x": 254.6, "y": 301.0}
+
+    if role == "opening":
+        _clear_all_movers()
+        # Same phase (Scott step 2): 4 pop, 5 pop, 3 to left block — back-to-back.
+        _straight("o4", pop4, "cut", min_disp=25.0)
+        _straight("o5", pop5, "cut", min_disp=25.0)
+        _straight("o3", left_block, "cut", min_disp=40.0)
+        _ensure_pass("o1", "o5")
+        # Keep pass tip on pop destination for #5 (ball arrives after pops).
+        for p in passes:
+            if p.get("fromPid") == "o1" and p.get("toPid") == "o5":
+                pts = p.get("points") or []
+                if len(pts) >= 2:
+                    pts[-1] = {"x": float(pop5["x"]), "y": float(pop5["y"])}
+        return
+
+    if role == "screen14":
+        _clear_all_movers()
+        o1 = digit_pos.get("o1")
+        o4 = digit_pos.get("o4")
+        if not _has_xy(o1) or not _has_xy(o4):
+            return
+        # Straight screen approach; hold with clearance from #4.
+        o1x, o1y = float(o1["x"]), float(o1["y"])
+        o4x, o4y = float(o4["x"]), float(o4["y"])
+        clearance = 55.0
+        corridor = ((o1x - o4x) ** 2 + (o1y - o4y) ** 2) ** 0.5
+        if corridor < 1.0:
+            return
+        t_clear = min(0.78, max(0.22, clearance / corridor))
+        screen_spot = {
+            "x": o4x + t_clear * (o1x - o4x),
+            "y": o4y + t_clear * (o1y - o4y),
+        }
+        paths["o1"] = [
+            {"x": o1x, "y": o1y},
+            {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
+        ]
+        marks["o1"] = "screen"
+        # #4 goes around 1 to the top (curl to vacated point).
+        sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
+        wp_around = {
+            "x": min(sx + 35.0, (sx + float(top["x"])) * 0.5),
+            "y": max(sy + 25.0, (sy + float(top["y"])) * 0.45),
+        }
+        _curl("o4", [wp_around, top], "cut")
+        return
+
+    if role == "reverse":
+        _clear_all_movers()
+        # Prefer post-screen landings for 1 (left wing) and 4 (top) when OCR sparse.
+        if not _has_xy(digit_pos.get("o1")) or float(digit_pos["o1"]["x"]) > 200:
+            digit_pos["o1"] = {"x": 125.0, "y": 230.0}
+        if not _has_xy(digit_pos.get("o4")) or float(digit_pos["o4"]["y"]) < 250:
+            digit_pos["o4"] = dict(top)
+        if not _has_xy(digit_pos.get("o5")):
+            digit_pos["o5"] = dict(pop5)
+        if not _has_xy(digit_pos.get("o3")):
+            digit_pos["o3"] = dict(left_block)
+        _ensure_pass("o5", "o4")
+        _ensure_pass("o4", "o1")
+        o3 = digit_pos["o3"]
+        o5 = digit_pos["o5"]
+        o3x, o3y = float(o3["x"]), float(o3["y"])
+        o5x, o5y = float(o5["x"]), float(o5["y"])
+        # 3 screens across the paint toward 5's cut corridor.
+        screen_spot = {"x": 255.0, "y": 155.0}
+        paths["o3"] = [
+            {"x": o3x, "y": o3y},
+            {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
+        ]
+        marks["o3"] = "screen"
+        sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
+        # 5 curls around 3 (below/left of screen) into the left block.
+        wp1 = {"x": min(sx - 40.0, (o5x + sx) * 0.5), "y": max(130.0, sy - 10.0)}
+        wp2 = {"x": (wp1["x"] + float(left_block["x"])) * 0.5, "y": (wp1["y"] + float(left_block["y"])) * 0.5}
+        paths["o5"] = [
+            {"x": o5x, "y": o5y},
+            wp1,
+            wp2,
+            {"x": float(left_block["x"]), "y": float(left_block["y"])},
+        ]
+        marks["o5"] = "cut"
+        return
+
+    if role == "downscreen":
+        _clear_all_movers()
+        if not _has_xy(digit_pos.get("o4")):
+            digit_pos["o4"] = dict(top)
+        if not _has_xy(digit_pos.get("o3")):
+            digit_pos["o3"] = {"x": 290.0, "y": 160.0}
+        if not _has_xy(digit_pos.get("o5")):
+            digit_pos["o5"] = dict(left_block)
+        o4 = digit_pos["o4"]
+        o3 = digit_pos["o3"]
+        o4x, o4y = float(o4["x"]), float(o4["y"])
+        o3x, o3y = float(o3["x"]), float(o3["y"])
+        clearance = 55.0
+        corridor = ((o4x - o3x) ** 2 + (o4y - o3y) ** 2) ** 0.5
+        if corridor < 1.0:
+            return
+        t_clear = min(0.78, max(0.22, clearance / corridor))
+        screen_spot = {
+            "x": o3x + t_clear * (o4x - o3x),
+            "y": o3y + t_clear * (o4y - o3y),
+        }
+        paths["o4"] = [
+            {"x": o4x, "y": o4y},
+            {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
+        ]
+        marks["o4"] = "screen"
+        sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
+        wp_around = {
+            "x": max(sx - 30.0, (sx + float(top["x"])) * 0.5 - 20.0),
+            "y": min(sy + 40.0, (sy + float(top["y"])) * 0.55),
+        }
+        _curl("o3", [wp_around, top], "cut")
+        return
+
+    if role == "finish":
+        _clear_all_movers()
+        if not _has_xy(digit_pos.get("o1")):
+            digit_pos["o1"] = {"x": 101.1, "y": 250.3}
+        if not _has_xy(digit_pos.get("o3")):
+            digit_pos["o3"] = {"x": 248.9, "y": 292.1}
+        if not _has_xy(digit_pos.get("o4")):
+            digit_pos["o4"] = {"x": 290.0, "y": 175.0}
+        if not _has_xy(digit_pos.get("o5")):
+            digit_pos["o5"] = dict(left_block)
+        _ensure_pass("o1", "o3")
+        o4 = digit_pos["o4"]
+        o5 = digit_pos["o5"]
+        o4x, o4y = float(o4["x"]), float(o4["y"])
+        o5x, o5y = float(o5["x"]), float(o5["y"])
+        clearance = 55.0
+        corridor = ((o4x - o5x) ** 2 + (o4y - o5y) ** 2) ** 0.5
+        if corridor < 1.0:
+            return
+        t_clear = min(0.78, max(0.22, clearance / corridor))
+        screen_spot = {
+            "x": o5x + t_clear * (o4x - o5x),
+            "y": o5y + t_clear * (o4y - o5y),
+        }
+        # Prefer a paint-side screen tip (right of left block) with clearance.
+        if float(screen_spot["x"]) < 200:
+            screen_spot = {"x": 240.0, "y": 145.0}
+        paths["o4"] = [
+            {"x": o4x, "y": o4y},
+            {"x": float(screen_spot["x"]), "y": float(screen_spot["y"])},
+        ]
+        marks["o4"] = "screen"
+        sx, sy = float(screen_spot["x"]), float(screen_spot["y"])
+        # 5 goes around 4 to the right block.
+        wp1 = {"x": min(320.0, sx + 45.0), "y": max(120.0, sy - 15.0)}
+        wp2 = {
+            "x": (wp1["x"] + float(right_block["x"])) * 0.5 + 10.0,
+            "y": (wp1["y"] + float(right_block["y"])) * 0.5,
+        }
+        paths["o5"] = [
+            {"x": o5x, "y": o5y},
+            wp1,
+            wp2,
+            {"x": float(right_block["x"]), "y": float(right_block["y"])},
+        ]
+        marks["o5"] = "cut"
+        _ensure_pass("o3", "o5")
+        for p in passes:
+            if p.get("fromPid") == "o3" and p.get("toPid") == "o5":
+                pts = p.get("points") or []
+                if len(pts) >= 2:
+                    pts[-1] = {"x": float(right_block["x"]), "y": float(right_block["y"])}
+        return
+
+
 def trace_marked_paths_for_transition(
     image_path: str | Path,
     from_positions: dict,
@@ -2043,6 +2413,8 @@ def trace_marked_paths_for_transition(
     apply_triangle_sequence_routes(crop, digit_pos, paths, marks, passes, image_path=path)
     # Pitt 5 (Scott): Pass 1→5 + corner clears, then 4 screens / 5 to right block.
     apply_pitt5_sequence_routes(crop, digit_pos, paths, marks, passes, image_path=path)
+    # 1-Game (Scott): 4-high pops → screen/reverse → finish on right block.
+    apply_game_sequence_routes(crop, digit_pos, paths, marks, passes, image_path=path)
 
     return {"paths": paths, "marks": marks, "passes": passes}
 
@@ -2095,6 +2467,8 @@ def analyze_sheet_image(image_path: str | Path, cache_base: str | Path | None = 
         for k, v in positions.items()
         if k in {f"o{i}" for i in range(1, 6)}
     }
+    # 1-Game sheets often miss 3/4/5 OCR (ink-bridged digits) — seed formation.
+    seed_game_sheet_positions(pos_public, image_path=path)
     result = {
         "ok": True,
         "cache_version": _CACHE_VERSION,

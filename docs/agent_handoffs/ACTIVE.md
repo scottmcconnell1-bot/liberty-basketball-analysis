@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-08 (Playbook UX: A–Z list + Back to plays position restore)
+Updated: 2026-08-08 (1-Game Scott choreography)
 
 Branch: `cursor/full-film-panel-ac1f`
 
@@ -8,47 +8,57 @@ Branch: `cursor/full-film-panel-ac1f`
 
 | Field | Value |
 | --- | --- |
-| **id** | playbook-list-ux-alpha-back |
+| **id** | playbook-1-game-choreography |
 | **status** | `implemented` |
 | **assigned_to** | cursor-agent |
 
 ## Decision (Scott)
 
-1. Plays list sorted **A–Z by name** (case-insensitive) when browsing.
-2. Play detail/animation pages get clear **← Back to plays**; return restores scroll + category + search via `sessionStorage`.
-3. Do not regress Rip / Triangle / Pitt 5 animation.
+Authoritative **1-Game** sequence (4-high → pops → screens/passes → 5 on right block). One-mover-at-a-time: simultaneous sheet actions = same phase, back-to-back beats. Clean court (no digit masks / underlay ink / T-bar markers). Do not regress Rip 125, Triangle 127, Pitt 5 137.
 
 ## Approach
 
-- Server: `_plays_query` + `_group_plays_for_list` (+ opponent list) sort by `name COLLATE NOCASE`.
-- Client: `liberty.playbook.listState` saves `scrollY`, `categoryId`, `search` before leaving list; restores on `/playbook` load.
-- Template: page-header + sidebar/progression **← Back to plays**.
+- `apply_game_sequence_routes` + `seed_game_sheet_positions` (pages 0032–0036) in `playbook_sheet_align.py`.
+- Frontend `isGamePlay` / `orderGameBeats` / `ensureGameBeats`; skip heuristic screens + T-bar markers.
+- Cache bump `v11` for formation seeds (OCR often misses 3/4/5 on these sheets).
 
 ## Files
 
-- `blueprints/playbook.py`
+- `playbook_sheet_align.py`
 - `templates/playbook.html`
-- `static/css/playbook.css`
-- `static/js/playbook-dnd.js` (hint comment)
-- `tests/test_playbook.py`
+- `tests/test_playbook_sheet_align.py`
 - `docs/agent_handoffs/ACTIVE.md`
+- `docs/agent_handoffs/ARCHIVE/playbook-multi-team-2026-08-08.md`
 
 ## Verify
 
-- Hard refresh: `http://127.0.0.1:8080/playbook` — names A–Z
-- Open a mid-list play (e.g. Pitt 5): `http://127.0.0.1:8080/playbook/play/137`
-- Click **← Back to plays** — same scroll/category/search as before
+- Hard refresh: `http://127.0.0.1:8080/playbook/play/98` → **Play All**
+- Headless beat list matches Scott steps (see Report)
+- Smoke: `/playbook/play/125`, `/127`, `/137` still animate
 
 ## Report
 
 ### Proven
 
-- Prior animation polish commit `8bbf575` already on origin; this slice is list UX only.
+- Play **id 98** · pages **32–36** (`page_0032.png` … `page_0036.png`).
+- Sheet-align tests: **26 passed** (includes 5 new 1-Game route tests).
+- Headless Play All: Game beats correct; clean court (`underlay=false`, `maskCircles=0`, `screenMarkers=0`); Rip/Triangle/Pitt 5 still move.
+
+**Final beat list (mapped to Scott):**
+
+| Scott step | Sheet | Beats |
+| --- | --- | --- |
+| 1–2 (+ pass start) | 0 (p32) | Cut #4 pop, Cut #5 pop, Cut #3→left block *(same phase)*, Pass #1→#5 |
+| 3 (screen) | 1 (p33) | Screen #1, Cut #4→top |
+| 4–5 | 2 (p34) | Pass #5→#4, Pass #4→#1, Screen #3, Cut #5 around→left block |
+| 6 | 3 (p35) | Screen #4 down, Cut #3→top |
+| 7–8 | 4 (p36) | Pass #1→#3, Screen #4 *(same phase)*, Cut #5 around→right block, Pass #3→#5 |
 
 ### Inferred
 
-- Drag-reorder still persists `list_order` but no longer drives browse order.
+- Formation seeds fill OCR gaps; ink tips used when present for passes.
+- Concurrent multi-team playbook UI landed in the same working tree; archived separately.
 
 ### Unknown / remaining
 
-- None for this slice.
+- Scott visual sign-off on spacing of pop angles / curl paths.

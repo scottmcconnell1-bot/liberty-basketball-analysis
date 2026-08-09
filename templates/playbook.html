@@ -10,8 +10,21 @@
     <p class="text-muted" style="margin-top:4px;">Offense / Defense / Press / Press Break (Man · Zone), Transition, BLOB, SLOB — Opponents opens scout playbooks.</p>
   </div>
   <div class="playbook-page-actions">
+    <label class="playbook-team-select" for="playbookTeamSelect">
+      <span class="playbook-team-select-label">Team</span>
+      <select id="playbookTeamSelect" class="form-control" aria-label="Select team playbook">
+        {% for t in playbook_teams|default([
+          {'key': 'hs_boys', 'label': 'High School Boys'},
+          {'key': 'hs_girls', 'label': 'High School Girls'},
+          {'key': 'jh_boys', 'label': 'Jr High Boys'},
+          {'key': 'jh_girls', 'label': 'Jr High Girls'},
+        ]) %}
+        <option value="{{ t.key }}" {% if t.key == selected_team|default('hs_boys') %}selected{% endif %}>{{ t.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
     {% if not coach_readonly %}
-    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create') }}">+ New Play</a>
+    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create', team=selected_team) }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
     {% endif %}
@@ -42,7 +55,7 @@
   </div>
   <div class="card playbook-main">
     <div class="playbook-main-head">
-      <h3>Plays</h3>
+      <h3>Plays{% if selected_team_label %} · {{ selected_team_label }}{% endif %}</h3>
       <div class="playbook-breadcrumb" id="playbookBreadcrumb">All plays</div>
     </div>
     {% if plays %}
@@ -123,8 +136,18 @@
           {% if not coach_readonly %}
           <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
           <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
-          <form method="post" action="{{ url_for('playbook.playbook_duplicate', play_id=play.id) }}">
-            <button class="btn btn-secondary btn-sm" type="submit" title="Duplicate play">Copy</button>
+          <form method="post" action="{{ url_for('playbook.playbook_copy_to_team', play_id=play.id) }}" class="play-copy-to-team">
+            <select name="target_team" class="form-control play-copy-team-select" aria-label="Copy {{ play.name }} to team" title="Copy to team">
+              {% for t in playbook_teams|default([
+                {'key': 'hs_boys', 'label': 'High School Boys'},
+                {'key': 'hs_girls', 'label': 'High School Girls'},
+                {'key': 'jh_boys', 'label': 'Jr High Boys'},
+                {'key': 'jh_girls', 'label': 'Jr High Girls'},
+              ]) %}
+              <option value="{{ t.key }}" {% if t.key == selected_team|default('hs_boys') %}selected{% endif %}>{{ t.label }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-secondary btn-sm" type="submit" title="Deep-copy this play into the selected team">Copy to…</button>
           </form>
           <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}">
             <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
@@ -150,7 +173,7 @@
 <div class="page-header" data-frame="6.1">
   <div>
     {% if view_mode in ("editor", "view") %}
-    <a class="playbook-back-link" id="backToPlaysLink" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
+    <a class="playbook-back-link" id="backToPlaysLink" href="{{ url_for('playbook.playbook_list', team=selected_team|default('hs_boys')) }}">← Back to plays</a>
     {% endif %}
     <h2 style="margin-top:4px;">{{ editing_play.name if editing_play and editing_play.name else 'Playbook' }}</h2>
   </div>
@@ -184,7 +207,7 @@
 {% set prog_slides = sibling_progressions|default([]) if parent_play else child_progressions|default([]) %}
 {% set prog_endpoint = 'playbook.playbook_view' if is_readonly else 'playbook.playbook_edit' %}
 <div class="play-progression-bar">
-  <a class="playbook-back-link" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
+  <a class="playbook-back-link" href="{{ url_for('playbook.playbook_list', team=selected_team|default('hs_boys')) }}">← Back to plays</a>
   <span>/</span>
   <strong>{{ prog_parent.name }}</strong>
   <span class="text-muted">slides:</span>
@@ -310,6 +333,7 @@
       {% if not is_readonly %}
       <form method="post" action="{{ url_for('playbook.playbook_save') }}" id="playForm">
         <input type="hidden" name="play_id" value="{{ editing_play.id if editing_play else '' }}">
+        <input type="hidden" name="team_key" value="{{ (editing_play.team_key if editing_play and editing_play.team_key else selected_team)|default('hs_boys') }}">
         <input type="hidden" name="diagram_json" id="diagramJsonInput"
                value="{{ (editing_play.diagram_json if editing_play and editing_play.diagram_json else '{}')|e }}">
         <input type="hidden" name="steps_json" id="stepsJsonInput" value="">
@@ -370,7 +394,7 @@
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
         {% endif %}
         {% if view_mode != "share" %}
-        <a class="btn btn-secondary btn-sm playbook-back-link" href="{{ url_for('playbook.playbook_list') }}">← Back to plays</a>
+        <a class="btn btn-secondary btn-sm playbook-back-link" href="{{ url_for('playbook.playbook_list', team=selected_team|default('hs_boys')) }}">← Back to plays</a>
         {% endif %}
         {% if editing_play and editing_play.id %}
         <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
@@ -2217,7 +2241,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw) {
     const carryOnly = !here[oid] && sheetAlignByStep[stepIndex];
     const allowCarry = carryOnly
       && stepIndex < steps.length - 1
-      && (oid === 'o4' || oid === 'o5' || isTrianglePlay());
+      && (oid === 'o4' || oid === 'o5' || isTrianglePlay() || isGamePlay());
     if (carryOnly && !allowCarry) continue;
     fromOffense[oid] = { x: a.x, y: a.y };
     const b = nextHere[oid] || here[oid] || a;
@@ -2384,6 +2408,154 @@ function isPitt5Play() {
     || ''
   ).toLowerCase();
   return name.includes('pitt 5') || name.includes('pitt5');
+}
+
+function isGamePlay() {
+  const name = (
+    (document.getElementById('playName') && document.getElementById('playName').value)
+    || (editingPlay && editingPlay.name)
+    || ''
+  ).toLowerCase().replace(/\s+/g, '');
+  // "1-Game", "1 Game", "1Game"
+  return name === '1-game' || name === '1game' || name.includes('1-game');
+}
+
+/**
+ * Scott's 1-Game sequence (authoritative when OCR/ink order is wrong).
+ * One-mover-at-a-time engine: simultaneous sheet actions = same phase,
+ * consecutive back-to-back beats (documented per sheet below).
+ *
+ * Sheet0 (page 32 opening, Scott 1–2 + pass): Relocate 4 pop, Relocate 5 pop,
+ *   Cut 3→left block (same phase), then Pass 1→5.
+ * Sheet1 (page 33): Screen 1 for 4 → Cut 4→top.
+ * Sheet2 (page 34): Pass 5→4 → Pass 4→1 → Screen 3 → Cut 5 around to left block.
+ * Sheet3 (page 35): Screen 4 down → Cut 3→top.
+ * Sheet4 (page 36): Pass 1→3 + Screen 4 (same phase) → Cut 5→right block → Pass 3→5.
+ */
+function orderGameBeats(beats, sheetIndex) {
+  if (!beats || !beats.length || !isGamePlay()) return beats;
+  const preferred = [];
+  const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
+  if (idx === 0) {
+    preferred.push(
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o4',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o5',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o3',
+      (b) => b.kind === 'pass' && b.path && b.path.fromPid === 'o1' && b.path.toPid === 'o5',
+    );
+  } else if (idx === 1) {
+    preferred.push(
+      (b) => b.kind === 'screen' && b.path && b.path.pid === 'o1',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o4',
+    );
+  } else if (idx === 2) {
+    preferred.push(
+      (b) => b.kind === 'pass' && b.path && b.path.fromPid === 'o5' && b.path.toPid === 'o4',
+      (b) => b.kind === 'pass' && b.path && b.path.fromPid === 'o4' && b.path.toPid === 'o1',
+      (b) => b.kind === 'screen' && b.path && b.path.pid === 'o3',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o5',
+    );
+  } else if (idx === 3) {
+    preferred.push(
+      (b) => b.kind === 'screen' && b.path && b.path.pid === 'o4',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o3',
+    );
+  } else {
+    preferred.push(
+      (b) => b.kind === 'pass' && b.path && b.path.fromPid === 'o1' && b.path.toPid === 'o3',
+      (b) => b.kind === 'screen' && b.path && b.path.pid === 'o4',
+      (b) => (b.kind === 'cut' || b.kind === 'relocate') && b.path && b.path.pid === 'o5',
+      (b) => b.kind === 'pass' && b.path && b.path.fromPid === 'o3' && b.path.toPid === 'o5',
+    );
+  }
+  const remaining = beats.slice();
+  const ordered = [];
+  preferred.forEach((pred) => {
+    for (let i = 0; i < remaining.length; i += 1) {
+      if (pred(remaining[i])) {
+        ordered.push(remaining.splice(i, 1)[0]);
+        break;
+      }
+    }
+  });
+  return ordered.concat(remaining);
+}
+
+/** Fill missing 1-Game beats from sheet marks when discovery order was wrong. */
+function ensureGameBeats(beats, fromRaw, toRaw, pathList, ballPid, sheetIndex) {
+  if (!isGamePlay()) return beats || [];
+  const out = (beats || []).slice();
+  const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
+  const hasPass = (frm, to) => out.some(
+    (b) => b.kind === 'pass' && b.path && b.path.fromPid === frm && b.path.toPid === to,
+  );
+  const hasMover = (pid, kinds) => out.some(
+    (b) => kinds.includes(b.kind) && b.path && b.path.pid === pid,
+  );
+  const pushPass = (frm, to) => {
+    if (hasPass(frm, to)) return;
+    const a = fromRaw[frm] || toRaw[frm];
+    const b = fromRaw[to] || toRaw[to];
+    if (!a || !b) return;
+    out.push({
+      kind: 'pass',
+      label: `Pass ${frm.replace(/^o/, '#')} → ${to.replace(/^o/, '#')}`,
+      path: {
+        pid: null,
+        ballOnly: true,
+        from: { x: a.x, y: a.y },
+        to: { x: b.x, y: b.y },
+        ctrl: null,
+        points: null,
+        type: 'pass',
+        fromPid: frm,
+        toPid: to,
+      },
+      holdAfterMs: ANIM.HOLD_PASS_MS,
+      ballTo: to,
+    });
+  };
+  const pushMover = (pid, kinds, labelKind) => {
+    if (hasMover(pid, kinds)) return;
+    const inkPath = (pathList || []).find(
+      (p) => p && p.pid === pid && !p.ballOnly && (kinds.includes(p.type) || kinds.includes('cut')),
+    );
+    if (!inkPath) return;
+    const kind = inkPath.type === 'screen' ? 'screen' : (labelKind || 'cut');
+    out.push({
+      kind,
+      label: `${kind === 'screen' ? 'Screen' : 'Cut'} ${pid.replace(/^o/, '#')}`,
+      path: inkPath,
+      holdAfterMs: kind === 'screen'
+        ? (ANIM.HOLD_SCREEN_MS || ANIM.HOLD_CUT_MS)
+        : ANIM.HOLD_CUT_MS,
+      ballTo: null,
+    });
+  };
+
+  if (idx === 0) {
+    pushMover('o4', ['cut', 'relocate'], 'cut');
+    pushMover('o5', ['cut', 'relocate'], 'cut');
+    pushMover('o3', ['cut', 'relocate'], 'cut');
+    pushPass('o1', 'o5');
+  } else if (idx === 1) {
+    pushMover('o1', ['screen'], 'screen');
+    pushMover('o4', ['cut', 'relocate'], 'cut');
+  } else if (idx === 2) {
+    pushPass('o5', 'o4');
+    pushPass('o4', 'o1');
+    pushMover('o3', ['screen'], 'screen');
+    pushMover('o5', ['cut', 'relocate'], 'cut');
+  } else if (idx === 3) {
+    pushMover('o4', ['screen'], 'screen');
+    pushMover('o3', ['cut', 'relocate'], 'cut');
+  } else {
+    pushPass('o1', 'o3');
+    pushMover('o4', ['screen'], 'screen');
+    pushMover('o5', ['cut', 'relocate'], 'cut');
+    pushPass('o3', 'o5');
+  }
+  return out;
 }
 
 /**
@@ -2636,11 +2808,11 @@ function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
     });
   });
 
-  // Heuristic screen only if sheet did not mark one (skip on Triangle / Pitt 5 —
-  // Scott's sequence is cuts/relocates/screens from sheet marks, not heuristics).
+  // Heuristic screen only if sheet did not mark one (skip on Triangle / Pitt 5 /
+  // 1-Game — Scott's sequence is cuts/relocates/screens from sheet marks).
   let screenPath = null;
   let cutPid = null;
-  if (!markedScreens.length && !isTrianglePlay() && !isPitt5Play()) {
+  if (!markedScreens.length && !isTrianglePlay() && !isPitt5Play() && !isGamePlay()) {
     const movers = remaining.filter((p) => p.pid && !p.ballOnly);
     movers.forEach((p) => {
       if (screenPath) return;
@@ -2684,9 +2856,9 @@ function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
     }
   }
 
-  // Triangle / Pitt 5 / multi-cut sheets: emit every remaining mover as its own beat
-  // (one at a time). Default path still promotes a single "primary" cut.
-  if (isTrianglePlay() || isPitt5Play()) {
+  // Triangle / Pitt 5 / 1-Game / multi-cut sheets: emit every remaining mover as
+  // its own beat (one at a time). Default path still promotes a single "primary" cut.
+  if (isTrianglePlay() || isPitt5Play() || isGamePlay()) {
     remaining
       .filter((p) => p.pid && !p.ballOnly)
       .slice()
@@ -2762,9 +2934,11 @@ function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
   let beats = buildActionBeats(fromRaw, toRaw, paths || [], ballPid);
   const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
   beats = ensurePitt5Beats(beats, fromRaw, toRaw, paths || [], ballPid, idx);
+  beats = ensureGameBeats(beats, fromRaw, toRaw, paths || [], ballPid, idx);
   if (beats.length) {
     beats = orderTriangleBeats(beats, idx);
     beats = orderPitt5Beats(beats, idx);
+    beats = orderGameBeats(beats, idx);
     return beats;
   }
 
@@ -2870,8 +3044,8 @@ function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
 
 function drawScreenMarker(at) {
   // Clean-court animation: no black T-bar stroke on the SVG court (Pitt 5 /
-  // Scott — screen hold is the token pause only). Rip/others keep the cue.
-  if (isPitt5Play()) return;
+  // 1-Game / Scott — screen hold is the token pause only). Rip/others keep the cue.
+  if (isPitt5Play() || isGamePlay()) return;
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer || !at) return;
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -2953,10 +3127,10 @@ function normalizeAnimPath(path, live, toRaw) {
     const a = path.from || livePt;
     let b = path.to || sheetPt;
     if (path.to && sheetPt && a) {
-      // Explicit choreography (Pitt 5 drop / multi-point around paths): never
-      // yank path.to onto OCR. path.from may be a mid-action tip (screen hold),
+      // Explicit choreography (Pitt 5 drop / multi-point around paths / screens):
+      // never yank path.to onto OCR. path.from may be a mid-action tip (screen hold),
       // so sheetMove vs path.from is a false "OCR moved" signal.
-      if (path.pitt5Drop || (path.points && path.points.length >= 3)) {
+      if (path.pitt5Drop || path.type === 'screen' || (path.points && path.points.length >= 3)) {
         b = path.to;
       } else {
         const sheetMove = Math.hypot(a.x - sheetPt.x, a.y - sheetPt.y);
@@ -3438,7 +3612,7 @@ async function buildPlaybarTimeline() {
         kind: 'beat_end',
         path,
         holdAfterMs: beat.holdAfterMs || 0,
-        screenAt: (beat.kind === 'screen' && path.to && !isPitt5Play())
+        screenAt: (beat.kind === 'screen' && path.to && !isPitt5Play() && !isGamePlay())
           ? { x: path.to.x, y: path.to.y }
           : null,
         beatKind: beat.kind,
@@ -4144,7 +4318,9 @@ document.getElementById('stepNotes')?.addEventListener('change', () => {
 
 const categoryTree = {{ category_tree|tojson if category_tree else '[]' }};
 const selectedCategoryId = {{ selected_category_id|tojson if selected_category_id else 'null' }};
+const SELECTED_PLAYBOOK_TEAM = {{ selected_team|tojson if selected_team else '"hs_boys"' }};
 const PLAYBOOK_LIST_STATE_KEY = 'liberty.playbook.listState';
+const PLAYBOOK_TEAM_STORAGE_KEY = 'liberty.playbook.teamKey';
 let playbookListStateReady = false;
 
 function readPlaybookListState() {
@@ -4162,6 +4338,7 @@ function savePlaybookListState() {
     scrollY: window.scrollY || window.pageYOffset || 0,
     categoryId: activeCategoryId == null ? null : activeCategoryId,
     search: document.getElementById('playSearch')?.value || '',
+    teamKey: SELECTED_PLAYBOOK_TEAM,
   };
   // Before scroll restore finishes, keep the prior scrollY if we are still at top.
   if (!playbookListStateReady && prev.scrollY && !state.scrollY) {
@@ -4169,6 +4346,7 @@ function savePlaybookListState() {
   }
   try {
     sessionStorage.setItem(PLAYBOOK_LIST_STATE_KEY, JSON.stringify(state));
+    localStorage.setItem(PLAYBOOK_TEAM_STORAGE_KEY, SELECTED_PLAYBOOK_TEAM);
   } catch (err) { /* ignore quota / private mode */ }
 }
 
@@ -4315,6 +4493,22 @@ function initPlaybookListPositionMemory() {
   savePlaybookListState();
 }
 
+document.getElementById('playbookTeamSelect')?.addEventListener('change', (e) => {
+  const team = e.target.value || 'hs_boys';
+  try {
+    const prev = readPlaybookListState() || {};
+    sessionStorage.setItem(PLAYBOOK_LIST_STATE_KEY, JSON.stringify({
+      ...prev,
+      teamKey: team,
+      scrollY: 0,
+      categoryId: null,
+      search: '',
+    }));
+    localStorage.setItem(PLAYBOOK_TEAM_STORAGE_KEY, team);
+  } catch (err) { /* ignore */ }
+  window.location.href = `/playbook?team=${encodeURIComponent(team)}`;
+});
+
 function initPlaybookTaxonomy() {
   if (!window.PlaybookTaxonomy) return;
   const treeEl = document.getElementById('playbookCategoryTree');
@@ -4333,7 +4527,9 @@ function initPlaybookTaxonomy() {
         : 'All plays';
     }
     if (newPlayBtn && categoryId) {
-      newPlayBtn.href = `/playbook/create?category_id=${categoryId}`;
+      newPlayBtn.href = `/playbook/create?team=${encodeURIComponent(SELECTED_PLAYBOOK_TEAM)}&category_id=${categoryId}`;
+    } else if (newPlayBtn) {
+      newPlayBtn.href = `/playbook/create?team=${encodeURIComponent(SELECTED_PLAYBOOK_TEAM)}`;
     }
     window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
     applyPlayFilters();

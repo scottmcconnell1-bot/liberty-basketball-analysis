@@ -21,7 +21,17 @@ Routes included:
 import json
 from pathlib import Path
 
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, current_app
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    jsonify,
+    flash,
+    current_app,
+    session,
+)
 
 from helpers import get_db, require_feature, get_default_team_id
 from module_entitlements import enforce_module_access
@@ -32,6 +42,19 @@ playbook_bp = Blueprint("playbook", __name__)
 _PUBLIC_ENDPOINTS = frozenset({
     "playbook.playbook_share",
 })
+
+# Liberty program playbooks (separate from opponent scout playbooks).
+# Stored on plays.team_key via runtime ALTER — schema.sql gate deferred.
+PLAYBOOK_TEAMS = (
+    {"key": "hs_boys", "label": "High School Boys"},
+    {"key": "hs_girls", "label": "High School Girls"},
+    {"key": "jh_boys", "label": "Jr High Boys"},
+    {"key": "jh_girls", "label": "Jr High Girls"},
+)
+DEFAULT_PLAYBOOK_TEAM = "hs_boys"
+PLAYBOOK_TEAM_KEYS = frozenset(t["key"] for t in PLAYBOOK_TEAMS)
+_PLAYBOOK_TEAM_LABELS = {t["key"]: t["label"] for t in PLAYBOOK_TEAMS}
+_SESSION_TEAM_KEY = "playbook_team"
 
 
 @playbook_bp.before_request
@@ -52,6 +75,43 @@ def _serialize(obj):
         return obj.isoformat()
     return obj
 
+
+def normalize_playbook_team(raw):
+    key = (raw or "").strip()
+    if key in PLAYBOOK_TEAM_KEYS:
+        return key
+    return DEFAULT_PLAYBOOK_TEAM
+
+
+def playbook_team_label(team_key):
+    return _PLAYBOOK_TEAM_LABELS.get(
+        normalize_playbook_team(team_key),
+        _PLAYBOOK_TEAM_LABELS[DEFAULT_PLAYBOOK_TEAM],
+    )
+
+
+def resolve_playbook_team(*, persist=False):
+    """Resolve active team from query → form → session → default."""
+    raw = request.args.get("team")
+    if raw is None and request.method in ("POST", "PUT", "PATCH"):
+        raw = request.form.get("team_key") or request.form.get("team")
+    if raw is None:
+        raw = session.get(_SESSION_TEAM_KEY)
+    team_key = normalize_playbook_team(raw)
+    if persist:
+        session[_SESSION_TEAM_KEY] = team_key
+    return team_key
+
+
+def _team_template_kwargs(team_key=None):
+    team = normalize_playbook_team(team_key)
+    return {
+        "playbook_teams": list(PLAYBOOK_TEAMS),
+        "selected_team": team,
+        "selected_team_label": playbook_team_label(team),
+    }
+
+
 PLAYBOOK_CATEGORIES = [
     ("offense", "Offense"),
     ("defense", "Defense"),
@@ -70,8 +130,9 @@ def _load_playbook_taxonomy(db):
     return build_category_tree(db)
 
 
-def _plays_query(db):
+def _plays_query(db, team_key=None):
     _ensure_play_progression_columns(db)
+    team_key = normalize_playbook_team(team_key)
     return db.execute(
         """SELECT p.*, pb.name as playbook_name,
                   pc.name as category_name,
@@ -81,8 +142,28 @@ def _plays_query(db):
            FROM plays p
            LEFT JOIN playbooks pb ON pb.id = p.playbook_id
            LEFT JOIN play_categories pc ON pc.id = p.category_id
-           ORDER BY p.name COLLATE NOCASE ASC, p.id ASC"""
+           WHERE COALESCE(p.team_key, ?) = ?
+             AND COALESCE(pb.kind, 'team') != 'opponent'
+           ORDER BY p.name COLLATE NOCASE ASC, p.id ASC""",
+        (DEFAULT_PLAYBOOK_TEAM, team_key),
     ).fetchall()
+
+
+def _ensure_play_team_key_column(db):
+    """Additive team playbook column — does not edit schema.sql (Scott gate)."""
+    cols = {row[1] for row in db.execute("PRAGMA table_info(plays)").fetchall()}
+    if "team_key" not in cols:
+        # DEFAULT must be a literal in SQLite ALTER; key is a fixed constant.
+        db.execute(
+            "ALTER TABLE plays ADD COLUMN team_key TEXT NOT NULL DEFAULT 'hs_boys'"
+        )
+    # Existing rows / empty values land on HS Boys so nothing disappears.
+    db.execute(
+        """UPDATE plays
+              SET team_key = ?
+            WHERE team_key IS NULL OR TRIM(COALESCE(team_key, '')) = ''""",
+        (DEFAULT_PLAYBOOK_TEAM,),
+    )
 
 
 def _ensure_play_progression_columns(db):
@@ -97,6 +178,7 @@ def _ensure_play_progression_columns(db):
         )
     if "list_order" not in cols:
         db.execute("ALTER TABLE plays ADD COLUMN list_order INTEGER")
+    _ensure_play_team_key_column(db)
     # Backfill top-level list_order once so drag-reorder has a stable baseline.
     missing = db.execute(
         """SELECT COUNT(*) AS c FROM plays
@@ -266,6 +348,111 @@ def move_plays_to_category(db, *, play_ids, category_id):
     }
 
 
+def _copy_play_row(db, play, *, team_key, name, parent_play_id=None, progression_order=0):
+    """Insert a deep-copied play row (no share_token) and return new id."""
+    _ensure_play_progression_columns(db)
+    cur = db.execute(
+        """INSERT INTO plays (
+               name, description, category, category_id, tags, playbook_id,
+               diagram_json, team_key, parent_play_id, progression_order, list_order
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            name,
+            play["description"],
+            play["category"],
+            play["category_id"],
+            play["tags"],
+            play["playbook_id"],
+            play["diagram_json"],
+            normalize_playbook_team(team_key),
+            parent_play_id,
+            progression_order if progression_order is not None else 0,
+            None,
+        ),
+    )
+    return cur.lastrowid
+
+
+def _copy_play_steps(db, source_play_id, dest_play_id):
+    steps = db.execute(
+        "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number",
+        (source_play_id,),
+    ).fetchall()
+    for step in steps:
+        db.execute(
+            """INSERT INTO play_steps (
+                   play_id, step_number, label, positions_json, movements_json,
+                   notes, source_image
+               ) VALUES (?,?,?,?,?,?,?)""",
+            (
+                dest_play_id,
+                step["step_number"],
+                step["label"],
+                step["positions_json"],
+                step["movements_json"],
+                step["notes"],
+                step["source_image"] if "source_image" in step.keys() else None,
+            ),
+        )
+
+
+def copy_play_to_team(db, play_id, target_team, *, include_progressions=True):
+    """Deep-copy a play (and optional progressions) into another team playbook.
+
+    Edits on the copy do not affect the source. Share tokens are not copied.
+    """
+    _ensure_play_progression_columns(db)
+    target_team = normalize_playbook_team(target_team)
+    play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        raise ValueError("Play not found")
+    play = dict(play)
+    source_team = normalize_playbook_team(play.get("team_key"))
+    same_team = source_team == target_team
+    new_name = play["name"] + (" (copy)" if same_team else "")
+
+    new_id = _copy_play_row(
+        db,
+        play,
+        team_key=target_team,
+        name=new_name,
+        parent_play_id=None,
+        progression_order=0,
+    )
+    _copy_play_steps(db, play_id, new_id)
+
+    copied_ids = [new_id]
+    if include_progressions and not play.get("parent_play_id"):
+        children = db.execute(
+            """SELECT * FROM plays
+                WHERE parent_play_id = ?
+                ORDER BY progression_order ASC, id ASC""",
+            (play_id,),
+        ).fetchall()
+        for index, child in enumerate(children):
+            child = dict(child)
+            child_name = child["name"] + (" (copy)" if same_team else "")
+            child_id = _copy_play_row(
+                db,
+                child,
+                team_key=target_team,
+                name=child_name,
+                parent_play_id=new_id,
+                progression_order=child.get("progression_order") or index,
+            )
+            _copy_play_steps(db, child["id"], child_id)
+            copied_ids.append(child_id)
+
+    db.commit()
+    return {
+        "new_play_id": new_id,
+        "copied_ids": copied_ids,
+        "target_team": target_team,
+        "source_team": source_team,
+        "name": new_name,
+    }
+
+
 def ensure_cycle_spots_progressions(db):
     """One-time: fold PDF-split Cycle Spots sequences under one parent play."""
     _ensure_play_progression_columns(db)
@@ -284,7 +471,7 @@ def ensure_cycle_spots_progressions(db):
     children = []
     for name in progression_names:
         row = db.execute(
-            """SELECT id, category_id, category, playbook_id
+            """SELECT id, category_id, category, playbook_id, team_key
                  FROM plays
                 WHERE name = ?
                   AND (parent_play_id IS NULL OR parent_play_id = 0)
@@ -310,9 +497,14 @@ def ensure_cycle_spots_progressions(db):
                 "progression_names": progression_names,
             }
         )
+        # Ensure team_key is available on child dicts after column ensure.
+        if "team_key" not in template:
+            template["team_key"] = DEFAULT_PLAYBOOK_TEAM
         cur = db.execute(
-            """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO plays (
+                   name, description, category, category_id, tags, playbook_id,
+                   diagram_json, team_key
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 "Cycle Spots",
                 "Progressions: " + ", ".join(progression_names),
@@ -321,6 +513,7 @@ def ensure_cycle_spots_progressions(db):
                 "cycle spots, progressions",
                 template.get("playbook_id"),
                 diagram,
+                normalize_playbook_team(template.get("team_key")),
             ),
         )
         parent_id = cur.lastrowid
@@ -508,9 +701,10 @@ def _share_url_for_play(play):
 def playbook_list():
     """Playbook list / plays library page."""
     db = get_db()
+    team_key = resolve_playbook_team(persist=True)
     category_tree = _load_playbook_taxonomy(db)
     ensure_known_play_progressions(db)
-    plays = _group_plays_for_list(db, _plays_query(db))
+    plays = _group_plays_for_list(db, _plays_query(db, team_key))
     playbooks = db.execute(
         "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
     ).fetchall()
@@ -524,6 +718,7 @@ def playbook_list():
         editing_steps=[],
         view_mode="list",
         selected_category_id=None,
+        **_team_template_kwargs(team_key),
     )
 
 
@@ -603,6 +798,7 @@ def playbook_create():
     db = get_db()
     from playbook_taxonomy import ensure_playbooks_opponent_columns
 
+    team_key = resolve_playbook_team(persist=True)
     category_tree = _load_playbook_taxonomy(db)
     ensure_playbooks_opponent_columns(db)
     playbooks = db.execute(
@@ -610,7 +806,17 @@ def playbook_create():
     ).fetchall()
     selected_category_id = request.args.get("category_id", type=int) or _default_category_id(db)
     opponent_playbook_id = request.args.get("playbook_id", type=int)
-    editing_play = None
+    editing_play = {
+        "id": None,
+        "name": "",
+        "description": "",
+        "category": "offense",
+        "category_id": selected_category_id,
+        "tags": "",
+        "playbook_id": None,
+        "diagram_json": "{}",
+        "team_key": team_key,
+    }
     playbooks_out = [dict(p) for p in playbooks]
     if opponent_playbook_id:
         opp = db.execute(
@@ -619,16 +825,7 @@ def playbook_create():
         ).fetchone()
         if opp:
             playbooks_out = [dict(opp)] + playbooks_out
-            editing_play = {
-                "id": None,
-                "name": "",
-                "description": "",
-                "category": "offense",
-                "category_id": selected_category_id,
-                "tags": "",
-                "playbook_id": opponent_playbook_id,
-                "diagram_json": "{}",
-            }
+            editing_play["playbook_id"] = opponent_playbook_id
     return render_template(
         "playbook.html",
         plays=[],
@@ -639,6 +836,7 @@ def playbook_create():
         editing_steps=[],
         view_mode="editor",
         selected_category_id=selected_category_id,
+        **_team_template_kwargs(team_key),
     )
 
 
@@ -692,8 +890,10 @@ def playbook_view(play_id):
     play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
     if not play:
         flash("Play not found.", "error")
-        return redirect(url_for("playbook.playbook_list"))
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
 
+    team_key = normalize_playbook_team(play["team_key"] if "team_key" in play.keys() else None)
+    session[_SESSION_TEAM_KEY] = team_key
     nav = _progression_nav_context(db, play)
     # Empty parent shell → open first progression, which still shows the full chip bar.
     step_count = db.execute(
@@ -723,6 +923,7 @@ def playbook_view(play_id):
         parent_play=nav["parent_play"],
         sibling_progressions=nav["sibling_progressions"],
         child_progressions=nav["child_progressions"],
+        **_team_template_kwargs(team_key),
     )
 
 
@@ -745,6 +946,7 @@ def playbook_share(token):
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
     ).fetchall()
     category_tree = _load_playbook_taxonomy(db)
+    team_key = normalize_playbook_team(play.get("team_key"))
     return render_template(
         "playbook.html",
         plays=[],
@@ -756,6 +958,7 @@ def playbook_share(token):
         view_mode="share",
         selected_category_id=play["category_id"],
         share_url=url_for("playbook.playbook_share", token=token, _external=True),
+        **_team_template_kwargs(team_key),
     )
 
 
@@ -768,7 +971,9 @@ def playbook_edit(play_id):
     play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
     if not play:
         flash("Play not found.", "error")
-        return redirect(url_for("playbook.playbook_list"))
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    team_key = normalize_playbook_team(play["team_key"] if "team_key" in play.keys() else None)
+    session[_SESSION_TEAM_KEY] = team_key
     steps = db.execute(
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
     ).fetchall()
@@ -789,6 +994,7 @@ def playbook_edit(play_id):
         parent_play=nav["parent_play"],
         sibling_progressions=nav["sibling_progressions"],
         child_progressions=nav["child_progressions"],
+        **_team_template_kwargs(team_key),
     )
 
 
@@ -888,48 +1094,51 @@ def playbook_progression_move(play_id):
 def playbook_delete(play_id):
     """Delete a play and its steps."""
     db = get_db()
+    _ensure_play_progression_columns(db)
+    play = db.execute("SELECT team_key FROM plays WHERE id = ?", (play_id,)).fetchone()
+    team_key = normalize_playbook_team(play["team_key"] if play else None)
     db.execute("DELETE FROM play_steps WHERE play_id = ?", (play_id,))
     db.execute("DELETE FROM plays WHERE id = ?", (play_id,))
     db.commit()
     flash("Play deleted.", "success")
-    return redirect(url_for("playbook.playbook_list"))
+    return redirect(url_for("playbook.playbook_list", team=team_key))
 
 
 @playbook_bp.route("/playbook/play/<int:play_id>/duplicate", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def playbook_duplicate(play_id):
-    """Duplicate a play (copy with new name)."""
+    """Duplicate a play within the same team playbook."""
     db = get_db()
-    play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+    _ensure_play_progression_columns(db)
+    play = db.execute("SELECT team_key FROM plays WHERE id = ?", (play_id,)).fetchone()
     if not play:
         flash("Play not found.", "error")
-        return redirect(url_for("playbook.playbook_list"))
-    steps = db.execute(
-        "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play_id,)
-    ).fetchall()
-    cur = db.execute(
-        """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
-           VALUES (?,?,?,?,?,?,?)""",
-        (
-            play["name"] + " (copy)",
-            play["description"],
-            play["category"],
-            play["category_id"],
-            play["tags"],
-            play["playbook_id"],
-            play["diagram_json"],
-        ),
-    )
-    new_id = cur.lastrowid
-    for step in steps:
-        db.execute(
-            """INSERT INTO play_steps (play_id, step_number, label, positions_json, movements_json, notes)
-               VALUES (?,?,?,?,?,?)""",
-            (new_id, step["step_number"], step["label"], step["positions_json"], step["movements_json"], step["notes"]),
-        )
-    db.commit()
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    source_team = normalize_playbook_team(play["team_key"])
+    try:
+        result = copy_play_to_team(db, play_id, source_team, include_progressions=True)
+    except ValueError:
+        flash("Play not found.", "error")
+        return redirect(url_for("playbook.playbook_list", team=source_team))
     flash("Play duplicated.", "success")
-    return redirect(url_for("playbook.playbook_edit", play_id=new_id))
+    return redirect(url_for("playbook.playbook_edit", play_id=result["new_play_id"]))
+
+
+@playbook_bp.route("/playbook/play/<int:play_id>/copy-to-team", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_copy_to_team(play_id):
+    """Deep-copy a play into another (or same) team playbook."""
+    db = get_db()
+    target_team = normalize_playbook_team(request.form.get("target_team"))
+    try:
+        result = copy_play_to_team(db, play_id, target_team, include_progressions=True)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    session[_SESSION_TEAM_KEY] = result["target_team"]
+    label = playbook_team_label(result["target_team"])
+    flash(f"Copied “{result['name']}” to {label}.", "success")
+    return redirect(url_for("playbook.playbook_list", team=result["target_team"]))
 
 
 @playbook_bp.route("/playbook/save", methods=["POST"])
@@ -946,15 +1155,19 @@ def playbook_save():
     playbook_id = (form.get("playbook_id") or "").strip()
     diagram_json = (form.get("diagram_json") or "{}").strip()
     steps_json = (form.get("steps_json") or "[]").strip()
+    team_key = normalize_playbook_team(
+        form.get("team_key") or session.get(_SESSION_TEAM_KEY)
+    )
 
     if not name:
         flash("Play name is required.", "error")
-        return redirect(url_for("playbook.playbook_list"))
+        return redirect(url_for("playbook.playbook_list", team=team_key))
 
     db = get_db()
     from playbook_taxonomy import legacy_category_from_id, resolve_category_id_by_path
 
     _load_playbook_taxonomy(db)
+    _ensure_play_progression_columns(db)
     category_id = None
     if category_id_raw:
         try:
@@ -966,15 +1179,22 @@ def playbook_save():
     category = legacy_category_from_id(db, category_id)
 
     if play_id:
-        # Update existing play
+        # Update existing play (keep existing team_key unless form overrides)
+        existing = db.execute(
+            "SELECT team_key FROM plays WHERE id = ?", (int(play_id),)
+        ).fetchone()
+        if existing and existing["team_key"]:
+            team_key = normalize_playbook_team(
+                form.get("team_key") or existing["team_key"]
+            )
         db.execute(
             """UPDATE plays SET name=?, description=?, category=?, category_id=?, tags=?,
-               playbook_id=?, diagram_json=?, updated_at=CURRENT_TIMESTAMP
+               playbook_id=?, diagram_json=?, team_key=?, updated_at=CURRENT_TIMESTAMP
                WHERE id=?""",
             (
                 name, description, category, category_id, tags,
                 int(playbook_id) if playbook_id else None,
-                diagram_json, int(play_id),
+                diagram_json, team_key, int(play_id),
             ),
         )
         # Delete old steps and re-insert
@@ -983,15 +1203,19 @@ def playbook_save():
     else:
         # Create new play
         cur = db.execute(
-            """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
-               VALUES (?,?,?,?,?,?,?)""",
+            """INSERT INTO plays (
+                   name, description, category, category_id, tags, playbook_id,
+                   diagram_json, team_key
+               ) VALUES (?,?,?,?,?,?,?,?)""",
             (
                 name, description, category, category_id, tags,
                 int(playbook_id) if playbook_id else None,
-                diagram_json,
+                diagram_json, team_key,
             ),
         )
         play_db_id = cur.lastrowid
+
+    session[_SESSION_TEAM_KEY] = team_key
 
     # Insert steps
     try:
@@ -1012,7 +1236,7 @@ def playbook_save():
                    VALUES (?,?,?,?,?,?,?)""",
                 (play_db_id, i, label, positions, movements, notes, source_image),
             )
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError, TypeError):
         pass
 
     db.commit()
@@ -1334,6 +1558,10 @@ def playbook_import_save():
     from playbook_taxonomy import ensure_playbook_taxonomy, legacy_category_from_id, resolve_category_id_by_path
 
     ensure_playbook_taxonomy(db)
+    _ensure_play_progression_columns(db)
+    team_key = normalize_playbook_team(
+        data.get("team_key") or session.get(_SESSION_TEAM_KEY)
+    )
     category_id = None
     if category_id_raw:
         try:
@@ -1345,12 +1573,14 @@ def playbook_import_save():
     category = legacy_category_from_id(db, category_id)
 
     cur = db.execute(
-        """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
-           VALUES (?,?,?,?,?,?,?)""",
+        """INSERT INTO plays (
+               name, description, category, category_id, tags, playbook_id,
+               diagram_json, team_key
+           ) VALUES (?,?,?,?,?,?,?,?)""",
         (
             name, description, category, category_id, tags,
             int(playbook_id) if playbook_id else None,
-            diagram_json,
+            diagram_json, team_key,
         ),
     )
     play_db_id = cur.lastrowid

@@ -349,6 +349,33 @@ body.playbook-dragging-plays .playbook-tree-item.playbook-tree-drop {
 .playbook-page-actions .form-control {
   width: min(220px, 100%);
 }
+.playbook-team-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.playbook-team-select-label {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.playbook-team-select .form-control {
+  width: min(200px, 100%);
+  min-width: 160px;
+}
+.play-copy-to-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.play-copy-team-select {
+  width: min(150px, 36vw);
+  min-width: 110px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+}
 .playbook-back-link {
   display: inline-flex;
   align-items: center;
