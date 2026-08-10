@@ -14,7 +14,7 @@
   #videos-card .video-table {
     table-layout: auto;
     width: 100%;
-    min-width: 64rem;
+    min-width: 48rem;
   }
   #videos-card .video-table th,
   #videos-card .video-table td {
@@ -35,42 +35,47 @@
     display: inline-block;
   }
   #videos-card .video-table .col-count {
-    min-width: 3.75rem;
-    text-align: center;
-    white-space: nowrap;
-  }
-  #videos-card .video-table thead .col-count {
-    font-size: 0.72rem;
-    letter-spacing: 0.02em;
-    line-height: 1.25;
+    display: none; /* light list: free space for Actions */
   }
   #videos-card .video-table .col-actions {
-    min-width: 22rem;
-    width: 22rem;
+    min-width: 17rem;
+    width: 17rem;
     position: sticky;
     right: 0;
     z-index: 2;
-    background: var(--color-surface, #fff);
-    box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.18);
+    background: var(--color-surface, #f7f5f0);
+    box-shadow: -8px 0 12px -6px rgba(0, 0, 0, 0.25);
     overflow: visible;
     word-break: normal;
+    border-left: 2px solid #01696f;
   }
   #videos-card .video-table thead .col-actions {
     z-index: 3;
-    background: var(--color-surface, #fff);
+    background: #e6f4f5;
+    color: #013f42;
+    font-size: 0.95rem;
   }
   #videos-card .video-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     align-items: stretch;
     min-width: 0;
   }
   #videos-card .video-actions-primary {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
-    align-items: center;
+    align-items: stretch;
+  }
+  #videos-card .video-actions-primary > .btn,
+  #videos-card .video-actions-primary > a.btn,
+  #videos-card .video-actions-primary > details {
+    width: 100%;
+  }
+  #videos-card .video-actions-primary > details > summary {
+    width: 100%;
+    text-align: center;
   }
   #videos-card .video-actions-more {
     margin: 0;
@@ -84,11 +89,10 @@
     display: none;
   }
   #videos-card .video-actions-more > summary::after {
-    content: " ▾";
-    font-weight: 700;
+    content: "";
   }
   #videos-card .video-actions-more[open] > summary::after {
-    content: " ▴";
+    content: "";
   }
   #videos-card .video-actions-secondary {
     display: flex;
@@ -101,18 +105,22 @@
   #videos-card .video-actions .btn,
   #videos-card .video-actions .btn-sm {
     margin: 0 !important;
-    min-height: 36px;
-    padding: 8px 12px;
-    font-size: 0.84rem;
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.2;
     color: #111 !important;
-    border: 1px solid #8f8b82;
+    border: 2px solid #8f8b82;
     background: #fff;
     overflow: visible;
     text-overflow: clip;
     max-width: none;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
   #videos-card .video-actions .btn-primary {
     color: #fff !important;
@@ -466,7 +474,7 @@ function actionButtons(v, deleteLabel) {
       <a href="${reviewHref}" class="btn btn-sm btn-review">Review</a>
       ${archiveBtn}
       <details class="video-actions-more">
-        <summary class="btn btn-sm btn-more" title="More actions">More</summary>
+        <summary class="btn btn-sm btn-more" title="More actions">More ▾</summary>
         <div class="video-actions-secondary">
           ${secondary}
         </div>
