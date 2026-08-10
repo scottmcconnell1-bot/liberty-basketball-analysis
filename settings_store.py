@@ -22,7 +22,8 @@ AI_DEFAULTS = {
     "auto_apply_jersey_mapping": True,
     "identity_auto_apply_min_confidence": 0.60,
     "identity_auto_apply_min_samples": 4,
-    "auto_accept_event_confidence": 0.50,
+    # 0 disables auto-accept (required for human review / coach ledger).
+    "auto_accept_event_confidence": 0.0,
     "llm_provider": "ollama",
     "llm_model": ""
 }
@@ -109,6 +110,9 @@ def load_all_settings(feature_defaults, analysis_defaults, ai_defaults=None, db=
         name: flat.get(f"ai.{name}", default)
         for name, default in ai_defaults.items()
     }
+    # Foundation / review testing: force disable even if an older DB still has 0.50.
+    # Remove this override when Scott intentionally re-enables auto-accept.
+    ai["auto_accept_event_confidence"] = 0.0
     return {"features": features, "analysis": analysis, "ai": ai}
 
 

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "game_id": "example_game",
+  "template_id": "liberty_hs_v1",
+  "final_score_home": 54,
+  "final_score_away": 48,
+  "home_team": "Liberty",
+  "away_team": "Opponent",
+  "players": [
+    {
+      "jersey": "12",
+      "name": "A. Player",
+      "team": "home",
+      "pts": 18,
+      "fouls": 2,
+      "fgm": 7,
+      "fga": 14,
+      "tpm": 2,
+      "tpa": 5,
+      "ftm": 2,
+      "fta": 2
+    },
+    {
+      "jersey": "5",
+      "name": "B. Guard",
+      "team": "away",
+      "pts": 15,
+      "fouls": 3
+    }
+  ],
+  "quarters": [
+    { "period": 1, "home_pts": 14, "away_pts": 12 },
+    { "period": 2, "home_pts": 12, "away_pts": 10 },
+    { "period": 3, "home_pts": 16, "away_pts": 14 },
+    { "period": 4, "home_pts": 12, "away_pts": 12 }
+  ],
+  "checksums": {
+    "upload_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "template_layout_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "confirmed_at": "2026-08-09T18:00:00-06:00",
+  "confirmed_by": "scott"
+}

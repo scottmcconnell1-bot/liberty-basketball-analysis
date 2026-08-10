@@ -1,45 +1,60 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (videos old-link hang)
+Updated: 2026-08-09 (coach-ledger foundation)
 
-Branch: `cursor/videos-fast-list-ac1f`
+Branch: `cursor/coach-ledger-ac1f`  
+Base: `jason-5-may-updates` + videos light-list commits (`cursor/videos-fast-list-ac1f`)
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | videos-fast-list |
-| **status** | `done` |
+| **id** | coach-ledger-foundation |
+| **status** | `in_progress` |
 | **assigned_to** | cursor-agent |
 
-## Decision
+## Scott approvals (2026-08-09)
 
-Videos nav (`/videos`) was slow because `/api/videos` ran per-video `COUNT(*)` on ~53M `detections`. Light list fixed the UI, but bare `/api/videos` (bookmarks, audits, cross-links) still hung. Default the list endpoint to light; opt into counts with `?full=1` or `GET /api/videos/<id>`.
+1. **New direction approved** — coach ledger / confirmed stat book box + human review (not auto-accept-led).
+2. **Working branch** — use `cursor/coach-ledger-ac1f` going forward (includes videos light-list fix).
+3. **Auto-accept off** for review testing — default `ai.auto_accept_event_confidence` is `0`; `load_all_settings` forces `0` (ignores legacy DB `0.50`); threshold `<= 0` does not promote drafts. Settings UI documents that saving other settings does **not** silently restore `0.50`. Remove the load-path force when Scott re-enables auto-accept.
+4. **Confirmed box JSON schema** — contract in `docs/stat_books/CONFIRMED_BOX_SCHEMA.md` (no `schema.sql` yet; ask Scott before DDL).
+5. **Do not** build full OCR or full review UI in foundation slice.
 
-## Changes
+## Sequencing (MVP agents)
 
-- `GET /api/videos` — **light by default** (fast; counts null); `?full=1` / `light=0` for full counts
-- `GET /api/videos?light=1&sort=title` — explicit light (UI)
-- `GET /api/videos/<id>` — full counts for one video
-- `/videos` UI uses light list; optional **Load counts** per row
+Use branch **`cursor/coach-ledger-ac1f`** as the shared base for both MVP follow-ons:
 
-## Try
+| Order | Slice | Notes |
+| --- | --- | --- |
+| Done | Foundation (this) | Branch merge + auto-accept off + confirmed JSON contract + ACTIVE |
+| Next A | Review / coach ledger MVP | Human confirm path; respect auto-accept=0 |
+| Next B | Stat book assist MVP | Templates + uploads paths; write only to drafts until confirm → `data/stat_books/confirmed/<game_id>.json` |
 
-- `/videos`
-- `/api/videos` (must return quickly)
-- Film Tool: `/film/<filename>?game_id=…`
+Videos nav fix is already on this branch (`GET /api/videos` light by default).
+
+## Foundation delivered
+
+- Branch `cursor/coach-ledger-ac1f` = `jason-5-may-updates` + videos-fast-list (2 commits)
+- `AI_DEFAULTS["auto_accept_event_confidence"]` → `0.0`; fail-closed parse; `threshold <= 0` returns 0 accepts
+- Docs: `docs/stat_books/CONFIRMED_BOX_SCHEMA.md`, `data/stat_books/templates/README.md`, example `data/stat_books/confirmed/example_game.json`
+- Paths reserved: `data/stat_books/templates/<template_id>/`, `uploads/stat_books/<game_id>/`, `data/stat_books/confirmed/<game_id>.json`
+
+## Operator note (existing DBs)
+
+`load_all_settings` and Settings save both force `ai.auto_accept_event_confidence` to `0` for review testing. Legacy DB values of `0.50` are ignored until Scott removes those force lines to re-enable.
 
 ## Report
 
 ### Proven
 
-- Bare `/api/videos` timed out at 25s on local DB (~53M detections) before default-light.
-- Light list and `/videos` / Film deep links returned 200 quickly.
+- Videos branch was exactly 2 commits ahead of `jason-5-may-updates` (clean fast-forward lineage).
+- `auto_accept_high_confidence_events(..., threshold=0)` already returned 0; default now matches.
 
 ### Inferred
 
-- Scott’s “old link doesn’t work” was the hanging bare `/api/videos` (or anything waiting on it).
+- MVP agents can fork from `cursor/coach-ledger-ac1f` without re-merging videos.
 
 ### Unknown
 
-- Whether denormalized counts / indexes are wanted later (schema gate).
+- When Scott wants `schema.sql` for confirmed boxes (gate).

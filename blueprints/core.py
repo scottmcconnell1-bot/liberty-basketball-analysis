@@ -1974,16 +1974,8 @@ def settings_page():
             tracker_gap = AI_DEFAULTS["tracker_max_frame_gap"]
         updates["ai.tracker_max_frame_gap"] = tracker_gap
 
-        try:
-            auto_accept_confidence = float(
-                request.form.get(
-                    "ai_auto_accept_event_confidence",
-                    AI_DEFAULTS["auto_accept_event_confidence"],
-                )
-            )
-        except ValueError:
-            auto_accept_confidence = AI_DEFAULTS["auto_accept_event_confidence"]
-        updates["ai.auto_accept_event_confidence"] = min(0.99, max(0.0, auto_accept_confidence))
+        # Foundation: keep auto-accept disabled on save so Settings cannot silently re-enable.
+        updates["ai.auto_accept_event_confidence"] = 0.0
 
         llm_provider = (request.form.get("ai_llm_provider") or "none").strip()
         if llm_provider not in llm_provider_values:

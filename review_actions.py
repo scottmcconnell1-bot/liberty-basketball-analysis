@@ -172,13 +172,20 @@ def auto_accept_high_confidence_events(
 
     if threshold is None:
         ai_settings = load_all_settings({}, {}, AI_DEFAULTS, db=db).get("ai", AI_DEFAULTS)
-        threshold = float(ai_settings.get("auto_accept_event_confidence", 0.50))
+        threshold = float(
+            ai_settings.get(
+                "auto_accept_event_confidence",
+                AI_DEFAULTS["auto_accept_event_confidence"],
+            )
+        )
 
     try:
         threshold = float(threshold)
     except (TypeError, ValueError):
-        threshold = 0.50
+        # Fail closed: never auto-accept when threshold is missing/invalid.
+        threshold = float(AI_DEFAULTS["auto_accept_event_confidence"])
 
+    # Threshold 0 (default) fully disables auto-accept; do not promote drafts.
     if threshold <= 0:
         return 0
 

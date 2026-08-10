@@ -182,7 +182,11 @@
       <div class="form-group">
         <label for="ai_auto_accept_event_confidence">Auto-Accept Event Confidence</label>
         <input class="form-control" id="ai_auto_accept_event_confidence" name="ai_auto_accept_event_confidence" type="number" min="0" max="0.99" step="0.01" value="{{ runtime_settings.ai.auto_accept_event_confidence }}">
-        <div class="text-muted mt-2">AI events at or above this confidence are auto-accepted after analysis. Set to <code>0</code> to disable.</div>
+        <div class="text-muted mt-2">
+          Default is <code>0</code> (disabled). AI events at or above this confidence are auto-accepted after analysis.
+          Keep at <code>0</code> for human review — saving other settings does not restore the old <code>0.50</code> default.
+          Only set above <code>0</code> intentionally.
+        </div>
       </div>
 
       <div class="form-group">
