@@ -133,7 +133,10 @@ def coach_readonly_blocked_response():
     """403 (JSON) or flash + redirect for coach read-only mutations."""
     if _wants_json_response():
         return jsonify({"error": "Coach view is read-only"}), 403
-    flash("Coach view is read-only — changes are not saved.", "error")
+    # One banner per coach session — avoid stacking identical flashes.
+    if not session.get("_coach_readonly_flashed"):
+        flash("Coach view is read-only — changes are not saved.", "error")
+        session["_coach_readonly_flashed"] = True
     referrer = request.referrer
     if referrer:
         return redirect(referrer)
@@ -184,7 +187,7 @@ def enforce_coach_ops_denylist():
 def coach_login():
     """Shared-password gate into coach portal session."""
     if session.get("coach_portal"):
-        return redirect(url_for("core.index"))
+        return redirect(url_for("coach.coach_progress"))
 
     password_set = coach_password_configured()
 
@@ -203,13 +206,14 @@ def coach_login():
         # Length mismatch → reject (shared soft gate; avoid compare_digest ValueError).
         if len(submitted_b) == len(expected_b) and hmac.compare_digest(submitted_b, expected_b):
             session["coach_portal"] = True
+            session.pop("_coach_readonly_flashed", None)
             # Soft role hint for templates / future role checks (not full user auth).
             if not session.get("user_role"):
                 session["user_role"] = "coach"
             if not session.get("user_name"):
                 session["user_name"] = "Coach"
             flash("Welcome — you are in Coach view.", "success")
-            next_url = request.args.get("next") or url_for("core.index")
+            next_url = request.args.get("next") or url_for("coach.coach_progress")
             return redirect(next_url)
 
         flash("Incorrect coach password.", "error")
@@ -225,11 +229,153 @@ def coach_login():
 def coach_logout():
     """Clear coach portal session flag."""
     session.pop("coach_portal", None)
+    session.pop("_coach_readonly_flashed", None)
     # Only clear soft coach hints if there is no real user login.
     if not session.get("user_id"):
         if session.get("user_role") == "coach":
             session.pop("user_role", None)
         if session.get("user_name") == "Coach":
             session.pop("user_name", None)
+    # Drop queued flashes (stacked read-only warnings) so login stays clean.
+    session.pop("_flashes", None)
     flash("Signed out of Coach view.", "success")
     return redirect(url_for("coach.coach_login"))
+
+
+def _pct_label(value) -> str:
+    if value is None:
+        return "—"
+    try:
+        return f"{float(value) * 100:.1f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def build_coach_progress_snapshot() -> dict:
+    """Live learning / program progress for coach portal (read-only)."""
+    from pathlib import Path
+    import json
+    import sqlite3
+    from datetime import datetime
+
+    root = Path(__file__).resolve().parents[1]
+    panel_path = root / "data" / "hoopsalytics" / "full_film_panel_latest.json"
+    teach_path = root / "data" / "hoopsalytics" / "teach_loop_state.json"
+    status_path = root / "docs" / "LEARNING_STATUS.md"
+    db_path = root / "film_analysis.db"
+
+    snapshot = {
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "queue": {
+            "hudl_taught": None,
+            "hudl_videos": None,
+            "pct": None,
+            "note": "Unknown",
+        },
+        "active": [],
+        "panel": {
+            "overall_pass": None,
+            "mean_precision": None,
+            "mean_recall": None,
+            "gates": [],
+            "generated_at": None,
+        },
+        "status_markdown": None,
+        "status_mtime": None,
+    }
+
+    taught_hudl = []
+    if teach_path.is_file():
+        try:
+            state = json.loads(teach_path.read_text(encoding="utf-8"))
+            taught = state.get("taught") or state.get("taught_keys") or []
+            if isinstance(taught, dict):
+                taught = list(taught.keys())
+            taught_hudl = [k for k in taught if str(k).startswith("hudl_")]
+            snapshot["queue"]["hudl_taught"] = len(taught_hudl)
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+
+    if db_path.is_file():
+        try:
+            conn = sqlite3.connect(str(db_path), timeout=10)
+            conn.row_factory = sqlite3.Row
+            vid_n = conn.execute(
+                "SELECT COUNT(*) AS n FROM videos WHERE game_id LIKE 'hudl_%'"
+            ).fetchone()["n"]
+            snapshot["queue"]["hudl_videos"] = vid_n
+            if snapshot["queue"]["hudl_taught"] is not None and vid_n:
+                pct = 100.0 * snapshot["queue"]["hudl_taught"] / vid_n
+                snapshot["queue"]["pct"] = round(pct, 1)
+                snapshot["queue"]["note"] = (
+                    f"{snapshot['queue']['hudl_taught']} of {vid_n} HUDL games taught"
+                )
+            for row in conn.execute(
+                """
+                SELECT analysis_key, status, progress_pct, progress_step
+                FROM analysis_runs
+                WHERE status = 'running'
+                ORDER BY id DESC
+                LIMIT 8
+                """
+            ):
+                snapshot["active"].append(
+                    {
+                        "key": row["analysis_key"],
+                        "progress_pct": row["progress_pct"],
+                        "step": row["progress_step"] or "",
+                    }
+                )
+            conn.close()
+        except sqlite3.Error:
+            pass
+
+    if panel_path.is_file():
+        try:
+            panel = json.loads(panel_path.read_text(encoding="utf-8"))
+            evaluation = panel.get("evaluation") or {}
+            snapshot["panel"]["overall_pass"] = evaluation.get("overall_pass")
+            snapshot["panel"]["mean_precision"] = evaluation.get("mean_precision")
+            snapshot["panel"]["mean_recall"] = evaluation.get("mean_recall")
+            snapshot["panel"]["generated_at"] = panel.get("generated_at")
+            gates = (evaluation.get("gates") or {})
+            for name, gate in gates.items():
+                snapshot["panel"]["gates"].append(
+                    {
+                        "name": name,
+                        "required": gate.get("required"),
+                        "actual": gate.get("actual"),
+                        "pass": gate.get("pass"),
+                        "required_label": _pct_label(gate.get("required"))
+                        if name.startswith("event_")
+                        else (
+                            "100%"
+                            if gate.get("required") == 1.0
+                            else str(gate.get("required"))
+                        ),
+                        "actual_label": _pct_label(gate.get("actual")),
+                    }
+                )
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+
+    if status_path.is_file():
+        try:
+            snapshot["status_markdown"] = status_path.read_text(encoding="utf-8")
+            snapshot["status_mtime"] = datetime.fromtimestamp(
+                status_path.stat().st_mtime
+            ).strftime("%Y-%m-%d %H:%M:%S")
+        except OSError:
+            pass
+
+    return snapshot
+
+
+@coach_bp.route("/coach/progress")
+@require_feature("ENABLE_COACH_PORTAL")
+def coach_progress():
+    """Always-on learning / program progress for coaches (live read)."""
+    if not session.get("coach_portal"):
+        return redirect(url_for("coach.coach_login", next=request.path))
+    snapshot = build_coach_progress_snapshot()
+    return render_template("coach_progress.html", progress=snapshot)

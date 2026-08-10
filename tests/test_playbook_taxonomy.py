@@ -3,6 +3,7 @@
 from playbook_taxonomy import (
     build_category_tree,
     create_category,
+    create_opponent_playbook,
     delete_category,
     ensure_playbook_taxonomy,
     resolve_category_from_section,
@@ -10,28 +11,62 @@ from playbook_taxonomy import (
 )
 
 
+def test_category_tree_rolls_up_play_counts(db):
+    """Parent folders (Offense / Man) include descendant play totals."""
+    ensure_playbook_taxonomy(db)
+    leaf_id = resolve_category_id_by_path(db, "offense/man")
+    assert leaf_id is not None
+    db.execute(
+        "INSERT INTO plays (name, category, category_id) VALUES (?, ?, ?)",
+        ("Rollup Test Play", "offense", leaf_id),
+    )
+    db.commit()
+    tree = build_category_tree(db)
+    offense = next(node for node in tree if node["name"] == "Offense")
+    man = next(child for child in offense["children"] if child["name"] == "Man")
+    assert man["play_count"] >= 1
+    assert offense["play_count"] >= man["play_count"]
+    assert offense["direct_play_count"] == 0
+
+
 def test_default_taxonomy_seeded(db):
     ensure_playbook_taxonomy(db)
     db.commit()
     tree = build_category_tree(db)
-    assert len(tree) == 4
-    assert tree[0]["name"] == "Offense"
-    offense_man = next(child for child in tree[0]["children"] if child["name"] == "Man")
-    subtype_names = {child["name"] for child in offense_man["children"]}
-    assert subtype_names == {"Plays", "BLOB", "SLOB"}
+    names = [node["name"] for node in tree]
+    assert names[:8] == [
+        "Offense",
+        "Defense",
+        "Press",
+        "Press Break",
+        "Transition",
+        "BLOB",
+        "SLOB",
+        "Opponents",
+    ]
+    offense = tree[0]
+    assert {c["name"] for c in offense["children"]} == {"Man", "Zone"}
+    defense = tree[1]
+    assert {c["name"] for c in defense["children"]} == {"Man", "Zone"}
+    press = tree[2]
+    assert {c["name"] for c in press["children"]} == {"Man", "Zone"}
+    press_break = tree[3]
+    assert {c["name"] for c in press_break["children"]} == {"Man", "Zone"}
+    opponents = next(node for node in tree if node["name"] == "Opponents")
+    assert opponents.get("nav_href") == "/playbook/opponents"
 
 
-def test_resolve_offense_man_plays_category(db):
+def test_resolve_offense_man_category(db):
     ensure_playbook_taxonomy(db)
     db.commit()
-    category_id = resolve_category_id_by_path(db, "offense/man/plays")
+    category_id = resolve_category_id_by_path(db, "offense/man")
     assert category_id is not None
 
 
 def test_create_and_delete_custom_category(db):
     ensure_playbook_taxonomy(db)
     db.commit()
-    parent_id = resolve_category_id_by_path(db, "defense/man/plays")
+    parent_id = resolve_category_id_by_path(db, "defense/man")
     custom_id = create_category(db, parent_id=parent_id, name="Traps")
     db.commit()
     assert resolve_category_id_by_path(db, "defense/man/traps") == custom_id
@@ -44,14 +79,14 @@ def test_resolve_category_from_section(db):
     ensure_playbook_taxonomy(db)
     db.commit()
     category_id, legacy = resolve_category_from_section(db, "BLOB", "Offense - Man")
-    assert legacy == "offense"
-    assert resolve_category_id_by_path(db, "offense/man/blob") == category_id
+    assert legacy == "out_of_bounds"
+    assert resolve_category_id_by_path(db, "blob") == category_id
 
 
 def test_play_save_with_category_id(client, db):
     ensure_playbook_taxonomy(db)
     db.commit()
-    category_id = resolve_category_id_by_path(db, "offense/zone/blob")
+    category_id = resolve_category_id_by_path(db, "blob")
     response = client.post(
         "/playbook/save",
         data={
@@ -87,3 +122,16 @@ def test_playbook_list_survives_missing_categories_table(client, db):
     assert db.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='play_categories'"
     ).fetchone() is not None
+
+
+def test_opponent_playbook_create_and_page(client, db):
+    ensure_playbook_taxonomy(db)
+    db.commit()
+    opp_id = create_opponent_playbook(db, name="Marsing")
+    db.commit()
+    resp = client.get("/playbook/opponents")
+    assert resp.status_code == 200
+    assert b"Marsing" in resp.data
+    detail = client.get(f"/playbook/opponents/{opp_id}")
+    assert detail.status_code == 200
+    assert b"Marsing" in detail.data

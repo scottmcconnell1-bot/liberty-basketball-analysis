@@ -808,6 +808,9 @@
     <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> <span>Liberty Basketball</span></a>
     <button class="nav-hamburger" type="button" id="nav-hamburger" aria-label="Toggle navigation" aria-controls="nav-links" aria-expanded="false">☰</button>
     <div class="nav-links" id="nav-links">
+    {% if coach_portal %}
+    <a href="{{ url_for('coach.coach_progress') }}" {% if nav_active('coach.coach_progress') %}class="active"{% endif %}>Learning Progress</a>
+    {% endif %}
     <a href="/" {% if nav_active('core.index') %}class="active"{% endif %}>Dashboard</a>
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
     <div class="nav-dropdown">
@@ -888,7 +891,7 @@
     </div>
   </nav>
   {% if coach_portal or coach_readonly %}
-  <div class="coach-readonly-banner" role="status">Coach view — read only</div>
+  <div class="coach-readonly-banner" role="status">Coach view — read only · <a href="{{ url_for('coach.coach_progress') }}" style="color:inherit;text-decoration:underline;">Learning Progress</a></div>
   {% endif %}
   <main>
     {% block content %}{% endblock %}

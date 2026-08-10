@@ -25,5 +25,8 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Se
 
 Write-Host "Registered scheduled task '$TaskName' (daily 11:00 PM)."
 Write-Host "Script: $ScriptPath"
+Write-Host "Before commit: score_full_film_panel.py + generate_learning_status.py"
+Write-Host "Report: $RepoRoot\docs\LEARNING_STATUS.md"
 Write-Host "Log: $RepoRoot\data\hoopsalytics\daily_git_save.log"
 Get-ScheduledTask -TaskName $TaskName | Format-List TaskName, State
+Get-ScheduledTaskInfo -TaskName $TaskName | Format-List LastRunTime, NextRunTime, LastTaskResult

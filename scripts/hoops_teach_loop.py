@@ -22,6 +22,32 @@ DB = ROOT / "film_analysis.db"
 PY = sys.executable
 BASE = "http://127.0.0.1:8080"
 
+
+def _connect_db() -> sqlite3.Connection:
+    """Open film DB with a long busy timeout so Flask/workers do not kill the loop."""
+    conn = sqlite3.connect(str(DB), timeout=60.0)
+    conn.execute("PRAGMA busy_timeout=60000")
+    return conn
+
+
+def _retry_locked(op, *, retries: int = 5, label: str = "db"):
+    """Retry on transient SQLite 'database is locked' (Flask/GPU writers compete)."""
+    last = None
+    for attempt in range(retries + 1):
+        try:
+            return op()
+        except sqlite3.OperationalError as exc:
+            last = exc
+            if "locked" not in str(exc).lower() or attempt >= retries:
+                raise
+            wait = min(30.0, 2.0 * (attempt + 1))
+            print(
+                f"[{label}] database is locked; retry {attempt + 1}/{retries} in {wait:.0f}s",
+                flush=True,
+            )
+            time.sleep(wait)
+    raise last  # pragma: no cover
+
 GAMES = [
     (17, "hoopsalytics-marsing-2025-12-02", "hoopsalytics_marsing_2025-12-02", "Marsing"),
     (16, "hoopsalytics-nyssa-2025-12-04", "hoopsalytics_nyssa_2025-12-04", "Nyssa"),
@@ -61,6 +87,76 @@ def all_games(conn: sqlite3.Connection) -> list[tuple]:
 
 TAUGHT = set()
 STATE_PATH = ROOT / "data" / "hoopsalytics" / "teach_loop_state.json"
+PANEL_SCRIPT = ROOT / "scripts" / "score_full_film_panel.py"
+PANEL_LATEST = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
+# Full-film panel cadence: every teach for Hoops; every N teaches for HUDL (default 2)
+PANEL_EVERY_HOOPS = int(os.environ.get("LIBERTY_PANEL_EVERY_HOOPS", "1"))
+PANEL_EVERY_HUDL = int(os.environ.get("LIBERTY_PANEL_EVERY_HUDL", "2"))
+# No progress_step/pct change for this long while a worker is alive → hung (kill + re-queue)
+HUNG_STALE_SEC = int(os.environ.get("LIBERTY_HUNG_STALE_SEC", str(45 * 60)))
+
+# Fixed full-film panel bases (Scott gates). Prefer these over HUDL when queueing.
+PANEL_BASE_KEYS = {
+    "hoopsalytics_idaho_city_2026-01-05",
+    "hoopsalytics_harper_or_2025-12-05",
+    "hoopsalytics_burns_or_2025-12-06",
+    "hoopsalytics_nyssa_2025-12-04",
+    "hoopsalytics_melba_2025-12-09",
+    "hoopsalytics_camas_county_2025-12-13",
+}
+
+
+def _base_analysis_key(gid: str) -> str:
+    return str(gid or "").split("__rerun_", 1)[0]
+
+
+def panel_queue_rank(gid: str, *, fail_scores: dict[str, float] | None = None) -> tuple:
+    """Lower sort key = teach/analyze sooner. Panel failures beat HUDL FIFO."""
+    base = _base_analysis_key(gid)
+    is_panel = 0 if base in PANEL_BASE_KEYS else 1
+    # Worse recall (or missing) → earlier among panel games
+    score = 1.0
+    if fail_scores is not None and base in fail_scores:
+        score = float(fail_scores[base])
+    elif is_panel == 0:
+        score = -1.0  # unknown panel → ahead of HUDL, behind scored failures
+    return (is_panel, score if is_panel == 0 else 0.0)
+
+
+def load_panel_fail_scores(path: Path = PANEL_LATEST) -> dict[str, float]:
+    """Map panel base analysis_key → recall (lower = worse). Empty if unavailable."""
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return {}
+    out: dict[str, float] = {}
+    for g in data.get("games") or []:
+        if not isinstance(g, dict):
+            continue
+        key = _base_analysis_key(str(g.get("analysis_key") or ""))
+        if not key:
+            continue
+        rec = g.get("recall")
+        try:
+            out[key] = float(rec) if rec is not None else -1.0
+        except (TypeError, ValueError):
+            out[key] = -1.0
+    return out
+
+
+def games_panel_first(games: list[tuple], *, fail_scores: dict[str, float] | None = None) -> list[tuple]:
+    """Stable panel-priority order: worst panel recall first, then non-panel by video id."""
+    indexed = list(enumerate(games))
+
+    def _key(item: tuple[int, tuple]) -> tuple:
+        idx, row = item
+        gid = row[2] if len(row) > 2 else ""
+        rank = panel_queue_rank(gid, fail_scores=fail_scores)
+        return (*rank, idx)
+
+    return [row for _, row in sorted(indexed, key=_key)]
 
 
 def load_state() -> dict:
@@ -112,6 +208,16 @@ def det_max_ms(conn: sqlite3.Connection, analysis_key: str) -> int:
     return int(row[0] or 0)
 
 
+def det_coverage_ok(conn: sqlite3.Connection, analysis_key: str, *, min_ms: int = 50_000) -> bool:
+    """Fast keep/fail gate for reclaim — avoids full-table MAX under write load."""
+    row = conn.execute(
+        """SELECT 1 FROM detections
+           WHERE game_id=? AND timestamp_ms >= ? LIMIT 1""",
+        (analysis_key, min_ms),
+    ).fetchone()
+    return row is not None
+
+
 def det_max_ms_for_base(conn: sqlite3.Connection, gid: str) -> int:
     """Best coverage across primary + any __rerun_* keys for this game."""
     row = conn.execute(
@@ -122,10 +228,52 @@ def det_max_ms_for_base(conn: sqlite3.Connection, gid: str) -> int:
     return int(row[0] or 0)
 
 
-def analysis_worker_alive() -> bool:
-    """True if an analysis_launcher (or ai_analyzer) process is running."""
+def _extract_analysis_key_from_cmdline(cmdline: str) -> str | None:
+    """Parse analysis_key from analysis_launcher / ai_analyzer argv (last token)."""
+    if not cmdline:
+        return None
+    low = cmdline.lower()
+    marker = None
+    for name in ("analysis_launcher.py", "ai_analyzer.py"):
+        if name in low:
+            marker = name
+            break
+    if not marker:
+        return None
+    idx = low.index(marker)
+    rest = cmdline[idx + len(marker) :].strip()
+    if not rest:
+        return None
+    # Windows paths may contain spaces; launcher argv is: db video game_id
+    parts = rest.split()
+    if not parts:
+        return None
+    return parts[-1].strip() or None
+
+
+def list_live_analysis_workers() -> dict:
+    """Probe live analysis_launcher / ai_analyzer processes and their keys.
+
+    Returns:
+      {
+        "ok": bool,
+        "any_worker": bool,
+        "keys": set[str],          # parsed analysis_keys
+        "pid_by_key": dict[str, int],
+        "unkeyed_workers": int,    # workers present but key unparseable
+        "unkeyed_pids": list[int],
+      }
+    """
+    empty = {
+        "ok": False,
+        "any_worker": False,
+        "keys": set(),
+        "pid_by_key": {},
+        "unkeyed_workers": 0,
+        "unkeyed_pids": [],
+    }
     try:
-        # tasklist CSV has no CommandLine; use CIM so we can see script names.
+        # tasklist CSV has no CommandLine; use CIM so we can see script names + PID.
         r = subprocess.run(
             [
                 "powershell",
@@ -134,7 +282,7 @@ def analysis_worker_alive() -> bool:
                 "Hidden",
                 "-Command",
                 "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" "
-                "| Select-Object -ExpandProperty CommandLine",
+                "| ForEach-Object { '{0}|{1}' -f $_.ProcessId, $_.CommandLine }",
             ],
             capture_output=True,
             text=True,
@@ -142,17 +290,179 @@ def analysis_worker_alive() -> bool:
             timeout=20,
             creationflags=CREATE_NO_WINDOW,
         )
-        out = (r.stdout or "").lower()
-        return "analysis_launcher" in out or "ai_analyzer" in out
+        lines = [ln.strip() for ln in (r.stdout or "").splitlines() if ln.strip()]
+        keys: set[str] = set()
+        pid_by_key: dict[str, int] = {}
+        unkeyed_pids: list[int] = []
+        unkeyed = 0
+        any_worker = False
+        for line in lines:
+            pid = None
+            cmdline = line
+            if "|" in line:
+                left, right = line.split("|", 1)
+                try:
+                    pid = int(left.strip())
+                except ValueError:
+                    pid = None
+                cmdline = right.strip()
+            low = cmdline.lower()
+            if "analysis_launcher" not in low and "ai_analyzer" not in low:
+                continue
+            # Ignore this teach loop itself if somehow matched
+            if "hoops_teach_loop" in low:
+                continue
+            any_worker = True
+            key = _extract_analysis_key_from_cmdline(cmdline)
+            if key:
+                keys.add(key)
+                if pid is not None:
+                    pid_by_key[key] = pid
+            else:
+                unkeyed += 1
+                if pid is not None:
+                    unkeyed_pids.append(pid)
+        return {
+            "ok": True,
+            "any_worker": any_worker,
+            "keys": keys,
+            "pid_by_key": pid_by_key,
+            "unkeyed_workers": unkeyed,
+            "unkeyed_pids": unkeyed_pids,
+        }
     except Exception:
+        return empty
+
+
+def analysis_worker_alive() -> bool:
+    """True if an analysis_launcher (or ai_analyzer) process is running."""
+    info = list_live_analysis_workers()
+    return bool(info.get("any_worker"))
+
+
+def live_analysis_keys() -> set[str]:
+    """Analysis keys currently owned by a live launcher/analyzer."""
+    return set(list_live_analysis_workers().get("keys") or set())
+
+
+def wait_progress_fingerprint(pct, step) -> str:
+    """Fingerprint for hung detection — frame text in step usually advances when healthy."""
+    return f"{pct}|{step or ''}"
+
+
+def hung_wait_due(
+    snap: dict | None,
+    *,
+    key: str,
+    fingerprint: str,
+    now: float,
+    stale_sec: int = HUNG_STALE_SEC,
+) -> bool:
+    """True when the same wait fingerprint has been stuck longer than stale_sec."""
+    if not snap or not key or stale_sec <= 0:
         return False
+    if snap.get("key") != key:
+        return False
+    if snap.get("fingerprint") != fingerprint:
+        return False
+    try:
+        since = float(snap.get("since") or 0)
+    except (TypeError, ValueError):
+        return False
+    if since <= 0:
+        return False
+    return (now - since) >= float(stale_sec)
+
+
+def update_wait_progress_snap(
+    snap: dict | None,
+    *,
+    key: str,
+    fingerprint: str,
+    now: float,
+) -> dict:
+    """Refresh or reset the wait-progress snapshot used for hung detection."""
+    if (
+        snap
+        and snap.get("key") == key
+        and snap.get("fingerprint") == fingerprint
+        and snap.get("since")
+    ):
+        return {
+            "key": key,
+            "fingerprint": fingerprint,
+            "since": snap["since"],
+            "last_seen": now,
+        }
+    return {"key": key, "fingerprint": fingerprint, "since": now, "last_seen": now}
+
+
+def kill_analysis_pids(pids: list[int]) -> list[int]:
+    """taskkill listed PIDs. Returns PIDs we attempted to kill."""
+    killed: list[int] = []
+    for pid in pids:
+        if not pid:
+            continue
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(int(pid)), "/F"],
+                check=False,
+                capture_output=True,
+                creationflags=CREATE_NO_WINDOW,
+            )
+            killed.append(int(pid))
+        except Exception as exc:
+            print(f"[hung] taskkill pid={pid} failed: {exc}", flush=True)
+    return killed
+
+
+def mark_run_failed_hung(conn: sqlite3.Connection, run_id: int, *, detail: str) -> None:
+    conn.execute(
+        """UPDATE analysis_runs
+           SET status='failed',
+               progress_step='Failed',
+               error_message=COALESCE(error_message,'') || ?,
+               completed_at=CURRENT_TIMESTAMP
+           WHERE id=? AND status='running'""",
+        (f" | hung: {detail}", run_id),
+    )
+    conn.commit()
+
+
+def restart_hung_analysis(
+    conn: sqlite3.Connection,
+    *,
+    run_id: int,
+    key: str,
+    fingerprint: str,
+    stale_sec: int = HUNG_STALE_SEC,
+) -> bool:
+    """Kill live worker for key (if any) and fail the run so teach can re-queue."""
+    workers = list_live_analysis_workers()
+    pid_by_key = dict(workers.get("pid_by_key") or {})
+    pids = []
+    if key and key in pid_by_key:
+        pids.append(int(pid_by_key[key]))
+    killed = kill_analysis_pids(pids)
+    detail = f"no progress for >={stale_sec}s ({fingerprint}); killed={killed or 'none'}"
+    mark_run_failed_hung(conn, run_id, detail=detail)
+    print(f"[hung] key={key} run_id={run_id} {detail}", flush=True)
+    return True
 
 
 def reclaim_zombie_runs(conn: sqlite3.Connection, *, stale_minutes: int = 20) -> int:
-    """Clear 'running' rows when no worker is alive (or run is ancient).
+    """Clear 'running' rows that are not backed by a live worker for that key.
 
-    Prevents the teach loop from waiting forever after reboot / crashed workers.
+    Per-game: a live North Star launcher must NOT block reclaim of other games'
+    zombie rows. When worker key cannot be parsed, stay conservative (skip).
     """
+    def _once() -> int:
+        return _reclaim_zombie_runs_once(conn, stale_minutes=stale_minutes)
+
+    return _retry_locked(_once, retries=2, label="zombie")
+
+
+def _reclaim_zombie_runs_once(conn: sqlite3.Connection, *, stale_minutes: int = 20) -> int:
     rows = conn.execute(
         """SELECT id, analysis_key, progress_step, progress_pct, started_at
            FROM analysis_runs WHERE status='running'"""
@@ -160,10 +470,21 @@ def reclaim_zombie_runs(conn: sqlite3.Connection, *, stale_minutes: int = 20) ->
     if not rows:
         return 0
 
-    worker = analysis_worker_alive()
+    workers = list_live_analysis_workers()
+    live_keys: set[str] = set(workers.get("keys") or set())
+    any_worker = bool(workers.get("any_worker"))
+    unkeyed = int(workers.get("unkeyed_workers") or 0)
+    # Cannot tell which game the live process owns → do not reclaim while it lives.
+    if any_worker and not live_keys and unkeyed > 0:
+        print(
+            "[zombie] live worker(s) with unparseable key; skipping reclaim (conservative)",
+            flush=True,
+        )
+        return 0
+
     fixed = 0
     for run_id, key, step, pct, started_at in rows:
-        mx = det_max_ms(conn, key or "")
+        key_s = key or ""
         step_l = (step or "").lower()
         age_row = conn.execute(
             """SELECT (julianday('now') - julianday(COALESCE(?, 'now'))) * 24 * 60""",
@@ -171,16 +492,31 @@ def reclaim_zombie_runs(conn: sqlite3.Connection, *, stale_minutes: int = 20) ->
         ).fetchone()
         age_min = float(age_row[0] or 0)
 
-        is_zombie = (not worker) or (age_min >= stale_minutes and not worker)
-        # Also treat long-stuck regenerate with no worker as zombie immediately
-        if (not worker) and ("regenerat" in step_l or "event" in step_l):
-            is_zombie = True
-        if worker and age_min < stale_minutes:
-            continue
-        if not is_zombie and worker:
+        # Live worker owns this exact key → leave alone.
+        if key_s and key_s in live_keys:
             continue
 
-        if mx >= 50_000:
+        # Another game's worker is alive, and this row is not that game → zombie now.
+        other_live = bool(live_keys) and (not key_s or key_s not in live_keys)
+        no_worker = not any_worker
+        stuck_regen = no_worker and ("regenerat" in step_l or "event" in step_l)
+        aged_out = no_worker and age_min >= stale_minutes
+
+        if not (other_live or no_worker or stuck_regen or aged_out):
+            continue
+        # When no worker: still honor stale_minutes unless regenerate-stuck or stale_minutes==0
+        if no_worker and not stuck_regen and stale_minutes > 0 and age_min < stale_minutes:
+            continue
+
+        # Cheap coverage gate (full MAX() blocks for minutes under concurrent YOLO writes).
+        keep = det_coverage_ok(conn, key_s, min_ms=50_000) if key_s else False
+        # Mid-film detection zombies must not become "completed" on thin coverage —
+        # teach treats completed as done and will never re-queue the rest of the film.
+        pct_f = float(pct or 0)
+        if keep and "detect" in step_l and "regenerat" not in step_l:
+            if pct_f < 95.0 or not det_coverage_ok(conn, key_s, min_ms=1_200_000):
+                keep = False
+        if keep:
             conn.execute(
                 """UPDATE analysis_runs
                    SET status='completed',
@@ -201,13 +537,14 @@ def reclaim_zombie_runs(conn: sqlite3.Connection, *, stale_minutes: int = 20) ->
                    WHERE id=?""",
                 (run_id,),
             )
+        # Commit each row so a slow later key cannot roll back earlier reclaim work.
+        conn.commit()
         fixed += 1
         print(
-            f"[zombie] id={run_id} key={key} worker={worker} age_min={age_min:.0f} mx={mx} -> fixed",
+            f"[zombie] id={run_id} key={key_s} live_keys={sorted(live_keys) or '-'} "
+            f"age_min={age_min:.0f} keep={keep} -> fixed",
             flush=True,
         )
-    if fixed:
-        conn.commit()
     return fixed
 
 
@@ -278,6 +615,60 @@ def needs_full(conn: sqlite3.Connection, video_id: int, gid: str) -> bool:
     return mx < 1_200_000
 
 
+def _panel_due(state: dict, *, is_hudl: bool) -> bool:
+    """Return True when the fixed full-film panel should run after this teach."""
+    every = PANEL_EVERY_HUDL if is_hudl else PANEL_EVERY_HOOPS
+    every = max(1, int(every or 1))
+    n = int(state.get("teaches_since_panel") or 0) + 1
+    state["teaches_since_panel"] = n
+    return n >= every
+
+
+def run_full_film_panel(state: dict) -> None:
+    """Compare-only panel scorecard (minutes, not hours). Never blocks forever."""
+    if not PANEL_SCRIPT.exists():
+        print(f"PANEL skip — missing {PANEL_SCRIPT}", flush=True)
+        return
+    print("PANEL running full-film evaluation…", flush=True)
+    # Soft timeout via wall clock logging only; script itself is compare-only.
+    rc = run([PY, str(PANEL_SCRIPT.relative_to(ROOT))])
+    latest = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
+    if latest.exists():
+        try:
+            data = json.loads(latest.read_text(encoding="utf-8"))
+            ev = data.get("evaluation") or {}
+            overall = "PASS" if ev.get("overall_pass") else "FAIL"
+            print(
+                f"PANEL overall={overall}  "
+                f"mean_prec={ev.get('mean_precision')}  mean_rec={ev.get('mean_recall')}  "
+                f"script_rc={rc}",
+                flush=True,
+            )
+            for key, gate in (ev.get("gates") or {}).items():
+                status = "PASS" if gate.get("pass") else "FAIL"
+                print(
+                    f"PANEL [{status}] {key}: actual={gate.get('actual')} "
+                    f"required={gate.get('required')}",
+                    flush=True,
+                )
+            for g in data.get("games") or []:
+                print(
+                    f"PANEL game {g.get('name')}: prec={g.get('precision')} "
+                    f"rec={g.get('recall')} final_exact={g.get('final_score_exact')} "
+                    f"player_exact={g.get('player_points_exact')} "
+                    f"status_final={g.get('final_score_status')} "
+                    f"status_player={g.get('player_points_status')}",
+                    flush=True,
+                )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            print(f"PANEL could not parse latest results: {exc}", flush=True)
+    else:
+        print(f"PANEL no results file after rc={rc}", flush=True)
+    state["teaches_since_panel"] = 0
+    state["last_panel_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    save_state(state)
+
+
 def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> None:
     print(f"\n=== TEACH after {name} ({analysis_key}) ===", flush=True)
     is_hudl = str(analysis_key).startswith("hudl_")
@@ -286,7 +677,7 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
     else:
         run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
     # Regenerate every game that has detections so new keep_clf / caps apply.
-    conn = sqlite3.connect(str(DB))
+    conn = _connect_db()
     keys = [
         r[0]
         for r in conn.execute(
@@ -332,84 +723,180 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
         f"mode={score.get('mode')}",
         flush=True,
     )
+    if _panel_due(state, is_hudl=is_hudl):
+        run_full_film_panel(state)
+    else:
+        save_state(state)
+        print(
+            f"PANEL deferred (teaches_since_panel={state.get('teaches_since_panel')} "
+            f"hudl={is_hudl})",
+            flush=True,
+        )
 
 
 def main() -> int:
     state = load_state()
-    print("Hoops+HUDL teach loop starting…", flush=True)
-    conn0 = sqlite3.connect(str(DB))
-    nfix = recover_interrupted_runs(conn0)
-    conn0.close()
-    if nfix:
-        print(f"[recover] adjusted {nfix} interrupted analysis_runs", flush=True)
+    print("Hoops+HUDL teach loop starting...", flush=True)
+    try:
+        conn0 = _connect_db()
+        try:
+            nfix = _retry_locked(
+                lambda: recover_interrupted_runs(conn0), retries=5, label="recover"
+            )
+        finally:
+            conn0.close()
+        if nfix:
+            print(f"[recover] adjusted {nfix} interrupted analysis_runs", flush=True)
+    except Exception as exc:
+        # Never die at startup — watchdog / next cycle will keep going.
+        print(f"[recover] skipped after error: {exc}", flush=True)
+
+    consecutive_errors = 0
     while True:
-        conn = sqlite3.connect(str(DB))
-        # Every cycle: never wait on dead workers
-        n_z = reclaim_zombie_runs(conn, stale_minutes=15)
-        if n_z:
-            print(f"[zombie] reclaimed {n_z} stuck run(s)", flush=True)
-        games = all_games(conn)
-        running = None
-        for vid, film, gid, name in games:
-            runrow = latest_run(conn, vid, gid)
-            if runrow and runrow[1] == "running":
-                running = (name, runrow)
-                break
-        if running:
-            name, runrow = running
-            # If no worker, reclaim again immediately instead of sleeping forever
-            if not analysis_worker_alive():
-                reclaim_zombie_runs(conn, stale_minutes=0)
+        try:
+            conn = _connect_db()
+            # Every cycle: never wait on dead workers
+            n_z = reclaim_zombie_runs(conn, stale_minutes=15)
+            if n_z:
+                print(f"[zombie] reclaimed {n_z} stuck run(s)", flush=True)
+            fail_scores = load_panel_fail_scores()
+            games = games_panel_first(all_games(conn), fail_scores=fail_scores)
+            running = None
+            for vid, film, gid, name in games:
+                runrow = latest_run(conn, vid, gid)
+                if runrow and runrow[1] == "running":
+                    running = (name, runrow)
+                    break
+            if running:
+                name, runrow = running
+                wait_key = (runrow[4] or "") if len(runrow) > 4 else ""
+                live_keys = live_analysis_keys()
+                # Waiting on a different game's zombie while another launcher is
+                # alive — reclaim others immediately; do not sleep 90s forever.
+                if wait_key and live_keys and wait_key not in live_keys:
+                    print(
+                        f"[wait-skip] {name} key={wait_key} not in live {sorted(live_keys)}; reclaiming",
+                        flush=True,
+                    )
+                    reclaim_zombie_runs(conn, stale_minutes=0)
+                    state.pop("wait_progress", None)
+                    save_state(state)
+                    conn.close()
+                    time.sleep(5)
+                    consecutive_errors = 0
+                    continue
+                # If no worker, reclaim again immediately instead of sleeping forever
+                if not analysis_worker_alive():
+                    reclaim_zombie_runs(conn, stale_minutes=0)
+                    state.pop("wait_progress", None)
+                    save_state(state)
+                    conn.close()
+                    time.sleep(5)
+                    consecutive_errors = 0
+                    continue
+                fp = wait_progress_fingerprint(runrow[2], runrow[3])
+                now = time.time()
+                snap = update_wait_progress_snap(
+                    state.get("wait_progress"),
+                    key=wait_key or name,
+                    fingerprint=fp,
+                    now=now,
+                )
+                state["wait_progress"] = snap
+                save_state(state)
+                if hung_wait_due(
+                    snap,
+                    key=wait_key or name,
+                    fingerprint=fp,
+                    now=now,
+                    stale_sec=HUNG_STALE_SEC,
+                ):
+                    restart_hung_analysis(
+                        conn,
+                        run_id=int(runrow[0]),
+                        key=wait_key,
+                        fingerprint=fp,
+                        stale_sec=HUNG_STALE_SEC,
+                    )
+                    state.pop("wait_progress", None)
+                    save_state(state)
+                    conn.close()
+                    consecutive_errors = 0
+                    time.sleep(5)
+                    continue
+                stuck_for = int(now - float(snap.get("since") or now))
+                print(
+                    f"[wait] {name} {runrow[2]}% - {runrow[3]} "
+                    f"(same_progress={stuck_for}s/{HUNG_STALE_SEC}s)",
+                    flush=True,
+                )
                 conn.close()
-                time.sleep(5)
+                consecutive_errors = 0
+                time.sleep(90)
                 continue
+
+            state.pop("wait_progress", None)
+
+            # Teach any newly completed game not yet in state (panel failures first)
+            for vid, film, gid, name in games:
+                runrow = latest_run(conn, vid, gid)
+                if not runrow or runrow[1] != "completed":
+                    continue
+                key = runrow[4] or gid
+                if det_max_ms(conn, key) < 50_000:
+                    continue
+                if key in (state.get("taught_keys") or []):
+                    continue
+                conn.close()
+                teach_and_score(key, film, name, state)
+                conn = _connect_db()
+                games = games_panel_first(all_games(conn), fail_scores=load_panel_fail_scores())
+
+            # Queue next needed full game — worst panel recall before HUDL FIFO
+            nxt = None
+            for vid, film, gid, name in games:
+                if needs_full(conn, vid, gid):
+                    nxt = (vid, film, gid, name)
+                    break
+            conn.close()
+            if not nxt:
+                print(
+                    "[done] All Hoops + HUDL games analyzed + taught at least once.",
+                    flush=True,
+                )
+                run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
+                run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
+                break
+
+            vid, film, gid, name = nxt
+            label = f"full teach - {name}"
+            print(f"[start] {name} video={vid}", flush=True)
+            try:
+                resp = post_analyze(vid, label)
+                print(json.dumps(resp, indent=2), flush=True)
+            except Exception as exc:
+                print(f"start failed: {exc}", flush=True)
+                time.sleep(60)
+                consecutive_errors = 0
+                continue
+            consecutive_errors = 0
+            time.sleep(90)
+        except sqlite3.OperationalError as exc:
+            consecutive_errors += 1
+            wait = min(120, 15 * consecutive_errors)
             print(
-                f"[wait] {name} {runrow[2]}% — {runrow[3]}",
+                f"[loop] SQLite error (survive, retry in {wait}s): {exc}",
                 flush=True,
             )
-            conn.close()
-            time.sleep(90)
-            continue
-
-        # Teach any newly completed game not yet in state
-        for vid, film, gid, name in games:
-            runrow = latest_run(conn, vid, gid)
-            if not runrow or runrow[1] != "completed":
-                continue
-            key = runrow[4] or gid
-            if det_max_ms(conn, key) < 50_000:
-                continue
-            if key in (state.get("taught_keys") or []):
-                continue
-            conn.close()
-            teach_and_score(key, film, name, state)
-            conn = sqlite3.connect(str(DB))
-            games = all_games(conn)
-
-        # Queue next needed full game
-        nxt = None
-        for vid, film, gid, name in games:
-            if needs_full(conn, vid, gid):
-                nxt = (vid, film, gid, name)
-                break
-        conn.close()
-        if not nxt:
-            print("[done] All Hoops + HUDL games analyzed + taught at least once.", flush=True)
-            run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
-            run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
-            break
-
-        vid, film, gid, name = nxt
-        label = f"full teach — {name}"
-        print(f"[start] {name} video={vid}", flush=True)
-        try:
-            resp = post_analyze(vid, label)
-            print(json.dumps(resp, indent=2), flush=True)
+            time.sleep(wait)
         except Exception as exc:
-            print(f"start failed: {exc}", flush=True)
-            time.sleep(60)
-            continue
-        time.sleep(90)
+            consecutive_errors += 1
+            wait = min(180, 30 * consecutive_errors)
+            print(
+                f"[loop] unexpected error (survive, retry in {wait}s): {exc}",
+                flush=True,
+            )
+            time.sleep(wait)
 
     return 0
 

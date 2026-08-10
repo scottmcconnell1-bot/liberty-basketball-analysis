@@ -1,0 +1,4724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#01696f" />
+  <title>Playbook – Liberty Basketball</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --color-primary:   #01696f;
+      --color-primary-d: #015558;
+      --color-bg:        #f7f6f2;
+      --color-surface:   #ffffff;
+      --color-border:    #e2e0da;
+      --color-text:      #1a1a1a;
+      --color-muted:     #6b7280;
+      --color-success:   #059669;
+      --color-danger:    #dc2626;
+      --radius:          8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.45;
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+
+    img, video {
+      max-width: 100%;
+      height: auto;
+    }
+
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Nav ───────────────────────────── */
+    nav {
+      background: var(--color-primary);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 8px;
+      flex-wrap: nowrap;
+      position: relative;
+      z-index: 300;
+    }
+
+    nav .brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    nav .brand-logo {
+      height: 28px;
+      width: auto;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    nav a {
+      color: rgba(255,255,255,0.82);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 4px 6px;
+      border-radius: var(--radius);
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    nav .spacer { flex: 1 0 auto; }
+
+    /* ── Nav links container (desktop: horizontal flex) ── */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1 0 auto;
+      min-width: 0;
+    }
+
+    /* ── Dropdown menus ─────────────────── */
+    .nav-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-dropdown > a {
+      cursor: pointer;
+    }
+
+    .nav-dropdown > a::after {
+      content: '▾';
+      font-size: 0.65rem;
+      margin-left: 3px;
+      opacity: 0.7;
+    }
+
+    .nav-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: var(--color-primary-d);
+      border-radius: 0 0 var(--radius) var(--radius);
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 400;
+      padding: 4px 0;
+    }
+
+    .nav-dropdown .dropdown-menu a {
+      display: block;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.85);
+      border-radius: 0;
+      white-space: nowrap;
+    }
+
+    .nav-dropdown .dropdown-menu a:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    .nav-dropdown .dropdown-menu .dropdown-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+      margin: 4px 0;
+    }
+
+    .nav-dropdown:hover .dropdown-menu,
+    .nav-dropdown:focus-within .dropdown-menu,
+    .nav-dropdown.open .dropdown-menu {
+      display: block;
+    }
+
+    .nav-dropdown:hover > a,
+    .nav-dropdown:focus-within > a,
+    .nav-dropdown.open > a {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    .report-link {
+      background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+      color: #fff !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35);
+      animation: reportPulse 1.8s ease-in-out infinite;
+      font-weight: 700;
+    }
+
+    .report-link:hover,
+    .report-link.active {
+      background: linear-gradient(135deg, #f97316, #dc2626, #db2777);
+      color: #fff;
+    }
+
+    @keyframes reportPulse {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(239,68,68,0.35); }
+      50% { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,255,255,0.18), 0 12px 28px rgba(245,158,11,0.45); }
+    }
+
+    /* ── Main layout ────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+
+    /* ── Card ───────────────────────────── */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    /* ── Buttons ────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover { background: var(--color-primary-d); }
+
+    .btn-secondary { background: var(--color-border); color: var(--color-text); }
+    .btn-secondary:hover { background: #d0cec8; }
+
+    .btn-danger { background: var(--color-danger); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+    /* ── Forms ──────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 4px; color: var(--color-muted); }
+    .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .form-control:focus { outline: none; border-color: var(--color-primary); }
+
+    /* ── Table ──────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-responsive table { min-width: 100%; }
+    thead th { padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--color-border); }
+    tbody td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); word-break: break-word; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(1,105,111,0.04); }
+
+    /* ── Modal ──────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: 18px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+    /* ── Stat boxes ─────────────────────── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 16px; }
+    .stat-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 18px 20px; overflow-wrap: break-word; }
+    .stat-box .label { font-size: 0.78rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--color-primary); overflow-wrap: break-word; }
+
+    /* ── Team Dashboard ──────────────────── */
+    .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; gap: 16px; }
+    .team-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; min-width: 0; }
+    .team-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+    .team-name { font-size: 0.95rem; font-weight: 700; flex-shrink: 0; }
+    .team-season-row { margin-bottom: 8px; }
+    .team-season-select {
+      width: 100%;
+      font-size: 0.78rem;
+      padding: 5px 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--color-text);
+    }
+    .team-records { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .record-block { display: flex; flex-direction: column; align-items: center; }
+    .record-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); }
+    .record-val { font-size: 1.15rem; font-weight: 700; color: var(--color-primary); }
+    .last-game { font-size: 0.78rem; color: var(--color-muted); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+    .last-game .result-win { color: #166534; font-weight: 600; }
+    .last-game .result-loss { color: #991b1b; font-weight: 600; }
+    .team-ranking { text-align: right; min-height: 48px; flex-shrink: 0; }
+    .team-ranking-empty { min-height: 48px; }
+    .rank-row { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .team-rank { font-size: 1.1rem; font-weight: 700; color: #b45309; }
+    .team-rank.rank-na { color: var(--color-muted); font-size: 0.9rem; }
+    .rank-link { font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
+    .rank-link:hover { color: var(--color-primary); }
+    .rank-date { font-size: 0.65rem; color: var(--color-muted); margin-top: 2px; }
+    .rank-update-btn { font-size: 0.65rem; padding: 2px 6px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; color: var(--color-muted); }
+    .rank-update-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .rank-update-btn:disabled { opacity: 0.5; cursor: wait; }
+    .schedule-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 6px; }
+    .schedule-list { display: grid; grid-template-columns: 1fr; gap: 0; }
+    .sched-row { display: grid; grid-template-columns: 150px 1fr 28px; gap: 12px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--color-border); }
+    .sched-date { font-weight: 600; font-size: 0.78rem; white-space: nowrap; text-align: right; color: var(--color-text); border-right: 2px solid var(--color-border); }
+    .sched-opp { font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sched-row .loc-badge { justify-self: center; font-weight: 700; }
+    .loc-home { background: #dcfce7; color: #166534; }
+    .loc-away { background: #dbeafe; color: #1e40af; }
+    .loc-tournament { background: #fef9c3; color: #854d0e; }
+    .no-games { font-size: 0.8rem; color: var(--color-muted); padding: 4px 0; }
+
+    /* ── Team Photos ─────────────────────── */
+    .team-photos-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .team-photos-controls { display: flex; align-items: center; gap: 10px; }
+    .team-photos-select-label { font-size: 0.82rem; color: var(--color-muted); display: flex; align-items: center; gap: 6px; }
+    .team-photos-select { font-size: 0.82rem; padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); }
+    .team-photos-grid { width: 100%; }
+    .team-photo-strip { display: flex; flex-direction: column; gap: 12px; }
+    .photo-thumb { position: relative; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); background: #f8f8f8; }
+    .photo-thumb img { width: 100%; height: auto; max-height: 400px; object-fit: contain; display: block; cursor: zoom-in; background: #f0f0f0; }
+    .photo-thumb .photo-caption { font-size: 0.78rem; color: var(--color-muted); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .photo-thumb .photo-actions { display: flex; gap: 6px; justify-content: flex-end; padding: 4px 8px 8px; }
+    .photo-thumb .photo-actions .btn { font-size: 0.7rem; padding: 3px 10px; }
+    .no-photos { font-size: 0.82rem; color: var(--color-muted); font-style: italic; padding: 12px 0; }
+
+    /* ── Badge ──────────────────────────── */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; }
+    .badge-home { background: #dcfce7; color: #166534; }
+    .badge-away { background: #dbeafe; color: #1e40af; }
+    .badge-tournament { background: #fef9c3; color: #854d0e; }
+    .badge-win  { background: #dcfce7; color: #166534; }
+    .badge-loss { background: #fee2e2; color: #991b1b; }
+    .badge-scheduled { background: #f3f4f6; color: #4b5563; }
+    .coach-view-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      white-space: nowrap;
+      flex-shrink: 1;
+      max-width: 100%;
+    }
+    .coach-readonly-banner {
+      background: #ecfdf5;
+      color: #065f46;
+      border-bottom: 1px solid #a7f3d0;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+
+    /* ── Utility ────────────────────────── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+    .page-header h2 { font-size: 1.25rem; font-weight: 700; overflow-wrap: break-word; }
+    .text-muted { color: var(--color-muted); font-size: 0.85rem; overflow-wrap: break-word; }
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+    .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 14px; }
+    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .report-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+      z-index: 110;
+    }
+    .report-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(460px, 100vw);
+      background: var(--color-surface);
+      box-shadow: -18px 0 48px rgba(15, 23, 42, 0.2);
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      z-index: 111;
+      display: flex;
+      flex-direction: column;
+    }
+    .report-drawer.open { transform: translateX(0); }
+    .report-drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .report-drawer-header,
+    .report-drawer-footer {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .report-drawer-footer {
+      border-top: 1px solid var(--color-border);
+      border-bottom: none;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .report-drawer-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .report-drawer-close {
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--color-muted);
+    }
+    .report-status-copy {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-top: 8px;
+    }
+    .report-drawer-note {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin-bottom: 14px;
+    }
+    body.report-drawer-open {
+      overflow: hidden;
+    }
+
+    /* ── Frame Labels (Review Mode) ─────────── */
+    .frame-label {
+      display: none;
+      position: absolute;
+      top: -8px;
+      right: -4px;
+      z-index: 10;
+      background: #dc2626;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1.2;
+      pointer-events: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .frame-label.active { display: block; }
+    .card, .modal, .stat-box, .form-group, table, .table-responsive {
+      position: relative;
+    }
+
+    /* ── Mobile Responsive ─────────────────── */
+    @media (max-width: 768px) {
+      /* Nav: hamburger */
+      nav { padding: 0 10px; height: 52px; }
+      nav .brand { font-size: 0.9rem; }
+      nav .brand-logo { height: 22px; }
+      .nav-hamburger { display: flex !important; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 52px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: var(--color-primary);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 0 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        z-index: 299;
+        max-height: calc(100vh - 52px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        font-size: 1rem;
+        min-height: 44px;
+        white-space: normal;
+        flex-shrink: 1;
+      }
+      .nav-links .nav-dropdown { flex-direction: column; align-items: stretch; width: 100%; }
+      .nav-links .nav-dropdown > a { padding: 12px 16px; min-height: 44px; }
+      .nav-links .nav-dropdown .dropdown-menu { position: static; display: none; box-shadow: none; background: rgba(0,0,0,0.15); border-radius: 0; min-width: 0; width: 100%; }
+      .nav-links .nav-dropdown.open .dropdown-menu { display: block; }
+      .nav-links .nav-dropdown .dropdown-menu a { padding: 12px 24px; font-size: 0.95rem; min-height: 44px; }
+      .nav-links .spacer { display: none; }
+      .nav-links .report-link { margin: 4px 16px; text-align: center; justify-content: center; }
+      .nav-links .coach-view-badge {
+        margin: 8px 16px;
+        align-self: flex-start;
+        white-space: normal;
+        line-height: 1.3;
+      }
+
+      /* Coach banner: compact, wraps */
+      .coach-readonly-banner {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        line-height: 1.35;
+      }
+
+      /* Main */
+      main { margin: 12px auto; padding: 0 10px; max-width: 100%; }
+
+      /* Cards */
+      .card { padding: 12px 14px; margin-bottom: 12px; max-width: 100%; }
+
+      /* Buttons */
+      .btn { padding: 10px 14px; font-size: 0.9rem; min-height: 44px; }
+      .btn-sm { padding: 8px 12px; font-size: 0.85rem; min-height: 40px; }
+
+      /* Inline multi-column grids (filters/forms) → stack */
+      main [style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Tables → card layout when wrapped */
+      .table-responsive { max-width: 100%; }
+      .table-responsive table { min-width: 0; }
+      .table-responsive thead { display: none; }
+      .table-responsive tbody tr { display: block; margin-bottom: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; background: var(--color-surface); }
+      .table-responsive tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 8px 0;
+        border: none;
+        text-align: right;
+        font-size: 0.9rem;
+        word-break: break-word;
+      }
+      .table-responsive tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        text-align: left;
+        margin-right: 12px;
+        flex-shrink: 0;
+        max-width: 42%;
+      }
+      .table-responsive tbody td:last-child { border-bottom: none; }
+      .table-responsive tbody td:last-child::before { display: none; }
+
+      /* Bare tables (not card-layout) still scroll instead of crushing */
+      .card > table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Stat grid */
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-box { padding: 12px 14px; }
+      .stat-box .value { font-size: 1.5rem; }
+
+      /* Team grid */
+      .team-grid { grid-template-columns: 1fr; }
+      .team-card { padding: 14px; }
+      .team-name { font-size: 1rem; }
+      .sched-opp { white-space: normal; }
+
+      /* Page header */
+      .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .page-header h2 { font-size: 1.2rem; }
+      .page-header .form-control { width: 100% !important; max-width: 100%; }
+      .page-header > div { width: 100%; }
+
+      /* Forms — 16px+ avoids iOS zoom */
+      .form-control { font-size: 16px; padding: 10px 12px; }
+      .form-group label { font-size: 0.9rem; }
+
+      /* Modals */
+      .modal { padding: 20px; margin: 10px; width: calc(100% - 20px); max-width: 100%; }
+
+      /* Schedule rows: date on its own line so opponent isn't crushed */
+      .sched-row {
+        grid-template-columns: 1fr 28px;
+        gap: 4px 8px;
+        padding: 8px 0;
+      }
+      .sched-date {
+        grid-column: 1 / -1;
+        text-align: left;
+        border-right: none;
+        font-size: 0.8rem;
+        white-space: normal;
+        padding-bottom: 2px;
+        margin-bottom: 2px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .sched-opp { font-size: 0.95rem; }
+
+      /* Report drawer */
+      .report-drawer { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      nav .brand span { display: none; }
+      main { padding: 0 8px; }
+      .card { padding: 12px; }
+      .coach-readonly-banner { font-size: 0.75rem; padding: 5px 8px; }
+    }
+
+    /* ── Hamburger button (hidden on desktop) ── */
+    .nav-hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin-left: auto;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 310;
+      min-width: 44px;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+  
+<link rel="stylesheet" href="/static/css/playbook.css">
+<style>
+  .player-token {
+    cursor: grab;
+    user-select: none;
+  }
+  .player-token:active {
+    cursor: grabbing;
+  }
+  .player-token circle {
+    transition: stroke-width 0.15s;
+  }
+  .player-token:hover circle {
+    stroke-width: 3;
+  }
+  .step-item {
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    background: #fff;
+  }
+  .step-item:hover { background: #f3f4f6; }
+  .step-item.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; border-color: #93c5fd; }
+  .step-item.step-dragging { opacity: 0.45; }
+  .step-item.step-drag-over { border-color: #0f766e; box-shadow: inset 0 0 0 1px #0f766e; }
+  .step-drag-handle {
+    cursor: grab;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .step-drag-handle:active { cursor: grabbing; }
+  .step-label-input {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    font-size: 0.8rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+    font-weight: inherit;
+  }
+  .step-label-input:hover { border-color: #d1d5db; }
+  .step-label-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+  .step-label-input:read-only {
+    border-color: transparent;
+    background: transparent;
+    cursor: pointer;
+    padding-left: 0;
+  }
+  .step-move-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex-shrink: 0;
+  }
+  .step-move-btns button {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    font-size: 0.65rem;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .step-move-btns button:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+  .step-move-btns button:disabled { opacity: 0.35; cursor: default; }
+  @media (max-width: 768px) {
+    div[style*="grid-template-columns:1fr 300px"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+
+  
+  <script>
+    // ── Frame Label Review Mode ──────────────
+    (function() {
+      const STORAGE_KEY = 'liberty-frame-labels';
+      let labelsActive = localStorage.getItem(STORAGE_KEY) === '1';
+
+      function toggleLabels(on) {
+        labelsActive = on;
+        localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+        document.querySelectorAll('.frame-label').forEach(el => el.classList.toggle('active', on));
+        const btn = document.getElementById('frame-label-toggle');
+        if (btn) btn.textContent = on ? '🏷 Hide Labels' : '🏷 Show Labels';
+      }
+
+      // Inject toggle only when a top-level nav report anchor exists (direct child of nav).
+      // Skip coach portal / nested anchors so we do not append a competing
+      // margin-left:auto control beside the hamburger.
+      function injectToggle() {
+        if (document.getElementById('frame-label-toggle')) return;
+        const nav = document.querySelector('nav');
+        if (!nav) return;
+        const reportLink = nav.querySelector('.report-link');
+        // Must be a direct child of nav for insertBefore; coach portal has no report link.
+        if (!reportLink || reportLink.parentElement !== nav) return;
+        const btn = document.createElement('button');
+        btn.id = 'frame-label-toggle';
+        btn.className = 'btn btn-sm';
+        btn.style.cssText = 'background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:2px 8px;font-size:0.7rem;margin-left:auto;';
+        btn.textContent = labelsActive ? '🏷 Hide Labels' : '🏷 Show Labels';
+        btn.addEventListener('click', () => toggleLabels(!labelsActive));
+        nav.insertBefore(btn, reportLink);
+        if (labelsActive) {
+          // Auto-activate after DOM ready
+          setTimeout(() => toggleLabels(true), 100);
+        }
+      }
+
+      // Auto-inject labels on elements with data-frame
+      function processFrames() {
+        document.querySelectorAll('[data-frame]').forEach(el => {
+          if (el.querySelector('.frame-label')) return;
+          const label = document.createElement('span');
+          label.className = 'frame-label' + (labelsActive ? ' active' : '');
+          label.textContent = el.getAttribute('data-frame');
+          el.style.position = 'relative';
+          el.appendChild(label);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { injectToggle(); processFrames(); });
+      } else {
+        injectToggle();
+        processFrames();
+      }
+      // For dynamically added content
+      window.libertyProcessFrameLabels = processFrames;
+    })();
+  </script>
+  <script>
+    (function initLibertyIssueReporter() {
+      if (window.LibertyIssueReporter) return;
+
+      const entries = [];
+      const maxEntries = 80;
+      const maxChunkLength = 600;
+
+      function serialize(value) {
+        if (value == null) return String(value);
+        if (value instanceof Error) return value.stack || value.message || String(value);
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        try {
+          return JSON.stringify(value);
+        } catch (_err) {
+          return String(value);
+        }
+      }
+
+      function record(level, args) {
+        const text = args.map((arg) => serialize(arg).slice(0, maxChunkLength)).join(' ');
+        entries.push({
+          at: new Date().toISOString(),
+          level,
+          text,
+        });
+        if (entries.length > maxEntries) {
+          entries.splice(0, entries.length - maxEntries);
+        }
+      }
+
+      ['log', 'info', 'warn', 'error', 'debug'].forEach((level) => {
+        const original = console[level] ? console[level].bind(console) : null;
+        console[level] = (...args) => {
+          record(level, args);
+          if (original) original(...args);
+        };
+      });
+
+      window.addEventListener('error', (event) => {
+        record('error', [
+          event.message,
+          event.filename ? `${event.filename}:${event.lineno || 0}:${event.colno || 0}` : '',
+          event.error && event.error.stack ? event.error.stack : '',
+        ]);
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        record('error', ['Unhandled promise rejection', event.reason]);
+      });
+
+      window.LibertyIssueReporter = {
+        getConsoleText() {
+          return entries.map((entry) => `[${entry.at}] ${entry.level.toUpperCase()} ${entry.text}`).join('\n');
+        },
+        getCurrentPagePath() {
+          return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        },
+      };
+    })();
+  </script>
+  <script>
+    // Global HTML escape function to prevent XSS in innerHTML concatenations
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</head>
+<body data-report-source-default="/playbook/play/100">
+  <nav>
+    <a href="/" class="brand"><img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="brand-logo"> <span>Liberty Basketball</span></a>
+    <button class="nav-hamburger" type="button" id="nav-hamburger" aria-label="Toggle navigation" aria-controls="nav-links" aria-expanded="false">☰</button>
+    <div class="nav-links" id="nav-links">
+    
+    <a href="/" >Dashboard</a>
+    
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">Teams</a>
+      <div class="dropdown-menu">
+        
+        <a href="/schedule" >Schedule</a>
+        
+        
+        <a href="/practices" >Practices</a>
+        
+        
+        <div class="dropdown-divider"></div>
+        <a href="/practice-playlists"  style="padding-left:22px;font-size:0.76rem;color:rgba(255,255,255,0.7);">└ Practice Plans</a>
+        
+        
+        <a href="/player-development" >Player Dev</a>
+        
+      </div>
+    </div>
+    
+    
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">Film & Stats</a>
+      <div class="dropdown-menu">
+        
+        <a href="/film" >Film Tool</a>
+        
+        
+        <a href="/videos" >Videos</a>
+        
+        
+        <a href="/assistant" >Assistant</a>
+        
+      </div>
+    </div>
+    
+    
+    <a href="/playbook" class="active">Playbook</a>
+    <a href="/messages" >💬 Messages</a>
+    
+    
+    
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">More</a>
+      <div class="dropdown-menu">
+        
+        
+        <a href="/nfhs-matches" >NFHS Matches</a>
+        <div class="dropdown-divider"></div>
+        
+        <a href="/settings" >Settings</a>
+        <a href="/users" >Users</a>
+        <a href="/debug" >Debug / Issues</a>
+      </div>
+    </div>
+    
+    <span class="spacer"></span>
+    
+    <a href="/login">Sign In</a>
+    <a href="/register">Register</a>
+    
+    
+    <a href="/debug?compose=1&amp;source=/playbook/play/100" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
+    
+    </div>
+  </nav>
+  
+  <main>
+    
+<!-- ── PLAY LIBRARY LIST ─────────────────────────────────── -->
+
+
+<!-- keep original page-header block from being duplicated: list mode owns header above -->
+
+<div class="page-header" data-frame="6.1">
+  <h2>Playbook</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="/playbook/create">+ New Play</a>
+    <a class="btn btn-secondary btn-sm" href="/playbook/import">📥 Import</a>
+    <a class="btn btn-secondary btn-sm" href="/playbook/bulk_import">📥 Bulk Import</a>
+    <input type="text" class="form-control" style="width:200px" placeholder="Search plays..."
+           id="playSearch" oninput="filterPlays(this.value)">
+  </div>
+</div>
+
+
+
+
+
+<!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
+
+
+
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+
+  <!-- Left: Court Canvas -->
+  <div class="card" style="padding:12px;" data-frame="6.3">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select class="form-control" style="width:auto;font-size:0.75rem;" id="courtModeSelect"
+                onchange="setCourtMode(this.value)" title="Court size">
+          <option value="half" selected>Half Court</option>
+          <option value="full">Full Court</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
+        <button class="btn btn-secondary btn-sm" onclick="prevStep()" disabled>◀ Prev</button>
+        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
+        <button class="btn btn-secondary btn-sm" onclick="nextStep()" disabled>Next ▶</button>
+        
+        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play animation">▶ Play All</button>
+        
+      </div>
+    </div>
+
+    <div id="sheetAlignBanner" role="status" aria-live="polite"
+         style="display:none;margin:0 0 8px;padding:10px 14px;border-radius:8px;font-size:0.9rem;font-weight:700;letter-spacing:0.01em;border:2px solid transparent;">
+      <span id="sheetAlignBannerText">Ready</span>
+    </div>
+
+    <!-- Animated court (sheet underlay + tokens); source image also listed below -->
+    <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
+        <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;">Animated court</div>
+        <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+      </div>
+      <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
+           xmlns="http://www.w3.org/2000/svg">
+        <g id="courtLayer"></g>
+        <g id="sheetUnderlayLayer"></g>
+        <g id="arrowLayer"></g>
+        <g id="playerLayer"></g>
+      </svg>
+      <!-- Discussion playbar: scrub sheets + beats under the animated court -->
+      <div id="playbar" class="playbook-playbar" role="group" aria-label="Play timeline">
+        <button type="button" id="playbarPrevBtn" class="playbook-playbar-btn" title="Previous beat / sheet"
+                onclick="playbarStep(-1)">⏮</button>
+        <button type="button" id="playbarPlayBtn" class="playbook-playbar-btn playbook-playbar-play" title="Play from here"
+                onclick="playbarTogglePlay()">▶</button>
+        <button type="button" id="playbarNextBtn" class="playbook-playbar-btn" title="Next beat / sheet"
+                onclick="playbarStep(1)">⏭</button>
+        <input type="range" id="playbarScrub" class="playbook-playbar-scrub" min="0" max="0" value="0" step="1"
+               aria-label="Scrub play timeline" oninput="playbarScrubTo(this.value)">
+        <span id="playbarLabel" class="playbook-playbar-label">Sheet 1 / 1</span>
+      </div>
+      <div id="stepSourceImageWrap" style="display:none;padding:8px;border-top:1px solid #e5e7eb;background:#f9fafb;">
+        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Play sheet (source)</div>
+        <img id="stepSourceImage" alt="Play sheet" style="width:100%;height:auto;display:block;border-radius:6px;border:1px solid #e5e7eb;">
+      </div>
+    </div>
+
+    <!-- All step images (collapsed helper list) -->
+    <div id="stepImages" style="margin-top:12px;display:none;">
+      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:#6b7280;">All imported pages</h4>
+      <div id="stepImagesList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- Step notes -->
+    <div style="margin-top:10px;">
+      <label for="stepNotes" style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px;">
+        Step Notes
+      </label>
+      <textarea class="form-control" id="stepNotes" rows="2" placeholder="Add notes for this step..."
+                readonly></textarea>
+    </div>
+  </div>
+
+  <!-- Right: Play Details Panel -->
+  <div>
+    <div class="card" style="margin-bottom:16px;" data-frame="6.4">
+      <h4 style="margin-bottom:12px;">Play Details</h4>
+      
+      <p style="font-weight:600;font-size:1.1rem;margin-bottom:4px;">32-C</p>
+      <p class="text-muted" style="margin-bottom:8px;">Imported from bulk PDF — Offense</p>
+      <span class="badge" style="background:#e0e7ff;color:#3730a3;">offense</span>
+      
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        
+        <a class="btn btn-secondary btn-sm" href="/playbook/play/100/edit">Edit</a>
+        
+        
+        <a class="btn btn-secondary btn-sm" href="/playbook">Back to Library</a>
+        
+        
+        <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
+        
+      </div>
+      
+    </div>
+
+    <!-- Step list (play sheets) -->
+    <div class="card" data-frame="6.5">
+      <h4 style="margin-bottom:4px;">Play sheets <span id="stepCount" style="color:#9ca3af;font-weight:400;">(8)</span></h4>
+      
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Open <strong>Edit</strong> to reorder sheets or change labels</p>
+      
+      <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
+        <!-- Populated by JS -->
+      </div>
+      <div id="stepsDirtyBanner" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.75rem;">
+        Sheet order/labels changed — click <strong>Save Play</strong> to keep them.
+      </div>
+      <div id="movementListWrap" style="margin-top:12px;">
+        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
+        <div id="movementList" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs with other actions · Optional = reads/decisions</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+  </main>
+  
+  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
+  <aside class="report-drawer" id="report-drawer" aria-hidden="true">
+    <div class="report-drawer-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <h3 style="margin:0;">Report Bug / Idea</h3>
+          <div class="report-status-copy">Stay on the page, describe what happened, and the browser console will be attached automatically.</div>
+        </div>
+        <button class="report-drawer-close" type="button" id="report-drawer-close" aria-label="Close report form">&times;</button>
+      </div>
+    </div>
+    <form id="report-drawer-form" method="post" action="/debug/issues" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+      <div class="report-drawer-body">
+        <div id="report-drawer-message" class="alert" style="display:none;"></div>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;">
+          <div class="form-group">
+            <label for="report-entry-type">Type</label>
+            <select class="form-control" id="report-entry-type" name="entry_type">
+              <option value="bug">Bug</option>
+              <option value="issue" selected>Issue</option>
+              <option value="recommendation">Recommendation</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="report-title">Title</label>
+            <input class="form-control" id="report-title" name="title" placeholder="Short title for the problem or idea">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="report-details">Details</label>
+          <textarea class="form-control" id="report-details" name="details" rows="6" placeholder="What happened, what you expected, or what you want to improve."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="report-source-path">Source Page</label>
+          <input class="form-control" id="report-source-path" name="source_path">
+        </div>
+        <div class="report-drawer-note">Browser console output is captured when you submit.</div>
+        <input type="hidden" id="report-browser-console" name="browser_console">
+        <input type="hidden" id="report-return-to" name="return_to">
+      </div>
+      <div class="report-drawer-footer">
+        <button class="btn btn-secondary" type="button" id="report-drawer-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
+      </div>
+    </form>
+  </aside>
+  
+  
+<script src="/static/js/playbook-taxonomy.js"></script>
+<script src="/static/js/playbook-dnd.js"></script>
+<script src="/static/js/playbook-export.js"></script>
+<script>
+// ── Playbook Canvas State ────────────────────────────────
+const COURT_W = 500, COURT_H = 470;
+const PLAYER_RADIUS = 16;
+const DEFENSE_RADIUS = 7;
+const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'];
+const PLAYER_LABELS = ['1', '2', '3', '4', '5'];
+const DEFENSE_COLORS = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#7c3aed'];
+
+let steps = [];
+let currentStep = 0;
+let selectedPlayer = null;
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+let currentTool = 'select';
+let currentPlayerType = 'offense';
+let arrowStart = null;
+let isFullCourt = false;
+let isAnimating = false;
+let playAllRunning = false;
+/** Per-step sheet alignment: { court_frac, positions } from /api/playbook/sheet-align */
+let sheetAlignByStep = [];
+let sheetAlignReady = false;
+let sheetAlignPromise = null;
+/** Client cache for /api/playbook/sheet-paths keyed by step+endpoints */
+const sheetInkPathCache = new Map();
+/** True while play-sheet underlay replaces SVG court markings (white bg only). */
+let sheetCourtMode = false;
+/** Bumps each one-player move so stale rAF frames cannot move extra tokens. */
+let sheetMoveGen = 0;
+
+/**
+ * Animation timing — tune these for discussion pace.
+ * One action at a time: MOVE then HOLD, then GAP before the next beat.
+ */
+const ANIM = {
+  MOVE_MS: 2300,
+  HOLD_PASS_MS: 700,
+  HOLD_SCREEN_MS: 1100,
+  HOLD_CUT_MS: 650,
+  HOLD_RELOCATE_MS: 550,
+  GAP_BETWEEN_BEATS_MS: 550,
+  LINE_PREVIEW_MS: 1100,
+  SHEET_END_HOLD_MS: 800,
+  SLIDESHOW_HOLD_MS: 2000,
+};
+
+/** Discussion playbar: discrete keyframes (sheet starts + each completed single action). */
+let playbarKeyframes = [];
+let playbarIndex = 0;
+let playbarReady = false;
+let playbarDirty = true;
+let playbarBuildPromise = null;
+let playbarPlaying = false;
+/** Ignore scrubber oninput while we sync the range from code (avoids aborting rAF). */
+let playbarSuppressScrub = false;
+/** Bumps each programmatic scrub sync; stale deferred oninput cannot clear suppress early. */
+let playbarSuppressGen = 0;
+/** Last Play move stats — many frames/beat proves sliding, not teleport. */
+let playbookAnimStats = { frames: 0, ms: 0, pid: null, pathLen: 0 };
+
+// Undo/Redo stacks
+let undoStack = [];
+let redoStack = [];
+const MAX_UNDO = 50;
+
+// Initialize from server data if editing
+const editingPlay = {"category": "offense", "category_id": 2, "created_at": "2026-07-23 23:23:44", "created_by": null, "description": "Imported from bulk PDF \u2014 Offense", "diagram_json": "{\"section\": \"Offense\", \"subsection\": \"\", \"source\": \"bulk_import\", \"import_id\": \"d125785a44474042b13589e9aadeca4f\", \"option_names\": [\"32-C\"], \"start_page\": 42, \"end_page\": 49}", "id": 100, "list_order": 27, "name": "32-C", "parent_play_id": null, "playbook_id": null, "program": "shared", "progression_order": 0, "share_token": null, "tags": "", "updated_at": "2026-07-23 23:24:48"};
+const editingSteps = [{"created_at": "2026-07-23 23:23:44", "id": 259, "label": "Step 1 (Page 42)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o4\": {\"x\": 167.4, \"y\": 396.2}, \"o5\": {\"x\": 333.1, \"y\": 393.1}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0042.png", "step_number": 0}, {"created_at": "2026-07-23 23:23:44", "id": 260, "label": "Step 2 (Page 43)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o4\": {\"x\": 167.4, \"y\": 396.2}, \"o5\": {\"x\": 333.1, \"y\": 393.1}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0043.png", "step_number": 1}, {"created_at": "2026-07-23 23:23:44", "id": 261, "label": "Step 3 (Page 44)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o4\": {\"x\": 324.3, \"y\": 380.1}, \"o5\": {\"x\": 210.8, \"y\": 379.3}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0044.png", "step_number": 2}, {"created_at": "2026-07-23 23:23:44", "id": 262, "label": "Step 4 (Page 45)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o5\": {\"x\": 255.2, \"y\": 173.6}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0045.png", "step_number": 3}, {"created_at": "2026-07-23 23:23:44", "id": 263, "label": "Step 5 (Page 46)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o5\": {\"x\": 255.2, \"y\": 173.6}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0046.png", "step_number": 4}, {"created_at": "2026-07-23 23:23:44", "id": 264, "label": "Step 6 (Page 47)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o5\": {\"x\": 255.2, \"y\": 173.6}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0047.png", "step_number": 5}, {"created_at": "2026-07-23 23:23:44", "id": 265, "label": "Step 7 (Page 48)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o4\": {\"x\": 170.7, \"y\": 388.4}, \"o5\": {\"x\": 255.2, \"y\": 173.6}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0048.png", "step_number": 6}, {"created_at": "2026-07-23 23:23:44", "id": 266, "label": "Step 8 (Page 49)", "movements_json": "[]", "notes": "", "play_id": 100, "positions_json": "{\"o1\": {\"x\": 250.0, \"y\": 172.2}, \"o2\": {\"x\": 455.8, \"y\": 274.8}, \"o3\": {\"x\": 48.1, \"y\": 281.2}, \"o4\": {\"x\": 174.3, \"y\": 393.7}, \"o5\": {\"x\": 325.7, \"y\": 394.0}}", "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0049.png", "step_number": 7}];
+const isReadOnly = true;
+const playId = 100;
+let shareUrl = null;
+let isExportingVideo = false;
+
+function movementQuadControl(from, to, bend = 0.12) {
+  return {
+    mx: (from.x + to.x) / 2 + (to.y - from.y) * bend,
+    my: (from.y + to.y) / 2 - (to.x - from.x) * bend,
+  };
+}
+
+function quadPointAt(from, ctrl, to, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * from.x + 2 * u * t * ctrl.mx + t * t * to.x,
+    y: u * u * from.y + 2 * u * t * ctrl.my + t * t * to.y,
+  };
+}
+
+function appendBallAlongPath(parent, from, ctrl, to, count = 3) {
+  for (let i = 1; i <= count; i++) {
+    const t = i / (count + 1);
+    const pt = quadPointAt(from, ctrl, to, t);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${pt.x}, ${pt.y})`);
+    g.appendChild(makeCircle(0, 0, 5, '#f97316', '#9a3412', 1.5));
+    parent.appendChild(g);
+  }
+}
+
+function movementLabel(m) {
+  const names = { pass: 'Pass', dribble: 'Dribble', cut: 'Cut', run: 'Run', screen: 'Screen' };
+  return names[m.type] || m.type;
+}
+
+function playerShortId(pid) {
+  if (!pid) return '?';
+  const type = pid.startsWith('d') ? 'X' : 'O';
+  return `${type}${pid.replace(/^[od]/, '')}`;
+}
+
+// ── Court Rendering ──────────────────────────────────────
+// PDF / playbook diagrams: basket at TOP. Draw that orientation directly
+// (do not scale-flip — negative Y scale reverses SVG arc sweep direction).
+function renderCourt() {
+  const layer = document.getElementById('courtSvg');
+  const courtLayer = document.getElementById('courtLayer');
+  if (!layer || !courtLayer) return;
+  courtLayer.innerHTML = '';
+
+  if (!isFullCourt) {
+    layer.setAttribute('viewBox', '0 0 500 470');
+  } else {
+    layer.setAttribute('viewBox', '0 0 500 940');
+  }
+
+  // Sheet-mode overlay: white plate only — play-sheet ink provides court + lines.
+  if (sheetCourtMode) {
+    const h = isFullCourt ? 940 : COURT_H;
+    courtLayer.appendChild(makeRect(0, 0, COURT_W, h, '#fff', 'none', 0));
+  } else if (!isFullCourt) {
+    renderHalfCourt(courtLayer, 0, 0, 'top');
+  } else {
+    renderHalfCourt(courtLayer, 0, 0, 'top');
+    renderHalfCourt(courtLayer, 0, 470, 'bottom');
+    courtLayer.appendChild(makeLine(0, 470, 500, 470, '#333', 3));
+    courtLayer.appendChild(makeCircle(250, 470, 60, 'none', '#333', 2));
+  }
+  const modeSelect = document.getElementById('courtModeSelect');
+  if (modeSelect) modeSelect.value = isFullCourt ? 'full' : 'half';
+}
+
+/** When underlay is shown, hide SVG court markings so sheet ink is the court. */
+function setSheetCourtMode(active) {
+  const next = !!active && playHasSheets();
+  if (next === sheetCourtMode) return;
+  sheetCourtMode = next;
+  renderCourt();
+}
+
+function drawHalfCourtMarks(g, ox, oy, basketEnd) {
+  const top = basketEnd === 'top';
+  g.appendChild(makeRect(ox, oy, 500, 470, '#fff', '#333', 3));
+  g.appendChild(makeRect(ox + 2, oy + 2, 496, 466, 'none', '#c4a882', 2));
+
+  const keyY = top ? oy : oy + 310;
+  const ftY = top ? oy + 160 : oy + 310;
+  const rimY = top ? oy + 15 : oy + 460;
+  const boardY = top ? oy + 8 : oy + 465;
+  const baseY = top ? oy : oy + 470;
+  // Corner stub ends where the arc (r≈220 around rim) meets x=40 / x=460.
+  const stubY = top ? oy + 82 : oy + 388;
+
+  // Lane / paint
+  g.appendChild(makeRect(ox + 170, keyY, 160, 160, 'none', '#333', 2));
+  // Free-throw circle (dashed) centered on the foul line
+  g.appendChild(makeCircle(ox + 250, ftY, 60, 'none', '#333', 2, '8,4'));
+
+  // 3-point: short corner stubs + arc around the rim (bulges toward midcourt).
+  // sweep-flag 0 = CCW; with basket at top that runs through midcourt, not over the rim.
+  const three = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  three.setAttribute(
+    'd',
+    `M ${ox + 40} ${baseY} L ${ox + 40} ${stubY} A 220 220 0 0 0 ${ox + 460} ${stubY} L ${ox + 460} ${baseY}`
+  );
+  three.setAttribute('fill', 'none');
+  three.setAttribute('stroke', '#333');
+  three.setAttribute('stroke-width', '2');
+  g.appendChild(three);
+
+  // Restricted area under the rim (into the court)
+  const ra = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  if (top) {
+    ra.setAttribute('d', `M ${ox + 210} ${baseY} A 40 40 0 0 0 ${ox + 290} ${baseY}`);
+  } else {
+    ra.setAttribute('d', `M ${ox + 210} ${baseY} A 40 40 0 0 1 ${ox + 290} ${baseY}`);
+  }
+  ra.setAttribute('fill', 'none');
+  ra.setAttribute('stroke', '#333');
+  ra.setAttribute('stroke-width', '2');
+  g.appendChild(ra);
+
+  g.appendChild(makeLine(ox + 230, boardY, ox + 270, boardY, '#333', 4));
+  g.appendChild(makeCircle(ox + 250, rimY, 8, 'none', '#eb5757', 3));
+}
+
+function renderHalfCourt(parent, ox, oy, basketEnd) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  drawHalfCourtMarks(g, ox, oy, basketEnd);
+  parent.appendChild(g);
+}
+
+function makeRect(x, y, w, h, fill, stroke, sw) {
+  const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  r.setAttribute('x', x); r.setAttribute('y', y);
+  r.setAttribute('width', w); r.setAttribute('height', h);
+  r.setAttribute('fill', fill); r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', sw);
+  return r;
+}
+function makeCircle(cx, cy, r, fill, stroke, sw, dash) {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+  c.setAttribute('fill', fill); c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', sw);
+  if (dash) c.setAttribute('stroke-dasharray', dash);
+  return c;
+}
+function makeLine(x1, y1, x2, y2, stroke, sw) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', stroke); l.setAttribute('stroke-width', sw);
+  return l;
+}
+
+function setCourtMode(mode) {
+  isFullCourt = mode === 'full';
+  renderCourt();
+  renderStep();
+}
+
+function toggleCourt() {
+  setCourtMode(isFullCourt ? 'half' : 'full');
+}
+
+function flipPositionsY(positions, height = COURT_H) {
+  const out = {};
+  Object.keys(positions || {}).forEach((k) => {
+    const p = positions[k];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      out[k] = { x: p.x, y: height - p.y };
+    }
+  });
+  return out;
+}
+
+function playHasSheets(list) {
+  const src = list || steps;
+  return (src || []).some((s) => s && s.source_image);
+}
+
+/** Real editor/import arrows — not OCR heuristics or _meta stubs. */
+function stepHasDrawnMovements(step) {
+  const moves = (step && step.movements) || [];
+  return moves.some((m) => m && !m._meta && m.from && m.to);
+}
+
+function playHasDrawnMovements(list) {
+  const src = list || steps;
+  return (src || []).some(stepHasDrawnMovements);
+}
+
+/**
+ * Optional secondary mode only — NOT the product default.
+ * Set window.__playbookSheetSlideshow = true to force timed source_image flips.
+ * Default Play All = OCR align + sheet-paths + SVG token animation.
+ */
+function useSheetSlideshowMode(list) {
+  return !!(typeof window !== 'undefined' && window.__playbookSheetSlideshow)
+    && playHasSheets(list)
+    && !playHasDrawnMovements(list);
+}
+
+function updateCourtPanelLabel() {
+  const el = document.getElementById('courtPanelLabel');
+  if (!el) return;
+  el.textContent = useSheetSlideshowMode() ? 'Play sheet' : 'Animated court';
+}
+
+// Legacy imports were drawn on a bottom-basket court (small y = midcourt).
+// Decide once per play — never per-step — so slides share one coordinate space.
+// Sheet-imported plays already have basket-at-top diagrams — never flip those.
+function shouldFlipLegacyBottomBasket(allStepPositions, stepList) {
+  if (playHasSheets(stepList)) return false;
+  const list = Array.isArray(allStepPositions) ? allStepPositions : [allStepPositions];
+  for (const positions of list) {
+    const o1 = positions && positions.o1;
+    if (o1 && typeof o1.y === 'number') return o1.y < 200;
+  }
+  for (const positions of list) {
+    const ys = Object.keys(positions || {})
+      .filter((k) => String(k).startsWith('o'))
+      .map((k) => positions[k]?.y)
+      .filter((y) => typeof y === 'number');
+    // Only flip when EVERY offense token is in the lower half AND o1 is absent/high —
+    // "all y > 200" alone is normal for top-basket formations (point near half court).
+    if (ys.length >= 3 && Math.min(...ys) > 280 && Math.max(...ys) > 400) return true;
+  }
+  return false;
+}
+
+function manDefenseOffset(offensePos) {
+  // Small color-matched x parked just beside the offense token (not a second big chip).
+  return {
+    x: Math.max(16, Math.min(484, offensePos.x + 18)),
+    y: Math.max(16, Math.min(454, offensePos.y - 14)),
+  };
+}
+
+function positionsThrough(stepIndex, options = {}) {
+  // Sheet mode: prefer digit-aligned positions for THIS sheet only (no defaults,
+  // no forward-fill from later OCR that fights the diagram).
+  if (playHasSheets() && options.sheetMode !== false) {
+    const aligned = sheetPositionsForStep(stepIndex);
+    if (aligned && Object.keys(aligned).length) {
+      return aligned;
+    }
+  }
+  // forwardOnly (default): carry positions 0..stepIndex only.
+  // Never seed from later pages — that made Step 1 look like the final frame.
+  const merged = {};
+  for (let i = 0; i <= stepIndex && i < steps.length; i += 1) {
+    const src = steps[i].positions || {};
+    Object.keys(src).forEach((k) => {
+      const p = src[k];
+      if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+        merged[k] = { x: p.x, y: p.y };
+      }
+    });
+  }
+  // OCR gaps: park missing offense on defaults (not later-step coords).
+  // Never invent defaults for sheet plays — that caused "start too high" chaos.
+  const fill = options.fillDefaults !== false && !playHasSheets();
+  if (fill) {
+    for (let i = 1; i <= 5; i += 1) {
+      const oid = 'o' + i;
+      if (!merged[oid]) merged[oid] = defaultOffensePos(i - 1);
+    }
+  }
+  return merged;
+}
+
+/** Alias — animation and static view share the same chronological positions. */
+function positionsForAnim(stepIndex) {
+  return positionsThrough(stepIndex, { fillDefaults: !playHasSheets() });
+}
+
+function sheetPositionsForStep(stepIndex) {
+  const align = sheetAlignByStep[stepIndex];
+  if (align && align.positions && Object.keys(align.positions).length) {
+    const out = {};
+    for (let i = 1; i <= 5; i += 1) {
+      const k = 'o' + i;
+      const p = align.positions[k];
+      if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+        out[k] = { x: p.x, y: p.y };
+      }
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  return null;
+}
+
+function positionsAlmostEqual(a, b, eps = 2) {
+  const ids = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const id of ids) {
+    if (!String(id).startsWith('o')) continue;
+    const p = a[id];
+    const q = b[id];
+    if (!p || !q) return false;
+    if (Math.abs(p.x - q.x) > eps || Math.abs(p.y - q.y) > eps) return false;
+  }
+  return true;
+}
+
+function showStepSourceImage(index) {
+  const currentWrap = document.getElementById('stepSourceImageWrap');
+  const currentImg = document.getElementById('stepSourceImage');
+  if (!currentWrap || !currentImg) return;
+  const step = steps[index];
+  if (step && step.source_image) {
+    if (currentImg.getAttribute('src') !== step.source_image) {
+      currentImg.src = step.source_image;
+    }
+    currentImg.alt = step.label || `Step ${index + 1}`;
+    currentWrap.style.display = 'block';
+  } else {
+    currentWrap.style.display = 'none';
+  }
+}
+
+function withManDefense(positions) {
+  const src = positions || {};
+  const out = {};
+  Object.keys(src).forEach((k) => {
+    const p = src[k];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
+  });
+  const hasDefense = Object.keys(out).some((k) => String(k).startsWith('d'));
+  if (!hasDefense) {
+    for (let i = 1; i <= 5; i += 1) {
+      const o = out['o' + i];
+      if (o) out['d' + i] = manDefenseOffset(o);
+    }
+  }
+  return out;
+}
+
+function playerColor(pid) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  const idx = Number.isFinite(num) && num >= 1 ? num - 1 : 0;
+  return PLAYER_COLORS[idx] || PLAYER_COLORS[0];
+}
+
+function playerLabel(pid) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  const idx = Number.isFinite(num) && num >= 1 ? num - 1 : 0;
+  return PLAYER_LABELS[idx] || String(num || '?');
+}
+
+// ── Player Rendering ─────────────────────────────────────
+function renderStep() {
+  const step = steps[currentStep];
+  const playerLayer = document.getElementById('playerLayer');
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!step || !playerLayer || !arrowLayer) return;
+
+  updateCourtPanelLabel();
+
+  if (!isAnimating) {
+    arrowLayer.innerHTML = '';
+    // Opt-in slideshow: ink on the page is the truth — skip SVG arrow overlays.
+    if (!useSheetSlideshowMode()) renderArrows(step);
+  }
+
+  if (useSheetSlideshowMode()) {
+    // Hide tokens only in opt-in slideshow mode.
+    playerLayer.innerHTML = '';
+  } else {
+    // Carry forward players across sparse steps so slide N keeps the full set.
+    syncPlayerTokens(withManDefense(positionsThrough(currentStep)), step.ball);
+  }
+  if (playHasSheets() && !playAllRunning && !isAnimating) {
+    showSheetUnderlay(currentStep);
+  }
+
+  const stepLabel = document.getElementById('stepLabel');
+  const stepNotes = document.getElementById('stepNotes');
+  const stepCount = document.getElementById('stepCount');
+  if (stepLabel) {
+    stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  if (stepNotes && !isAnimating) stepNotes.value = step.notes || '';
+  if (stepCount) stepCount.textContent = `(${steps.length})`;
+
+  if (!isAnimating) {
+    renderStepImages();
+    updateMovementList();
+  }
+}
+
+function syncPlayerTokens(positions, ballPid) {
+  const playerLayer = document.getElementById('playerLayer');
+  if (!playerLayer) return;
+  const seen = new Set();
+
+  Object.keys(positions || {}).forEach((pid) => {
+    const pos = positions[pid];
+    if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
+    seen.add(pid);
+    const isDefense = String(pid).startsWith('d');
+    let g = playerLayer.querySelector(`[data-player="${pid}"]`);
+    if (!g) {
+      renderPlayerToken(
+        playerLayer,
+        pid,
+        pos,
+        playerColor(pid),
+        playerLabel(pid),
+        isDefense ? 'defense' : 'offense'
+      );
+      g = playerLayer.querySelector(`[data-player="${pid}"]`);
+    }
+    if (g) g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+  });
+
+  playerLayer.querySelectorAll('.player-token').forEach((g) => {
+    if (!seen.has(g.dataset.player)) g.remove();
+  });
+
+  let ball = playerLayer.querySelector('.ball-indicator');
+  if (ballPid && positions[ballPid]) {
+    const bpos = positions[ballPid];
+    if (!ball) {
+      renderBallIndicator(playerLayer, bpos);
+    } else {
+      ball.setAttribute('transform', `translate(${bpos.x + 14}, ${bpos.y - 14})`);
+    }
+  } else if (ball) {
+    ball.remove();
+  }
+}
+
+// ── Step Image Rendering (for imported plays) ─────────────
+function renderStepImages() {
+  const currentWrap = document.getElementById('stepSourceImageWrap');
+  const currentImg = document.getElementById('stepSourceImage');
+  const container = document.getElementById('stepImages');
+  const list = document.getElementById('stepImagesList');
+  const step = steps[currentStep];
+
+  if (currentWrap && currentImg) {
+    if (step && step.source_image) {
+      currentImg.src = step.source_image;
+      currentImg.alt = step.label || `Step ${currentStep + 1}`;
+      currentWrap.style.display = 'block';
+    } else {
+      currentWrap.style.display = 'none';
+      currentImg.removeAttribute('src');
+    }
+  }
+
+  if (!container || !list) return;
+  const stepsWithImages = steps.filter((s) => s.source_image);
+  if (stepsWithImages.length <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = '';
+  stepsWithImages.forEach((s) => {
+    const idx = steps.indexOf(s);
+    const div = document.createElement('div');
+    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer;'
+      + (idx === currentStep ? 'outline:2px solid #0f766e;' : '');
+    div.onclick = () => {
+      saveCurrentStepNotes();
+      currentStep = idx;
+      renderStep();
+      updateStepList();
+    };
+    const img = document.createElement('img');
+    img.src = s.source_image;
+    img.style.cssText = 'width:100%;height:auto;display:block;';
+    img.alt = s.label || `Step ${idx + 1}`;
+    const caption = document.createElement('div');
+    caption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9fafb;';
+    caption.textContent = s.label || `Step ${idx + 1}`;
+    div.appendChild(img);
+    div.appendChild(caption);
+    list.appendChild(div);
+  });
+}
+
+function defaultOffensePos(i) {
+  // Basket at top — point at bottom, posts near rim.
+  const positions = [
+    { x: 250, y: 400 },
+    { x: 100, y: 300 },
+    { x: 400, y: 300 },
+    { x: 170, y: 140 },
+    { x: 330, y: 140 },
+  ];
+  return positions[i];
+}
+
+function defaultDefensePos(i) {
+  return manDefenseOffset(defaultOffensePos(i));
+}
+
+function renderPlayerToken(parent, pid, pos, color, label, type) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'player-token');
+  g.setAttribute('data-player', pid);
+  g.setAttribute('data-type', type);
+  g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
+  circle.setAttribute('fill', color);
+  circle.setAttribute('stroke', '#fff');
+  circle.setAttribute('stroke-width', '2');
+  g.appendChild(circle);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', '#fff');
+  text.setAttribute('font-weight', '700');
+  if (type === 'defense') {
+    // Color-matched man defender — tiny x mark only (no jersey number).
+    text.setAttribute('dy', '3');
+    text.setAttribute('font-size', '9');
+    text.textContent = '×';
+  } else {
+    text.setAttribute('dy', '5');
+    text.setAttribute('font-size', '11');
+    text.textContent = label;
+  }
+  g.appendChild(text);
+
+  if (!isReadOnly) {
+    g.addEventListener('mousedown', (e) => startDrag(e, pid));
+    g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
+    if (type === 'offense') {
+      g.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        saveUndoState();
+        steps[currentStep].ball = pid;
+        renderStep();
+      });
+    }
+  }
+
+  parent.appendChild(g);
+}
+
+function renderBallIndicator(parent, pos) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'ball-indicator');
+  g.setAttribute('transform', `translate(${pos.x + 14}, ${pos.y - 14})`);
+  const ball = makeCircle(0, 0, 9, '#f97316', '#9a3412', 2);
+  g.appendChild(ball);
+  const seam1 = makeLine(-6, 0, 6, 0, '#9a3412', 1.2);
+  const seam2 = makeLine(0, -6, 0, 6, '#9a3412', 1.2);
+  g.appendChild(seam1);
+  g.appendChild(seam2);
+  parent.appendChild(g);
+}
+
+// ── Arrow Rendering ──────────────────────────────────────
+function renderArrows(step) {
+  const arrowLayer = document.getElementById('arrowLayer');
+  arrowLayer.innerHTML = '';
+  if (!step.movements) return;
+  const pos = positionsThrough(Math.max(0, steps.indexOf(step)));
+
+  step.movements.forEach((m) => {
+    if (m && m._meta) return;
+    const from = pos[m.from] || step.positions[m.from];
+    const to = pos[m.to] || step.positions[m.to];
+    if (!from || !to) return;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let d = '';
+    let ctrl = null;
+    const isOptional = m.timing === 'optional';
+
+    if (m.type === 'pass') {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#3b82f6');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '6,4' : '8,4');
+      path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (m.type === 'dribble') {
+      ctrl = movementQuadControl(from, to, 0.18);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '0');
+      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else if (m.type === 'cut' || m.type === 'run') {
+      ctrl = movementQuadControl(from, to, 0.12);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', m.type === 'cut' ? '#ef4444' : '#16a34a');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : (m.type === 'cut' ? '6,4' : '0'));
+      path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
+    } else if (m.type === 'screen') {
+      ctrl = movementQuadControl(from, to, 0.15);
+      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#f59e0b');
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '4,4');
+    }
+
+    if (isOptional) path.setAttribute('opacity', '0.6');
+    path.setAttribute('d', d);
+    arrowLayer.appendChild(path);
+
+    if (m.type === 'dribble' && ctrl) {
+      appendBallAlongPath(arrowLayer, from, ctrl, to, 3);
+    }
+
+    if (isOptional && ctrl) {
+      const mid = quadPointAt(from, ctrl, to, 0.5);
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    } else if (isOptional && m.type === 'pass') {
+      const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('x', mid.x + 6);
+      tag.setAttribute('y', mid.y - 6);
+      tag.setAttribute('fill', '#6b7280');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-weight', '700');
+      tag.textContent = 'OPT';
+      arrowLayer.appendChild(tag);
+    }
+  });
+
+  addArrowheadMarkers();
+}
+
+function addArrowheadMarkers() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || svg.querySelector('#arrowhead-red')) return;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const mkRed = makeArrowhead('arrowhead-red', '#ef4444');
+  const mkBlue = makeArrowhead('arrowhead-blue', '#3b82f6');
+  const mkGreen = makeArrowhead('arrowhead-green', '#16a34a');
+  const mkBlack = makeArrowhead('arrowhead-black', '#111827');
+  defs.appendChild(mkRed);
+  defs.appendChild(mkBlue);
+  defs.appendChild(mkGreen);
+  defs.appendChild(mkBlack);
+  svg.insertBefore(defs, svg.firstChild);
+}
+
+function makeArrowhead(id, color) {
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', id);
+  marker.setAttribute('viewBox', '0 0 10 10');
+  marker.setAttribute('refX', '9');
+  marker.setAttribute('refY', '5');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('orient', 'auto');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', '0 0, 10 5, 0 10');
+  polygon.setAttribute('fill', color);
+  marker.appendChild(polygon);
+  return marker;
+}
+
+// ── Dragging ─────────────────────────────────────────────
+function startDrag(e, pid) {
+  if (currentTool !== 'select') {
+    handleToolClick(e, pid);
+    return;
+  }
+  saveUndoState();
+  isDragging = true;
+  selectedPlayer = pid;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+function startDragTouch(e, pid) {
+  if (e.touches.length !== 1) return;
+  if (currentTool !== 'select') return;
+  saveUndoState();
+  isDragging = true;
+  selectedPlayer = pid;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  const pos = step.positions[pid];
+  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  e.preventDefault();
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging || !selectedPlayer) return;
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const maxX = COURT_W - PLAYER_RADIUS;
+  const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
+  const touch = e.touches[0];
+  const svg = document.getElementById('courtSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = touch.clientX; pt.y = touch.clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const maxX = COURT_W - PLAYER_RADIUS;
+  const maxY = isFullCourt ? 940 - PLAYER_RADIUS : COURT_H - PLAYER_RADIUS;
+  steps[currentStep].positions[selectedPlayer] = {
+    x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
+    y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
+  };
+  renderStep();
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('mouseup', () => { isDragging = false; selectedPlayer = null; });
+document.addEventListener('touchend', () => { isDragging = false; selectedPlayer = null; });
+
+// ── Tools (arrows) ───────────────────────────────────────
+function handleToolClick(e, pid) {
+  if (!arrowStart) {
+    arrowStart = pid;
+    highlightPlayer(pid, true);
+  } else if (arrowStart === pid) {
+    highlightPlayer(pid, false);
+    arrowStart = null;
+  } else {
+    saveUndoState();
+    const type = currentTool;
+    if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
+      const timing = document.getElementById('actionTimingSelect')?.value || 'sync';
+      steps[currentStep].movements.push({ from: arrowStart, to: pid, type, timing });
+    }
+    highlightPlayer(arrowStart, false);
+    arrowStart = null;
+    renderStep();
+    updateMovementList();
+  }
+}
+
+function highlightPlayer(pid, on) {
+  const tokens = document.querySelectorAll(`.player-token[data-player="${pid}"]`);
+  tokens.forEach(t => {
+    if (t.dataset.type === 'defense') {
+      t.querySelectorAll('line').forEach(l => l.setAttribute('stroke-width', on ? '5' : '3'));
+    } else {
+      const c = t.querySelector('circle');
+      if (c) c.setAttribute('stroke-width', on ? '4' : '2');
+    }
+  });
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  arrowStart = null;
+  document.getElementById('toolSelect').value = tool;
+}
+
+function setPlayerType(type) {
+  currentPlayerType = type;
+  document.getElementById('playerTypeSelect').value = type;
+}
+
+// ── Undo / Redo ──────────────────────────────────────────
+function saveUndoState() {
+  undoStack.push(JSON.stringify(steps));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack = [];
+}
+
+function undoStep() {
+  if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(steps));
+  steps = JSON.parse(undoStack.pop());
+  renderStep();
+  updateStepList();
+}
+
+function redoStep() {
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(steps));
+  steps = JSON.parse(redoStack.pop());
+  renderStep();
+  updateStepList();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (isReadOnly) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    undoStep();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+    e.preventDefault();
+    redoStep();
+  }
+});
+
+// ── Step Management ──────────────────────────────────────
+function addStep() {
+  saveUndoState();
+  const prevStep = steps[currentStep];
+  steps.push({
+    positions: JSON.parse(JSON.stringify(prevStep.positions)),
+    movements: [],
+    label: '',
+    notes: '',
+    source_image: '',
+    ball: prevStep.ball || 'o1',
+  });
+  currentStep = steps.length - 1;
+  markStepsDirty();
+  renderStep();
+  updateStepList();
+}
+
+function duplicateStep() {
+  saveUndoState();
+  const src = steps[currentStep];
+  steps.splice(currentStep + 1, 0, {
+    positions: JSON.parse(JSON.stringify(src.positions)),
+    movements: JSON.parse(JSON.stringify(src.movements)),
+    label: src.label ? src.label + ' (copy)' : '',
+    notes: src.notes || '',
+    source_image: src.source_image || '',
+    ball: src.ball || 'o1',
+  });
+  currentStep++;
+  markStepsDirty();
+  renderStep();
+  updateStepList();
+}
+
+function removeStep() {
+  if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
+  saveUndoState();
+  steps.splice(currentStep, 1);
+  if (currentStep >= steps.length) currentStep = steps.length - 1;
+  markStepsDirty();
+  renderStep();
+  updateStepList();
+}
+
+function prevStep() {
+  if (currentStep > 0) { saveCurrentStepNotes(); currentStep--; renderStep(); updateStepList(); }
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) { saveCurrentStepNotes(); currentStep++; renderStep(); updateStepList(); }
+}
+
+function saveCurrentStepNotes() {
+  const el = document.getElementById('stepNotes');
+  if (!el || isReadOnly || !steps[currentStep]) return;
+  const next = el.value;
+  if ((steps[currentStep].notes || '') !== next) {
+    steps[currentStep].notes = next;
+    markStepsDirty();
+  } else {
+    steps[currentStep].notes = next;
+  }
+}
+
+function updateMovementList() {
+  const list = document.getElementById('movementList');
+  const wrap = document.getElementById('movementListWrap');
+  if (!list || !wrap) return;
+  const step = steps[currentStep];
+  const movements = (step?.movements || []).filter((m) => !(m && m._meta));
+  if (!movements.length) {
+    wrap.style.display = isReadOnly ? 'none' : 'block';
+    list.innerHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool and click two players.</div>';
+    return;
+  }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  movements.forEach((m, idx) => {
+    const row = document.createElement('div');
+    row.className = 'movement-item';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#f9fafb;';
+
+    const label = document.createElement('span');
+    label.style.flex = '1';
+    label.textContent = `${playerShortId(m.from)} → ${playerShortId(m.to)} · ${movementLabel(m)}`;
+
+    if (isReadOnly) {
+      const badge = document.createElement('span');
+      badge.textContent = m.timing === 'optional' ? 'Optional' : 'Sync';
+      badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
+      row.appendChild(label);
+      row.appendChild(badge);
+    } else {
+      const timingSelect = document.createElement('select');
+      timingSelect.className = 'form-control';
+      timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+      ['sync', 'optional'].forEach((value) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
+        if ((m.timing || 'sync') === value) opt.selected = true;
+        timingSelect.appendChild(opt);
+      });
+      timingSelect.onchange = () => {
+        saveUndoState();
+        m.timing = timingSelect.value;
+        renderStep();
+      };
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-danger btn-sm';
+      removeBtn.textContent = '×';
+      removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
+      removeBtn.onclick = () => {
+        saveUndoState();
+        step.movements.splice(idx, 1);
+        renderStep();
+        updateMovementList();
+      };
+
+      row.appendChild(label);
+      row.appendChild(timingSelect);
+      row.appendChild(removeBtn);
+    }
+    list.appendChild(row);
+  });
+}
+
+let stepsDirty = false;
+let stepDragFrom = null;
+
+function markStepsDirty() {
+  if (isReadOnly) return;
+  stepsDirty = true;
+  invalidatePlaybarTimeline();
+  const banner = document.getElementById('stepsDirtyBanner');
+  if (banner) banner.style.display = 'block';
+}
+
+function clearStepsDirty() {
+  stepsDirty = false;
+  const banner = document.getElementById('stepsDirtyBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+function moveStep(fromIdx, toIdx) {
+  if (isReadOnly) return;
+  if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+  if (fromIdx >= steps.length || toIdx >= steps.length) return;
+  saveCurrentStepNotes();
+  const [item] = steps.splice(fromIdx, 1);
+  steps.splice(toIdx, 0, item);
+  if (currentStep === fromIdx) currentStep = toIdx;
+  else if (fromIdx < currentStep && toIdx >= currentStep) currentStep -= 1;
+  else if (fromIdx > currentStep && toIdx <= currentStep) currentStep += 1;
+  markStepsDirty();
+  renderStep();
+  updateStepList();
+  updateMovementList();
+}
+
+function updateStepList() {
+  const list = document.getElementById('stepList');
+  if (!list) return;
+  list.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-item' + (i === currentStep ? ' active' : '');
+    div.dataset.stepIndex = String(i);
+    div.onclick = () => {
+      saveCurrentStepNotes();
+      currentStep = i;
+      renderStep();
+      updateStepList();
+      updateMovementList();
+    };
+
+    if (!isReadOnly) {
+      const handle = document.createElement('span');
+      handle.className = 'step-drag-handle';
+      handle.title = 'Drag to reorder';
+      handle.textContent = '☰';
+      handle.draggable = true;
+      handle.addEventListener('click', (e) => e.stopPropagation());
+      handle.addEventListener('dragstart', (e) => {
+        stepDragFrom = i;
+        div.classList.add('step-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(i));
+      });
+      handle.addEventListener('dragend', () => {
+        stepDragFrom = null;
+        list.querySelectorAll('.step-item').forEach((el) => {
+          el.classList.remove('step-dragging', 'step-drag-over');
+        });
+      });
+      div.appendChild(handle);
+
+      div.addEventListener('dragover', (e) => {
+        if (stepDragFrom === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        div.classList.add('step-drag-over');
+      });
+      div.addEventListener('dragleave', () => div.classList.remove('step-drag-over'));
+      div.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        div.classList.remove('step-drag-over');
+        const from = stepDragFrom;
+        stepDragFrom = null;
+        if (from === null || from === i) return;
+        moveStep(from, i);
+      });
+    }
+
+    const num = document.createElement('span');
+    num.textContent = `${i + 1}.`;
+    num.style.fontWeight = '600';
+    num.style.minWidth = '22px';
+    num.style.flexShrink = '0';
+
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text';
+    labelInput.className = 'step-label-input';
+    labelInput.value = s.label || '';
+    labelInput.placeholder = isReadOnly ? 'Untitled sheet' : 'Sheet label (e.g. Pass to 2)…';
+    labelInput.readOnly = isReadOnly;
+    labelInput.title = isReadOnly ? '' : 'Edit sheet wording';
+    labelInput.onclick = (e) => e.stopPropagation();
+    labelInput.onmousedown = (e) => e.stopPropagation();
+    labelInput.onchange = (e) => {
+      steps[i].label = e.target.value;
+      markStepsDirty();
+      const stepLabel = document.getElementById('stepLabel');
+      if (i === currentStep && stepLabel) {
+        stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}${steps[i].label ? ' — ' + steps[i].label : ''}`;
+      }
+    };
+    labelInput.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        labelInput.blur();
+      }
+    };
+
+    div.appendChild(num);
+    div.appendChild(labelInput);
+
+    if (!isReadOnly) {
+      const movers = document.createElement('div');
+      movers.className = 'step-move-btns';
+      movers.addEventListener('click', (e) => e.stopPropagation());
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.textContent = '▲';
+      up.title = 'Move up';
+      up.disabled = i === 0;
+      up.onclick = () => moveStep(i, i - 1);
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.textContent = '▼';
+      down.title = 'Move down';
+      down.disabled = i === steps.length - 1;
+      down.onclick = () => moveStep(i, i + 1);
+      movers.appendChild(up);
+      movers.appendChild(down);
+      div.appendChild(movers);
+    }
+
+    list.appendChild(div);
+  });
+}
+
+// ── Playback animation ───────────────────────────────────
+let animInterval = null;
+let animFrame = null;
+
+function lerpPosition(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function isDefaultOffensePos(pid, pos) {
+  const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
+  if (!Number.isFinite(num) || num < 1 || !pos) return false;
+  const d = defaultOffensePos(num - 1);
+  return Math.abs(d.x - pos.x) < 1.5 && Math.abs(d.y - pos.y) < 1.5;
+}
+
+function buildAnimPositions(fromRaw, toRaw, t) {
+  const fromOffense = {};
+  const toOffense = {};
+  Object.keys(fromRaw || {}).forEach((k) => {
+    if (String(k).startsWith('o') && fromRaw[k]) fromOffense[k] = fromRaw[k];
+  });
+  Object.keys(toRaw || {}).forEach((k) => {
+    if (String(k).startsWith('o') && toRaw[k]) toOffense[k] = toRaw[k];
+  });
+  // Keep players on court across steps when OCR drops a token (no blink-out).
+  Object.keys(fromOffense).forEach((k) => {
+    if (!toOffense[k]) toOffense[k] = fromOffense[k];
+  });
+  // New / previously-default tokens: appear at destination — don't invent a fake run from a default spot.
+  Object.keys(toOffense).forEach((k) => {
+    if (!fromOffense[k] || (isDefaultOffensePos(k, fromOffense[k]) && !isDefaultOffensePos(k, toOffense[k]))) {
+      fromOffense[k] = toOffense[k];
+    }
+  });
+
+  const e = easeInOutCubic(Math.max(0, Math.min(1, t)));
+  const pos = {};
+  const ids = new Set([...Object.keys(fromOffense), ...Object.keys(toOffense)]);
+  ids.forEach((oid) => {
+    const a = fromOffense[oid] || toOffense[oid];
+    const b = toOffense[oid] || fromOffense[oid];
+    if (!a || !b) return;
+    pos[oid] = lerpPosition(a, b, e);
+  });
+
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const did = 'd' + i;
+    if (!pos[oid]) continue;
+    if (fromRaw[did] && toRaw[did]
+        && !isDefaultOffensePos(oid, fromRaw[oid] || {})
+        && !isDefaultOffensePos(oid, toRaw[oid] || {})) {
+      pos[did] = lerpPosition(fromRaw[did], toRaw[did], e);
+    } else {
+      pos[did] = manDefenseOffset(pos[oid]);
+    }
+  }
+  return pos;
+}
+
+function setPlayAllButton(running) {
+  const btn = document.getElementById('playAllBtn')
+    || document.querySelector('[onclick="playAnimation()"]');
+  if (btn) {
+    if (running) {
+      btn.disabled = false;
+      btn.textContent = '⏹ Stop';
+      btn.classList.add('btn-danger');
+      btn.classList.remove('btn-primary', 'btn-secondary');
+      btn.title = 'Stop animation';
+    } else {
+      // Imported sheets need OCR align before token animation (slideshow opt-in skips this).
+      const needsAlign = playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady;
+      btn.textContent = needsAlign ? '⏳ Aligning…' : '▶ Play All';
+      btn.classList.toggle('btn-danger', false);
+      btn.disabled = needsAlign;
+      btn.classList.toggle('btn-primary', !needsAlign);
+      btn.classList.toggle('btn-secondary', needsAlign);
+      if (needsAlign) {
+        btn.title = 'Aligning play sheets — animation not ready yet';
+      } else if (useSheetSlideshowMode()) {
+        btn.title = 'Play sheet slideshow (opt-in)';
+      } else {
+        btn.title = 'Play animation';
+      }
+    }
+  }
+  updatePlaybarPlayButton();
+}
+
+function setSheetAlignStatus(state, detail) {
+  const banner = document.getElementById('sheetAlignBanner');
+  const text = document.getElementById('sheetAlignBannerText');
+  if (!banner || !text) {
+    setPlayAllButton(playAllRunning);
+    return;
+  }
+  if (!playHasSheets()) {
+    banner.style.display = 'none';
+    sheetAlignReady = true;
+    setPlayAllButton(playAllRunning);
+    return;
+  }
+  if (useSheetSlideshowMode()) {
+    // Opt-in slideshow only — skip Aligning gate.
+    banner.style.display = 'block';
+    banner.style.background = '#d1fae5';
+    banner.style.borderColor = '#10b981';
+    banner.style.color = '#065f46';
+    text.textContent = detail || 'Ready — sheet slideshow (opt-in)';
+    sheetAlignReady = true;
+    setPlayAllButton(playAllRunning);
+    return;
+  }
+  banner.style.display = 'block';
+  if (state === 'aligning') {
+    banner.style.background = '#fef3c7';
+    banner.style.borderColor = '#f59e0b';
+    banner.style.color = '#92400e';
+    text.textContent = detail || 'Aligning play sheets… Animation not ready yet.';
+    sheetAlignReady = false;
+  } else if (state === 'ready') {
+    banner.style.background = '#d1fae5';
+    banner.style.borderColor = '#10b981';
+    banner.style.color = '#065f46';
+    text.textContent = detail || 'Ready to play';
+    sheetAlignReady = true;
+  } else if (state === 'error') {
+    banner.style.background = '#fee2e2';
+    banner.style.borderColor = '#ef4444';
+    banner.style.color = '#991b1b';
+    text.textContent = detail || 'Sheet align failed — Play All may be inaccurate.';
+    sheetAlignReady = true; // allow attempt; tokens may be sparse
+  }
+  setPlayAllButton(playAllRunning);
+  updatePlaybarUI();
+}
+
+function setSheetAnimHint(text) {
+  const el = document.getElementById('sheetAnimHint');
+  if (el) el.textContent = text || '';
+}
+
+function delayMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function updateStepChrome(index) {
+  currentStep = index;
+  const step = steps[index];
+  const stepLabel = document.getElementById('stepLabel');
+  if (stepLabel && step) {
+    stepLabel.textContent = `Step ${index + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  showStepSourceImage(index);
+  updateStepList();
+}
+
+function clearSheetUnderlay() {
+  const layer = document.getElementById('sheetUnderlayLayer');
+  if (layer) layer.innerHTML = '';
+  setSheetCourtMode(false);
+}
+
+function showSheetUnderlay(stepIndex) {
+  const layer = document.getElementById('sheetUnderlayLayer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const url = steps[stepIndex] && steps[stepIndex].source_image;
+  if (!url) {
+    setSheetCourtMode(false);
+    return;
+  }
+  setSheetCourtMode(true);
+  const svgW = isFullCourt ? 500 : COURT_W;
+  const svgH = isFullCourt ? 940 : COURT_H;
+  const slideshow = useSheetSlideshowMode();
+  const frac = (!slideshow && sheetAlignByStep[stepIndex] && sheetAlignByStep[stepIndex].court_frac) || null;
+  // Sheet ink IS the court. Keep underlay readable so printed marks show under tokens.
+  const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  img.setAttribute('href', url);
+  img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
+  if (frac && typeof frac.x0 === 'number' && frac.x1 > frac.x0 && frac.y1 > frac.y0) {
+    const cw = frac.x1 - frac.x0;
+    const ch = frac.y1 - frac.y0;
+    img.setAttribute('x', String(-frac.x0 / cw * svgW));
+    img.setAttribute('y', String(-frac.y0 / ch * svgH));
+    img.setAttribute('width', String(svgW / cw));
+    img.setAttribute('height', String(svgH / ch));
+    img.setAttribute('preserveAspectRatio', 'none');
+    img.setAttribute('opacity', '0.88');
+  } else {
+    img.setAttribute('x', '0');
+    img.setAttribute('y', '0');
+    img.setAttribute('width', String(svgW));
+    img.setAttribute('height', String(svgH));
+    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    img.setAttribute('opacity', slideshow ? '0.98' : '0.78');
+  }
+  img.style.pointerEvents = 'none';
+  layer.appendChild(img);
+}
+
+async function ensureSheetAlignment() {
+  // Opt-in slideshow skips OCR; default animation always aligns imported sheets.
+  if (useSheetSlideshowMode()) {
+    sheetAlignByStep = [];
+    sheetAlignReady = true;
+    setSheetAlignStatus('ready', 'Ready — sheet slideshow (opt-in)');
+    return;
+  }
+  if (!playHasSheets()) {
+    sheetAlignByStep = [];
+    sheetAlignReady = true;
+    setSheetAlignStatus('ready', 'Ready to play');
+    return;
+  }
+  if (sheetAlignReady && sheetAlignByStep.length === steps.length) {
+    setSheetAlignStatus('ready', 'Ready to play');
+    return;
+  }
+  if (sheetAlignPromise) return sheetAlignPromise;
+
+  setSheetAlignStatus('aligning');
+  setSheetAnimHint('Aligning sheets…');
+  sheetAlignPromise = (async () => {
+    const results = await Promise.all(steps.map(async (step, idx) => {
+      if (!step.source_image) return { index: idx, court_frac: null, positions: {} };
+      try {
+        const resp = await fetch('/api/playbook/sheet-align', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: step.source_image }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          console.warn('sheet-align failed', step.source_image, data);
+          return { index: idx, court_frac: null, positions: {} };
+        }
+        return {
+          index: idx,
+          court_frac: data.court_frac || null,
+          positions: data.positions || {},
+        };
+      } catch (err) {
+        console.warn('sheet-align error', err);
+        return { index: idx, court_frac: null, positions: {} };
+      }
+    }));
+    sheetAlignByStep = results.map((r) => ({
+      court_frac: r.court_frac,
+      positions: r.positions || {},
+    }));
+    const anyPos = sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
+    const anyFrac = sheetAlignByStep.some((a) => a.court_frac);
+    if (!anyPos && !anyFrac) {
+      setSheetAlignStatus('error');
+    } else {
+      setSheetAlignStatus('ready', 'Ready to play');
+    }
+    setSheetAnimHint('');
+    // Refresh tokens/underlay now that digits map to the court.
+    // Never invalidate the playbar while Play is running — that empties keyframes mid-flight.
+    if (!isPlaybackActive()) {
+      showSheetUnderlay(currentStep);
+      renderStep();
+      invalidatePlaybarTimeline();
+      ensurePlaybarTimeline();
+    }
+  })();
+
+  try {
+    await sheetAlignPromise;
+  } finally {
+    sheetAlignPromise = null;
+  }
+}
+
+/** Build travel paths: stored movements first, else ink-traced marks (pass/screen/cut). */
+function buildTravelPaths(fromRaw, toRaw, step, inkBundle) {
+  const paths = [];
+  const moves = (step && step.movements) || [];
+  let usedStored = false;
+  const ink = (inkBundle && inkBundle.paths) || inkBundle || {};
+  const marks = (inkBundle && inkBundle.marks) || {};
+  const sheetPasses = (inkBundle && inkBundle.passes) || [];
+
+  moves.forEach((m) => {
+    if (!m || m._meta) return;
+    const a = fromRaw[m.from] || toRaw[m.from];
+    const b = toRaw[m.to] || fromRaw[m.to];
+    if (!a || !b) return;
+    usedStored = true;
+    const isPass = m.type === 'pass';
+    const pid = isPass ? null : m.to;
+    const poly = (!isPass && pid && ink[pid]) ? ink[pid] : null;
+    const ctrl = (isPass || poly) ? null : movementQuadControl(a, b, m.type === 'dribble' ? 0.18 : 0.12);
+    paths.push({
+      pid,
+      ballOnly: isPass,
+      from: a,
+      to: b,
+      ctrl,
+      points: poly || null,
+      type: m.type || 'cut',
+      fromPid: m.from,
+      toPid: m.to,
+    });
+  });
+
+  if (usedStored) return paths;
+
+  // Sheet-marked dashed passes (ball only) — never invent; only when ink classifies as pass.
+  sheetPasses.forEach((p) => {
+    if (!p || p.type !== 'pass') return;
+    const a = fromRaw[p.fromPid];
+    const b = fromRaw[p.toPid] || toRaw[p.toPid];
+    if (!a || !b) return;
+    let points = null;
+    if (p.points && p.points.length >= 2) {
+      points = p.points.map((pt) => ({ x: pt.x, y: pt.y }));
+      points[0] = { x: a.x, y: a.y };
+      points[points.length - 1] = { x: b.x, y: b.y };
+    }
+    paths.push({
+      pid: null,
+      ballOnly: true,
+      from: a,
+      to: b,
+      ctrl: points ? null : movementQuadControl(a, b, 0.08),
+      points,
+      type: 'pass',
+      fromPid: p.fromPid,
+      toPid: p.toPid,
+    });
+  });
+
+  // Movers: hug ink; type from sheet mark (screen T-bar / solid cut).
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const a = fromRaw[oid];
+    const b = toRaw[oid];
+    if (!a || !b) continue;
+    if (isDefaultOffensePos(oid, a) || isDefaultOffensePos(oid, b)) continue;
+    if (Math.hypot(a.x - b.x, a.y - b.y) < 10) continue;
+    const poly = ink[oid] || null;
+    let points = null;
+    if (poly && poly.length >= 2) {
+      points = poly.map((p) => ({ x: p.x, y: p.y }));
+      points[0] = { x: a.x, y: a.y };
+      points[points.length - 1] = { x: b.x, y: b.y };
+    }
+    const ctrl = points ? null : movementQuadControl(a, b, 0.14);
+    const markType = marks[oid] === 'screen' ? 'screen' : 'cut';
+    paths.push({
+      pid: oid,
+      ballOnly: false,
+      from: a,
+      to: b,
+      ctrl,
+      points,
+      type: markType,
+    });
+  }
+  return paths;
+}
+
+async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw) {
+  const step = steps[stepIndex];
+  if (!step || !step.source_image || !playHasSheets()) {
+    return { paths: {}, marks: {}, passes: [] };
+  }
+  const fromOffense = {};
+  const toOffense = {};
+  let anyMove = false;
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    if (fromRaw[oid]) fromOffense[oid] = { x: fromRaw[oid].x, y: fromRaw[oid].y };
+    if (toRaw[oid]) toOffense[oid] = { x: toRaw[oid].x, y: toRaw[oid].y };
+    if (fromOffense[oid] && toOffense[oid]
+        && Math.hypot(fromOffense[oid].x - toOffense[oid].x, fromOffense[oid].y - toOffense[oid].y) >= 10) {
+      anyMove = true;
+    }
+  }
+  if (!anyMove) return { paths: {}, marks: {}, passes: [] };
+
+  const cacheKey = JSON.stringify({
+    u: step.source_image,
+    f: fromOffense,
+    t: toOffense,
+  });
+  if (sheetInkPathCache.has(cacheKey)) {
+    return sheetInkPathCache.get(cacheKey);
+  }
+
+  try {
+    const resp = await fetch('/api/playbook/sheet-paths', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: step.source_image,
+        from_positions: fromOffense,
+        to_positions: toOffense,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) return { paths: {}, marks: {}, passes: [] };
+    const bundle = {
+      paths: data.paths || {},
+      marks: data.marks || {},
+      passes: data.passes || [],
+    };
+    sheetInkPathCache.set(cacheKey, bundle);
+    return bundle;
+  } catch (err) {
+    console.warn('sheet-paths error', err);
+    return { paths: {}, marks: {}, passes: [] };
+  }
+}
+
+function drawTravelPaths(paths, activePath) {
+  addArrowheadMarkers();
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!arrowLayer) return;
+  arrowLayer.innerHTML = '';
+  paths.forEach((p) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let d;
+    if (p.points && p.points.length >= 2) {
+      d = p.points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+    } else if (p.ctrl) {
+      d = `M ${p.from.x} ${p.from.y} Q ${p.ctrl.mx} ${p.ctrl.my} ${p.to.x} ${p.to.y}`;
+    } else {
+      d = `M ${p.from.x} ${p.from.y} L ${p.to.x} ${p.to.y}`;
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    const isActive = !activePath || p === activePath;
+    const baseW = p.ballOnly || p.type === 'pass' ? 2.5 : 3;
+    path.setAttribute('stroke-width', String(isActive ? baseW + 0.5 : baseW));
+    path.setAttribute('opacity', isActive ? '1' : '0.35');
+    if (p.type === 'pass' || p.ballOnly) {
+      path.setAttribute('stroke', '#3b82f6');
+      path.setAttribute('stroke-dasharray', '8,4');
+      path.setAttribute('marker-end', 'url(#arrowhead-blue)');
+    } else if (p.type === 'dribble') {
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else {
+      path.setAttribute('stroke', '#ef4444');
+      path.setAttribute('marker-end', 'url(#arrowhead-red)');
+    }
+    arrowLayer.appendChild(path);
+  });
+}
+
+function pointAlongPolyline(points, t) {
+  const e = Math.max(0, Math.min(1, t));
+  if (!points || points.length < 2) return points && points[0] ? points[0] : { x: 0, y: 0 };
+  if (e <= 0) return { x: points[0].x, y: points[0].y };
+  if (e >= 1) return { x: points[points.length - 1].x, y: points[points.length - 1].y };
+  let total = 0;
+  const seg = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const len = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    seg.push(len);
+    total += len;
+  }
+  if (total < 1e-6) return { x: points[0].x, y: points[0].y };
+  let dist = e * total;
+  for (let i = 0; i < seg.length; i += 1) {
+    if (dist <= seg[i] || i === seg.length - 1) {
+      const u = seg[i] < 1e-6 ? 1 : dist / seg[i];
+      return lerpPosition(points[i], points[i + 1], Math.max(0, Math.min(1, u)));
+    }
+    dist -= seg[i];
+  }
+  return { x: points[points.length - 1].x, y: points[points.length - 1].y };
+}
+
+function pointAlongTravel(p, t) {
+  const e = easeInOutCubic(Math.max(0, Math.min(1, t)));
+  if (p.points && p.points.length >= 2) return pointAlongPolyline(p.points, e);
+  if (p.ctrl) return quadPointAt(p.from, p.ctrl, p.to, e);
+  return lerpPosition(p.from, p.to, e);
+}
+
+function travelPathLength(p) {
+  if (p.points && p.points.length >= 2) {
+    let total = 0;
+    for (let i = 1; i < p.points.length; i += 1) {
+      total += Math.hypot(p.points[i].x - p.points[i - 1].x, p.points[i].y - p.points[i - 1].y);
+    }
+    return total;
+  }
+  if (p.from && p.to) return Math.hypot(p.to.x - p.from.x, p.to.y - p.from.y);
+  return 0;
+}
+
+/**
+ * Move order for sheet Play All (legacy helper — prefer buildActionBeats):
+ * 1) passes / ball-only first
+ * 2) then movers by path length descending
+ * 3) jersey number ascending as tiebreak
+ */
+function orderPathsSequential(paths) {
+  const scored = (paths || []).map((p, idx) => {
+    const isPass = !!(p.ballOnly || p.type === 'pass');
+    const jersey = parseInt(String(p.pid || p.toPid || '99').replace(/\D/g, ''), 10) || 99;
+    return { p, idx, isPass, len: travelPathLength(p), jersey };
+  });
+  scored.sort((a, b) => {
+    if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
+    if (Math.abs(a.len - b.len) > 5) return b.len - a.len;
+    if (a.jersey !== b.jersey) return a.jersey - b.jersey;
+    return a.idx - b.idx;
+  });
+  return scored.map((s) => s.p);
+}
+
+function offenseIdsAt(positions) {
+  return Object.keys(positions || {}).filter((k) => String(k).startsWith('o') && positions[k]);
+}
+
+function distPos(a, b) {
+  if (!a || !b) return 1e9;
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/**
+ * Coach teaching beats for one sheet transition.
+ * Order: pass → screen (hold) → cut off screen → off-ball relocates one-by-one.
+ *
+ * Prefer sheet marks when present:
+ * - type=pass (dashed ink) — never invent
+ * - type=screen (T-bar) — hold on set
+ * - type=cut / solid ink — cut or relocate
+ */
+function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
+  const beats = [];
+  const remaining = (paths || []).slice();
+  const ball = ballPid || 'o1';
+
+  // Explicit pass paths first (stored movements OR dashed sheet marks)
+  const explicitPasses = [];
+  for (let i = remaining.length - 1; i >= 0; i -= 1) {
+    const p = remaining[i];
+    if (p.ballOnly || p.type === 'pass') {
+      explicitPasses.push(p);
+      remaining.splice(i, 1);
+    }
+  }
+  explicitPasses.reverse().forEach((p) => {
+    beats.push({
+      kind: 'pass',
+      label: `Pass ${(p.fromPid || ball || '').replace(/^o/, '#')} → ${(p.toPid || '').replace(/^o/, '#')}`.trim(),
+      path: p,
+      holdAfterMs: ANIM.HOLD_PASS_MS,
+      ballTo: p.toPid || null,
+    });
+  });
+
+  // Sheet-marked screens (T-bar) before heuristic screen detection
+  const markedScreens = [];
+  for (let i = remaining.length - 1; i >= 0; i -= 1) {
+    const p = remaining[i];
+    if (p && p.type === 'screen' && p.pid && !p.ballOnly) {
+      markedScreens.push(p);
+      remaining.splice(i, 1);
+    }
+  }
+  markedScreens.reverse().forEach((p) => {
+    beats.push({
+      kind: 'screen',
+      label: `Screen ${String(p.pid).replace(/^o/, '#')}`,
+      path: { ...p, type: 'screen' },
+      holdAfterMs: ANIM.HOLD_SCREEN_MS,
+      ballTo: null,
+    });
+  });
+
+  // Heuristic screen only if sheet did not mark one
+  let screenPath = null;
+  let cutPid = null;
+  if (!markedScreens.length) {
+    const movers = remaining.filter((p) => p.pid && !p.ballOnly);
+    movers.forEach((p) => {
+      if (screenPath) return;
+      const len = travelPathLength(p);
+      if (len < 14 || len > 110) return;
+      movers.forEach((q) => {
+        if (screenPath || q === p || !q.from) return;
+        const qLen = travelPathLength(q);
+        if (qLen < len + 35) return;
+        if (distPos(p.to, q.from) < 75) {
+          screenPath = p;
+          cutPid = q.pid;
+        }
+      });
+    });
+    if (!screenPath) {
+      movers.forEach((p) => {
+        if (screenPath) return;
+        const len = travelPathLength(p);
+        if (len < 14 || len > 90) return;
+        offenseIdsAt(fromRaw).forEach((oid) => {
+          if (screenPath || oid === p.pid) return;
+          const stayed = !toRaw[oid] || distPos(fromRaw[oid], toRaw[oid]) < 18;
+          if (stayed && distPos(p.to, fromRaw[oid]) < 60) {
+            screenPath = p;
+            cutPid = null;
+          }
+        });
+      });
+    }
+    if (screenPath) {
+      const idx = remaining.indexOf(screenPath);
+      if (idx >= 0) remaining.splice(idx, 1);
+      beats.push({
+        kind: 'screen',
+        label: `Screen ${String(screenPath.pid).replace(/^o/, '#')}`,
+        path: { ...screenPath, type: 'screen' },
+        holdAfterMs: ANIM.HOLD_SCREEN_MS,
+        ballTo: null,
+      });
+    }
+  }
+
+  // Cut off the screen (or longest remaining cutter)
+  let cutPath = cutPid ? remaining.find((p) => p.pid === cutPid) : null;
+  if (!cutPath) {
+    cutPath = remaining
+      .filter((p) => p.pid && !p.ballOnly)
+      .slice()
+      .sort((a, b) => travelPathLength(b) - travelPathLength(a))[0] || null;
+  }
+  if (cutPath) {
+    const idx = remaining.indexOf(cutPath);
+    if (idx >= 0) remaining.splice(idx, 1);
+    beats.push({
+      kind: 'cut',
+      label: `Cut ${String(cutPath.pid).replace(/^o/, '#')}`,
+      path: { ...cutPath, type: 'cut' },
+      holdAfterMs: ANIM.HOLD_CUT_MS,
+      ballTo: null,
+    });
+  }
+
+  // Off-ball relocates — one at a time, longest first
+  remaining
+    .filter((p) => p.pid && !p.ballOnly)
+    .slice()
+    .sort((a, b) => {
+      const d = travelPathLength(b) - travelPathLength(a);
+      if (Math.abs(d) > 5) return d;
+      const ja = parseInt(String(a.pid).replace(/\D/g, ''), 10) || 99;
+      const jb = parseInt(String(b.pid).replace(/\D/g, ''), 10) || 99;
+      return ja - jb;
+    })
+    .forEach((p) => {
+      beats.push({
+        kind: 'relocate',
+        label: `Relocate ${String(p.pid).replace(/^o/, '#')}`,
+        path: p,
+        holdAfterMs: ANIM.HOLD_RELOCATE_MS,
+        ballTo: null,
+      });
+    });
+
+  return beats;
+}
+
+function drawScreenMarker(at) {
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!arrowLayer || !at) return;
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'screen-marker');
+  // T-bar: vertical stem + crossbar (coach "screen set" cue)
+  const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  stem.setAttribute('x1', at.x);
+  stem.setAttribute('y1', at.y - 16);
+  stem.setAttribute('x2', at.x);
+  stem.setAttribute('y2', at.y + 10);
+  stem.setAttribute('stroke', '#111827');
+  stem.setAttribute('stroke-width', '4');
+  stem.setAttribute('stroke-linecap', 'round');
+  const bar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  bar.setAttribute('x1', at.x - 14);
+  bar.setAttribute('y1', at.y - 16);
+  bar.setAttribute('x2', at.x + 14);
+  bar.setAttribute('y2', at.y - 16);
+  bar.setAttribute('stroke', '#111827');
+  bar.setAttribute('stroke-width', '4');
+  bar.setAttribute('stroke-linecap', 'round');
+  g.appendChild(stem);
+  g.appendChild(bar);
+  arrowLayer.appendChild(g);
+}
+
+function clearScreenMarker() {
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (!arrowLayer) return;
+  arrowLayer.querySelectorAll('.screen-marker').forEach((el) => el.remove());
+}
+
+function syncLiveWithDefense(live, ballPid) {
+  const pos = {};
+  Object.keys(live || {}).forEach((k) => {
+    if (live[k] && !String(k).startsWith('_')) pos[k] = { x: live[k].x, y: live[k].y };
+  });
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    if (pos[oid]) pos['d' + i] = manDefenseOffset(pos[oid]);
+  }
+  syncPlayerTokens(pos, ballPid);
+}
+
+function isPlaybackActive() {
+  return !!(playAllRunning || playbarPlaying);
+}
+
+/**
+ * Guarantee a walkable path for rAF lerp: pin from/to to live→toRaw, keep ink polyline
+ * when usable, otherwise quad/lerp so the token always slides (never teleport).
+ */
+function normalizeAnimPath(path, live, toRaw) {
+  if (!path) return null;
+  const p = {
+    pid: path.pid || null,
+    ballOnly: !!(path.ballOnly || path.type === 'pass'),
+    type: path.type || (path.ballOnly ? 'pass' : 'cut'),
+    fromPid: path.fromPid || null,
+    toPid: path.toPid || null,
+    from: null,
+    to: null,
+    ctrl: null,
+    points: null,
+  };
+  const pid = p.pid;
+  if (p.ballOnly) {
+    const a = path.from || (p.fromPid && live[p.fromPid]) || path.from;
+    const b = path.to || (p.toPid && (live[p.toPid] || (toRaw && toRaw[p.toPid]))) || path.to;
+    if (!a || !b) return null;
+    p.from = { x: a.x, y: a.y };
+    p.to = { x: b.x, y: b.y };
+  } else if (pid) {
+    const a = (live && live[pid]) || path.from;
+    const b = (toRaw && toRaw[pid]) || path.to;
+    if (!a || !b) return null;
+    p.from = { x: a.x, y: a.y };
+    p.to = { x: b.x, y: b.y };
+  } else {
+    return null;
+  }
+
+  if (path.points && path.points.length >= 2) {
+    const pts = path.points
+      .filter((pt) => pt && typeof pt.x === 'number' && typeof pt.y === 'number')
+      .map((pt) => ({ x: pt.x, y: pt.y }));
+    if (pts.length >= 2) {
+      pts[0] = { x: p.from.x, y: p.from.y };
+      pts[pts.length - 1] = { x: p.to.x, y: p.to.y };
+      let len = 0;
+      for (let i = 1; i < pts.length; i += 1) {
+        len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      }
+      if (len >= 1) p.points = pts;
+    }
+  }
+  if (!p.points) {
+    p.ctrl = path.ctrl && typeof path.ctrl.mx === 'number'
+      ? { mx: path.ctrl.mx, my: path.ctrl.my }
+      : movementQuadControl(p.from, p.to, p.ballOnly ? 0.08 : 0.12);
+  }
+  return p;
+}
+
+/** Animate exactly one path; other tokens stay frozen at `live`. Many rAF frames per beat. */
+function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
+  const animPath = normalizeAnimPath(path, live, toRaw);
+  if (!animPath) return Promise.resolve();
+  if (animFrame) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
+  isAnimating = true;
+  const start = performance.now();
+  const dur = Math.max(ANIM.MOVE_MS * 0.75, durationMs || ANIM.MOVE_MS);
+  const gatePlayback = isPlaybackActive();
+  let frames = 0;
+  playbookAnimStats = {
+    frames: 0,
+    ms: 0,
+    pid: animPath.pid || (animPath.ballOnly ? 'ball' : null),
+    pathLen: travelPathLength(animPath),
+  };
+  if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
+
+  return new Promise((resolve) => {
+    function finish(completed) {
+      isAnimating = false;
+      animFrame = null;
+      playbookAnimStats.frames = frames;
+      playbookAnimStats.ms = performance.now() - start;
+      if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
+      if (completed) {
+        if (animPath.pid && toRaw && toRaw[animPath.pid]) {
+          live[animPath.pid] = { x: toRaw[animPath.pid].x, y: toRaw[animPath.pid].y };
+        } else if (animPath.pid && animPath.to) {
+          live[animPath.pid] = { x: animPath.to.x, y: animPath.to.y };
+        }
+        syncLiveWithDefense(live, ballPid);
+      }
+      resolve();
+    }
+
+    function frame(now) {
+      // Newer move always wins. Playback gate only if we started under Play/playbar.
+      if (moveGen !== sheetMoveGen) {
+        finish(false);
+        return;
+      }
+      if (gatePlayback && !isPlaybackActive()) {
+        finish(false);
+        return;
+      }
+      frames += 1;
+      const t = Math.min(1, (now - start) / dur);
+      const pos = {};
+      Object.keys(live || {}).forEach((k) => {
+        if (live[k]) pos[k] = { x: live[k].x, y: live[k].y };
+      });
+      if (animPath.ballOnly || animPath.type === 'pass') {
+        const bpos = t >= 1 ? animPath.to : pointAlongTravel(animPath, t);
+        syncLiveWithDefense(pos, ballPid);
+        const playerLayer = document.getElementById('playerLayer');
+        let ball = playerLayer && playerLayer.querySelector('.ball-indicator');
+        if (!ball && playerLayer) {
+          renderBallIndicator(playerLayer, bpos);
+          ball = playerLayer.querySelector('.ball-indicator');
+        }
+        if (ball) ball.setAttribute('transform', `translate(${bpos.x + 14}, ${bpos.y - 14})`);
+      } else if (animPath.pid) {
+        const at = t >= 1 && toRaw && toRaw[animPath.pid]
+          ? { x: toRaw[animPath.pid].x, y: toRaw[animPath.pid].y }
+          : pointAlongTravel(animPath, t);
+        pos[animPath.pid] = at;
+        live[animPath.pid] = { x: at.x, y: at.y };
+        syncLiveWithDefense(pos, ballPid);
+      } else {
+        syncLiveWithDefense(pos, ballPid);
+      }
+      if (t < 1) {
+        animFrame = requestAnimationFrame(frame);
+      } else {
+        finish(true);
+      }
+    }
+    animFrame = requestAnimationFrame(frame);
+  });
+}
+
+/**
+ * STRICTLY one action beat at a time (pass → screen hold → cut → relocates).
+ * Never moves two players at once. Mutates ballRef.pid when a pass completes.
+ */
+async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
+  if (!beats.length) {
+    syncPlayerTokens(toRaw, ballRef.pid);
+    return;
+  }
+  const live = {};
+  Object.keys(fromRaw || {}).forEach((k) => {
+    if (fromRaw[k]) live[k] = { x: fromRaw[k].x, y: fromRaw[k].y };
+  });
+  Object.keys(toRaw || {}).forEach((k) => {
+    if (!live[k] && toRaw[k]) live[k] = { x: toRaw[k].x, y: toRaw[k].y };
+  });
+  beats.forEach((b) => {
+    const p = b.path;
+    if (p && p.pid && fromRaw[p.pid]) live[p.pid] = { x: fromRaw[p.pid].x, y: fromRaw[p.pid].y };
+  });
+
+  const perPathMs = durationMs || ANIM.MOVE_MS;
+  syncLiveWithDefense(live, ballRef.pid);
+
+  for (let i = 0; i < beats.length; i += 1) {
+    if (!isPlaybackActive()) break;
+    const beat = beats[i];
+    const path = beat.path;
+    if (!path) continue;
+    sheetMoveGen += 1;
+    const gen = sheetMoveGen;
+    clearScreenMarker();
+    // Draw ONLY this beat's path — never all movers at once.
+    drawTravelPaths([path], path);
+    setSheetAnimHint(`${beat.label}  ·  ${i + 1} of ${beats.length}`);
+    // eslint-disable-next-line no-await-in-loop
+    await animateOnePath(live, path, toRaw, ballRef.pid, perPathMs, gen);
+    if (!isPlaybackActive()) break;
+
+    if (beat.kind === 'pass' && beat.ballTo) {
+      ballRef.pid = beat.ballTo;
+      syncLiveWithDefense(live, ballRef.pid);
+    }
+    if (beat.kind === 'screen' && path.to) {
+      drawScreenMarker(path.to);
+      setSheetAnimHint(`${beat.label} — held`);
+      // eslint-disable-next-line no-await-in-loop
+      await delayMs(beat.holdAfterMs || ANIM.HOLD_SCREEN_MS);
+      clearScreenMarker();
+    } else if (beat.holdAfterMs) {
+      // eslint-disable-next-line no-await-in-loop
+      await delayMs(beat.holdAfterMs);
+    }
+
+    const arrowLayer = document.getElementById('arrowLayer');
+    if (arrowLayer) {
+      arrowLayer.querySelectorAll('path').forEach((el) => el.remove());
+    }
+    if (i < beats.length - 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+    }
+  }
+  clearScreenMarker();
+  syncPlayerTokens(toRaw, ballRef.pid);
+}
+
+/** Back-compat wrapper: classify paths into coach beats, then play sequentially. */
+async function animateAlongPaths(fromRaw, toRaw, paths, ballPid, durationMs) {
+  const ballRef = { pid: ballPid || 'o1' };
+  const beats = buildActionBeats(fromRaw, toRaw, paths || [], ballRef.pid);
+  await playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs);
+  return ballRef.pid;
+}
+
+function animateToStep(targetIndex, durationMs = ANIM.MOVE_MS, onFrame) {
+  // Kept for video export / single-step callers — path-based when possible.
+  if (targetIndex < 0 || targetIndex >= steps.length) return Promise.resolve();
+  if (useSheetSlideshowMode()) {
+    isAnimating = false;
+    updateStepChrome(targetIndex);
+    showSheetUnderlay(targetIndex);
+    const playerLayer = document.getElementById('playerLayer');
+    if (playerLayer) playerLayer.innerHTML = '';
+    const arrowLayer = document.getElementById('arrowLayer');
+    if (arrowLayer) arrowLayer.innerHTML = '';
+    if (onFrame) onFrame();
+    if (!playAllRunning) { renderStep(); updateMovementList(); }
+    return Promise.resolve();
+  }
+  if (targetIndex === 0) {
+    isAnimating = false;
+    updateStepChrome(0);
+    showSheetUnderlay(0);
+    syncPlayerTokens(withManDefense(positionsForAnim(0)), steps[0]?.ball || 'o1');
+    if (!playAllRunning) { renderStep(); updateMovementList(); }
+    return Promise.resolve();
+  }
+  updateStepChrome(targetIndex);
+  showSheetUnderlay(targetIndex);
+  const fromRaw = withManDefense(positionsForAnim(targetIndex - 1));
+  const toRaw = withManDefense(positionsForAnim(targetIndex));
+  const ballPid = steps[targetIndex].ball || steps[targetIndex - 1].ball || 'o1';
+  const paths = buildTravelPaths(fromRaw, toRaw, steps[targetIndex - 1]);
+  drawTravelPaths(paths);
+  if (onFrame) onFrame();
+  return animateAlongPaths(fromRaw, toRaw, paths, ballPid, durationMs || ANIM.MOVE_MS).then(() => {
+    if (!playAllRunning) { renderStep(); updateMovementList(); }
+  });
+}
+
+/**
+ * Opt-in only (window.__playbookSheetSlideshow). Default Play All uses animation.
+ */
+async function playSheetSlideshow() {
+  const holdMs = ANIM.SLIDESHOW_HOLD_MS;
+  const playerLayer = document.getElementById('playerLayer');
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (playerLayer) playerLayer.innerHTML = '';
+  if (arrowLayer) arrowLayer.innerHTML = '';
+
+  for (let i = 0; i < steps.length; i += 1) {
+    if (!playAllRunning) break;
+    updateStepChrome(i);
+    showSheetUnderlay(i);
+    if (playerLayer) playerLayer.innerHTML = '';
+    if (arrowLayer) arrowLayer.innerHTML = '';
+    const label = steps[i].label ? ` — ${steps[i].label}` : '';
+    setSheetAnimHint(`Sheet ${i + 1} / ${steps.length}${label}`);
+    playbarIndex = i;
+    updatePlaybarUI();
+    // eslint-disable-next-line no-await-in-loop
+    await delayMs(holdMs);
+  }
+}
+
+function clonePosMap(pos) {
+  const out = {};
+  Object.keys(pos || {}).forEach((k) => {
+    if (pos[k] && typeof pos[k].x === 'number') out[k] = { x: pos[k].x, y: pos[k].y };
+  });
+  return out;
+}
+
+function invalidatePlaybarTimeline() {
+  playbarDirty = true;
+  playbarReady = false;
+  playbarKeyframes = [];
+  updatePlaybarUI();
+}
+
+function updatePlaybarPlayButton() {
+  const btn = document.getElementById('playbarPlayBtn');
+  if (!btn) return;
+  const needsAlign = playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady;
+  if (playAllRunning || playbarPlaying) {
+    btn.textContent = '⏸';
+    btn.title = 'Pause (stay on this moment)';
+    btn.classList.add('is-playing');
+    btn.disabled = false;
+  } else {
+    btn.textContent = '▶';
+    btn.title = needsAlign ? 'Aligning sheets…' : 'Play from here';
+    btn.classList.remove('is-playing');
+    btn.disabled = needsAlign;
+  }
+}
+
+function updatePlaybarUI() {
+  const scrub = document.getElementById('playbarScrub');
+  const label = document.getElementById('playbarLabel');
+  const prevBtn = document.getElementById('playbarPrevBtn');
+  const nextBtn = document.getElementById('playbarNextBtn');
+  const n = playbarReady && playbarKeyframes.length
+    ? playbarKeyframes.length
+    : Math.max(1, steps.length);
+  const idx = playbarReady && playbarKeyframes.length
+    ? Math.max(0, Math.min(playbarIndex, n - 1))
+    : Math.max(0, Math.min(currentStep, n - 1));
+  if (scrub) {
+    // Hold suppress across microtasks + a paint: Chrome often fires range `input`
+    // asynchronously when max/value change, which used to abort Play All with 0 frames.
+    playbarSuppressScrub = true;
+    playbarSuppressGen += 1;
+    const gen = playbarSuppressGen;
+    scrub.min = '0';
+    scrub.max = String(Math.max(0, n - 1));
+    scrub.value = String(idx);
+    scrub.disabled = n <= 1 && !(playbarReady && playbarKeyframes.length);
+    const release = () => {
+      if (gen !== playbarSuppressGen) return;
+      playbarSuppressScrub = false;
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { setTimeout(release, 0); });
+      });
+    } else {
+      setTimeout(release, 32);
+    }
+  }
+  if (prevBtn) prevBtn.disabled = idx <= 0;
+  if (nextBtn) nextBtn.disabled = idx >= n - 1;
+  if (label) {
+    if (!playbarReady && playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady) {
+      label.textContent = 'Aligning…';
+    } else if (!playbarReady && playbarDirty && playHasSheets()) {
+      label.textContent = 'Building timeline…';
+    } else if (playbarReady && playbarKeyframes[idx]) {
+      const kf = playbarKeyframes[idx];
+      label.textContent = `${kf.label || ''} · ${idx + 1}/${n}`;
+    } else {
+      label.textContent = `Sheet ${currentStep + 1} / ${steps.length || 1}`;
+    }
+  }
+  updatePlaybarPlayButton();
+}
+
+/**
+ * Build discrete keyframes: sheet start + one keyframe per completed single action.
+ * Scrubbing lands on each action; never packs two movers into one frame.
+ */
+async function buildPlaybarTimeline() {
+  playbarKeyframes = [];
+  playbarReady = false;
+  updatePlaybarUI();
+  if (!steps.length) {
+    playbarDirty = false;
+    playbarReady = true;
+    updatePlaybarUI();
+    return;
+  }
+
+  if (useSheetSlideshowMode()) {
+    for (let i = 0; i < steps.length; i += 1) {
+      const lab = steps[i].label ? ` — ${steps[i].label}` : '';
+      playbarKeyframes.push({
+        sheetIndex: i,
+        positions: {},
+        ballPid: steps[i].ball || 'o1',
+        label: `Sheet ${i + 1} / ${steps.length}${lab}`,
+        kind: 'sheet_start',
+        slideshow: true,
+        path: null,
+        holdAfterMs: 0,
+        screenAt: null,
+      });
+    }
+    playbarReady = true;
+    playbarDirty = false;
+    playbarIndex = Math.min(playbarIndex, Math.max(0, playbarKeyframes.length - 1));
+    updatePlaybarUI();
+    return;
+  }
+
+  if (playHasSheets()) await ensureSheetAlignment();
+
+  const pos0 = withManDefense(positionsForAnim(0));
+  playbarKeyframes.push({
+    sheetIndex: 0,
+    positions: clonePosMap(pos0),
+    ballPid: steps[0]?.ball || 'o1',
+    label: `Sheet 1 / ${steps.length}`,
+    kind: 'sheet_start',
+    path: null,
+    holdAfterMs: 0,
+    screenAt: null,
+  });
+
+  for (let i = 0; i < steps.length - 1; i += 1) {
+    const fromRaw = withManDefense(positionsForAnim(i));
+    const toRaw = withManDefense(positionsForAnim(i + 1));
+    // eslint-disable-next-line no-await-in-loop
+    const inkPaths = await fetchSheetInkPaths(i, fromRaw, toRaw);
+    const paths = buildTravelPaths(fromRaw, toRaw, steps[i], inkPaths);
+    const startBall = steps[i].ball || 'o1';
+    const beats = buildActionBeats(fromRaw, toRaw, paths, startBall);
+
+    const live = {};
+    Object.keys(fromRaw || {}).forEach((k) => {
+      if (fromRaw[k] && !String(k).startsWith('d')) live[k] = { x: fromRaw[k].x, y: fromRaw[k].y };
+    });
+    Object.keys(toRaw || {}).forEach((k) => {
+      if (!live[k] && toRaw[k] && !String(k).startsWith('d')) {
+        live[k] = { x: toRaw[k].x, y: toRaw[k].y };
+      }
+    });
+    beats.forEach((b) => {
+      const p = b.path;
+      if (p && p.pid && fromRaw[p.pid]) live[p.pid] = { x: fromRaw[p.pid].x, y: fromRaw[p.pid].y };
+    });
+
+    let ballPid = startBall;
+    for (let bi = 0; bi < beats.length; bi += 1) {
+      const beat = beats[bi];
+      const path = beat.path;
+      if (!path) continue;
+      // One completed action → one keyframe (single mover or ball only).
+      if (path.pid && toRaw[path.pid]) {
+        live[path.pid] = { x: toRaw[path.pid].x, y: toRaw[path.pid].y };
+      }
+      if (beat.kind === 'pass' && beat.ballTo) ballPid = beat.ballTo;
+      playbarKeyframes.push({
+        sheetIndex: i,
+        positions: withManDefense(clonePosMap(live)),
+        ballPid,
+        label: `S${i + 1} · ${beat.label} (${bi + 1}/${beats.length})`,
+        kind: 'beat_end',
+        path,
+        holdAfterMs: beat.holdAfterMs || 0,
+        screenAt: (beat.kind === 'screen' && path.to) ? { x: path.to.x, y: path.to.y } : null,
+        beatKind: beat.kind,
+      });
+    }
+
+    const endBall = steps[i + 1].ball || ballPid;
+    playbarKeyframes.push({
+      sheetIndex: i + 1,
+      positions: clonePosMap(toRaw),
+      ballPid: endBall,
+      label: `Sheet ${i + 2} / ${steps.length}`,
+      kind: 'sheet_arrive',
+      path: null,
+      holdAfterMs: 0,
+      screenAt: null,
+    });
+  }
+
+  playbarReady = true;
+  playbarDirty = false;
+  playbarIndex = Math.min(playbarIndex, Math.max(0, playbarKeyframes.length - 1));
+  updatePlaybarUI();
+}
+
+async function ensurePlaybarTimeline() {
+  if (playbarBuildPromise) return playbarBuildPromise;
+  if (playbarReady && !playbarDirty && playbarKeyframes.length) return;
+  playbarBuildPromise = (async () => {
+    try {
+      await buildPlaybarTimeline();
+    } finally {
+      playbarBuildPromise = null;
+    }
+  })();
+  return playbarBuildPromise;
+}
+
+function playbarApplyKeyframe(idx, opts) {
+  opts = opts || {};
+  if (!playbarKeyframes.length) return;
+  const i = Math.max(0, Math.min(Number(idx) || 0, playbarKeyframes.length - 1));
+  const kf = playbarKeyframes[i];
+  const sameIndex = i === playbarIndex;
+  playbarIndex = i;
+
+  // User scrub to a new beat stops Play. Same-index re-apply (programmatic scrub
+  // sync / playbarCommit) must never clear playAllRunning or bump sheetMoveGen.
+  if (!opts.keepPlaying && !opts.fromPlay && isPlaybackActive() && !sameIndex) {
+    playAllRunning = false;
+    playbarPlaying = false;
+    isAnimating = false;
+    sheetMoveGen += 1;
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
+    setPlayAllButton(false);
+  }
+
+  currentStep = kf.sheetIndex;
+  updateStepChrome(kf.sheetIndex);
+  if (playHasSheets() || kf.slideshow) showSheetUnderlay(kf.sheetIndex);
+  else clearSheetUnderlay();
+
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (arrowLayer) arrowLayer.innerHTML = '';
+  clearScreenMarker();
+
+  if (kf.slideshow) {
+    const playerLayer = document.getElementById('playerLayer');
+    if (playerLayer) playerLayer.innerHTML = '';
+  } else {
+    if (kf.path) drawTravelPaths([kf.path], kf.path);
+    if (kf.screenAt) drawScreenMarker(kf.screenAt);
+    syncPlayerTokens(withManDefense(kf.positions), kf.ballPid);
+  }
+
+  setSheetAnimHint(kf.label || '');
+  updatePlaybarUI();
+  if (!opts.keepPlaying && !opts.fromPlay) {
+    updateStepList();
+    updateMovementList();
+  }
+}
+
+function playbarScrubTo(value) {
+  if (playbarSuppressScrub) return;
+  const idx = parseInt(value, 10);
+  if (!Number.isFinite(idx)) return;
+  if (playbarReady && playbarKeyframes.length) {
+    // Programmatic range sync often re-fires input with the current index.
+    // Treating that as a user scrub aborted Play All before the first rAF.
+    if (isPlaybackActive() && idx === playbarIndex) return;
+    playbarApplyKeyframe(idx);
+    return;
+  }
+  const sheetIdx = Math.max(0, Math.min(idx, steps.length - 1));
+  if (sheetIdx === currentStep) {
+    if (!isPlaybackActive()) updatePlaybarUI();
+    return;
+  }
+  if (isPlaybackActive()) {
+    playAllRunning = false;
+    playbarPlaying = false;
+    sheetMoveGen += 1;
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
+    isAnimating = false;
+    setPlayAllButton(false);
+  }
+  saveCurrentStepNotes();
+  currentStep = sheetIdx;
+  renderStep();
+  updateStepList();
+  playbarIndex = sheetIdx;
+  updatePlaybarUI();
+}
+
+function playbarStep(delta) {
+  if (playbarReady && playbarKeyframes.length) {
+    playbarApplyKeyframe(playbarIndex + delta);
+    return;
+  }
+  const next = Math.max(0, Math.min(steps.length - 1, currentStep + (delta || 0)));
+  playbarScrubTo(next);
+}
+
+function stopPlayback(opts) {
+  const reset = !!(opts && opts.reset);
+  playAllRunning = false;
+  playbarPlaying = false;
+  isAnimating = false;
+  sheetMoveGen += 1;
+  if (animFrame) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
+  setPlayAllButton(false);
+  updatePlaybarPlayButton();
+  if (reset) {
+    setSheetAnimHint('');
+    resetPlayToOpening();
+  }
+}
+
+/** Animate from keyframe fromIdx → toIdx (one action); Play interpolates, scrub snaps. */
+async function animatePlaybarSegment(fromIdx, toIdx) {
+  const fromKf = playbarKeyframes[fromIdx];
+  const toKf = playbarKeyframes[toIdx];
+  if (!fromKf || !toKf) return;
+
+  if (toKf.slideshow || fromKf.slideshow) {
+    await delayMs(ANIM.SLIDESHOW_HOLD_MS);
+    return;
+  }
+
+  // Optional line preview when leaving a sheet start into the first beat.
+  if (fromKf.kind === 'sheet_start' && toKf.kind === 'beat_end') {
+    const preview = [];
+    for (let j = toIdx; j < playbarKeyframes.length; j += 1) {
+      const k = playbarKeyframes[j];
+      if (k.sheetIndex !== fromKf.sheetIndex || k.kind !== 'beat_end') break;
+      if (k.path) preview.push(k.path);
+    }
+    if (preview.length) {
+      updateStepChrome(fromKf.sheetIndex);
+      showSheetUnderlay(fromKf.sheetIndex);
+      syncPlayerTokens(withManDefense(fromKf.positions), fromKf.ballPid);
+      drawTravelPaths(preview, null);
+      setSheetAnimHint(`Sheet ${fromKf.sheetIndex + 1} — ${preview.length} beat(s): one at a time`);
+      await delayMs(ANIM.LINE_PREVIEW_MS);
+      if (!isPlaybackActive()) return;
+      const arrowLayer = document.getElementById('arrowLayer');
+      if (arrowLayer) arrowLayer.querySelectorAll('path').forEach((el) => el.remove());
+    }
+  }
+
+  const live = {};
+  Object.keys(fromKf.positions || {}).forEach((k) => {
+    if (fromKf.positions[k] && !String(k).startsWith('d')) {
+      live[k] = { x: fromKf.positions[k].x, y: fromKf.positions[k].y };
+    }
+  });
+  const toRaw = clonePosMap(toKf.positions);
+
+  // Beat with a path — slide along polyline/quad for full MOVE_MS.
+  if (toKf.kind === 'beat_end' && toKf.path) {
+    updateStepChrome(fromKf.sheetIndex);
+    showSheetUnderlay(fromKf.sheetIndex);
+    const animPath = normalizeAnimPath(toKf.path, live, toRaw);
+    if (!animPath) {
+      syncPlayerTokens(withManDefense(toKf.positions), toKf.ballPid);
+      await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+      return;
+    }
+    sheetMoveGen += 1;
+    const gen = sheetMoveGen;
+    clearScreenMarker();
+    drawTravelPaths([animPath], animPath);
+    setSheetAnimHint(toKf.label || '');
+    await animateOnePath(live, animPath, toRaw, fromKf.ballPid, ANIM.MOVE_MS, gen);
+    if (!isPlaybackActive()) return;
+    if (toKf.screenAt) {
+      drawScreenMarker(toKf.screenAt);
+      setSheetAnimHint(`${toKf.label || 'Screen'} — held`);
+      await delayMs(toKf.holdAfterMs || ANIM.HOLD_SCREEN_MS);
+      clearScreenMarker();
+    } else if (toKf.holdAfterMs) {
+      await delayMs(toKf.holdAfterMs);
+    }
+    await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+    return;
+  }
+
+  // sheet_arrive / sheet_start — if any offense still needs to travel, slide one-at-a-time
+  // instead of teleporting the formation.
+  const movers = [];
+  for (let i = 1; i <= 5; i += 1) {
+    const oid = 'o' + i;
+    const a = live[oid];
+    const b = toRaw[oid];
+    if (!a || !b) continue;
+    if (Math.hypot(a.x - b.x, a.y - b.y) < 10) continue;
+    movers.push({
+      pid: oid,
+      ballOnly: false,
+      from: { x: a.x, y: a.y },
+      to: { x: b.x, y: b.y },
+      ctrl: movementQuadControl(a, b, 0.12),
+      points: null,
+      type: 'cut',
+    });
+  }
+  if (movers.length) {
+    updateStepChrome(toKf.sheetIndex);
+    if (playHasSheets()) showSheetUnderlay(toKf.sheetIndex);
+    for (let mi = 0; mi < movers.length; mi += 1) {
+      if (!isPlaybackActive()) return;
+      const path = movers[mi];
+      sheetMoveGen += 1;
+      const gen = sheetMoveGen;
+      clearScreenMarker();
+      drawTravelPaths([path], path);
+      setSheetAnimHint(`Settle ${String(path.pid).replace(/^o/, '#')}  ·  ${mi + 1}/${movers.length}`);
+      await animateOnePath(live, path, toRaw, toKf.ballPid || fromKf.ballPid, ANIM.MOVE_MS, gen);
+      if (!isPlaybackActive()) return;
+      await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+    }
+    syncLiveWithDefense(live, toKf.ballPid || fromKf.ballPid);
+    return;
+  }
+
+  await delayMs(ANIM.SHEET_END_HOLD_MS);
+}
+
+/**
+ * After a played segment: advance playbar index/label without remounting tokens
+ * (tokens already sit at the animated end pose).
+ */
+function playbarCommitIndex(idx) {
+  if (!playbarKeyframes.length) return;
+  const i = Math.max(0, Math.min(Number(idx) || 0, playbarKeyframes.length - 1));
+  const kf = playbarKeyframes[i];
+  playbarIndex = i;
+  currentStep = kf.sheetIndex;
+  const stepLabel = document.getElementById('stepLabel');
+  if (stepLabel && steps[kf.sheetIndex]) {
+    const step = steps[kf.sheetIndex];
+    stepLabel.textContent = `Step ${kf.sheetIndex + 1} / ${steps.length}${step.label ? ' — ' + step.label : ''}`;
+  }
+  setSheetAnimHint(kf.label || '');
+  if (kf.screenAt) drawScreenMarker(kf.screenAt);
+  updatePlaybarUI();
+}
+
+async function playbarPlayThrough(opts) {
+  opts = opts || {};
+  const resetAtEnd = !!opts.resetAtEnd;
+  const from = typeof opts.from === 'number' ? opts.from : playbarIndex;
+  // Caller may already have raised playAllRunning (Play All sets it before timeline build).
+  const alreadyRunning = isPlaybackActive();
+
+  await ensurePlaybarTimeline();
+  // If caller already started Play and user hit Stop during the await, do not revive.
+  if (alreadyRunning && !isPlaybackActive()) return;
+  if (!playbarKeyframes.length || playbarKeyframes.length <= 1) {
+    // Timeline still empty / single pose — never no-op Play All when there are sheets to animate.
+    if (steps.length > 1 || (steps.length === 1 && !useSheetSlideshowMode())) {
+      await playSheetsDirectly({ resetAtEnd, alreadyRunning: true });
+      return;
+    }
+    playAllRunning = false;
+    playbarPlaying = false;
+    setPlayAllButton(false);
+    updatePlaybarPlayButton();
+    return;
+  }
+
+  playAllRunning = true;
+  playbarPlaying = true;
+  setPlayAllButton(true);
+  updatePlaybarPlayButton();
+  addArrowheadMarkers();
+
+  playbarIndex = Math.max(0, Math.min(from, playbarKeyframes.length - 1));
+  playbarApplyKeyframe(playbarIndex, { fromPlay: true, keepPlaying: true });
+
+  for (let i = playbarIndex; i < playbarKeyframes.length - 1; i += 1) {
+    if (!isPlaybackActive()) break;
+    // eslint-disable-next-line no-await-in-loop
+    await animatePlaybarSegment(i, i + 1);
+    if (!isPlaybackActive()) break;
+    // Land on the keyframe for scrubber/label; tokens already lerped — avoid snap flash.
+    playbarCommitIndex(i + 1);
+    const landed = playbarKeyframes[i + 1];
+    if (landed && !landed.slideshow) {
+      syncPlayerTokens(withManDefense(landed.positions), landed.ballPid);
+    }
+  }
+
+  playAllRunning = false;
+  playbarPlaying = false;
+  setPlayAllButton(false);
+  updatePlaybarPlayButton();
+  if (resetAtEnd) {
+    setSheetAnimHint('');
+    resetPlayToOpening();
+  } else {
+    updatePlaybarUI();
+  }
+}
+
+/**
+ * Fallback Play All: sheet→sheet coach beats without waiting on a full playbar timeline.
+ * Used when timeline is still building / empty so ▶ never becomes a silent no-op.
+ */
+async function playSheetsDirectly(opts) {
+  opts = opts || {};
+  const resetAtEnd = opts.resetAtEnd !== false;
+  playAllRunning = true;
+  playbarPlaying = true;
+  setPlayAllButton(true);
+  updatePlaybarPlayButton();
+  addArrowheadMarkers();
+
+  updateStepChrome(0);
+  if (playHasSheets()) showSheetUnderlay(0);
+  const startPos = withManDefense(positionsForAnim(0));
+  if (useSheetSlideshowMode()) {
+    const playerLayer = document.getElementById('playerLayer');
+    if (playerLayer) playerLayer.innerHTML = '';
+  } else {
+    syncPlayerTokens(startPos, steps[0]?.ball || 'o1');
+  }
+  setSheetAnimHint(steps.length > 1 ? `Sheet 1 / ${steps.length}` : 'Sheet 1');
+  playbarIndex = 0;
+  updatePlaybarUI();
+
+  if (useSheetSlideshowMode()) {
+    for (let i = 0; i < steps.length; i += 1) {
+      if (!isPlaybackActive()) break;
+      updateStepChrome(i);
+      showSheetUnderlay(i);
+      setSheetAnimHint(`Sheet ${i + 1} / ${steps.length}`);
+      playbarIndex = i;
+      updatePlaybarUI();
+      // eslint-disable-next-line no-await-in-loop
+      await delayMs(ANIM.SLIDESHOW_HOLD_MS);
+    }
+  } else if (steps.length === 1) {
+    if (steps[0]) renderArrows(steps[0]);
+    await delayMs(ANIM.LINE_PREVIEW_MS);
+  } else {
+    for (let i = 0; i < steps.length - 1; i += 1) {
+      if (!isPlaybackActive()) break;
+      const fromRaw = withManDefense(positionsForAnim(i));
+      const toRaw = withManDefense(positionsForAnim(i + 1));
+      const ballPid = steps[i + 1].ball || steps[i].ball || 'o1';
+
+      updateStepChrome(i);
+      if (playHasSheets()) showSheetUnderlay(i);
+      syncPlayerTokens(fromRaw, steps[i].ball || 'o1');
+      playbarIndex = i;
+      updatePlaybarUI();
+
+      setSheetAnimHint(`Sheet ${i + 1} / ${steps.length} — tracing…`);
+      // eslint-disable-next-line no-await-in-loop
+      const inkPaths = await fetchSheetInkPaths(i, fromRaw, toRaw);
+      if (!isPlaybackActive()) break;
+
+      const paths = buildTravelPaths(fromRaw, toRaw, steps[i], inkPaths);
+      const startBall = steps[i].ball || 'o1';
+      const beats = buildActionBeats(fromRaw, toRaw, paths, startBall);
+      if (beats.length) {
+        const previewPaths = beats.map((b) => b.path).filter(Boolean);
+        drawTravelPaths(previewPaths, null);
+        setSheetAnimHint(`Sheet ${i + 1} — ${beats.length} beat(s): one at a time`);
+        // eslint-disable-next-line no-await-in-loop
+        await delayMs(ANIM.LINE_PREVIEW_MS);
+        if (!isPlaybackActive()) break;
+        const ballRef = { pid: startBall };
+        // eslint-disable-next-line no-await-in-loop
+        await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS);
+        syncPlayerTokens(toRaw, ballRef.pid);
+      } else {
+        setSheetAnimHint(`Sheet ${i + 1} — settle`);
+        // eslint-disable-next-line no-await-in-loop
+        await delayMs(ANIM.SHEET_END_HOLD_MS);
+        syncPlayerTokens(toRaw, ballPid);
+      }
+      if (!isPlaybackActive()) break;
+
+      updateStepChrome(i + 1);
+      if (playHasSheets()) showSheetUnderlay(i + 1);
+      const endBall = steps[i + 1].ball || ballPid;
+      syncPlayerTokens(toRaw, endBall);
+      const arrowLayer = document.getElementById('arrowLayer');
+      if (arrowLayer) arrowLayer.innerHTML = '';
+      clearScreenMarker();
+      setSheetAnimHint(`Sheet ${i + 2} / ${steps.length}`);
+      playbarIndex = i + 1;
+      updatePlaybarUI();
+      // eslint-disable-next-line no-await-in-loop
+      await delayMs(ANIM.SHEET_END_HOLD_MS);
+    }
+  }
+
+  playAllRunning = false;
+  playbarPlaying = false;
+  setPlayAllButton(false);
+  updatePlaybarPlayButton();
+  if (resetAtEnd) {
+    setSheetAnimHint('');
+    resetPlayToOpening();
+  } else {
+    updatePlaybarUI();
+  }
+}
+
+async function playbarTogglePlay() {
+  if (playAllRunning || playbarPlaying) {
+    stopPlayback({ reset: false });
+    updatePlaybarUI();
+    return;
+  }
+  if (playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady) {
+    setSheetAlignStatus('aligning');
+    await ensureSheetAlignment();
+  }
+  // Prefer playbar when ready; otherwise direct sheet play so ▶ is never a no-op.
+  if (playbarReady && playbarKeyframes.length > 1) {
+    await playbarPlayThrough({ from: playbarIndex, resetAtEnd: false });
+  } else {
+    playAllRunning = true;
+    playbarPlaying = true;
+    setPlayAllButton(true);
+    // Kick timeline build in parallel; Play proceeds via sheets / or playbar if build wins.
+    const build = ensurePlaybarTimeline();
+    await Promise.race([
+      build.then(() => 'built'),
+      delayMs(50).then(() => 'go'),
+    ]);
+    if (playbarReady && playbarKeyframes.length > 1 && isPlaybackActive()) {
+      await playbarPlayThrough({ from: playbarIndex, resetAtEnd: false });
+    } else if (isPlaybackActive()) {
+      await playSheetsDirectly({ resetAtEnd: false, alreadyRunning: true });
+    }
+  }
+}
+
+/**
+ * Play All (toolbar): start from beginning via playbar keyframes (sequential beats).
+ * Stop resets to opening. Playbar ▶/⏸ pauses in place for discussion.
+ * Never silent-no-ops if the playbar timeline is still building.
+ */
+async function playAnimation() {
+  if (playAllRunning || playbarPlaying) {
+    stopPlayback({ reset: true });
+    return;
+  }
+  if (!steps.length) return;
+
+  // Raise flags immediately so scrub sync / UI cannot race a "not playing" state,
+  // and so Aligning / timeline build still show ⏹ Stop instead of a dead click.
+  playAllRunning = true;
+  playbarPlaying = true;
+  setPlayAllButton(true);
+  addArrowheadMarkers();
+
+  if (playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady) {
+    setSheetAlignStatus('aligning');
+    setSheetAnimHint('Aligning sheets…');
+    await ensureSheetAlignment();
+    if (!isPlaybackActive()) return;
+  }
+
+  // Start timeline build but do not block Play forever on ink-path fetch.
+  const build = ensurePlaybarTimeline();
+  await Promise.race([
+    build.then(() => 'built'),
+    delayMs(80).then(() => 'go'),
+  ]);
+  if (!isPlaybackActive()) return;
+
+  if (playbarReady && playbarKeyframes.length > 1) {
+    await playbarPlayThrough({ from: 0, resetAtEnd: true });
+  } else {
+    await playSheetsDirectly({ resetAtEnd: true, alreadyRunning: true });
+    // If timeline finishes later, keep it warm for scrub — do not await.
+    build.catch(() => {});
+  }
+}
+
+/** After Play All Stop: return to opening sheet/formation. */
+function resetPlayToOpening() {
+  currentStep = 0;
+  playbarIndex = 0;
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (arrowLayer) arrowLayer.innerHTML = '';
+  clearScreenMarker();
+  if (playbarReady && playbarKeyframes[0]) {
+    playbarApplyKeyframe(0, { fromPlay: true });
+    setSheetAnimHint('');
+    updateStepList();
+    updateMovementList();
+    return;
+  }
+  updateStepChrome(0);
+  if (playHasSheets()) {
+    showSheetUnderlay(0);
+    if (useSheetSlideshowMode()) {
+      const playerLayer = document.getElementById('playerLayer');
+      if (playerLayer) playerLayer.innerHTML = '';
+    } else {
+      syncPlayerTokens(withManDefense(positionsForAnim(0)), steps[0]?.ball || 'o1');
+    }
+  } else {
+    clearSheetUnderlay();
+    renderStep();
+  }
+  updatePlaybarUI();
+  updateStepList();
+  updateMovementList();
+}
+
+// ── Export as PNG ────────────────────────────────────────
+function exportPng() {
+  const svg = document.getElementById('courtSvg');
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement('canvas');
+  const scale = 2; // 2x for better quality
+  canvas.width = 500 * scale;
+  canvas.height = (isFullCourt ? 940 : 470) * scale;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  img.onload = function () {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    const playName = document.getElementById('playName')?.value || 'play';
+    link.download = playName.replace(/[^a-z0-9]/gi, '_') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+  img.src = url;
+}
+
+async function exportVideo() {
+  if (isExportingVideo || !window.PlaybookExport) {
+    if (!window.PlaybookExport) alert('Video export is not available.');
+    return;
+  }
+  isExportingVideo = true;
+  const btn = document.querySelector('[onclick="exportVideo()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recording…'; }
+  try {
+    await window.PlaybookExport.recordPlayAnimation({
+      svg: document.getElementById('courtSvg'),
+      steps,
+      isFullCourt,
+      playName: document.getElementById('playName')?.value || editingPlay?.name || 'play',
+      animateToStep,
+      renderStep,
+      updateStepList,
+      setCurrentStep: (index) => { currentStep = index; },
+      getCurrentStep: () => currentStep,
+      restorePositions: () => {
+        const snapshot = steps.map((s) => JSON.parse(JSON.stringify(s.positions)));
+        return () => steps.forEach((s, i) => { s.positions = snapshot[i]; });
+      },
+    });
+  } catch (err) {
+    alert(err.message || 'Video export failed.');
+  } finally {
+    isExportingVideo = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🎬 Video'; }
+  }
+}
+
+async function copyPlayShareLink() {
+  if (!playId || !window.PlaybookExport) return;
+  try {
+    shareUrl = await window.PlaybookExport.copyShareLink(playId, shareUrl);
+    alert('Share link copied to clipboard.');
+  } catch (err) {
+    alert(err.message || 'Could not copy share link.');
+  }
+}
+
+// ── Save to hidden form fields ───────────────────────────
+document.getElementById('playForm')?.addEventListener('submit', function() {
+  saveCurrentStepNotes();
+  // Preserve import/progression metadata in diagram_json — never replace with a stub.
+  let diagram = {};
+  try {
+    diagram = JSON.parse(document.getElementById('diagramJsonInput').value || '{}') || {};
+  } catch (err) {
+    diagram = {};
+  }
+  if (typeof diagram !== 'object' || Array.isArray(diagram)) diagram = {};
+  diagram.name = document.getElementById('playName').value;
+  if (document.getElementById('playCategoryId')?.value) {
+    diagram.category_id = document.getElementById('playCategoryId').value;
+  }
+  document.getElementById('diagramJsonInput').value = JSON.stringify(diagram);
+  document.getElementById('stepsJsonInput').value = JSON.stringify(steps);
+  clearStepsDirty();
+});
+
+window.addEventListener('beforeunload', (e) => {
+  if (!stepsDirty || isReadOnly) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+document.getElementById('stepNotes')?.addEventListener('change', () => {
+  if (!isReadOnly) markStepsDirty();
+});
+
+const categoryTree = [{"assignable": false, "children": [{"assignable": true, "children": [], "direct_play_count": 26, "id": 2, "is_system": true, "name": "Man", "parent_id": 1, "play_count": 26, "slug": "man", "slug_path": "offense/man", "sort_order": 0}, {"assignable": true, "children": [], "direct_play_count": 3, "id": 6, "is_system": true, "name": "Zone", "parent_id": 1, "play_count": 3, "slug": "zone", "slug_path": "offense/zone", "sort_order": 1}], "direct_play_count": 0, "id": 1, "is_system": true, "name": "Offense", "parent_id": null, "play_count": 29, "slug": "offense", "slug_path": "offense", "sort_order": 0}, {"assignable": false, "children": [{"assignable": true, "children": [], "direct_play_count": 1, "id": 11, "is_system": true, "name": "Man", "parent_id": 10, "play_count": 1, "slug": "man", "slug_path": "defense/man", "sort_order": 0}, {"assignable": true, "children": [], "direct_play_count": 11, "id": 13, "is_system": true, "name": "Zone", "parent_id": 10, "play_count": 11, "slug": "zone", "slug_path": "defense/zone", "sort_order": 1}], "direct_play_count": 0, "id": 10, "is_system": true, "name": "Defense", "parent_id": null, "play_count": 12, "slug": "defense", "slug_path": "defense", "sort_order": 1}, {"assignable": false, "children": [{"assignable": true, "children": [], "direct_play_count": 0, "id": 43, "is_system": true, "name": "Man", "parent_id": 41, "play_count": 0, "slug": "man", "slug_path": "press/man", "sort_order": 0}, {"assignable": true, "children": [], "direct_play_count": 2, "id": 44, "is_system": true, "name": "Zone", "parent_id": 41, "play_count": 2, "slug": "zone", "slug_path": "press/zone", "sort_order": 1}], "direct_play_count": 0, "id": 41, "is_system": true, "name": "Press", "parent_id": null, "play_count": 2, "slug": "press", "slug_path": "press", "sort_order": 2}, {"assignable": false, "children": [{"assignable": true, "children": [], "direct_play_count": 1, "id": 45, "is_system": true, "name": "Man", "parent_id": 42, "play_count": 1, "slug": "man", "slug_path": "press_break/man", "sort_order": 0}, {"assignable": true, "children": [], "direct_play_count": 1, "id": 46, "is_system": true, "name": "Zone", "parent_id": 42, "play_count": 1, "slug": "zone", "slug_path": "press_break/zone", "sort_order": 1}], "direct_play_count": 0, "id": 42, "is_system": true, "name": "Press Break", "parent_id": null, "play_count": 2, "slug": "press_break", "slug_path": "press_break", "sort_order": 3}, {"assignable": true, "children": [], "direct_play_count": 9, "id": 25, "is_system": true, "name": "Transition", "parent_id": null, "play_count": 9, "slug": "transition", "slug_path": "transition", "sort_order": 4}, {"assignable": true, "children": [], "direct_play_count": 5, "id": 26, "is_system": true, "name": "BLOB", "parent_id": null, "play_count": 5, "slug": "blob", "slug_path": "blob", "sort_order": 5}, {"assignable": true, "children": [], "direct_play_count": 0, "id": 27, "is_system": true, "name": "SLOB", "parent_id": null, "play_count": 0, "slug": "slob", "slug_path": "slob", "sort_order": 6}, {"assignable": false, "children": [], "direct_play_count": 0, "id": 28, "is_system": true, "name": "Opponents", "nav_href": "/playbook/opponents", "parent_id": null, "play_count": 0, "slug": "opponents", "slug_path": "opponents", "sort_order": 7}];
+const selectedCategoryId = 2;
+let activeCategoryId = selectedCategoryId;
+
+function replaceCategoryTree(nextTree) {
+  categoryTree.splice(0, categoryTree.length, ...(nextTree || []));
+}
+
+function applyPlayFilters() {
+  const q = (document.getElementById('playSearch')?.value || '').toLowerCase();
+  const allowedIds = window.PlaybookTaxonomy
+    ? window.PlaybookTaxonomy.collectDescendantIds(categoryTree, activeCategoryId)
+    : null;
+  let visibleCount = 0;
+  document.querySelectorAll('.play-row').forEach((row) => {
+    const matchesSearch = !q || (row.dataset.name || '').includes(q);
+    const rowCat = String(row.dataset.categoryId || '');
+    const matchesCategory = !allowedIds || allowedIds.map(String).includes(rowCat);
+    const visible = matchesSearch && matchesCategory;
+    row.style.display = visible ? '' : 'none';
+    if (visible) visibleCount += 1;
+    // When filtering by category (or searching), expand nested progressions so slides stay visible.
+    if (visible && row.classList.contains('is-collapsible') && (q || activeCategoryId)) {
+      setPlayProgressionsExpanded(row, true, { persist: false });
+    }
+  });
+  const emptyEl = document.getElementById('playbookFilterEmpty');
+  if (emptyEl) {
+    emptyEl.style.display = visibleCount === 0 ? '' : 'none';
+  }
+}
+
+function setPlayProgressionsExpanded(row, expanded, { persist = true } = {}) {
+  if (!row || !row.classList.contains('is-collapsible')) return;
+  const toggle = row.querySelector('.play-collapse-toggle');
+  const panel = row.querySelector('.play-progressions');
+  row.classList.toggle('is-collapsed', !expanded);
+  if (panel) {
+    if (expanded) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+  }
+  if (toggle) {
+    toggle.textContent = expanded ? '▾' : '▸';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggle.setAttribute('aria-label', expanded ? 'Collapse progressions' : 'Expand progressions');
+  }
+  if (persist) {
+    const key = 'liberty.playbook.playExpanded';
+    let state = {};
+    try { state = JSON.parse(sessionStorage.getItem(key) || '{}') || {}; } catch (err) { state = {}; }
+    state[String(row.dataset.playId)] = !!expanded;
+    try { sessionStorage.setItem(key, JSON.stringify(state)); } catch (err) { /* ignore */ }
+  }
+}
+
+function initPlayProgressionCollapse() {
+  const list = document.getElementById('playsTableBody');
+  if (!list) return;
+  const key = 'liberty.playbook.playExpanded';
+  let state = {};
+  try { state = JSON.parse(sessionStorage.getItem(key) || '{}') || {}; } catch (err) { state = {}; }
+
+  list.querySelectorAll('.play-row.is-collapsible').forEach((row) => {
+    const id = String(row.dataset.playId);
+    const expanded = Object.prototype.hasOwnProperty.call(state, id) ? !!state[id] : false;
+    setPlayProgressionsExpanded(row, expanded, { persist: false });
+  });
+
+  list.addEventListener('click', (e) => {
+    const toggle = e.target.closest('.play-collapse-toggle');
+    if (!toggle || !list.contains(toggle)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = toggle.closest('.play-row');
+    if (!row) return;
+    setPlayProgressionsExpanded(row, row.classList.contains('is-collapsed'));
+  });
+}
+
+function filterPlays(q) {
+  if (q != null && document.getElementById('playSearch')) {
+    document.getElementById('playSearch').value = q;
+  }
+  applyPlayFilters();
+}
+
+function initPlaybookTaxonomy() {
+  if (!window.PlaybookTaxonomy) return;
+  const treeEl = document.getElementById('playbookCategoryTree');
+  const breadcrumb = document.getElementById('playbookBreadcrumb');
+  const newPlayBtn = document.getElementById('newPlayBtn');
+  const categorySelect = document.getElementById('playCategoryId');
+
+  window.PlaybookTaxonomy.fillCategorySelect(categorySelect, categoryTree, selectedCategoryId);
+  if (!treeEl) return;
+
+  function onCategorySelect(categoryId, node) {
+    activeCategoryId = categoryId;
+    if (breadcrumb) {
+      breadcrumb.textContent = categoryId && node
+        ? node.slug_path.replace(/\//g, ' · ').replace(/_/g, ' ')
+        : 'All plays';
+    }
+    if (newPlayBtn && categoryId) {
+      newPlayBtn.href = `/playbook/create?category_id=${categoryId}`;
+    }
+    window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+    applyPlayFilters();
+  }
+  window.refreshPlaybookCategoryTree = function refreshPlaybookCategoryTree() {
+    window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+    applyPlayFilters();
+  };
+  window.PlaybookTaxonomy.renderTree(treeEl, categoryTree, activeCategoryId, onCategorySelect);
+
+  document.getElementById('addCategoryBtn')?.addEventListener('click', async () => {
+    const name = prompt('New category name');
+    if (!name) return;
+    const parentId = activeCategoryId || null;
+    try {
+      const data = await window.PlaybookTaxonomy.createCategory(parentId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('renameCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const name = prompt('Rename category');
+    if (!name) return;
+    try {
+      await window.PlaybookTaxonomy.renameCategory(activeCategoryId, name);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('moveCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const parentId = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move category under…',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— Top level —',
+    });
+    if (parentId === undefined) return;
+    try {
+      await window.PlaybookTaxonomy.moveCategory(activeCategoryId, parentId);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  document.getElementById('deleteCategoryBtn')?.addEventListener('click', async () => {
+    if (!activeCategoryId) { alert('Select a category first.'); return; }
+    const reassignTo = await window.PlaybookTaxonomy.pickCategory(categoryTree, {
+      title: 'Move plays to… (leave blank only if empty)',
+      excludeId: activeCategoryId,
+      allowBlank: true,
+      blankLabel: '— None —',
+    });
+    if (reassignTo === undefined) return;
+    if (!confirm('Delete this category?')) return;
+    try {
+      await window.PlaybookTaxonomy.deleteCategory(activeCategoryId, reassignTo);
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+  applyPlayFilters();
+}
+
+// ── Init ─────────────────────────────────────────────────
+function initSteps() {
+  if (editingSteps && editingSteps.length > 0) {
+    const sorted = editingSteps.slice().sort((a, b) => {
+      const an = Number(a.step_number);
+      const bn = Number(b.step_number);
+      if (Number.isFinite(an) && Number.isFinite(bn) && an !== bn) return an - bn;
+      return 0;
+    });
+    const parsed = sorted.map(s => {
+      let positions = {};
+      try { positions = JSON.parse(s.positions_json || '{}') || {}; } catch (e) { positions = {}; }
+      return {
+        positions,
+        movements: (() => {
+          try {
+            return JSON.parse(s.movements_json || '[]').filter((m) => !(m && m._meta));
+          } catch (e) { return []; }
+        })(),
+        label: s.label || '',
+        notes: s.notes || '',
+        source_image: s.source_image || '',
+        ball: (() => {
+          try {
+            const movements = JSON.parse(s.movements_json || '[]');
+            const meta = movements.find(m => m && m._meta);
+            return meta ? meta._ball : 'o1';
+          } catch (e) { return 'o1'; }
+        })(),
+      };
+    });
+    const flipAll = shouldFlipLegacyBottomBasket(parsed.map((s) => s.positions), parsed);
+    steps = parsed.map((s) => ({
+      ...s,
+      positions: flipAll ? flipPositionsY(s.positions) : s.positions,
+    }));
+  } else {
+    // Default: single step with 5 offensive + color-matched man defenders (basket at top).
+    const positions = {};
+    for (let i = 0; i < 5; i += 1) {
+      positions['o' + (i + 1)] = defaultOffensePos(i);
+      positions['d' + (i + 1)] = defaultDefensePos(i);
+    }
+    steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '', ball: 'o1' }];
+  }
+  currentStep = 0;
+  sheetAlignByStep = [];
+  sheetAlignReady = !playHasSheets() || useSheetSlideshowMode();
+  sheetAlignPromise = null;
+  sheetInkPathCache.clear();
+  invalidatePlaybarTimeline();
+  updateCourtPanelLabel();
+  renderCourt();
+  renderStep();
+  renderStepImages();
+  updateStepList();
+  updatePlaybarUI();
+  if (useSheetSlideshowMode()) {
+    setSheetAlignStatus('ready', 'Ready — sheet slideshow (opt-in)');
+    ensurePlaybarTimeline();
+  } else if (playHasSheets()) {
+    setSheetAlignStatus('aligning');
+    // Imported sheets: OCR digits + ink marks drive token Play All.
+    ensureSheetAlignment();
+  } else {
+    setSheetAlignStatus('ready', 'Ready to play');
+    ensurePlaybarTimeline();
+  }
+}
+
+if (document.getElementById('courtSvg')) {
+  initSteps();
+}
+if (document.getElementById('playCategoryId') || document.getElementById('playbookCategoryTree')) {
+  initPlaybookTaxonomy();
+}
+initPlayProgressionCollapse();
+if (document.getElementById('playsTableBody') && window.PlaybookDragDrop) {
+  window.PlaybookDragDrop.init(document.getElementById('playsTableBody'), {
+    categoryTree: document.getElementById('playbookCategoryTree'),
+    onCategoryMoved(data) {
+      if (data && data.tree) replaceCategoryTree(data.tree);
+      if (typeof window.refreshPlaybookCategoryTree === 'function') {
+        window.refreshPlaybookCategoryTree();
+      } else {
+        applyPlayFilters();
+      }
+    },
+  });
+}
+
+// Ctrl+Enter to save
+document.getElementById('stepNotes')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    document.getElementById('playForm')?.requestSubmit?.();
+  }
+});
+</script>
+
+
+  
+  
+  <script>
+  (function initReportDrawer() {
+    const drawer = document.getElementById('report-drawer');
+      const backdrop = document.getElementById('report-drawer-backdrop');
+      const form = document.getElementById('report-drawer-form');
+      const message = document.getElementById('report-drawer-message');
+      const closeButton = document.getElementById('report-drawer-close');
+      const cancelButton = document.getElementById('report-drawer-cancel');
+      const submitButton = document.getElementById('report-drawer-submit');
+      const sourceInput = document.getElementById('report-source-path');
+      const returnToInput = document.getElementById('report-return-to');
+      const consoleInput = document.getElementById('report-browser-console');
+      const detailsInput = document.getElementById('report-details');
+      if (!drawer || !backdrop || !form || !sourceInput || !returnToInput || !consoleInput) return;
+
+      function getPreferredSourcePath() {
+        const configuredSource = document.body.dataset.reportSourceDefault || '';
+        const currentPath = window.LibertyIssueReporter?.getCurrentPagePath?.() || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (window.location.pathname === '/debug' && configuredSource && configuredSource !== currentPath) {
+          return configuredSource;
+        }
+        return currentPath;
+      }
+
+      function setReportMessage(kind, text) {
+        if (!message) return;
+        if (!text) {
+          message.style.display = 'none';
+          message.textContent = '';
+          message.className = 'alert';
+          return;
+        }
+        message.textContent = text;
+        message.className = `alert ${kind === 'error' ? 'alert-error' : 'alert-success'}`;
+        message.style.display = 'block';
+      }
+
+      function syncReportContext() {
+        const sourcePath = getPreferredSourcePath();
+        sourceInput.value = sourcePath;
+        returnToInput.value = sourcePath;
+        consoleInput.value = window.LibertyIssueReporter?.getConsoleText?.() || '';
+      }
+
+      function openDrawer() {
+        syncReportContext();
+        setReportMessage(null, '');
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        backdrop.classList.add('open');
+        document.body.classList.add('report-drawer-open');
+        window.setTimeout(() => detailsInput?.focus(), 0);
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        backdrop.classList.remove('open');
+        document.body.classList.remove('report-drawer-open');
+      }
+
+      document.querySelectorAll('[data-open-report-overlay]').forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          openDrawer();
+        });
+      });
+
+      [backdrop, closeButton, cancelButton].forEach((el) => {
+        el?.addEventListener('click', closeDrawer);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && drawer.classList.contains('open')) {
+          closeDrawer();
+        }
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        syncReportContext();
+        setReportMessage(null, '');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving…';
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+          const result = await response.json();
+          if (!response.ok || result.status !== 'ok') {
+            throw new Error(result.message || 'Unable to save report.');
+          }
+          setReportMessage('success', result.message || 'Report saved.');
+          form.reset();
+          document.getElementById('report-entry-type').value = 'issue';
+          syncReportContext();
+          window.setTimeout(closeDrawer, 700);
+        } catch (error) {
+          setReportMessage('error', error.message || 'Unable to save report.');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Save Report';
+        }
+      });
+
+      if (new URLSearchParams(window.location.search).get('compose') === '1') {
+        openDrawer();
+      }
+    })();
+
+  </script>
+  
+
+  
+  <script>
+  (function() {
+    var userId = null;
+    if (!userId) return;
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    }
+
+    // Subscribe to push notifications
+    function subscribePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      navigator.serviceWorker.ready.then(function(reg) {
+        reg.pushManager.getSubscription().then(function(sub) {
+          if (sub) return; // already subscribed
+          // Get VAPID public key from server
+          fetch('/api/push/vapid-public-key')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.key) return;
+              return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(data.key),
+              });
+            })
+            .then(function(sub) {
+              return fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(sub.toJSON()),
+              });
+            })
+            .catch(function() {});
+        });
+      });
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      var rawData = window.atob(base64);
+      var outputArray = new Uint8Array(rawData.length);
+      for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Auto-subscribe on load (browser will prompt permission)
+    if (Notification.permission === 'granted') {
+      subscribePush();
+    }
+  })();
+  </script>
+
+  
+  <script>
+  (function() {
+    var userId = null;
+    if (!userId) return;
+
+    function pollNotifications() {
+      fetch('/api/notifications')
+        .then(function(r) { return r.json(); })
+        .then(function(notifs) {
+          var badge = document.getElementById('nav-msg-badge');
+          if (!badge) return;
+          var unread = notifs.length;
+          if (unread > 0) {
+            badge.textContent = unread > 9 ? '9+' : unread;
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        })
+        .catch(function() {});
+    }
+    pollNotifications();
+    setInterval(pollNotifications, 30000);
+    })();
+  </script>
+  <script>
+    // ── Mobile table card layout ─────────────
+    (function() {
+      function initMobileTables() {
+        document.querySelectorAll('.table-responsive').forEach(function(wrapper) {
+          var headers = wrapper.querySelectorAll('thead th');
+          if (!headers.length) return;
+          var labels = Array.from(headers).map(function(th) { return th.textContent.trim(); });
+          wrapper.querySelectorAll('tbody tr').forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            cells.forEach(function(td, i) {
+              if (i < labels.length && labels[i]) {
+                td.setAttribute('data-label', labels[i]);
+              }
+            });
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMobileTables);
+      } else {
+        initMobileTables();
+      }
+    })();
+  </script>
+  <script>
+    // ── Mobile nav dropdown toggle ───────────
+    (function() {
+      var navLinks = document.getElementById('nav-links');
+      var hamburger = document.getElementById('nav-hamburger');
+      if (!navLinks) return;
+
+      function setNavOpen(open) {
+        navLinks.classList.toggle('open', open);
+        if (hamburger) hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) {
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(dd) {
+            dd.classList.remove('open');
+          });
+        }
+      }
+
+      // Hamburger is a sibling of #nav-links (not inside it). Must stopPropagation
+      // so the document "click outside" handler does not immediately close the menu.
+      if (hamburger) {
+        hamburger.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          setNavOpen(!navLinks.classList.contains('open'));
+        });
+      }
+
+      // Close hamburger when clicking a top-level link
+      navLinks.querySelectorAll('a[href]').forEach(function(a) {
+        a.addEventListener('click', function() {
+          // Only close if it's a direct link (not a dropdown toggle)
+          if (!a.parentElement.classList.contains('nav-dropdown')) {
+            setNavOpen(false);
+          }
+        });
+      });
+      // Toggle dropdown on click (works on both desktop and mobile)
+      navLinks.querySelectorAll('.nav-dropdown > a').forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var dd = toggle.parentElement;
+          // Close other open dropdowns
+          navLinks.querySelectorAll('.nav-dropdown').forEach(function(other) {
+            if (other !== dd) other.classList.remove('open');
+          });
+          dd.classList.toggle('open');
+        });
+      });
+      // Close menu when clicking outside nav chrome (hamburger is outside #nav-links)
+      document.addEventListener('click', function(e) {
+        var inNavChrome = navLinks.contains(e.target) ||
+          (hamburger && (e.target === hamburger || hamburger.contains(e.target)));
+        if (!inNavChrome) {
+          setNavOpen(false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

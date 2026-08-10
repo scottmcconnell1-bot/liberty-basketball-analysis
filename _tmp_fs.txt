@@ -1,0 +1,32 @@
+ class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="set
+ class="form-control" style="width:auto;font-size:0.75rem;" id="actionTimingSelect" title
+ class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchang
+        <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span
+ class="form-control" style="width:auto;font-size:0.75rem;" id="courtModeSelect"
+        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</sp
+8px;padding:10px 14px;border-radius:8px;font-size:0.9rem;font-weight:700;letter-spacing:0
+       <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;"
+        <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;m
+      <h4 style="font-size:0.8rem;font-weight:600;margin-bottom:8p
+      <label for="stepNotes" style="font-size:0.75rem;font-weight:600;display:block;m
+      <p style="font-weight:600;font-size:1.1rem;margin-bottom:4px;">{{ editing_p
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reo
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Open <strong>
+us:6px;background:#fef3c7;color:#92400e;font-size:0.75rem;">
+        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;m
+        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs wi
+    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-size: 0.8rem;
+    font-size: 0.65rem;
+ption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9faf
+      delBtn.style.cssText = 'font-size:0.7rem;padding:2px 6px;';
+    text.setAttribute('font-size', '9');
+    text.setAttribute('font-size', '11');
+      tag.setAttribute('font-size', '9');
+      tag.setAttribute('font-size', '9');
+rHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool 
+display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6
+      badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
+imingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';

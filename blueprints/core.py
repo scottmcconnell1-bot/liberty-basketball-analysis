@@ -16,6 +16,7 @@ Routes included:
 - schedule_record_game (/schedule/games/<int:game_id>/record POST)
 - videos_page (/videos)              – Video listing page
 - film (/film, /film/<filename>)    – Film tool page
+- assisted_stat_sample (/film/assisted-stat-sample) – SAMPLE prototype (delete me)
 - uploaded_file (/uploads/<filename>) – Serve uploaded files
 - settings_page (/settings GET POST) – Application settings
 - custom_weights_guide_page (/settings/custom-weights)
@@ -1678,6 +1679,13 @@ def film_review_workspace(filename):
     return redirect(url_for("core.film", filename=filename, **args))
 
 
+@core.route("/film/assisted-stat-sample")
+def assisted_stat_sample():
+    """SAMPLE / DELETE ME � static AI-assisted stating prototype (fake data)."""
+    root = os.path.abspath(os.path.join(current_app.root_path, "docs", "prototypes"))
+    return send_from_directory(root, "assisted_stat_sample.html")
+
+
 @core.route("/film")
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
@@ -2119,12 +2127,20 @@ def create_issue_report():
            VALUES (?, ?, ?, ?, ?, 'open')""",
         (entry_type, title, details, source_path, browser_console),
     )
+    report_id = cursor.lastrowid
     db.commit()
+    try:
+        from services.notifications import notify_issue_report_created
+
+        notify_issue_report_created(db, report_id, entry_type, title, details)
+    except Exception:
+        # Reporting must never fail because of notification wiring.
+        pass
     if wants_json:
         return jsonify({
             "status": "ok",
             "message": "Report saved.",
-            "report_id": cursor.lastrowid,
+            "report_id": report_id,
             "source_path": source_path,
         })
     return redirect(append_query_params(return_to, message="Report saved."))

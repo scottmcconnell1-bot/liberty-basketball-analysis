@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Learning Progress — Coach Portal{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Program learning progress</h2>
+    <p class="text-muted">Live snapshot for coaches · refreshed when you open or reload this page · {{ progress.generated_at }}</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('coach.coach_progress') }}">Refresh</a>
+    <a class="btn btn-primary btn-sm" href="/">Open full app</a>
+  </div>
+</div>
+
+<div class="stat-grid" style="margin-bottom:20px;">
+  <div class="stat-box">
+    <div class="stat-label">HUDL queue</div>
+    <div class="stat-value">
+      {% if progress.queue.hudl_taught is not none and progress.queue.hudl_videos is not none %}
+        {{ progress.queue.hudl_taught }} / {{ progress.queue.hudl_videos }}
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="text-muted">
+      {% if progress.queue.pct is not none %}{{ progress.queue.pct }}% taught{% else %}{{ progress.queue.note }}{% endif %}
+    </div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Panel gates</div>
+    <div class="stat-value">
+      {% if progress.panel.overall_pass is sameas true %}PASS
+      {% elif progress.panel.overall_pass is sameas false %}FAIL
+      {% else %}—{% endif %}
+    </div>
+    <div class="text-muted">
+      {% if progress.panel.mean_precision is not none and progress.panel.mean_recall is not none %}
+      P {{ (progress.panel.mean_precision * 100)|round(1) }}%
+      · R {{ (progress.panel.mean_recall * 100)|round(1) }}%
+      {% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Active analysis</div>
+    <div class="stat-value">{{ progress.active|length }}</div>
+    <div class="text-muted">{% if progress.active %}In progress now{% else %}Idle / between games{% endif %}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-bottom:10px;">Currently running</h3>
+  {% if progress.active %}
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr><th>Game / key</th><th>Progress</th><th>Step</th></tr>
+      </thead>
+      <tbody>
+        {% for row in progress.active %}
+        <tr>
+          <td data-label="Game">{{ row.key }}</td>
+          <td data-label="Progress">{% if row.progress_pct is not none %}{{ row.progress_pct|round(0)|int }}%{% else %}—{% endif %}</td>
+          <td data-label="Step">{{ row.step }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">No analysis job marked running right now.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-bottom:10px;">Fixed full-film panel (Scott targets)</h3>
+  {% if progress.panel.gates %}
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr><th>Gate</th><th>Target</th><th>Actual</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        {% for g in progress.panel.gates %}
+        <tr>
+          <td data-label="Gate">{{ g.name }}</td>
+          <td data-label="Target">{{ g.required_label }}</td>
+          <td data-label="Actual">{{ g.actual_label }}</td>
+          <td data-label="Result">{% if g.pass %}PASS{% else %}FAIL{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if progress.panel.generated_at %}
+  <p class="text-muted mt-2">Panel snapshot: {{ progress.panel.generated_at }}</p>
+  {% endif %}
+  {% else %}
+  <p class="text-muted">Panel snapshot not available yet.</p>
+  {% endif %}
+</div>
+
+{% if progress.status_markdown %}
+<div class="card">
+  <h3 style="margin-bottom:8px;">Nightly status report</h3>
+  <p class="text-muted" style="margin-bottom:12px;">From docs/LEARNING_STATUS.md{% if progress.status_mtime %} · file {{ progress.status_mtime }}{% endif %}</p>
+  <pre style="white-space:pre-wrap;font-size:0.82rem;line-height:1.45;max-height:420px;overflow:auto;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid var(--color-border);">{{ progress.status_markdown }}</pre>
+</div>
+{% endif %}
+{% endblock %}

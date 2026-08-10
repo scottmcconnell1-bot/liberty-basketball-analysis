@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Opponent Playbooks – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Opponent Playbooks</h2>
+    <p class="text-muted" style="margin-top:4px;">Track what opponents run. Separate from Liberty’s own playbook.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_list') }}">← Back to Playbook</a>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="playbook-layout">
+  <div class="card playbook-sidebar">
+    <h3>Opponents</h3>
+    <div class="playbook-tree">
+      {% for opp in opponents %}
+      <a class="playbook-tree-item {% if opponent and opponent.id == opp.id %}active{% endif %}"
+         href="{{ url_for('playbook.playbook_opponent_detail', playbook_id=opp.id) }}"
+         style="text-decoration:none;color:inherit;">
+        <span>{{ opp.opponent_name or opp.name }}</span>
+        <span class="count">{{ opp.play_count or 0 }}</span>
+      </a>
+      {% else %}
+      <p class="text-muted" style="font-size:0.85rem;padding:8px;">No opponents yet.</p>
+      {% endfor %}
+    </div>
+    {% if not coach_readonly %}
+    <form method="post" action="{{ url_for('playbook.playbook_opponents_create') }}" style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;">
+      <div class="form-group">
+        <label for="oppName">Add opponent</label>
+        <input class="form-control" id="oppName" name="name" required placeholder="e.g. Marsing">
+      </div>
+      <div class="form-group">
+        <label for="oppDesc">Notes (optional)</label>
+        <input class="form-control" id="oppDesc" name="description" placeholder="Scout notes">
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit">Create playbook</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card playbook-main">
+    {% if opponent %}
+    <div class="playbook-main-head">
+      <h3>{{ opponent.opponent_name or opponent.name }}</h3>
+      {% if not coach_readonly %}
+      <a class="btn btn-primary btn-sm"
+         href="{{ url_for('playbook.playbook_create', playbook_id=opponent.id) }}">+ Add opponent play</a>
+      {% endif %}
+    </div>
+    {% if opponent.description %}
+    <p class="text-muted" style="margin-bottom:14px;">{{ opponent.description }}</p>
+    {% endif %}
+    {% if plays %}
+    <div class="playbook-list" id="opponentPlaysList"
+         data-readonly="{{ '1' if coach_readonly else '0' }}">
+      {% if not coach_readonly %}
+      <p class="playbook-dnd-hint text-muted">Click to select · Ctrl/Cmd multi-select · Shift range · Drag to reorder · Double-click to open</p>
+      {% endif %}
+      <div class="playbook-list-items" data-group="root">
+      {% for play in plays %}
+      <div class="play-list-item play-row play-dnd-item"
+           data-play-id="{{ play.id }}"
+           data-group="root"
+           data-view-href="{{ url_for('playbook.playbook_view', play_id=play.id) }}"
+           data-name="{{ play.name.lower() }}">
+        <div class="play-list-item-main">
+          {% if coach_readonly %}
+          <a class="play-list-item-title" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">{{ play.name }}</a>
+          {% else %}
+          <div class="play-list-item-title play-dnd-handle" title="Click to select, drag to move, double-click to open">{{ play.name }}</div>
+          {% endif %}
+          <div class="play-list-item-meta">
+            {% if play.step_count %}<span>{{ play.step_count }} steps</span>{% endif %}
+            {% if play.updated_at %}<span>{{ play.updated_at[:10] }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="play-row-actions">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_view', play_id=play.id) }}">View</a>
+          {% if not coach_readonly %}
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=play.id) }}">Edit</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">No plays for this opponent yet.{% if not coach_readonly %} Add what they run on offense and defense.{% endif %}</p>
+    {% endif %}
+    {% else %}
+    <div class="playbook-main-head">
+      <h3>Select an opponent</h3>
+    </div>
+    <p class="text-muted">Choose an opponent on the left, or create one to start building their playbook.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/playbook-dnd.js') }}"></script>
+<script>
+if (document.getElementById('opponentPlaysList') && window.PlaybookDragDrop) {
+  window.PlaybookDragDrop.init(document.getElementById('opponentPlaysList'));
+}
+</script>
+{% endblock %}

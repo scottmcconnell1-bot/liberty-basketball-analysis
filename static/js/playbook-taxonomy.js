@@ -9,6 +9,36 @@
 
   function renderTree(container, tree, selectedId, onSelect) {
     if (!container) return;
+    const storageKey = 'liberty.playbook.treeExpanded';
+    let expanded = {};
+    try {
+      expanded = JSON.parse(sessionStorage.getItem(storageKey) || '{}') || {};
+    } catch (err) {
+      expanded = {};
+    }
+
+    function isExpanded(node) {
+      const key = String(node.id);
+      if (Object.prototype.hasOwnProperty.call(expanded, key)) {
+        return !!expanded[key];
+      }
+      // Default: open parents that contain the selection or have plays under them.
+      if (selectedId) {
+        const ids = collectDescendantIds([node], selectedId) || [];
+        if (ids.map(String).includes(String(selectedId))) return true;
+      }
+      return (node.play_count || 0) > 0;
+    }
+
+    function setExpanded(nodeId, value) {
+      expanded[String(nodeId)] = value;
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(expanded));
+      } catch (err) {
+        /* ignore quota */
+      }
+    }
+
     container.innerHTML = '';
     const allItem = document.createElement('div');
     allItem.className = 'playbook-tree-item' + (selectedId ? '' : ' active');
@@ -16,20 +46,80 @@
     allItem.addEventListener('click', () => onSelect(null));
     container.appendChild(allItem);
 
-    function renderNodes(nodes, parentEl, depth) {
-      const wrap = document.createElement('div');
-      if (depth > 0) wrap.className = 'playbook-tree-children';
-      flattenTree(nodes, depth).forEach(({ node, depth: nodeDepth }) => {
-        const item = document.createElement('div');
-        item.className = 'playbook-tree-item' + (String(node.id) === String(selectedId) ? ' active' : '');
-        item.style.paddingLeft = `${8 + nodeDepth * 4}px`;
-        item.innerHTML = `<span>${escapeHtml(node.name)}</span><span class="count">${node.play_count || 0}</span>`;
-        item.addEventListener('click', () => onSelect(node.id, node));
-        wrap.appendChild(item);
+    function renderNode(node, parentEl, depth) {
+      const children = node.children || [];
+      const hasChildren = children.length > 0;
+      const open = hasChildren && isExpanded(node);
+
+      const item = document.createElement('div');
+      const droppable = !node.nav_href && !hasChildren;
+      item.className = 'playbook-tree-item'
+        + (String(node.id) === String(selectedId) ? ' active' : '')
+        + (hasChildren ? ' has-children' : '')
+        + (open ? ' is-open' : '')
+        + (droppable ? ' playbook-tree-drop' : '');
+      item.style.setProperty('--tree-depth', String(depth));
+      item.dataset.categoryId = String(node.id);
+      item.dataset.droppable = droppable ? '1' : '0';
+      if (node.slug_path) item.dataset.slugPath = node.slug_path;
+      if (droppable) {
+        item.title = 'Drop plays here to move them into this category';
+      }
+      const label = document.createElement('span');
+      label.className = 'playbook-tree-label';
+
+      if (hasChildren) {
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'playbook-tree-toggle';
+        toggle.setAttribute('aria-label', open ? 'Collapse' : 'Expand');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.textContent = open ? '▾' : '▸';
+        toggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setExpanded(node.id, !open);
+          renderTree(container, tree, selectedId, onSelect);
+        });
+        label.appendChild(toggle);
+      } else {
+        const spacer = document.createElement('span');
+        spacer.className = 'playbook-tree-toggle-spacer';
+        label.appendChild(spacer);
+      }
+
+      const name = document.createElement('span');
+      name.className = 'playbook-tree-name';
+      name.textContent = node.name;
+      label.appendChild(name);
+
+      const count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = String(node.play_count || 0);
+
+      item.appendChild(label);
+      item.appendChild(count);
+      item.addEventListener('click', () => {
+        if (node.nav_href) {
+          window.location.href = node.nav_href;
+          return;
+        }
+        if (hasChildren && !open) {
+          setExpanded(node.id, true);
+        }
+        onSelect(node.id, node);
       });
-      parentEl.appendChild(wrap);
+      parentEl.appendChild(item);
+
+      if (hasChildren && open) {
+        const childWrap = document.createElement('div');
+        childWrap.className = 'playbook-tree-children';
+        children.forEach((child) => renderNode(child, childWrap, depth + 1));
+        parentEl.appendChild(childWrap);
+      }
     }
-    renderNodes(tree, container, 0);
+
+    (tree || []).forEach((node) => renderNode(node, container, 0));
   }
 
   function escapeHtml(value) {

@@ -1,0 +1,4 @@
+519:let animFrame = null;
+1726:let animFrame = null;
+3216:  const heldLandings = {};
+3693:    const heldLandings = {};

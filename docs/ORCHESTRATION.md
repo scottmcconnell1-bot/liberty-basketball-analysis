@@ -1,4 +1,4 @@
-# Liberty Orchestration — Cursor-Only Workflow
+﻿# Liberty Orchestration â€” Cursor-Only Workflow
 
 Updated: 2026-07-05
 Branch: `jason-5-may-updates`
@@ -15,17 +15,17 @@ Run Liberty Basketball Analysis with **Cursor Pro only**. The Cloud Agent plans,
 - **Autonomous mode:** orchestrator follows `docs/COMPLETION_PATH.md` and merges bounded slices after tests pass
 - **Repository files are source of truth**, not chat history
 
-## Account optimization checklist (Scott — do once)
+## Account optimization checklist (Scott â€” do once)
 
 Complete these in [cursor.com/dashboard](https://cursor.com/dashboard):
 
 ### Billing and usage
 
 1. **Disable on-demand usage**, or set the monthly spend hard limit to **$0**. (Scott confirmed.)
-2. **Check usage weekly** at Dashboard → Billing & Invoices → Included Usage.
+2. **Check usage weekly** at Dashboard â†’ Billing & Invoices â†’ Included Usage.
 3. **Archive stuck Cloud Agents** at [cursor.com/agents](https://cursor.com/agents) if you see false "limit reached" errors.
 
-### Model picker (item 3 — nothing to install)
+### Model picker (item 3 â€” nothing to install)
 
 There is **no separate settings page** for this. When you open Cursor chat or start a Cloud Agent, use the **model dropdown** at the top of the input:
 
@@ -36,21 +36,21 @@ There is **no separate settings page** for this. When you open Cursor chat or st
 
 That is the entire step. Default to Auto/Composer so Cursor credits last the month.
 
-### GitHub + Cloud Agents (item 4 — quick verify)
+### GitHub + Cloud Agents (item 4 â€” quick verify)
 
-If these are true, you are done — no further setup:
+If these are true, you are done â€” no further setup:
 
 1. Go to [cursor.com/agents](https://cursor.com/agents)
 2. You can start an agent on **`liberty-basketball-analysis`**
 3. The agent checks out **`jason-5-may-updates`** (not `main`)
 
-Optional check: Dashboard → Settings → GitHub shows the repo connected.
+Optional check: Dashboard â†’ Settings â†’ GitHub shows the repo connected.
 
 ### Cursor Cloud Agent (sole executor)
 
 One session reads `ACTIVE.md`, implements, tests, opens PR, merges when green.
 
-**Start a session (optional — agent can also continue from queue):**
+**Start a session (optional â€” agent can also continue from queue):**
 
 ```
 Read docs/COMPLETION_PATH.md and docs/agent_handoffs/ACTIVE.md. Execute the active task.
@@ -60,15 +60,15 @@ Read docs/COMPLETION_PATH.md and docs/agent_handoffs/ACTIVE.md. Execute the acti
 
 ```
 Scott starts one Cloud Agent session
-        ↓
+        â†“
 Orchestrator reads ACTIVE.md + PROJECT_STATUS.md
-        ↓
-Orchestrator plans bounded slice → implements or delegates to in-session subagents
-        ↓
+        â†“
+Orchestrator plans bounded slice â†’ implements or delegates to in-session subagents
+        â†“
 Work lands on cursor/<task>-ac1f branch + PR
-        ↓
+        â†“
 Orchestrator updates ACTIVE.md report (Proven / Inferred / Unknown)
-        ↓
+        â†“
 Scott reviews PR + /status + /preview when product-facing
 ```
 
@@ -83,14 +83,14 @@ Scott reviews PR + /status + /preview when product-facing
 
 | Artifact | Purpose |
 | --- | --- |
-| `docs/agent_handoffs/ACTIVE.md` | **Current task only** — objective, checklist, status, report |
+| `docs/agent_handoffs/ACTIVE.md` | **Current task only** â€” objective, checklist, status, report |
 | `docs/agent_handoffs/ARCHIVE/` | Completed tasks moved here |
 | **Pull request** | Code diff, test evidence, review thread |
 | `PROJECT_STATUS.md` | Long-lived Proven / Inferred / Unknown facts |
 
 Do **not** use GitHub labels (`OWL ACTION`, etc.) for coordination. Comments on PRs are fine; labels are retired.
 
-### Starting a session (Scott — one line)
+### Starting a session (Scott â€” one line)
 
 ```
 Read docs/ORCHESTRATION.md and docs/agent_handoffs/ACTIVE.md.
@@ -105,8 +105,8 @@ That is the only relay required.
 2. One bounded slice per session when possible.
 3. Prefer **in-session subagents** over spawning parallel Cloud Agents.
 4. Run `python -m pytest tests/ -q` (or the focused subset named in ACTIVE.md) before marking done.
-5. Report as **Proven / Inferred / Unknown** — never present inference as fact.
-6. **Stop and ask Scott** before changing `schema.sql`, feature flags `False → True`, or production detector settings.
+5. Report as **Proven / Inferred / Unknown** â€” never present inference as fact.
+6. **Stop and ask Scott** before changing `schema.sql`, feature flags `False â†’ True`, or production detector settings.
 7. Branch names: `cursor/<descriptive-name>-ac1f`.
 8. When ACTIVE task completes: move file to `ARCHIVE/`, open next task in ACTIVE.md.
 
@@ -124,10 +124,22 @@ On $20 Pro, treat agent runs like a finite resource:
 
 `AGENT_PROTOCOL.md` and old `OWL ACTION` issues are **historical**. Do not create new Owl issues or labels. Open OWL issues on GitHub may be closed when convenient.
 
+
+## Dual-machine (home + work)
+
+Scott may switch PCs. Use **one shared feature branch** (see `ACTIVE.md`; currently `cursor/full-film-panel-ac1f`).
+
+- Arrive: `powershell -File scripts/sync_liberty_work.ps1` (fetch, checkout, `pull --ff-only`)
+- Leave: commit safe code/docs, then `git push -u origin HEAD`
+- Full protocol: `docs/DUAL_MACHINE.md`
+- Never expect `.env`, `film_analysis.db`, or `uploads/` to sync via git
+
 ## Related files
 
-- `docs/agent_handoffs/ACTIVE.md` — current task
-- `docs/agent_handoffs/ALPHA_GITHUB_SYNC_2026-07-05.md` — branch snapshot
-- `PROJECT_STATUS.md` — verified project facts
-- `ROADMAP.md` — direction
-- `AUTHORITY.md` — who approves what
+- `docs/DUAL_MACHINE.md` — home + work PC pull/push protocol (code/docs only)
+
+- `docs/agent_handoffs/ACTIVE.md` â€” current task
+- `docs/agent_handoffs/ALPHA_GITHUB_SYNC_2026-07-05.md` â€” branch snapshot
+- `PROJECT_STATUS.md` â€” verified project facts
+- `ROADMAP.md` â€” direction
+- `AUTHORITY.md` â€” who approves what

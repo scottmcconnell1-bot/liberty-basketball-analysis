@@ -2568,6 +2568,9 @@ def _ensure_migration_columns(db):
         ("detections", "jersey_confidence", "ALTER TABLE detections ADD COLUMN jersey_confidence REAL"),
         ("plays", "category_id", "ALTER TABLE plays ADD COLUMN category_id INTEGER REFERENCES play_categories(id)"),
         ("plays", "share_token", "ALTER TABLE plays ADD COLUMN share_token TEXT UNIQUE"),
+        ("plays", "parent_play_id", "ALTER TABLE plays ADD COLUMN parent_play_id INTEGER REFERENCES plays(id) ON DELETE SET NULL"),
+        ("plays", "progression_order", "ALTER TABLE plays ADD COLUMN progression_order INTEGER NOT NULL DEFAULT 0"),
+        ("plays", "list_order", "ALTER TABLE plays ADD COLUMN list_order INTEGER"),
         ("play_steps", "source_image", "ALTER TABLE play_steps ADD COLUMN source_image TEXT"),
     ]
     existing = {
@@ -3295,7 +3298,26 @@ def render_practices_page(*, error=None, message=None, filters=None, edit_practi
 
 
 def refresh_game_stats(db, game_id):
-    if not feature_enabled("ENABLE_AUTO_STATS_M1"):
+    """Refresh derived stats after review/auto-accept.
+
+    Safe outside Flask app context (analysis_launcher / regenerate_events CLI):
+    feature flag is resolved from Config + DB settings when current_app is absent.
+    """
+    from flask import has_app_context
+
+    if has_app_context():
+        enabled = feature_enabled("ENABLE_AUTO_STATS_M1")
+    else:
+        from config import Config
+
+        settings = load_all_settings(
+            feature_defaults=dict(Config.FEATURES),
+            analysis_defaults=dict(Config.ANALYSIS_CONFIG),
+            ai_defaults=AI_DEFAULTS,
+            db=db,
+        )
+        enabled = bool(settings["features"].get("ENABLE_AUTO_STATS_M1", False))
+    if not enabled:
         return
     from stats import refresh_stats
 

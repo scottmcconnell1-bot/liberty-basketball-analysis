@@ -18,7 +18,7 @@ def _login_coach(client, password="test-coach-secret"):
 def test_coach_login_sets_session(client, coach_password):
     resp = _login_coach(client, coach_password)
     assert resp.status_code in (302, 303)
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/coach/progress")
 
     with client.session_transaction() as sess:
         assert sess.get("coach_portal") is True

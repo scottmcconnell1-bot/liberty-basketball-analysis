@@ -109,6 +109,21 @@ data/hoopsalytics/detached_*.json
 # Model weights in root
 yolo*.pt
 
+# Hoopsalytics / teach runtime (regenerated locally; do not commit)
+data/hoopsalytics/*.log
+data/hoopsalytics/*.err.log
+data/hoopsalytics/*.out.log
+data/hoopsalytics/detached_pids.json
+data/hoopsalytics/coach_*.txt
+data/hoopsalytics/improve_pass*
+data/hoopsalytics/compare_*.json
+data/hoopsalytics/detached_*.json
+data/hoopsalytics/teach_loop_state.json
+data/hoopsalytics/boxscore_teach_report.json
+data/hoopsalytics/full_film_panel_latest.json
+data/hoopsalytics/full_film_panel_history.jsonl
+# Keep tracked: docs/LEARNING_STATUS.md, data/hoopsalytics/full_film_panel_targets.json
+
 # Backup files
 *.bak
 

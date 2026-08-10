@@ -17,8 +17,11 @@ set LIBERTY_COACH_PASSWORD=choose-a-strong-shared-password
 
 Or add that line near the top of a local launcher wrapper before starting the app.
 
-3. Share with coaches: `https://<your-permanent-hostname>/coach`
-4. Feature flag `ENABLE_COACH_PORTAL` defaults **True** (intentional). Uncheck in Settings if you need to disable the routes.
+3. Share with coaches: `https://liberty-coach.tail368a37.ts.net/coach`
+4. After login, coaches land on **`/coach/progress`** — live HUDL queue %, active analysis, and fixed-panel gates (plus the nightly `LEARNING_STATUS.md` text).
+5. Feature flag `ENABLE_COACH_PORTAL` defaults **True** (intentional). Uncheck in Settings if you need to disable the routes.
+
+Keep Liberty + Funnel on port **8080** via `py -3.12 scripts/start_hoops_teach_detached.py` so coaches always hit the same app that is learning.
 
 If `LIBERTY_COACH_PASSWORD` is empty, `/coach` shows setup instructions instead of a login form.
 
