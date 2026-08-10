@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Stat Books - Liberty Basketball{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Stat Books</h1>
+  <p class="text-muted">Spiral scorebook photo → align → digit OCR → checksum (TP=2·FG2+3·FG3+FTM) → coach confirm</p>
+</div>
+
+<div class="row">
+  <div class="col-6">
+    <div class="card">
+      <div class="card-header"><h2>Upload game sheet</h2></div>
+      <div class="card-body">
+        <form method="post" id="upload-form" action="/stat-books/games/placeholder/upload" enctype="multipart/form-data">
+          <div class="form-group">
+            <label>Game ID</label>
+            <input type="text" id="game_id" class="form-control" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,80}" placeholder="e.g. 2026-02-28-hsb">
+          </div>
+          <div class="form-group">
+            <label>Template</label>
+            <select name="template_id" class="form-control">
+              {% for t in templates %}
+              <option value="{{ t }}" {% if t == default_template %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Photo / scan (two-page spread)</label>
+            <input type="file" name="scan" class="form-control" accept="image/*" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Upload &amp; extract</button>
+        </form>
+        <p class="text-muted" style="margin-top:10px;font-size:0.9rem;">OCR uses EasyOCR/Tesseract when installed; otherwise correct cells on the review screen. No auto-accept.</p>
+      </div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header"><h2>Scott samples</h2></div>
+      <div class="card-body">
+        <form method="post" action="/stat-books/sample">
+          <button type="submit" class="btn btn-secondary">Open HSB / Liberty sample draft</button>
+        </form>
+        <p class="text-muted" style="margin-top:8px;font-size:0.9rem;">Seeds a partial roster from the District Finals photo for review/confirm practice.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="card">
+      <div class="card-header"><h2>Templates</h2></div>
+      <div class="card-body">
+        <ul>
+          {% for t in templates %}
+          <li><a href="/stat-books/templates/{{ t }}">{{ t }}</a></li>
+          {% else %}
+          <li class="text-muted">None</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header"><h2>Confirmed</h2></div>
+      <div class="card-body">
+        <ul>
+          {% for g in confirmed %}
+          <li><a href="/stat-books/confirmed/{{ g }}">{{ g }}.json</a> · <a href="/stat-books/games/{{ g }}/review">review</a></li>
+          {% else %}
+          <li class="text-muted">None yet</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('upload-form').addEventListener('submit', function (e) {
+  var gid = document.getElementById('game_id').value.trim();
+  if (!gid) { e.preventDefault(); return; }
+  this.action = '/stat-books/games/' + encodeURIComponent(gid) + '/upload';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Calibrate {{ template_id }} - Stat Books{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Calibrate: {{ template_id }}</h1>
+  <p class="text-muted">Blank form + <code>layout.json</code> (normalized 0–1 cells). Priority: jersey / FG2 / FG3 / FTA / FTM / TP / final score.</p>
+  <p><a href="/stat-books">← Stat Books</a></p>
+</div>
+<div class="row">
+  <div class="col-5">
+    <div class="card">
+      <div class="card-header"><h2>Blank</h2></div>
+      <div class="card-body">
+        {% if has_blank %}
+        <img src="/stat-books/templates/{{ template_id }}/blank-file" alt="blank" style="max-width:100%;border:1px solid #ccc;">
+        <p class="text-muted">{{ blank_name }}</p>
+        {% else %}
+        <p class="text-muted">No blank.png yet.</p>
+        {% endif %}
+        <form method="post" action="/stat-books/templates/{{ template_id }}/blank" enctype="multipart/form-data">
+          <input type="file" name="blank" accept="image/*" required>
+          <button type="submit" class="btn btn-primary" style="margin-top:8px;">Upload blank</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-7">
+    <div class="card">
+      <div class="card-header"><h2>layout.json</h2></div>
+      <div class="card-body">
+        <form method="post" action="/stat-books/templates/{{ template_id }}/layout">
+          <textarea name="layout_json" class="form-control" rows="28" style="font-family:ui-monospace,monospace;font-size:0.8rem;">{{ layout_json }}</textarea>
+          <button type="submit" class="btn btn-primary" style="margin-top:12px;">Save layout</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

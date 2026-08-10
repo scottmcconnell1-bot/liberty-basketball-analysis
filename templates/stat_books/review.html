@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Review {{ game_id }} - Stat Books{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Review: {{ game_id }}</h1>
+  <p class="text-muted">
+    Align: {{ meta.get('align_mode','n/a') }} · OCR: {{ (meta.get('ocr') or {}).get('backend','n/a') }}
+    · Rule: TP = 2·FG2 + 3·FG3 + FTM · Nothing auto-accepts
+  </p>
+  <p><a href="/stat-books">← Stat Books</a></p>
+</div>
+
+{% set issues = ((box.validation or {}).issues) if box.validation else [] %}
+{% if issues %}
+<div class="card" style="border-color:#c0392b;margin-bottom:16px;">
+  <div class="card-header"><h2>Validation flags ({{ issues|length }})</h2></div>
+  <div class="card-body"><ul>{% for iss in issues %}<li><code>{{ iss.code }}</code> — {{ iss.message }}</li>{% endfor %}</ul></div>
+</div>
+{% else %}
+<div class="card" style="border-color:#27ae60;margin-bottom:16px;"><div class="card-body">Validation OK — still confirm manually.</div></div>
+{% endif %}
+
+<div class="row">
+  <div class="col-5">
+    <div class="card">
+      <div class="card-header"><h2>Sheet</h2></div>
+      <div class="card-body">
+        {% if image_name %}
+        <img id="sheet-img" src="/stat-books/games/{{ game_id }}/image/{{ image_name }}" alt="sheet" style="max-width:100%;border:1px solid #ccc;cursor:crosshair;">
+        <p class="text-muted" style="font-size:0.85rem;">Click 4 corners TL→TR→BR→BL, then Align.</p>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">Clear</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-align">Align &amp; re-extract</button>
+        <pre id="corners-out" style="font-size:0.75rem;"></pre>
+        {% else %}<p class="text-muted">No image.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-7">
+    <div class="card">
+      <div class="card-header"><h2>Box grid</h2></div>
+      <div class="card-body" style="overflow-x:auto;">
+        <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+          <label>Home <input id="home_team" value="{{ box.home_team or 'Liberty' }}" style="width:7rem;"></label>
+          <label>Away <input id="away_team" value="{{ box.away_team or '' }}" style="width:7rem;"></label>
+          <label>Home final <input id="final_home" type="number" value="{{ box.final_score_home if box.final_score_home is not none else '' }}" style="width:4rem;"></label>
+          <label>Away final <input id="final_away" type="number" value="{{ box.final_score_away if box.final_score_away is not none else '' }}" style="width:4rem;"></label>
+        </div>
+        <table class="table" id="box-table" style="font-size:0.85rem;">
+          <thead><tr><th>Side</th><th>#</th><th>Name</th><th>FG2</th><th>FG3</th><th>FTA</th><th>FTM</th><th>TP</th></tr></thead>
+          <tbody>
+            {% for p in box.players %}
+            <tr>
+              <td>
+                <select data-field="team">
+                  <option value="home" {% if p.team=='home' %}selected{% endif %}>home</option>
+                  <option value="away" {% if p.team=='away' %}selected{% endif %}>away</option>
+                </select>
+              </td>
+              <td><input data-field="jersey" value="{{ p.jersey or '' }}" style="width:2.5rem;"></td>
+              <td><input data-field="name" value="{{ p.name or '' }}" style="width:7rem;"></td>
+              <td><input data-field="fg2" value="{{ (p.extras or {}).get('fg2','') if p.extras else '' }}" style="width:2.4rem;"></td>
+              <td><input data-field="fg3" value="{{ (p.extras or {}).get('fg3','') if p.extras else '' }}" style="width:2.4rem;"></td>
+              <td><input data-field="fta" value="{{ p.fta if p.fta is not none else '' }}" style="width:2.4rem;"></td>
+              <td><input data-field="ftm" value="{{ p.ftm if p.ftm is not none else '' }}" style="width:2.4rem;"></td>
+              <td><input data-field="pts" value="{{ p.pts if p.pts is not none else '' }}" style="width:2.4rem;"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <button type="button" class="btn btn-secondary" id="btn-recheck">Re-check</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm">Confirm box</button>
+        <input type="text" id="confirmed-by" value="coach" style="width:8rem;margin-left:8px;">
+        <p id="status-msg" class="text-muted"></p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var gameId = {{ game_id|tojson }};
+  var templateId = {{ box.template_id|tojson }};
+  var corners = [];
+  var img = document.getElementById('sheet-img');
+  var out = document.getElementById('corners-out');
+  function num(v) { v = (v||'').trim(); if (!v) return null; var n = parseInt(v,10); return Number.isNaN(n) ? null : n; }
+  function readBox() {
+    var players = [];
+    document.querySelectorAll('#box-table tbody tr').forEach(function (tr) {
+      var row = { extras: {} };
+      tr.querySelectorAll('input,select').forEach(function (inp) {
+        var f = inp.getAttribute('data-field');
+        var v = inp.value;
+        if (f === 'team' || f === 'jersey' || f === 'name') row[f] = (v||'').trim() || null;
+        else if (f === 'fg2' || f === 'fg3') { var n = num(v); if (n !== null) row.extras[f] = n; }
+        else row[f] = num(v);
+      });
+      players.push(row);
+    });
+    return {
+      schema_version: 1,
+      game_id: gameId,
+      template_id: templateId,
+      home_team: document.getElementById('home_team').value.trim() || null,
+      away_team: document.getElementById('away_team').value.trim() || null,
+      final_score_home: num(document.getElementById('final_home').value),
+      final_score_away: num(document.getElementById('final_away').value),
+      players: players,
+      quarters: {{ (box.quarters or [])|tojson }},
+      checksums: {{ (box.checksums or {})|tojson }}
+    };
+  }
+  if (img) img.addEventListener('click', function (ev) {
+    if (corners.length >= 4) return;
+    var r = img.getBoundingClientRect();
+    corners.push([Math.round((ev.clientX-r.left)*(img.naturalWidth/r.width)), Math.round((ev.clientY-r.top)*(img.naturalHeight/r.height))]);
+    out.textContent = JSON.stringify(corners);
+  });
+  var clear = document.getElementById('btn-clear');
+  if (clear) clear.addEventListener('click', function () { corners = []; out.textContent = ''; });
+  var align = document.getElementById('btn-align');
+  if (align) align.addEventListener('click', function () {
+    if (corners.length !== 4) { alert('Need 4 corners'); return; }
+    fetch('/stat-books/games/' + encodeURIComponent(gameId) + '/align', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ corners: corners, template_id: templateId })
+    }).then(function () { location.reload(); });
+  });
+  document.getElementById('btn-recheck').addEventListener('click', function () {
+    fetch('/stat-books/games/' + encodeURIComponent(gameId) + '/draft', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ box: readBox() })
+    }).then(function () { location.reload(); });
+  });
+  document.getElementById('btn-confirm').addEventListener('click', function () {
+    fetch('/stat-books/games/' + encodeURIComponent(gameId) + '/confirm', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ box: readBox(), confirmed_by: document.getElementById('confirmed-by').value.trim() || 'coach' })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      document.getElementById('status-msg').textContent = data.ok ? ('Saved ' + data.path) : JSON.stringify(data);
+    });
+  });
+})();
+</script>
+{% endblock %}
