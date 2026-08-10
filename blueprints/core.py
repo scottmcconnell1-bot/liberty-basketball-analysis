@@ -1681,7 +1681,7 @@ def film_review_workspace(filename):
 
 @core.route("/film/assisted-stat-sample")
 def assisted_stat_sample():
-    """SAMPLE / DELETE ME — static AI-assisted stating prototype (fake data)."""
+    """SAMPLE / DELETE ME â€“ static AI-assisted stating prototype (fake data)."""
     root = os.path.abspath(os.path.join(current_app.root_path, "docs", "prototypes"))
     return send_from_directory(root, "assisted_stat_sample.html")
 
