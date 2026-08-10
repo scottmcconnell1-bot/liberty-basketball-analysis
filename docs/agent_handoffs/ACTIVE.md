@@ -10,7 +10,7 @@ Base: `jason-5-may-updates` + videos light-list commits (`cursor/videos-fast-lis
 | Field | Value |
 | --- | --- |
 | **id** | coach-ledger-foundation |
-| **status** | `in_progress` |
+| **status** | `done` |
 | **assigned_to** | cursor-agent |
 
 ## Scott approvals (2026-08-09)
