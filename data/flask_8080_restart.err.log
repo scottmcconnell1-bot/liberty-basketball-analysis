@@ -16,3 +16,9 @@ Press CTRL+C to quit
 127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /static/manifest.json HTTP/1.1" 304 -
 127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /api/videos?light=1&sort=title&archived=0 HTTP/1.1" 200 -
 127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /api/videos/archive-counts HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /static/img/patriot-logo.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /static/manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /api/videos?light=1&sort=title&archived=0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /api/videos/archive-counts HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:22:48] "GET /favicon.ico HTTP/1.1" 404 -
