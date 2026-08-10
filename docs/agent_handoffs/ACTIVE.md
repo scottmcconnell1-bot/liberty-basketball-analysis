@@ -1,50 +1,44 @@
-﻿# Active Task
+# Active Task
 
-Updated: 2026-08-09 (ops: stale Flask + login)
+Updated: 2026-08-09 (videos Active/Archive + bulk archive)
 
-Branch: `jason-5-may-updates` @ `c4a0529`  
-Current working tip for Scott: coach-ledger unified tip (review + stat-book + sticky/assisted sample).
+Branch: `cursor/videos-archive-ac1f`  
+Tip: `3979ef2` (encoding fix on top of `ac78b33` archive feature)
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | ops-stale-flask-login |
+| **id** | videos-archive |
 | **status** | `done` |
 | **assigned_to** | cursor-agent |
 
-## Included on this tip
+## Scope delivered
 
-- Videos light-list + Review button
-- Coach-ledger foundation (auto-accept off + confirmed-box schema)
-- Review workspace MVP — Accept/Correct/Reject in Film Tool
-- Stat-book MVP — spiral scorebook extract/confirm
-- Sticky choreography / assisted stating SAMPLE
-- FastDraw / highlight / Active-Archive tabs: **not** on this tip yet (separate branches)
+- `videos.archived` + `archived_at` via runtime ALTER (no schema.sql)
+- `/videos` Active vs Archive tabs (`?view=archive`)
+- Archive / Unarchive per-row buttons + high-contrast tab CSS
+- APIs: `?archived=0|1|all`, `/api/videos/archive-counts`, `POST .../archive|unarchive`
+- Bulk-archived all rows in `film_analysis.db`
 
-## Try (after hard refresh)
+## Try
 
-1. `http://127.0.0.1:8080/videos` — Review button; light list
-2. `http://127.0.0.1:8080/stat-books` — must be 200 (proves new code)
-3. `http://127.0.0.1:8080/film/assisted-stat-sample`
-4. Staff login: `/login` with email (not username)
-5. Coach: `/coach` with `.env` `LIBERTY_COACH_PASSWORD`
+1. `/videos` � Active list empty after bulk archive
+2. `/videos?view=archive` � all games
+3. Unarchive one game to move it back to Active
 
-## Ops report (2026-08-09 night)
+## Report
 
 ### Proven
 
-- Stale Flask (started 6:23 PM) was older than tip merge (7:43 PM) → `/stat-books` 404 and missing UI.
-- Killed launchers + app.py; restarted one clean `app.py` on :8080 from tip.
-- Staff login works with email `smcconnell@legacycharterschool.net` (DB password matches known Hoops password).
-- Local fix: one bad Windows-1252 byte in `blueprints/core.py` docstring blocked UTF-8 import (uncommitted 1-line fix).
-- `TEACH_LOOP_PAUSED` left in place; teach loop not restarted.
+- Commit `ac78b33` feature + `3979ef2` Flask import fix; pushed to origin
+- DB: active=0, archived=63 (film_analysis.db)
+- Flask serving archive tip on :8080
 
 ### Inferred
 
-- Scott signing in with a username (not email) would always fail — form field is `email`.
-- “No UI changes” was stale process, not wrong branch tip (jason already at coach-ledger merge).
+- Scott's unreadability was low-contrast secondary buttons / crowded action row
 
 ### Unknown
 
-- Whether Active/Archive videos UI was expected tonight (not on `c4a0529`; fastdraw/highlights still separate).
+- Whether JrHigh uploads after this point should stay Active by default (new uploads start unarchived)
