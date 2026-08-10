@@ -1,53 +1,43 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (branches unified on coach-ledger)
+Updated: 2026-08-09
 
-Branch: `cursor/coach-ledger-ac1f`  
-Current working tip for Scott: foundation + review workspace + stat-book + playbook sticky/assisted sample work.
+Branch: `cursor/highlight-clips-ac1f`  
+Base: `c4a0529` (`jason-5-may-updates` / coach-ledger tip)
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | coach-ledger-unified |
+| **id** | highlight-clips-mvp |
 | **status** | `done` |
 | **assigned_to** | cursor-agent |
 
-## Included on this tip
+## Goal
 
-- Videos light-list (`cursor/videos-fast-list-ac1f`)
-- Coach-ledger foundation (auto-accept off + confirmed-box schema)
-- Review workspace MVP — Accept/Correct/Reject in Film Tool
-- Stat-book MVP — spiral scorebook extract/confirm
-- Sticky choreography / FastDraw vector path (`cursor/sticky-choreography-ac1f`)
-- Assisted stating SAMPLE prototype (`cursor/assisted-stat-sample-ac1f`)
-- Full-film panel lineage (ancestor of sticky)
+Highlight clip generation from the **reviewed event ledger** — filter by jersey / event type, list moments, save clip rows + optional ffmpeg cuts (else seek/export list).
 
 ## Try
 
-1. `/videos` — light list + Review button
-2. `/film/<stored_filename>/review?game_id=<analysis_key>` — Accept / Correct / Reject
-3. `/stat-books` and `/stat-books/sample` — scorebook OCR review/confirm
-4. `/film/assisted-stat-sample` — SAMPLE assisted stating prototype
-5. Playbook Play All / sticky choreography flows (existing playbook UI)
-6. `/settings` — auto-accept locked off
-
-## Not merged into jason
-
-`jason-5-may-updates` left at prior tip; consolidate here on `cursor/coach-ledger-ac1f` first.
+1. `/highlights` — pick game → filter jersey and/or event type → List moments
+2. Select moments → **Generate clips** (saves PD/canonical clips; starts ffmpeg trims when available) or **Download clip list**
+3. Empty game with no accepted/corrected events shows Review workspace instruction
+4. `/api/highlights/games`, `/api/highlights/moments`, `POST /api/highlights/generate`
 
 ## Report
 
 ### Proven
 
-- Merged `review-workspace-mvp` (`2925973`) and `stat-book-mvp` (`1246067`) into coach-ledger.
-- Merged `assisted-stat-sample` (includes sticky + full-film lineage) with both route sets kept.
-- Untracked local probes/DB dumps left uncommitted.
+- Source of truth: `events.review_status IN ('accepted','corrected')` via `highlight_clips.py` + `_trusted_event_review_clause`.
+- Pending AI events excluded from moments and generate (returned in `missing_event_ids`).
+- UI + APIs in `blueprints/clips.py`; nav link under Film & Stats.
+- Generate reuses `player_development.create_clip` (canonical `clips` + `player_development_clips`) and `video_trim.start_trim_job` when ffmpeg + video exist.
+- Seek links use Film Tool `?t=` / `game_id=` pattern.
 
 ### Inferred
 
-- Playbook sticky + jason-based ledger can coexist; conflicts were limited to docs + blueprint registration.
+- Jersey filter matches bare numbers and labels containing the number token; roster jersey_number column not required for MVP.
 
 ### Unknown
 
-- Whether Scott wants `jason-5-may-updates` fast-forwarded to this tip next.
+- Whether Scott wants batch zip download of finished ffmpeg outputs in a follow-up (jobs currently pollable via `/api/videos/trim/<job_id>`).

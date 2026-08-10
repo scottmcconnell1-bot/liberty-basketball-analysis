@@ -10,6 +10,12 @@ This blueprint covers all API routes related to:
       PUT    /api/clips/<clip_id>    — update a clip
       DELETE /api/clips/<clip_id>    — delete a clip
 
+  - Highlight clips (reviewed ledger)
+      GET    /highlights                   — filter jersey/type → generate clips
+      GET    /api/highlights/games         — games with reviewed event counts
+      GET    /api/highlights/moments       — reviewed moments + seek links
+      POST   /api/highlights/generate      — save clips + optional ffmpeg cuts
+
   - Game Events (manual tagging)
       POST   /api/save_event                    — save a new event
       GET    /api/events/<game_id>              — list events for a game (optionally filtered by event_type)
@@ -27,7 +33,7 @@ import json
 import sqlite3
 
 from flask import (
-    Blueprint, abort, current_app, g, jsonify, redirect, request, session, url_for,
+    Blueprint, abort, current_app, g, jsonify, redirect, render_template, request, session, url_for,
 )
 
 import player_development as pd_helpers
@@ -834,3 +840,102 @@ def api_clips_delete(clip_id):
     db = get_db()
     pd_helpers.delete_clip(db, clip_id)
     return jsonify({"status": "deleted"})
+
+
+# ── Highlight clips (reviewed ledger → cut/export) ─────────
+
+@clips_bp.route("/highlights")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def highlights_page():
+    """Filter reviewed events by jersey/type and generate highlight clips."""
+    from video_trim import ffmpeg_available
+
+    return render_template(
+        "highlights.html",
+        ffmpeg_available=ffmpeg_available(),
+    )
+
+
+@clips_bp.route("/api/highlights/games")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_highlights_games():
+    from highlight_clips import REVIEW_SCOPE, list_highlight_games
+
+    db = get_db()
+    return jsonify({
+        "review_scope": REVIEW_SCOPE,
+        "games": list_highlight_games(db),
+    })
+
+
+@clips_bp.route("/api/highlights/moments")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_highlights_moments():
+    from highlight_clips import (
+        DEFAULT_PAD_AFTER_MS,
+        DEFAULT_PAD_BEFORE_MS,
+        list_highlight_moments,
+    )
+
+    game_id = (request.args.get("game_id") or "").strip()
+    if not game_id:
+        return jsonify({"error": "game_id is required"}), 400
+
+    try:
+        pad_before = int(request.args.get("pad_before_ms") or DEFAULT_PAD_BEFORE_MS)
+        pad_after = int(request.args.get("pad_after_ms") or DEFAULT_PAD_AFTER_MS)
+    except (TypeError, ValueError):
+        return jsonify({"error": "pad_before_ms/pad_after_ms must be integers"}), 400
+
+    payload = list_highlight_moments(
+        get_db(),
+        game_id,
+        jersey=(request.args.get("jersey") or "").strip() or None,
+        player=(request.args.get("player") or "").strip() or None,
+        event_type=(request.args.get("event_type") or "").strip() or None,
+        pad_before_ms=pad_before,
+        pad_after_ms=pad_after,
+    )
+    return jsonify(payload)
+
+
+@clips_bp.route("/api/highlights/generate", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def api_highlights_generate():
+    from highlight_clips import (
+        DEFAULT_PAD_AFTER_MS,
+        DEFAULT_PAD_BEFORE_MS,
+        generate_highlight_clips,
+    )
+
+    data = request.get_json(silent=True) or {}
+    game_id = data.get("game_id")
+    if game_id in (None, ""):
+        return jsonify({"error": "game_id is required"}), 400
+
+    event_ids = data.get("event_ids") or []
+    if not isinstance(event_ids, list) or not event_ids:
+        return jsonify({"error": "event_ids must be a non-empty list"}), 400
+
+    try:
+        pad_before = int(data.get("pad_before_ms") or DEFAULT_PAD_BEFORE_MS)
+        pad_after = int(data.get("pad_after_ms") or DEFAULT_PAD_AFTER_MS)
+    except (TypeError, ValueError):
+        return jsonify({"error": "pad_before_ms/pad_after_ms must be integers"}), 400
+
+    save_clips = str(data.get("save_clips", "true")).lower() not in ("0", "false", "no")
+    cut_video = str(data.get("cut_video", "true")).lower() not in ("0", "false", "no")
+
+    result = generate_highlight_clips(
+        get_db(),
+        game_id,
+        event_ids,
+        pad_before_ms=pad_before,
+        pad_after_ms=pad_after,
+        save_clips=save_clips,
+        cut_video=cut_video,
+        app=current_app._get_current_object(),
+    )
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), int(result.get("status") or 400)
+    return jsonify(result), 201
