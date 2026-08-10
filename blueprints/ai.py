@@ -5,8 +5,12 @@ Routes:
   GET  /api/analysis_status/<game_id>  - Analysis status for an analysis key
   GET  /api/stats/<game_id>            - Stats for a game/analysis key
   POST /api/upload_video               - Upload a video file
-  GET  /api/videos                     - List all videos (light by default; ?full=1 for counts)
+  GET  /api/videos                     - List videos (light by default; ?full=1 for counts;
+                                         default active only; ?archived=1|all)
+  GET  /api/videos/archive-counts      - Active/archive counts for list badges
   GET  /api/videos/<int:vid_id>        - One video with full counts
+  POST /api/videos/<int:vid_id>/archive - Hide video from active list
+  POST /api/videos/<int:vid_id>/unarchive - Restore video to active list
   POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
   DELETE /api/videos/<int:vid_id>      - Delete a video
@@ -116,6 +120,7 @@ def _enrich_video_list_row(db, row, *, light=False):
         payload["team_label"] = None
 
     payload["display_game"] = f"Liberty vs {opponent}" if opponent else "Liberty"
+    payload["archived"] = 1 if int(payload.get("archived") or 0) else 0
 
     # Light list: keep joined analysis_status / analysis_key from the list query.
     # Skip per-row COUNT(*) on detections/events (tens of millions of rows, no index).
@@ -841,10 +846,81 @@ def _api_videos_wants_light_list() -> bool:
     return str(light_arg).lower() in {"1", "true", "yes"}
 
 
+def _ensure_videos_archived_column(db):
+    """Additive archive columns — does not edit schema.sql (Scott gate)."""
+    cols = {row[1] for row in db.execute("PRAGMA table_info(videos)").fetchall()}
+    if "archived" not in cols:
+        db.execute(
+            "ALTER TABLE videos ADD COLUMN archived INTEGER NOT NULL DEFAULT 0"
+        )
+    if "archived_at" not in cols:
+        db.execute("ALTER TABLE videos ADD COLUMN archived_at TIMESTAMP")
+
+
+def _parse_videos_archived_filter():
+    """Return 0 (active), 1 (archived), or None (all). Default: active only."""
+    raw = request.args.get("archived")
+    if raw is None or str(raw).strip() == "":
+        return 0
+    value = str(raw).strip().lower()
+    if value in {"all", "*"}:
+        return None
+    if value in {"1", "true", "yes", "archived"}:
+        return 1
+    if value in {"0", "false", "no", "active"}:
+        return 0
+    return 0
+
+
+def _videos_archive_where_sql(archived_filter):
+    """SQL AND-clause fragment for archive filter (empty string = no filter)."""
+    if archived_filter is None:
+        return ""
+    return f" AND COALESCE(v.archived, 0) = {int(archived_filter)}"
+
+
+def _videos_archive_counts(db):
+    _ensure_videos_archived_column(db)
+    active = db.execute(
+        "SELECT COUNT(*) AS c FROM videos WHERE COALESCE(archived, 0) = 0"
+    ).fetchone()["c"]
+    archived = db.execute(
+        "SELECT COUNT(*) AS c FROM videos WHERE COALESCE(archived, 0) = 1"
+    ).fetchone()["c"]
+    return {"active": int(active), "archived": int(archived)}
+
+
+def _set_video_archived(db, vid_id, archived: bool):
+    _ensure_videos_archived_column(db)
+    row = db.execute("SELECT id FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not row:
+        return None
+    if archived:
+        db.execute(
+            "UPDATE videos SET archived = 1, archived_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (vid_id,),
+        )
+    else:
+        db.execute(
+            "UPDATE videos SET archived = 0, archived_at = NULL WHERE id = ?",
+            (vid_id,),
+        )
+    db.commit()
+    out = db.execute(
+        "SELECT id, archived, archived_at FROM videos WHERE id = ?",
+        (vid_id,),
+    ).fetchone()
+    return {
+        "id": vid_id,
+        "archived": 1 if int(out["archived"] or 0) else 0,
+        "archived_at": out["archived_at"],
+    }
+
+
 @ai_bp.route("/api/videos")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_videos():
-    """Return all videos from the DB with their analysis status.
+    """Return videos from the DB with their analysis status.
 
     Query params:
       (default) – light list: skip per-video detection/event COUNT(*) (fast).
@@ -852,16 +928,23 @@ def api_videos():
       light=1   – same as default (explicit).
       light=0 / full=1 – include detection/event counts (can be very slow).
       sort=title (default for light) | id – list order.
+      archived=0 (default) – active games only.
+      archived=1 – archived games only.
+      archived=all – both (still no detection COUNT(*) in light mode).
     """
     db = get_db()
+    _ensure_videos_archived_column(db)
     light = _api_videos_wants_light_list()
     sort = (request.args.get("sort") or ("title" if light else "id")).strip().lower()
+    archived_filter = _parse_videos_archived_filter()
+    archive_where = _videos_archive_where_sql(archived_filter)
     latest_run = latest_analysis_run_id_subquery()
     rows = db.execute(f"""
         SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
                (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
         FROM videos v
         LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+        WHERE 1=1{archive_where}
         ORDER BY v.id DESC
     """).fetchall()
 
@@ -878,6 +961,7 @@ def api_videos():
                    (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
             FROM videos v
             LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+            WHERE 1=1{archive_where}
             ORDER BY v.id DESC
         """).fetchall()
 
@@ -887,11 +971,19 @@ def api_videos():
     return jsonify(payloads)
 
 
+@ai_bp.route("/api/videos/archive-counts")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_videos_archive_counts():
+    """Cheap active/archive counts for Video Library badges (no detection scans)."""
+    return jsonify(_videos_archive_counts(get_db()))
+
+
 @ai_bp.route("/api/videos/<int:vid_id>", methods=["GET"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_video_detail(vid_id):
     """Return one video with full analysis status + detection/event counts."""
     db = get_db()
+    _ensure_videos_archived_column(db)
     latest_run = latest_analysis_run_id_subquery()
     row = db.execute(
         f"""
@@ -929,6 +1021,26 @@ def api_video_detail(vid_id):
         ).fetchone()
 
     return jsonify(_enrich_video_list_row(db, row, light=False))
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/archive", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_archive(vid_id):
+    """Hide a video from the default Active list (Film Tool deep links still work)."""
+    result = _set_video_archived(get_db(), vid_id, True)
+    if result is None:
+        return jsonify({"error": "Video not found"}), 404
+    return jsonify({"status": "ok", **result})
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/unarchive", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_unarchive(vid_id):
+    """Restore a video to the Active list."""
+    result = _set_video_archived(get_db(), vid_id, False)
+    if result is None:
+        return jsonify({"error": "Video not found"}), 404
+    return jsonify({"status": "ok", **result})
 
 
 @ai_bp.route("/videos/<int:vid_id>/compare")

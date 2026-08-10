@@ -1732,6 +1732,69 @@ def test_api_videos_light_skips_counts_and_sorts_by_title(client, db):
     assert alpha["analysis_status"] == "completed"
 
 
+def test_api_videos_archive_filter_and_toggle(client, db):
+    from blueprints.ai import _ensure_videos_archived_column
+
+    _ensure_videos_archived_column(db)
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("z.mp4", "z.mp4", "uploads/z.mp4", 100, "Zebra", "g_zebra"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("a.mp4", "a.mp4", "uploads/a.mp4", 100, "Alpha", "g_alpha"),
+    )
+    db.commit()
+
+    counts = client.get("/api/videos/archive-counts").get_json()
+    assert counts == {"active": 2, "archived": 0}
+
+    active = client.get("/api/videos?light=1&sort=title").get_json()
+    assert [row["display_game"] for row in active] == [
+        "Liberty vs Alpha",
+        "Liberty vs Zebra",
+    ]
+    assert all(row["archived"] == 0 for row in active)
+
+    archived = client.post("/api/videos/2/archive").get_json()
+    assert archived["status"] == "ok"
+    assert archived["archived"] == 1
+
+    active_after = client.get("/api/videos?light=1&sort=title").get_json()
+    assert [row["display_game"] for row in active_after] == ["Liberty vs Zebra"]
+
+    archive_list = client.get("/api/videos?light=1&sort=title&archived=1").get_json()
+    assert [row["display_game"] for row in archive_list] == ["Liberty vs Alpha"]
+    assert archive_list[0]["archived"] == 1
+    assert archive_list[0]["detection_count"] is None
+
+    counts_after = client.get("/api/videos/archive-counts").get_json()
+    assert counts_after == {"active": 1, "archived": 1}
+
+    # Detail + deep-link style access still works for archived videos.
+    detail = client.get("/api/videos/2").get_json()
+    assert detail["archived"] == 1
+    assert detail["stored_filename"] == "a.mp4"
+
+    all_rows = client.get("/api/videos?light=1&sort=title&archived=all").get_json()
+    assert [row["display_game"] for row in all_rows] == [
+        "Liberty vs Alpha",
+        "Liberty vs Zebra",
+    ]
+
+    restored = client.post("/api/videos/2/unarchive").get_json()
+    assert restored["archived"] == 0
+    active_restored = client.get("/api/videos?light=1&sort=title").get_json()
+    assert [row["display_game"] for row in active_restored] == [
+        "Liberty vs Alpha",
+        "Liberty vs Zebra",
+    ]
+
+
 def test_compare_video_analysis_keeps_run_specific_counts(client, db):
     db.execute(
         """INSERT INTO videos
