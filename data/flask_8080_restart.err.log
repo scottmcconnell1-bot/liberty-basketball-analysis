@@ -1,25 +1,18 @@
- * Tip: There are .env files present. Install python-dotenv to use them.
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:8080
  * Running on http://192.168.1.101:8080
 Press CTRL+C to quit
-127.0.0.1 - - [09/Aug/2026 22:24:07] "GET /stat-books HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:07] "GET /videos HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:07] "GET /login HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "GET /film/assisted-stat-sample HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "GET /login HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "POST /login HTTP/1.1" 302 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "POST /login HTTP/1.1" 302 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "GET /profile HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:24:08] "GET /videos HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "GET /stat-books HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "GET /videos HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "POST /login HTTP/1.1" 302 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "GET /profile HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "POST /coach HTTP/1.1" 302 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "GET /coach/progress HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:41] "GET /videos HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:26:46] "GET /login HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:43:58] "GET /videos HTTP/1.1" 200 -
-127.0.0.1 - - [09/Aug/2026 22:46:25] "GET /stat-books HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 00:53:19] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 00:53:19] "GET /api/videos/archive-counts HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 01:08:16] "GET /xmlrpc.php HTTP/1.1" 404 -
+127.0.0.1 - - [10/Aug/2026 01:08:16] "GET /wp-login.php HTTP/1.1" 404 -
+127.0.0.1 - - [10/Aug/2026 12:14:14] "GET /coach HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:14:14] "GET /static/img/patriot-logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [10/Aug/2026 12:14:15] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [10/Aug/2026 12:14:15] "GET /static/manifest.json HTTP/1.1" 304 -
+127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /videos HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /static/img/patriot-logo.jpg HTTP/1.1" 304 -
+127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /static/manifest.json HTTP/1.1" 304 -
+127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /api/videos?light=1&sort=title&archived=0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Aug/2026 12:14:20] "GET /api/videos/archive-counts HTTP/1.1" 200 -

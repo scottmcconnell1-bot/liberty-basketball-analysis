@@ -8,10 +8,13 @@
   }
   #videos-card .table-responsive {
     margin: 0 -0.25rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   #videos-card .video-table {
     table-layout: auto;
     width: 100%;
+    min-width: 64rem;
   }
   #videos-card .video-table th,
   #videos-card .video-table td {
@@ -41,25 +44,85 @@
     letter-spacing: 0.02em;
     line-height: 1.25;
   }
-  #videos-card .video-table .col-actions { min-width: 20rem; }
+  #videos-card .video-table .col-actions {
+    min-width: 22rem;
+    width: 22rem;
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--color-surface, #fff);
+    box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.18);
+    overflow: visible;
+    word-break: normal;
+  }
+  #videos-card .video-table thead .col-actions {
+    z-index: 3;
+    background: var(--color-surface, #fff);
+  }
   #videos-card .video-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    min-width: 0;
   }
+  #videos-card .video-actions-primary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  #videos-card .video-actions-more {
+    margin: 0;
+  }
+  #videos-card .video-actions-more > summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+  }
+  #videos-card .video-actions-more > summary::-webkit-details-marker {
+    display: none;
+  }
+  #videos-card .video-actions-more > summary::after {
+    content: " ▾";
+    font-weight: 700;
+  }
+  #videos-card .video-actions-more[open] > summary::after {
+    content: " ▴";
+  }
+  #videos-card .video-actions-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #d8d5cc;
+  }
+  #videos-card .video-actions .btn,
   #videos-card .video-actions .btn-sm {
     margin: 0 !important;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    border: 1px solid #c8c5bc;
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #111 !important;
+    border: 1px solid #8f8b82;
     background: #fff;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+    white-space: nowrap;
   }
   #videos-card .video-actions .btn-primary {
     color: #fff !important;
     background: var(--color-primary) !important;
     border-color: var(--color-primary) !important;
+  }
+  #videos-card .video-actions .btn-review {
+    color: #015558 !important;
+    background: #e6f4f5 !important;
+    border-color: #01696f !important;
   }
   #videos-card .video-actions .btn-danger {
     color: #fff !important;
@@ -67,9 +130,14 @@
     border-color: var(--color-danger) !important;
   }
   #videos-card .video-actions .btn-archive {
-    color: #015558 !important;
-    background: #e6f4f5 !important;
-    border-color: #01696f !important;
+    color: #013f42 !important;
+    background: #d7eef0 !important;
+    border-color: #015558 !important;
+  }
+  #videos-card .video-actions .btn-more {
+    color: #1a1a1a !important;
+    background: #f3f1ea !important;
+    border-color: #6b675e !important;
   }
   #videos-view-tabs .videos-tab {
     font-size: 0.95rem;
@@ -89,6 +157,17 @@
     opacity: 1;
     font-weight: 700;
     margin-left: 4px;
+  }
+  @media (max-width: 768px) {
+    #videos-card .video-table {
+      min-width: 0;
+    }
+    #videos-card .video-table .col-actions {
+      position: static;
+      width: auto;
+      min-width: 0;
+      box-shadow: none;
+    }
   }
 </style>
 <div class="page-header" data-frame="4.1">
@@ -347,7 +426,7 @@ async function unarchiveVideo(videoId) {
   }
 }
 
-function actionButtons(v) {
+function actionButtons(v, deleteLabel) {
   const status = v.analysis_status || 'not_started';
   const dets = v.detection_count;
   const countsKnown = dets !== null && dets !== undefined;
@@ -357,20 +436,42 @@ function actionButtons(v) {
   );
   const showLoadCounts = !countsKnown;
   const isArchived = Number(v.archived) === 1 || videosView === 'archive';
+  const gameId = encodeURIComponent(v.analysis_key || v.game_id || '');
+  const filmHref = `/film/${encodeURIComponent(v.stored_filename)}?game_id=${gameId}`;
+  const reviewHref = `/film/${encodeURIComponent(v.stored_filename)}/review?game_id=${gameId}`;
   const archiveBtn = isArchived
-    ? `<button class="btn btn-sm btn-archive" onclick="unarchiveVideo(${v.id})" title="Restore to Active list">Unarchive</button>`
-    : `<button class="btn btn-sm btn-archive" onclick="archiveVideo(${v.id})" title="Hide from Active list (deep links still work)">Archive</button>`;
+    ? `<button type="button" class="btn btn-sm btn-archive" onclick="unarchiveVideo(${v.id})" title="Restore to Active list">Unarchive</button>`
+    : `<button type="button" class="btn btn-sm btn-archive" onclick="archiveVideo(${v.id})" title="Hide from Active list (deep links still work)">Archive</button>`;
+
+  const secondary = [
+    `<a href="/analysis/${gameId}" class="btn btn-secondary btn-sm">Results</a>`,
+    showLoadCounts
+      ? `<button type="button" class="btn btn-secondary btn-sm" onclick="loadVideoCounts(${v.id})" title="Optional: count detections/events for this video only (can be slow on large games). Prefer Film Tool to open the video.">Load counts</button>`
+      : '',
+    showRebuild
+      ? `<button type="button" class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>`
+      : '',
+    showRerun
+      ? `<button type="button" class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>`
+      : '',
+    `<a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>`,
+    `<a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>`,
+    `<a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>`,
+    `<button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete(${v.id}, '${deleteLabel}')">Delete</button>`,
+  ].filter(Boolean).join('\n        ');
+
   return `
-    <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
-    <a href="/film/${encodeURIComponent(v.stored_filename)}/review?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Review</a>
-    <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
-    ${showLoadCounts ? `<button class="btn btn-secondary btn-sm" onclick="loadVideoCounts(${v.id})" title="Optional: count detections/events for this video only (can be slow on large games). Prefer Film Tool to open the video.">Load counts</button>` : ''}
-    ${showRebuild ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}
-    ${showRerun ? `<button class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>` : ''}
-    <a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>
-    <a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>
-    <a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>
-    ${archiveBtn}
+    <div class="video-actions-primary">
+      <a href="${filmHref}" class="btn btn-primary btn-sm">Film Tool</a>
+      <a href="${reviewHref}" class="btn btn-sm btn-review">Review</a>
+      ${archiveBtn}
+      <details class="video-actions-more">
+        <summary class="btn btn-sm btn-more" title="More actions">More</summary>
+        <div class="video-actions-secondary">
+          ${secondary}
+        </div>
+      </details>
+    </div>
   `;
 }
 
@@ -385,7 +486,7 @@ function renderVideoRow(v) {
   const gameLabel = escHtml(v.display_game || v.opponent || 'Liberty');
   const teamLabel = escHtml(v.team_label || '—');
   const gameDate = formatGameDate(v.game_date);
-  const deleteLabel = escHtml(v.display_game || v.opponent || v.stored_filename || 'this video');
+  const deleteLabel = escHtml(v.display_game || v.opponent || v.stored_filename || 'this video').replace(/'/g, "\\'");
 
   const tr = document.createElement('tr');
   tr.id = `video-row-${v.id}`;
@@ -402,9 +503,7 @@ function renderVideoRow(v) {
     <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
     <td class="col-actions" data-label="Actions">
       <div class="video-actions">
-        ${actionButtons(v)}
-        <button class="btn btn-danger btn-sm"
-          onclick="confirmDelete(${v.id}, '${deleteLabel.replace(/'/g,"\\'")}')">Delete</button>
+        ${actionButtons(v, deleteLabel)}
       </div>
     </td>
   `;

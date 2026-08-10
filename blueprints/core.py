@@ -7,29 +7,29 @@ application. These are the main page-rendering and utility routes that don't bel
 to a specific API subdomain.
 
 Routes included:
-- index (/)                          – Home page
-- schedule (/schedule)               – Season/game schedule management
+- index (/)                          â€“ Home page
+- schedule (/schedule)               â€“ Season/game schedule management
 - schedule_save_season (/schedule/seasons/save POST)
 - schedule_delete_season (/schedule/seasons/<int:season_id>/delete POST)
 - schedule_save_game (/schedule/games/save POST)
 - schedule_delete_game (/schedule/games/<int:game_id>/delete POST)
 - schedule_record_game (/schedule/games/<int:game_id>/record POST)
-- videos_page (/videos)              – Video listing page
-- film (/film, /film/<filename>)    – Film tool page
-- assisted_stat_sample (/film/assisted-stat-sample) – SAMPLE prototype (delete me)
-- uploaded_file (/uploads/<filename>) – Serve uploaded files
-- settings_page (/settings GET POST) – Application settings
+- videos_page (/videos)              â€“ Video listing page
+- film (/film, /film/<filename>)    â€“ Film tool page
+- assisted_stat_sample (/film/assisted-stat-sample) â€“ SAMPLE prototype (delete me)
+- uploaded_file (/uploads/<filename>) â€“ Serve uploaded files
+- settings_page (/settings GET POST) â€“ Application settings
 - custom_weights_guide_page (/settings/custom-weights)
 - pull_ollama_model (/settings/ollama/pull POST)
-- debug_page (/debug)                – Debug/issues page
+- debug_page (/debug)                â€“ Debug/issues page
 - create_issue_report (/debug/issues POST)
 - complete_issue_report (/debug/issues/<int:issue_id>/complete POST)
-- api_dashboard (/api/dashboard)     – Dashboard JSON API
-- api_resource_status (/api/resource-status) – Resource status JSON API
-- status_page (/status)              – Live analysis status page
-- dashboard_page (/dashboard)        – Dashboard page
-- users_page (/users)                – Users page
-- admin_reset (/api/admin/reset POST) – Admin reset endpoint
+- api_dashboard (/api/dashboard)     â€“ Dashboard JSON API
+- api_resource_status (/api/resource-status) â€“ Resource status JSON API
+- status_page (/status)              â€“ Live analysis status page
+- dashboard_page (/dashboard)        â€“ Dashboard page
+- users_page (/users)                â€“ Users page
+- admin_reset (/api/admin/reset POST) â€“ Admin reset endpoint
 """
 
 import os
@@ -621,7 +621,7 @@ def schedule_record_game(game_id):
     )
 
 
-# ── PDF Import ──────────────────────────────────────────
+# â”€â”€ PDF Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _schedule_import_health_payload():
     """Report whether MaxPreps schedule PDF import is available on this server."""
@@ -739,13 +739,13 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
 
     The pdf_team parameter sets default gender/level based on which team
     the user selected before uploading:
-      boys_hs   → gender=boys,  level=varsity
-      girls_hs  → gender=girls, level=varsity
-      jr_boys   → gender=boys,  level=jr_high
-      jr_girls  → gender=girls, level=jr_high
+      boys_hs   â†’ gender=boys,  level=varsity
+      girls_hs  â†’ gender=girls, level=varsity
+      jr_boys   â†’ gender=boys,  level=jr_high
+      jr_girls  â†’ gender=girls, level=jr_high
 
     season_info: optional dict with {start_date, end_date} used to infer
-    the correct year for dates that lack a year (e.g. "DEC 2" → "2025-12-02").
+    the correct year for dates that lack a year (e.g. "DEC 2" â†’ "2025-12-02").
 
     MaxPreps printable PDFs use a multi-line block format and are handled
     by schedule_import.parse_maxpreps_schedule_text().
@@ -759,8 +759,8 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
     games = []
     lines = text.splitlines()
 
-    # Build a month→year mapping from season_info for dates without a year
-    # e.g. for season 2025-11-01→2026-03-31: Nov,Dec→2025; Jan,Feb,Mar→2026
+    # Build a monthâ†’year mapping from season_info for dates without a year
+    # e.g. for season 2025-11-01â†’2026-03-31: Nov,Decâ†’2025; Jan,Feb,Marâ†’2026
     month_year_map = {}
     if season_info and season_info.get("start_date") and season_info.get("end_date"):
         s_start = datetime.date.fromisoformat(season_info["start_date"])
@@ -811,7 +811,7 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
             ))
 
             if has_date:
-                # This is a new game line — check if next line is just times (no date, short)
+                # This is a new game line â€” check if next line is just times (no date, short)
                 full_line = line
                 # Look ahead for time-only continuation lines
                 while i + 1 < len(lines):
@@ -910,11 +910,11 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
       '1/5 @ Idaho City (A) 7:30p'
 
     pdf_team sets default gender/level:
-      boys_hs/girls_hs → level=varsity
-      jr_boys/jr_girls → level=jr_high
+      boys_hs/girls_hs â†’ level=varsity
+      jr_boys/jr_girls â†’ level=jr_high
       gender is boys for *_hs/boys_*, girls for girls_*
 
-    month_year_map: optional dict mapping month number → year, used to
+    month_year_map: optional dict mapping month number â†’ year, used to
     infer the correct year for dates without a year (e.g. "DEC 2").
     """
     import re, datetime
@@ -950,7 +950,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
         elif len(time_parts) == 1:
             varsity_time = _normalize_time(time_parts[0])
 
-    # Pattern: date (various formats) — order matters, try most specific first
+    # Pattern: date (various formats) â€” order matters, try most specific first
     date_patterns = [
         r'(\w+\s*-\s*\w+,?\s+\w+\s+\d{1,2}\s*-\s*\d{1,2})',  # Thurs-Sat, Dec 4-6
         r'(\w+\s+\d{1,2}\s*-\s*\d{1,2},?\s+\d{4})',          # Dec 4-6, 2025
@@ -974,9 +974,9 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     if re.search(r"Printable\s+.*Basketball\s+Schedule|maxpreps\.com/print/schedule", line, re.IGNORECASE):
         return None
     game_date = None
-    # Handle date ranges: "Thurs-Sat, Dec 4-6" → use first date "Dec 4"
+    # Handle date ranges: "Thurs-Sat, Dec 4-6" â†’ use first date "Dec 4"
     date_for_parse = re.sub(r'\w+\s*-\s*\w+,?\s+', '', date_str)  # "Dec 4-6" from "Thurs-Sat, Dec 4-6"
-    date_for_parse = re.sub(r'\s*-\s*\d{1,2}(,|$)', r'\1', date_for_parse)  # "Dec 4-6" → "Dec 4"
+    date_for_parse = re.sub(r'\s*-\s*\d{1,2}(,|$)', r'\1', date_for_parse)  # "Dec 4-6" â†’ "Dec 4"
     # Strip day-of-week prefix (e.g. "TUES, " or "Thurs-Sat, " already handled above)
     date_for_parse = re.sub(r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|THURS|TUES|WED|THUR|FRI|SAT|SUN),?\s+', '', date_for_parse, flags=re.IGNORECASE).strip()
 
@@ -1014,7 +1014,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
 
     # Get remainder after date
     remainder = line[line.index(date_str) + len(date_str):].strip()
-    remainder = re.sub(r'^\s*[:\\\-–—]\s*', '', remainder)
+    remainder = re.sub(r'^\s*[:\\\-â€“â€”]\s*', '', remainder)
 
     # Detect location: (H), (A), (N) or @/at prefix
     location_type = 'home'
@@ -1041,8 +1041,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
             r'(\d{1,2}:\d{2})\s*([Bb])\s*/\s*(\d{1,2}:\d{2})\s*([Aa])', remainder
         )
         if ab_time_match:
-            jv_time = _normalize_time(ab_time_match.group(1))  # B team → jv_game_time
-            varsity_time = _normalize_time(ab_time_match.group(3))  # A team → game_time
+            jv_time = _normalize_time(ab_time_match.group(1))  # B team â†’ jv_game_time
+            varsity_time = _normalize_time(ab_time_match.group(3))  # A team â†’ game_time
             remainder = remainder[:ab_time_match.start()] + remainder[ab_time_match.end():]
             remainder = remainder.strip()
         else:
@@ -1051,8 +1051,8 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
                 r'[Bb]\s*(?:team)?\s*(\d{1,2}:\d{2})\s*/\s*[Aa]\s*(?:team)?\s*(\d{1,2}:\d{2})', remainder
             )
             if ab_time_match2:
-                jv_time = _normalize_time(ab_time_match2.group(1))  # B team → jv_game_time
-                varsity_time = _normalize_time(ab_time_match2.group(2))  # A team → game_time
+                jv_time = _normalize_time(ab_time_match2.group(1))  # B team â†’ jv_game_time
+                varsity_time = _normalize_time(ab_time_match2.group(2))  # A team â†’ game_time
                 remainder = remainder[:ab_time_match2.start()] + remainder[ab_time_match2.end():]
                 remainder = remainder.strip()
             else:
@@ -1106,9 +1106,9 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
             varsity_time = _normalize_time(time_str)
 
     # Detect tournament names and vs. pattern
-    # "Small School Showcase vs. Camas County" → tournament=Small School Showcase, opponent=Camas County
-    # "Varsity vs Westside" → opponent=Westside, level=varsity (pre_vs is a level keyword)
-    # "Girls vs Eastside" → opponent=Eastside, gender=girls
+    # "Small School Showcase vs. Camas County" â†’ tournament=Small School Showcase, opponent=Camas County
+    # "Varsity vs Westside" â†’ opponent=Westside, level=varsity (pre_vs is a level keyword)
+    # "Girls vs Eastside" â†’ opponent=Eastside, gender=girls
     # _team_level and _team_gender already defined above
 
     level = _team_level  # May be overridden by vs. handler or level detection below
@@ -1117,7 +1117,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     if vs_match:
         pre_vs = vs_match.group(1).strip()
         post_vs = vs_match.group(2).strip()
-        # Check if pre_vs looks like a date — if so, this isn't a real vs. pattern
+        # Check if pre_vs looks like a date â€” if so, this isn't a real vs. pattern
         pre_is_date = bool(re.match(r'^(\w+\s+\d{1,2}|\d{1,2}/\d{1,2})$', pre_vs))
         if not pre_is_date:
             # Check if pre_vs is a level/gender keyword
@@ -1157,7 +1157,7 @@ def _parse_schedule_line(line, pdf_team="boys_hs", month_year_map=None):
     opponent = re.sub(r'^\s*vs\.?\s*', '', opponent, flags=re.IGNORECASE).strip()  # Remove leading "vs."
     opponent = re.sub(r'^\.\s*', '', opponent).strip()  # Remove leading orphaned period
     opponent = re.sub(r'\s+', ' ', opponent).strip()
-    opponent = re.sub(r'[,;:\-–—]+$', '', opponent).strip()
+    opponent = re.sub(r'[,;:\-â€“â€”]+$', '', opponent).strip()
     opponent = re.sub(r'\(H\)|\(A\)|\(N\)', '', opponent, flags=re.IGNORECASE).strip()
     opponent = re.sub(r'\s+', ' ', opponent).strip()
 
@@ -1223,7 +1223,7 @@ def schedule_import_pdf_confirm():
         opponent = (g.get("opponent_name") or "").strip()
 
         # Re-parse date from raw string only if user didn't edit it.
-        # Compare submitted game_date to original_date — if they differ, user edited it.
+        # Compare submitted game_date to original_date â€” if they differ, user edited it.
         if raw_dates and month_year_map and i < len(raw_dates):
             raw = raw_dates[i]
             original_date = (original_dates[i] or "").strip() if i < len(original_dates) else ""
@@ -1296,12 +1296,12 @@ def schedule_import_pdf_confirm():
 
 
 def _reparse_date_with_map(date_str, month_year_map):
-    """Re-parse a date string (e.g. 'DEC 2', '11/4', '1/5') using a month→year map.
+    """Re-parse a date string (e.g. 'DEC 2', '11/4', '1/5') using a monthâ†’year map.
     Returns YYYY-MM-DD string or None."""
     import re, datetime
     if not date_str or not month_year_map:
         return None
-    # Already has a 4-digit year — return as-is
+    # Already has a 4-digit year â€” return as-is
     if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
         return date_str
     # Try various formats
@@ -1348,9 +1348,9 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     Returns a dict: {name, start_date, end_date} or None if no season detected.
 
     Season date logic (based on actual Liberty Charter season dates):
-      - High School (boys_hs, girls_hs):  Nov(year1) → Mar(year2)  e.g. 2025-11-01 to 2026-03-31
-      - Jr High Girls (jr_girls):         Nov(year1) → Dec(year1)  e.g. 2025-11-01 to 2025-12-31
-      - Jr High Boys (jr_boys):           Jan(year2) → Feb(year2)  e.g. 2026-01-01 to 2026-02-28
+      - High School (boys_hs, girls_hs):  Nov(year1) â†’ Mar(year2)  e.g. 2025-11-01 to 2026-03-31
+      - Jr High Girls (jr_girls):         Nov(year1) â†’ Dec(year1)  e.g. 2025-11-01 to 2025-12-31
+      - Jr High Boys (jr_boys):           Jan(year2) â†’ Feb(year2)  e.g. 2026-01-01 to 2026-02-28
     """
     import re, datetime
 
@@ -1361,7 +1361,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     year1 = None
     year2 = None
 
-    # ── Strategy 1: Header season-year pattern ──────────────────
+    # â”€â”€ Strategy 1: Header season-year pattern â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # "2025-26", "2025-2026", "2025/26", "2025 2026"
     header_patterns = [
         r'(20\d{2})\s*[-/]\s*(?:20)?(\d{2})\b',   # 2025-26, 2025/26
@@ -1376,7 +1376,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
             year2 = int(year2_raw) if len(year2_raw) == 4 else year1 // 100 * 100 + int(year2_raw)
             break
 
-    # ── Strategy 2: 2-digit years in date patterns ─────────────
+    # â”€â”€ Strategy 2: 2-digit years in date patterns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # e.g. "11/4/25", "12/02/25", "1/5/26", "01/05/2026"
     if year1 is None:
         # Find all dates with 2-digit or 4-digit years: M/D/YY, M/D/YYYY, MM/DD/YY, etc.
@@ -1419,7 +1419,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
                 else:
                     year2 = year1 + 1
 
-    # ── Strategy 3: 4-digit years anywhere in header ───────────
+    # â”€â”€ Strategy 3: 4-digit years anywhere in header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if year1 is None:
         all_years = [int(m.group(1)) for m in re.finditer(r'(20\d{2})', header_text)]
         distinct = []
@@ -1432,7 +1432,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
             year1 = distinct[0]
             year2 = year1 + 1
 
-    # ── Strategy 4: Infer from month patterns alone ─────────────
+    # â”€â”€ Strategy 4: Infer from month patterns alone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # If we see months 11,12 and 1,2 together, it's a winter season
     if year1 is None:
         month_mentions = set()
@@ -1453,7 +1453,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
         has_winter = bool(month_mentions & {'Jan', 'Feb', 'Mar'})
 
         if has_fall and has_winter:
-            # Winter season spanning two years — use current year logic
+            # Winter season spanning two years â€” use current year logic
             today = datetime.date.today()
             # If we're in the first half of the year (Jan-Jun), season started last year
             if today.month <= 6:
@@ -1483,7 +1483,7 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     is_hs = pdf_team in ("boys_hs", "girls_hs")
 
     # Sanity clamp: if detected years are more than 1 year in the future,
-    # the PDF likely had a typo or misread year — clamp to current year range.
+    # the PDF likely had a typo or misread year â€” clamp to current year range.
     import datetime as _dt
     _today = _dt.date.today()
     _max_year = _today.year + 1
@@ -1571,7 +1571,7 @@ def _get_or_create_season_for_pdf(db, season_info):
     return cur.lastrowid
 
 
-# ── MaxPreps Export ──────────────────────────────────────
+# â”€â”€ MaxPreps Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @core.route("/schedule/export/maxpreps")
 @require_feature("ENABLE_SEASONS_SCHEDULE")
@@ -1681,7 +1681,7 @@ def film_review_workspace(filename):
 
 @core.route("/film/assisted-stat-sample")
 def assisted_stat_sample():
-    """SAMPLE / DELETE ME – static AI-assisted stating prototype (fake data)."""
+    """SAMPLE / DELETE ME â€“ static AI-assisted stating prototype (fake data)."""
     root = os.path.abspath(os.path.join(current_app.root_path, "docs", "prototypes"))
     return send_from_directory(root, "assisted_stat_sample.html")
 
@@ -1827,7 +1827,7 @@ def uploaded_file(filename):
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
-# ── Team Photos ──────────────────────────────────────────────
+# â”€â”€ Team Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALLOWED_PHOTO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
@@ -2157,7 +2157,7 @@ def complete_issue_report(issue_id):
     return redirect(safe_return_path(request.form.get("return_to")))
 
 
-# ── API: Dashboard ────────────────────────────────────────
+# â”€â”€ API: Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @core.route("/api/dashboard")
 def api_dashboard():
@@ -2196,7 +2196,7 @@ TEAM_SECTIONS = [
 
 @core.route("/api/teams/schedule")
 def api_teams_schedule():
-    """Dashboard team cards: records, last game, upcoming — optionally filtered by season."""
+    """Dashboard team cards: records, last game, upcoming â€” optionally filtered by season."""
     import datetime as _dt
 
     db = get_db()

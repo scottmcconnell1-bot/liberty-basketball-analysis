@@ -1,44 +1,40 @@
 # Active Task
 
-Updated: 2026-08-09 (videos Active/Archive + bulk archive)
+Updated: 2026-08-10 (videos ACTIONS UI readable)
 
-Branch: `cursor/videos-archive-ac1f`  
-Tip: `3979ef2` (encoding fix on top of `ac78b33` archive feature)
+Branch: `cursor/videos-actions-ui-ac1f`  
+Base: `jason-5-may-updates`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | videos-archive |
+| **id** | videos-actions-ui |
 | **status** | `done` |
 | **assigned_to** | cursor-agent |
 
 ## Scope delivered
 
-- `videos.archived` + `archived_at` via runtime ALTER (no schema.sql)
-- `/videos` Active vs Archive tabs (`?view=archive`)
-- Archive / Unarchive per-row buttons + high-contrast tab CSS
-- APIs: `?archived=0|1|all`, `/api/videos/archive-counts`, `POST .../archive|unarchive`
-- Bulk-archived all rows in `film_analysis.db`
+- `/videos` ACTIONS: primary **Film Tool / Review / Archive|Unarchive** always visible
+- Secondary actions under in-flow **More** (Results, Load counts, Rebuild, Re-run AI, Trim, Compare, Debug, Delete)
+- Larger hit targets, high-contrast button text, sticky Actions column + horizontal scroll (no clipped labels)
 
 ## Try
 
-1. `/videos` — Active list empty after bulk archive
-2. `/videos?view=archive` — all games
-3. Unarchive one game to move it back to Active
+1. Hard-refresh `https://liberty-coach.tail?.ts.net/videos` (or local `:8080/videos`)
+2. Confirm primary buttons readable; open **More** for full secondary labels
+3. Archive view shows **Unarchive** as primary
 
 ## Report
 
 ### Proven
 
-- Commit `ac78b33` feature + `3979ef2` Flask import fix; pushed to origin
-- DB: active=0, archived=63 (film_analysis.db)
-- Flask serving archive tip on :8080
+- Template-only change in `templates/videos.html`
 
 ### Inferred
 
-- Scott's unreadability was low-contrast secondary buttons / crowded action row
+- Clip was from many `btn-sm` in one wrap row + global `.btn { overflow:hidden; max-width:100% }`
 
 ### Unknown
 
-- Whether JrHigh uploads after this point should stay Active by default (new uploads start unarchived)
+- Whether Scott prefers More collapsed by default long-term vs always-expanded second row
