@@ -14,6 +14,7 @@ Blueprint modules:
   ai         - Video upload, AI analysis, video management
   scouting   - Scouting reports, NFHS download, opponent analysis
   coach      - Coach portal shared-password soft gate
+  stat_books - Handwritten spiral scorebook extract / confirm
 """
 
 import os
@@ -47,6 +48,7 @@ from blueprints.users import users_bp, _current_user
 from blueprints.scouting import scouting_bp
 from blueprints.bulk_import import bulk_import_bp
 from blueprints.coach import coach_bp, enforce_coach_ops_denylist
+from blueprints.stat_books import stat_books_bp
 
 app.register_blueprint(messaging_bp)
 app.register_blueprint(users_bp)
@@ -61,6 +63,7 @@ app.register_blueprint(playbook_bp)
 app.register_blueprint(scouting_bp)
 app.register_blueprint(bulk_import_bp)
 app.register_blueprint(coach_bp)
+app.register_blueprint(stat_books_bp)
 
 # ── Template Context Processors ──────────────────────────────
 from helpers import get_runtime_settings

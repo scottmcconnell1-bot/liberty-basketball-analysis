@@ -839,6 +839,7 @@
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <a href="/videos" {% if nav_active('core.videos_page') %}class="active"{% endif %}>Videos</a>
         {% endif %}
+        <a href="/stat-books" {% if nav_active('stat_books.*') %}class="active"{% endif %}>Stat Books</a>
         {% if features.ENABLE_ASSISTANT_READ_ONLY %}
         <a href="/assistant" {% if nav_active('ai.assistant_workflow_page') %}class="active"{% endif %}>Assistant</a>
         {% endif %}
