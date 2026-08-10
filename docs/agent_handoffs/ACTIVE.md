@@ -1,42 +1,50 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (videos archive)
+Updated: 2026-08-09 (ops: stale Flask + login)
 
-Branch: `cursor/videos-archive-ac1f`  
-Base: `cursor/coach-ledger-ac1f` / `jason-5-may-updates` @ `c4a0529`
+Branch: `jason-5-may-updates` @ `c4a0529`  
+Current working tip for Scott: coach-ledger unified tip (review + stat-book + sticky/assisted sample).
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | videos-archive |
+| **id** | ops-stale-flask-login |
 | **status** | `done` |
 | **assigned_to** | cursor-agent |
 
-## Goal
+## Included on this tip
 
-Organize `/videos` light list into **Active** vs **Archive** so Scott is not confused by a long mixed game list.
+- Videos light-list + Review button
+- Coach-ledger foundation (auto-accept off + confirmed-box schema)
+- Review workspace MVP — Accept/Correct/Reject in Film Tool
+- Stat-book MVP — spiral scorebook extract/confirm
+- Sticky choreography / assisted stating SAMPLE
+- FastDraw / highlight / Active-Archive tabs: **not** on this tip yet (separate branches)
 
-## Try
+## Try (after hard refresh)
 
-1. `/videos` — Active list (default), A–Z, badges Active (N) | Archive (M)
-2. Row **Archive** → game leaves Active; open Archive tab (`/videos?view=archive`) to see it
-3. Row **Unarchive** → back on Active
-4. Film Tool / Review deep links still open archived games
+1. `http://127.0.0.1:8080/videos` — Review button; light list
+2. `http://127.0.0.1:8080/stat-books` — must be 200 (proves new code)
+3. `http://127.0.0.1:8080/film/assisted-stat-sample`
+4. Staff login: `/login` with email (not username)
+5. Coach: `/coach` with `.env` `LIBERTY_COACH_PASSWORD`
 
-## Report
+## Ops report (2026-08-09 night)
 
 ### Proven
 
-- Runtime `ALTER TABLE videos ADD COLUMN archived INTEGER NOT NULL DEFAULT 0` (no `schema.sql` change).
-- `GET /api/videos` defaults to `archived=0`; `archived=1` / `archived=all` supported; light list unchanged (no N× detection counts).
-- `POST /api/videos/<id>/archive` and `/unarchive`; `GET /api/videos/archive-counts`.
-- Tests: `test_api_videos_archive_filter_and_toggle` in `tests/test_api.py`.
+- Stale Flask (started 6:23 PM) was older than tip merge (7:43 PM) → `/stat-books` 404 and missing UI.
+- Killed launchers + app.py; restarted one clean `app.py` on :8080 from tip.
+- Staff login works with email `smcconnell@legacycharterschool.net` (DB password matches known Hoops password).
+- Local fix: one bad Windows-1252 byte in `blueprints/core.py` docstring blocked UTF-8 import (uncommitted 1-line fix).
+- `TEACH_LOOP_PAUSED` left in place; teach loop not restarted.
 
 ### Inferred
 
-- Defaulting bare `/api/videos` to active-only is desirable for the library UI; callers that need every row can pass `archived=all`.
+- Scott signing in with a username (not email) would always fail — form field is `email`.
+- “No UI changes” was stale process, not wrong branch tip (jason already at coach-ledger merge).
 
 ### Unknown
 
-- Whether Scott later wants archive to also hide games from other surfaces (status, assistant workflow).
+- Whether Active/Archive videos UI was expected tonight (not on `c4a0529`; fastdraw/highlights still separate).

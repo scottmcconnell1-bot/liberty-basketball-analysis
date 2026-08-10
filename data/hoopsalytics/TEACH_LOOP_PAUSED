@@ -1,0 +1,8 @@
+﻿PAUSED 2026-08-09 21:34:27
+Reason: Scott+Claude consensus — pause backlog video analyses (games without stat books).
+Free shared GPU for coach-ledger / review / fastdraw work (#4/#5/#6).
+Do not auto-restart until this file is removed AND Liberty Teach Watchdog is re-enabled.
+Stopped: hoops_teach_loop.py PID 27100; scheduled task 'Liberty Teach Watchdog' Disabled.
+Flask left running for /videos and review UI.
+Detections retained; analysis_runs had 0 running rows at pause time.
+Next priority: 1–2 JrHigh games WITH stat books for E2E (CV draft → review → stat book confirm). Do not start JrHigh analysis until Scott queues it.
