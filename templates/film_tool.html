@@ -583,19 +583,25 @@
           </div>
         </div>
 
-        <!-- AI Events Panel -->
+        <!-- AI Events / Review Workspace -->
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <div class="panel" id="aiEventsPanel" style="margin-top:1rem;">
           <div class="panel-head">
             <div>
-              <h2>🤖 AI Events</h2>
-              <p>Independent scrolling event timeline that syncs to the current video position.</p>
+              <h2>Review workspace</h2>
+              <p>Pending AI drafts stay off the official ledger until you Accept, Correct, or Reject.</p>
             </div>
           </div>
           <div class="panel-body">
             <div class="ai-events-summary">
               <span class="badge" id="aiEventsCount">0 events</span>
+              <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
               <span class="tiny" id="aiCurrentEventLabel">No active event</span>
+            </div>
+            <div class="ai-review-filters" role="tablist" aria-label="Event review filters">
+              <button class="btn btn-ghost btn-sm ai-filter-btn active" type="button" data-ai-filter="pending" id="aiFilterPending">Pending</button>
+              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="ledger" id="aiFilterLedger">Ledger</button>
+              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="all" id="aiFilterAll">All</button>
             </div>
             <div class="ai-events-scroll" id="aiEventsScroller">
               <div class="list-stack" id="aiEventsList">
@@ -980,6 +986,66 @@
     </form>
   </dialog>
 
+  <dialog id="aiCorrectDialog">
+    <form method="dialog" id="aiCorrectForm">
+      <div class="modal-head"><h2>Correct event</h2></div>
+      <div class="modal-body">
+        <p class="tiny" id="aiCorrectSummary">Edit the AI guess, then save to the official ledger.</p>
+        <input type="hidden" id="aiCorrectEventId" value="">
+        <div class="field">
+          <label for="aiCorrectPlayer">Player</label>
+          <select id="aiCorrectPlayer"></select>
+        </div>
+        <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:140px;">
+            <label for="aiCorrectNewPlayerName">Add player for tagging</label>
+            <input id="aiCorrectNewPlayerName" placeholder="Full name" autocomplete="off">
+          </div>
+          <div style="width:72px;">
+            <label for="aiCorrectNewPlayerNum">#</label>
+            <input id="aiCorrectNewPlayerNum" type="number" min="0" max="99" placeholder="#">
+          </div>
+          <button class="btn btn-primary" type="button" id="aiCorrectAddPlayerBtn">Add</button>
+        </div>
+        <div class="term-list" id="aiCorrectPlayerManageList" style="max-height:120px;overflow:auto;margin-bottom:.75rem;"></div>
+        <div class="field">
+          <label for="aiCorrectEventType">Event type</label>
+          <select id="aiCorrectEventType">
+            <option value="made_two">made_two</option>
+            <option value="missed_two">missed_two</option>
+            <option value="made_three">made_three</option>
+            <option value="missed_three">missed_three</option>
+            <option value="made_free_throw">made_free_throw</option>
+            <option value="missed_free_throw">missed_free_throw</option>
+            <option value="rebound">rebound</option>
+            <option value="assist">assist</option>
+            <option value="turnover">turnover</option>
+            <option value="steal">steal</option>
+            <option value="block">block</option>
+            <option value="foul">foul</option>
+            <option value="shot">shot</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="aiCorrectOutcome">Outcome</label>
+          <select id="aiCorrectOutcome">
+            <option value="">(none)</option>
+            <option value="make">make</option>
+            <option value="miss">miss</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="aiCorrectNotes">Notes (optional)</label>
+          <input id="aiCorrectNotes" placeholder="Why this correction">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="aiCorrectCancelBtn">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="aiCorrectSaveBtn">Save correction</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="quickTagDialog">
     <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
     <div class="modal-body" id="quickTagBody"></div>
@@ -1037,6 +1103,7 @@
   window.FILM_TOOL_ANALYSIS_STATUS = {{ analysis_status|tojson|safe }};
   window.FILM_TOOL_DETECTION_COUNT = {{ detection_count|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
+  window.FILM_TOOL_REVIEW_MODE = {{ "true" if review_mode|default(false) else "false" }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>

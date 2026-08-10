@@ -1669,6 +1669,15 @@ def review_page():
     return render_template("review_events.html")
 
 
+@core.route("/film/<path:filename>/review")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_review_workspace(filename):
+    """Deep-link into Film Tool review workspace (pending AI events + video)."""
+    args = request.args.to_dict(flat=True)
+    args["review"] = "1"
+    return redirect(url_for("core.film", filename=filename, **args))
+
+
 @core.route("/film")
 @core.route("/film/<filename>")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
@@ -1787,6 +1796,7 @@ def film(filename=None):
         if feature_enabled("ENABLE_AUTO_STATS_M1"):
             possession_summary = build_possession_workflow_summary(db, game_id)
 
+    review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
     return render_template(
         "film_tool.html",
         filename=filename,
@@ -1800,6 +1810,7 @@ def film(filename=None):
         player_effect_data=player_effect_data,
         player_minutes_data=player_minutes_data,
         possession_summary=possession_summary,
+        review_mode=review_mode,
     )
 
 

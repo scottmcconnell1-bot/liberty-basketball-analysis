@@ -380,7 +380,10 @@ def review_events():
     params = []
 
     review_status = (request.args.get("review_status") or "pending").strip()
-    if review_status and review_status != "all":
+    if review_status in ("ledger", "trusted"):
+        # Official MVP ledger = coach-accepted or corrected events only.
+        clauses.append("e.review_status IN ('accepted', 'corrected')")
+    elif review_status and review_status != "all":
         clauses.append("e.review_status = ?")
         params.append(review_status)
 

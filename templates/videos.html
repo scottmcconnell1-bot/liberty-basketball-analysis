@@ -241,6 +241,7 @@ function actionButtons(v) {
   const showLoadCounts = !countsKnown;
   return `
     <a href="/film/${encodeURIComponent(v.stored_filename)}?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-primary btn-sm">Film Tool</a>
+    <a href="/film/${encodeURIComponent(v.stored_filename)}/review?game_id=${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Review</a>
     <a href="/analysis/${encodeURIComponent(v.analysis_key || v.game_id || '')}" class="btn btn-secondary btn-sm">Results</a>
     ${showLoadCounts ? `<button class="btn btn-secondary btn-sm" onclick="loadVideoCounts(${v.id})" title="Optional: count detections/events for this video only (can be slow on large games). Prefer Film Tool to open the video.">Load counts</button>` : ''}
     ${showRebuild ? `<button class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>` : ''}

@@ -181,11 +181,12 @@
 
       <div class="form-group">
         <label for="ai_auto_accept_event_confidence">Auto-Accept Event Confidence</label>
-        <input class="form-control" id="ai_auto_accept_event_confidence" name="ai_auto_accept_event_confidence" type="number" min="0" max="0.99" step="0.01" value="{{ runtime_settings.ai.auto_accept_event_confidence }}">
-        <div class="text-muted mt-2">
-          Default is <code>0</code> (disabled). AI events at or above this confidence are auto-accepted after analysis.
-          Keep at <code>0</code> for human review — saving other settings does not restore the old <code>0.50</code> default.
-          Only set above <code>0</code> intentionally.
+        <input class="form-control" <div class="form-group">
+        <label>Auto-Accept Event Confidence</label>
+        <input type="hidden" name="ai_auto_accept_event_confidence" value="0">
+        <div class="alert alert-info" style="margin:0;" id="ai-auto-accept-disabled-notice">
+          Disabled for the review workspace MVP. AI drafts stay <code>pending</code> until you
+          Accept / Correct / Reject them in Film Tool. Threshold is locked to <code>0</code> (no-op).
         </div>
       </div>
 

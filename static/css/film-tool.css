@@ -832,12 +832,33 @@
 #film-tool-root .ai-event-status.pending { color: #d97706; }
 #film-tool-root .ai-event-status.trusted { color: #059669; }
 #film-tool-root .ai-event-status.rejected { color: #dc2626; }
+#film-tool-root .ai-review-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-bottom: .65rem;
+}
+#film-tool-root .ai-filter-btn.active {
+    background: var(--color-surface-2);
+    font-weight: 600;
+    border-color: var(--color-primary);
+}
 #film-tool-root .ai-event-review {
     display: flex;
     gap: .25rem;
+    flex-wrap: wrap;
 }
 #film-tool-root .ai-review-btn.accept { color: #059669; }
+#film-tool-root .ai-review-btn.correct { color: #2563eb; }
 #film-tool-root .ai-review-btn.reject { color: #dc2626; }
+#film-tool-root .ai-correct-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    padding: .2rem 0;
+    font-size: .85rem;
+}
 
 /* ── Inline Action Rows ───────────────────────────────────── */
 #film-tool-root .inline-actions {

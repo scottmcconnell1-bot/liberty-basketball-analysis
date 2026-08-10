@@ -1658,7 +1658,19 @@ function exitFocusMode() {
     focusExitBtn.classList.add('hidden'); btn.textContent = 'Hide game info';
 }
 
-// ── AI Events ───────────────────────────────────────────────
+// ── AI Events / Review Workspace ────────────────────────────
+let aiReviewFilter = 'pending';
+let aiReviewPlayersCache = [];
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function parseAiEventDetails(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch (_err) { return {}; } }
 
 function summarizeAiEvent(event) {
@@ -1677,8 +1689,18 @@ function summarizeAiEvent(event) {
     return parts.length ? parts.join(' · ') : 'Click to jump video playback to this event.';
 }
 
+function currentFilmGameId() {
+    return document.getElementById('gameId')?.value
+        || window.FILM_TOOL_GAME_ID
+        || new URLSearchParams(window.location.search).get('game_id')
+        || '';
+}
+
 function updateAiEventsSummary() {
-    if (aiEventsCount) aiEventsCount.textContent = `${aiEventsCache.length} event${aiEventsCache.length === 1 ? '' : 's'}`;
+    if (aiEventsCount) {
+        const label = aiReviewFilter === 'ledger' ? 'ledger' : (aiReviewFilter === 'pending' ? 'pending' : '');
+        aiEventsCount.textContent = `${aiEventsCache.length} ${label} event${aiEventsCache.length === 1 ? '' : 's'}`.trim();
+    }
     if (!aiCurrentEventLabel) return;
     const active = aiEventsCache.find(event => String(event.id) === String(activeAiEventId));
     aiCurrentEventLabel.textContent = active ? `Active event: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No active event at the current playback position.';
@@ -1710,7 +1732,20 @@ function reviewStatusLabel(status) {
     return labels[status] || status || 'Unknown';
 }
 
+function setAiReviewFilter(filter) {
+    aiReviewFilter = filter || 'pending';
+    document.querySelectorAll('.ai-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aiFilter === aiReviewFilter);
+    });
+    const gameId = currentFilmGameId();
+    if (gameId) fetchAndRenderAIEvents(gameId);
+}
+
 async function reviewAiEvent(eventId, action) {
+    if (action === 'correct') {
+        openAiCorrectDialog(eventId);
+        return;
+    }
     const endpoint = action === 'accept' ? 'accept' : 'reject';
     try {
         const response = await fetch(`/api/review/events/${eventId}/${endpoint}`, {
@@ -1719,39 +1754,180 @@ async function reviewAiEvent(eventId, action) {
             body: JSON.stringify({ notes: action === 'accept' ? 'Accepted in Film Tool' : 'Rejected in Film Tool' }),
         });
         if (!response.ok) throw new Error('Review action failed');
-        const gameId = document.getElementById('gameId')?.value || new URLSearchParams(window.location.search).get('game_id');
+        const gameId = currentFilmGameId();
         if (gameId) await fetchAndRenderAIEvents(gameId);
-        setStatus(action === 'accept' ? 'Event accepted.' : 'Event rejected.');
+        setStatus(action === 'accept' ? 'Event accepted onto ledger.' : 'Event rejected (not on ledger).');
     } catch (_err) {
         setStatus('Could not update event review status.');
+    }
+}
+
+async function loadReviewPlayers() {
+    try {
+        const response = await fetch('/api/players');
+        if (!response.ok) throw new Error('players failed');
+        aiReviewPlayersCache = await response.json();
+    } catch (_err) {
+        aiReviewPlayersCache = [];
+    }
+    return aiReviewPlayersCache;
+}
+
+function populateCorrectPlayerSelect(selectedName) {
+    const select = document.getElementById('aiCorrectPlayer');
+    if (!select) return;
+    const names = new Set();
+    const options = ['<option value="">(unassigned)</option>'];
+    aiReviewPlayersCache.forEach(player => {
+        const name = (player.name || '').trim();
+        if (!name || names.has(name)) return;
+        names.add(name);
+        const selected = name === selectedName ? ' selected' : '';
+        options.push(`<option value="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`);
+    });
+    if (selectedName && !names.has(selectedName)) {
+        options.push(`<option value="${escapeHtml(selectedName)}" selected>${escapeHtml(selectedName)} (AI)</option>`);
+    }
+    select.innerHTML = options.join('');
+}
+
+function renderCorrectPlayerManageList() {
+    const list = document.getElementById('aiCorrectPlayerManageList');
+    if (!list) return;
+    if (!aiReviewPlayersCache.length) {
+        list.innerHTML = '<div class="tiny">No players yet — add one above for tagging.</div>';
+        return;
+    }
+    list.innerHTML = aiReviewPlayersCache.map(player => `
+        <div class="ai-correct-player-row" data-player-id="${player.id}">
+            <span>${escapeHtml(player.name || '')}${player.jersey_number != null ? ` #${escapeHtml(String(player.jersey_number))}` : ''}</span>
+            <button class="btn btn-ghost btn-sm" type="button" data-delete-review-player="${player.id}">Delete</button>
+        </div>
+    `).join('');
+    list.querySelectorAll('[data-delete-review-player]').forEach(btn => {
+        btn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const playerId = btn.dataset.deleteReviewPlayer;
+            if (!confirm('Delete this player from tagging list?')) return;
+            try {
+                const response = await fetch(`/api/players/${playerId}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('delete failed');
+                await loadReviewPlayers();
+                const current = document.getElementById('aiCorrectPlayer')?.value || '';
+                populateCorrectPlayerSelect(current);
+                renderCorrectPlayerManageList();
+                setStatus('Player deleted.');
+            } catch (_err) {
+                setStatus('Could not delete player.');
+            }
+        });
+    });
+}
+
+async function openAiCorrectDialog(eventId) {
+    const event = aiEventsCache.find(row => String(row.id) === String(eventId))
+        || (await (async () => {
+            const gameId = currentFilmGameId();
+            if (!gameId) return null;
+            const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all`);
+            if (!response.ok) return null;
+            const rows = await response.json();
+            return rows.find(row => String(row.id) === String(eventId)) || null;
+        })());
+    if (!event) {
+        setStatus('Could not load event for correction.');
+        return;
+    }
+    await loadReviewPlayers();
+    document.getElementById('aiCorrectEventId').value = String(event.id);
+    document.getElementById('aiCorrectSummary').textContent =
+        `AI draft: ${event.event_type} · ${event.player || 'unassigned'} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
+    populateCorrectPlayerSelect(event.player || '');
+    renderCorrectPlayerManageList();
+    const typeSelect = document.getElementById('aiCorrectEventType');
+    if (typeSelect) {
+        const existing = Array.from(typeSelect.options).some(opt => opt.value === event.event_type);
+        if (!existing && event.event_type) {
+            const opt = document.createElement('option');
+            opt.value = event.event_type;
+            opt.textContent = event.event_type;
+            typeSelect.appendChild(opt);
+        }
+        typeSelect.value = event.event_type || 'shot';
+    }
+    const outcome = document.getElementById('aiCorrectOutcome');
+    if (outcome) outcome.value = event.shot_result || '';
+    const notes = document.getElementById('aiCorrectNotes');
+    if (notes) notes.value = '';
+    const dialog = document.getElementById('aiCorrectDialog');
+    if (dialog?.showModal) dialog.showModal();
+}
+
+async function submitAiCorrection(formEvent) {
+    formEvent.preventDefault();
+    const eventId = document.getElementById('aiCorrectEventId')?.value;
+    if (!eventId) return;
+    const payload = {
+        player: document.getElementById('aiCorrectPlayer')?.value || '',
+        event_type: document.getElementById('aiCorrectEventType')?.value || '',
+        shot_result: document.getElementById('aiCorrectOutcome')?.value || null,
+        notes: document.getElementById('aiCorrectNotes')?.value || 'Corrected in Film Tool',
+    };
+    if (!payload.shot_result) payload.shot_result = null;
+    try {
+        const response = await fetch(`/api/review/events/${eventId}/correct`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'correct failed');
+        }
+        document.getElementById('aiCorrectDialog')?.close();
+        const gameId = currentFilmGameId();
+        if (gameId) await fetchAndRenderAIEvents(gameId);
+        setStatus('Event corrected onto ledger.');
+    } catch (err) {
+        setStatus(err.message || 'Could not save correction.');
     }
 }
 
 function renderAiEvents(events) {
     if (!aiEventsList) return;
     aiEventsCache = events.filter(event => event.event_type !== 'bookmark');
-    if (!aiEventsCache.length) { aiEventsList.innerHTML = '<div class="empty-state">No AI events found for this game.</div>'; setActiveAiEvent(null); return; }
+    if (!aiEventsCache.length) {
+        const emptyMsg = aiReviewFilter === 'ledger'
+            ? 'No accepted/corrected events on the ledger yet.'
+            : (aiReviewFilter === 'pending'
+                ? 'No pending AI drafts for this game.'
+                : 'No AI events found for this game.');
+        aiEventsList.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+        setActiveAiEvent(null);
+        return;
+    }
     aiEventsList.innerHTML = aiEventsCache.map(event => {
         const status = event.review_status || 'pending';
         const statusClass = status === 'pending' ? 'pending' : (status === 'rejected' ? 'rejected' : 'trusted');
         const reviewControls = status === 'pending'
             ? `<div class="ai-event-review" data-no-seek="1">
-                <button class="btn btn-ghost btn-sm ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept event">✓</button>
-                <button class="btn btn-ghost btn-sm ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject event">✗</button>
+                <button class="btn btn-ghost btn-sm ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept onto ledger">Accept</button>
+                <button class="btn btn-ghost btn-sm ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct then accept">Correct</button>
+                <button class="btn btn-ghost btn-sm ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject (keep off ledger)">Reject</button>
                </div>`
             : '';
         return `
         <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" aria-label="Jump to ${event.event_type} at ${formatTime(event.timestamp_ms / 1000)}">
             <div class="ai-event-row">
-                <strong>${event.event_type}</strong>
+                <strong>${escapeHtml(event.event_type || '')}</strong>
                 <span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span>
             </div>
             <div class="ai-event-meta">
                 <span class="ai-event-status ${statusClass}">${reviewStatusLabel(status)}</span>
                 ${reviewControls}
             </div>
-            <div class="tiny">${event.player || 'AI detected event'}</div>
-            <div class="ai-event-details">${summarizeAiEvent(event)}</div>
+            <div class="tiny">${escapeHtml(event.player || 'AI detected event')}</div>
+            <div class="ai-event-details">${escapeHtml(summarizeAiEvent(event))}</div>
         </div>`;
     }).join('');
     aiEventsList.querySelectorAll('[data-ai-event-id]').forEach(item => {
@@ -1775,15 +1951,37 @@ function renderAiEvents(events) {
     syncAiEventsToPlayback();
 }
 
+async function refreshLedgerCount(gameId) {
+    const el = document.getElementById('aiLedgerCount');
+    if (!el || !gameId) return;
+    try {
+        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=ledger`);
+        if (!response.ok) throw new Error('ledger count failed');
+        const rows = await response.json();
+        el.textContent = `Ledger: ${rows.length}`;
+    } catch (_err) {
+        el.textContent = 'Ledger: —';
+    }
+}
+
 async function fetchAndRenderAIEvents(gameId) {
     if (!gameId || !aiEventsList) return;
-    aiEventsList.innerHTML = '<div class="empty-state">Loading AI events...</div>';
+    aiEventsList.innerHTML = '<div class="empty-state">Loading review events...</div>';
     try {
-        const response = await fetch(`/api/events/${gameId}`);
-        if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load AI events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
+        const status = aiReviewFilter === 'all' ? 'all' : aiReviewFilter;
+        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=${encodeURIComponent(status)}`);
+        if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
         const events = await response.json();
         renderAiEvents(events);
-    } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading AI events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
+        await refreshLedgerCount(gameId);
+    } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
+}
+
+function focusReviewWorkspace() {
+    const panel = document.getElementById('aiEventsPanel');
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setAiReviewFilter('pending');
 }
 
 // ── Video ───────────────────────────────────────────────────
@@ -2476,6 +2674,36 @@ function attachEventHandlers() {
     document.getElementById('addPlayerBtn')?.addEventListener('click', openAddPlayerDialog);
     document.getElementById('playerCancelBtn')?.addEventListener('click', () => playerDialog.close());
     document.getElementById('playerSaveBtn')?.addEventListener('click', savePlayerFromDialog);
+    document.querySelectorAll('.ai-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAiReviewFilter(btn.dataset.aiFilter));
+    });
+    document.getElementById('aiCorrectCancelBtn')?.addEventListener('click', () => {
+        document.getElementById('aiCorrectDialog')?.close();
+    });
+    document.getElementById('aiCorrectForm')?.addEventListener('submit', submitAiCorrection);
+    document.getElementById('aiCorrectAddPlayerBtn')?.addEventListener('click', async () => {
+        const name = (document.getElementById('aiCorrectNewPlayerName')?.value || '').trim();
+        const jerseyRaw = document.getElementById('aiCorrectNewPlayerNum')?.value;
+        if (!name) { setStatus('Player name required.'); return; }
+        const body = { name };
+        if (jerseyRaw !== '' && jerseyRaw != null) body.jersey_number = Number(jerseyRaw);
+        try {
+            const response = await fetch('/api/players', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok) throw new Error('add player failed');
+            document.getElementById('aiCorrectNewPlayerName').value = '';
+            document.getElementById('aiCorrectNewPlayerNum').value = '';
+            await loadReviewPlayers();
+            populateCorrectPlayerSelect(name);
+            renderCorrectPlayerManageList();
+            setStatus(`Added player ${name}.`);
+        } catch (_err) {
+            setStatus('Could not add player.');
+        }
+    });
     document.getElementById('chooseOutputBtn')?.addEventListener('click', handleDirectoryPick);
     videoFileInput?.addEventListener('change', handleVideoFile);
 
@@ -2624,10 +2852,22 @@ function init() {
     const gameIdFromUrl = urlParams.get('game_id');
     const activeGameId = gameIdFromUrl || window.FILM_TOOL_GAME_ID || '';
     const seekSeconds = Number(urlParams.get('t') || urlParams.get('timestamp_ms') || 0);
+    const reviewRequested = window.FILM_TOOL_REVIEW_MODE === true
+        || window.FILM_TOOL_REVIEW_MODE === 'true'
+        || urlParams.get('review') === '1';
+    if (reviewRequested) {
+        aiReviewFilter = 'pending';
+        document.querySelectorAll('.ai-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.aiFilter === 'pending');
+        });
+    }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
-    setStatus('Ready.');
+    setStatus(reviewRequested ? 'Review workspace ready — pending AI drafts shown.' : 'Ready.');
+    if (reviewRequested) {
+        setTimeout(focusReviewWorkspace, 250);
+    }
 
     function seekFromUrlParam() {
       const seconds = seekSeconds > 1000 ? seekSeconds / 1000 : seekSeconds;

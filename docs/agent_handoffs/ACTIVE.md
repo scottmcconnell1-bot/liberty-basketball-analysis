@@ -1,60 +1,49 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (coach-ledger foundation)
+Updated: 2026-08-09 (review workspace MVP)
 
-Branch: `cursor/coach-ledger-ac1f`  
-Base: `jason-5-may-updates` + videos light-list commits (`cursor/videos-fast-list-ac1f`)
+Branch: `cursor/review-workspace-mvp-ac1f` (based on `origin/cursor/coach-ledger-ac1f`)
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | coach-ledger-foundation |
+| **id** | review-workspace-mvp |
 | **status** | `done` |
 | **assigned_to** | cursor-agent |
 
-## Scott approvals (2026-08-09)
+## Decision
 
-1. **New direction approved** — coach ledger / confirmed stat book box + human review (not auto-accept-led).
-2. **Working branch** — use `cursor/coach-ledger-ac1f` going forward (includes videos light-list fix).
-3. **Auto-accept off** for review testing — default `ai.auto_accept_event_confidence` is `0`; `load_all_settings` forces `0` (ignores legacy DB `0.50`); threshold `<= 0` does not promote drafts. Settings UI documents that saving other settings does **not** silently restore `0.50`. Remove the load-path force when Scott re-enables auto-accept.
-4. **Confirmed box JSON schema** — contract in `docs/stat_books/CONFIRMED_BOX_SCHEMA.md` (no `schema.sql` yet; ask Scott before DDL).
-5. **Do not** build full OCR or full review UI in foundation slice.
+Scott-approved parallel MVP #4: Accept/Correct/Reject video review workspace. Official ledger = `events` where `review_status IN ('accepted','corrected')` (+ human_verified). AI drafts stay pending. Auto-accept stays off (inherited from coach-ledger foundation; Settings control hidden/locked to 0).
 
-## Sequencing (MVP agents)
+## Changes
 
-Use branch **`cursor/coach-ledger-ac1f`** as the shared base for both MVP follow-ons:
+- Film Tool **Review workspace** panel: Pending / Ledger / All filters; Accept / Correct / Reject
+- Correct modal: player, event type, outcome; add/delete player via `/api/players`
+- Deep link: `/film/<file>/review?game_id=…` → Film Tool with `review=1`
+- `GET /api/review/events?review_status=ledger` → accepted+corrected only
+- Settings: auto-accept UI hidden; save still forces `0.0`
+- Videos list: Review button next to Film Tool
 
-| Order | Slice | Notes |
-| --- | --- | --- |
-| Done | Foundation (this) | Branch merge + auto-accept off + confirmed JSON contract + ACTIVE |
-| Next A | Review / coach ledger MVP | Human confirm path; respect auto-accept=0 |
-| Next B | Stat book assist MVP | Templates + uploads paths; write only to drafts until confirm → `data/stat_books/confirmed/<game_id>.json` |
+## Try
 
-Videos nav fix is already on this branch (`GET /api/videos` light by default).
-
-## Foundation delivered
-
-- Branch `cursor/coach-ledger-ac1f` = `jason-5-may-updates` + videos-fast-list (2 commits)
-- `AI_DEFAULTS["auto_accept_event_confidence"]` → `0.0`; fail-closed parse; `threshold <= 0` returns 0 accepts
-- Docs: `docs/stat_books/CONFIRMED_BOX_SCHEMA.md`, `data/stat_books/templates/README.md`, example `data/stat_books/confirmed/example_game.json`
-- Paths reserved: `data/stat_books/templates/<template_id>/`, `uploads/stat_books/<game_id>/`, `data/stat_books/confirmed/<game_id>.json`
-
-## Operator note (existing DBs)
-
-`load_all_settings` and Settings save both force `ai.auto_accept_event_confidence` to `0` for review testing. Legacy DB values of `0.50` are ignored until Scott removes those force lines to re-enable.
+1. `/videos` → **Review** on a game, or
+2. `/film/<stored_filename>/review?game_id=<analysis_key>`
+3. Pending drafts → Accept / Correct / Reject; Ledger tab shows trusted only
+4. `/settings` → auto-accept notice (locked off)
 
 ## Report
 
 ### Proven
 
-- Videos branch was exactly 2 commits ahead of `jason-5-may-updates` (clean fast-forward lineage).
-- `auto_accept_high_confidence_events(..., threshold=0)` already returned 0; default now matches.
+- Rebased onto `origin/cursor/coach-ledger-ac1f` (auto-accept default/load/save = 0).
+- 16 focused review tests passed (`test_review_workspace_mvp`, cleanup, UI).
+- Accept/correct land on ledger filter; reject stays off; corrections write `human_corrections`.
 
 ### Inferred
 
-- MVP agents can fork from `cursor/coach-ledger-ac1f` without re-merging videos.
+- Coaches will use Film Tool review more than `/review` batch queue for day-to-day work.
 
 ### Unknown
 
-- When Scott wants `schema.sql` for confirmed boxes (gate).
+- Whether production DB still has a non-zero stored auto-accept value (load path forces 0 regardless).
