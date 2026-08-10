@@ -1597,7 +1597,7 @@ def test_api_videos_uses_latest_linked_run_status_and_counts(client, db):
     )
     db.commit()
 
-    r = client.get("/api/videos")
+    r = client.get("/api/videos?full=1")
     payload = r.get_json()
     assert r.status_code == 200
     assert len(payload) == 1
@@ -1634,6 +1634,9 @@ def test_api_videos_includes_game_display_fields(client, db):
     assert payload[0]["display_game"] == "Liberty vs wilder"
     assert payload[0]["team_label"] == "Boys Varsity"
     assert payload[0]["game_date"] == "2026-01-15"
+    # Default list is light (no global COUNT scans).
+    assert payload[0]["detection_count"] is None
+    assert payload[0]["event_count"] is None
 
 
 def test_api_videos_counts_detections_via_relational_game_id(client, db):
@@ -1668,7 +1671,7 @@ def test_api_videos_counts_detections_via_relational_game_id(client, db):
     )
     db.commit()
 
-    payload = client.get("/api/videos").get_json()
+    payload = client.get("/api/videos?full=1").get_json()
     assert payload[0]["detection_count"] == 1
     assert payload[0]["event_count"] == 1
     assert payload[0]["analysis_status"] == "completed"
@@ -1701,18 +1704,32 @@ def test_api_videos_light_skips_counts_and_sorts_by_title(client, db):
     )
     db.commit()
 
+    # Bare /api/videos must stay light+sorted so old bookmarks do not hang on COUNT(*).
+    bare = client.get("/api/videos").get_json()
+    assert [row["display_game"] for row in bare] == [
+        "Liberty vs Alpha",
+        "Liberty vs Zebra",
+    ]
+    assert bare[0]["detection_count"] is None
+    assert bare[0]["event_count"] is None
+    assert bare[0]["analysis_status"] == "completed"
+    assert bare[0]["stored_filename"] == "a.mp4"
+
     light = client.get("/api/videos?light=1&sort=title").get_json()
     assert [row["display_game"] for row in light] == [
         "Liberty vs Alpha",
         "Liberty vs Zebra",
     ]
     assert light[0]["detection_count"] is None
-    assert light[0]["event_count"] is None
-    assert light[0]["analysis_status"] == "completed"
 
     detail = client.get("/api/videos/2").get_json()
     assert detail["detection_count"] == 1
     assert detail["analysis_status"] == "completed"
+
+    full = client.get("/api/videos?full=1").get_json()
+    alpha = next(row for row in full if row["stored_filename"] == "a.mp4")
+    assert alpha["detection_count"] == 1
+    assert alpha["analysis_status"] == "completed"
 
 
 def test_compare_video_analysis_keeps_run_specific_counts(client, db):

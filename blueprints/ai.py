@@ -5,7 +5,7 @@ Routes:
   GET  /api/analysis_status/<game_id>  - Analysis status for an analysis key
   GET  /api/stats/<game_id>            - Stats for a game/analysis key
   POST /api/upload_video               - Upload a video file
-  GET  /api/videos                     - List all videos (?light=1 skips detection/event counts)
+  GET  /api/videos                     - List all videos (light by default; ?full=1 for counts)
   GET  /api/videos/<int:vid_id>        - One video with full counts
   POST /api/videos/<int:vid_id>/analyze - Start AI analysis for an existing video
   GET  /api/check_duplicate            - Check for duplicate videos
@@ -826,18 +826,35 @@ def upload_chunk():
     return jsonify({"status": "chunk_received", "received": received, "total": total_chunks})
 
 
+def _api_videos_wants_light_list() -> bool:
+    """Bare /api/videos defaults to light so old bookmarks/callers do not hang.
+
+    Full detection/event COUNT(*) over tens of millions of rows can take minutes.
+    Opt into counts with ?full=1 (or light=0). Per-video: GET /api/videos/<id>.
+    """
+    full = str(request.args.get("full", "")).lower() in {"1", "true", "yes"}
+    if full:
+        return False
+    light_arg = request.args.get("light")
+    if light_arg is None:
+        return True
+    return str(light_arg).lower() in {"1", "true", "yes"}
+
+
 @ai_bp.route("/api/videos")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def api_videos():
     """Return all videos from the DB with their analysis status.
 
     Query params:
-      light=1  – skip per-video detection/event COUNT(*) (fast list for /videos).
-                 Counts are null; open Film Tool or GET /api/videos/<id> for one video.
+      (default) – light list: skip per-video detection/event COUNT(*) (fast).
+                  Counts are null; use Film Tool, GET /api/videos/<id>, or ?full=1.
+      light=1   – same as default (explicit).
+      light=0 / full=1 – include detection/event counts (can be very slow).
       sort=title (default for light) | id – list order.
     """
     db = get_db()
-    light = str(request.args.get("light", "")).lower() in {"1", "true", "yes"}
+    light = _api_videos_wants_light_list()
     sort = (request.args.get("sort") or ("title" if light else "id")).strip().lower()
     latest_run = latest_analysis_run_id_subquery()
     rows = db.execute(f"""

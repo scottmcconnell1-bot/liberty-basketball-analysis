@@ -1,6 +1,6 @@
 ﻿# Active Task
 
-Updated: 2026-08-09 (videos fast list)
+Updated: 2026-08-09 (videos old-link hang)
 
 Branch: `cursor/videos-fast-list-ac1f`
 
@@ -14,30 +14,32 @@ Branch: `cursor/videos-fast-list-ac1f`
 
 ## Decision
 
-Videos nav (`/videos`) was slow because `/api/videos` ran per-video `COUNT(*)` on ~53M `detections` (no useful index) for every row, and polled every 10s. List-first with light metadata is the fix; Film Tool already loads one video.
+Videos nav (`/videos`) was slow because `/api/videos` ran per-video `COUNT(*)` on ~53M `detections`. Light list fixed the UI, but bare `/api/videos` (bookmarks, audits, cross-links) still hung. Default the list endpoint to light; opt into counts with `?full=1` or `GET /api/videos/<id>`.
 
 ## Changes
 
-- `GET /api/videos?light=1&sort=title` — skip detection/event counts; sort A–Z by title
+- `GET /api/videos` — **light by default** (fast; counts null); `?full=1` / `light=0` for full counts
+- `GET /api/videos?light=1&sort=title` — explicit light (UI)
 - `GET /api/videos/<id>` — full counts for one video
-- `/videos` UI uses light list; optional **Load counts** per row; poll only while runs are active
+- `/videos` UI uses light list; optional **Load counts** per row
 
 ## Try
 
 - `/videos`
-- Film Tool deep links unchanged: `/film/<filename>?game_id=…`
+- `/api/videos` (must return quickly)
+- Film Tool: `/film/<filename>?game_id=…`
 
 ## Report
 
 ### Proven
 
-- Local DB: 54 videos, ~52.8M detections, ~618k events; full `COUNT(*)` on detections ~45s table-wide.
-- Light list skips those counts; detail endpoint loads one video’s counts.
+- Bare `/api/videos` timed out at 25s on local DB (~53M detections) before default-light.
+- Light list and `/videos` / Film deep links returned 200 quickly.
 
 ### Inferred
 
-- Prior UI felt multi‑minute / hang because list × N counts + 10s refresh.
+- Scott’s “old link doesn’t work” was the hanging bare `/api/videos` (or anything waiting on it).
 
 ### Unknown
 
-- Whether denormalized counts on `analysis_runs` or detections indexes are wanted later (schema gate).
+- Whether denormalized counts / indexes are wanted later (schema gate).
