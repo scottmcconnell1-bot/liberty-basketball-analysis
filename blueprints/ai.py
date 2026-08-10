@@ -687,6 +687,92 @@ def get_possessions(game_id):
     return jsonify(get_possession_summary(db, game_id))
 
 
+# ── API: FastDraw play / set suggestions (rank only) ─────────
+
+def _play_match_store_base():
+    return os.path.join(current_app.root_path, "data", "play_matches")
+
+
+def _choreography_match_base():
+    return os.path.join(current_app.root_path, "data", "playbook")
+
+
+@ai_bp.route("/api/film/<game_id>/play-matches", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def get_film_play_matches(game_id):
+    """Return cached (or freshly computed) ranked playbook suggestions per possession.
+
+    Suggestions are confidence-as-rank only — never auto-accepted into the ledger.
+    """
+    from playbook_play_match import load_match_results, match_possessions_for_game, save_match_results
+
+    db = get_db()
+    refresh = (request.args.get("refresh") or "").strip().lower() in {"1", "true", "yes"}
+    top_k = request.args.get("top_k", type=int) or 5
+    top_k = max(1, min(top_k, 10))
+    store = _play_match_store_base()
+
+    if not refresh:
+        cached = load_match_results(game_id, base=store)
+        if cached is not None:
+            cached["cached"] = True
+            cached["auto_accept"] = False
+            return jsonify(cached)
+
+    from helpers import assign_possessions_for_game
+
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        try:
+            assign_possessions_for_game(db, relational_game_id)
+        except Exception:
+            pass
+
+    result = match_possessions_for_game(
+        db,
+        game_id,
+        relational_game_id=relational_game_id,
+        choreography_base=_choreography_match_base(),
+        top_k=top_k,
+    )
+    saved = save_match_results(game_id, result, base=store)
+    saved["cached"] = False
+    saved["auto_accept"] = False
+    return jsonify(saved)
+
+
+@ai_bp.route("/api/film/<game_id>/play-matches/run", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def run_film_play_matches(game_id):
+    """Force recompute ranked play suggestions (still suggestions only)."""
+    from playbook_play_match import match_possessions_for_game, save_match_results
+    from helpers import assign_possessions_for_game
+
+    db = get_db()
+    body = request.get_json(silent=True) or {}
+    top_k = int(body.get("top_k") or request.args.get("top_k") or 5)
+    top_k = max(1, min(top_k, 10))
+
+    relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
+    if relational_game_id is not None:
+        try:
+            assign_possessions_for_game(db, relational_game_id)
+        except Exception:
+            pass
+
+    result = match_possessions_for_game(
+        db,
+        game_id,
+        relational_game_id=relational_game_id,
+        choreography_base=_choreography_match_base(),
+        top_k=top_k,
+    )
+    saved = save_match_results(game_id, result, base=_play_match_store_base())
+    saved["cached"] = False
+    saved["auto_accept"] = False
+    return jsonify(saved)
+
+
 # ── Page: Analysis Results ──────────────────────────────────
 
 @ai_bp.route("/analysis/<game_id>")
