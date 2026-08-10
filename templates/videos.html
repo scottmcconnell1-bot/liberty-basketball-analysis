@@ -26,7 +26,7 @@
     max-width: 18rem;
     word-break: break-word;
   }
-  #videos-card .video-table .col-team { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-gameid { min-width: 6.5rem; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; }
   #videos-card .video-table .col-date { min-width: 6.5rem; white-space: nowrap; }
   #videos-card .video-table .col-size { min-width: 4.5rem; white-space: nowrap; }
   #videos-card .video-table .col-status { min-width: 7rem; }
@@ -211,7 +211,7 @@
     <thead>
       <tr>
         <th class="col-game">Game</th>
-        <th class="col-team">Team</th>
+        <th class="col-gameid">GameID</th>
         <th class="col-date">Game Date</th>
         <th class="col-size">Size</th>
         <th class="col-status">AI Status</th>
@@ -492,7 +492,10 @@ function renderVideoRow(v) {
     ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">Dup</span>`
     : '';
   const gameLabel = escHtml(v.display_game || v.opponent || 'Liberty');
-  const teamLabel = escHtml(v.team_label || '—');
+  // Prefer identifiers Scott can match to scorebooks (light list already has these).
+  const gameIdDisplay = escHtml(
+    v.game_id || v.analysis_key || (v.relational_game_id != null ? String(v.relational_game_id) : '') || String(v.id) || '—'
+  );
   const gameDate = formatGameDate(v.game_date);
   const deleteLabel = escHtml(v.display_game || v.opponent || v.stored_filename || 'this video').replace(/'/g, "\\'");
 
@@ -502,7 +505,7 @@ function renderVideoRow(v) {
     <td class="col-game" data-label="Game">
       <strong>${gameLabel}</strong>${dupBadge}
     </td>
-    <td class="col-team" data-label="Team">${teamLabel}</td>
+    <td class="col-gameid" data-label="GameID" title="${gameIdDisplay}">${gameIdDisplay}</td>
     <td class="col-date" data-label="Game Date">${gameDate}</td>
     <td class="col-size" data-label="Size">${formatBytes(v.file_size_bytes)}</td>
     <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count)}</td>
