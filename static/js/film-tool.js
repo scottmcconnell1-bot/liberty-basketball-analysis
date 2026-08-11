@@ -1658,6 +1658,111 @@ function exitFocusMode() {
     focusExitBtn.classList.add('hidden'); btn.textContent = 'Hide game info';
 }
 
+// ── Play / set suggestions (FastDraw library rank) ───────────
+let playMatchesCache = null;
+
+function focusPlayMatchesPanel() {
+    const panel = document.getElementById('playMatchesPanel');
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function formatPlayMatchTime(ms) {
+    const sec = Math.max(0, Number(ms) || 0) / 1000;
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function renderPlayMatches(data) {
+    const list = document.getElementById('playMatchesList');
+    const countEl = document.getElementById('playMatchesCount');
+    const libEl = document.getElementById('playMatchesLibraryLabel');
+    const limitsEl = document.getElementById('playMatchesLimits');
+    if (!list) return;
+
+    playMatchesCache = data || null;
+    const possessions = (data && data.possessions) || [];
+    if (countEl) countEl.textContent = `${possessions.length} possession${possessions.length === 1 ? '' : 's'}`;
+    if (libEl) libEl.textContent = `Library: ${data && data.library_size != null ? data.library_size : '—'} plays`;
+    if (limitsEl) {
+        const limits = (data && data.limits) || [];
+        limitsEl.textContent = limits.length
+            ? `MVP limits: ${limits.slice(0, 2).join(' ')}`
+            : '';
+    }
+
+    if (!possessions.length) {
+        list.innerHTML = '<div class="empty-state">No possession windows to match. Run analysis first, then Refresh.</div>';
+        return;
+    }
+
+    list.innerHTML = possessions.map((poss, idx) => {
+        const top = (poss.suggestions && poss.suggestions[0]) || null;
+        const title = top
+            ? `#${top.rank} ${escapeHtml(top.play_name)} <span class="tiny">(score ${Number(top.score).toFixed(2)})</span>`
+            : '<span class="tiny">No strong match</span>';
+        const alts = (poss.suggestions || []).slice(0, 3).map(s =>
+            `<li class="tiny">#${s.rank} ${escapeHtml(s.play_name)} — ${Number(s.score).toFixed(2)}</li>`
+        ).join('');
+        const startSec = (Number(poss.start_ms) || 0) / 1000;
+        return `
+          <div class="list-item play-match-item" data-start-ms="${poss.start_ms || 0}" data-play-match-idx="${idx}">
+            <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">
+              <div>
+                <strong>${formatPlayMatchTime(poss.start_ms)}–${formatPlayMatchTime(poss.end_ms)}</strong>
+                <div>${title}</div>
+                ${alts ? `<ul style="margin:.25rem 0 0 1rem;padding:0;">${alts}</ul>` : ''}
+                <div class="tiny text-muted">${poss.track_count || 0} tracks · ${escapeHtml(poss.window_source || '')}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button" data-seek-play-match="${startSec}">Seek</button>
+            </div>
+          </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-seek-play-match]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sec = Number(btn.getAttribute('data-seek-play-match') || 0);
+            if (video && !Number.isNaN(sec)) {
+                video.currentTime = Math.max(0, sec);
+                setStatus(`Jumped to play-match window at ${sec.toFixed(1)}s.`);
+            }
+        });
+    });
+}
+
+async function fetchAndRenderPlayMatches(gameId, { refresh = false } = {}) {
+    const list = document.getElementById('playMatchesList');
+    if (!list || !gameId) return;
+    list.innerHTML = '<div class="empty-state">Matching possessions to playbook…</div>';
+    try {
+        const url = refresh
+            ? `/api/film/${encodeURIComponent(gameId)}/play-matches?refresh=1`
+            : `/api/film/${encodeURIComponent(gameId)}/play-matches`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            list.innerHTML = '<div class="empty-state">Could not load play matches.</div>';
+            return;
+        }
+        const data = await response.json();
+        renderPlayMatches(data);
+    } catch (_err) {
+        list.innerHTML = '<div class="empty-state">Error loading play matches.</div>';
+    }
+}
+
+function initPlayMatchesPanel() {
+    const btn = document.getElementById('playMatchesRefreshBtn');
+    btn?.addEventListener('click', () => {
+        const gameId = window.FILM_TOOL_GAME_ID || new URLSearchParams(window.location.search).get('game_id') || '';
+        if (!gameId) {
+            setStatus('No game_id — open film with ?game_id=… first.');
+            return;
+        }
+        fetchAndRenderPlayMatches(gameId, { refresh: true });
+    });
+}
+
 // ── AI Events / Review Workspace ────────────────────────────
 let aiReviewFilter = 'pending';
 let aiReviewPlayersCache = [];
@@ -2855,6 +2960,9 @@ function init() {
     const reviewRequested = window.FILM_TOOL_REVIEW_MODE === true
         || window.FILM_TOOL_REVIEW_MODE === 'true'
         || urlParams.get('review') === '1';
+    const playsRequested = window.FILM_TOOL_PLAYS_MODE === true
+        || window.FILM_TOOL_PLAYS_MODE === 'true'
+        || urlParams.get('plays') === '1';
     if (reviewRequested) {
         aiReviewFilter = 'pending';
         document.querySelectorAll('.ai-filter-btn').forEach(btn => {
@@ -2862,11 +2970,19 @@ function init() {
         });
     }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
+    if (activeGameId && window.ENABLE_AUTO_STATS_M1) {
+        fetchAndRenderPlayMatches(activeGameId, { refresh: false });
+    }
+    initPlayMatchesPanel();
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
     setStatus(reviewRequested ? 'Review workspace ready — pending AI drafts shown.' : 'Ready.');
     if (reviewRequested) {
         setTimeout(focusReviewWorkspace, 250);
+    }
+    if (playsRequested) {
+        setTimeout(focusPlayMatchesPanel, 280);
+        setStatus('Play/set suggestions panel ready — ranked matches only (not auto-accepted).');
     }
 
     function seekFromUrlParam() {

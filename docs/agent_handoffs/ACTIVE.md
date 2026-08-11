@@ -11,8 +11,8 @@ Updated: 2026-08-11 (archive prior conversation; continue here)
 | Item | Value |
 | --- | --- |
 | Repo | `C:\Users\scott\Documents\liberty-basketball-analysis` |
-| Branch | `jason-5-may-updates` (tip ~`3ea9fff` as of handoff; `git pull` first) |
-| Site | `https://liberty-coach.tail368a37.ts.net` → local `:8080` |
+| Branch | `jason-5-may-updates` (`git pull` first) |
+| Site | `https://liberty-coach.tail368a37.ts.net` -> local `:8080` |
 | Flask Python | `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe` |
 | Login | Staff **email** (not username) + usual password |
 
@@ -20,15 +20,15 @@ Updated: 2026-08-11 (archive prior conversation; continue here)
 
 A game is **done** when:
 
-1. Scorebook photo → `/stat-books` → confirm → `data/stat_books/confirmed/<game_id>.json`
-2. Film events → **Review** Accept/Correct/Reject → official ledger (`events` with accepted/corrected)
+1. Scorebook photo -> `/stat-books` -> confirm -> `data/stat_books/confirmed/<game_id>.json`
+2. Film events -> **Review** Accept/Correct/Reject -> official ledger (`events` with accepted/corrected)
 
 GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confidence thresholds).
 
 ## Ops (important)
 
 - Teach loop **PAUSED**: `data/hoopsalytics/TEACH_LOOP_PAUSED` present; watchdog disabled earlier. **Do not** resume full HUDL backlog.
-- Videos: **Active → 9 JrHigh**, **Archive → 54** older games.
+- Videos: **Active -> 9 JrHigh**, **Archive -> 54** older games.
 - Scorebook images staged: `uploads/stat_books/jrhigh/`
 - Prefer **one game at a time** for AI (not batch teach).
 
@@ -36,13 +36,13 @@ GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confid
 
 - Videos light list (no N+ detection COUNT)
 - Active / Archive tabs + bulk archive
-- Actions UI: Film Tool / Review / Archive / More (2×2)
+- Actions UI: Film Tool / Review / Archive / More (2x2)
 - **GameID** column (match scorebooks)
 - `/stat-books` MVP; upload fix for commas in game_id (e.g. `jrhigh_adrian,_or_...`)
 - Review workspace Accept / Correct / Reject
-- Sticky playbook + FastDraw vector extract (merged earlier)
-- **Highlights** from reviewed ledger (`/highlights`, jersey/event filters, generate clips / clip list; `highlight_clips.py` + clips APIs)
-- FastDraw play-match may exist on side branch — **verify merged before assuming live**
+- Sticky playbook + FastDraw vector extract
+- **Highlights** from reviewed ledger (`/highlights`, jersey/event filters, generate clips / clip list)
+- **FastDraw play/set match** (rank-only MVP; Film Tool panel + `/api/film/<game_id>/play-matches`; see `docs/PLAYBOOK_PLAY_MATCH.md`)
 
 ## Immediate open bug (Scott screenshot 2026-08-11)
 
@@ -59,7 +59,7 @@ GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confid
 2. Clear hung `analysis_runs` for this game if needed
 3. Restart Flask with Python312 on :8080
 4. Retry AI on **this game only**; confirm progress past sklearn error
-5. Then E2E: `/stat-books` confirm for same GameID → Review ledger → optional `/highlights`
+5. Then E2E: `/stat-books` confirm for same GameID -> Review ledger -> optional `/highlights`
 
 ## Suggested first message for new agent
 
@@ -67,7 +67,7 @@ GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confid
 
 ## Proven / Inferred / Unknown
 
-- **Proven:** DoD shift; teach paused; JrHigh active list; scorebook comma fix; Adrian error text names sklearn; highlight-clips merged
+- **Proven:** DoD shift; teach paused; JrHigh active list; scorebook comma fix; Adrian error text names sklearn; highlight-clips + fastdraw-play-match merged onto jason
 - **Inferred:** Flask must use Python312 (system), not a bare `python` without deps
-- **Unknown:** Whether sklearn already installed after partial fix attempt; whether FastDraw-match is on jason tip yet
+- **Unknown:** Whether sklearn already installed after partial fix attempt
 

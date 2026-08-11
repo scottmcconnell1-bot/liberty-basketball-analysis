@@ -610,6 +610,28 @@
             </div>
           </div>
         </div>
+
+        <div class="panel" id="playMatchesPanel" style="margin-top:1rem;">
+          <div class="panel-head">
+            <div>
+              <h2>Play / set suggestions</h2>
+              <p>Ranked matches of possession movement vs sticky FastDraw playbook vectors. Suggestions only — not auto-accepted.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
+              <span class="badge" id="playMatchesCount">0 possessions</span>
+              <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
+              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn">Refresh matches</button>
+            </div>
+            <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
+            <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:320px;">
+              <div class="list-stack" id="playMatchesList">
+                <div class="empty-state">Open a game with detections, then Refresh matches.</div>
+              </div>
+            </div>
+          </div>
+        </div>
         {% endif %}
       </div>
 
@@ -1104,6 +1126,7 @@
   window.FILM_TOOL_DETECTION_COUNT = {{ detection_count|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
   window.FILM_TOOL_REVIEW_MODE = {{ "true" if review_mode|default(false) else "false" }};
+  window.FILM_TOOL_PLAYS_MODE = {{ "true" if plays_mode|default(false) else "false" }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
