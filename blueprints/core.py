@@ -1679,9 +1679,18 @@ def film_review_workspace(filename):
     return redirect(url_for("core.film", filename=filename, **args))
 
 
+@core.route("/film/<path:filename>/plays")
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_play_matches(filename):
+    """Deep-link into Film Tool play/set suggestion panel (rank only)."""
+    args = request.args.to_dict(flat=True)
+    args["plays"] = "1"
+    return redirect(url_for("core.film", filename=filename, **args))
+
+
 @core.route("/film/assisted-stat-sample")
 def assisted_stat_sample():
-    """SAMPLE / DELETE ME – static AI-assisted stating prototype (fake data)."""
+    """SAMPLE / DELETE ME - static AI-assisted stating prototype (fake data)."""
     root = os.path.abspath(os.path.join(current_app.root_path, "docs", "prototypes"))
     return send_from_directory(root, "assisted_stat_sample.html")
 
@@ -1805,6 +1814,7 @@ def film(filename=None):
             possession_summary = build_possession_workflow_summary(db, game_id)
 
     review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
+    plays_mode = (request.args.get("plays") or "").strip().lower() in {"1", "true", "yes"}
     return render_template(
         "film_tool.html",
         filename=filename,
@@ -1819,6 +1829,7 @@ def film(filename=None):
         player_minutes_data=player_minutes_data,
         possession_summary=possession_summary,
         review_mode=review_mode,
+        plays_mode=plays_mode,
     )
 
 

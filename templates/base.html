@@ -838,6 +838,7 @@
       <div class="dropdown-menu">
         {% if features.ENABLE_MANUAL_TAG_MVP %}
         <a href="/film" {% if nav_active('core.film') %}class="active"{% endif %}>Film Tool</a>
+        <a href="/highlights" {% if nav_active('clips.highlights_page') %}class="active"{% endif %}>Highlights</a>
         {% endif %}
         {% if features.ENABLE_AUTO_STATS_M1 %}
         <a href="/videos" {% if nav_active('core.videos_page') %}class="active"{% endif %}>Videos</a>

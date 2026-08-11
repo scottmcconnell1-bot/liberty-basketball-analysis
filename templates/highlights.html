@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}Highlight Clips - Liberty Basketball{% endblock %}
+
+{% block content %}
+<style>
+  .hl-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 20px 24px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+    margin-bottom: 18px;
+  }
+  .hl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  .hl-note { color: var(--color-muted); font-size: 0.95rem; line-height: 1.5; }
+  .hl-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .hl-table th, .hl-table td {
+    text-align: left; padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .hl-empty {
+    padding: 18px; border-radius: 12px; background: #f8fafc; color: var(--color-muted);
+  }
+  .hl-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .hl-status { margin-top: 12px; font-size: 0.92rem; }
+  .hl-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: #eef2ff; color: #3730a3; font-size: 0.78rem;
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <h2>Highlight Clips</h2>
+    <div class="text-muted">Cut clips from the <strong>reviewed</strong> event ledger (accepted / corrected only).</div>
+  </div>
+  <span class="hl-badge" id="hl-ffmpeg-badge">
+    {% if ffmpeg_available %}ffmpeg ready{% else %}ffmpeg missing — seek export{% endif %}
+  </span>
+</div>
+
+<section class="hl-card">
+  <p class="hl-note" style="margin-top:0;">
+    Pending AI drafts are excluded. Review film first, then generate highlights here.
+  </p>
+  <div class="hl-grid">
+    <div class="form-group">
+      <label for="hl-game">Game</label>
+      <select id="hl-game" class="form-control">
+        <option value="">Loading games…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="hl-jersey">Jersey</label>
+      <input id="hl-jersey" class="form-control" type="text" placeholder="e.g. 23" list="hl-player-list">
+      <datalist id="hl-player-list"></datalist>
+    </div>
+    <div class="form-group">
+      <label for="hl-event-type">Event type</label>
+      <select id="hl-event-type" class="form-control" disabled>
+        <option value="">All types</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="hl-pad-before">Pad before (ms)</label>
+      <input id="hl-pad-before" class="form-control" type="number" min="0" step="500" value="3000">
+    </div>
+    <div class="form-group">
+      <label for="hl-pad-after">Pad after (ms)</label>
+      <input id="hl-pad-after" class="form-control" type="number" min="0" step="500" value="5000">
+    </div>
+    <button class="btn btn-primary" id="hl-apply" type="button">List moments</button>
+  </div>
+</section>
+
+<section class="hl-card">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+    <h3 style="margin:0;">Moments</h3>
+    <div class="hl-actions" style="margin:0;">
+      <button class="btn btn-secondary btn-sm" id="hl-select-all" type="button" disabled>Select all</button>
+      <button class="btn btn-secondary btn-sm" id="hl-export" type="button" disabled>Download clip list</button>
+      <button class="btn btn-primary btn-sm" id="hl-generate" type="button" disabled>Generate clips</button>
+    </div>
+  </div>
+  <div id="hl-moments" class="hl-empty" style="margin-top:14px;">Pick a game to load reviewed moments.</div>
+  <div id="hl-status" class="hl-status text-muted" hidden></div>
+</section>
+
+<script>
+(function () {
+  const gameSelect = document.getElementById('hl-game');
+  const jerseyInput = document.getElementById('hl-jersey');
+  const eventTypeSelect = document.getElementById('hl-event-type');
+  const padBefore = document.getElementById('hl-pad-before');
+  const padAfter = document.getElementById('hl-pad-after');
+  const momentsEl = document.getElementById('hl-moments');
+  const statusEl = document.getElementById('hl-status');
+  const applyBtn = document.getElementById('hl-apply');
+  const selectAllBtn = document.getElementById('hl-select-all');
+  const exportBtn = document.getElementById('hl-export');
+  const generateBtn = document.getElementById('hl-generate');
+  const playerList = document.getElementById('hl-player-list');
+
+  let lastPayload = null;
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatMs(ms) {
+    if (ms == null) return '—';
+    const total = Math.max(0, Math.floor(Number(ms) / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function setStatus(text, isError) {
+    statusEl.hidden = !text;
+    statusEl.textContent = text || '';
+    statusEl.style.color = isError ? '#b91c1c' : '';
+  }
+
+  function setActionEnabled(enabled) {
+    selectAllBtn.disabled = !enabled;
+    exportBtn.disabled = !enabled;
+    generateBtn.disabled = !enabled;
+  }
+
+  async function loadGames() {
+    const resp = await fetch('/api/highlights/games');
+    const data = await resp.json();
+    gameSelect.innerHTML = '<option value="">Select a game</option>';
+    (data.games || []).forEach((game) => {
+      const option = document.createElement('option');
+      option.value = game.id;
+      const count = game.reviewed_event_count || 0;
+      option.textContent = `${game.label} (${count} reviewed)`;
+      gameSelect.appendChild(option);
+    });
+    if (!(data.games || []).length) {
+      gameSelect.innerHTML = '<option value="">No games found</option>';
+    }
+  }
+
+  function fillFilterOptions(payload) {
+    const players = (payload.filter_options && payload.filter_options.players) || [];
+    const types = (payload.filter_options && payload.filter_options.event_types) || [];
+    playerList.innerHTML = players.map((p) => `<option value="${escapeHtml(p)}"></option>`).join('');
+    const currentType = eventTypeSelect.value;
+    eventTypeSelect.innerHTML = '<option value="">All types</option>';
+    types.forEach((t) => {
+      const option = document.createElement('option');
+      option.value = t;
+      option.textContent = t;
+      if (t === currentType) option.selected = true;
+      eventTypeSelect.appendChild(option);
+    });
+    eventTypeSelect.disabled = false;
+  }
+
+  function renderEmpty(payload) {
+    setActionEnabled(false);
+    if (payload.empty_reason === 'no_reviewed_events') {
+      momentsEl.className = 'hl-empty';
+      momentsEl.innerHTML = `
+        <strong>No reviewed events for this game.</strong>
+        <p style="margin:8px 0 0;">Accept or correct drafts in the
+        <a href="/videos">Review workspace</a> (Film Tool → Review) first.
+        Pending AI events are not used for highlights.</p>`;
+      return;
+    }
+    momentsEl.className = 'hl-empty';
+    momentsEl.textContent = 'No moments match the current jersey / event type filters.';
+  }
+
+  function renderMoments(payload) {
+    lastPayload = payload;
+    fillFilterOptions(payload);
+    const moments = payload.moments || [];
+    if (!moments.length) {
+      renderEmpty(payload);
+      return;
+    }
+    setActionEnabled(true);
+    const rows = moments.map((m) => {
+      const seek = m.seek_url
+        ? `<a href="${escapeHtml(m.seek_url)}" target="_blank" rel="noopener">Seek</a>`
+        : '—';
+      return `<tr>
+        <td><input type="checkbox" class="hl-check" value="${m.id}" checked></td>
+        <td>${formatMs(m.timestamp_ms)}</td>
+        <td>${escapeHtml(m.player || '—')}</td>
+        <td>${escapeHtml(m.event_type || '—')}</td>
+        <td><span class="hl-badge">${escapeHtml(m.review_status || '')}</span></td>
+        <td>${formatMs(m.clip_start_ms)}–${formatMs(m.clip_end_ms)}</td>
+        <td>${seek}</td>
+      </tr>`;
+    }).join('');
+    momentsEl.className = '';
+    momentsEl.innerHTML = `
+      <p class="hl-note" style="margin:0 0 8px;">
+        Showing ${moments.length} of ${payload.reviewed_event_count} reviewed event(s).
+        ${payload.video ? `Video: ${escapeHtml(payload.video.original_filename || payload.video.stored_filename)}` : 'No linked video — seek/export only.'}
+      </p>
+      <table class="hl-table">
+        <thead>
+          <tr>
+            <th></th><th>Time</th><th>Player / jersey</th><th>Event</th>
+            <th>Status</th><th>Clip window</th><th>Film</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function loadMoments() {
+    const gameId = gameSelect.value;
+    if (!gameId) {
+      momentsEl.className = 'hl-empty';
+      momentsEl.textContent = 'Pick a game to load reviewed moments.';
+      setActionEnabled(false);
+      return;
+    }
+    momentsEl.className = 'hl-empty';
+    momentsEl.textContent = 'Loading reviewed moments…';
+    setStatus('');
+    const params = new URLSearchParams({
+      game_id: gameId,
+      pad_before_ms: padBefore.value || '3000',
+      pad_after_ms: padAfter.value || '5000',
+    });
+    if (jerseyInput.value.trim()) params.set('jersey', jerseyInput.value.trim());
+    if (eventTypeSelect.value.trim()) params.set('event_type', eventTypeSelect.value.trim());
+    const resp = await fetch(`/api/highlights/moments?${params}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      momentsEl.textContent = data.error || 'Failed to load moments.';
+      setActionEnabled(false);
+      return;
+    }
+    renderMoments(data);
+  }
+
+  function selectedIds() {
+    return Array.from(document.querySelectorAll('.hl-check:checked')).map((el) => Number(el.value));
+  }
+
+  function downloadClipList(items) {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `highlight-clips-game-${gameSelect.value}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  selectAllBtn.addEventListener('click', () => {
+    document.querySelectorAll('.hl-check').forEach((el) => { el.checked = true; });
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if (!lastPayload) return;
+    const ids = new Set(selectedIds());
+    const items = (lastPayload.moments || [])
+      .filter((m) => ids.has(m.id))
+      .map((m) => ({
+        event_id: m.id,
+        player: m.player,
+        event_type: m.event_type,
+        timestamp_ms: m.timestamp_ms,
+        clip_start_ms: m.clip_start_ms,
+        clip_end_ms: m.clip_end_ms,
+        clip_label: m.clip_label,
+        seek_url: m.seek_url,
+        review_status: m.review_status,
+      }));
+    if (!items.length) {
+      setStatus('Select at least one moment to export.', true);
+      return;
+    }
+    downloadClipList(items);
+    setStatus(`Downloaded clip list (${items.length}).`);
+  });
+
+  generateBtn.addEventListener('click', async () => {
+    const gameId = gameSelect.value;
+    const eventIds = selectedIds();
+    if (!gameId || !eventIds.length) {
+      setStatus('Select a game and at least one reviewed moment.', true);
+      return;
+    }
+    generateBtn.disabled = true;
+    setStatus('Generating clips…');
+    try {
+      const resp = await fetch('/api/highlights/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          game_id: Number(gameId),
+          event_ids: eventIds,
+          pad_before_ms: Number(padBefore.value || 3000),
+          pad_after_ms: Number(padAfter.value || 5000),
+          save_clips: true,
+          cut_video: true,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setStatus(data.error || 'Generate failed.', true);
+        generateBtn.disabled = false;
+        return;
+      }
+      downloadClipList(data.export || []);
+      const jobs = (data.trim_jobs || []).length;
+      setStatus(
+        `${data.message || 'Done.'}` +
+        (jobs ? ` Trim jobs started: ${jobs} (poll /api/videos/trim/<job_id>).` : '')
+      );
+    } catch (err) {
+      setStatus(String(err), true);
+    }
+    generateBtn.disabled = false;
+  });
+
+  applyBtn.addEventListener('click', loadMoments);
+  gameSelect.addEventListener('change', loadMoments);
+
+  loadGames().catch((err) => {
+    gameSelect.innerHTML = '<option value="">Failed to load games</option>';
+    setStatus(String(err), true);
+  });
+})();
+</script>
+{% endblock %}
