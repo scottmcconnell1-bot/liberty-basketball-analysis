@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "game_id": "sample-hsb-liberty",
+  "template_id": "liberty_spiral_scorebook",
+  "final_score_home": 17,
+  "final_score_away": 0,
+  "home_team": "Liberty",
+  "away_team": "HSB",
+  "players": [
+    {
+      "jersey": "21",
+      "name": "H. Coleman",
+      "team": "home",
+      "pts": 17,
+      "fouls": null,
+      "fgm": 6,
+      "fga": null,
+      "tpm": 3,
+      "tpa": null,
+      "ftm": 2,
+      "fta": 4,
+      "reb": null,
+      "ast": null,
+      "stl": null,
+      "blk": null,
+      "to": null,
+      "min": null,
+      "extras": {
+        "fg2": 3,
+        "fg3": 3
+      }
+    }
+  ],
+  "quarters": [],
+  "checksums": {},
+  "confirmed_at": "2026-08-11T01:15:42Z",
+  "confirmed_by": "pytest",
+  "validation": {
+    "ok": true,
+    "issues": []
+  }
+}

@@ -1,21 +1,16 @@
 # Learning Status
 
-Generated (local): **2026-08-09 23:00:13 Mountain Daylight Time**
+Generated (local): **2026-08-10 23:00:15 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
 ## Current learning activity
 
 - **Process map:** ok
-- **Active (live worker-backed):** 0
-- **Hint / key:** `hudl_carey_home_regular_vs_carey`
-- **Status:** inferred_from_teach_state (no live analysis worker)
-- **Progress:** Unknown
-- **Step:** last scored: HUDL Carey
-- **Source:** teach_loop_state (Inferred)
+- **Active (live worker-backed):** 1
+  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334` **(primary)**: 7.0%, step=Failed, PID=14760, kind=analysis_launcher, db_status=failed
 - **Stale/zombie candidates (DB running, no worker):** 0
-- **analysis_runs counts (raw DB):** completed=46, failed=10 (running includes stale/zombie candidates until reclaimed)
-- Note: no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only
+- **analysis_runs counts (raw DB):** completed=46, failed=11 (running includes stale/zombie candidates until reclaimed)
 
 ## Queue summary
 
@@ -39,7 +34,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 52.6% | FAIL |
 
 **Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-08-10T05:00:11.678078+00:00`
+- Panel snapshot: `2026-08-11T05:00:13.675153+00:00`
 
 ## Per-game panel
 
@@ -69,6 +64,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 ### Proven
 
 - Panel metrics from `full_film_panel_latest.json`
+- `analysis_runs` status/progress from `film_analysis.db`
 - Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list
 - HUDL taught key count from `teach_loop_state.json`
 - HUDL film_tool game count from DB
@@ -77,7 +73,6 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 ### Inferred
 
-- Current activity inferred from last teach score (no live worker)
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
 
 ### Unknown
