@@ -12,7 +12,7 @@ Updated: 2026-08-11 (archive prior conversation; continue here)
 | --- | --- |
 | Repo | `C:\Users\scott\Documents\liberty-basketball-analysis` |
 | Branch | `jason-5-may-updates` (tip ~`3ea9fff` as of handoff; `git pull` first) |
-| Site | `https://liberty-coach.tail368a37.ts.net` · local `:8080` |
+| Site | `https://liberty-coach.tail368a37.ts.net` ï¿½ local `:8080` |
 | Flask Python | `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe` |
 | Login | Staff **email** (not username) + usual password |
 
@@ -34,9 +34,9 @@ GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confid
 
 ## Shipped (already on tip)
 
-- Videos light list (no N× detection COUNT)
+- Videos light list (no Nï¿½ detection COUNT)
 - Active / Archive tabs + bulk archive
-- Actions UI: Film Tool / Review / Archive / More (2×2)
+- Actions UI: Film Tool / Review / Archive / More (2ï¿½2)
 - **GameID** column (match scorebooks)
 - `/stat-books` MVP; upload fix for commas in game_id (e.g. `jrhigh_adrian,_or_...`)
 - Review workspace Accept / Correct / Reject
