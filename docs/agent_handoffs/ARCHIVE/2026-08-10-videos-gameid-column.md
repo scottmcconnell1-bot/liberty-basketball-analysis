@@ -15,8 +15,8 @@ Base: `jason-5-may-updates`
 
 ## Scope delivered
 
-- `/videos` column header **Team** ? **GameID**
-- Cell shows best available id from light list: `game_id` ? `analysis_key` ? `relational_game_id` ? video `id` (no extra API work)
+- `/videos` column header **Team** → **GameID**
+- Cell shows best available id from light list: `game_id` → `analysis_key` → `relational_game_id` → video `id` (no extra API work)
 
 ## Try
 
