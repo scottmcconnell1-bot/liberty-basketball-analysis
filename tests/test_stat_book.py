@@ -79,6 +79,47 @@ def test_example_game_foundation_shape():
     assert "players" in data and "checksums" in data and "quarters" in data
 
 
+def test_sanitize_game_id_allows_jrhigh_comma():
+    from stat_book.paths import sanitize_game_id
+
+    gid = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    assert sanitize_game_id(gid) == gid
+
+
+def test_sanitize_game_id_rejects_path_chars():
+    from stat_book.paths import sanitize_game_id
+    import pytest
+
+    with pytest.raises(ValueError):
+        sanitize_game_id("../evil")
+    with pytest.raises(ValueError):
+        sanitize_game_id("a/b")
+
+
+def test_upload_jrhigh_comma_game_id(client, tmp_path, monkeypatch):
+    monkeypatch.setitem(client.application.config, "UPLOAD_FOLDER", str(tmp_path))
+    sample_png = Path("data/stat_books/templates/liberty_spiral_scorebook/blank.png")
+    gid = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    data = {
+        "template_id": "liberty_spiral_scorebook",
+        "scan": (sample_png.open("rb"), "scorebook.png"),
+    }
+    resp = client.post(
+        f"/stat-books/games/{gid}/upload",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=False,
+    )
+    assert resp.status_code in (302, 303), resp.data
+    assert f"/stat-books/games/" in (resp.headers.get("Location") or "")
+    draft = tmp_path / "stat_books" / gid / "draft.json"
+    assert draft.is_file()
+    original = list((tmp_path / "stat_books" / gid).glob("original.*"))
+    assert original, "upload should save original image"
+    review = client.get(f"/stat-books/games/{gid}/review")
+    assert review.status_code == 200
+
+
 def test_routes_sample_and_confirm(client, tmp_path, monkeypatch):
     monkeypatch.setitem(client.application.config, "UPLOAD_FOLDER", str(tmp_path))
     resp = client.get("/stat-books")

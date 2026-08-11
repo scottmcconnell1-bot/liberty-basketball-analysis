@@ -33,7 +33,14 @@ from stat_book.paths import (
     sanitize_template_id,
     upload_dir,
 )
-from stat_book.pipeline import extract_from_image, load_draft, load_layout, save_draft, save_layout
+from stat_book.pipeline import (
+    create_manual_draft,
+    extract_from_image,
+    load_draft,
+    load_layout,
+    save_draft,
+    save_layout,
+)
 from stat_book.schema import build_confirmed_box, stamp_confirmed, validate_confirmed_box
 
 stat_books_bp = Blueprint("stat_books", __name__)
@@ -43,6 +50,13 @@ DEFAULT_TEMPLATE = "liberty_spiral_scorebook"
 
 def _upload_root() -> str:
     return current_app.config.get("UPLOAD_FOLDER", "uploads")
+
+
+def _parse_game_id(game_id: str) -> str | None:
+    try:
+        return sanitize_game_id(game_id)
+    except ValueError:
+        return None
 
 
 @stat_books_bp.record_once
@@ -130,8 +144,15 @@ def blank_file(template_id):
 
 @stat_books_bp.route("/stat-books/games/<game_id>/upload", methods=["POST"])
 def upload_game(game_id):
-    gid = sanitize_game_id(game_id)
-    tid = sanitize_template_id(request.form.get("template_id") or DEFAULT_TEMPLATE)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        flash("Invalid Game ID. Use letters, numbers, and . _ - , only.", "error")
+        return redirect(url_for("stat_books.index"))
+    try:
+        tid = sanitize_template_id(request.form.get("template_id") or DEFAULT_TEMPLATE)
+    except ValueError:
+        flash("Invalid template.", "error")
+        return redirect(url_for("stat_books.index"))
     file = request.files.get("scan") or request.files.get("file")
     if not file or not file.filename:
         flash("Choose a photo/scan.", "error")
@@ -146,14 +167,30 @@ def upload_game(game_id):
             corners = json.loads(request.form["corners"])
         except json.JSONDecodeError:
             corners = None
-    extract_from_image(original, tid, gid, corners=corners, upload_folder=_upload_root())
-    flash(f"Draft extracted for {gid} — review before confirming.", "ok")
+    try:
+        payload = extract_from_image(
+            original, tid, gid, corners=corners, upload_folder=_upload_root()
+        )
+    except Exception as exc:  # noqa: BLE001 — always land on review UI
+        current_app.logger.exception("stat-book extract failed for %s", gid)
+        payload = create_manual_draft(
+            gid, tid, _upload_root(), reason=str(exc), image_path=original
+        )
+    if (payload.get("meta") or {}).get("manual_fill"):
+        flash(
+            f"Upload saved for {gid}. OCR/align incomplete — fill stats on the review screen.",
+            "ok",
+        )
+    else:
+        flash(f"Draft extracted for {gid} — review before confirming.", "ok")
     return redirect(url_for("stat_books.review", game_id=gid))
 
 
 @stat_books_bp.route("/stat-books/games/<game_id>/align", methods=["POST"])
 def align_game(game_id):
-    gid = sanitize_game_id(game_id)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        return jsonify({"ok": False, "error": "Invalid game_id"}), 400
     draft = load_draft(gid, _upload_root())
     work = upload_dir(gid, _upload_root())
     originals = list(work.glob("original.*"))
@@ -161,15 +198,24 @@ def align_game(game_id):
         return jsonify({"ok": False, "error": "No original upload"}), 404
     body = request.get_json(silent=True) or {}
     tid = body.get("template_id") or (draft or {}).get("box", {}).get("template_id") or DEFAULT_TEMPLATE
-    payload = extract_from_image(
-        originals[0], tid, gid, corners=body.get("corners"), upload_folder=_upload_root()
-    )
+    try:
+        payload = extract_from_image(
+            originals[0], tid, gid, corners=body.get("corners"), upload_folder=_upload_root()
+        )
+    except Exception as exc:  # noqa: BLE001
+        current_app.logger.exception("stat-book align failed for %s", gid)
+        payload = create_manual_draft(
+            gid, tid, _upload_root(), reason=str(exc), image_path=originals[0]
+        )
     return jsonify({"ok": True, "draft": payload})
 
 
 @stat_books_bp.route("/stat-books/games/<game_id>/review")
 def review(game_id):
-    gid = sanitize_game_id(game_id)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        flash("Invalid Game ID.", "error")
+        return redirect(url_for("stat_books.index"))
     draft = load_draft(gid, _upload_root())
     if not draft:
         flash(f"No draft for {gid}.", "error")
@@ -197,7 +243,9 @@ def review(game_id):
 
 @stat_books_bp.route("/stat-books/games/<game_id>/image/<path:filename>")
 def game_image(game_id, filename):
-    gid = sanitize_game_id(game_id)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        return jsonify({"error": "invalid game_id"}), 400
     work = upload_dir(gid, _upload_root())
     path = (work / filename).resolve()
     if not str(path).startswith(str(work.resolve())) or not path.is_file():
@@ -207,7 +255,9 @@ def game_image(game_id, filename):
 
 @stat_books_bp.route("/stat-books/games/<game_id>/draft", methods=["GET", "POST"])
 def draft_api(game_id):
-    gid = sanitize_game_id(game_id)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        return jsonify({"ok": False, "error": "Invalid game_id"}), 400
     if request.method == "GET":
         draft = load_draft(gid, _upload_root())
         if not draft:
@@ -237,7 +287,9 @@ def draft_api(game_id):
 
 @stat_books_bp.route("/stat-books/games/<game_id>/confirm", methods=["POST"])
 def confirm_game(game_id):
-    gid = sanitize_game_id(game_id)
+    gid = _parse_game_id(game_id)
+    if not gid:
+        return jsonify({"ok": False, "error": "Invalid game_id"}), 400
     body = request.get_json(silent=True) or {}
     box_in = body.get("box") or body
     confirmed_by = (body.get("confirmed_by") or "coach").strip()
@@ -267,7 +319,10 @@ def confirm_game(game_id):
 
 @stat_books_bp.route("/stat-books/confirmed/<game_id>")
 def get_confirmed(game_id):
-    path = confirmed_path(sanitize_game_id(game_id))
+    gid = _parse_game_id(game_id)
+    if not gid:
+        return jsonify({"ok": False, "error": "Invalid game_id"}), 400
+    path = confirmed_path(gid)
     if not path.is_file():
         return jsonify({"ok": False, "error": "not found"}), 404
     with path.open(encoding="utf-8") as fh:
@@ -277,7 +332,10 @@ def get_confirmed(game_id):
 @stat_books_bp.route("/stat-books/sample", methods=["POST", "GET"])
 def sample():
     """Seed HSB/Liberty filled sample into review for pipeline practice."""
-    gid = sanitize_game_id(request.values.get("game_id") or "sample-hsb-liberty")
+    gid = _parse_game_id(request.values.get("game_id") or "sample-hsb-liberty")
+    if not gid:
+        flash("Invalid Game ID.", "error")
+        return redirect(url_for("stat_books.index"))
     create_sample_draft(gid, upload_folder=_upload_root())
     flash(f"Sample draft {gid} ready.", "ok")
     return redirect(url_for("stat_books.review", game_id=gid))

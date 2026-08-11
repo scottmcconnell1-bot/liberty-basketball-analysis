@@ -11,7 +11,9 @@ DATA_ROOT = ROOT / "data" / "stat_books"
 TEMPLATES_ROOT = DATA_ROOT / "templates"
 CONFIRMED_ROOT = DATA_ROOT / "confirmed"
 
-_GAME_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
+# Commas appear in JrHigh keys like jrhigh_adrian,_or_... (city, ST → city,_st).
+# Reject path separators and Windows-reserved filename chars only.
+_GAME_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._,\-]{0,119}$")
 _TEMPLATE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,64}$")
 
 
@@ -23,6 +25,8 @@ def ensure_dirs() -> None:
 def sanitize_game_id(game_id: str) -> str:
     text = (game_id or "").strip()
     if not _GAME_ID_RE.match(text):
+        raise ValueError("Invalid game_id")
+    if ".." in text:
         raise ValueError("Invalid game_id")
     return text
 

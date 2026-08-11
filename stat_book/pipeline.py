@@ -57,6 +57,50 @@ def _ensure_player(bucket: dict[tuple[str, int], dict], team: str, index: int) -
     return bucket[key]
 
 
+def create_manual_draft(
+    game_id: str,
+    template_id: str = DEFAULT_TEMPLATE,
+    upload_folder: str | Path | None = None,
+    *,
+    reason: str | None = None,
+    image_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Empty review draft so coaches can fill stats when OCR/align fails."""
+    tid = sanitize_template_id(template_id)
+    gid = sanitize_game_id(game_id)
+    work_dir = upload_dir(gid, upload_folder)
+    checksums: dict[str, str] = {}
+    if image_path is not None:
+        digest = _sha256_file(Path(image_path))
+        if digest:
+            checksums["upload_sha256"] = digest
+    box = build_confirmed_box(
+        game_id=gid,
+        template_id=tid,
+        players=[],
+        home_team="Liberty",
+        away_team=None,
+        checksums=checksums,
+    )
+    box = apply_validation(box)
+    payload: dict[str, Any] = {
+        "box": box,
+        "meta": {
+            "align_mode": "manual",
+            "ocr": describe_ocr_status(),
+            "aligned_image": None,
+            "cell_reads": [],
+            "extract_error": reason,
+            "manual_fill": True,
+        },
+    }
+    draft_path = work_dir / "draft.json"
+    with draft_path.open("w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+        fh.write("\n")
+    return payload
+
+
 def extract_from_image(
     image_path: str | Path,
     template_id: str,
@@ -66,24 +110,42 @@ def extract_from_image(
 ) -> dict[str, Any]:
     tid = sanitize_template_id(template_id)
     gid = sanitize_game_id(game_id)
-    layout = load_layout(tid)
+    try:
+        layout = load_layout(tid)
+    except (OSError, ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
+        return create_manual_draft(
+            gid, tid, upload_folder, reason=f"layout: {exc}", image_path=image_path
+        )
+
     page = layout.get("page_size") or {"width": 1024, "height": 1024}
     out_w = int(page.get("width") or 1024)
     out_h = int(page.get("height") or 1024)
 
-    image = load_image_bgr(image_path)
+    try:
+        image = load_image_bgr(image_path)
+    except Exception as exc:  # noqa: BLE001 — soft-fail to manual review
+        return create_manual_draft(
+            gid, tid, upload_folder, reason=f"image_load: {exc}", image_path=image_path
+        )
+
     align_mode = "identity"
     working = image
     if image is not None and corners and len(corners) == 4:
-        warped = warp_to_template(image, corners, out_w, out_h)
-        if warped is not None:
-            working = warped
-            align_mode = "homography"
+        try:
+            warped = warp_to_template(image, corners, out_w, out_h)
+            if warped is not None:
+                working = warped
+                align_mode = "homography"
+        except Exception:  # noqa: BLE001
+            align_mode = "identity"
 
     work_dir = upload_dir(gid, upload_folder)
     aligned_path = work_dir / "aligned.png"
     if working is not None:
-        save_image_bgr(aligned_path, working)
+        try:
+            save_image_bgr(aligned_path, working)
+        except Exception:  # noqa: BLE001
+            aligned_path = work_dir / "aligned.png"
 
     players_map: dict[tuple[str, int], dict] = {}
     cell_reads: list[dict] = []
@@ -97,14 +159,17 @@ def extract_from_image(
         idx = int(cell.get("player_index", 0)) if "player_index" in cell else None
         crop = None
         if working is not None and all(k in cell for k in ("x0", "y0", "x1", "y1")):
-            crop = crop_norm_cell(
-                working,
-                float(cell["x0"]),
-                float(cell["y0"]),
-                float(cell["x1"]),
-                float(cell["y1"]),
-                pad=0.002,
-            )
+            try:
+                crop = crop_norm_cell(
+                    working,
+                    float(cell["x0"]),
+                    float(cell["y0"]),
+                    float(cell["x1"]),
+                    float(cell["y1"]),
+                    pad=0.002,
+                )
+            except Exception:  # noqa: BLE001
+                crop = None
 
         value = None
         conf = 0.0
@@ -115,7 +180,10 @@ def extract_from_image(
         elif field == "team_name":
             pass
         else:
-            value, conf, engine = read_digit_cell(crop) if crop is not None else (None, 0.0, "none")
+            try:
+                value, conf, engine = read_digit_cell(crop) if crop is not None else (None, 0.0, "none")
+            except Exception:  # noqa: BLE001
+                value, conf, engine = None, 0.0, "error"
 
         if field == "final_score" and team in final_scores and value is not None:
             final_scores[team] = value
