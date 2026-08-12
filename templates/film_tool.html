@@ -6,67 +6,179 @@
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/film-tool.css') }}">
 <style>
-  /* ── Tagger View Redesign ────────────────────────────────── */
-  .ft-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
-    gap: .75rem;
-    align-items: start;
+  /* Film Tool uses a wider canvas so the player can dominate */
+  main:has(#film-tool-root) {
+    max-width: min(1680px, calc(100vw - 1.5rem));
+  }
+
+  /* ── Tagger / Review layout ──────────────────────────────── */
+  .ft-review-stage {
+    display: block;
     max-width: 100%;
-    overflow-x: hidden;
+    margin-bottom: .75rem;
   }
-  .ft-layout > * {
+  .ft-review-video {
     min-width: 0;
-    overflow-x: hidden;
   }
+  .ft-program-section {
+    margin: 0 0 1rem;
+  }
+  .ft-program-section #aiEventsPanel {
+    margin: 0;
+  }
+  .ft-program-section #aiEventsPanel .panel-head h2 {
+    font-size: 1.05rem;
+  }
+  .ft-program-section #aiEventsPanel .panel-head p {
+    font-size: .78rem;
+    margin: .2rem 0 0;
+  }
+  .ft-program-section .ai-add-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin: .75rem 0 .5rem;
+  }
+  .ft-program-section .ai-add-bar .btn-primary {
+    flex: 1 1 auto;
+    min-height: 2.4rem;
+    font-weight: 600;
+  }
+  .ft-program-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin-bottom: .55rem;
+  }
+  .ft-program-score {
+    font-size: .85rem;
+    margin-bottom: .45rem;
+    color: var(--color-text-muted);
+  }
+  .ft-program-exceptions {
+    max-height: 200px;
+    overflow: auto;
+    margin-bottom: .65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .45rem .55rem;
+    background: var(--color-surface-offset, rgba(0,0,0,.03));
+  }
+  .ft-program-ex {
+    font-size: .78rem;
+    padding: .3rem 0;
+    border-bottom: 1px solid var(--color-divider, #ddd);
+  }
+  .ft-program-ex:last-child { border-bottom: none; }
+  .ft-program-ex.high { color: #b45309; font-weight: 600; }
+  .ft-program-ex.medium { color: var(--color-text); }
+  .ft-program-subhead {
+    font-size: .8rem;
+    margin: 0 0 .35rem;
+    font-weight: 600;
+  }
+  .ft-program-box {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .78rem;
+  }
+  .ft-program-box th,
+  .ft-program-box td {
+    padding: .25rem .35rem;
+    text-align: right;
+    border-bottom: 1px solid var(--color-divider, #ddd);
+  }
+  .ft-program-box th:first-child,
+  .ft-program-box td:first-child { text-align: left; }
+  .ft-program-box-wrap {
+    margin-bottom: .5rem;
+    max-height: min(40vh, 360px);
+    overflow: auto;
+  }
+  .ft-program-section .ai-events-scroll {
+    max-height: min(42vh, 420px);
+    overflow-y: auto;
+  }
+  .ft-secondary {
+    margin: 0 0 .75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: .35rem .85rem .65rem;
+  }
+  .ft-secondary > summary {
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 600;
+    padding: .45rem 0;
+    list-style: none;
+    color: var(--color-text);
+  }
+  .ft-secondary > summary::-webkit-details-marker { display: none; }
+  .ft-secondary > summary::before {
+    content: "▶";
+    display: inline-block;
+    margin-right: .45rem;
+    font-size: .7rem;
+    color: var(--color-text-muted);
+    transition: transform .15s ease;
+  }
+  .ft-secondary[open] > summary::before { transform: rotate(90deg); }
+  .ft-secondary .ft-secondary-body { padding: .35rem 0 .25rem; }
 
   /* Scoreboard */
   .ft-scoreboard {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
+    gap: .75rem;
+    padding: .35rem .75rem;
+    margin-bottom: .5rem;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
   }
   .ft-score-team {
     text-align: center;
-    min-width: 120px;
+    min-width: 72px;
   }
   .ft-score-team .ft-team-name {
-    font-size: .85rem;
+    font-size: .68rem;
     font-weight: 600;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: .04em;
   }
   .ft-score-team .ft-team-score {
-    font-size: 2.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.1;
-    margin-top: .25rem;
+    margin-top: .05rem;
   }
   .ft-score-vs {
-    font-size: .75rem;
+    font-size: .7rem;
     color: var(--color-text-muted);
     font-weight: 500;
-    padding: .5rem;
+    padding: .25rem;
   }
 
-  /* Video Area */
+  /* Video Area — largest object on the page */
   .ft-video-wrap {
     background: #000;
     border-radius: var(--radius-md);
     overflow: hidden;
-    margin-bottom: .75rem;
+    margin-bottom: .5rem;
   }
-  .ft-video-wrap video {
+  .ft-video-wrap video,
+  #film-tool-root .ft-video-wrap video {
     width: 100%;
-    max-height: 65vh;
+    max-height: min(82vh, 920px);
+    height: auto;
     display: block;
+    object-fit: contain;
+    background: #000;
   }
   .ft-video-bar {
     display: flex;
@@ -207,31 +319,16 @@
     font-size: .75rem;
   }
 
-  /* Bookmarks compact */
-  .ft-bookmarks {
-    margin-top: 1rem;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .ft-bookmarks-header {
-    padding: .6rem 1rem;
-    border-bottom: 1px solid var(--color-divider);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .ft-bookmarks-header h3 { font-size: .85rem; font-weight: 600; }
-  .ft-bookmarks-body { padding: .75rem; }
+  /* Bookmarks kept in DOM for JS, hidden from main review UX */
+  .ft-bookmarks[hidden] { display: none !important; }
 
   /* Top bar redesign */
   .ft-topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
+    margin-bottom: .55rem;
+    gap: .75rem;
   }
   .ft-tabs {
     display: flex;
@@ -296,14 +393,17 @@
 
   /* Responsive */
   @media (max-width: 1100px) {
-    .ft-layout { grid-template-columns: 1fr; }
-    .ft-tag-panel { order: -1; }
+    .ft-video-wrap video,
+    #film-tool-root .ft-video-wrap video { max-height: min(70vh, 720px); }
     .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 760px) {
-    .ft-scoreboard { padding: .75rem; gap: .75rem; }
-    .ft-score-team .ft-team-score { font-size: 1.75rem; }
+    .ft-scoreboard { padding: .5rem .75rem; gap: .75rem; }
+    .ft-score-team .ft-team-score { font-size: 1.4rem; }
     .ft-tag-grid { grid-template-columns: 1fr 1fr; }
+    .ft-topbar { flex-wrap: wrap; }
+    .ft-video-wrap video,
+    #film-tool-root .ft-video-wrap video { max-height: min(56vh, 480px); }
   }
 </style>
 {% endblock %}
@@ -346,20 +446,17 @@
       </div>
     </div>
 
-    <div class="ft-layout">
-
-      <!-- ── Left: Video + Controls + Bookmarks ────────────── -->
-      <div>
-
-        <!-- AI Upload (collapsible) -->
-        {% if features.ENABLE_AUTO_STATS_M1 %}
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <details class="ft-secondary" id="ftIngestDetails"{% if not filename %} open{% endif %}>
+      <summary>Load / analyze video</summary>
+      <div class="ft-secondary-body">
         <div class="ft-ai-upload-toggle" id="ftAiUploadToggle">
           <span class="ft-chevron">▶</span>
-          <span>🤖 Upload Video — Tag manually or run AI analysis</span>
+          <span>Upload video — tag manually or run AI</span>
         </div>
         <div class="ft-ai-upload-body" id="ftAiUploadBody">
           <form enctype="multipart/form-data" method="post" id="aiUploadForm">
-            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Original quality is preserved — large files upload in chunks automatically.</p>
+            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background.</p>
             <div class="split ai-upload-fields">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
@@ -372,17 +469,16 @@
               </div>
             </div>
             <div class="split" style="margin-top:.75rem;gap:.5rem;">
-              <button type="button" class="btn btn-secondary" id="uploadTagBtn">📝 Upload for Tagging</button>
-              <button type="button" class="btn btn-primary" id="uploadAiBtn">🤖 Upload & AI Analyze</button>
+              <button type="button" class="btn btn-secondary" id="uploadTagBtn">Upload for Tagging</button>
+              <button type="button" class="btn btn-primary" id="uploadAiBtn">Upload & AI Analyze</button>
             </div>
             <div class="upload-progress-shell" id="uploadProgressShell">
               <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
               <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting…</div>
             </div>
-            <!-- Analysis Progress (shown after upload during AI analysis) -->
             <div class="upload-progress-shell" id="analysisProgressShell" style="display:none;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <span style="font-size:.85rem;font-weight:600;">🤖 AI Analysis</span>
+                <span style="font-size:.85rem;font-weight:600;">AI Analysis</span>
                 <span class="tiny" id="analysisProgressPct">0%</span>
               </div>
               <div class="upload-progress-bar"><span id="analysisProgressBar" style="width:0%"></span></div>
@@ -393,15 +489,18 @@
 
         <div class="ft-ai-upload-toggle" id="ftNfhsToggle">
           <span class="ft-chevron">▶</span>
-          <span>📥 Download from NFHS — your games or opponents</span>
+          <span>Download from NFHS</span>
         </div>
         <div class="ft-ai-upload-body" id="ftNfhsBody">
           {% set nfhs_prefix = 'ft-nfhs-' %}
           {% include 'partials/nfhs_download_panel.html' %}
         </div>
-        {% endif %}
+      </div>
+    </details>
+    {% endif %}
 
-        <!-- Video Player -->
+    <div class="ft-review-stage">
+      <div class="ft-review-video">
         <div class="ft-video-wrap" id="filmReviewGrid">
           <video id="video" controls></video>
         </div>
@@ -414,7 +513,7 @@
         <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
           <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
             <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
-            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">🤖 Run AI Analysis</button>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">Run AI Analysis</button>
           </div>
           <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
             <div class="ft-run-analysis-progress-head">
@@ -426,18 +525,6 @@
           </div>
         </div>
         {% endif %}
-        <div class="tiny" style="padding:.25rem 0 .5rem;">
-          {% if uploaded_video_url %}
-          Server video <code>{{ filename }}</code> will auto-load below.
-          {% if features.ENABLE_AUTO_STATS_M1 %}
-          Use <strong>Run AI Analysis</strong> above to detect events automatically, or tag manually.
-          {% endif %}
-          {% else %}
-          Load a video from your computer, or open a saved video from the Video Library.
-          {% endif %}
-        </div>
-
-        <!-- Video Controls -->
         <div class="ft-vid-controls no-print">
           <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
           <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
@@ -454,13 +541,129 @@
           <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
           <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
         </div>
+        <div class="status" id="statusText" style="margin-top:.5rem;">Ready.</div>
+      </div>
+    </div>
 
-        <!-- Game Info (collapsible) -->
-        <div class="ft-game-info-toggle" id="ftGameInfoToggle">
-          <span class="ft-chevron">▶</span>
-          <span>📝 Game Info</span>
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <section class="ft-program-section" aria-label="Program mode">
+      <div class="panel" id="aiEventsPanel">
+        <div class="panel-head">
+          <div>
+            <h2>Program mode</h2>
+            <p>Like pro tracking pipelines: <strong>AI fills the ledger</strong>, you check <strong>exceptions</strong> vs scorebook, add rare misses, then coach from stats + plays — not 17k clicks.</p>
+          </div>
         </div>
-        <div class="ft-game-info-body" id="ftGameInfoBody">
+        <div class="panel-body">
+          <div class="ft-program-bar" id="ftProgramBar">
+            <button class="btn btn-primary" type="button" id="programBuildLedgerBtn">Build / refine Adrian ledger</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="programRefreshBtn">Refresh</button>
+            <span class="tiny" id="programStatusText">Load summary for this game.</span>
+          </div>
+          <div class="ft-program-score" id="programScoreLine"></div>
+          <div class="ft-program-exceptions" id="programExceptions">
+            <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
+          </div>
+          <div class="ft-program-box-wrap">
+            <h3 class="ft-program-subhead">AI ledger box (full counting stats)</h3>
+            <div class="table-responsive">
+              <table class="ft-program-box" id="programBoxTable">
+                <thead>
+                  <tr>
+                    <th>#</th><th>PTS</th><th>FGM</th><th>FGA</th><th>3PM</th><th>FTM</th><th>FTA</th>
+                    <th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PF</th>
+                  </tr>
+                </thead>
+                <tbody id="programBoxBody">
+                  <tr><td colspan="13" class="tiny">No ledger yet — click Build program ledger.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="ai-add-bar">
+            <button class="btn btn-primary" type="button" id="aiAddAtPlayheadBtn" title="Add a coach event at the current video time">+ Add event at playhead</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="aiRefreshNearPlayheadBtn" title="Show AI drafts near the current time">AI near now</button>
+          </div>
+          <div class="ai-events-summary">
+            <span class="badge" id="aiEventsCount">0 near playhead</span>
+            <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
+            <span class="tiny" id="aiCurrentEventLabel">No active event</span>
+          </div>
+          <div class="ai-review-filters" role="tablist" aria-label="Review view">
+            <button class="btn btn-ghost btn-sm ai-filter-btn active" type="button" data-ai-filter="pending" id="aiFilterPending">AI near playhead</button>
+            <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="ledger" id="aiFilterLedger">Ledger near now</button>
+          </div>
+          <div class="ai-review-filters" role="tablist" aria-label="Event type scope">
+            <button class="btn btn-ghost btn-sm ai-scope-btn active" type="button" data-ai-scope="useful" id="aiScopeUseful">Scoring / box</button>
+            <button class="btn btn-ghost btn-sm ai-scope-btn" type="button" data-ai-scope="all" id="aiScopeAll">All AI types</button>
+          </div>
+          <div class="ai-events-scroll" id="aiEventsScroller">
+            <div class="list-stack" id="aiEventsList">
+              <div class="empty-state">No AI events yet. Run analysis to see results.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <details class="ft-secondary" id="ftManualTagDetails">
+      <summary>Manual tagging <span class="tiny" id="eventCountText" style="font-weight:500;margin-left:.35rem;">0 tagged</span></summary>
+      <div class="ft-secondary-body">
+        <div class="ft-tag-panel">
+          <div class="ft-tag-groups">
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label flow">Possession / Flow</div>
+              <div class="ft-tag-grid" id="groupFlow"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label offense">Scoring / Offense</div>
+              <div class="ft-tag-grid" id="groupOffense"></div>
+            </div>
+            <div class="ft-tag-group">
+              <div class="ft-tag-group-label defense">Defense / Misc</div>
+              <div class="ft-tag-grid" id="groupDefense"></div>
+            </div>
+          </div>
+          <div class="ft-tag-actions">
+            <button class="btn btn-ghost" id="undoBtn" type="button">Undo</button>
+            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
+            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
+            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <details class="ft-secondary" id="ftPlayMatchesDetails">
+      <summary>Play / set suggestions</summary>
+      <div class="ft-secondary-body">
+        <div class="panel" id="playMatchesPanel" style="margin:0;border:none;box-shadow:none;background:transparent;">
+          <div class="panel-body" style="padding:0;">
+            <p class="tiny" style="margin:0 0 .5rem;color:var(--color-text-muted);">Ranked FastDraw matches — suggestions only, not auto-accepted.</p>
+            <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
+              <span class="badge" id="playMatchesCount">0 possessions</span>
+              <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
+              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn">Refresh matches</button>
+            </div>
+            <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
+            <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:280px;">
+              <div class="list-stack" id="playMatchesList">
+                <div class="empty-state">Open a game with detections, then Refresh matches.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+    {% endif %}
+
+    <details class="ft-secondary" id="ftGameInfoDetails">
+      <summary>Game info</summary>
+      <div class="ft-secondary-body">
+        <div class="ft-game-info-toggle" id="ftGameInfoToggle" hidden></div>
+        <div class="ft-game-info-body open" id="ftGameInfoBody">
           <div class="info-grid">
             <div class="field">
               <label for="gameType">Game Type</label>
@@ -518,123 +721,38 @@
             </div>
           </div>
         </div>
-
-        <!-- Bookmarks -->
-        <div class="ft-bookmarks">
-          <div class="ft-bookmarks-header">
-            <h3>🔖 Bookmarks</h3>
-            <div class="inline-actions">
-              <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button" style="padding:.25rem .5rem;min-height:26px;font-size:.75rem;">Refresh</button>
-            </div>
-          </div>
-          <div class="ft-bookmarks-body">
-            <div class="field">
-              <label for="bookmarkGameId">Game ID</label>
-              <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
-            </div>
-            <div class="split">
-              <div class="field">
-                <label for="bookmarkLabel">Label</label>
-                <input id="bookmarkLabel" placeholder="e.g. Press break">
-              </div>
-              <div class="field">
-                <label for="bookmarkNote">Note</label>
-                <input id="bookmarkNote" placeholder="Optional">
-              </div>
-            </div>
-            <button class="btn btn-primary" id="saveBookmarkBtn" type="button" style="margin-top:.5rem;">Save Current Time</button>
-            <span class="tiny" id="bookmarkStatus" style="margin-left:.5rem;">No bookmarks loaded.</span>
-            <div class="list-stack" id="manualBookmarksList" style="margin-top:.75rem;">
-              <div class="empty-state">Choose a game ID to load bookmarks.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status -->
-        <div class="status" id="statusText" style="margin-top:.75rem;">Ready.</div>
       </div>
+    </details>
 
-      <!-- ── Right: Tagging Buttons ─────────────────────────── -->
-      <div>
-        <div class="ft-tag-panel">
-          <div class="ft-tag-panel-header">
-            <h3>Tag Events</h3>
-            <span class="ft-event-count" id="eventCountText">0 tagged</span>
-          </div>
-          <div class="ft-tag-groups">
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label flow">⚡ Possession / Flow</div>
-              <div class="ft-tag-grid" id="groupFlow"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label offense">🏀 Scoring / Offense</div>
-              <div class="ft-tag-grid" id="groupOffense"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label defense">🛡 Defense / Misc</div>
-              <div class="ft-tag-grid" id="groupDefense"></div>
-            </div>
-          </div>
-          <div class="ft-tag-actions">
-            <button class="btn btn-ghost" id="undoBtn" type="button">↩ Undo</button>
-            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
-            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
-            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
-          </div>
+    <!-- Bookmarks kept for JS compatibility; hidden from review UX -->
+    <div class="ft-bookmarks" hidden>
+      <div class="ft-bookmarks-header">
+        <h3>Bookmarks</h3>
+        <div class="inline-actions">
+          <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button">Refresh</button>
         </div>
-
-        <!-- AI Events / Review Workspace -->
-        {% if features.ENABLE_AUTO_STATS_M1 %}
-        <div class="panel" id="aiEventsPanel" style="margin-top:1rem;">
-          <div class="panel-head">
-            <div>
-              <h2>Review workspace</h2>
-              <p>Pending AI drafts stay off the official ledger until you Accept, Correct, or Reject.</p>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="ai-events-summary">
-              <span class="badge" id="aiEventsCount">0 events</span>
-              <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
-              <span class="tiny" id="aiCurrentEventLabel">No active event</span>
-            </div>
-            <div class="ai-review-filters" role="tablist" aria-label="Event review filters">
-              <button class="btn btn-ghost btn-sm ai-filter-btn active" type="button" data-ai-filter="pending" id="aiFilterPending">Pending</button>
-              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="ledger" id="aiFilterLedger">Ledger</button>
-              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="all" id="aiFilterAll">All</button>
-            </div>
-            <div class="ai-events-scroll" id="aiEventsScroller">
-              <div class="list-stack" id="aiEventsList">
-                <div class="empty-state">No AI events yet. Run analysis to see results.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel" id="playMatchesPanel" style="margin-top:1rem;">
-          <div class="panel-head">
-            <div>
-              <h2>Play / set suggestions</h2>
-              <p>Ranked matches of possession movement vs sticky FastDraw playbook vectors. Suggestions only — not auto-accepted.</p>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
-              <span class="badge" id="playMatchesCount">0 possessions</span>
-              <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
-              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn">Refresh matches</button>
-            </div>
-            <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
-            <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:320px;">
-              <div class="list-stack" id="playMatchesList">
-                <div class="empty-state">Open a game with detections, then Refresh matches.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
       </div>
-
+      <div class="ft-bookmarks-body">
+        <div class="field">
+          <label for="bookmarkGameId">Game ID</label>
+          <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
+        </div>
+        <div class="split">
+          <div class="field">
+            <label for="bookmarkLabel">Label</label>
+            <input id="bookmarkLabel" placeholder="e.g. Press break">
+          </div>
+          <div class="field">
+            <label for="bookmarkNote">Note</label>
+            <input id="bookmarkNote" placeholder="Optional">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveBookmarkBtn" type="button">Save Current Time</button>
+        <span class="tiny" id="bookmarkStatus">No bookmarks loaded.</span>
+        <div class="list-stack" id="manualBookmarksList">
+          <div class="empty-state">Choose a game ID to load bookmarks.</div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════
@@ -1046,6 +1164,8 @@
             <option value="block">block</option>
             <option value="foul">foul</option>
             <option value="shot">shot</option>
+            <option value="miss">miss</option>
+            <option value="make">make</option>
           </select>
         </div>
         <div class="field">

@@ -1662,9 +1662,11 @@ function exitFocusMode() {
 let playMatchesCache = null;
 
 function focusPlayMatchesPanel() {
+    const details = document.getElementById('ftPlayMatchesDetails');
+    if (details) details.open = true;
     const panel = document.getElementById('playMatchesPanel');
     if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function formatPlayMatchTime(ms) {
@@ -1832,13 +1834,20 @@ function syncAiEventsToPlayback() {
     setActiveAiEvent(nearest.id, shouldScroll);
 }
 
+const AI_REVIEW_PAGE_SIZE = 40;
+let aiReviewBusy = false;
+let aiLedgerCountValue = 0;
+let aiReviewScope = 'useful'; // useful = scoring/box types only (default)
+let aiSeekReloadTimer = null;
+
 function reviewStatusLabel(status) {
     const labels = { pending: 'Pending', accepted: 'Accepted', corrected: 'Corrected', rejected: 'Rejected' };
     return labels[status] || status || 'Unknown';
 }
 
 function setAiReviewFilter(filter) {
-    aiReviewFilter = filter || 'pending';
+    // "all" retired — film-driven review uses near-playhead pending + ledger only.
+    aiReviewFilter = filter === 'ledger' ? 'ledger' : 'pending';
     document.querySelectorAll('.ai-filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aiFilter === aiReviewFilter);
     });
@@ -1846,12 +1855,166 @@ function setAiReviewFilter(filter) {
     if (gameId) fetchAndRenderAIEvents(gameId);
 }
 
+function setAiReviewScope(scope) {
+    aiReviewScope = scope === 'all' ? 'all' : 'useful';
+    document.querySelectorAll('.ai-scope-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aiScope === aiReviewScope);
+    });
+    const gameId = currentFilmGameId();
+    if (gameId) fetchAndRenderAIEvents(gameId);
+}
+
+function scheduleAiReviewReloadFromSeek() {
+    if (aiReviewFilter !== 'pending') return;
+    const gameId = currentFilmGameId();
+    if (!gameId) return;
+    clearTimeout(aiSeekReloadTimer);
+    aiSeekReloadTimer = setTimeout(() => fetchAndRenderAIEvents(gameId), 350);
+}
+
+function renderProgramSummary(summary) {
+    const statusEl = document.getElementById('programStatusText');
+    const scoreEl = document.getElementById('programScoreLine');
+    const exEl = document.getElementById('programExceptions');
+    const body = document.getElementById('programBoxBody');
+    if (!summary) return;
+
+    const counts = summary.counts || {};
+    const sb = summary.scorebook || {};
+    if (statusEl) {
+        statusEl.textContent = (
+            `Ledger ${counts.accepted || 0} accepted · ${counts.pending || 0} pending left · `
+            + `${summary.exception_count || 0} exceptions`
+        );
+    }
+    if (scoreEl) {
+        if (sb.present) {
+            const bookPts = sb.team_pts ?? ((Number(sb.final_score_home) || 0) + (Number(sb.final_score_away) || 0));
+            const aiPts = (summary.ledger_box?.totals || {}).pts ?? 0;
+            scoreEl.textContent = (
+                `Scorebook team PTS ${bookPts} · AI ledger PTS ${aiPts}`
+                + ` · players still tracker IDs (not jerseys yet)`
+            );
+        } else {
+            scoreEl.textContent = 'No confirmed scorebook yet — confirm on /stat-books for better exceptions.';
+        }
+    }
+    if (exEl) {
+        const list = summary.exceptions || [];
+        if (!list.length) {
+            exEl.innerHTML = '<div class="tiny">No scorebook exceptions flagged. Spot-check film if totals look off.</div>';
+        } else {
+            exEl.innerHTML = list.map(item => (
+                `<div class="ft-program-ex ${escapeHtml(item.severity || '')}">${escapeHtml(item.message || '')}</div>`
+            )).join('');
+        }
+    }
+    if (body) {
+        const players = summary.ledger_box?.players || [];
+        const totals = summary.ledger_box?.totals || {};
+        if (!players.length) {
+            body.innerHTML = '<tr><td colspan="13" class="tiny">No counting stats on ledger yet.</td></tr>';
+        } else {
+            const rows = players.slice(0, 40).map(p => (
+                `<tr>
+                  <td>${escapeHtml(String(p.player))}</td>
+                  <td>${p.pts}</td><td>${p.fgm}</td><td>${p.fga}</td><td>${p.tpm}</td>
+                  <td>${p.ftm}</td><td>${p.fta}</td><td>${p.reb}</td><td>${p.ast}</td>
+                  <td>${p.stl}</td><td>${p.blk}</td><td>${p.to}</td><td>${p.foul}</td>
+                </tr>`
+            ));
+            rows.push(
+                `<tr style="font-weight:700">
+                  <td>TOT</td>
+                  <td>${totals.pts || 0}</td><td>${totals.fgm || 0}</td><td>${totals.fga || 0}</td>
+                  <td>${totals.tpm || 0}</td><td>${totals.ftm || 0}</td><td>${totals.fta || 0}</td>
+                  <td>${totals.reb || 0}</td><td>${totals.ast || 0}</td><td>${totals.stl || 0}</td>
+                  <td>${totals.blk || 0}</td><td>${totals.to || 0}</td><td>${totals.foul || 0}</td>
+                </tr>`
+            );
+            body.innerHTML = rows.join('');
+        }
+    }
+    if (typeof bumpLedgerCount === 'function' || true) {
+        const el = document.getElementById('aiLedgerCount');
+        if (el) {
+            aiLedgerCountValue = Number(counts.accepted || 0) + Number(counts.corrected || 0);
+            el.textContent = `Ledger: ${aiLedgerCountValue}`;
+        }
+    }
+}
+
+async function fetchProgramSummary() {
+    const gameId = currentFilmGameId();
+    const statusEl = document.getElementById('programStatusText');
+    if (!gameId) {
+        if (statusEl) statusEl.textContent = 'Open film with ?game_id=… first.';
+        return null;
+    }
+    if (statusEl) statusEl.textContent = 'Loading program summary…';
+    try {
+        const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/summary`);
+        if (!response.ok) throw new Error('summary failed');
+        const summary = await response.json();
+        renderProgramSummary(summary);
+        return summary;
+    } catch (_err) {
+        if (statusEl) statusEl.textContent = 'Could not load program summary.';
+        return null;
+    }
+}
+
+async function buildProgramLedger() {
+    const gameId = currentFilmGameId();
+    const statusEl = document.getElementById('programStatusText');
+    const btn = document.getElementById('programBuildLedgerBtn');
+    if (!gameId) {
+        if (statusEl) statusEl.textContent = 'Open film with ?game_id=… first.';
+        return;
+    }
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Refining Adrian ledger vs scorebook…';
+    try {
+        const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/auto-ledger`, { method: 'POST' });
+        if (!response.ok) throw new Error('auto-ledger failed');
+        const data = await response.json();
+        renderProgramSummary(data.summary);
+        const q = data.quality;
+        if (q) {
+            setStatus(`Adrian quality: kept ${q.kept || q.kept_ids || 0} of ${q.raw || '?'} events (deduped ${q.after_dedupe || '—'}).`);
+        } else {
+            const promoted = data.promote?.promoted_useful ?? 0;
+            const noise = data.promote?.rejected_noise ?? 0;
+            setStatus(`Program ledger: promoted ${promoted} useful events; parked ${noise} noise events.`);
+        }
+        await fetchAndRenderAIEvents(gameId);
+    } catch (_err) {
+        if (statusEl) statusEl.textContent = 'Build failed — check server logs.';
+        setStatus('Could not build program ledger.');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function bumpLedgerCount(delta) {
+    const el = document.getElementById('aiLedgerCount');
+    if (!el) return;
+    aiLedgerCountValue = Math.max(0, (aiLedgerCountValue || 0) + delta);
+    el.textContent = `Ledger: ${aiLedgerCountValue}`;
+}
+
 async function reviewAiEvent(eventId, action) {
+    if (aiReviewBusy) return;
     if (action === 'correct') {
         openAiCorrectDialog(eventId);
         return;
     }
     const endpoint = action === 'accept' ? 'accept' : 'reject';
+    aiReviewBusy = true;
+    setStatus(action === 'accept' ? 'Accepting…' : 'Rejecting…');
+    document.querySelectorAll(`.ai-review-btn[data-event-id="${eventId}"]`).forEach(btn => {
+        btn.disabled = true;
+    });
     try {
         const response = await fetch(`/api/review/events/${eventId}/${endpoint}`, {
             method: 'POST',
@@ -1859,11 +2022,26 @@ async function reviewAiEvent(eventId, action) {
             body: JSON.stringify({ notes: action === 'accept' ? 'Accepted in Film Tool' : 'Rejected in Film Tool' }),
         });
         if (!response.ok) throw new Error('Review action failed');
-        const gameId = currentFilmGameId();
-        if (gameId) await fetchAndRenderAIEvents(gameId);
+        // Optimistic local update — avoid reloading ~17k pending events (was freezing the UI).
+        if (aiReviewFilter === 'pending') {
+            aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
+            renderAiEvents(aiEventsCache);
+        } else {
+            aiEventsCache = aiEventsCache.map(event => {
+                if (String(event.id) !== String(eventId)) return event;
+                return { ...event, review_status: action === 'accept' ? 'accepted' : 'rejected', human_verified: action === 'accept' ? 1 : 0 };
+            });
+            renderAiEvents(aiEventsCache);
+        }
+        if (action === 'accept') bumpLedgerCount(1);
         setStatus(action === 'accept' ? 'Event accepted onto ledger.' : 'Event rejected (not on ledger).');
     } catch (_err) {
         setStatus('Could not update event review status.');
+        document.querySelectorAll(`.ai-review-btn[data-event-id="${eventId}"]`).forEach(btn => {
+            btn.disabled = false;
+        });
+    } finally {
+        aiReviewBusy = false;
     }
 }
 
@@ -1930,40 +2108,51 @@ function renderCorrectPlayerManageList() {
 }
 
 async function openAiCorrectDialog(eventId) {
-    const event = aiEventsCache.find(row => String(row.id) === String(eventId))
-        || (await (async () => {
-            const gameId = currentFilmGameId();
-            if (!gameId) return null;
-            const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all`);
-            if (!response.ok) return null;
-            const rows = await response.json();
-            return rows.find(row => String(row.id) === String(eventId)) || null;
-        })());
-    if (!event) {
-        setStatus('Could not load event for correction.');
-        return;
+    const isAdd = !eventId || eventId === 'new';
+    let event = null;
+    if (!isAdd) {
+        event = aiEventsCache.find(row => String(row.id) === String(eventId))
+            || (await (async () => {
+                const gameId = currentFilmGameId();
+                if (!gameId) return null;
+                const around = Math.round((video?.currentTime || 0) * 1000);
+                const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all&limit=40&around_ms=${around}`);
+                if (!response.ok) return null;
+                const rows = await response.json();
+                return rows.find(row => String(row.id) === String(eventId)) || null;
+            })());
+        if (!event) {
+            setStatus('Could not load event for correction.');
+            return;
+        }
     }
     await loadReviewPlayers();
-    document.getElementById('aiCorrectEventId').value = String(event.id);
-    document.getElementById('aiCorrectSummary').textContent =
-        `AI draft: ${event.event_type} · ${event.player || 'unassigned'} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
-    populateCorrectPlayerSelect(event.player || '');
+    document.getElementById('aiCorrectEventId').value = isAdd ? 'new' : String(event.id);
+    const head = document.querySelector('#aiCorrectDialog .modal-head h2');
+    if (head) head.textContent = isAdd ? 'Add event at playhead' : 'Correct event';
+    document.getElementById('aiCorrectSummary').textContent = isAdd
+        ? `New ledger event at ${formatTime(video?.currentTime || 0)}. Choose type (e.g. miss) and save.`
+        : `AI draft: ${event.event_type} · ${event.player || 'unassigned'} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
+    populateCorrectPlayerSelect(isAdd ? '' : (event.player || ''));
     renderCorrectPlayerManageList();
     const typeSelect = document.getElementById('aiCorrectEventType');
     if (typeSelect) {
-        const existing = Array.from(typeSelect.options).some(opt => opt.value === event.event_type);
-        if (!existing && event.event_type) {
+        const desired = isAdd ? 'miss' : (event.event_type || 'shot');
+        const existing = Array.from(typeSelect.options).some(opt => opt.value === desired);
+        if (!existing && desired) {
             const opt = document.createElement('option');
-            opt.value = event.event_type;
-            opt.textContent = event.event_type;
+            opt.value = desired;
+            opt.textContent = desired;
             typeSelect.appendChild(opt);
         }
-        typeSelect.value = event.event_type || 'shot';
+        typeSelect.value = desired;
     }
     const outcome = document.getElementById('aiCorrectOutcome');
-    if (outcome) outcome.value = event.shot_result || '';
+    if (outcome) outcome.value = isAdd ? 'miss' : (event.shot_result || '');
     const notes = document.getElementById('aiCorrectNotes');
     if (notes) notes.value = '';
+    const saveBtn = document.getElementById('aiCorrectSaveBtn');
+    if (saveBtn) saveBtn.textContent = isAdd ? 'Add to ledger' : 'Save correction';
     const dialog = document.getElementById('aiCorrectDialog');
     if (dialog?.showModal) dialog.showModal();
 }
@@ -1972,26 +2161,63 @@ async function submitAiCorrection(formEvent) {
     formEvent.preventDefault();
     const eventId = document.getElementById('aiCorrectEventId')?.value;
     if (!eventId) return;
+    const gameId = currentFilmGameId();
     const payload = {
         player: document.getElementById('aiCorrectPlayer')?.value || '',
         event_type: document.getElementById('aiCorrectEventType')?.value || '',
         shot_result: document.getElementById('aiCorrectOutcome')?.value || null,
-        notes: document.getElementById('aiCorrectNotes')?.value || 'Corrected in Film Tool',
+        notes: document.getElementById('aiCorrectNotes')?.value || '',
     };
     if (!payload.shot_result) payload.shot_result = null;
     try {
+        if (eventId === 'new') {
+            if (!gameId) throw new Error('No game_id — open film with ?game_id=…');
+            const response = await fetch('/api/review/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    game_id: gameId,
+                    event_type: payload.event_type,
+                    player: payload.player,
+                    shot_result: payload.shot_result,
+                    notes: payload.notes || 'Added at playhead in Film Tool',
+                    timestamp_ms: Math.round((video?.currentTime || 0) * 1000),
+                    source_video: uploadedVideoName || '',
+                }),
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'add failed');
+            }
+            document.getElementById('aiCorrectDialog')?.close();
+            bumpLedgerCount(1);
+            if (aiReviewFilter === 'ledger' || aiReviewFilter === 'all') {
+                await fetchAndRenderAIEvents(gameId);
+            }
+            setStatus(`Added ${payload.event_type} at playhead onto ledger.`);
+            return;
+        }
         const response = await fetch(`/api/review/events/${eventId}/correct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                ...payload,
+                notes: payload.notes || 'Corrected in Film Tool',
+            }),
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.error || 'correct failed');
         }
         document.getElementById('aiCorrectDialog')?.close();
-        const gameId = currentFilmGameId();
-        if (gameId) await fetchAndRenderAIEvents(gameId);
+        if (aiReviewFilter === 'pending') {
+            const wasPending = aiEventsCache.some(e => String(e.id) === String(eventId));
+            aiEventsCache = aiEventsCache.filter(e => String(e.id) !== String(eventId));
+            renderAiEvents(aiEventsCache);
+            if (wasPending) bumpLedgerCount(1);
+        } else if (gameId) {
+            await fetchAndRenderAIEvents(gameId);
+        }
         setStatus('Event corrected onto ledger.');
     } catch (err) {
         setStatus(err.message || 'Could not save correction.');
@@ -2060,10 +2286,11 @@ async function refreshLedgerCount(gameId) {
     const el = document.getElementById('aiLedgerCount');
     if (!el || !gameId) return;
     try {
-        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=ledger`);
+        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=ledger&count_only=1`);
         if (!response.ok) throw new Error('ledger count failed');
-        const rows = await response.json();
-        el.textContent = `Ledger: ${rows.length}`;
+        const data = await response.json();
+        aiLedgerCountValue = Number(data.count || 0);
+        el.textContent = `Ledger: ${aiLedgerCountValue}`;
     } catch (_err) {
         el.textContent = 'Ledger: —';
     }
@@ -2071,21 +2298,46 @@ async function refreshLedgerCount(gameId) {
 
 async function fetchAndRenderAIEvents(gameId) {
     if (!gameId || !aiEventsList) return;
-    aiEventsList.innerHTML = '<div class="empty-state">Loading review events...</div>';
+    aiEventsList.innerHTML = '<div class="empty-state">Loading events near playhead…</div>';
     try {
-        const status = aiReviewFilter === 'all' ? 'all' : aiReviewFilter;
-        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=${encodeURIComponent(status)}`);
+        const status = aiReviewFilter === 'ledger' ? 'ledger' : 'pending';
+        const around = Math.round((video?.currentTime || 0) * 1000);
+        const params = new URLSearchParams({
+            game_id: gameId,
+            review_status: status,
+            limit: String(AI_REVIEW_PAGE_SIZE),
+            around_ms: String(around),
+            window_ms: '45000',
+        });
+        if (aiReviewScope === 'useful') params.set('useful_only', '1');
+        const response = await fetch(`/api/review/events?${params.toString()}`);
         if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
         const events = await response.json();
         renderAiEvents(events);
         await refreshLedgerCount(gameId);
+        updateAiEventsSummary();
+        if (aiEventsCount && Array.isArray(events)) {
+            if (status === 'ledger') {
+                aiEventsCount.textContent = `${events.length} on ledger near now`;
+            } else {
+                aiEventsCount.textContent = `${events.length} AI drafts near now`;
+            }
+        }
     } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
 }
 
 function focusReviewWorkspace() {
     const panel = document.getElementById('aiEventsPanel');
     if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const section = document.querySelector('.ft-program-section') || document.querySelector('.ft-review-stage');
+    // Scroll program mode into view under the video (full-width stack).
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    panel.classList.add('ft-review-focus');
+    setTimeout(() => panel.classList.remove('ft-review-focus'), 1200);
     setAiReviewFilter('pending');
 }
 
@@ -2782,6 +3034,17 @@ function attachEventHandlers() {
     document.querySelectorAll('.ai-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => setAiReviewFilter(btn.dataset.aiFilter));
     });
+    document.querySelectorAll('.ai-scope-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAiReviewScope(btn.dataset.aiScope));
+    });
+    document.getElementById('aiAddAtPlayheadBtn')?.addEventListener('click', () => openAiCorrectDialog('new'));
+    document.getElementById('aiRefreshNearPlayheadBtn')?.addEventListener('click', () => {
+        const gameId = currentFilmGameId();
+        if (gameId) fetchAndRenderAIEvents(gameId);
+    });
+    document.getElementById('programBuildLedgerBtn')?.addEventListener('click', buildProgramLedger);
+    document.getElementById('programRefreshBtn')?.addEventListener('click', fetchProgramSummary);
+    document.getElementById('video')?.addEventListener('seeked', scheduleAiReviewReloadFromSeek);
     document.getElementById('aiCorrectCancelBtn')?.addEventListener('click', () => {
         document.getElementById('aiCorrectDialog')?.close();
     });
@@ -2970,13 +3233,16 @@ function init() {
         });
     }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
+    if (activeGameId) fetchProgramSummary();
     if (activeGameId && window.ENABLE_AUTO_STATS_M1) {
         fetchAndRenderPlayMatches(activeGameId, { refresh: false });
     }
     initPlayMatchesPanel();
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
-    setStatus(reviewRequested ? 'Review workspace ready — pending AI drafts shown.' : 'Ready.');
+    setStatus(reviewRequested
+        ? 'Program mode ready — Build ledger, check exceptions, add rare misses.'
+        : 'Ready.');
     if (reviewRequested) {
         setTimeout(focusReviewWorkspace, 250);
     }

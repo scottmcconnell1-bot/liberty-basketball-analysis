@@ -10,7 +10,7 @@
     {
       "jersey": "11",
       "name": "Linkhart",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -33,7 +33,7 @@
     {
       "jersey": "12",
       "name": "Linkhart",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -56,7 +56,7 @@
     {
       "jersey": "13",
       "name": "Mendoza",
-      "team": "away",
+      "team": "home",
       "pts": 13,
       "fouls": null,
       "fgm": 3,
@@ -79,7 +79,7 @@
     {
       "jersey": "14",
       "name": "Dorms",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -102,7 +102,7 @@
     {
       "jersey": "15",
       "name": "Allison",
-      "team": "away",
+      "team": "home",
       "pts": 2,
       "fouls": null,
       "fgm": 1,
@@ -125,7 +125,7 @@
     {
       "jersey": "22",
       "name": "Foster",
-      "team": "away",
+      "team": "home",
       "pts": 2,
       "fouls": null,
       "fgm": 1,
@@ -148,7 +148,7 @@
     {
       "jersey": "23",
       "name": "Rodus",
-      "team": "away",
+      "team": "home",
       "pts": 4,
       "fouls": null,
       "fgm": 1,
@@ -171,7 +171,7 @@
     {
       "jersey": "24",
       "name": "Abel",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -194,7 +194,7 @@
     {
       "jersey": "25",
       "name": "Alvarez",
-      "team": "away",
+      "team": "home",
       "pts": 5,
       "fouls": null,
       "fgm": 0,
@@ -217,7 +217,7 @@
     {
       "jersey": "30",
       "name": "Gallegos",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -263,7 +263,7 @@
     {
       "jersey": "0",
       "name": "Sullivan",
-      "team": "home",
+      "team": "away",
       "pts": 4,
       "fouls": null,
       "fgm": 2,
@@ -286,7 +286,7 @@
     {
       "jersey": "3",
       "name": "Kariuki",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -309,7 +309,7 @@
     {
       "jersey": "5",
       "name": "Bradshaw",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -332,7 +332,7 @@
     {
       "jersey": "11",
       "name": "Flores",
-      "team": "home",
+      "team": "away",
       "pts": 2,
       "fouls": null,
       "fgm": 1,
@@ -355,7 +355,7 @@
     {
       "jersey": "21",
       "name": "Colman",
-      "team": "home",
+      "team": "away",
       "pts": 15,
       "fouls": null,
       "fgm": 6,
@@ -378,7 +378,7 @@
     {
       "jersey": "24",
       "name": "Jenkins",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -401,7 +401,7 @@
     {
       "jersey": "40",
       "name": "Dayley",
-      "team": "home",
+      "team": "away",
       "pts": 26,
       "fouls": null,
       "fgm": 11,
@@ -424,7 +424,7 @@
     {
       "jersey": "41",
       "name": "Leach",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -447,7 +447,7 @@
     {
       "jersey": "45",
       "name": "Musgrave",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -470,7 +470,7 @@
     {
       "jersey": "51",
       "name": "Peterson",
-      "team": "home",
+      "team": "away",
       "pts": 4,
       "fouls": null,
       "fgm": 2,
@@ -493,7 +493,7 @@
     {
       "jersey": "53",
       "name": "Price",
-      "team": "home",
+      "team": "away",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -658,21 +658,10 @@
     "template_layout_sha256": "ccc8b283c2e17921096f0a02ef40506d1c90716263b062c21c7dc0af24e56dde",
     "upload_sha256": "ecd71bc92fad230404266dc48628a508f4ea610dc788a5c361c39d8df6732325"
   },
-  "confirmed_at": "2026-08-11T01:48:25Z",
+  "confirmed_at": "2026-08-12T04:19:36Z",
   "confirmed_by": "coach",
   "validation": {
-    "ok": false,
-    "issues": [
-      {
-        "code": "final_score_home_sum",
-        "message": "final_score_home (26) != sum home pts (51)",
-        "path": "final_score_home"
-      },
-      {
-        "code": "final_score_away_sum",
-        "message": "final_score_away (51) != sum away pts (26)",
-        "path": "final_score_away"
-      }
-    ]
+    "ok": true,
+    "issues": []
   }
 }

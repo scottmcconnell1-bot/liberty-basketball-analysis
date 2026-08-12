@@ -1,73 +1,51 @@
-﻿# Active Task — HANDOFF FOR NEW CHAT
+# Active Task
 
-Updated: 2026-08-11 (archive prior conversation; continue here)
+Updated: 2026-08-12 (Adrian-only accuracy — scorebook quality pass)
 
-**Paste this whole file into a new Cursor agent chat, then archive the old thread.**
+Branch: `cursor/film-tool-review-layout-ac1f`  
+Base: `jason-5-may-updates`
 
----
+## Meta
 
-## Repo / branch / site
-
-| Item | Value |
+| Field | Value |
 | --- | --- |
-| Repo | `C:\Users\scott\Documents\liberty-basketball-analysis` |
-| Branch | `jason-5-may-updates` (`git pull` first) |
-| Site | `https://liberty-coach.tail368a37.ts.net` -> local `:8080` |
-| Flask Python | `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe` |
-| Login | Staff **email** (not username) + usual password |
+| **id** | adrian-accuracy-quality |
+| **status** | `in_progress` (team PTS match; jersey IDs still wrong) |
+| **assigned_to** | cursor-agent |
+| **scope** | **Adrian JrHigh only** until Scott says accurate |
 
-## Product definition of done
+## Why
 
-A game is **done** when:
+Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. CV firehose + tracker IDs ≠ jerseys. One coach cannot clear that by hand.
 
-1. Scorebook photo -> `/stat-books` -> confirm -> `data/stat_books/confirmed/<game_id>.json`
-2. Film events -> **Review** Accept/Correct/Reject -> official ledger (`events` with accepted/corrected)
+## Done (Proven)
 
-GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confidence thresholds).
+- `adrian_quality.py` — temporal dedupe + scorebook make/FT caps + heuristic REB/AST/… + reject noise on **all** related keys (base + `__rerun_*`)
+- `scripts/refine_adrian_events.py` + `POST /api/program/<game_id>/auto-ledger` runs quality for Adrian (not blind promote)
+- Film Tool button: **Build / refine Adrian ledger**
+- After refine on `film_analysis.db`: **team ledger PTS 77 = scorebook 77**; FGM 28, TPM 6, FTM 15
+- Confidence auto-accept still **locked at 0**
 
-## Ops (important)
+## Try
 
-- Teach loop **PAUSED**: `data/hoopsalytics/TEACH_LOOP_PAUSED` present; watchdog disabled earlier. **Do not** resume full HUDL backlog.
-- Videos: **Active -> 9 JrHigh**, **Archive -> 54** older games.
-- Scorebook images staged: `uploads/stat_books/jrhigh/`
-- Prefer **one game at a time** for AI (not batch teach).
+1. Hard-refresh:  
+   `/film/LIBERTY_A_v_ADRIAN_H_20260809_221334.mp4/review?game_id=jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`
+2. Click **Build / refine Adrian ledger** (or already applied via script)
+3. Scorebook photo truth (uploaded spiral): **Liberty 51 – Adrian 26**
+   - Review Sheet now prefers `original.jpeg` (was wrongly showing blank `aligned.png`)
+   - Confirmed JSON: Liberty away 51 (Dayley 26, Colman 15, Sullivan 4, Peterson 4, Flores 2); Adrian home 26
+   - Upload: `uploads/stat_books/jrhigh_adrian,_or_…/original.jpeg`
+   - Review: `/stat-books/games/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334/review` — hard refresh
+4. Exceptions = jersey/ID mismatches (expected until CV links #13/#40/…)
 
-## Shipped (already on tip)
+## Next (still Adrian only)
 
-- Videos light list (no N+ detection COUNT)
-- Active / Archive tabs + bulk archive
-- Actions UI: Film Tool / Review / Archive / More (2x2)
-- **GameID** column (match scorebooks)
-- `/stat-books` MVP; upload fix for commas in game_id (e.g. `jrhigh_adrian,_or_...`)
-- Review workspace Accept / Correct / Reject
-- Sticky playbook + FastDraw vector extract
-- **Highlights** from reviewed ledger (`/highlights`, jersey/event filters, generate clips / clip list)
-- **FastDraw play/set match** (rank-only MVP; Film Tool panel + `/api/film/<game_id>/play-matches`; see `docs/PLAYBOOK_PLAY_MATCH.md`)
+1. Jersey/track ID linking so player lines match scorebook (Mendoza 13, Dayley 26, …)
+2. Timestamp truth-check vs film (caps fix counts, not necessarily timing)
+3. Only then expand quality path beyond Adrian
 
-## Immediate open bug (Scott screenshot 2026-08-11)
+## Do not
 
-**Film Tool AI failed on JrHigh Adrian:**
-
-- File: `LIBERTY_A_v_ADRIAN_H_20260809_221334.mp4`
-- game_id: `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`
-- Error UI: *Analysis run stopped responding. Check logs, install missing packages (**pip install scikit-learn**), then click Rebuild again.*
-- Button: **Retry AI Analysis**
-
-**Next agent should:**
-
-1. `pip install scikit-learn` into **Python 3.12** (same interpreter as Flask)
-2. Clear hung `analysis_runs` for this game if needed
-3. Restart Flask with Python312 on :8080
-4. Retry AI on **this game only**; confirm progress past sklearn error
-5. Then E2E: `/stat-books` confirm for same GameID -> Review ledger -> optional `/highlights`
-
-## Suggested first message for new agent
-
-> Read `docs/agent_handoffs/ACTIVE.md`. Fix Adrian JrHigh AI analysis (missing scikit-learn / hung run). Use Python312. Do not unpause teach backlog. After Retry works, walk one E2E: scorebook confirm + Review.
-
-## Proven / Inferred / Unknown
-
-- **Proven:** DoD shift; teach paused; JrHigh active list; scorebook comma fix; Adrian error text names sklearn; highlight-clips + fastdraw-play-match merged onto jason
-- **Inferred:** Flask must use Python312 (system), not a bare `python` without deps
-- **Unknown:** Whether sklearn already installed after partial fix attempt
-
+- Unpause teach loop (`TEACH_LOOP_PAUSED`)
+- Flip `auto_accept_event_confidence`
+- Run quality/auto-ledger on other games yet

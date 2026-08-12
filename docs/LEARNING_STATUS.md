@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-08-10 23:00:15 Mountain Daylight Time**
+Generated (local): **2026-08-11 23:00:11 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -8,9 +8,9 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 - **Process map:** ok
 - **Active (live worker-backed):** 1
-  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334` **(primary)**: 7.0%, step=Failed, PID=14760, kind=analysis_launcher, db_status=failed
+  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260811_182823` **(primary)**: 100.0%, step=Done, PID=22904, kind=analysis_launcher, db_status=completed
 - **Stale/zombie candidates (DB running, no worker):** 0
-- **analysis_runs counts (raw DB):** completed=46, failed=11 (running includes stale/zombie candidates until reclaimed)
+- **analysis_runs counts (raw DB):** completed=49, failed=10 (running includes stale/zombie candidates until reclaimed)
 
 ## Queue summary
 
@@ -34,7 +34,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 52.6% | FAIL |
 
 **Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-08-11T05:00:13.675153+00:00`
+- Panel snapshot: `2026-08-12T05:00:09.487602+00:00`
 
 ## Per-game panel
 

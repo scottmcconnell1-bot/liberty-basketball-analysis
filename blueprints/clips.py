@@ -378,6 +378,25 @@ def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
     return _sync(db, event_id, status, user_id=user_id, notes=notes)
 
 
+USEFUL_REVIEW_EVENT_TYPES = (
+    "shot",
+    "miss",
+    "make",
+    "missed_two",
+    "made_two",
+    "missed_three",
+    "made_three",
+    "missed_free_throw",
+    "made_free_throw",
+    "rebound",
+    "assist",
+    "turnover",
+    "steal",
+    "block",
+    "foul",
+)
+
+
 @clips_bp.route("/api/review/events", methods=["GET"])
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def review_events():
@@ -399,6 +418,20 @@ def review_events():
             clauses.append(f"e.{key} = ?")
             params.append(value)
 
+    useful_only = (request.args.get("useful_only") or "").strip().lower() in ("1", "true", "yes")
+    if useful_only and not (request.args.get("event_type") or "").strip():
+        placeholders = ",".join("?" for _ in USEFUL_REVIEW_EVENT_TYPES)
+        clauses.append(f"e.event_type IN ({placeholders})")
+        params.extend(USEFUL_REVIEW_EVENT_TYPES)
+
+    exclude_raw = (request.args.get("exclude_types") or "").strip()
+    if exclude_raw:
+        excluded = [part.strip() for part in exclude_raw.split(",") if part.strip()]
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            clauses.append(f"e.event_type NOT IN ({placeholders})")
+            params.extend(excluded)
+
     min_conf = request.args.get("min_confidence")
     if min_conf not in (None, ""):
         clauses.append("e.confidence >= ?")
@@ -409,20 +442,176 @@ def review_events():
         params.append(float(max_conf))
 
     where = "WHERE " + " AND ".join(clauses) if clauses else ""
-    rows = db.execute(
-        f"""SELECT e.*,
+
+    if (request.args.get("count_only") or "").strip().lower() in ("1", "true", "yes"):
+        count = db.execute(
+            f"SELECT COUNT(*) AS c FROM events e {where}",
+            params,
+        ).fetchone()["c"]
+        return jsonify({"count": int(count or 0)})
+
+    around_ms = request.args.get("around_ms", type=int)
+    limit = request.args.get("limit", type=int)
+    offset = request.args.get("offset", type=int) or 0
+    if limit is not None and limit <= 0:
+        limit = None
+    if offset < 0:
+        offset = 0
+
+    select_cols = """e.*,
                   ri.id AS review_item_id,
                   ri.priority AS review_priority,
                   ri.reason AS review_reason,
-                  ri.notes AS queue_notes
-             FROM events e
+                  ri.notes AS queue_notes"""
+    join_sql = """FROM events e
              LEFT JOIN review_items ri
-               ON ri.entity_type='event' AND ri.entity_id=e.id
+               ON ri.entity_type='event' AND ri.entity_id=e.id"""
+    where_sql = where if where else "WHERE 1=1"
+
+    # Near playhead: window of events around current video time.
+    if around_ms is not None and limit:
+        half = max(limit // 2, 1)
+        window_ms = request.args.get("window_ms", type=int)
+        if window_ms is None or window_ms <= 0:
+            window_ms = 45_000
+        lo = max(0, around_ms - window_ms)
+        hi = around_ms + window_ms
+        before_rows = db.execute(
+            f"""SELECT {select_cols}
+                 {join_sql}
+                 {where_sql}
+                   AND e.timestamp_ms <= ?
+                   AND e.timestamp_ms >= ?
+                ORDER BY e.timestamp_ms DESC, e.id DESC
+                LIMIT ?""",
+            (*params, around_ms, lo, half + (limit % 2)),
+        ).fetchall()
+        after_rows = db.execute(
+            f"""SELECT {select_cols}
+                 {join_sql}
+                 {where_sql}
+                   AND e.timestamp_ms > ?
+                   AND e.timestamp_ms <= ?
+                ORDER BY e.timestamp_ms ASC, e.id ASC
+                LIMIT ?""",
+            (*params, around_ms, hi, half),
+        ).fetchall()
+        rows = list(reversed(before_rows)) + list(after_rows)
+        return jsonify([dict(r) for r in rows])
+
+    order_sql = "ORDER BY e.timestamp_ms ASC, e.id ASC"
+    limit_sql = ""
+    limit_params: list = []
+    if limit is not None:
+        limit_sql = " LIMIT ? OFFSET ?"
+        limit_params = [limit, offset]
+
+    rows = db.execute(
+        f"""SELECT {select_cols}
+             {join_sql}
              {where}
-            ORDER BY e.game_id, e.timestamp_ms, e.id""",
-        params,
+            {order_sql}{limit_sql}""",
+        (*params, *limit_params),
     ).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+@clips_bp.route("/api/review/events", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def create_reviewed_event():
+    """Coach-added ledger event at a video timestamp (string analysis game_id OK)."""
+    data = request.get_json(silent=True) or {}
+    game_id = str(data.get("game_id") or "").strip()
+    event_type = str(data.get("event_type") or "").strip()
+    if not game_id:
+        return jsonify({"error": "game_id required"}), 400
+    if not event_type:
+        return jsonify({"error": "event_type required"}), 400
+    try:
+        timestamp_ms = int(data.get("timestamp_ms"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "timestamp_ms must be an integer"}), 400
+
+    player = str(data.get("player") or "").strip()[:128] or None
+    notes = str(data.get("notes") or "").strip() or None
+    details = {"source": "film_tool_add", "notes": notes} if notes else {"source": "film_tool_add"}
+    shot_result = str(data.get("shot_result") or "").strip()[:32] or None
+    source_video = str(data.get("source_video") or "").strip()[:256] or None
+    user_id = _current_review_user_id()
+
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO events
+           (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+            source_video, human_verified, confidence, review_status, source_type,
+            reviewed_at, created_by_user_id, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
+        (
+            game_id,
+            player,
+            event_type,
+            shot_result,
+            timestamp_ms,
+            json.dumps(details),
+            source_video,
+            1,
+            1.0,
+            "accepted",
+            "manual",
+            user_id,
+        ),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM events WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@clips_bp.route("/api/program/<path:game_id>/summary", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_summary_api(game_id):
+    """Season-ops view: ledger box, scorebook exceptions, pending counts."""
+    from program_mode import program_summary
+
+    db = get_db()
+    return jsonify(program_summary(db, game_id))
+
+
+@clips_bp.route("/api/program/<path:game_id>/auto-ledger", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_auto_ledger_api(game_id):
+    """Promote useful AI drafts → program ledger; reject noise types.
+
+    Distinct from confidence auto-accept (still locked at 0).
+    Adrian games run scorebook quality refine first.
+    """
+    from adrian_quality import is_adrian_game, apply_quality_to_db
+    from program_mode import program_summary, promote_useful_events_to_ledger
+
+    db = get_db()
+    quality = None
+    if is_adrian_game(game_id):
+        quality = apply_quality_to_db(db, game_id)
+        # Quality already set accepted/rejected; skip blind promote.
+        summary = program_summary(db, game_id)
+        return jsonify({"ok": True, "quality": quality, "promote": None, "summary": summary})
+
+    result = promote_useful_events_to_ledger(db, game_id, commit=True)
+    summary = program_summary(db, game_id)
+    return jsonify({"ok": True, "promote": result, "summary": summary})
+
+
+@clips_bp.route("/api/program/<path:game_id>/refine", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_refine_api(game_id):
+    """Adrian-only scorebook quality refine."""
+    from adrian_quality import apply_quality_to_db, is_adrian_game
+    from program_mode import program_summary
+
+    if not is_adrian_game(game_id):
+        return jsonify({"error": "refine is Adrian-only for now"}), 400
+    db = get_db()
+    quality = apply_quality_to_db(db, game_id)
+    return jsonify({"ok": True, "quality": quality, "summary": program_summary(db, game_id)})
 
 
 @clips_bp.route("/api/review/events/<int:event_id>/accept", methods=["POST"])

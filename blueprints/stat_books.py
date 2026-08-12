@@ -223,21 +223,25 @@ def review(game_id):
     box = apply_validation(draft.get("box") or {})
     draft["box"] = box
     work = upload_dir(gid, _upload_root())
+    # Prefer the coach upload over aligned.png — a failed/identity align can
+    # overwrite the sheet view with the blank template and hide the real scan.
     image_name = None
-    for name in ("aligned.png", "original.png", "original.jpg", "original.jpeg", "original.webp"):
+    for name in ("original.jpeg", "original.jpg", "original.webp", "original.png", "aligned.png"):
         if (work / name).is_file():
             image_name = name
             break
     if image_name is None:
-        found = list(work.glob("original.*"))
+        found = list(work.glob("original.*")) + list(work.glob("aligned.*"))
         if found:
             image_name = found[0].name
+    aligned_name = "aligned.png" if (work / "aligned.png").is_file() else None
     return render_template(
         "stat_books/review.html",
         game_id=gid,
         box=box,
         meta=draft.get("meta") or {},
         image_name=image_name,
+        aligned_name=aligned_name,
     )
 
 
