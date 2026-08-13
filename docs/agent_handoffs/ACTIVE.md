@@ -28,15 +28,13 @@ Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. C
 
 ## Try
 
-1. Hard-refresh:  
-   `/film/LIBERTY_A_v_ADRIAN_H_20260809_221334.mp4/review?game_id=jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`
-2. Click **Build / refine Adrian ledger** (or already applied via script)
-3. Scorebook photo truth (uploaded spiral): **Liberty 51 – Adrian 26**
-   - Review Sheet now prefers `original.jpeg` (was wrongly showing blank `aligned.png`)
-   - Confirmed JSON: Liberty away 51 (Dayley 26, Colman 15, Sullivan 4, Peterson 4, Flores 2); Adrian home 26
-   - Upload: `uploads/stat_books/jrhigh_adrian,_or_…/original.jpeg`
-   - Review: `/stat-books/games/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334/review` — hard refresh
-4. Exceptions = jersey/ID mismatches (expected until CV links #13/#40/…)
+1. Videos → Active → **Liberty vs Adrian (JrHigh) - NFHS clean** → **Review**  
+   File: `nfhs_gam0a66d85e12.mp4` · GameID: `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`  
+   Old `LIBERTY_A_v_ADRIAN_H_…` screen-capture is **Archived** (do not use)
+2. Hard-refresh — player sizes to the film (no black side bars)
+3. Click **Build / refine Adrian ledger**
+4. Scorebook: **Liberty 51 – Adrian 26** (confirmed + photo)
+5. Exceptions = jersey/ID mismatches (expected until CV links #13/#40/…)
 
 ## Next (still Adrian only)
 

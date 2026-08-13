@@ -336,16 +336,21 @@
     gap: .75rem;
 }
 #film-tool-root .video-shell.large video {
-    max-height: 82vh;
+    max-height: min(92vh, 1200px);
 }
 #film-tool-root video {
-    width: 100%;
-    max-height: 75vh;
+    width: auto;
+    max-width: 100%;
+    max-height: min(92vh, 1200px);
+    height: auto;
     background: #000;
     border-radius: var(--radius-md);
 }
 #film-tool-root .ft-video-wrap video {
-    max-height: min(82vh, 920px);
+    width: auto;
+    max-width: 100%;
+    max-height: min(92vh, 1200px);
+    height: auto;
 }
 #film-tool-root .video-meta {
     display: flex;

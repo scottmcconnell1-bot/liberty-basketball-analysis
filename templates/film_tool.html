@@ -19,6 +19,9 @@
   }
   .ft-review-video {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .ft-program-section {
     margin: 0 0 1rem;
@@ -164,21 +167,26 @@
     padding: .25rem;
   }
 
-  /* Video Area — largest object on the page */
+  /* Video Area — size to the film (no pillarbox black sides) */
   .ft-video-wrap {
-    background: #000;
+    background: transparent;
     border-radius: var(--radius-md);
     overflow: hidden;
-    margin-bottom: .5rem;
+    margin: 0 auto .5rem;
+    width: fit-content;
+    max-width: 100%;
   }
   .ft-video-wrap video,
   #film-tool-root .ft-video-wrap video {
-    width: 100%;
-    max-height: min(82vh, 920px);
+    width: auto;
     height: auto;
+    max-width: 100%;
+    /* Prefer taller so 16:9 can use nearly full page width */
+    max-height: min(92vh, 1200px);
     display: block;
     object-fit: contain;
     background: #000;
+    border-radius: var(--radius-md);
   }
   .ft-video-bar {
     display: flex;
@@ -188,6 +196,9 @@
     background: #111;
     color: #e2e8f0;
     font-size: .8rem;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
   .ft-video-bar .ft-time {
     font-family: monospace;
@@ -201,26 +212,35 @@
     font-size: .75rem;
   }
 
-  /* Video Controls */
+  /* Video Controls — centered under the film */
   .ft-vid-controls {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: .35rem;
     padding: .5rem 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
   }
   .ft-vid-controls::-webkit-scrollbar { display: none; }
   .ft-vid-controls .btn {
     padding: .3rem .5rem;
     min-height: 30px;
     font-size: .75rem;
-    flex-shrink: 1;
+    flex-shrink: 0;
     white-space: nowrap;
   }
   .ft-vid-controls .btn.btn-primary {
     padding: .3rem .65rem;
+  }
+  .ft-review-video > .status {
+    text-align: center;
+    width: 100%;
+  }
+  .ft-review-video > .ft-run-analysis-bar {
+    width: min(100%, 1280px);
   }
 
   /* Game Info Collapsible */
@@ -394,7 +414,7 @@
   /* Responsive */
   @media (max-width: 1100px) {
     .ft-video-wrap video,
-    #film-tool-root .ft-video-wrap video { max-height: min(70vh, 720px); }
+    #film-tool-root .ft-video-wrap video { max-height: min(78vh, 900px); }
     .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 760px) {
@@ -403,7 +423,7 @@
     .ft-tag-grid { grid-template-columns: 1fr 1fr; }
     .ft-topbar { flex-wrap: wrap; }
     .ft-video-wrap video,
-    #film-tool-root .ft-video-wrap video { max-height: min(56vh, 480px); }
+    #film-tool-root .ft-video-wrap video { max-height: min(62vh, 560px); }
   }
 </style>
 {% endblock %}
@@ -503,11 +523,11 @@
       <div class="ft-review-video">
         <div class="ft-video-wrap" id="filmReviewGrid">
           <video id="video" controls></video>
-        </div>
-        <div class="ft-video-bar">
-          <span class="ft-time" id="timeDisplay">0:00.0</span>
-          <span style="flex:1"></span>
-          <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+          <div class="ft-video-bar">
+            <span class="ft-time" id="timeDisplay">0:00.0</span>
+            <span style="flex:1"></span>
+            <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+          </div>
         </div>
         {% if features.ENABLE_AUTO_STATS_M1 and filename %}
         <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
