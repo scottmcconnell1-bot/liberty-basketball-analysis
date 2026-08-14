@@ -85,6 +85,7 @@ def accept_event(
     notes=None,
     provenance_action="accept_event",
     commit=True,
+    refresh_stats=False,
 ):
     from helpers import refresh_game_stats
 
@@ -114,11 +115,14 @@ def accept_event(
     )
     if commit:
         db.commit()
-        refresh_game_stats(db, row["game_id"])
+        # Full stats rebuild is expensive (can be ~60s on big games). Skip by default
+        # for single-event coach review; bulk paths refresh once when needed.
+        if refresh_stats:
+            refresh_game_stats(db, row["game_id"])
     return dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone())
 
 
-def reject_event(db, event_id, *, user_id=None, notes=None, commit=True):
+def reject_event(db, event_id, *, user_id=None, notes=None, commit=True, refresh_stats=False):
     from helpers import refresh_game_stats
 
     row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
@@ -156,7 +160,8 @@ def reject_event(db, event_id, *, user_id=None, notes=None, commit=True):
     )
     if commit:
         db.commit()
-        refresh_game_stats(db, row["game_id"])
+        if refresh_stats:
+            refresh_game_stats(db, row["game_id"])
     return dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone())
 
 

@@ -43,7 +43,6 @@ from flask import Blueprint, current_app, redirect, render_template, request, ur
 from helpers import (
     AI_DEFAULTS,
     ai_runtime_available,
-    build_possession_workflow_summary,
     build_player_minutes_summary,
     build_resource_status,
     build_review_workflow_summary,
@@ -72,7 +71,6 @@ from module_keys import (
     SCOUTING,
     STATS,
 )
-from stats import _resolve_relational_game_id
 
 core = Blueprint("core", __name__)
 
@@ -1701,10 +1699,6 @@ def assisted_stat_sample():
 def film(filename=None):
     requested_game_id = (request.args.get("game_id") or "").strip() or None
     game_id = requested_game_id
-    shot_summary = []
-    player_effect_data = []
-    player_minutes_data = []
-    possession_summary = None
     video_id = None
     analysis_status = None
     detection_count = None
@@ -1735,8 +1729,16 @@ def film(filename=None):
             run_row = resolve_analysis_run_for_progress(db, requested_game_id)
             if run_row:
                 analysis_status = run_row["status"]
-                if run_row["analysis_key"]:
-                    game_id = run_row["analysis_key"]
+                # Keep the coach-facing game_id for ledger/events (usually the base
+                # key). Do not replace it with a later __rerun_ analysis_key — those
+                # copies may have zero accepted ledger rows after quality refine.
+                base_key = run_row["base_analysis_key"] or requested_game_id
+                if "__rerun_" in str(requested_game_id):
+                    game_id = base_key
+                else:
+                    game_id = requested_game_id
+            else:
+                game_id = requested_game_id.split("__rerun_", 1)[0]
         if game_id and video_id:
             run_row = resolve_analysis_run_for_progress(db, game_id)
             if run_row:
@@ -1747,71 +1749,6 @@ def film(filename=None):
                     video_game_id=video_row["game_id"] if video_row else None,
                     base_analysis_key=run_row["base_analysis_key"],
                 )
-    if game_id:
-        db = get_db()
-        relational_game_id = _resolve_relational_game_id(db, game_id)
-        # Shot summary: aggregate makes and misses by shot type
-        if relational_game_id is not None:
-            shot_rows = db.execute(
-                """SELECT shot_type, shot_result, COUNT(*) as cnt
-                   FROM shot_classifications
-                   WHERE relational_game_id = ?
-                      OR (relational_game_id IS NULL AND game_id = ?)
-                   GROUP BY shot_type, shot_result
-                   ORDER BY shot_type, shot_result""",
-                (relational_game_id, str(game_id)),
-            ).fetchall()
-        else:
-            shot_rows = db.execute(
-                """SELECT shot_type, shot_result, COUNT(*) as cnt
-                   FROM shot_classifications
-                   WHERE game_id = ?
-                   GROUP BY shot_type, shot_result
-                   ORDER BY shot_type, shot_result""",
-                (game_id,),
-            ).fetchall()
-        # Pivot: build {shot_type: {make: n, miss: n}}
-        shot_pivot = {}
-        for r in shot_rows:
-            st = r["shot_type"]
-            if st not in shot_pivot:
-                shot_pivot[st] = {"make": 0, "miss": 0}
-            shot_pivot[st][r["shot_result"]] = r["cnt"]
-        for st, counts in shot_pivot.items():
-            total = counts["make"] + counts["miss"]
-            pct = (counts["make"] / total * 100) if total > 0 else 0
-            shot_summary.append({
-                "shot_type": st,
-                "makes": counts["make"],
-                "misses": counts["miss"],
-                "total": total,
-                "pct": round(pct, 1),
-            })
-
-        # Player effect: possessions, points, ORTG by tracker
-        effect_rows = db.execute(
-            """SELECT tracker_id, possessions_on, points_for, ortg
-               FROM player_effect
-               WHERE game_id = ?
-               ORDER BY tracker_id""",
-            (game_id,),
-        ).fetchall()
-        player_effect_data = [dict(r) for r in effect_rows]
-
-        # Player minutes
-        from player_minutes import get_player_minutes
-
-        player_minutes_data = [
-            {
-                "tracker_id": row["tracker_id"],
-                "minutes_played": row["minutes_played"],
-                "player_name": row["resolved_name"] or row["player_name"],
-            }
-            for row in get_player_minutes(db, game_id)
-        ]
-
-        if feature_enabled("ENABLE_AUTO_STATS_M1"):
-            possession_summary = build_possession_workflow_summary(db, game_id)
 
     review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
     plays_mode = (request.args.get("plays") or "").strip().lower() in {"1", "true", "yes"}
@@ -1824,10 +1761,6 @@ def film(filename=None):
         detection_count=detection_count,
         ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
-        shot_summary=shot_summary,
-        player_effect_data=player_effect_data,
-        player_minutes_data=player_minutes_data,
-        possession_summary=possession_summary,
         review_mode=review_mode,
         plays_mode=plays_mode,
     )

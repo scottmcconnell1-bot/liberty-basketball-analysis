@@ -412,11 +412,24 @@ def review_events():
         clauses.append("e.review_status = ?")
         params.append(review_status)
 
-    for key in ["game_id", "event_type", "source_type", "player"]:
+    for key in ["event_type", "source_type", "player"]:
         value = (request.args.get(key) or "").strip()
         if value:
             clauses.append(f"e.{key} = ?")
             params.append(value)
+
+    # Prefer the canonical event key (base, not empty __rerun_ copies).
+    game_id_value = (request.args.get("game_id") or "").strip()
+    if game_id_value:
+        try:
+            from program_mode import canonical_event_key
+
+            game_id_value = canonical_event_key(db, game_id_value)
+        except Exception:
+            if "__rerun_" in game_id_value:
+                game_id_value = game_id_value.split("__rerun_", 1)[0]
+        clauses.append("e.game_id = ?")
+        params.append(game_id_value)
 
     useful_only = (request.args.get("useful_only") or "").strip().lower() in ("1", "true", "yes")
     if useful_only and not (request.args.get("event_type") or "").strip():
@@ -497,6 +510,21 @@ def review_events():
             (*params, around_ms, hi, half),
         ).fetchall()
         rows = list(reversed(before_rows)) + list(after_rows)
+        # If nothing in the short window, return nearest events in the game
+        # (Adrian quality keeps are often clustered early — mid-film must still list).
+        if not rows:
+            nearest = db.execute(
+                f"""SELECT {select_cols}
+                     {join_sql}
+                     {where_sql}
+                    ORDER BY ABS(e.timestamp_ms - ?) ASC, e.id ASC
+                    LIMIT ?""",
+                (*params, around_ms, limit),
+            ).fetchall()
+            rows = sorted(
+                nearest,
+                key=lambda r: (int(r["timestamp_ms"] or 0), int(r["id"] or 0)),
+            )
         return jsonify([dict(r) for r in rows])
 
     order_sql = "ORDER BY e.timestamp_ms ASC, e.id ASC"
@@ -739,7 +767,7 @@ def review_event_correct(event_id):
         {"fields_changed": sorted(changed.keys()), "notes": notes},
     )
     db.commit()
-    refresh_game_stats(db, row["game_id"])
+    # Skip full stats rebuild on single corrections — same cost issue as accept/reject.
     return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
 
 

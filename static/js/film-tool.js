@@ -1766,7 +1766,7 @@ function initPlayMatchesPanel() {
 }
 
 // ── AI Events / Review Workspace ────────────────────────────
-let aiReviewFilter = 'pending';
+let aiReviewFilter = 'ledger';
 let aiReviewPlayersCache = [];
 
 function escapeHtml(value) {
@@ -1797,20 +1797,24 @@ function summarizeAiEvent(event) {
 }
 
 function currentFilmGameId() {
-    return document.getElementById('gameId')?.value
+    const raw = document.getElementById('gameId')?.value
         || window.FILM_TOOL_GAME_ID
         || new URLSearchParams(window.location.search).get('game_id')
         || '';
+    // Ledger events live on the base analysis key after Adrian quality refine.
+    const text = String(raw || '').trim();
+    if (text.includes('__rerun_')) return text.split('__rerun_')[0];
+    return text;
 }
 
 function updateAiEventsSummary() {
     if (aiEventsCount) {
-        const label = aiReviewFilter === 'ledger' ? 'ledger' : (aiReviewFilter === 'pending' ? 'pending' : '');
-        aiEventsCount.textContent = `${aiEventsCache.length} ${label} event${aiEventsCache.length === 1 ? '' : 's'}`.trim();
+        const label = aiReviewFilter === 'ledger' ? 'ledger plays' : 'AI drafts';
+        aiEventsCount.textContent = `${aiEventsCache.length} ${label}`;
     }
     if (!aiCurrentEventLabel) return;
     const active = aiEventsCache.find(event => String(event.id) === String(activeAiEventId));
-    aiCurrentEventLabel.textContent = active ? `Active event: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No active event at the current playback position.';
+    aiCurrentEventLabel.textContent = active ? `Active: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No row selected — click a play in the list.';
 }
 
 function setActiveAiEvent(eventId, shouldScroll = false) {
@@ -1825,17 +1829,177 @@ function setActiveAiEvent(eventId, shouldScroll = false) {
 }
 
 function syncAiEventsToPlayback() {
+    if (clipReview) return; // clip loop owns the active play
     if (!video || !aiEventsCache.length) { setActiveAiEvent(null); return; }
     const currentMs = Math.round((video.currentTime || 0) * 1000);
     let nearest = null, nearestDistance = Infinity;
     aiEventsCache.forEach(event => { const distance = Math.abs(Number(event.timestamp_ms || 0) - currentMs); if (distance < nearestDistance) { nearestDistance = distance; nearest = event; } });
     if (!nearest || nearestDistance > 5000) { setActiveAiEvent(null); return; }
-    const shouldScroll = String(nearest.id) !== String(activeAiEventId) && video && !video.paused;
-    setActiveAiEvent(nearest.id, shouldScroll);
+    // Never auto-scroll the play list during playback — that pulls the coach
+    // away from the film after they clicked a row to watch.
+    setActiveAiEvent(nearest.id, false);
+}
+
+const CLIP_PAD_BEFORE_SEC = 2.5;
+const CLIP_PAD_AFTER_SEC = 4;
+/** @type {{ eventId: string, start: number, end: number, token: number } | null} */
+let clipReview = null;
+let clipSeekToken = 0;
+/** Counts seeks we initiate so a stale seeked event cannot cancel the active clip. */
+let clipInternalSeekCount = 0;
+
+function updateClipReviewDock(event) {
+    const dock = document.getElementById('ftClipReviewDock');
+    const label = document.getElementById('ftClipReviewLabel');
+    if (!dock) return;
+    if (!event || !clipReview) {
+        dock.hidden = true;
+        return;
+    }
+    dock.hidden = false;
+    const status = event.review_status || 'pending';
+    if (label) {
+        label.textContent = (
+            `Looping ${event.event_type || 'play'}`
+            + (event.player ? ` · #${event.player}` : '')
+            + ` · ${formatTime(clipReview.start)}–${formatTime(clipReview.end)}`
+            + ` (${reviewStatusLabel(status)})`
+        );
+    }
+    const acceptBtn = document.getElementById('ftClipAcceptBtn');
+    if (acceptBtn) {
+        // Ledger rows are already accepted — Accept means "looks good, next".
+        acceptBtn.textContent = (status === 'accepted' || status === 'corrected')
+            ? '✓ Looks good →'
+            : '✓ Accept';
+        acceptBtn.title = (status === 'accepted' || status === 'corrected')
+            ? 'Keep this play and go to the next looping clip'
+            : 'Accept onto ledger, then go to the next play';
+    }
+}
+
+function stopClipReview({ pause = false } = {}) {
+    clipSeekToken += 1;
+    clipReview = null;
+    updateClipReviewDock(null);
+    if (pause && video && !video.paused) video.pause();
+}
+
+function seekVideoForClip(seconds) {
+    if (!video) return;
+    clipInternalSeekCount += 1;
+    try {
+        video.currentTime = seconds;
+    } catch (_err) {
+        clipInternalSeekCount = Math.max(0, clipInternalSeekCount - 1);
+    }
+}
+
+function startClipReview(event) {
+    if (!video || !event) return;
+    const center = Number(event.timestamp_ms || 0) / 1000;
+    const duration = Number(video.duration);
+    const endCap = Number.isFinite(duration) && duration > 0 ? duration : center + CLIP_PAD_AFTER_SEC + 1;
+    const start = Math.max(0, center - CLIP_PAD_BEFORE_SEC);
+    const end = Math.min(endCap, center + CLIP_PAD_AFTER_SEC);
+    const token = ++clipSeekToken;
+    clipReview = { eventId: String(event.id), start, end, token };
+    setActiveAiEvent(event.id, false);
+    const stage = document.querySelector('.ft-review-stage');
+    const wrap = document.getElementById('filmReviewGrid');
+    (stage || wrap || video)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    seekVideoForClip(start);
+    const playPromise = video.play?.();
+    if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => { /* autoplay may be blocked */ });
+    }
+    updateClipReviewDock(event);
+    setStatus(`Looping clip around ${(center).toFixed(1)}s — Accept / Reject / Correct, or Next play.`);
+}
+
+function onClipReviewTimeUpdate() {
+    if (!clipReview || !video) return;
+    if (video.currentTime >= clipReview.end - 0.04) {
+        seekVideoForClip(clipReview.start);
+    }
+}
+
+function goToNextClip(fromEventId) {
+    if (!aiEventsCache.length) {
+        stopClipReview({ pause: true });
+        setStatus('No more plays in this list.');
+        return;
+    }
+    const idx = aiEventsCache.findIndex(event => String(event.id) === String(fromEventId));
+    if (idx < 0) {
+        stopClipReview({ pause: true });
+        setStatus('End of play list.');
+        return;
+    }
+    const next = aiEventsCache[idx + 1];
+    if (!next) {
+        stopClipReview({ pause: true });
+        setStatus('End of play list.');
+        return;
+    }
+    startClipReview(next);
+}
+
+function peekNextClipEventId(fromEventId) {
+    const idx = aiEventsCache.findIndex(event => String(event.id) === String(fromEventId));
+    if (idx < 0) return null;
+    return aiEventsCache[idx + 1] ? String(aiEventsCache[idx + 1].id) : null;
+}
+
+function advanceClipReviewAfterDecision(fromEventId, nextEventId) {
+    if (nextEventId) {
+        const next = aiEventsCache.find(event => String(event.id) === String(nextEventId));
+        if (next) {
+            startClipReview(next);
+            return;
+        }
+    }
+    if (aiEventsCache.some(event => String(event.id) === String(fromEventId))) {
+        goToNextClip(fromEventId);
+        return;
+    }
+    stopClipReview({ pause: true });
+    setStatus('End of play list.');
+}
+
+function applyLocalReviewUpdate(eventId, action) {
+    if (aiReviewFilter === 'pending') {
+        aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
+        renderAiEvents(aiEventsCache);
+        if (action === 'accept') bumpLedgerCount(1);
+        return;
+    }
+    if (aiReviewFilter === 'ledger') {
+        if (action === 'reject') {
+            aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
+            bumpLedgerCount(-1);
+        } else {
+            aiEventsCache = aiEventsCache.map(event => {
+                if (String(event.id) !== String(eventId)) return event;
+                return { ...event, review_status: 'accepted', human_verified: 1 };
+            });
+        }
+        renderAiEvents(aiEventsCache);
+        return;
+    }
+    aiEventsCache = aiEventsCache.map(event => {
+        if (String(event.id) !== String(eventId)) return event;
+        return {
+            ...event,
+            review_status: action === 'accept' ? 'accepted' : 'rejected',
+            human_verified: action === 'accept' ? 1 : 0,
+        };
+    });
+    renderAiEvents(aiEventsCache);
+    if (action === 'accept') bumpLedgerCount(1);
 }
 
 const AI_REVIEW_PAGE_SIZE = 40;
-let aiReviewBusy = false;
 let aiLedgerCountValue = 0;
 let aiReviewScope = 'useful'; // useful = scoring/box types only (default)
 let aiSeekReloadTimer = null;
@@ -2004,44 +2168,32 @@ function bumpLedgerCount(delta) {
 }
 
 async function reviewAiEvent(eventId, action) {
-    if (aiReviewBusy) return;
     if (action === 'correct') {
         openAiCorrectDialog(eventId);
         return;
     }
     const endpoint = action === 'accept' ? 'accept' : 'reject';
-    aiReviewBusy = true;
-    setStatus(action === 'accept' ? 'Accepting…' : 'Rejecting…');
-    document.querySelectorAll(`.ai-review-btn[data-event-id="${eventId}"]`).forEach(btn => {
-        btn.disabled = true;
-    });
+    const inClip = Boolean(clipReview && String(clipReview.eventId) === String(eventId));
+    const nextEventId = inClip ? peekNextClipEventId(eventId) : null;
+    // Instant UI — do not wait on the network (and never block the next click).
+    applyLocalReviewUpdate(eventId, action);
+    if (inClip) advanceClipReviewAfterDecision(eventId, nextEventId);
+    setStatus(action === 'accept' ? 'Accepted.' : 'Rejected.');
+
     try {
         const response = await fetch(`/api/review/events/${eventId}/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ notes: action === 'accept' ? 'Accepted in Film Tool' : 'Rejected in Film Tool' }),
         });
-        if (!response.ok) throw new Error('Review action failed');
-        // Optimistic local update — avoid reloading ~17k pending events (was freezing the UI).
-        if (aiReviewFilter === 'pending') {
-            aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
-            renderAiEvents(aiEventsCache);
-        } else {
-            aiEventsCache = aiEventsCache.map(event => {
-                if (String(event.id) !== String(eventId)) return event;
-                return { ...event, review_status: action === 'accept' ? 'accepted' : 'rejected', human_verified: action === 'accept' ? 1 : 0 };
-            });
-            renderAiEvents(aiEventsCache);
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Review ${endpoint} failed (${response.status})`);
         }
-        if (action === 'accept') bumpLedgerCount(1);
-        setStatus(action === 'accept' ? 'Event accepted onto ledger.' : 'Event rejected (not on ledger).');
-    } catch (_err) {
-        setStatus('Could not update event review status.');
-        document.querySelectorAll(`.ai-review-btn[data-event-id="${eventId}"]`).forEach(btn => {
-            btn.disabled = false;
-        });
-    } finally {
-        aiReviewBusy = false;
+    } catch (err) {
+        setStatus(err.message || 'Could not update event review status.');
+        const gameId = currentFilmGameId();
+        if (gameId) fetchAndRenderAIEvents(gameId);
     }
 }
 
@@ -2162,6 +2314,8 @@ async function submitAiCorrection(formEvent) {
     const eventId = document.getElementById('aiCorrectEventId')?.value;
     if (!eventId) return;
     const gameId = currentFilmGameId();
+    const inClip = Boolean(clipReview && eventId !== 'new' && String(clipReview.eventId) === String(eventId));
+    const nextEventId = inClip ? peekNextClipEventId(eventId) : null;
     const payload = {
         player: document.getElementById('aiCorrectPlayer')?.value || '',
         event_type: document.getElementById('aiCorrectEventType')?.value || '',
@@ -2219,6 +2373,7 @@ async function submitAiCorrection(formEvent) {
             await fetchAndRenderAIEvents(gameId);
         }
         setStatus('Event corrected onto ledger.');
+        if (inClip) advanceClipReviewAfterDecision(eventId, nextEventId);
     } catch (err) {
         setStatus(err.message || 'Could not save correction.');
     }
@@ -2229,26 +2384,35 @@ function renderAiEvents(events) {
     aiEventsCache = events.filter(event => event.event_type !== 'bookmark');
     if (!aiEventsCache.length) {
         const emptyMsg = aiReviewFilter === 'ledger'
-            ? 'No accepted/corrected events on the ledger yet.'
+            ? 'No ledger plays found. Click “Build / refine Adrian ledger” in step 1 first.'
             : (aiReviewFilter === 'pending'
-                ? 'No pending AI drafts for this game.'
+                ? 'No AI drafts near this time (Adrian pending was cleared after refine). Use Show ledger plays.'
                 : 'No AI events found for this game.');
         aiEventsList.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+        stopClipReview();
         setActiveAiEvent(null);
         return;
     }
     aiEventsList.innerHTML = aiEventsCache.map(event => {
         const status = event.review_status || 'pending';
         const statusClass = status === 'pending' ? 'pending' : (status === 'rejected' ? 'rejected' : 'trusted');
-        const reviewControls = status === 'pending'
-            ? `<div class="ai-event-review" data-no-seek="1">
-                <button class="btn btn-ghost btn-sm ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept onto ledger">Accept</button>
-                <button class="btn btn-ghost btn-sm ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct then accept">Correct</button>
-                <button class="btn btn-ghost btn-sm ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject (keep off ledger)">Reject</button>
-               </div>`
-            : '';
+        let reviewControls = '';
+        if (status === 'pending') {
+            reviewControls = `<div class="ai-event-review" data-no-seek="1">
+                <button class="btn ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept: keep this play on the ledger">✓ Accept</button>
+                <button class="btn ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct: fix player or type, then keep">✎ Correct</button>
+                <button class="btn ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject: this play is wrong — remove it">✗ Reject</button>
+               </div>`;
+        } else if (status === 'accepted' || status === 'corrected') {
+            // Ledger rows are already kept — coach still needs Decline / Correct.
+            reviewControls = `<div class="ai-event-review" data-no-seek="1">
+                <button class="btn ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct: fix player or type for this play">✎ Correct</button>
+                <button class="btn ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject / decline: this play is wrong — remove from ledger">✗ Reject</button>
+               </div>`;
+        }
+        const seekTitle = `Click to loop a short clip around ${formatTime(event.timestamp_ms / 1000)} — ${event.event_type || 'event'}${event.player ? ' · ' + event.player : ''}`;
         return `
-        <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" aria-label="Jump to ${event.event_type} at ${formatTime(event.timestamp_ms / 1000)}">
+        <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" title="${escapeHtml(seekTitle)}" aria-label="${escapeHtml(seekTitle)}">
             <div class="ai-event-row">
                 <strong>${escapeHtml(event.event_type || '')}</strong>
                 <span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span>
@@ -2264,10 +2428,8 @@ function renderAiEvents(events) {
     aiEventsList.querySelectorAll('[data-ai-event-id]').forEach(item => {
         const seekToEvent = (clickEvent) => {
             if (clickEvent && (clickEvent.target.closest('[data-no-seek]') || clickEvent.target.closest('.ai-review-btn'))) return;
-            const ms = Number(item.dataset.aiEventTs || '0');
-            video.currentTime = ms / 1000;
-            setActiveAiEvent(item.dataset.aiEventId, true);
-            setStatus(`Jumped to AI event at ${(ms / 1000).toFixed(1)}s.`);
+            const event = aiEventsCache.find(row => String(row.id) === String(item.dataset.aiEventId));
+            if (event) startClipReview(event);
         };
         item.addEventListener('click', seekToEvent);
         item.addEventListener('keydown', keyEvent => { if (keyEvent.key === 'Enter' || keyEvent.key === ' ') { keyEvent.preventDefault(); seekToEvent(); } });
@@ -2279,7 +2441,15 @@ function renderAiEvents(events) {
             reviewAiEvent(button.dataset.eventId, button.dataset.reviewAction);
         });
     });
-    syncAiEventsToPlayback();
+    if (clipReview) {
+        const stillThere = aiEventsCache.find(event => String(event.id) === String(clipReview.eventId));
+        if (stillThere) updateClipReviewDock(stillThere);
+        // If the active clip event was removed (reject), leave clipReview alone —
+        // the caller advances to the next play. Only clear when nothing left to show.
+        else if (!aiEventsCache.length) stopClipReview();
+    } else {
+        syncAiEventsToPlayback();
+    }
 }
 
 async function refreshLedgerCount(gameId) {
@@ -2298,32 +2468,57 @@ async function refreshLedgerCount(gameId) {
 
 async function fetchAndRenderAIEvents(gameId) {
     if (!gameId || !aiEventsList) return;
-    aiEventsList.innerHTML = '<div class="empty-state">Loading events near playhead…</div>';
+    aiEventsList.innerHTML = '<div class="empty-state">Loading play list…</div>';
     try {
         const status = aiReviewFilter === 'ledger' ? 'ledger' : 'pending';
         const around = Math.round((video?.currentTime || 0) * 1000);
+        const windowMs = status === 'ledger' ? String(3 * 60 * 60 * 1000) : '45000';
         const params = new URLSearchParams({
             game_id: gameId,
             review_status: status,
             limit: String(AI_REVIEW_PAGE_SIZE),
             around_ms: String(around),
-            window_ms: '45000',
+            window_ms: windowMs,
         });
         if (aiReviewScope === 'useful') params.set('useful_only', '1');
-        const response = await fetch(`/api/review/events?${params.toString()}`);
-        if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
-        const events = await response.json();
+        let response = await fetch(`/api/review/events?${params.toString()}`);
+        if (!response.ok) {
+            aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>';
+            aiEventsCache = [];
+            updateAiEventsSummary();
+            return;
+        }
+        let events = await response.json();
+        // If ledger has rows but near-playhead query returned none, load chronologically.
+        if (status === 'ledger' && Array.isArray(events) && events.length === 0) {
+            const fallback = new URLSearchParams({
+                game_id: gameId,
+                review_status: 'ledger',
+                limit: String(AI_REVIEW_PAGE_SIZE),
+                useful_only: aiReviewScope === 'useful' ? '1' : '0',
+            });
+            if (aiReviewScope !== 'useful') fallback.delete('useful_only');
+            response = await fetch(`/api/review/events?${fallback.toString()}`);
+            if (response.ok) {
+                events = await response.json();
+                if (Array.isArray(events) && events.length) {
+                    setStatus('Showing ledger plays from the start of the game — click a row to jump.');
+                }
+            }
+        }
         renderAiEvents(events);
         await refreshLedgerCount(gameId);
         updateAiEventsSummary();
         if (aiEventsCount && Array.isArray(events)) {
-            if (status === 'ledger') {
-                aiEventsCount.textContent = `${events.length} on ledger near now`;
-            } else {
-                aiEventsCount.textContent = `${events.length} AI drafts near now`;
-            }
+            aiEventsCount.textContent = status === 'ledger'
+                ? `${events.length} ledger plays listed`
+                : `${events.length} AI drafts listed`;
         }
-    } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
+    } catch (_err) {
+        aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>';
+        aiEventsCache = [];
+        updateAiEventsSummary();
+    }
 }
 
 function focusReviewWorkspace() {
@@ -2338,7 +2533,7 @@ function focusReviewWorkspace() {
     }
     panel.classList.add('ft-review-focus');
     setTimeout(() => panel.classList.remove('ft-review-focus'), 1200);
-    setAiReviewFilter('pending');
+    setAiReviewFilter('ledger');
 }
 
 // ── Video ───────────────────────────────────────────────────
@@ -3094,18 +3289,63 @@ function attachEventHandlers() {
     focusExitBtn?.addEventListener('click', exitFocusMode);
     document.getElementById('quickTagCancelBtn')?.addEventListener('click', () => quickTagDialog.close());
 
-    document.querySelectorAll('.video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
+    document.querySelectorAll('.ft-vid-controls [data-skip], .video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { stopClipReview(); video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
     document.getElementById('vidPlayPauseBtn')?.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
-    document.getElementById('vidToStartBtn')?.addEventListener('click', () => { video.currentTime = 0; });
-    document.getElementById('vidToEndBtn')?.addEventListener('click', () => { video.currentTime = video.duration || 0; });
+    document.getElementById('vidToStartBtn')?.addEventListener('click', () => { stopClipReview(); video.currentTime = 0; });
+    document.getElementById('vidToEndBtn')?.addEventListener('click', () => { stopClipReview(); video.currentTime = video.duration || 0; });
     document.getElementById('vidSlow5x')?.addEventListener('click', () => { video.playbackRate = 0.5; });
     document.getElementById('vidSlow25x')?.addEventListener('click', () => { video.playbackRate = 0.25; });
     document.getElementById('vidNormalBtn')?.addEventListener('click', () => { video.playbackRate = 1; });
     document.getElementById('vidFast25x')?.addEventListener('click', () => { video.playbackRate = 2.5; });
     document.getElementById('vidFast5x')?.addEventListener('click', () => { video.playbackRate = 5; });
 
-    video.addEventListener('timeupdate', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
-    video.addEventListener('seeked', syncAiEventsToPlayback);
+    document.getElementById('ftClipAcceptBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        const event = aiEventsCache.find(row => String(row.id) === String(clipReview.eventId));
+        if (!event) return;
+        const status = event.review_status || 'pending';
+        if (status === 'accepted' || status === 'corrected') {
+            goToNextClip(clipReview.eventId);
+            return;
+        }
+        reviewAiEvent(event.id, 'accept');
+    });
+    document.getElementById('ftClipRejectBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        reviewAiEvent(clipReview.eventId, 'reject');
+    });
+    document.getElementById('ftClipCorrectBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        reviewAiEvent(clipReview.eventId, 'correct');
+    });
+    document.getElementById('ftClipNextBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        goToNextClip(clipReview.eventId);
+    });
+    document.getElementById('ftClipStopBtn')?.addEventListener('click', () => {
+        stopClipReview({ pause: true });
+        setStatus('Clip loop stopped — normal playback.');
+    });
+
+    video.addEventListener('timeupdate', () => {
+        timeDisplay.textContent = formatTime(video.currentTime || 0);
+        onClipReviewTimeUpdate();
+        syncAiEventsToPlayback();
+    });
+    video.addEventListener('seeked', () => {
+        if (clipInternalSeekCount > 0) {
+            clipInternalSeekCount -= 1;
+            return;
+        }
+        // User scrubbed the native timeline — leave clip mode.
+        if (clipReview) {
+            const t = video.currentTime || 0;
+            if (t < clipReview.start - 0.75 || t > clipReview.end + 0.75) {
+                stopClipReview();
+            }
+        }
+        syncAiEventsToPlayback();
+    });
     video.addEventListener('loadedmetadata', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
 }
 
@@ -3227,9 +3467,9 @@ function init() {
         || window.FILM_TOOL_PLAYS_MODE === 'true'
         || urlParams.get('plays') === '1';
     if (reviewRequested) {
-        aiReviewFilter = 'pending';
+        aiReviewFilter = 'ledger';
         document.querySelectorAll('.ai-filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.aiFilter === 'pending');
+            btn.classList.toggle('active', btn.dataset.aiFilter === 'ledger');
         });
     }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);

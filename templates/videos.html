@@ -444,7 +444,7 @@ function actionButtons(v, deleteLabel) {
   );
   const showLoadCounts = !countsKnown;
   const isArchived = Number(v.archived) === 1 || videosView === 'archive';
-  const gameId = encodeURIComponent(v.analysis_key || v.game_id || '');
+  const gameId = encodeURIComponent(v.game_id || v.analysis_key || '');
   const filmHref = `/film/${encodeURIComponent(v.stored_filename)}?game_id=${gameId}`;
   const reviewHref = `/film/${encodeURIComponent(v.stored_filename)}/review?game_id=${gameId}`;
   const archiveBtn = isArchived

@@ -16,12 +16,60 @@
     display: block;
     max-width: 100%;
     margin-bottom: .75rem;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--color-bg, #f8fafc);
+    padding: .35rem 0 .65rem;
+    border-bottom: 1px solid var(--color-border, #cbd5e1);
+    /* Sticky film must not steal clicks meant for the play list underneath. */
+    pointer-events: none;
+  }
+  .ft-review-stage > * {
+    pointer-events: auto;
   }
   .ft-review-video {
     min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+  .ft-clip-review-dock {
+    width: min(100%, 1280px);
+    margin: .55rem auto 0;
+    padding: .65rem .75rem;
+    border: 2px solid #0f172a;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #fff;
+    box-sizing: border-box;
+  }
+  .ft-clip-review-dock[hidden] { display: none !important; }
+  .ft-clip-review-label {
+    font-size: .9rem;
+    font-weight: 800;
+    margin: 0 0 .5rem;
+    color: #fff;
+  }
+  .ft-clip-review-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .4rem;
+  }
+  .ft-clip-review-actions .btn {
+    width: 100%;
+    min-height: 2.6rem;
+    font-weight: 800;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .ft-clip-review-actions .ft-toolbar-btn {
+    background: #fff;
+    color: #0f172a;
+    border: 2px solid #fff;
+  }
+  @media (max-width: 900px) {
+    .ft-clip-review-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   .ft-program-section {
     margin: 0 0 1rem;
@@ -104,6 +152,92 @@
     max-height: min(42vh, 420px);
     overflow-y: auto;
   }
+  .ft-control-group {
+    border: 2px solid var(--color-border, #9ca3af);
+    border-radius: var(--radius-lg, 10px);
+    padding: .75rem .9rem .9rem;
+    margin: 0 0 1rem;
+    background: var(--color-surface, #fff);
+  }
+  .ft-control-group-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    margin: 0 0 .25rem;
+    color: var(--color-text, #111827);
+  }
+  .ft-control-group-help {
+    font-size: .82rem;
+    margin: 0 0 .65rem;
+    color: var(--color-text, #1f2937);
+    line-height: 1.35;
+  }
+  .ft-control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin: 0 0 .55rem;
+  }
+  .ft-play-toolbar {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .5rem;
+    margin: 0 0 .75rem;
+  }
+  .ft-play-toolbar .ft-toolbar-btn {
+    width: 100%;
+    min-height: 3rem;
+    margin: 0;
+    padding: .55rem .4rem;
+    box-sizing: border-box;
+    font-size: .82rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+    border: 2px solid #0f172a;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: none;
+  }
+  .ft-play-toolbar .ft-toolbar-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #0f172a;
+  }
+  .ft-play-toolbar .ft-toolbar-btn.active,
+  .ft-play-toolbar .ft-toolbar-primary {
+    background: #0f172a !important;
+    border-color: #0f172a !important;
+    color: #ffffff !important;
+  }
+  .ft-play-toolbar .ft-toolbar-btn.active:hover,
+  .ft-play-toolbar .ft-toolbar-primary:hover {
+    background: #1e293b !important;
+    color: #ffffff !important;
+  }
+  @media (max-width: 1100px) {
+    .ft-play-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .ft-play-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .ft-event-list-label {
+    font-size: .85rem;
+    font-weight: 700;
+    margin: .35rem 0 .4rem;
+    color: var(--color-text, #111827);
+  }
+  .ft-program-section .ai-filter-btn,
+  .ft-program-section .ai-scope-btn,
+  .ft-program-section .ft-control-row .btn {
+    min-height: 2.4rem;
+    font-size: .9rem;
+    font-weight: 700;
+    padding: .45rem .75rem;
+  }
   .ft-secondary {
     margin: 0 0 .75rem;
     background: var(--color-surface);
@@ -129,7 +263,16 @@
     transition: transform .15s ease;
   }
   .ft-secondary[open] > summary::before { transform: rotate(90deg); }
-  .ft-secondary .ft-secondary-body { padding: .35rem 0 .25rem; }
+  .ft-program-fold {
+    margin: 0 0 .65rem;
+    padding: .25rem .65rem .45rem;
+    background: var(--color-surface-offset, rgba(0,0,0,.03));
+  }
+  .ft-program-fold:last-child { margin-bottom: 0; }
+  .ft-program-fold > summary {
+    font-size: .95rem;
+    font-weight: 700;
+  }
 
   /* Scoreboard */
   .ft-scoreboard {
@@ -235,12 +378,42 @@
   .ft-vid-controls .btn.btn-primary {
     padding: .3rem .65rem;
   }
-  .ft-review-video > .status {
-    text-align: center;
-    width: 100%;
-  }
-  .ft-review-video > .ft-run-analysis-bar {
+  .ft-clip-review-dock {
     width: min(100%, 1280px);
+    margin: .55rem auto 0;
+    padding: .65rem .75rem;
+    border: 2px solid #0f172a;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #fff;
+    box-sizing: border-box;
+  }
+  .ft-clip-review-dock[hidden] { display: none !important; }
+  .ft-clip-review-label {
+    font-size: .9rem;
+    font-weight: 800;
+    margin: 0 0 .5rem;
+    color: #fff;
+  }
+  .ft-clip-review-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .4rem;
+  }
+  .ft-clip-review-actions .btn {
+    width: 100%;
+    min-height: 2.6rem;
+    font-weight: 800;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .ft-clip-review-actions .ft-toolbar-btn {
+    background: #fff;
+    color: #0f172a;
+    border: 2px solid #fff;
+  }
+  @media (max-width: 900px) {
+    .ft-clip-review-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   /* Game Info Collapsible */
@@ -533,7 +706,7 @@
         <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
           <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
             <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
-            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">Run AI Analysis</button>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn" title="Run AI analysis on this video (YOLO pipeline). Not needed for Check C if a ledger already exists.">Run AI Analysis</button>
           </div>
           <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
             <div class="ft-run-analysis-progress-head">
@@ -545,23 +718,33 @@
           </div>
         </div>
         {% endif %}
-        <div class="ft-vid-controls no-print">
-          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
-          <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
-          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">▶ / ⏸</button>
-          <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
-          <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
-          <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
-          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
+        <div class="ft-vid-controls no-print" aria-label="Video transport controls">
+          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Jump to start of video (0:00)">⏮ Start</button>
+          <button class="btn btn-ghost" type="button" data-skip="-30" title="Jump back 30 seconds">-30s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10" title="Jump back 10 seconds">-10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-3" title="Jump back 3 seconds">-3s</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow5x" title="Play at half speed (0.5x)">0.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow25x" title="Play at quarter speed (0.25x)">0.25x</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn" title="Play or pause the video">▶ / ⏸</button>
+          <button class="btn btn-ghost" type="button" id="vidNormalBtn" title="Play at normal speed (1x)">1x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast25x" title="Play at 2.5x speed">2.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast5x" title="Play at 5x speed">5x</button>
+          <button class="btn btn-ghost" type="button" data-skip="3" title="Jump forward 3 seconds">+3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="10" title="Jump forward 10 seconds">+10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="30" title="Jump forward 30 seconds">+30s</button>
+          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Jump to end of video">⏭ End</button>
         </div>
         <div class="status" id="statusText" style="margin-top:.5rem;">Ready.</div>
+        <div id="ftClipReviewDock" class="ft-clip-review-dock" hidden>
+          <div class="ft-clip-review-label" id="ftClipReviewLabel">Clip review</div>
+          <div class="ft-clip-review-actions">
+            <button type="button" class="btn ai-review-btn accept" id="ftClipAcceptBtn" title="Keep this play on the ledger, then go to the next play">✓ Accept</button>
+            <button type="button" class="btn ai-review-btn correct" id="ftClipCorrectBtn" title="Fix player or type for this play">✎ Correct</button>
+            <button type="button" class="btn ai-review-btn reject" id="ftClipRejectBtn" title="Remove this wrong play, then go to the next">✗ Reject</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipNextBtn" title="Leave this play unchanged and loop the next one">Next play →</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipStopBtn" title="Stop the looping clip and return to normal playback">Stop loop</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -570,58 +753,86 @@
       <div class="panel" id="aiEventsPanel">
         <div class="panel-head">
           <div>
-            <h2>Program mode</h2>
-            <p>Like pro tracking pipelines: <strong>AI fills the ledger</strong>, you check <strong>exceptions</strong> vs scorebook, add rare misses, then coach from stats + plays — not 17k clicks.</p>
+            <h2 title="Season-scale workflow: AI drafts a box, you check exceptions vs the scorebook">Program mode</h2>
+            <p>Open a section below when you need it. Film review stays on top.</p>
           </div>
         </div>
         <div class="panel-body">
-          <div class="ft-program-bar" id="ftProgramBar">
-            <button class="btn btn-primary" type="button" id="programBuildLedgerBtn">Build / refine Adrian ledger</button>
-            <button class="btn btn-ghost btn-sm" type="button" id="programRefreshBtn">Refresh</button>
-            <span class="tiny" id="programStatusText">Load summary for this game.</span>
-          </div>
-          <div class="ft-program-score" id="programScoreLine"></div>
-          <div class="ft-program-exceptions" id="programExceptions">
-            <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
-          </div>
-          <div class="ft-program-box-wrap">
-            <h3 class="ft-program-subhead">AI ledger box (full counting stats)</h3>
-            <div class="table-responsive">
-              <table class="ft-program-box" id="programBoxTable">
-                <thead>
-                  <tr>
-                    <th>#</th><th>PTS</th><th>FGM</th><th>FGA</th><th>3PM</th><th>FTM</th><th>FTA</th>
-                    <th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PF</th>
-                  </tr>
-                </thead>
-                <tbody id="programBoxBody">
-                  <tr><td colspan="13" class="tiny">No ledger yet — click Build program ledger.</td></tr>
-                </tbody>
-              </table>
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep2" open>
+            <summary>Watch plays on film</summary>
+            <div class="ft-secondary-body">
+              <p class="ft-control-group-help">Click a row to loop a short clip. Use the dock (or row buttons) to Accept / Correct / Reject, then Next.</p>
+              <div class="ft-play-toolbar" role="group" aria-label="Play list controls">
+                <button class="btn ft-toolbar-btn ai-filter-btn" type="button" data-ai-filter="pending" id="aiFilterPending" title="Show AI drafts near the current video time.">Show AI drafts</button>
+                <button class="btn ft-toolbar-btn ai-filter-btn active" type="button" data-ai-filter="ledger" id="aiFilterLedger" title="Show accepted ledger plays. Click a row to loop the film clip.">Show ledger plays</button>
+                <button class="btn ft-toolbar-btn ai-scope-btn active" type="button" data-ai-scope="useful" id="aiScopeUseful" title="Only scoring / box-score types.">Scoring / box only</button>
+                <button class="btn ft-toolbar-btn ai-scope-btn" type="button" data-ai-scope="all" id="aiScopeAll" title="All AI event types (noisier).">All AI types</button>
+                <button class="btn ft-toolbar-btn" type="button" id="aiRefreshNearPlayheadBtn" title="Reload the play list for the current video time.">Reload play list</button>
+                <button class="btn ft-toolbar-btn ft-toolbar-primary" type="button" id="aiAddAtPlayheadBtn" title="Manually add an event at the current video time.">+ Add at playhead</button>
+              </div>
+              <div class="ai-events-summary" title="Counts for the list below">
+                <span class="badge" id="aiEventsCount">0 plays listed</span>
+                <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
+                <span class="tiny" id="aiCurrentEventLabel">No active event</span>
+              </div>
+              <div class="ft-event-list-label">Play list — click a row to loop the clip</div>
+              <div class="ai-events-scroll" id="aiEventsScroller" title="Click a row to loop a short clip around that play">
+                <div class="list-stack" id="aiEventsList">
+                  <div class="empty-state">Click <strong>Show ledger plays</strong> (or open Build the team box first if empty).</div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="ai-add-bar">
-            <button class="btn btn-primary" type="button" id="aiAddAtPlayheadBtn" title="Add a coach event at the current video time">+ Add event at playhead</button>
-            <button class="btn btn-ghost btn-sm" type="button" id="aiRefreshNearPlayheadBtn" title="Show AI drafts near the current time">AI near now</button>
-          </div>
-          <div class="ai-events-summary">
-            <span class="badge" id="aiEventsCount">0 near playhead</span>
-            <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
-            <span class="tiny" id="aiCurrentEventLabel">No active event</span>
-          </div>
-          <div class="ai-review-filters" role="tablist" aria-label="Review view">
-            <button class="btn btn-ghost btn-sm ai-filter-btn active" type="button" data-ai-filter="pending" id="aiFilterPending">AI near playhead</button>
-            <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="ledger" id="aiFilterLedger">Ledger near now</button>
-          </div>
-          <div class="ai-review-filters" role="tablist" aria-label="Event type scope">
-            <button class="btn btn-ghost btn-sm ai-scope-btn active" type="button" data-ai-scope="useful" id="aiScopeUseful">Scoring / box</button>
-            <button class="btn btn-ghost btn-sm ai-scope-btn" type="button" data-ai-scope="all" id="aiScopeAll">All AI types</button>
-          </div>
-          <div class="ai-events-scroll" id="aiEventsScroller">
-            <div class="list-stack" id="aiEventsList">
-              <div class="empty-state">No AI events yet. Run analysis to see results.</div>
+          </details>
+
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep1">
+            <summary>Build the team box</summary>
+            <div class="ft-secondary-body">
+              <p class="ft-control-group-help">Creates a draft box score from AI, capped to the Adrian scorebook. Hover buttons for help.</p>
+              <div class="ft-program-bar" id="ftProgramBar">
+                <button class="btn btn-primary" type="button" id="programBuildLedgerBtn" title="Build / refine Adrian ledger: run scorebook quality pass, keep believable team totals, park noise.">Build / refine Adrian ledger</button>
+                <button class="btn btn-ghost" type="button" id="programRefreshBtn" title="Reload the score line, exceptions, and box without rebuilding.">Refresh box</button>
+              </div>
+              <div class="tiny" id="programStatusText" title="Status of the last build/refresh">Load summary for this game.</div>
+              <div class="ft-program-score" id="programScoreLine" title="Compares scorebook team points to AI ledger team points"></div>
+              <div class="ft-program-exceptions" id="programExceptions" title="Mismatches vs scorebook — mostly wrong player IDs until jerseys are linked">
+                <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
+              </div>
+              <div class="ft-program-box-wrap" title="Draft counting stats from accepted ledger events.">
+                <h3 class="ft-program-subhead">AI ledger box</h3>
+                <div class="table-responsive">
+                  <table class="ft-program-box" id="programBoxTable">
+                    <thead>
+                      <tr>
+                        <th title="Player jersey or tracker ID">#</th>
+                        <th title="Points">PTS</th>
+                        <th title="Field goals made">FGM</th>
+                        <th title="Field goals attempted">FGA</th>
+                        <th title="Three-pointers made">3PM</th>
+                        <th title="Free throws made">FTM</th>
+                        <th title="Free throws attempted">FTA</th>
+                        <th title="Rebounds">REB</th>
+                        <th title="Assists">AST</th>
+                        <th title="Steals">STL</th>
+                        <th title="Blocks">BLK</th>
+                        <th title="Turnovers">TO</th>
+                        <th title="Personal fouls">PF</th>
+                      </tr>
+                    </thead>
+                    <tbody id="programBoxBody">
+                      <tr><td colspan="13" class="tiny">No ledger yet — open this section and click Build / refine Adrian ledger.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {% if game_id %}
+              <p class="tiny" style="margin:.75rem 0 0;">
+                Shot charts, possessions, and minutes live on
+                <a href="{{ url_for('ai.analysis_results_page', game_id=game_id) }}">Analysis Results</a>
+                — not duplicated here.
+              </p>
+              {% endif %}
             </div>
-          </div>
+          </details>
         </div>
       </div>
     </section>
@@ -646,10 +857,10 @@
             </div>
           </div>
           <div class="ft-tag-actions">
-            <button class="btn btn-ghost" id="undoBtn" type="button">Undo</button>
-            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
-            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
-            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+            <button class="btn btn-ghost" id="undoBtn" type="button" title="Undo the last manual tag">Undo</button>
+            <button class="btn btn-ghost" id="clearAllBtn" type="button" title="Clear all manual tags for this session (careful)">Clear All</button>
+            <button class="btn btn-ghost" id="subBtn" type="button" title="Record a substitution at the current time">SUB</button>
+            <button class="btn btn-ghost" id="startersBtn" type="button" title="Set starting lineup">Starters</button>
           </div>
         </div>
       </div>
@@ -665,7 +876,7 @@
             <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
               <span class="badge" id="playMatchesCount">0 possessions</span>
               <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
-              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn">Refresh matches</button>
+              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn" title="Re-rank FastDraw play/set matches for this game (suggestions only)">Refresh matches</button>
             </div>
             <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
             <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:280px;">
@@ -775,182 +986,6 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════
-         ANALYSIS RESULTS
-         ═══════════════════════════════════════════════════════ -->
-    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data or possession_summary) %}
-    <section class="ft-analysis-results" style="margin-top:1.5rem;">
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>📊 Analysis Results</h2>
-            <p>Shot classifications, possessions, player effect, and minutes from AI analysis.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-
-          <div class="split" style="gap:1rem;align-items:flex-start;flex-wrap:wrap;">
-
-            <!-- Possession Summary -->
-            {% if possession_summary and possession_summary.events_total > 0 %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">🏀 Possessions</div>
-              <div class="checklist-summary" style="display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;">
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.total_possessions }}</strong>
-                  <span class="text-muted">total possessions</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.scoring_possessions }}</strong>
-                  <span class="text-muted">scoring</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.points_per_possession }}</strong>
-                  <span class="text-muted">pts / poss</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.turnover_rate }}</strong>
-                  <span class="text-muted">TO rate</span>
-                </div>
-              </div>
-              <div class="text-muted" style="font-size:.82rem;margin-bottom:.5rem;">
-                {{ possession_summary.events_linked }} of {{ possession_summary.events_total }} events linked to possessions
-                {% if possession_summary.events_unlinked > 0 %}
-                  ({{ possession_summary.events_unlinked }} unlinked)
-                {% endif %}
-              </div>
-              {% if possession_summary.top_outcomes %}
-              <div class="text-muted" style="font-size:.82rem;">
-                Top outcomes:
-                {% for row in possession_summary.top_outcomes %}
-                  <span style="margin-right:.5rem;">{{ row.outcome }} ({{ row.count }})</span>
-                {% endfor %}
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Shot Summary -->
-            {% if shot_summary %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">🎯 Shot Summary</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th style="text-align:right;">Makes</th>
-                      <th style="text-align:right;">Misses</th>
-                      <th style="text-align:right;">Total</th>
-                      <th style="text-align:right;">FG%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in shot_summary %}
-                    <tr>
-                      <td>
-                        {% if row.shot_type == '2pt' %}
-                          <span class="ft-badge ft-badge-2pt">2PT</span>
-                        {% elif row.shot_type == '3pt' %}
-                          <span class="ft-badge ft-badge-3pt">3PT</span>
-                        {% elif row.shot_type == 'ft' %}
-                          <span class="ft-badge ft-badge-ft">FT</span>
-                        {% else %}
-                          <span class="ft-badge">{{ row.shot_type }}</span>
-                        {% endif %}
-                      </td>
-                      <td style="text-align:right;font-weight:600;color:#22c55e;">{{ row.makes }}</td>
-                      <td style="text-align:right;color:#ef4444;">{{ row.misses }}</td>
-                      <td style="text-align:right;">{{ row.total }}</td>
-                      <td style="text-align:right;font-weight:600;">{{ row.pct }}%</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                  {% set total_makes = shot_summary|sum(attribute='makes') %}
-                  {% set total_misses = shot_summary|sum(attribute='misses') %}
-                  {% set total_shots = shot_summary|sum(attribute='total') %}
-                  {% set total_pct = (total_makes / total_shots * 100) if total_shots > 0 else 0 %}
-                  <tfoot>
-                    <tr style="background:var(--color-surface-offset);font-weight:700;border-top:2px solid var(--color-divider);">
-                      <td>Total</td>
-                      <td style="text-align:right;color:#22c55e;">{{ total_makes }}</td>
-                      <td style="text-align:right;color:#ef4444;">{{ total_misses }}</td>
-                      <td style="text-align:right;">{{ total_shots }}</td>
-                      <td style="text-align:right;">{{ "%.1f"|format(total_pct) }}%</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-            <!-- Player Effect -->
-            {% if player_effect_data %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">⚡ Player Effect</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Pos</th>
-                      <th style="text-align:right;">Poss</th>
-                      <th style="text-align:right;">Pts</th>
-                      <th style="text-align:right;">ORTG</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in player_effect_data %}
-                    <tr>
-                      <td><strong>{{ row.tracker_id }}</strong></td>
-                      <td style="text-align:right;">{{ row.possessions_on }}</td>
-                      <td style="text-align:right;">{{ row.points_for }}</td>
-                      <td style="text-align:right;">
-                        {% if row.ortg is not none %}
-                          <span style="font-weight:600;color:{% if row.ortg > 100 %}#22c55e{% elif row.ortg < 80 %}#ef4444{% else %}var(--color-text){% endif %};">
-                            {{ "%.1f"|format(row.ortg) }}
-                          </span>
-                        {% else %}
-                          <span style="color:var(--color-text-muted);">N/A</span>
-                        {% endif %}
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-            <!-- Player Minutes -->
-            {% if player_minutes_data %}
-            <div class="ft-report-card" style="flex:1;min-width:180px;">
-              <div class="ft-report-card-title">⏱ Player Minutes</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Player</th>
-                      <th style="text-align:right;">Min</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in player_minutes_data %}
-                    <tr>
-                      <td><strong>{% if row.player_name %}{{ row.player_name }}{% else %}Pos {{ row.tracker_id }}{% endif %}</strong></td>
-                      <td style="text-align:right;font-weight:600;">{{ "%.1f"|format(row.minutes_played) }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-          </div><!-- /split -->
-        </div><!-- /panel-body -->
-      </div><!-- /panel -->
-    </section>
-    {% endif %}
   </section>
 
   <!-- ═══════════════════════════════════════════════════════
