@@ -2188,7 +2188,11 @@ async function reviewAiEvent(eventId, action) {
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || `Review ${endpoint} failed (${response.status})`);
+            const msg = err.error || `Review ${endpoint} failed (${response.status})`;
+            if (response.status === 403 && /read-only/i.test(msg)) {
+                throw new Error('Coach view is read-only — use Open full app (or Sign out of Coach view) to Accept/Reject.');
+            }
+            throw new Error(msg);
         }
     } catch (err) {
         setStatus(err.message || 'Could not update event review status.');

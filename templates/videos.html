@@ -452,7 +452,7 @@ function actionButtons(v, deleteLabel) {
     : `<button type="button" class="btn btn-sm btn-archive" onclick="archiveVideo(${v.id})" title="Hide from Active list (deep links still work)">Archive</button>`;
 
   const secondary = [
-    `<a href="/analysis/${gameId}" class="btn btn-secondary btn-sm">Results</a>`,
+    `<a href="/analysis/${encodeURIComponent(gameId)}" class="btn btn-secondary btn-sm">Results</a>`,
     showLoadCounts
       ? `<button type="button" class="btn btn-secondary btn-sm" onclick="loadVideoCounts(${v.id})" title="Optional: count detections/events for this video only (can be slow on large games). Prefer Film Tool to open the video.">Load counts</button>`
       : '',

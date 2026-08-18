@@ -170,12 +170,6 @@ def require_auth_for_api():
     pass  # No auth enforced yet — will be enabled in a future phase
 
 
-@app.before_request
-def coach_portal_ops_gate():
-    """Soft denylist for coach portal sessions (does not enable global auth)."""
-    return enforce_coach_ops_denylist()
-
-
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess
 from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess

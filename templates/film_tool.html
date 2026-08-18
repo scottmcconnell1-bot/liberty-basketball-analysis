@@ -824,10 +824,10 @@
                   </table>
                 </div>
               </div>
-              {% if game_id %}
+              {% if analysis_results_url %}
               <p class="tiny" style="margin:.75rem 0 0;">
                 Shot charts, possessions, and minutes live on
-                <a href="{{ url_for('ai.analysis_results_page', game_id=game_id) }}">Analysis Results</a>
+                <a href="{{ analysis_results_url }}">Analysis Results</a>
                 — not duplicated here.
               </p>
               {% endif %}

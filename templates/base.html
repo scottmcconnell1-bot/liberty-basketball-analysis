@@ -892,7 +892,7 @@
     </div>
   </nav>
   {% if coach_portal or coach_readonly %}
-  <div class="coach-readonly-banner" role="status">Coach view — read only · <a href="{{ url_for('coach.coach_progress') }}" style="color:inherit;text-decoration:underline;">Learning Progress</a></div>
+  <div class="coach-readonly-banner" role="status">Coach view — read only · <a href="{{ url_for('coach.coach_progress') }}" style="color:inherit;text-decoration:underline;">Learning Progress</a> · <a href="{{ url_for('coach.coach_exit_full_app') }}" style="color:inherit;text-decoration:underline;">Open full app</a></div>
   {% endif %}
   <main>
     {% block content %}{% endblock %}

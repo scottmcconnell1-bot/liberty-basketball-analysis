@@ -43,6 +43,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, ur
 from helpers import (
     AI_DEFAULTS,
     ai_runtime_available,
+    analysis_results_url_for,
     build_player_minutes_summary,
     build_resource_status,
     build_review_workflow_summary,
@@ -1761,6 +1762,7 @@ def film(filename=None):
         detection_count=detection_count,
         ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
+        analysis_results_url=analysis_results_url_for(game_id),
         review_mode=review_mode,
         plays_mode=plays_mode,
     )

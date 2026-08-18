@@ -3297,6 +3297,15 @@ def render_practices_page(*, error=None, message=None, filters=None, edit_practi
     )
 
 
+def analysis_results_url_for(game_id) -> str | None:
+    """Build a path-safe Analysis Results URL (commas and other chars encoded)."""
+    if not game_id:
+        return None
+    from urllib.parse import quote
+
+    return f"/analysis/{quote(str(game_id), safe='')}"
+
+
 def refresh_game_stats(db, game_id):
     """Refresh derived stats after review/auto-accept.
 

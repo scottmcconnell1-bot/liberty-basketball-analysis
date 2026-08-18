@@ -146,6 +146,18 @@ def test_coach_logout_clears_session(client, coach_password):
         assert not sess.get("coach_portal")
 
 
+def test_coach_exit_opens_full_app(client, coach_password):
+    assert _login_coach(client, coach_password).status_code in (302, 303)
+    resp = client.get("/coach/exit", follow_redirects=False)
+    assert resp.status_code in (302, 303)
+    assert resp.headers["Location"].endswith("/")
+    with client.session_transaction() as sess:
+        assert not sess.get("coach_portal")
+    home = client.get("/")
+    assert home.status_code == 200
+    assert b"Coach view" not in home.data
+
+
 def test_path_denied_helper():
     from blueprints.coach import path_denied_for_coach
 

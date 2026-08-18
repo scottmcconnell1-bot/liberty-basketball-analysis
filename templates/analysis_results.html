@@ -398,7 +398,7 @@ async function loadResults() {
     setProgress(20, 'Fetching analysis data…');
     setStep('step-fetch', 'active');
 
-    const resp = await fetch('/api/analysis/' + GAME_ID);
+    const resp = await fetch('/api/analysis/' + encodeURIComponent(GAME_ID));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     if (data.analysis_key && data.analysis_key !== GAME_ID) {

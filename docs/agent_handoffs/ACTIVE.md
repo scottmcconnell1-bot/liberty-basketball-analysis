@@ -29,6 +29,8 @@ Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. C
 - Film Tool declutter: **Watch plays** above **Build the team box**, both arrow-collapsed (`details`); Analysis Results panel removed from Film Tool (link to `/analysis/<game_id>` only)
 - Clip reject/advance fix: optimistic UI + seek guard + sticky stage `pointer-events` so Reject removes the row and Next clip starts; list clicks work under the sticky film
 - Accept/Reject speed: skip full `refresh_game_stats` on single-event review (~60s → ~30ms); UI no longer waits on the save
+- Coach **Open full app** → `/coach/exit` clears read-only Coach view (old `/` link left you in Coach mode); Analysis Results URLs encode game_id commas
+- **Liberty Server Watchdog** — `Install Liberty Watchdog.bat` → scheduled task every 5 min restarts Flask on :8080 if dead (fixes Tailscale 502 after reboot)
 
 ## Try
 

@@ -224,6 +224,16 @@ def coach_login():
     )
 
 
+@coach_bp.route("/coach/exit")
+@require_feature("ENABLE_COACH_PORTAL")
+def coach_exit_full_app():
+    """Leave read-only Coach view and open the full staff app in this browser."""
+    session.pop("coach_portal", None)
+    session.pop("_coach_readonly_flashed", None)
+    flash("Left Coach view — full app (not read-only).", "success")
+    return redirect(url_for("core.index"))
+
+
 @coach_bp.route("/coach/logout")
 @require_feature("ENABLE_COACH_PORTAL")
 def coach_logout():
