@@ -23,7 +23,7 @@ Or add that line near the top of a local launcher wrapper before starting the ap
 
 Keep Liberty + Funnel on port **8080** via `py -3.12 scripts/start_hoops_teach_detached.py` so coaches always hit the same app that is learning.
 
-**Watchdog (recommended):** double-click **`Install Liberty Watchdog.bat`** once — registers a Windows task every **5 minutes** that restarts Flask if `:8080` is down (log: `data/hoopsalytics/liberty_watchdog.log`). Manual check: `py -3.12 scripts/watchdog_liberty_server.py --status`.
+**Watchdog (recommended):** double-click **`Install Liberty Watchdog.bat`** once — registers a Windows task every **30 minutes** that restarts Flask if `:8080` is down (log: `data/hoopsalytics/liberty_watchdog.log`). Manual check: `py -3.12 scripts/watchdog_liberty_server.py --status`.
 
 If `LIBERTY_COACH_PASSWORD` is empty, `/coach` shows setup instructions instead of a login form.
 
