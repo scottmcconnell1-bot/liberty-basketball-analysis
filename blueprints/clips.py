@@ -779,7 +779,32 @@ def review_event_correct(event_id):
         "confidence": row["confidence"],
     }
     values.update(changed)
+
+    # Adrian: coach name/jersey → stamp scorebook jersey + team on details
+    # so Film Tool does not keep showing "player unlinked".
+    try:
+        from adrian_quality import is_adrian_game, resolve_adrian_teams, load_adrian_scorebook, _details
+        from adrian_identity import resolve_label_to_scorebook, enrich_details_with_identity
+
+        game_key = row["game_id"] if "game_id" in row.keys() else None
+        if is_adrian_game(game_key) and values.get("player"):
+            identity = resolve_label_to_scorebook(values["player"])
+            if identity:
+                details = _details({"details_json": values.get("details_json")})
+                details = enrich_details_with_identity(
+                    details, identity, teams=resolve_adrian_teams(load_adrian_scorebook())
+                )
+                values["details_json"] = json.dumps(details)
+                # Prefer canonical scorebook jersey as player id for ledger alignment
+                values["player"] = str(identity.get("jersey") or values["player"])
+                if "details_json" not in changed:
+                    changed["details_json"] = values["details_json"]
+                changed["player"] = values["player"]
+    except Exception:
+        pass
+
     user_id = _current_review_user_id()
+    correction_notes = notes or "Corrected in Film Tool"
     db.execute(
         """UPDATE events
               SET player=?,
@@ -792,7 +817,7 @@ def review_event_correct(event_id):
                   human_verified=1,
                   reviewed_by_user_id=?,
                   reviewed_at=CURRENT_TIMESTAMP,
-                  review_notes=COALESCE(?, review_notes)
+                  review_notes=?
             WHERE id=?""",
         (
             values["player"],
@@ -802,7 +827,7 @@ def review_event_correct(event_id):
             values["details_json"],
             values["confidence"],
             user_id,
-            notes,
+            correction_notes,
             event_id,
         ),
     )

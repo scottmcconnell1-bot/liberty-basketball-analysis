@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-08-26 (Adrian timing vs film — quality v2 spread)
+Updated: 2026-08-26 (Correct scorebook-only + tip_off)
 
 Branch: `cursor/film-tool-review-layout-ac1f`  
 Base: `jason-5-may-updates`
@@ -10,36 +10,34 @@ Base: `jason-5-may-updates`
 | Field | Value |
 | --- | --- |
 | **id** | adrian-accuracy-quality |
-| **status** | `in_progress` (team PTS match; timestamps spread; jersey/team still wrong) |
+| **status** | `in_progress` |
 | **assigned_to** | cursor-agent |
 | **scope** | **Adrian JrHigh only** until Scott says accurate |
 
 ## Why
 
-Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. CV firehose + tracker IDs ≠ jerseys. Quality v1 capped counts but kept early high-confidence noise (first ~2 min), same-ms pileups (miss+reb+block), and no team/player labels.
+Correct dialog was keeping sticky `/api/players` tagging names (Daly, unkn…). Opening tip was stored as `jump_ball` so it did not read as tip.
 
 ## Done (Proven)
 
-- `adrian_quality.py` v2 — temporal dedupe + **same-timestamp collapse** + **time-spread caps** (not top-confidence-only) + scorebook make/FT caps
-- After v2 refine: **team PTS 77**; accepted spread across ~0–58 min (was ~114 under 2:00 / 24 after → now **36 under 2:00 / 179 after**); no 3-way same-ms pileups
-- Frame match: NFHS clean vs archived screencapture body clocks **~aligned** (median offset ~1s); offset file `data/film_sync/…json` = 0; Film Tool sync bar for manual tip calibration if needed
-- Clip review loop, dock, Accept/Reject speed, coach exit; Liberty watchdog every **15 min** + at logon, hidden (prior)
+- Opening tip is **`tip_off`** @ ~3.3s (tracker #2); tip-scramble rebounds not promoted
+- Correct: scorebook roster only; sticky Daly/unkn tagging list hidden when scorebook loads
+- Program summary exposes scorebook `players` for the dropdown
+- Re-refine stable (tip_ms stays ~2.9s, not drift to scramble)
 
 ## Try
 
-1. Hard-refresh Film Tool → Adrian NFHS clean → **Build / refine Adrian ledger** (if not already on v2)
-2. **Show ledger plays** — rows should land across the game, not only tip-off
-3. Still expect tracker IDs (`#2`) not jerseys; almost no team label — identity is next
-4. Film sync bar under Build: leave at 0 unless tip is clearly off
+1. Hard-refresh Film Tool → Show ledger plays → first row **tip_off** (not rebound)
+2. Correct → scorebook names only (#40 Dayley · Liberty…)
+3. Tip type = **tip_off (opening tip)**; jump_ball = mid-game held ball only
 
-## Next (still Adrian only)
+## Next
 
-1. Jersey/track ID + team (Liberty vs Adrian) on ledger rows
-2. Spot-check a mid-game make/miss on film after v2 spread
-3. Only then expand quality path beyond Adrian
+1. Tip winner jersey/team via lookaround
+2. Spot-check timing on NFHS film
+3. Unresolved OCR jersey links
 
 ## Do not
 
-- Unpause teach loop (`TEACH_LOOP_PAUSED`)
-- Flip `auto_accept_event_confidence`
-- Run quality/auto-ledger on other games yet
+- Unpause teach loop / flip auto-accept
+- Quality on other games yet

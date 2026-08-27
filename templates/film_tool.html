@@ -1198,22 +1198,26 @@
         <div class="field">
           <label for="aiCorrectPlayer">Player</label>
           <select id="aiCorrectPlayer"></select>
+          <p class="tiny" id="aiCorrectPlayerHint">Pick from the scorebook roster when available.</p>
         </div>
-        <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
-          <div style="flex:1;min-width:140px;">
-            <label for="aiCorrectNewPlayerName">Add player for tagging</label>
-            <input id="aiCorrectNewPlayerName" placeholder="Full name" autocomplete="off">
+        <div id="aiCorrectTaggingBlock" hidden>
+          <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:140px;">
+              <label for="aiCorrectNewPlayerName">Add player for tagging</label>
+              <input id="aiCorrectNewPlayerName" placeholder="Full name" autocomplete="off">
+            </div>
+            <div style="width:72px;">
+              <label for="aiCorrectNewPlayerNum">#</label>
+              <input id="aiCorrectNewPlayerNum" type="number" min="0" max="99" placeholder="#">
+            </div>
+            <button class="btn btn-primary" type="button" id="aiCorrectAddPlayerBtn">Add</button>
           </div>
-          <div style="width:72px;">
-            <label for="aiCorrectNewPlayerNum">#</label>
-            <input id="aiCorrectNewPlayerNum" type="number" min="0" max="99" placeholder="#">
-          </div>
-          <button class="btn btn-primary" type="button" id="aiCorrectAddPlayerBtn">Add</button>
+          <div class="term-list" id="aiCorrectPlayerManageList" style="max-height:120px;overflow:auto;margin-bottom:.75rem;"></div>
         </div>
-        <div class="term-list" id="aiCorrectPlayerManageList" style="max-height:120px;overflow:auto;margin-bottom:.75rem;"></div>
         <div class="field">
           <label for="aiCorrectEventType">Event type</label>
           <select id="aiCorrectEventType">
+            <option value="tip_off">tip_off (opening tip)</option>
             <option value="made_two">made_two</option>
             <option value="missed_two">missed_two</option>
             <option value="made_three">made_three</option>
@@ -1226,6 +1230,7 @@
             <option value="steal">steal</option>
             <option value="block">block</option>
             <option value="foul">foul</option>
+            <option value="jump_ball">jump_ball (held ball / mid-game)</option>
             <option value="shot">shot</option>
             <option value="miss">miss</option>
             <option value="make">make</option>

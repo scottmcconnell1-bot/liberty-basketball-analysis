@@ -35,6 +35,8 @@ PROGRAM_LEDGER_TYPES = (
     "steal",
     "block",
     "foul",
+    "jump_ball",
+    "tip_off",
 )
 
 NOISE_TYPES = ("possession_change", "bookmark")
@@ -398,6 +400,22 @@ def program_summary(db, game_id: str) -> dict[str, Any]:
             "home_team": (scorebook or {}).get("home_team"),
             "away_team": (scorebook or {}).get("away_team"),
             "team_pts": book_pts,
+            "players": [
+                {
+                    "jersey": p.get("jersey"),
+                    "name": p.get("name"),
+                    "team_name": (
+                        (scorebook or {}).get("home_team")
+                        if str(p.get("team") or "").lower() in ("home", "h")
+                        else (scorebook or {}).get("away_team")
+                        if str(p.get("team") or "").lower() in ("away", "a")
+                        else (p.get("team_name") or p.get("team"))
+                    ),
+                    "team_side": p.get("team"),
+                }
+                for p in ((scorebook or {}).get("players") or [])
+                if p.get("jersey") is not None or p.get("name")
+            ],
         },
         "exceptions": exceptions,
         "exception_count": len(exceptions),

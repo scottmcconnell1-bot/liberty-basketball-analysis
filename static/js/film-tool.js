@@ -1780,10 +1780,71 @@ function escapeHtml(value) {
 
 function parseAiEventDetails(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch (_err) { return {}; } }
 
+/** Prefer scorebook jersey/name from lookaround/correction; else tracker ID. */
+function formatAiPlayerLabel(event) {
+    const details = parseAiEventDetails(event?.details_json);
+    if (details.jersey_number != null || details.player_name) {
+        const num = details.jersey_number != null ? `#${details.jersey_number}` : '';
+        const name = details.player_name ? String(details.player_name) : '';
+        return [num, name].filter(Boolean).join(' ').trim();
+    }
+    const raw = String(event?.player || '').trim();
+    if (!raw) return 'player unknown';
+    if (/^\d+$/.test(raw)) return `tracker #${raw}`;
+    // Coach typed a name without scorebook stamp yet
+    return raw;
+}
+
+function formatAiTeamLabel(event) {
+    const details = parseAiEventDetails(event?.details_json);
+    const linked = event?.team_id ?? event?.team ?? details.team_name ?? details.team;
+    if (linked != null && linked !== '' && linked !== 'unlinked') return String(linked);
+    if (details.player_team && details.player_team !== 'unlinked') return String(details.player_team);
+
+    const home = details.home_team || window.FILM_GAME_TEAMS?.home_team;
+    const away = details.away_team || window.FILM_GAME_TEAMS?.away_team;
+    const playerRaw = String(event?.player || '').trim();
+    const hasNamedPlayer = Boolean(
+        details.player_name
+        || details.jersey_number != null
+        || (playerRaw && !/^\d+$/.test(playerRaw))
+    );
+    // Coach assigned a person — don't say "player unlinked"
+    if (hasNamedPlayer) {
+        if (home || away) return `team not set · Home ${home || '?'} / Away ${away || '?'}`;
+        return 'team not set';
+    }
+    if (home || away) {
+        return `player unlinked · Home ${home || '?'} / Away ${away || '?'}`;
+    }
+    return 'team unknown';
+}
+
+function formatAiEventTypeLabel(event) {
+    const et = String(event?.event_type || '').toLowerCase();
+    const details = parseAiEventDetails(event?.details_json);
+    if (et === 'tip_off' || (et === 'jump_ball' && details.kind === 'opening_tip')) {
+        return 'tip_off';
+    }
+    return event?.event_type || '';
+}
+
+function formatAiIdentityLine(event) {
+    const et = String(event?.event_type || '').toLowerCase();
+    const details = parseAiEventDetails(event?.details_json);
+    if (et === 'tip_off' || (et === 'jump_ball' && details.tip_winner)) {
+        const who = details.tip_winner || event?.player || '?';
+        return `tip → tracker #${who} · ${formatAiTeamLabel(event)}`;
+    }
+    return `${formatAiPlayerLabel(event)} · ${formatAiTeamLabel(event)}`;
+}
+
 function summarizeAiEvent(event) {
     const details = parseAiEventDetails(event.details_json);
     const parts = [];
+    if (details.note) parts.push(details.note);
     if (event.shot_result) parts.push(`result: ${event.shot_result}`);
+    if (details.tip_winner) parts.push(`tip winner tracker #${details.tip_winner}`);
     if (details.from_player && details.to_player) parts.push(`${details.from_player} -> ${details.to_player}`);
     if (details.from_player && !details.to_player) parts.push(`from ${details.from_player}`);
     if (details.next_possessor) parts.push(`to ${details.next_possessor}`);
@@ -1791,7 +1852,6 @@ function summarizeAiEvent(event) {
     if (details.scorer) parts.push(`scorer ${details.scorer}`);
     if (details.gap_frames != null) parts.push(`gap ${details.gap_frames} frames`);
     if (details.ball_rise != null) parts.push(`rise ${details.ball_rise}`);
-    if (details.note) parts.push(details.note);
     if (event.confidence != null) parts.push(`conf ${(Number(event.confidence) * 100).toFixed(0)}%`);
     return parts.length ? parts.join(' · ') : 'Click to jump video playback to this event.';
 }
@@ -1924,7 +1984,7 @@ function updateClipReviewDock(event) {
     if (label) {
         label.textContent = (
             `Looping ${event.event_type || 'play'}`
-            + (event.player ? ` · #${event.player}` : '')
+            + ` · ${formatAiIdentityLine(event)}`
             + ` · ${formatTime(clipReview.start)}–${formatTime(clipReview.end)}`
             + ` (${reviewStatusLabel(status)})`
         );
@@ -2119,11 +2179,16 @@ function renderProgramSummary(summary) {
         if (sb.present) {
             const bookPts = sb.team_pts ?? ((Number(sb.final_score_home) || 0) + (Number(sb.final_score_away) || 0));
             const aiPts = (summary.ledger_box?.totals || {}).pts ?? 0;
+            const home = sb.home_team || 'Home';
+            const away = sb.away_team || 'Away';
+            window.FILM_GAME_TEAMS = { home_team: home, away_team: away };
+            window.FILM_SCOREBOOK_PLAYERS = Array.isArray(sb.players) ? sb.players : [];
             scoreEl.textContent = (
-                `Scorebook team PTS ${bookPts} · AI ledger PTS ${aiPts}`
+                `Home ${home} / Away ${away} · Scorebook team PTS ${bookPts} · AI ledger PTS ${aiPts}`
                 + ` · players still tracker IDs (not jerseys yet)`
             );
         } else {
+            window.FILM_SCOREBOOK_PLAYERS = [];
             scoreEl.textContent = 'No confirmed scorebook yet — confirm on /stat-books for better exceptions.';
         }
     }
@@ -2276,27 +2341,70 @@ async function loadReviewPlayers() {
     return aiReviewPlayersCache;
 }
 
+function scorebookPlayersAvailable() {
+    return Array.isArray(window.FILM_SCOREBOOK_PLAYERS) && window.FILM_SCOREBOOK_PLAYERS.length > 0;
+}
+
+function syncCorrectTaggingVisibility() {
+    const block = document.getElementById('aiCorrectTaggingBlock');
+    const hint = document.getElementById('aiCorrectPlayerHint');
+    const useBook = scorebookPlayersAvailable();
+    if (block) block.hidden = useBook;
+    if (hint) {
+        hint.textContent = useBook
+            ? 'Scorebook roster only — tagging list is hidden so Correct does not keep old names.'
+            : 'No scorebook roster loaded — you can add a tagging player below.';
+    }
+}
+
 function populateCorrectPlayerSelect(selectedName) {
     const select = document.getElementById('aiCorrectPlayer');
     if (!select) return;
     const names = new Set();
     const options = ['<option value="">(unassigned)</option>'];
-    aiReviewPlayersCache.forEach(player => {
+    const useBook = scorebookPlayersAvailable();
+    const bookPlayers = window.FILM_SCOREBOOK_PLAYERS || [];
+
+    bookPlayers.forEach(player => {
+        const jersey = player.jersey != null ? String(player.jersey) : '';
         const name = (player.name || '').trim();
-        if (!name || names.has(name)) return;
-        names.add(name);
-        const selected = name === selectedName ? ' selected' : '';
-        options.push(`<option value="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`);
+        const team = (player.team_name || player.team || '').trim();
+        const label = [jersey ? `#${jersey}` : '', name, team ? `(${team})` : ''].filter(Boolean).join(' ').trim();
+        const value = [jersey, name].filter(Boolean).join(' ').trim() || name;
+        if (!value || names.has(value)) return;
+        names.add(value);
+        const selected = (value === selectedName || name === selectedName || (jersey && selectedName === jersey)) ? ' selected' : '';
+        options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`);
     });
+
+    // Only merge sticky /api/players tagging names when no scorebook roster.
+    if (!useBook) {
+        aiReviewPlayersCache.forEach(player => {
+            const name = (player.name || '').trim();
+            if (!name || names.has(name)) return;
+            names.add(name);
+            const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
+            const label = jersey ? `#${jersey} ${name}` : name;
+            const value = jersey ? `${jersey} ${name}` : name;
+            const selected = (name === selectedName || value === selectedName) ? ' selected' : '';
+            options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`);
+        });
+    }
     if (selectedName && !names.has(selectedName)) {
-        options.push(`<option value="${escapeHtml(selectedName)}" selected>${escapeHtml(selectedName)} (AI)</option>`);
+        options.push(`<option value="${escapeHtml(selectedName)}" selected>${escapeHtml(selectedName)} (current)</option>`);
     }
     select.innerHTML = options.join('');
+    syncCorrectTaggingVisibility();
 }
 
 function renderCorrectPlayerManageList() {
     const list = document.getElementById('aiCorrectPlayerManageList');
     if (!list) return;
+    if (scorebookPlayersAvailable()) {
+        list.innerHTML = '';
+        syncCorrectTaggingVisibility();
+        return;
+    }
     if (!aiReviewPlayersCache.length) {
         list.innerHTML = '<div class="tiny">No players yet — add one above for tagging.</div>';
         return;
@@ -2346,18 +2454,33 @@ async function openAiCorrectDialog(eventId) {
             return;
         }
     }
+    // Ensure scorebook roster is loaded so Correct does not fall back to sticky tagging players.
+    if (!scorebookPlayersAvailable()) {
+        const gameId = currentFilmGameId();
+        if (gameId) {
+            try {
+                const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/summary`);
+                if (response.ok) {
+                    const summary = await response.json();
+                    renderProgramSummary(summary);
+                }
+            } catch (_err) { /* keep going */ }
+        }
+    }
     await loadReviewPlayers();
     document.getElementById('aiCorrectEventId').value = isAdd ? 'new' : String(event.id);
     const head = document.querySelector('#aiCorrectDialog .modal-head h2');
     if (head) head.textContent = isAdd ? 'Add event at playhead' : 'Correct event';
     document.getElementById('aiCorrectSummary').textContent = isAdd
-        ? `New ledger event at ${formatTime(video?.currentTime || 0)}. Choose type (e.g. miss) and save.`
-        : `AI draft: ${event.event_type} · ${event.player || 'unassigned'} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
+        ? `New ledger event at ${formatTime(video?.currentTime || 0)}. Choose type (e.g. tip_off or miss) and save.`
+        : `AI draft: ${formatAiEventTypeLabel(event)} · ${formatAiIdentityLine(event)} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
     populateCorrectPlayerSelect(isAdd ? '' : (event.player || ''));
     renderCorrectPlayerManageList();
     const typeSelect = document.getElementById('aiCorrectEventType');
     if (typeSelect) {
-        const desired = isAdd ? 'miss' : (event.event_type || 'shot');
+        let desired = isAdd ? 'miss' : (event.event_type || 'shot');
+        const details = parseAiEventDetails(event?.details_json);
+        if (desired === 'jump_ball' && details.kind === 'opening_tip') desired = 'tip_off';
         const existing = Array.from(typeSelect.options).some(opt => opt.value === desired);
         if (!existing && desired) {
             const opt = document.createElement('option');
@@ -2478,18 +2601,19 @@ function renderAiEvents(events) {
                 <button class="btn ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject / decline: this play is wrong — remove from ledger">✗ Reject</button>
                </div>`;
         }
-        const seekTitle = `Click to loop a short clip around ${formatTime(event.timestamp_ms / 1000)} — ${event.event_type || 'event'}${event.player ? ' · ' + event.player : ''}`;
+        const typeLabel = formatAiEventTypeLabel(event);
+        const seekTitle = `Click to loop a short clip around ${formatTime(event.timestamp_ms / 1000)} — ${typeLabel || 'event'} · ${formatAiIdentityLine(event)}`;
         return `
         <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" title="${escapeHtml(seekTitle)}" aria-label="${escapeHtml(seekTitle)}">
             <div class="ai-event-row">
-                <strong>${escapeHtml(event.event_type || '')}</strong>
+                <strong>${escapeHtml(typeLabel)}</strong>
                 <span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span>
             </div>
             <div class="ai-event-meta">
                 <span class="ai-event-status ${statusClass}">${reviewStatusLabel(status)}</span>
                 ${reviewControls}
             </div>
-            <div class="tiny">${escapeHtml(event.player || 'AI detected event')}</div>
+            <div class="tiny">${escapeHtml(formatAiIdentityLine(event))}</div>
             <div class="ai-event-details">${escapeHtml(summarizeAiEvent(event))}</div>
         </div>`;
     }).join('');

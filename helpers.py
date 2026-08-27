@@ -59,6 +59,7 @@ EVENT_TYPE_SEEDS = [
     ("substitution", "Substitution", "rotation", 0, 0, 0),
     ("timeout", "Timeout", "game_management", 0, 0, 0),
     ("jump_ball", "Jump ball", "game_management", 0, 0, 1),
+    ("tip_off", "Tip-off", "game_management", 0, 0, 1),
     ("period_start", "Period start", "clock", 0, 0, 1),
     ("period_end", "Period end", "clock", 0, 0, 1),
     # Legacy event_type aliases. These bridge pre-taxonomy events so the
