@@ -1,5 +1,6 @@
 # Liberty server watchdog: if Flask is not healthy on :8080, start it again.
-# Safe to run every 30 minutes (does not restart a healthy server).
+# Safe to run every 15 minutes (does not restart a healthy server).
+# Runs hidden via Task Scheduler (-WindowStyle Hidden).
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watchdog_liberty_server.ps1
 
 $ErrorActionPreference = "Continue"

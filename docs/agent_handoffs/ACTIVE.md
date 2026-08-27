@@ -23,7 +23,7 @@ Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. C
 - `adrian_quality.py` v2 — temporal dedupe + **same-timestamp collapse** + **time-spread caps** (not top-confidence-only) + scorebook make/FT caps
 - After v2 refine: **team PTS 77**; accepted spread across ~0–58 min (was ~114 under 2:00 / 24 after → now **36 under 2:00 / 179 after**); no 3-way same-ms pileups
 - Frame match: NFHS clean vs archived screencapture body clocks **~aligned** (median offset ~1s); offset file `data/film_sync/…json` = 0; Film Tool sync bar for manual tip calibration if needed
-- Clip review loop, dock, Accept/Reject speed, coach exit, 30‑min Liberty watchdog (prior)
+- Clip review loop, dock, Accept/Reject speed, coach exit; Liberty watchdog every **15 min** + at logon, hidden (prior)
 
 ## Try
 
