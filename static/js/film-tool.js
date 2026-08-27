@@ -1847,6 +1847,69 @@ let clipReview = null;
 let clipSeekToken = 0;
 /** Counts seeks we initiate so a stale seeked event cannot cancel the active clip. */
 let clipInternalSeekCount = 0;
+/** Analysis→review film offset (ms). review_time = analysis_timestamp + offset. */
+let filmSyncOffsetMs = 0;
+
+function eventReviewSeconds(event) {
+    const analysisMs = Number(event?.timestamp_ms || 0);
+    return Math.max(0, (analysisMs + (filmSyncOffsetMs || 0)) / 1000);
+}
+
+function updateFilmSyncStatus() {
+    const el = document.getElementById('ftFilmSyncStatus');
+    if (!el) return;
+    const sec = (filmSyncOffsetMs || 0) / 1000;
+    el.textContent = filmSyncOffsetMs
+        ? `Film sync: +${sec.toFixed(1)}s on review film (analysis timestamps shifted)`
+        : 'Film sync: 0 (analysis time = review playhead)';
+}
+
+async function loadFilmSync(gameId) {
+    if (!gameId) {
+        filmSyncOffsetMs = 0;
+        updateFilmSyncStatus();
+        return;
+    }
+    try {
+        const response = await fetch(`/api/film-sync/${encodeURIComponent(gameId)}`);
+        if (!response.ok) throw new Error('sync load failed');
+        const data = await response.json();
+        filmSyncOffsetMs = Number(data.offset_ms || 0) || 0;
+    } catch (_err) {
+        filmSyncOffsetMs = 0;
+    }
+    updateFilmSyncStatus();
+}
+
+async function saveFilmSync(offsetMs, method, notes) {
+    const gameId = currentFilmGameId();
+    if (!gameId) {
+        setStatus('No game_id — open film with ?game_id=… first.');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/film-sync/${encodeURIComponent(gameId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                offset_ms: Math.round(offsetMs),
+                method: method || 'manual',
+                notes: notes || '',
+            }),
+        });
+        if (!response.ok) throw new Error('sync save failed');
+        const data = await response.json();
+        filmSyncOffsetMs = Number(data.offset_ms || 0) || 0;
+        updateFilmSyncStatus();
+        setStatus(`Film sync saved: offset ${(filmSyncOffsetMs / 1000).toFixed(1)}s.`);
+        if (clipReview) {
+            const event = aiEventsCache.find(row => String(row.id) === String(clipReview.eventId));
+            if (event) startClipReview(event);
+        }
+    } catch (_err) {
+        setStatus('Could not save film sync offset.');
+    }
+}
 
 function updateClipReviewDock(event) {
     const dock = document.getElementById('ftClipReviewDock');
@@ -1897,7 +1960,7 @@ function seekVideoForClip(seconds) {
 
 function startClipReview(event) {
     if (!video || !event) return;
-    const center = Number(event.timestamp_ms || 0) / 1000;
+    const center = eventReviewSeconds(event);
     const duration = Number(video.duration);
     const endCap = Number.isFinite(duration) && duration > 0 ? duration : center + CLIP_PAD_AFTER_SEC + 1;
     const start = Math.max(0, center - CLIP_PAD_BEFORE_SEC);
@@ -1914,7 +1977,8 @@ function startClipReview(event) {
         playPromise.catch(() => { /* autoplay may be blocked */ });
     }
     updateClipReviewDock(event);
-    setStatus(`Looping clip around ${(center).toFixed(1)}s — Accept / Reject / Correct, or Next play.`);
+    const off = filmSyncOffsetMs ? ` (sync +${(filmSyncOffsetMs / 1000).toFixed(1)}s)` : '';
+    setStatus(`Looping clip around ${center.toFixed(1)}s${off} — Accept / Reject / Correct, or Next play.`);
 }
 
 function onClipReviewTimeUpdate() {
@@ -3243,6 +3307,14 @@ function attachEventHandlers() {
     });
     document.getElementById('programBuildLedgerBtn')?.addEventListener('click', buildProgramLedger);
     document.getElementById('programRefreshBtn')?.addEventListener('click', fetchProgramSummary);
+    document.getElementById('ftFilmSyncZeroBtn')?.addEventListener('click', () => {
+        saveFilmSync(0, 'manual_zero', 'Cleared in Film Tool');
+    });
+    document.getElementById('ftFilmSyncHereBtn')?.addEventListener('click', () => {
+        // Current review playhead corresponds to analysis tip (t=0).
+        const reviewMs = Math.round((video?.currentTime || 0) * 1000);
+        saveFilmSync(reviewMs, 'playhead_as_analysis_tip', 'Playhead set as analysis tip in Film Tool');
+    });
     document.getElementById('video')?.addEventListener('seeked', scheduleAiReviewReloadFromSeek);
     document.getElementById('aiCorrectCancelBtn')?.addEventListener('click', () => {
         document.getElementById('aiCorrectDialog')?.close();
@@ -3478,6 +3550,7 @@ function init() {
     }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
     if (activeGameId) fetchProgramSummary();
+    if (activeGameId) loadFilmSync(activeGameId);
     if (activeGameId && window.ENABLE_AUTO_STATS_M1) {
         fetchAndRenderPlayMatches(activeGameId, { refresh: false });
     }

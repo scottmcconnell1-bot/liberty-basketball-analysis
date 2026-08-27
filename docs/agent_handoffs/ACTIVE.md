@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-08-12 (Adrian-only accuracy — scorebook quality pass)
+Updated: 2026-08-26 (Adrian timing vs film — quality v2 spread)
 
 Branch: `cursor/film-tool-review-layout-ac1f`  
 Base: `jason-5-may-updates`
@@ -10,44 +10,32 @@ Base: `jason-5-may-updates`
 | Field | Value |
 | --- | --- |
 | **id** | adrian-accuracy-quality |
-| **status** | `in_progress` (team PTS match; jersey IDs still wrong) |
+| **status** | `in_progress` (team PTS match; timestamps spread; jersey/team still wrong) |
 | **assigned_to** | cursor-agent |
 | **scope** | **Adrian JrHigh only** until Scott says accurate |
 
 ## Why
 
-Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. CV firehose + tracker IDs ≠ jerseys. One coach cannot clear that by hand.
+Blind program promote left ~13k accepted events / ~5k AI PTS vs scorebook ~77. CV firehose + tracker IDs ≠ jerseys. Quality v1 capped counts but kept early high-confidence noise (first ~2 min), same-ms pileups (miss+reb+block), and no team/player labels.
 
 ## Done (Proven)
 
-- `adrian_quality.py` — temporal dedupe + scorebook make/FT caps + heuristic REB/AST/… + reject noise on **all** related keys (base + `__rerun_*`)
-- `scripts/refine_adrian_events.py` + `POST /api/program/<game_id>/auto-ledger` runs quality for Adrian (not blind promote)
-- Film Tool button: **Build / refine Adrian ledger**
-- After refine on `film_analysis.db`: **team ledger PTS 77 = scorebook 77**; FGM 28, TPM 6, FTM 15
-- Confidence auto-accept still **locked at 0**
-- **Clip review loop**: click a play list row → loops ~2.5s before / ~4s after; dock Accept / Correct / Reject / Next / Stop; advances to next after a decision
-- Film Tool declutter: **Watch plays** above **Build the team box**, both arrow-collapsed (`details`); Analysis Results panel removed from Film Tool (link to `/analysis/<game_id>` only)
-- Clip reject/advance fix: optimistic UI + seek guard + sticky stage `pointer-events` so Reject removes the row and Next clip starts; list clicks work under the sticky film
-- Accept/Reject speed: skip full `refresh_game_stats` on single-event review (~60s → ~30ms); UI no longer waits on the save
-- Coach **Open full app** → `/coach/exit` clears read-only Coach view (old `/` link left you in Coach mode); Analysis Results URLs encode game_id commas
-- **Liberty Server Watchdog** — `Install Liberty Watchdog.bat` → scheduled task every 30 min restarts Flask on :8080 if dead (fixes Tailscale 502 after reboot)
+- `adrian_quality.py` v2 — temporal dedupe + **same-timestamp collapse** + **time-spread caps** (not top-confidence-only) + scorebook make/FT caps
+- After v2 refine: **team PTS 77**; accepted spread across ~0–58 min (was ~114 under 2:00 / 24 after → now **36 under 2:00 / 179 after**); no 3-way same-ms pileups
+- Frame match: NFHS clean vs archived screencapture body clocks **~aligned** (median offset ~1s); offset file `data/film_sync/…json` = 0; Film Tool sync bar for manual tip calibration if needed
+- Clip review loop, dock, Accept/Reject speed, coach exit, 30‑min Liberty watchdog (prior)
 
 ## Try
 
-1. Videos → Active → **Liberty vs Adrian (JrHigh) - NFHS clean** → **Review**  
-   File: `nfhs_gam0a66d85e12.mp4` · GameID: `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`  
-   Old `LIBERTY_A_v_ADRIAN_H_…` screen-capture is **Archived** (do not use)
-2. Hard-refresh — player sizes to the film (no black side bars)
-3. Open **Build the team box** only when refining; day-to-day stay in **Watch plays on film**
-4. Scorebook: **Liberty 51 – Adrian 26** (confirmed + photo)
-5. Click a play row → looping clip dock → Accept/Reject/Correct or Next
-6. Exceptions = jersey/ID mismatches (expected until CV links #13/#40/…)
-7. Full shot/possession/minutes panels: use **Analysis Results**, not Film Tool
+1. Hard-refresh Film Tool → Adrian NFHS clean → **Build / refine Adrian ledger** (if not already on v2)
+2. **Show ledger plays** — rows should land across the game, not only tip-off
+3. Still expect tracker IDs (`#2`) not jerseys; almost no team label — identity is next
+4. Film sync bar under Build: leave at 0 unless tip is clearly off
 
 ## Next (still Adrian only)
 
-1. Jersey/track ID linking so player lines match scorebook (Mendoza 13, Dayley 26, …)
-2. Timestamp truth-check vs film (caps fix counts, not necessarily timing)
+1. Jersey/track ID + team (Liberty vs Adrian) on ledger rows
+2. Spot-check a mid-game make/miss on film after v2 spread
 3. Only then expand quality path beyond Adrian
 
 ## Do not

@@ -23,7 +23,6 @@ from typing import Any
 from boxscore_constraints import (
     COUNT_BUCKETS,
     SHOT_BUCKETS,
-    apply_boxscore_constraints,
     empty_caps,
     event_confidence,
 )
@@ -33,7 +32,7 @@ ADRIAN_BASE = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
 SCOREBOOK_PATH = (
     ROOT / "data" / "stat_books" / "confirmed" / f"{ADRIAN_BASE}.json"
 )
-QUALITY_NOTE = "adrian_quality_v1"
+QUALITY_NOTE = "adrian_quality_v2"
 
 
 def is_adrian_game(game_id: str | None) -> bool:
@@ -194,6 +193,154 @@ def temporal_dedupe(events: list[dict], window_ms: int = 2000) -> list[dict]:
     return kept
 
 
+def _event_priority(event: dict) -> int:
+    """Higher = more primary when collapsing same-clock pileups."""
+    et = str(event.get("event_type") or "").lower()
+    if et in {
+        "shot", "make", "miss", "made_two", "missed_two", "made_three",
+        "missed_three", "made_free_throw", "missed_free_throw",
+    }:
+        return 50
+    if et in {"steal", "turnover"}:
+        return 40
+    if et == "assist":
+        return 35
+    if et == "rebound":
+        return 30
+    if et == "block":
+        return 20
+    if et == "foul":
+        return 10
+    return 0
+
+
+def collapse_same_timestamp(events: list[dict], window_ms: int = 50) -> list[dict]:
+    """Keep at most one primary event per clock cluster.
+
+    AI often stamps miss+rebound+block (or similar) on the exact same ms.
+    Coach review saw three tags on one instant — collapse those.
+    """
+    if not events:
+        return []
+    ordered = sorted(
+        events,
+        key=lambda e: (
+            int(e.get("timestamp_ms") or 0),
+            -_event_priority(e),
+            -event_confidence(e),
+            int(e.get("id") or 0),
+        ),
+    )
+    kept: list[dict] = []
+    cluster_ts: int | None = None
+    cluster: list[dict] = []
+
+    def flush() -> None:
+        nonlocal cluster, cluster_ts
+        if not cluster:
+            return
+        # One winner in the cluster (highest priority then confidence).
+        winner = cluster[0]
+        kept.append(winner)
+        w_et = str(winner.get("event_type") or "").lower()
+        # Optional linked steal with a turnover (or vice versa) if different players.
+        if w_et in {"steal", "turnover"}:
+            partner_need = "turnover" if w_et == "steal" else "steal"
+            w_player = str(winner.get("player") or "")
+            for other in cluster[1:]:
+                if str(other.get("event_type") or "").lower() != partner_need:
+                    continue
+                if str(other.get("player") or "") == w_player:
+                    continue
+                kept.append(other)
+                break
+        cluster = []
+        cluster_ts = None
+
+    for event in ordered:
+        ts = int(event.get("timestamp_ms") or 0)
+        if cluster_ts is None:
+            cluster_ts = ts
+            cluster = [event]
+            continue
+        if abs(ts - cluster_ts) <= window_ms:
+            cluster.append(event)
+            continue
+        flush()
+        cluster_ts = ts
+        cluster = [event]
+    flush()
+    kept.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), int(e.get("id") or 0)))
+    return kept
+
+
+def spread_pick(events: list[dict], limit: int, game_span_ms: int | None = None) -> list[dict]:
+    """Pick up to `limit` events spread across the game, not just top confidence.
+
+    Early CV firehose is high-confidence; taking top-N alone piles the ledger
+    into the first 1–2 minutes. Bin the timeline and take the best event per bin.
+    """
+    if limit <= 0 or not events:
+        return []
+    if len(events) <= limit:
+        return list(events)
+
+    times = [int(e.get("timestamp_ms") or 0) for e in events]
+    t_min = min(times)
+    t_max = max(times)
+    if game_span_ms is not None and game_span_ms > t_max:
+        t_max = game_span_ms
+    span = max(1, t_max - t_min)
+
+    bins: dict[int, list[dict]] = {i: [] for i in range(limit)}
+    for event in events:
+        ts = int(event.get("timestamp_ms") or 0)
+        idx = int((ts - t_min) / span * limit)
+        if idx >= limit:
+            idx = limit - 1
+        if idx < 0:
+            idx = 0
+        bins[idx].append(event)
+
+    picked: list[dict] = []
+    used_ids: set[int] = set()
+    for i in range(limit):
+        candidates = bins.get(i) or []
+        if not candidates:
+            continue
+        best = max(
+            candidates,
+            key=lambda e: (event_confidence(e), -int(e.get("timestamp_ms") or 0)),
+        )
+        eid = int(best["id"]) if best.get("id") is not None else None
+        if eid is not None and eid in used_ids:
+            continue
+        picked.append(best)
+        if eid is not None:
+            used_ids.add(eid)
+
+    # Fill remaining slots with highest-confidence leftovers, enforcing min gap.
+    if len(picked) < limit:
+        min_gap = max(15_000, span // max(limit * 2, 1))
+        leftovers = sorted(
+            (e for e in events if int(e.get("id") or -1) not in used_ids),
+            key=event_confidence,
+            reverse=True,
+        )
+        for event in leftovers:
+            if len(picked) >= limit:
+                break
+            ts = int(event.get("timestamp_ms") or 0)
+            if any(abs(ts - int(p.get("timestamp_ms") or 0)) < min_gap for p in picked):
+                continue
+            picked.append(event)
+            if event.get("id") is not None:
+                used_ids.add(int(event["id"]))
+
+    picked.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), int(e.get("id") or 0)))
+    return picked[:limit]
+
+
 def heuristic_count_caps(shot_kept: list[dict], team_caps: dict) -> dict[str, int]:
     """When scorebook lacks REB/AST/… use tight JH-reasonable caps from kept shots."""
     makes = sum(
@@ -219,8 +366,10 @@ def heuristic_count_caps(shot_kept: list[dict], team_caps: dict) -> dict[str, in
     return {"reb": reb, "ast": ast, "stl": stl, "blk": blk, "to": to, "pf": pf}
 
 
-def _assign_shot_types_to_caps(shots: list[dict], team: dict) -> list[dict]:
-    """AI shots rarely have shot_type; allocate top-confidence makes/misses to book buckets."""
+def _assign_shot_types_to_caps(
+    shots: list[dict], team: dict, game_span_ms: int | None = None
+) -> list[dict]:
+    """AI shots rarely have shot_type; allocate spread makes/misses to book buckets."""
     from boxscore_constraints import shot_bucket
 
     typed: list[dict] = []
@@ -266,7 +415,8 @@ def _assign_shot_types_to_caps(shots: list[dict], team: dict) -> list[dict]:
             left[b] -= 1
         out.append(e)
 
-    untyped_makes = sorted(untyped_makes, key=event_confidence, reverse=True)
+    need_makes = max(0, left["2pt_make"]) + max(0, left["3pt_make"]) + max(0, left["ft_make"])
+    untyped_makes = spread_pick(untyped_makes, need_makes, game_span_ms=game_span_ms)
     fill_order = (
         [("2pt_make", "2pt")] * max(0, left["2pt_make"])
         + [("3pt_make", "3pt")] * max(0, left["3pt_make"])
@@ -283,7 +433,11 @@ def _assign_shot_types_to_caps(shots: list[dict], team: dict) -> list[dict]:
         out.append(row)
         left[bucket] = max(0, left[bucket] - 1)
 
-    untyped_misses = sorted(untyped_misses, key=event_confidence, reverse=True)
+    untyped_misses = spread_pick(
+        untyped_misses,
+        max(0, left["ft_miss"]) + 80,
+        game_span_ms=game_span_ms,
+    )
     ft_miss_n = max(0, left["ft_miss"])
     for e in untyped_misses[:ft_miss_n]:
         details = _details(e)
@@ -347,8 +501,10 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
         not in {"possession_change", "bookmark"}
     ]
     deduped = temporal_dedupe(usable, window_ms=2000)
+    deduped = collapse_same_timestamp(deduped, window_ms=50)
 
-    # Normalize for shot caps; keep original event_type for counting stats
+    # Full detection span (~screencapture length) for spread bins
+    game_span_ms = max((int(e.get("timestamp_ms") or 0) for e in raw_events), default=0)
     normalized = []
     for e in deduped:
         et = str(e.get("event_type") or "").lower()
@@ -368,32 +524,48 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
     shot_pool = [
         e for e in normalized if str(e.get("event_type") or "").lower() not in count_types
     ]
-    shot_pool = _assign_shot_types_to_caps(shot_pool, team)
+    shot_pool = _assign_shot_types_to_caps(shot_pool, team, game_span_ms=game_span_ms)
 
-    # Strip FG miss caps (unknown) — only cap makes + FT from book
-    model = {
-        "boxscore_by_game": {
-            ADRIAN_BASE: {
-                "team": {
-                    **team,
-                    "2pt_miss": 10_000,
-                    "3pt_miss": 10_000,
-                    "reb": 0,
-                    "ast": 0,
-                    "stl": 0,
-                    "blk": 0,
-                    "to": 0,
-                    "pf": int(team.get("pf") or 0),
-                },
-                "by_jersey": {},
-            }
-        }
+    # Cap shot buckets with time-spread picks (not raw top-confidence).
+    from boxscore_constraints import shot_bucket as _shot_bucket
+
+    team_left = {
+        "2pt_make": int(team.get("2pt_make") or 0),
+        "3pt_make": int(team.get("3pt_make") or 0),
+        "ft_make": int(team.get("ft_make") or 0),
+        "ft_miss": int(team.get("ft_miss") or 0),
+        "2pt_miss": 10_000,
+        "3pt_miss": 10_000,
     }
-
+    by_bucket: dict[str, list[dict]] = {}
+    uncapped: list[dict] = []
     for e in shot_pool:
-        e["game_id"] = ADRIAN_BASE
+        probe = dict(e)
+        if str(probe.get("event_type") or "").lower() != "shot":
+            # normalize_event / assign already set shot for typed rows
+            pass
+        b = _shot_bucket(probe if str(probe.get("event_type") or "").lower() == "shot" else {
+            **probe,
+            "event_type": "shot",
+            "shot_result": probe.get("shot_result") or (
+                "make" if "made" in str(probe.get("event_type") or "").lower() else "miss"
+            ),
+        })
+        if not b:
+            uncapped.append(e)
+            continue
+        by_bucket.setdefault(b, []).append(e)
 
-    capped_shots = apply_boxscore_constraints(shot_pool, model)
+    capped_shots: list[dict] = list(uncapped)
+    for bucket, limit in team_left.items():
+        candidates = by_bucket.get(bucket) or []
+        keep = spread_pick(candidates, int(limit), game_span_ms=game_span_ms)
+        for event in keep:
+            details = _details(event)
+            details["boxscore_capped"] = True
+            details["boxscore_bucket"] = bucket
+            event["details_json"] = json.dumps(details)
+            capped_shots.append(event)
 
     shots = [
         e
@@ -423,8 +595,7 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
         for e in shots
         if str(e.get("shot_result") or "").lower() not in {"make", "made", "miss", "missed"}
     ]
-    # Prefer keeping FT misses already typed; then FG misses
-    miss_events = sorted(miss_events, key=event_confidence, reverse=True)[:miss_cap]
+    miss_events = spread_pick(miss_events, miss_cap, game_span_ms=game_span_ms)
     shots = make_events + miss_events + other_shots
 
     hcaps = heuristic_count_caps(shots, team)
@@ -438,10 +609,9 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
         ("foul", hcaps["pf"]),
     ):
         subset = [e for e in counting if str(e.get("event_type") or "").lower() == etype]
-        subset = sorted(subset, key=event_confidence, reverse=True)[:limit]
-        counting_kept.extend(subset)
+        counting_kept.extend(spread_pick(subset, int(limit), game_span_ms=game_span_ms))
 
-    kept = shots + counting_kept
+    kept = collapse_same_timestamp(shots + counting_kept, window_ms=50)
     kept.sort(key=lambda e: (int(e.get("timestamp_ms") or 0), int(e.get("id") or 0)))
 
     # Restore base row, then stamp ledger-friendly shot types + quality notes
@@ -470,6 +640,7 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
         "raw": len(raw_events),
         "after_dedupe": len(deduped),
         "kept": len(restored),
+        "quality_version": QUALITY_NOTE,
         "team_caps": team,
         "heuristic_count_caps": hcaps,
         "makes_kept": makes_n,
@@ -480,6 +651,8 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
             + 3 * int(team.get("3pt_make") or 0)
             + int(team.get("ft_make") or 0)
         ),
+        "kept_ts_min_ms": min((int(e.get("timestamp_ms") or 0) for e in restored), default=None),
+        "kept_ts_max_ms": max((int(e.get("timestamp_ms") or 0) for e in restored), default=None),
     }
     return restored, report
 
@@ -549,7 +722,9 @@ def apply_quality_to_db(conn: sqlite3.Connection, game_id: str = ADRIAN_BASE) ->
                       human_verified=0,
                       reviewed_at=CURRENT_TIMESTAMP,
                       review_notes=?
-                WHERE game_id=?""",
+                WHERE game_id=?
+                  AND COALESCE(review_status,'') != 'corrected'
+                  AND COALESCE(review_notes,'') NOT LIKE '%Corrected in Film Tool%'""",
             (f"{QUALITY_NOTE}:drop", key),
         )
 

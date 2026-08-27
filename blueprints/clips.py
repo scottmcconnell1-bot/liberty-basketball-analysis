@@ -604,6 +604,54 @@ def program_summary_api(game_id):
     return jsonify(program_summary(db, game_id))
 
 
+@clips_bp.route("/api/film-sync/<path:game_id>", methods=["GET"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_sync_get(game_id):
+    """Return analysis→review timestamp offset for this game (ms)."""
+    from film_sync import load_film_sync
+
+    data = load_film_sync(game_id) or {
+        "game_id": (game_id or "").split("__rerun_", 1)[0],
+        "offset_ms": 0,
+        "method": "none",
+        "notes": "No sync file — review_ms = analysis timestamp_ms.",
+    }
+    return jsonify(data)
+
+
+@clips_bp.route("/api/film-sync/<path:game_id>", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_sync_set(game_id):
+    """Set analysis→review offset. Body: {offset_ms, notes?, method?}."""
+    from datetime import datetime, timezone
+
+    from film_sync import (
+        ADRIAN_ANALYSIS_VIDEO,
+        ADRIAN_BASE,
+        ADRIAN_REVIEW_VIDEO,
+        save_film_sync,
+    )
+
+    body = request.get_json(silent=True) or {}
+    try:
+        offset_ms = int(body.get("offset_ms") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "offset_ms must be an integer"}), 400
+    base = (game_id or "").split("__rerun_", 1)[0]
+    payload = {
+        "offset_ms": offset_ms,
+        "method": (body.get("method") or "manual").strip() or "manual",
+        "notes": (body.get("notes") or "").strip(),
+        "calibrated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "analysis_video": body.get("analysis_video")
+        or (ADRIAN_ANALYSIS_VIDEO if base == ADRIAN_BASE else ""),
+        "review_video": body.get("review_video")
+        or (ADRIAN_REVIEW_VIDEO if base == ADRIAN_BASE else ""),
+    }
+    saved = save_film_sync(base, payload)
+    return jsonify(saved)
+
+
 @clips_bp.route("/api/program/<path:game_id>/auto-ledger", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def program_auto_ledger_api(game_id):

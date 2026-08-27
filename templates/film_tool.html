@@ -269,9 +269,12 @@
     background: var(--color-surface-offset, rgba(0,0,0,.03));
   }
   .ft-program-fold:last-child { margin-bottom: 0; }
-  .ft-program-fold > summary {
-    font-size: .95rem;
-    font-weight: 700;
+  .ft-film-sync-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    align-items: center;
+    margin: .35rem 0 .55rem;
   }
 
   /* Scoreboard */
@@ -791,6 +794,11 @@
               <div class="ft-program-bar" id="ftProgramBar">
                 <button class="btn btn-primary" type="button" id="programBuildLedgerBtn" title="Build / refine Adrian ledger: run scorebook quality pass, keep believable team totals, park noise.">Build / refine Adrian ledger</button>
                 <button class="btn btn-ghost" type="button" id="programRefreshBtn" title="Reload the score line, exceptions, and box without rebuilding.">Refresh box</button>
+              </div>
+              <div class="ft-film-sync-bar" id="ftFilmSyncBar" title="If analysis and review videos differ, set an offset so clip seeks land on the right moment.">
+                <span class="tiny" id="ftFilmSyncStatus">Film sync: loading…</span>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncZeroBtn" title="Clear offset (review time = analysis timestamp)">Sync 0</button>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncHereBtn" title="Treat current playhead as analysis t=0 (tip) on this review film">Playhead = analysis tip</button>
               </div>
               <div class="tiny" id="programStatusText" title="Status of the last build/refresh">Load summary for this game.</div>
               <div class="ft-program-score" id="programScoreLine" title="Compares scorebook team points to AI ledger team points"></div>
