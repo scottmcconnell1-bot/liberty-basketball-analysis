@@ -27,7 +27,13 @@ from adrian_quality import (
 )
 
 ROOT = Path(__file__).resolve().parent
-LOOKAROUND_NOTE = "adrian_jersey_lookaround_v1"
+LOOKAROUND_NOTE = "adrian_jersey_lookaround_v2"
+
+# Tip + first-possession steals often have sparse OCR; relax lookaround there.
+EARLY_GAME_MS = 120_000
+EARLY_MIN_CONFIDENCE = 0.35
+EARLY_SINGLE_SAMPLE_CONFIDENCE = 0.55
+EARLY_EXTRA_WINDOW_MS = 1_800_000  # 30 min — same ByteTrack id may OCR later
 
 
 def scorebook_roster_index(sb: dict[str, Any] | None = None) -> dict[str, list[dict[str, Any]]]:
@@ -115,10 +121,14 @@ def lookaround_jersey_votes(
     *,
     window_ms: int = 90_000,
     min_confidence: float = 0.50,
+    early_game: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Jersey OCR votes on this track before/after the event (expand if sparse)."""
     ts = int(timestamp_ms)
+    is_early = bool(early_game) if early_game is not None else ts < EARLY_GAME_MS
     windows = [window_ms, window_ms * 3, window_ms * 10]
+    if is_early and EARLY_EXTRA_WINDOW_MS not in windows:
+        windows.append(EARLY_EXTRA_WINDOW_MS)
 
     for win in windows:
         lo, hi = max(0, ts - win), ts + win
@@ -254,16 +264,26 @@ def resolve_event_identity(
     """Follow the player around the event until jersey OCR is usable."""
     player = str(event.get("player") or "").strip()
     ts = int(event.get("timestamp_ms") or 0)
+    early = ts < EARLY_GAME_MS
+    conf_floor = EARLY_MIN_CONFIDENCE if early else min_confidence
     tracker_id = _dominant_tracker_near(conn, game_id, player, ts)
     if tracker_id is None:
         return None
     votes = lookaround_jersey_votes(
-        conn, game_id, tracker_id, ts, min_confidence=min_confidence
+        conn,
+        game_id,
+        tracker_id,
+        ts,
+        min_confidence=conf_floor,
+        early_game=early,
     )
     if not votes:
         return None
     top = votes[0]
-    if int(top["sample_count"]) < min_samples:
+    samples_needed = min_samples
+    if early and float(top["confidence"] or 0) >= EARLY_SINGLE_SAMPLE_CONFIDENCE:
+        samples_needed = 1
+    if int(top["sample_count"]) < samples_needed:
         return None
     matched = match_scorebook_player(top["jersey_number"], roster_index)
     if not matched:

@@ -32,7 +32,7 @@ def main() -> int:
         """
         SELECT id, event_type, player, timestamp_ms, details_json
           FROM events
-         WHERE game_id=? AND review_notes LIKE '%adrian_jersey_lookaround_v1:matched%'
+         WHERE game_id=? AND review_notes LIKE '%adrian_jersey_lookaround_v2:matched%'
          ORDER BY timestamp_ms LIMIT 8
         """,
         (ADRIAN_BASE,),
