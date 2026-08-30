@@ -7,6 +7,7 @@ from adrian_quality import (
     build_possession_changes,
     counting_links_to_kept_shot,
     drop_pass_like_shots,
+    drop_rebounds_before_steal,
     drop_tipoff_rebounds,
     drop_tipoff_shots,
     filter_counting_to_real_shots,
@@ -169,6 +170,36 @@ def test_tip_scramble_rebound_dropped():
     kept, dropped = drop_tipoff_rebounds([tip_reb, mid], tip_info)
     assert dropped == 1
     assert [e["id"] for e in kept] == [2]
+
+
+def test_rebound_dropped_before_steal():
+    # Scott: rebound #9 @ ~11s is really steal 8 from 9 @ ~13s
+    counting = [
+        {
+            "id": 929764,
+            "event_type": "rebound",
+            "player": "9",
+            "timestamp_ms": 10900,
+            "details_json": '{"adrian_promoted_from_fake_make": true}',
+        },
+        {
+            "id": 929777,
+            "event_type": "turnover",
+            "player": "9",
+            "timestamp_ms": 13133,
+            "details_json": "{}",
+        },
+        {
+            "id": 929778,
+            "event_type": "steal",
+            "player": "8",
+            "timestamp_ms": 13133,
+            "details_json": '{"from_player": "9"}',
+        },
+    ]
+    kept, dropped = drop_rebounds_before_steal(counting)
+    assert dropped == 1
+    assert [e["id"] for e in kept] == [929777, 929778]
 
 
 def test_filename_ha_marks_home_away():

@@ -34,6 +34,13 @@
     flex-direction: column;
     align-items: center;
   }
+  #film-tool-root dialog:not([open]) {
+    display: none !important;
+  }
+  /* Hide black frame flash while clip loop seeks back to start */
+  .ft-video-wrap video.ft-clip-seeking {
+    visibility: hidden;
+  }
   .ft-clip-review-dock {
     width: min(100%, 1280px);
     margin: .55rem auto 0;
@@ -1275,30 +1282,7 @@
       </div>
       <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
     </form>
-  </div>
-
-  <!-- Report Drawer -->
-  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
-  <div class="report-drawer" id="report-drawer" aria-hidden="true">
-    <div class="report-drawer-header">
-      <h2>Report Bug / Idea</h2>
-      <button class="report-drawer-close" id="report-drawer-close" type="button">&times;</button>
-    </div>
-    <div class="report-drawer-body" style="flex:1;overflow-y:auto;padding:18px 20px;">
-      <form id="report-drawer-form" action="{{ url_for('core.debug_page', compose='1') }}" method="post" enctype="multipart/form-data">
-        <div class="field"><label for="report-entry-type">Type</label><select id="report-entry-type" name="entry_type"><option value="issue">Bug / Issue</option><option value="idea">Idea / Feature</option></select></div>
-        <div class="field"><label for="report-details">Details</label><textarea id="report-details" name="details" placeholder="Describe the issue or idea..."></textarea></div>
-        <div class="field"><label for="report-source-path">Page</label><input id="report-source-path" name="source_path" readonly></div>
-        <input type="hidden" id="report-return-to" name="return_to">
-        <div class="field"><label for="report-browser-console">Browser Console</label><textarea id="report-browser-console" name="browser_console" readonly style="height:120px;font-family:monospace;font-size:.7rem;"></textarea></div>
-        <div id="report-drawer-message" class="report-status-copy" style="display:none;"></div>
-    </div>
-    <div class="report-drawer-footer">
-      <button class="btn" type="button" id="report-drawer-cancel">Cancel</button>
-      <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
-    </div>
-    </form>
-  </div>
+  </dialog>
 
 </div><!-- /#film-tool-root -->
 {% endblock %}

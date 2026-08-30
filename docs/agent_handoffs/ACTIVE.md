@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-08-26 (Correct scorebook-only + tip_off)
+Updated: 2026-08-29 (black overlay fix + steal vs rebound)
 
 Branch: `cursor/film-tool-review-layout-ac1f`  
 Base: `jason-5-may-updates`
@@ -16,26 +16,18 @@ Base: `jason-5-may-updates`
 
 ## Why
 
-Correct dialog was keeping sticky `/api/players` tagging names (Daly, unkn…). Opening tip was stored as `jump_ball` so it did not read as tip.
+Black full-page overlays on Film Tool load (broken HTML + duplicate report drawer). Rebound @ ~11s was steal.
 
 ## Done (Proven)
 
-- Opening tip is **`tip_off`** @ ~3.3s (tracker #2); tip-scramble rebounds not promoted
-- Correct: scorebook roster only; sticky Daly/unkn tagging list hidden when scorebook loads
-- Program summary exposes scorebook `players` for the dropdown
-- Re-refine stable (tip_ms stays ~2.9s, not drift to scramble)
+- Fixed `startersDialog` (`</dialog>` not `</div>`); removed duplicate report drawer in film_tool.html
+- `ensureFilmToolOverlaysClosed()` on init — closes stuck dialog backdrops
+- Fake rebounds before steal dropped; steal labels show stealer + victim
 
 ## Try
 
-1. Hard-refresh Film Tool → Show ledger plays → first row **tip_off** (not rebound)
-2. Correct → scorebook names only (#40 Dayley · Liberty…)
-3. Tip type = **tip_off (opening tip)**; jump_ball = mid-game held ball only
-
-## Next
-
-1. Tip winner jersey/team via lookaround
-2. Spot-check timing on NFHS film
-3. Unresolved OCR jersey links
+1. Hard-refresh Film Tool — page should be clickable/typeable immediately (no black flashes)
+2. Show ledger → ~13s = steal (not rebound @ ~11s)
 
 ## Do not
 

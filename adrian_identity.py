@@ -374,6 +374,22 @@ def apply_lookaround_to_accepted(
         }
         details["adrian_quality"] = details.get("adrian_quality") or QUALITY_NOTE
 
+        # Steals: also try to name the victim (from_player tracker).
+        if str(event.get("event_type") or "").lower() == "steal":
+            from_tr = str(details.get("from_player") or "").strip()
+            if from_tr:
+                victim_event = {
+                    "player": from_tr,
+                    "timestamp_ms": event["timestamp_ms"],
+                }
+                victim_result = resolve_event_identity(
+                    conn, game_id, victim_event, roster_index
+                )
+                if victim_result and victim_result.get("status") == "matched":
+                    details["from_jersey_number"] = victim_result["jersey_number"]
+                    details["from_player_name"] = victim_result.get("player_name")
+                    details["from_team_name"] = victim_result.get("team_name")
+
         # Store jersey as player so box/exceptions can align; name lives in details.
         new_player = str(result["jersey_number"])
         conn.execute(

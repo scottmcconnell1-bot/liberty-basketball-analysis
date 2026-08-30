@@ -1781,12 +1781,23 @@ function escapeHtml(value) {
 function parseAiEventDetails(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch (_err) { return {}; } }
 
 /** Prefer scorebook jersey/name from lookaround/correction; else tracker ID. */
-function formatAiPlayerLabel(event) {
+function formatAiPlayerLabel(event, playerField) {
     const details = parseAiEventDetails(event?.details_json);
-    if (details.jersey_number != null || details.player_name) {
+    if (!playerField && (details.jersey_number != null || details.player_name)) {
         const num = details.jersey_number != null ? `#${details.jersey_number}` : '';
         const name = details.player_name ? String(details.player_name) : '';
         return [num, name].filter(Boolean).join(' ').trim();
+    }
+    if (playerField === 'from_player') {
+        if (details.from_jersey_number != null || details.from_player_name) {
+            const num = details.from_jersey_number != null ? `#${details.from_jersey_number}` : '';
+            const name = details.from_player_name ? String(details.from_player_name) : '';
+            return [num, name].filter(Boolean).join(' ').trim();
+        }
+        const fromRaw = String(details.from_player || '').trim();
+        if (fromRaw && /^\d+$/.test(fromRaw)) return `tracker #${fromRaw}`;
+        if (fromRaw) return fromRaw;
+        return '';
     }
     const raw = String(event?.player || '').trim();
     if (!raw) return 'player unknown';
@@ -1835,6 +1846,25 @@ function formatAiIdentityLine(event) {
     if (et === 'tip_off' || (et === 'jump_ball' && details.tip_winner)) {
         const who = details.tip_winner || event?.player || '?';
         return `tip → tracker #${who} · ${formatAiTeamLabel(event)}`;
+    }
+    if (et === 'steal') {
+        const stealer = formatAiPlayerLabel(event);
+        const victim = formatAiPlayerLabel(event, 'from_player')
+            || (details.from_player ? `tracker #${details.from_player}` : '');
+        const parts = ['steal', stealer];
+        if (victim) parts.push(`from ${victim}`);
+        parts.push(formatAiTeamLabel(event));
+        return parts.join(' · ');
+    }
+    if (et === 'turnover') {
+        const who = formatAiPlayerLabel(event);
+        const taker = details.next_possessor
+            ? `lost to tracker #${details.next_possessor}`
+            : '';
+        const parts = ['turnover', who];
+        if (taker) parts.push(taker);
+        parts.push(formatAiTeamLabel(event));
+        return parts.join(' · ');
     }
     return `${formatAiPlayerLabel(event)} · ${formatAiTeamLabel(event)}`;
 }
@@ -1907,6 +1937,8 @@ let clipReview = null;
 let clipSeekToken = 0;
 /** Counts seeks we initiate so a stale seeked event cannot cancel the active clip. */
 let clipInternalSeekCount = 0;
+/** True while looping clip waits for seeked (hides black seek flash). */
+let clipLoopSeekPending = false;
 /** Analysis→review film offset (ms). review_time = analysis_timestamp + offset. */
 let filmSyncOffsetMs = 0;
 
@@ -2004,6 +2036,8 @@ function updateClipReviewDock(event) {
 function stopClipReview({ pause = false } = {}) {
     clipSeekToken += 1;
     clipReview = null;
+    clipLoopSeekPending = false;
+    video?.classList.remove('ft-clip-seeking');
     updateClipReviewDock(null);
     if (pause && video && !video.paused) video.pause();
 }
@@ -2018,7 +2052,7 @@ function seekVideoForClip(seconds) {
     }
 }
 
-function startClipReview(event) {
+function startClipReview(event, { scroll = true } = {}) {
     if (!video || !event) return;
     const center = eventReviewSeconds(event);
     const duration = Number(video.duration);
@@ -2028,9 +2062,13 @@ function startClipReview(event) {
     const token = ++clipSeekToken;
     clipReview = { eventId: String(event.id), start, end, token };
     setActiveAiEvent(event.id, false);
-    const stage = document.querySelector('.ft-review-stage');
-    const wrap = document.getElementById('filmReviewGrid');
-    (stage || wrap || video)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (scroll) {
+        const stage = document.querySelector('.ft-review-stage');
+        const wrap = document.getElementById('filmReviewGrid');
+        (stage || wrap || video)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    clipLoopSeekPending = true;
+    video.classList.add('ft-clip-seeking');
     seekVideoForClip(start);
     const playPromise = video.play?.();
     if (playPromise && typeof playPromise.catch === 'function') {
@@ -2042,8 +2080,10 @@ function startClipReview(event) {
 }
 
 function onClipReviewTimeUpdate() {
-    if (!clipReview || !video) return;
+    if (!clipReview || !video || clipLoopSeekPending) return;
     if (video.currentTime >= clipReview.end - 0.04) {
+        clipLoopSeekPending = true;
+        video.classList.add('ft-clip-seeking');
         seekVideoForClip(clipReview.start);
     }
 }
@@ -2066,7 +2106,7 @@ function goToNextClip(fromEventId) {
         setStatus('End of play list.');
         return;
     }
-    startClipReview(next);
+    startClipReview(next, { scroll: false });
 }
 
 function peekNextClipEventId(fromEventId) {
@@ -2079,7 +2119,7 @@ function advanceClipReviewAfterDecision(fromEventId, nextEventId) {
     if (nextEventId) {
         const next = aiEventsCache.find(event => String(event.id) === String(nextEventId));
         if (next) {
-            startClipReview(next);
+            startClipReview(next, { scroll: false });
             return;
         }
     }
@@ -3179,52 +3219,29 @@ function initResourceMonitor() {
     setInterval(refreshResourceStatus, 2000);
 }
 
-// ── Report Drawer ───────────────────────────────────────────
-function initReportDrawer() {
-    const drawer = document.getElementById('report-drawer');
-    const backdrop = document.getElementById('report-drawer-backdrop');
-    const form = document.getElementById('report-drawer-form');
-    const message = document.getElementById('report-drawer-message');
-    const closeButton = document.getElementById('report-drawer-close');
-    const cancelButton = document.getElementById('report-drawer-cancel');
-    const submitButton = document.getElementById('report-drawer-submit');
-    const sourceInput = document.getElementById('report-source-path');
-    const returnToInput = document.getElementById('report-return-to');
-    const consoleInput = document.getElementById('report-browser-console');
-    const detailsInput = document.getElementById('report-details');
-    if (!drawer || !backdrop || !form || !sourceInput || !returnToInput || !consoleInput) return;
-
-    function setReportMessage(kind, text) {
-        if (!message) return;
-        if (!text) { message.style.display = 'none'; message.textContent = ''; message.style.color = ''; return; }
-        message.style.display = 'block'; message.textContent = text;
-        message.style.color = kind === 'error' ? 'var(--color-error)' : 'var(--color-success)';
-    }
-    function syncReportContext() {
-        sourceInput.value = window.LibertyIssueReporter?.getCurrentPagePath?.() || `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        returnToInput.value = sourceInput.value;
-        consoleInput.value = window.LibertyIssueReporter?.getConsoleText?.() || '';
-    }
-    function openDrawer() { syncReportContext(); setReportMessage(null, ''); drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); backdrop.classList.add('open'); document.body.classList.add('report-drawer-open'); window.setTimeout(() => detailsInput?.focus(), 0); }
-    function closeDrawer() { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); backdrop.classList.remove('open'); document.body.classList.remove('report-drawer-open'); }
-
-    document.querySelectorAll('[data-open-report-overlay]').forEach(trigger => { trigger.addEventListener('click', (event) => { event.preventDefault(); openDrawer(); }); });
-    [backdrop, closeButton, cancelButton].forEach(el => { el?.addEventListener('click', closeDrawer); });
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
-
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault(); syncReportContext(); setReportMessage(null, '');
-        submitButton.disabled = true; submitButton.textContent = 'Saving…';
+// ── Overlay safety (modals must not block page on load) ───────
+function ensureFilmToolOverlaysClosed() {
+    document.querySelectorAll('#film-tool-root dialog').forEach((dlg) => {
         try {
-            const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            const result = await response.json();
-            if (!response.ok || result.status !== 'ok') throw new Error(result.message || 'Unable to save report.');
-            setReportMessage('success', result.message || 'Report saved.'); form.reset();
-            document.getElementById('report-entry-type').value = 'issue'; syncReportContext();
-            window.setTimeout(closeDrawer, 700);
-        } catch (error) { setReportMessage('error', error.message || 'Unable to save report.'); }
-        finally { submitButton.disabled = false; submitButton.textContent = 'Save Report'; }
+            if (dlg.open) dlg.close();
+        } catch (_err) { /* ignore */ }
     });
+    clipLoopSeekPending = false;
+    document.getElementById('video')?.classList.remove('ft-clip-seeking');
+    // Base layout owns the report drawer — only force-close when not explicitly composing.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('compose') === '1') return;
+    document.getElementById('report-drawer-backdrop')?.classList.remove('open');
+    const drawer = document.getElementById('report-drawer');
+    drawer?.classList.remove('open');
+    drawer?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('report-drawer-open');
+}
+
+// ── Report Drawer ───────────────────────────────────────────
+// Report drawer lives in base.html — do not duplicate init here.
+function initReportDrawer() {
+    /* no-op: base.html initReportDrawer handles global report overlay */
 }
 
 // ── AI Upload Form ──────────────────────────────────────────
@@ -3535,7 +3552,17 @@ function attachEventHandlers() {
     video.addEventListener('seeked', () => {
         if (clipInternalSeekCount > 0) {
             clipInternalSeekCount -= 1;
+            if (clipLoopSeekPending) {
+                clipLoopSeekPending = false;
+                video.classList.remove('ft-clip-seeking');
+                video.play?.().catch(() => {});
+            }
             return;
+        }
+        if (clipLoopSeekPending) {
+            clipLoopSeekPending = false;
+            video.classList.remove('ft-clip-seeking');
+            video.play?.().catch(() => {});
         }
         // User scrubbed the native timeline — leave clip mode.
         if (clipReview) {
@@ -3560,6 +3587,7 @@ function initFromAutosave() {
 // ── Init ────────────────────────────────────────────────────
 function init() {
     try {
+    ensureFilmToolOverlaysClosed();
     // Cache DOM references
     rowsBody = document.getElementById('rowsBody');
     statusText = document.getElementById('statusText');
@@ -3710,6 +3738,7 @@ function init() {
     initBookmarks();
     initResourceMonitor();
     initReportDrawer();
+    ensureFilmToolOverlaysClosed();
     initAiUpload();
     initAnalysisStatus();
     initRunAnalysis();

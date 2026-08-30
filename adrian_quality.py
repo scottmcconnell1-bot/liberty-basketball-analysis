@@ -333,6 +333,20 @@ def promote_rebounds_before_fake_makes(
         if best is None:
             continue
         row = dict(best)
+        reb_ts = int(row.get("timestamp_ms") or 0)
+        # Do not promote a board when a steal/turnover on this player follows.
+        steal_follows = any(
+            str(e.get("event_type") or "").lower() in {"steal", "turnover"}
+            and 0 < int(e.get("timestamp_ms") or 0) - reb_ts <= POST_REBOUND_MAKE_WINDOW_MS
+            and (
+                str(_details(e).get("from_player") or "") == player
+                if str(e.get("event_type") or "").lower() == "steal"
+                else str(e.get("player") or "") == player
+            )
+            for e in raw_events
+        )
+        if steal_follows:
+            continue
         details = _details(row)
         details["adrian_promoted_from_fake_make"] = True
         details["fake_make_id"] = event.get("id")
@@ -342,6 +356,49 @@ def promote_rebounds_before_fake_makes(
         if row.get("id") is not None:
             kept_ids.add(int(row["id"]))
     return counting + promoted, len(promoted)
+
+
+def drop_rebounds_before_steal(
+    counting: list[dict],
+    *,
+    window_ms: int = 5000,
+) -> tuple[list[dict], int]:
+    """Drop fake rebounds when steal/turnover follows (pass deflection, not a board).
+
+    Scott: rebound tracker #9 @ ~11s before steal 8 from 9 @ ~13s is not a rebound.
+    """
+    victims: list[tuple[int, str]] = []
+    for event in counting:
+        et = str(event.get("event_type") or "").lower()
+        if et not in {"steal", "turnover"}:
+            continue
+        ts = int(event.get("timestamp_ms") or 0)
+        details = _details(event)
+        if et == "steal":
+            victim = str(details.get("from_player") or "")
+        else:
+            victim = str(event.get("player") or "")
+        if victim:
+            victims.append((ts, victim))
+    if not victims:
+        return counting, 0
+
+    kept: list[dict] = []
+    dropped = 0
+    for event in counting:
+        if str(event.get("event_type") or "").lower() != "rebound":
+            kept.append(event)
+            continue
+        reb_player = str(event.get("player") or "")
+        reb_ts = int(event.get("timestamp_ms") or 0)
+        if any(
+            victim == reb_player and 0 < (st_ts - reb_ts) <= window_ms
+            for st_ts, victim in victims
+        ):
+            dropped += 1
+            continue
+        kept.append(event)
+    return kept, dropped
 
 
 def is_tipoff_shot(event: dict, *, guard_ms: int = TIPOFF_SHOT_GUARD_MS) -> bool:
@@ -1197,6 +1254,7 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
     counting, promoted_rebounds = promote_rebounds_before_fake_makes(
         counting, raw_events, possession_changes, shots
     )
+    counting, steal_rebound_dropped = drop_rebounds_before_steal(counting)
     counting, steal_over_block_dropped = prefer_steal_over_block(counting)
 
     hcaps = heuristic_count_caps(shots, team)
@@ -1278,6 +1336,7 @@ def refine_adrian_events(raw_events: list[dict]) -> tuple[list[dict], dict[str, 
         "jump_ball_kept": bool(jump_ball_event),  # legacy alias
         "orphan_counting_dropped": orphan_counting_dropped,
         "promoted_rebounds": promoted_rebounds,
+        "steal_rebound_dropped": steal_rebound_dropped,
         "steal_over_block_dropped": steal_over_block_dropped,
         "game_teams": game_teams,
         "kept": len(restored),
