@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-09-07 23:00:07 Mountain Daylight Time**
+Generated (local): **2026-09-08 23:00:34 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -39,7 +39,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 52.6% | FAIL |
 
 **Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-09-08T05:00:05.698240+00:00`
+- Panel snapshot: `2026-09-09T05:00:32.887260+00:00`
 
 ## Per-game panel
 
