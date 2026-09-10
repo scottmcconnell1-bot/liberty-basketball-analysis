@@ -17,7 +17,7 @@ Python 3.13 venv, CPU torch/opencv/ultralytics, all five LFS model weights hydra
 gunicorn bound to **127.0.0.1:8080 only**. A real 5-minute film clip was analysed end to end
 on CPU (**1,038 s wall-clock, 77,810 detections, ~1,350 events, 578 shots classified,
 `analysis_runs.status='completed'`**). The test suite went from **7 failed / 606 passed /
-11 skipped** (as cloned) to **0 failed / 625 passed / 28 skipped**, and it no longer writes
+11 skipped** (as cloned) to **0 failed / 631 passed / 29 skipped**, and it no longer writes
 into tracked files. Ruff reports zero undefined names / redefinitions / syntax errors.
 
 ---
@@ -44,7 +44,7 @@ into tracked files. Ruff reports zero undefined names / redefinitions / syntax e
 /home/myaccount/LibertyData/run-liberty-local.sh      # gunicorn, 127.0.0.1:8080, runs ensure_db() first
 tail -f /home/myaccount/LibertyData/gunicorn.log
 bash scripts/smoke_test.sh http://127.0.0.1:8080 standalone
-.venv/bin/python -m pytest tests/ -q                   # expect 625 passed, 28 skipped
+.venv/bin/python -m pytest tests/ -q                   # expect 631 passed, 29 skipped
 ```
 
 Stop: `pkill -f 'gunicor[n] --workers'` (the `[n]` keeps pkill from matching its own shell).
@@ -148,7 +148,7 @@ or `deploy/deploy_production.sh` here.
 
 - Test baseline: `STAGE_INDEX.md` said 360/1, `DOCKER_PRODUCTION_SMOKE.md` and
   `HERMES_LINUX_PARITY.md` said 331/1. **Actual as cloned: 606 passed / 7 failed / 11 skipped.
-  Now: 625 / 0 / 28** (skips = fixture files not in repo + live-UI opt-ins). All three updated.
+  Now: 631 / 0 / 29** (skips = fixture files not in repo + live-UI opt-ins). All three updated.
 - `docs/BRANCH_AUDIT_2026-09-09.md` overstated the Pages exposure: LFS paths serve only the
   pointer, not weights/footage. Corrected in place. Source + roster exposure stands.
 - `docs/CODEX_BRIEFING.md §5` known-issues list annotated with 2026-09-09 status.
@@ -159,7 +159,7 @@ or `deploy/deploy_production.sh` here.
 ## 4. Verification log (Proven)
 
 ```
-.venv/bin/python -m pytest tests/ -q                -> 625 passed, 28 skipped
+.venv/bin/python -m pytest tests/ -q                -> 631 passed, 29 skipped
 ruff --select F821,F811,F823,E9 (excl. scratch)     -> All checks passed
 py_compile on every edited .py                      -> ok ; bash -n on edited .sh -> ok
 import of every edited production module            -> no failures

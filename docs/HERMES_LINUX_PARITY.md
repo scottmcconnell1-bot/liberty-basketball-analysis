@@ -23,7 +23,7 @@ Liberty development spans multiple agents and machines. **Parity** means the sam
 
 | Check | Command | Expected |
 | --- | --- | --- |
-| Unit/integration tests | `python3 -m pytest tests/ -q` | **625 passed, 28 skipped** (2026-09-09; was 331/1 on 2026-07-05) |
+| Unit/integration tests | `python3 -m pytest tests/ -q` | **631 passed, 29 skipped** (2026-09-09; was 331/1 on 2026-07-05) |
 | Secrets audit | `python3 scripts/audit_secrets.py` | exits 0; findings documented in `docs/SECRETS_AUDIT.md` |
 | Module entitlements audit | `python3 scripts/audit_module_entitlements.py` | exits 0 |
 | Transfer bundle build | `bash scripts/build_transfer_bundle.sh` | creates `transfer-bundles/*.tar.gz` (gitignored; now includes `stat_book/`, `static/`, `data/stat_books/`, `models/`) |

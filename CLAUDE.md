@@ -143,7 +143,7 @@ this machine (setup, every fix made, verification log, Scott gates, next steps).
 
 - Shell is **fish**: `VAR=x cmd` fails; use `env VAR=x cmd`. Venv activate: `source .venv/bin/activate.fish`.
 - `.venv/` is Python **3.13.14** (uv-managed; system 3.14 is unsupported) with the CPU CV stack.
-  Always run tests as `.venv/bin/python -m pytest tests/ -q` → **625 passed, 28 skipped**.
+  Always run tests as `.venv/bin/python -m pytest tests/ -q` → **631 passed, 29 skipped**.
 - Run the app with `/home/myaccount/LibertyData/run-liberty-local.sh` (gunicorn, **127.0.0.1:8080**).
   Do not use `python app.py` / `scripts/launch_liberty.py` here — they bind `0.0.0.0` and auth is a no-op.
 - `.env` holds a real `SECRET_KEY`; `LIBERTY_UPLOAD_FOLDER=/home/myaccount/LibertyData/uploads`

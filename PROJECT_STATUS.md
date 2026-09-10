@@ -8,7 +8,7 @@ Branch: jason-5-may-updates (work in progress on `claude/local-standup`, not pus
 See `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` for the full record.
 
 - The app runs fully local with no runtime network dependency (SQLite, local Ollama-or-heuristic LLM, local OCR chain, no cloud storage). Only NFHS scouting and MaxPreps rankings refresh are inherently online.
-- Verified on Linux, Python 3.13.14, CPU-only: 625 passed / 28 skipped; smoke 20/20; a real 5-minute clip analysed end to end (1038 s).
+- Verified on Linux, Python 3.13.14, CPU-only: 631 passed / 29 skipped; smoke 20/20; a real 5-minute clip analysed end to end (1038 s).
 - As cloned, the default branch had 7 failing tests (1 real bug: `/play/share/<token>` 500s; 5 stale assertions incl. one date time-bomb; 1 environment). All fixed on `claude/local-standup`.
 - `.env` values `LIBERTY_DATABASE` / `LIBERTY_UPLOAD_FOLDER` were silently ignored because `config.py` was imported before `.env` loaded. Fixed.
 - `scripts/build_transfer_bundle.sh` omitted `stat_book/`, `static/`, `data/stat_books/`, `models/` — a restored bundle could not import. Fixed.

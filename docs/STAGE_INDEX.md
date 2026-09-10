@@ -61,6 +61,6 @@ Repository history, GitHub issues, and verification reports already reference th
 
 Stages 6A–10A are complete. **Authoritative queue:** `docs/COMPLETION_PATH.md` and `docs/agent_handoffs/QUEUE.md`.
 
-Current work: **Stage 10B** guided assistant workflow (`/assistant`). Test baseline: **625 passed, 28 skipped** (Python 3.13, Linux, 2026-09-09; skips are fixture-not-present / live-UI opt-ins). The earlier "360 passed, 1 skipped" figure was stale — see `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`.
+Current work: **Stage 10B** guided assistant workflow (`/assistant`). Test baseline: **631 passed, 29 skipped** (Python 3.13, Linux, 2026-09-09; skips are fixture-not-present / live-UI opt-ins). The earlier "360 passed, 1 skipped" figure was stale — see `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`.
 
 Hermes/Linux Docker smoke (`bash scripts/docker_production_smoke.sh`) remains a Scott gate before public production — not a blocker for ongoing bounded slices.
