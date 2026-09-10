@@ -1391,3 +1391,83 @@ Verification:
 
 Recommended next move:
 - Fresh repo-truth audit for the next smallest remaining identity seam outside the now-completed review/detections/video-run cluster.
+
+Linux local standup + full issue sweep - 2026-09-09
+----------------------------------------------------
+Claude (Fable 5.1) stood the app up fully local on a Linux workstation (Python 3.13 venv via uv,
+CPU torch/opencv/ultralytics, LFS weights hydrated, gunicorn on 127.0.0.1:8080) and swept the
+tree for issues. Full detail, per-file rationale, and Scott gates:
+`docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`. Branch `claude/local-standup`; NOT pushed.
+
+Implemented in code:
+- app.py: load .env BEFORE importing config.py (LIBERTY_DATABASE / LIBERTY_UPLOAD_FOLDER /
+  LIBERTY_COACH_PASSWORD from .env were silently ignored); removed duplicate before_request
+  coach_portal_ops_gate; honor documented LIBERTY_DEBUG; warn on dev SECRET_KEY fallback
+  (LIBERTY_ALLOW_DEV_SECRET now has a meaning).
+- blueprints/ai.py: missing module-level `import json` (NameError when settings_json set).
+- blueprints/playbook.py:949: sqlite3.Row.get() -> every /play/share/<token> returned 500.
+- settings_store.load_all_settings: tolerate missing app_settings table (ai_analyzer runs it
+  out-of-process against db_path).
+- static/sw.js: cached a nonexistent stylesheet -> service worker never installed.
+- helpers.py: migration loop skips missing tables explicitly; ball-confidence UI note now
+  reads AI_DEFAULTS (said 0.15, truth is 0.25); services/notifications.py To: header uses
+  display name; dead locals/imports removed across ~15 modules (re-exports kept with noqa).
+- scripts/build_transfer_bundle.sh: was omitting stat_book/, static/, data/stat_books/, models/
+  (restore ImportError + no CSS/JS + no weights); adds LIBERTY_TRANSFER_OUT_DIR/_SKIP_MODELS.
+- scripts/smoke_test.sh: /games deliberately 302s -> now 20/20.
+- scripts/launch_liberty.py: accept sys.executable (uv/pyenv interpreters not on PATH).
+- scripts/run_v8.py: repo-relative paths + CLI args (was hard-coded to one box).
+- requirements.txt: + gunicorn (systemd unit needs it; was docker-only).
+- tests: 7 stale/time-bomb/env-coupled tests fixed; suite made hermetic (stat-book confirm
+  and transfer bundle no longer write into tracked files; play-match JSON and analysis logs
+  redirected to tmp_path via conftest autouse fixtures; a guard makes spawning
+  analysis_launcher.py from a test an error; tests/test_ui_audit.py — a live-server script with no
+  tests — no longer runs at collection); 3 accidentally committed tarballs untracked and
+  gitignored; blueprints/coach.py progress snapshot reads app.config DATABASE instead of a
+  hard-coded repo-root path.
+
+Verification:
+- `.venv/bin/python -m pytest tests/ -q` -> 625 passed, 28 skipped (as cloned: 606 passed, 7 failed, 11 skipped)
+- `ruff check --select F821,F811,F823,E9` -> All checks passed
+- `bash scripts/smoke_test.sh http://127.0.0.1:8080 standalone` -> 20 passed, 0 failed
+- `ai_analyzer.py` on data/videos/Q1_snippet.mp4 (CPU) -> 1038 s for 300 s of film, 77,810 detections, analysis_runs=completed
+- git status after full test run -> no tracked files modified
+
+Recommended next move:
+- Scott: review docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md §5 (gates), Pages exposure first.
+- Then transfer Scott's DB + film per §7 and run the Windows-path audit before first boot.
+
+AI quality baseline measured locally - 2026-09-10
+--------------------------------------------------
+Rescued the manual-vs-AI Q1 measurement: extracted Scott's hand-tagged Wilder Q1 ground truth
+(tag-exports/liberty-manual-tags-backup.json) from July-branch commit 3749831, verified
+videos/Q1.mp4 is that footage (906 s; frame hash at t=60 == data/videos/Q1_snippet.mp4), and
+fixed scripts/score_manual_q1_regression.py so it runs from a clean checkout (film_tool_games
+fallback, backup path, sys.path — all broke when the script moved from tag-exports/ to
+scripts/). Added --window-end-sec / --per-tag / per-type breakdown / chance estimate + tests.
+
+Result (first 300 s, strict ±10 s): 13 manual action tags, 754 comparable AI rows, TP 8,
+FP 744, FN 3 -> precision 0.0106, recall 0.6154 (chance-dominated), F1 0.0209. Both manual
+3PT misses scored as "2PT Make" because AI shot events carry no shot_type; all 3 fouls missed.
+Full write-up: docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
+
+Verification:
+- `python scripts/score_manual_q1_regression.py --analysis-key smoke_q1_local --window-end-sec 300 --no-fail --per-tag` -> numbers above
+- `pytest tests/test_score_manual_q1_regression.py -q` -> 3 passed
+- Full Wilder Q1 (`wilder_q1_full_local`, 871 s window): precision 0.0143, recall 0.6604, 35 TP / 2415 FP / 8 FN
+  (Scott's 07-18 baseline: 0.008 / 0.4151, 22 / 2726 / 31). All 7 3PT typed as 2PT; all 7 fouls missed.
+
+Full E2E through the app + two trim bugs - 2026-09-10
+------------------------------------------------------
+Walked the coach's definition of done on the Linux box: upload via /upload (gunicorn spawned
+the analysis), progress bar on the film page, scorebook upload + Confirm click in the browser,
+Review accept/reject/correct via the buttons' endpoints, highlights limited to reviewed events,
+ffmpeg clips cut. Details: docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md §6a.
+
+Implemented in code:
+- video_trim.py: per-job output names (two clips in one second overwrote each other);
+  file-backed job registry so status polls work across gunicorn workers. 3 tests added.
+
+Verification:
+- pytest tests/ -q -> 631 passed, 29 skipped; ruff F821/F811/E9 clean
+- regenerate 2 highlight clips -> 2 distinct files (6.2 s, 11.6 s); 12/12 status polls `complete` across 2 workers

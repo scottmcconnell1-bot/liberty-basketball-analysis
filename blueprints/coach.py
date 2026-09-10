@@ -22,6 +22,7 @@ import os
 from flask import (
     Blueprint,
     abort,
+    current_app,
     flash,
     jsonify,
     redirect,
@@ -262,7 +263,14 @@ def build_coach_progress_snapshot() -> dict:
     panel_path = root / "data" / "hoopsalytics" / "full_film_panel_latest.json"
     teach_path = root / "data" / "hoopsalytics" / "teach_loop_state.json"
     status_path = root / "docs" / "LEARNING_STATUS.md"
-    db_path = root / "film_analysis.db"
+    # Use the app's configured DB (LIBERTY_DATABASE / tests' temp DB), not a hard-coded
+    # repo-root file; fall back to the legacy location only outside an app context.
+    try:
+        db_path = Path(current_app.config.get("DATABASE") or (root / "film_analysis.db"))
+        if not db_path.is_absolute():
+            db_path = root / db_path
+    except RuntimeError:
+        db_path = root / "film_analysis.db"
 
     snapshot = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

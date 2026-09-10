@@ -1,7 +1,19 @@
 # Project Status
 
-Updated: 2026-07-06
-Branch: jason-5-may-updates
+Updated: 2026-09-09
+Branch: jason-5-may-updates (work in progress on `claude/local-standup`, not pushed)
+
+## Proven — Linux local standup (2026-09-09)
+
+See `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` for the full record.
+
+- The app runs fully local with no runtime network dependency (SQLite, local Ollama-or-heuristic LLM, local OCR chain, no cloud storage). Only NFHS scouting and MaxPreps rankings refresh are inherently online.
+- Verified on Linux, Python 3.13.14, CPU-only: 631 passed / 29 skipped; smoke 20/20; a real 5-minute clip analysed end to end (1038 s).
+- As cloned, the default branch had 7 failing tests (1 real bug: `/play/share/<token>` 500s; 5 stale assertions incl. one date time-bomb; 1 environment). All fixed on `claude/local-standup`.
+- `.env` values `LIBERTY_DATABASE` / `LIBERTY_UPLOAD_FOLDER` were silently ignored because `config.py` was imported before `.env` loaded. Fixed.
+- `scripts/build_transfer_bundle.sh` omitted `stat_book/`, `static/`, `data/stat_books/`, `models/` — a restored bundle could not import. Fixed.
+- Auth middleware remains a no-op and `/register` allows self-service admin — Scott gates; mitigated locally by binding 127.0.0.1 only.
+- GitHub Pages (`gh-pages`) publicly serves application source and the athlete roster CSV (not LFS payloads). Scott decision pending.
 
 ## Proven
 

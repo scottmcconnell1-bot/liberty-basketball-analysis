@@ -2,9 +2,8 @@ import json
 import math
 import sqlite3
 import pandas as pd
-from scipy.spatial import distance
 
-from config import AnalysisConfig
+from config import AnalysisConfig  # noqa: F401  (re-exported for experiments/ai_analyzer_tuned.py)
 from settings_store import AI_DEFAULTS, load_all_settings
 
 
@@ -546,10 +545,10 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
         if index > 0:
             previous = segments[index - 1]
             if previous["player"] != segment["player"]:
-                # Only generate possession change events for segments with meaningful duration
-                # Skip noise segments (less than 0.5 seconds = ~12 frames at stride=10)
+                # NOTE: every player change is recorded as a possession_change;
+                # short "noise" segments are NOT filtered here (prev_duration is only
+                # used for downstream gap/turnover heuristics).
                 prev_duration = previous.get("duration_frames", 1)
-                curr_duration = segment.get("duration_frames", 1)
                 gap_frames = segment["start_frame"] - previous["end_frame"]
 
                 # Always record possession change

@@ -1,7 +1,6 @@
 """Tests for the Playbook feature."""
 
 import json
-import pytest
 
 
 class TestPlaybookList:

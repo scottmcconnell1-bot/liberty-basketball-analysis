@@ -56,7 +56,7 @@ test_standalone() {
     # Core pages
     test_url "$BASE_URL/" 200 "Dashboard page"
     test_url "$BASE_URL/schedule" 200 "Schedule page"
-    test_url "$BASE_URL/games" 200 "Games page"
+    test_url "$BASE_URL/games" 302 "Games page (redirects to Schedule)"
     test_url "$BASE_URL/practices" 200 "Practices page"
     test_url "$BASE_URL/player-development" 200 "Player Development page"
     test_url "$BASE_URL/practice-playlists" 200 "Practice Playlists page"

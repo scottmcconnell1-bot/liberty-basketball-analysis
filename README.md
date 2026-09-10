@@ -74,7 +74,7 @@ python app.py
 | `LIBERTY_DATABASE` | `film_analysis.db` | SQLite DB path |
 | `LIBERTY_UPLOAD_FOLDER` | `uploads` | Upload/media directory |
 | `PORT` | `8080` | HTTP port |
-| `LIBERTY_DEBUG` | `1` | Enables Flask debug mode when running `python app.py` |
+| `LIBERTY_DEBUG` | `0` | Set to `1` for Flask debug mode when running `python app.py` (dev only) |
 
 ### Production-style standalone launch
 

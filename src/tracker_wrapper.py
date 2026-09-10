@@ -34,7 +34,6 @@ installation requirements.
 """
 
 from typing import List, Dict, Any, Optional
-import sys
 import traceback
 
 # Module-level tracker instance used by initialize/track_frames

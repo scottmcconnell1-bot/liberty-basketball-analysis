@@ -85,9 +85,8 @@ def assign_trackers_bytetrack(detections, model_name="yolov8n.pt", tracker_type=
     Use ultralytics built-in ByteTrack for production-quality tracking.
     Requires ultralytics with ByteTrack support.
     """
-    try:
-        from ultralytics import YOLO
-    except ImportError:
+    import importlib.util
+    if importlib.util.find_spec("ultralytics") is None:
         print("WARNING: ultralytics not available, falling back to centroid tracker")
         return assign_trackers_centroid(detections)
 

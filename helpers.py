@@ -18,12 +18,12 @@ from datetime import datetime
 from functools import wraps
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
-from flask import g, current_app, request, render_template, abort, redirect, url_for, jsonify, send_from_directory
-from werkzeug.utils import secure_filename
+from flask import g, current_app, request, render_template, abort, url_for
+from flask import jsonify  # noqa: F401  (re-exported: blueprints/ai.py imports it from helpers)
 
-from config import Config
 from module_keys import BASE_PLATFORM, SCOUTING, STATS
-from settings_store import AI_DEFAULTS, load_all_settings, save_settings
+from settings_store import AI_DEFAULTS, load_all_settings
+from settings_store import save_settings  # noqa: F401  (re-exported: blueprints/core.py imports it from helpers)
 
 try:
     import psutil
@@ -615,7 +615,10 @@ def build_settings_catalog():
         {
             "value": "models/ball_detector.pt",
             "label": "Fine-tuned basketball detector",
-            "note": "Benchmark default for ball detection: class 0 at 0.15 confidence.",
+            "note": (
+                f"Production default for ball detection: class {AI_DEFAULTS['ball_class_id']} "
+                f"at {AI_DEFAULTS['ball_confidence']} confidence (see AGENT_PROTOCOL.md)."
+            ),
             "recommended": True,
         },
         {
@@ -2573,13 +2576,13 @@ def _ensure_migration_columns(db):
         ("plays", "list_order", "ALTER TABLE plays ADD COLUMN list_order INTEGER"),
         ("play_steps", "source_image", "ALTER TABLE play_steps ADD COLUMN source_image TEXT"),
     ]
-    existing = {
-        (row[1], row[2]): True
-        for row in db.execute(
-            "SELECT type, tbl_name, name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+    existing_tables = {
+        row[0]
+        for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     }
     for table, col, sql in col_migrations:
+        if table not in existing_tables:
+            continue
         try:
             cols = [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
             if col not in cols:

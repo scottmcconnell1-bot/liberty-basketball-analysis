@@ -1,7 +1,14 @@
 """Dashboard season filtering tests."""
 
+from datetime import date, timedelta
+
 
 def test_teams_schedule_filters_by_season(client, app):
+    # "upcoming" means game_date >= date('now'); keep the summer fixture in the future.
+    today = date.today()
+    summer_start = (today - timedelta(days=30)).isoformat()
+    summer_end = (today + timedelta(days=60)).isoformat()
+    summer_game = (today + timedelta(days=7)).isoformat()
     with app.app_context():
         from helpers import get_db
         db = get_db()
@@ -11,7 +18,7 @@ def test_teams_schedule_filters_by_season(client, app):
         )
         db.execute(
             "INSERT INTO seasons (name, start_date, end_date, season_type) VALUES (?,?,?,?)",
-            ("Summer 2026", "2026-06-01", "2026-08-31", "summer"),
+            ("Summer 2026", summer_start, summer_end, "summer"),
         )
         db.commit()
         winter_id = db.execute("SELECT id FROM seasons WHERE name='2021-22 Boys'").fetchone()["id"]
@@ -26,7 +33,7 @@ def test_teams_schedule_filters_by_season(client, app):
             """INSERT INTO scheduled_games
                (season_id, program_name, team, gender, level, game_date, opponent_name, status)
                VALUES (?,?,?,?,?,?,?,?)""",
-            (summer_id, "Liberty", "boys_hs", "boys", "varsity", "2026-07-15", "Summer Tourney", "scheduled"),
+            (summer_id, "Liberty", "boys_hs", "boys", "varsity", summer_game, "Summer Tourney", "scheduled"),
         )
         db.execute(
             """INSERT INTO scheduled_games

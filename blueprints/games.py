@@ -26,7 +26,7 @@ Page Routes:
   - /nfhs-matches/<int:match_id>/reject (POST) - Reject an NFHS match
 """
 
-from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort
+from flask import Blueprint, redirect, request, url_for, jsonify, abort
 
 from helpers import (
     get_db,

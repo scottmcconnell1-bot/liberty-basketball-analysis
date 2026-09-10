@@ -4,7 +4,6 @@ test_api.py – Integration tests for all Flask API endpoints.
 import json
 import io
 from pathlib import Path
-import pytest
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -1074,7 +1073,6 @@ def test_film_page(client):
     assert b"aiEventsPanel" in r.data
     assert b"aiEventsScroller" in r.data
     assert b"aiCurrentEventLabel" in r.data
-    assert b"Independent scrolling event timeline" in r.data
 
 
 def test_film_page_accepts_manual_game_id_query(client):
@@ -1506,6 +1504,8 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
     db.commit()
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda *a, **k: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda *a, **k: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     r = client.post("/videos/1/rerun", data={"run_label": "YOLOv8s retry"}, follow_redirects=True)
@@ -1548,6 +1548,8 @@ def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch
     db.commit()
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda *a, **k: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda *a, **k: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
