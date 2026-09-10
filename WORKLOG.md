@@ -1454,3 +1454,20 @@ Full write-up: docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
 Verification:
 - `python scripts/score_manual_q1_regression.py --analysis-key smoke_q1_local --window-end-sec 300 --no-fail --per-tag` -> numbers above
 - `pytest tests/test_score_manual_q1_regression.py -q` -> 3 passed
+- Full Wilder Q1 (`wilder_q1_full_local`, 871 s window): precision 0.0143, recall 0.6604, 35 TP / 2415 FP / 8 FN
+  (Scott's 07-18 baseline: 0.008 / 0.4151, 22 / 2726 / 31). All 7 3PT typed as 2PT; all 7 fouls missed.
+
+Full E2E through the app + two trim bugs - 2026-09-10
+------------------------------------------------------
+Walked the coach's definition of done on the Linux box: upload via /upload (gunicorn spawned
+the analysis), progress bar on the film page, scorebook upload + Confirm click in the browser,
+Review accept/reject/correct via the buttons' endpoints, highlights limited to reviewed events,
+ffmpeg clips cut. Details: docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md §6a.
+
+Implemented in code:
+- video_trim.py: per-job output names (two clips in one second overwrote each other);
+  file-backed job registry so status polls work across gunicorn workers. 3 tests added.
+
+Verification:
+- pytest tests/ -q -> 631 passed, 29 skipped; ruff F821/F811/E9 clean
+- regenerate 2 highlight clips -> 2 distinct files (6.2 s, 11.6 s); 12/12 status polls `complete` across 2 workers

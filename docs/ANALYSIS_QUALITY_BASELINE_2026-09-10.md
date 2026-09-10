@@ -91,10 +91,38 @@ Every manual tag, with the AI verdict:
   (`BASELINE`: precision 0.008, recall 0.415, 22 exact / 2,726 AI-only over the full 871 s).
   The instrument reproduces across machines; the problem is the pipeline, not the measurement.
 
-## 3. Full-quarter result (videos/Q1.mp4, 871 s window)
+## 3. Full-quarter result (videos/Q1.mp4, 871 s window) — Proven
 
-_Pending — `wilder_q1_full_local` analysis running on CPU; this section is filled in when it
-completes. Compare against `BASELINE` in the scorer._
+Analysis `wilder_q1_full_local` (CLI `ai_analyzer.py` on the full 906 s file, default settings,
+CPU, 2,937 s wall-clock while sharing the machine with another run):
+
+| Metric | Here (2026-09-10) | Scott's baseline (2026-07-18, in scorer) |
+| --- | ---: | ---: |
+| Manual action tags | 53 | — |
+| AI comparable rows | 2,460 | — |
+| Exact matches (TP) | **35** | 22 |
+| Manual only (FN) | 8 | 31 |
+| AI only (FP) | **2,415** | 2,726 |
+| Near but wrong label | 10 | — |
+| **Precision** | **0.0143** | 0.008 |
+| Recall (strict) | 0.6604 | 0.4151 |
+| F1 | 0.028 | 0.0157 |
+| AI rows per second | 2.82 | — |
+| Chance same-family candidates per tag (±10 s) | ~56 | — |
+
+Per manual type — matched / near-wrong / missed:
+`2PT 13/1/0 · DefRebound 6/0/0 · Turnover 5/0/1 · Assist 5/0/0 · Steal 4/0/0 · OffRebound 2/0/0 ·
+3PT 0/7/0 · FT 0/2/0 · Foul 0/0/7`.
+
+Reading: the pipeline on this machine reproduces Scott's finding and is modestly better on
+every metric (same code, so the difference is most likely the model auto-downloads and library
+versions — not a real improvement). The structure of the errors is identical to the 5-minute
+window: **every** 3PT and FT is mis-typed as 2PT, **every** foul is missed, and 2,415 false
+positives drown 35 true ones. Scorer gates (`MIN_PRECISION 0.08`, `MAX_AI_ONLY 400`) fail.
+
+The E2E upload of the snippet through the web app (`e2e_sample_Q1_snippet_20260910_054233`,
+spawned by gunicorn) produced exactly the same counts as the CLI run (77,810 detections,
+1,378 events): the pipeline is deterministic and the app path and CLI path are equivalent.
 
 ## 4. Bugs fixed in the instrument (Proven)
 

@@ -75,6 +75,9 @@ or `deploy/deploy_production.sh` here.
 | `static/sw.js` | `OFFLINE_URLS` pre-cached `/static/css/style.css`, which **does not exist** → `cache.addAll()` rejected → service worker never installed. | Removed the phantom entry (base.html inlines CSS). |
 | `tracker_assigner.py` | ultralytics availability probe via an unused import. | `importlib.util.find_spec("ultralytics")`. |
 | `blueprints/core.py`, `event_generator.py`, `film_analysis.py` | Dead locals (`most_common`, `is_hs`, `curr_duration`, `effective_fps`); an `event_generator` comment claiming noise segments are skipped when they are not. | Removed dead code; comment now states actual behaviour. **No AI behaviour changed.** |
+| `video_trim.py` | Output filename/game_id keyed on a per-second timestamp → concurrent highlight clips collided on one file. | `trim_stamp(job_id)` adds the job-id suffix. |
+| `video_trim.py` | Job registry was an in-process dict → status polls fail on the non-owning gunicorn worker (`--workers 2` in the systemd unit). | State mirrored to `<UPLOAD_FOLDER>/.trim_jobs/<id>.json`; `get_trim_job` falls back to it. |
+| `scripts/score_manual_q1_regression.py` | Unrunnable from a clean checkout after being moved to `scripts/` (table assumption, backup path, `sys.path`). | See `docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md` §4. |
 | ~15 modules | 96 unused imports tree-wide (ruff F401). | Removed **except** re-exports other modules depend on, which are kept with explicit `# noqa: F401` notes: `helpers.jsonify` (→ `blueprints/ai.py`), `helpers.save_settings` (→ `blueprints/core.py`), `app.subprocess` + `app.{get_db,init_db,…}` (→ tests), `event_generator.AnalysisConfig` (→ `experiments/`). |
 
 ### 3b. Tests fixed (7 failing as cloned → 0)
@@ -211,6 +214,45 @@ Docker's only advantage. Docker remains fine for a parity smoke on an empty DB �
 asserts their contents.
 
 ---
+
+## 6a. Full E2E through the app — done (2026-09-10)
+
+The coach's definition of done (`ACTIVE.md`): scorebook photo → `/stat-books` → confirm;
+film → AI events → Review Accept/Correct/Reject → official ledger → highlights. Walked end to
+end on this machine against the 5-minute Wilder Q1 snippet, game
+`e2e_sample_Q1_snippet_20260910_054233` (rows remain in the local DB for inspection).
+
+| Step | How | Result (Proven) |
+| --- | --- | --- |
+| Upload | multipart POST to `/upload` (the film-tool form's route) | `videos` row 2, `analysis_runs` row 2 (`primary`); **gunicorn spawned** `analysis_launcher.py` (PID 818303) |
+| Progress | browser: film page "Upload Video" panel | live bar "AI Analysis 44% — Detecting objects: frame 4000/9002" |
+| Analysis | app-spawned, CPU | `completed`, 77,810 detections, 1,378 events — identical to the CLI run (deterministic) |
+| Scorebook | POST `/stat-books/games/<g>/upload` with the sample scan, then **browser**: filled team/score fields and clicked **Confirm box** | aligned (`identity`), OCR `none` here → manual entry; confirmed JSON written, validation OK, served by `/stat-books/confirmed/<g>` |
+| Review | `POST /api/review/events/<id>/{accept,reject,correct}` — the exact calls the three buttons make | accepted shot (`human_verified=1`), rejected block, corrected `possession_change`→`turnover` (#4); ledger and notes/`reviewed_at` written |
+| Highlights | `GET /api/highlights/moments`, `POST /api/highlights/generate` | **only** the accepted + corrected events listed (1,375 pending excluded); 2 canonical clips + 2 dev clips saved; ffmpeg cut 2 files (6.2 s, 11.6 s) |
+
+Honest scope note: the Review clicks were made through the endpoints rather than the buttons
+because the in-app browser pane was hidden (viewport 0×0) at that point and clicks cannot
+render; the Review page itself was verified rendering with its Accept/Correct/Reject controls
+and 1,378-row queue while the pane was visible, and the stat-book Confirm *was* a real click.
+
+Bugs found by the E2E and fixed (see §3a table additions):
+- `video_trim.py` output name was `{stem}_trim_{YYYYmmdd_HHMMSS}` → two highlight clips cut in
+  the same second wrote the **same file** (second ffmpeg overwrote the first; one 11.6 s file
+  survived instead of 6.1 s + 8.0 s). Now suffixed with the job id.
+- Trim job registry was a per-process dict → under the shipped `--workers 2` systemd unit a
+  status poll served by the other worker returned "not found or expired". Now mirrored to
+  `<UPLOAD_FOLDER>/.trim_jobs/<id>.json`; verified 12/12 polls return `complete` across both workers.
+
+Findings not fixed (product decisions):
+- The upload success message sends coaches to `/status` for progress, but `/status` is a
+  product-roadmap checklist; run progress lives on the film page panel.
+- `/api/highlights/games` lists only `games`-table rows, so an uploaded video with no
+  relational game (this one, and any plain upload) never appears in the Highlights dropdown
+  even though `/api/highlights/moments?game_id=` serves it.
+- Confirmed stat books are written **into the repo tree** (`data/stat_books/confirmed/`), so a
+  real coach's confirmations become untracked files in the working copy.
+- OCR backend is `none` on this machine (no tesseract/EasyOCR): every scorebook cell is manual.
 
 ## 6b. AI analysis quality — measured (2026-09-10)
 
