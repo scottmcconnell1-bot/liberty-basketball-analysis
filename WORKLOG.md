@@ -1471,3 +1471,25 @@ Implemented in code:
 Verification:
 - pytest tests/ -q -> 631 passed, 29 skipped; ruff F821/F811/E9 clean
 - regenerate 2 highlight clips -> 2 distinct files (6.2 s, 11.6 s); 12/12 status polls `complete` across 2 workers
+
+Precision event generator + migration/watchdog tooling + CI - 2026-09-10
+--------------------------------------------------------------------------
+Branch claude/precision-mode. ByteTrack confirmed running in ai_analyzer (the stub in
+tracker_assigner is dead code). New opt-in ai.event_generator_mode="precision" tuned with the
+manual-tag scorer on the full Wilder Q1: precision 0.014 -> 0.087, AI-only 2415 -> 346,
+recall 0.660 -> 0.623; all scorer gates pass; `expanded` untouched. Tables in
+docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md §3b.
+
+Implemented in code:
+- event_generator.py: generate_precision_events_from_segments + PRECISION_DEFAULTS,
+  main(mode_override=, precision_params=); helpers.py settings option.
+- scripts/migrate_paths.py: audit/dry-run/apply rewrite of stored absolute paths (Windows ->
+  Linux) across 7 columns + stat-book draft JSON. scripts/mark_stale_analysis_runs.py: hung
+  analysis_runs -> failed when old and log idle. Both with tests.
+- .github/workflows/tests.yml (pull_request + manual; 3.12/3.13; ruff, pytest, secrets audit).
+- requirements.txt: + pytesseract (scorebook OCR tier 2; tesseract binary present here).
+- video_trim / rerun ids stamped in local time like uploads.
+
+Verification:
+- pytest tests/ -q -> 643 passed, 29 skipped; ruff real-error classes clean
+- score_manual_q1_regression --analysis-key wilder_q1_full_local on the precision output -> REGRESSION PASS

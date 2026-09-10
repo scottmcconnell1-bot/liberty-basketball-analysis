@@ -740,6 +740,176 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     return events
 
 
+# ── Precision mode ─────────────────────────────────────────────────────────
+# Opt-in generator (ai.event_generator_mode = "precision"). Same possession segments and
+# ball track as "expanded", but tuned for the Review queue: it emits far fewer, better-
+# supported events. Measured against Scott's manual Wilder Q1 tags with
+# scripts/score_manual_q1_regression.py — see docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
+# "expanded" is untouched; nothing changes for production until the mode is switched.
+PRECISION_DEFAULTS = {
+    # a segment must last this many frames before it counts as a real possession
+    # (12 / 80 below: measured on Scott's manual Wilder Q1 tags -> precision 0.087,
+    #  recall 0.623, AI-only 346; the expanded generator scores 0.014 / 0.660 / 2415)
+    "min_hold_frames": 12,
+    # primary-pass shot detection only (no low-threshold secondary pass); px of ball rise
+    "shot_min_ball_rise": 80.0,
+    # at most one shot per possessor within this window
+    "shot_refractory_ms": 6000,
+    # blocks are rare; the expanded heuristic fired on almost every miss
+    "emit_blocks": False,
+    # assist only if the passer held the ball and the hand-off was quick
+    "assist_max_gap_frames": 15,
+    # turnover/steal: the lost possession must have been brief and the new possessor must
+    # actually keep the ball
+    "turnover_min_next_hold_frames": 6,
+    "turnover_max_prev_hold_frames": 60,
+    # foul-after-dead-ball heuristic is weak; keep it opt-in
+    "emit_fouls": False,
+    # "make" needs a longer dead-ball gap than expanded mode's 15 frames (inbound after a
+    # score) unless the ball is seen reaching the basket area
+    "make_min_gap_frames": 15,
+}
+
+
+def _clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def _merge_short_segments(segments, min_hold_frames):
+    """Drop segments shorter than min_hold_frames and merge neighbours with the same player.
+
+    Tracker fragmentation produces many 1–5 frame "possessions" that flip between cluster
+    ids; each flip became a possession_change (and often a shot/rebound/block cascade)."""
+    kept = [dict(seg) for seg in segments if seg.get("duration_frames", 1) >= min_hold_frames]
+    merged = []
+    for seg in kept:
+        if merged and merged[-1]["player"] == seg["player"]:
+            last = merged[-1]
+            last["end_frame"] = max(last["end_frame"], seg["end_frame"])
+            last["end_timestamp_ms"] = max(last.get("end_timestamp_ms", 0), seg.get("end_timestamp_ms", 0))
+            last["duration_frames"] = last["end_frame"] - last["start_frame"] + 1
+            n1, n2 = last.get("_n", 1), seg.get("_n", 1)
+            last["mean_ball_distance"] = (
+                last.get("mean_ball_distance", 0) * n1 + seg.get("mean_ball_distance", 0) * n2
+            ) / (n1 + n2)
+            last["_n"] = n1 + n2
+            continue
+        seg["_n"] = 1
+        merged.append(seg)
+    return merged
+
+
+def generate_precision_events_from_segments(game_id, segments, ball_track, params=None):
+    p = {**PRECISION_DEFAULTS, **(params or {})}
+    events = []
+    seen_keys = set()
+
+    segments = _merge_short_segments(segments, p["min_hold_frames"])
+
+    # Shots: primary detector only, higher rise threshold, one per possessor per window.
+    shot_segments = {}
+    last_shot_ms_by_player = {}
+    for index, segment in enumerate(segments):
+        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
+        shot_info = detect_shot_from_segment(
+            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start
+        )
+        if not shot_info:
+            continue
+        last_ms = last_shot_ms_by_player.get(segment["player"])
+        if last_ms is not None and shot_info["timestamp_ms"] - last_ms < p["shot_refractory_ms"]:
+            continue
+        last_shot_ms_by_player[segment["player"]] = shot_info["timestamp_ms"]
+        shot_segments[index] = shot_info
+
+    for index, segment in enumerate(segments):
+        hold = segment.get("duration_frames", 1)
+        if index > 0:
+            previous = segments[index - 1]
+            if previous["player"] != segment["player"]:
+                prev_hold = previous.get("duration_frames", 1)
+                gap_frames = segment["start_frame"] - previous["end_frame"]
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "possession_change", segment["start_timestamp_ms"],
+                    player=segment["player"],
+                    # grows with how long BOTH players held the ball; saturates at 45 frames
+                    confidence=_clamp(0.4 + 0.01 * min(hold, prev_hold), 0.4, 0.85),
+                    details={"from_player": previous["player"], "to_player": segment["player"],
+                             "gap_frames": gap_frames, "hold_frames": hold},
+                ))
+                is_abrupt = (
+                    prev_hold <= p["turnover_max_prev_hold_frames"]
+                    and gap_frames < 20
+                    and previous.get("mean_ball_distance", 0) > 25
+                    and hold >= p["turnover_min_next_hold_frames"]
+                    and (index - 1) not in shot_segments
+                )
+                if is_abrupt:
+                    conf = _clamp(0.35 + 0.01 * hold, 0.35, 0.7)
+                    append_unique_event(events, seen_keys, make_event(
+                        game_id, "turnover", segment["start_timestamp_ms"], player=previous["player"],
+                        confidence=conf, details={"next_possessor": segment["player"]}))
+                    append_unique_event(events, seen_keys, make_event(
+                        game_id, "steal", segment["start_timestamp_ms"], player=segment["player"],
+                        confidence=conf, details={"from_player": previous["player"]}))
+
+        if index not in shot_segments:
+            continue
+
+        shot_info = shot_segments[index]
+        next_segment = segments[index + 1] if index + 1 < len(segments) else None
+        next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
+
+        # make/miss: same gap/trajectory heuristic as expanded mode
+        shot_result = "miss"
+        peak_frame = shot_info.get("peak_frame")
+        ball_moving_to_basket = False
+        if peak_frame:
+            post_peak = ball_track[(ball_track["frame_number"] > peak_frame) & (ball_track["frame_number"] <= peak_frame + 30)]
+            ball_moving_to_basket = (not post_peak.empty) and post_peak["y_center"].min() < 240
+        if next_segment is None or (next_gap is not None and next_gap > p["make_min_gap_frames"]) or ball_moving_to_basket:
+            shot_result = "make"
+
+        shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
+        append_unique_event(events, seen_keys, make_event(
+            game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
+            confidence=shot_conf,
+            details={"ball_rise": round(shot_info["ball_rise"], 1), "lateral_travel": round(shot_info["lateral_travel"], 1),
+                     "peak_frame": peak_frame, "generator": "precision"},
+        ))
+        # keep the derived make/miss row: stats.py and the Review queue expect it
+        append_unique_event(events, seen_keys, make_event(
+            game_id, shot_result, shot_info["timestamp_ms"], player=segment["player"],
+            confidence=round(shot_conf * 0.9, 3), details={"derived_from": "shot"}))
+
+        if shot_result == "miss" and next_segment is not None:
+            append_unique_event(events, seen_keys, make_event(
+                game_id, "rebound", next_segment["start_timestamp_ms"], player=next_segment["player"],
+                confidence=_clamp(0.6 - 0.01 * max(next_gap or 0, 0), 0.3, 0.6),
+                details={"shot_player": segment["player"], "gap_frames": next_gap}))
+            if p["emit_blocks"] and next_segment["player"] != segment["player"] and (next_gap or 0) <= 3:
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "block", next_segment["start_timestamp_ms"], player=next_segment["player"],
+                    confidence=0.3, details={"shot_player": segment["player"], "gap_frames": next_gap}))
+
+        if shot_result == "make" and index > 0:
+            previous = segments[index - 1]
+            assist_gap = segment["start_frame"] - previous["end_frame"]
+            if (previous["player"] != segment["player"] and assist_gap <= p["assist_max_gap_frames"]
+                    and previous.get("duration_frames", 1) >= p["min_hold_frames"]):
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "assist", shot_info["timestamp_ms"], player=previous["player"],
+                    confidence=_clamp(0.5 - 0.01 * assist_gap, 0.3, 0.5),
+                    details={"scorer": segment["player"], "gap_frames": assist_gap}))
+
+        if p["emit_fouls"] and (next_segment is None or (next_gap is not None and next_gap >= 90)):
+            append_unique_event(events, seen_keys, make_event(
+                game_id, "foul", shot_info["timestamp_ms"], player=segment["player"], confidence=0.18,
+                details={"reason": "long_dead_ball_after_shot", "gap_frames": next_gap}))
+
+    return events
+
+
 def _lookup_event_type_id(conn, event_type):
     if not event_type:
         return None
@@ -816,6 +986,8 @@ def main(
     base_analysis_key=None,
     video_relational_game_id=None,
     force_expanded=False,
+    mode_override=None,
+    precision_params=None,
 ):
     """
     Analyzes raw detection data to identify and store basketball events.
@@ -865,12 +1037,24 @@ def main(
         detections_with_possession_df = find_ball_possession(detections_df)
 
         generator_mode = ai_settings.get("event_generator_mode", "legacy")
-        if force_expanded:
+        if force_expanded and generator_mode != "precision":
             generator_mode = "expanded"
             print("INFO: Forcing expanded event generator for rebuild.")
+        if mode_override:
+            generator_mode = mode_override
+            print(f"INFO: Event generator mode overridden to {generator_mode!r}.")
         events_to_persist = []
 
-        if generator_mode == "expanded":
+        if generator_mode == "precision":
+            segments = build_possession_segments(detections_with_possession_df)
+            ball_track = build_ball_track(detections_df)
+            print(f"INFO: Built {len(segments)} possession segments for precision generation.")
+            events_to_persist = generate_precision_events_from_segments(
+                game_id, segments, ball_track, params=precision_params
+            )
+            print(f"INFO: Precision generator produced {len(events_to_persist)} events.")
+            persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)
+        elif generator_mode == "expanded":
             segments = build_possession_segments(detections_with_possession_df)
             ball_track = build_ball_track(detections_df)
             print(f"INFO: Built {len(segments)} possession segments for expanded generation.")

@@ -715,6 +715,11 @@ def build_settings_catalog():
                 "label": "Expanded heuristic generator",
                 "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
             },
+            {
+                "value": "precision",
+                "label": "Precision generator (opt-in)",
+                "note": "Fewer, better-supported events for the Review queue; measured with scripts/score_manual_q1_regression.py.",
+            },
         ],
         "llm_provider_options": llm_provider_options,
         "llm_model_options": llm_model_options,
@@ -794,7 +799,8 @@ def build_analysis_settings_snapshot(runtime_settings):
 
 
 def build_rerun_game_id(base_game_id):
-    return f"{base_game_id}__rerun_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    # local time, consistent with upload/trim filenames (DB columns stay UTC)
+    return f"{base_game_id}__rerun_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 
 def default_run_label(run_kind, snapshot):

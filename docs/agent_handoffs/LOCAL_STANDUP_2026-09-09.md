@@ -269,6 +269,40 @@ Ground truth `tag-exports/liberty-manual-tags-backup.json` was extracted from Ju
 `3749831` (no code merged). `videos/Q1.mp4` is verified to be the Wilder Q1 (duration + frame
 hash vs the snippet). Three latent path/table bugs in the scorer were fixed; tests added.
 
+## 6c. Second branch — `claude/precision-mode` (2026-09-10)
+
+| Item | Where | Status |
+| --- | --- | --- |
+| ByteTrack verification | `ai_analyzer.py:167-178` | **Proven running** via `model.track(tracker="bytetrack.yaml")`. `tracker_assigner.assign_trackers_bytetrack` is a stub that returns the centroid fallback but is only reachable from that module's own CLI. Fragmented IDs are real ByteTrack output. |
+| Precision event generator (opt-in) | `event_generator.py`, Settings option in `helpers.py` | precision 0.014 → **0.087** on the full quarter, all scorer gates pass. `expanded` untouched. See `ANALYSIS_QUALITY_BASELINE §3b`. |
+| Scott's-DB path migration | `scripts/migrate_paths.py` (+ tests) | Audit / dry-run / apply for every path column + stat-book draft JSON; case- and separator-insensitive prefix rewrite. |
+| Stale-run watchdog | `scripts/mark_stale_analysis_runs.py` (+ tests) | Marks `pending`/`running` rows failed when older than N min **and** the log is idle. Dry run by default. This is `ACTIVE.md`'s "hung run" bug, handled. |
+| CI | `.github/workflows/tests.yml` | `pull_request` + manual: ruff (real-error classes), pytest on 3.12 + 3.13, `audit_secrets.py`. Web stack only. **Runs on Scott's Actions minutes — flagged in the PR.** |
+| Scorebook OCR tier 2 | `requirements.txt` + `tesseract` (system) | `stat_book.ocr.ocr_backend_name()` → `tesseract` here now (was `none`). |
+| Timestamp stamps | `video_trim.py`, `helpers.build_rerun_game_id` | Local time like upload filenames; DB columns remain UTC. |
+
+**Nightly backup timer (not installed — the agent sandbox blocks writing systemd units; run
+these yourself):**
+
+```
+~/.config/systemd/user/liberty-backup.service
+  [Unit]    Description=Liberty DB backup
+  [Service] Type=oneshot
+            WorkingDirectory=/home/myaccount/Desktop/PROJECTS/liberty-basketball-analysis
+            ExecStart=/home/myaccount/Desktop/PROJECTS/liberty-basketball-analysis/.venv/bin/python scripts/backup_db.py --out-dir /home/myaccount/LibertyData/backups --keep 14
+~/.config/systemd/user/liberty-backup.timer
+  [Unit]    Description=Nightly Liberty DB backup
+  [Timer]   OnCalendar=daily
+            RandomizedDelaySec=15m
+            Persistent=true
+  [Install] WantedBy=timers.target
+```
+```bash
+systemctl --user daemon-reload && systemctl --user enable --now liberty-backup.timer && systemctl --user start liberty-backup.service
+```
+The same pattern with `scripts/mark_stale_analysis_runs.py --apply` on an hourly timer gives
+the watchdog.
+
 ## 7. Next steps for whoever picks this up
 
 1. **Review + push.** `git log` shows one commit on `claude/local-standup` with everything in

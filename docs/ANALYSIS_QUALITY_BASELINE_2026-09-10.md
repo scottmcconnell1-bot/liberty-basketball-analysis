@@ -124,6 +124,40 @@ The E2E upload of the snippet through the web app (`e2e_sample_Q1_snippet_202609
 spawned by gunicorn) produced exactly the same counts as the CLI run (77,810 detections,
 1,378 events): the pipeline is deterministic and the app path and CLI path are equivalent.
 
+## 3b. Precision generator — first measured improvement (2026-09-10, Proven)
+
+`event_generator.py` gained an **opt-in** mode, `ai.event_generator_mode = "precision"`
+(selectable in Settings → Runtime; `expanded` is untouched and remains the default). Same
+possession segments and ball track as `expanded`, but: segments shorter than
+`min_hold_frames` are dropped and same-player neighbours merged (tracker flicker no longer
+becomes a possession change); shot detection uses the primary pass only with a higher ball
+rise; one shot per possessor per 6 s; no blocks, no dead-ball fouls; assists/turnovers need a
+real prior hold; confidences are computed, not constants. Tuned on a **copy** of the DB with
+the scorer, on the full quarter (53 tags), not the 5-minute window:
+
+| Variant (full Q1, ±10 s) | AI rows | TP | FP | FN | Precision | Recall | F1 | Scorer gates |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `expanded` (production) | 2,460 | 35 | 2,415 | 8 | 0.014 | 0.660 | 0.028 | fail |
+| `precision` hold=6 rise=40 | 943 | 35 | 898 | 8 | 0.037 | 0.660 | 0.071 | fail |
+| `precision` hold=10 rise=60 | 517 | 34 | 473 | 9 | 0.067 | 0.641 | 0.121 | fail |
+| **`precision` hold=12 rise=80 (default)** | **390** | **33** | **346** | **9** | **0.087** | **0.623** | **0.153** | **pass** |
+| `precision` hold=15 rise=80 | 267 | 28 | 228 | 14 | 0.109 | 0.528 | 0.181 | pass |
+
+Same on the 300 s window: default 0.103 / 0.615 (8 TP / 70 FP) vs expanded 0.011 / 0.615.
+
+Chosen default: `hold=12, rise=80` — the first setting that passes all four gates
+(`precision ≥ 0.08`, `recall ≥ 0.25`, `exact ≥ 12`, `AI-only ≤ 400`) while keeping recall
+within 2 hits of the baseline. `hold=15` is the quieter choice if the Review queue matters more
+than the last few hits. Tightening the steal/turnover and assist knobs traded hits for misses
+one-for-one, so they stay at their defaults.
+
+What the remaining 346 false positives are: `2PT|Make` 88, `Steal` 61, `Turnover` 59,
+`Assist` 51, `Rebound` 44. The make/miss call (dead-ball gap after the shot) is the next
+target; changing its gap threshold alone only moved makes into misses+rebounds.
+
+Still true in both modes: every 3PT is typed 2PT (no shot type on the event), every foul is
+missed. Tests: `tests/test_event_generator_precision.py`.
+
 ## 4. Bugs fixed in the instrument (Proven)
 
 `scripts/score_manual_q1_regression.py` was moved from `tag-exports/` to `scripts/` at some
