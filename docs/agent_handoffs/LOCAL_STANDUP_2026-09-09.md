@@ -107,8 +107,25 @@ or `deploy/deploy_production.sh` here.
   `blueprints.ai._play_match_store_base()` resolves under `current_app.root_path`. Fixed with an
   **autouse fixture in `tests/conftest.py`** that points it at `tmp_path`; `data/play_matches/`
   is also gitignored (it is runtime output for real games).
+- Analysis launcher logs (`helpers.ai_analysis_log_path`) defaulted to `<repo>/logs/ai-<game>.log`
+  even under pytest → redirected to `tmp_path` by the same conftest fixture.
+- **Safety net:** a conftest autouse fixture wraps `subprocess.Popen` and raises if any test tries
+  to spawn `analysis_launcher.py`. On this box (CV stack installed) an un-stubbed test could
+  otherwise start a multi-minute CPU job against whatever DB/video it was handed.
+- `tests/test_ui_audit.py` is a standalone live-server audit *script* with no test functions; pytest
+  imported it and it ran ~100 live GETs at collection time. Now skips at module level unless run
+  directly or `LIBERTY_RUN_LIVE_UI_TESTS=1`.
+- `blueprints/coach.py` hard-coded `<repo>/film_analysis.db` for its progress snapshot instead of
+  `app.config["DATABASE"]` → now uses the configured DB (falls back outside an app context).
 - Verified: after a full run, `git status` shows no tracked-file modifications **and no new
-  untracked files under `data/`** (check both — the first check alone missed this one).
+  untracked files under `data/` or `logs/`**, and the live `film_analysis.db` row counts are
+  unchanged (check all three — the first check alone missed two of these).
+- Note: one `videos` row + failed `analysis_runs` row for `test_Q1_<stamp>` appeared in the live DB
+  at 00:00 on 2026-09-10. Nothing in the repo produces it (no test/script references `Q1.mp4` or
+  opponent `TEST`); it matches a manual browser upload of `videos/Q1.mp4` — which is still a
+  **134-byte LFS pointer**, so analysis correctly failed with `Could not open video file`.
+  Rows and the pointer file were removed. If you want that full-quarter file usable:
+  `git lfs pull --include=videos/Q1.mp4` (184 MB).
 
 ### 3d. Scripts / config
 

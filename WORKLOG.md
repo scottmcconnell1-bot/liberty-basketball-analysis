@@ -1419,9 +1419,12 @@ Implemented in code:
 - scripts/run_v8.py: repo-relative paths + CLI args (was hard-coded to one box).
 - requirements.txt: + gunicorn (systemd unit needs it; was docker-only).
 - tests: 7 stale/time-bomb/env-coupled tests fixed; suite made hermetic (stat-book confirm
-  and transfer bundle no longer write into tracked files; play-match JSON no longer lands in
-  data/play_matches/ via a conftest autouse fixture); 3 accidentally committed tarballs
-  untracked and gitignored.
+  and transfer bundle no longer write into tracked files; play-match JSON and analysis logs
+  redirected to tmp_path via conftest autouse fixtures; a guard makes spawning
+  analysis_launcher.py from a test an error; tests/test_ui_audit.py — a live-server script with no
+  tests — no longer runs at collection); 3 accidentally committed tarballs untracked and
+  gitignored; blueprints/coach.py progress snapshot reads app.config DATABASE instead of a
+  hard-coded repo-root path.
 
 Verification:
 - `.venv/bin/python -m pytest tests/ -q` -> 625 passed, 28 skipped (as cloned: 606 passed, 7 failed, 11 skipped)
