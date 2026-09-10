@@ -212,6 +212,21 @@ asserts their contents.
 
 ---
 
+## 6b. AI analysis quality — measured (2026-09-10)
+
+See **`docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md`**. Short version: on the same five minutes
+of Wilder Q1 that Scott hand-tagged, the pipeline scores **precision 1.1%, recall 61.5% (mostly
+chance at 2.5 AI rows/sec)** — 8 true positives vs 744 false positives. This reproduces Scott's
+own full-quarter baseline (0.8% / 41.5%). The instrument is now runnable from a clean checkout:
+
+```bash
+.venv/bin/python scripts/score_manual_q1_regression.py --analysis-key <key> --window-end-sec 300 --no-fail --per-tag
+```
+
+Ground truth `tag-exports/liberty-manual-tags-backup.json` was extracted from July-branch commit
+`3749831` (no code merged). `videos/Q1.mp4` is verified to be the Wilder Q1 (duration + frame
+hash vs the snippet). Three latent path/table bugs in the scorer were fixed; tests added.
+
 ## 7. Next steps for whoever picks this up
 
 1. **Review + push.** `git log` shows one commit on `claude/local-standup` with everything in

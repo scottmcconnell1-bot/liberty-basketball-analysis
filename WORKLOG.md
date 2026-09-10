@@ -1436,3 +1436,21 @@ Verification:
 Recommended next move:
 - Scott: review docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md §5 (gates), Pages exposure first.
 - Then transfer Scott's DB + film per §7 and run the Windows-path audit before first boot.
+
+AI quality baseline measured locally - 2026-09-10
+--------------------------------------------------
+Rescued the manual-vs-AI Q1 measurement: extracted Scott's hand-tagged Wilder Q1 ground truth
+(tag-exports/liberty-manual-tags-backup.json) from July-branch commit 3749831, verified
+videos/Q1.mp4 is that footage (906 s; frame hash at t=60 == data/videos/Q1_snippet.mp4), and
+fixed scripts/score_manual_q1_regression.py so it runs from a clean checkout (film_tool_games
+fallback, backup path, sys.path — all broke when the script moved from tag-exports/ to
+scripts/). Added --window-end-sec / --per-tag / per-type breakdown / chance estimate + tests.
+
+Result (first 300 s, strict ±10 s): 13 manual action tags, 754 comparable AI rows, TP 8,
+FP 744, FN 3 -> precision 0.0106, recall 0.6154 (chance-dominated), F1 0.0209. Both manual
+3PT misses scored as "2PT Make" because AI shot events carry no shot_type; all 3 fouls missed.
+Full write-up: docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
+
+Verification:
+- `python scripts/score_manual_q1_regression.py --analysis-key smoke_q1_local --window-end-sec 300 --no-fail --per-tag` -> numbers above
+- `pytest tests/test_score_manual_q1_regression.py -q` -> 3 passed
