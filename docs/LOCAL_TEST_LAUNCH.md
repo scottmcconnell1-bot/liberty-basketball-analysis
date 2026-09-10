@@ -71,3 +71,14 @@ See the coach walkthrough in chat or `docs/agent_handoffs/` for the full test ch
   (Get-Item models\ball_detector.pt).Length
   ```
   The last command should print about **172669123**, not 137.
+
+## Linux notes (2026-09-09)
+
+- `scripts/launch_liberty.py` now accepts the interpreter it is started with, so
+  `uv run --python 3.13 scripts/launch_liberty.py` (or any 3.12/3.13 not on PATH as
+  `python3.12`/`python3.13`) works.
+- The launcher binds `0.0.0.0`. On a machine holding real athlete data use the loopback
+  gunicorn runbook in `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` instead.
+- fish shell: `LIBERTY_DEBUG=0 python app.py` is bash syntax; use `env LIBERTY_DEBUG=0 python app.py`.
+- The models troubleshooting step above also applies on Linux:
+  `git lfs pull --include="models/*.pt"` then check `stat -c %s models/ball_detector.pt` → `172669123`.

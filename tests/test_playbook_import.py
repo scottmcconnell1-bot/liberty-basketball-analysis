@@ -1,9 +1,7 @@
 """Playbook import tests."""
 
-import os
 
 import fitz
-import pytest
 
 
 def _write_scout_style_pdf(path):

@@ -25,6 +25,7 @@ Routes:
   GET  /assistant                      - Guided workflow UI
 """
 
+import json
 import os
 from datetime import datetime
 from flask import (
@@ -34,15 +35,14 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from helpers import (
-    AI_DEFAULTS, ai_runtime_available, append_query_params, build_analysis_settings_snapshot,
-    build_resource_status, build_rerun_game_id, build_run_summary,
-    build_settings_catalog, default_run_label, display_detector_model,
-    ensure_db, ensure_primary_run_metadata, extract_local_path, get_db, get_default_team_id,
+    AI_DEFAULTS, ai_runtime_available, build_analysis_settings_snapshot,
+    build_run_summary,
+    display_detector_model,
+    ensure_db, ensure_primary_run_metadata, get_db, get_default_team_id,
     get_runtime_settings, is_superseded_analysis_run, latest_analysis_run_id_subquery,
     load_all_settings,
     queue_analysis_run, require_feature,
-    resolve_analysis_run_for_progress, resolve_detector_model, safe_return_path,
-    start_analysis_subprocess,
+    resolve_analysis_run_for_progress, start_analysis_subprocess,
     ai_packages_install_commands, ai_packages_install_hint,
     supersede_pending_analysis_runs,
     validate_video_for_analysis,
@@ -807,7 +807,7 @@ def upload_video():
 # Supports large file uploads by splitting into chunks that fit
 # within Cloudflare's ~100MB proxy limit per request.
 
-import tempfile, uuid, json as _json
+import tempfile
 
 CHUNK_SIZE = 80 * 1024 * 1024  # 80 MB per chunk (under Cloudflare limit)
 

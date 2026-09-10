@@ -158,7 +158,7 @@ def test_get_player_minutes_per_game(app, populated_db):
 
 
 def test_get_player_minutes_for_player(app, populated_db):
-    from player_minutes import backfill_player_minutes, backfill_all_games, get_player_minutes_for_player
+    from player_minutes import backfill_all_games, get_player_minutes_for_player
 
     backfill_all_games(populated_db)
     rows = get_player_minutes_for_player(populated_db, 1)

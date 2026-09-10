@@ -2,7 +2,6 @@
 
 import io
 
-import pytest
 
 from film_roster import delete_film_roster, list_film_roster_players, save_film_roster
 

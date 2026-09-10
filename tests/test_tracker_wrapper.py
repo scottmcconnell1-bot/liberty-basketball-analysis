@@ -1,6 +1,3 @@
-import importlib
-import sys
-import types
 
 from src.tracker_wrapper import initialize, track_frames, backend_name
 

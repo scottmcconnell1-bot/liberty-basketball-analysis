@@ -17,11 +17,10 @@ Blueprint modules:
   stat_books - Handwritten spiral scorebook extract / confirm
 """
 
+import logging
 import os
 from pathlib import Path
-from flask import Flask, g, jsonify, request, session
-
-from config import Config
+from flask import Flask, g, request, session
 
 
 def _load_dotenv() -> None:
@@ -47,20 +46,33 @@ def _load_dotenv() -> None:
         os.environ[key] = value
 
 
+# .env must be loaded BEFORE config.py is imported: config.Config reads
+# LIBERTY_DATABASE / LIBERTY_UPLOAD_FOLDER / LIBERTY_COACH_PASSWORD from
+# os.environ at import time, so importing it first silently ignored .env.
 _load_dotenv()
+
+from config import Config  # noqa: E402  (intentionally after _load_dotenv)
 
 app = Flask(__name__)
 app.config.from_object(Config)
 # Always reload Jinja templates from disk (production-like debug=off otherwise caches them).
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.jinja_env.auto_reload = True
-# Refresh password from env after .env load (Config may have been imported earlier).
 app.config["COACH_PASSWORD"] = os.environ.get("LIBERTY_COACH_PASSWORD", "")
+_DEV_SECRET_KEY = "liberty-basketball-dev-secret-key-2026"
 app.config["SECRET_KEY"] = (
     os.environ.get("SECRET_KEY")
     or app.config.get("SECRET_KEY")
-    or "liberty-basketball-dev-secret-key-2026"
+    or _DEV_SECRET_KEY
 )
+if app.config["SECRET_KEY"] == _DEV_SECRET_KEY and os.environ.get("LIBERTY_ALLOW_DEV_SECRET") != "1":
+    # Known committed dev key. Sessions signed with it are forgeable by anyone who
+    # has read the repo. Set SECRET_KEY in .env (see .env.example), or set
+    # LIBERTY_ALLOW_DEV_SECRET=1 to acknowledge this on a private dev machine.
+    logging.getLogger(__name__).warning(
+        "SECRET_KEY is unset - using the committed dev fallback. "
+        "Set SECRET_KEY in .env before any network exposure."
+    )
 app.config.setdefault("DATABASE", "film_analysis.db")
 app.config.setdefault("UPLOAD_FOLDER", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024 * 1024  # 4 GB max upload
@@ -76,7 +88,7 @@ from blueprints.player_dev import player_dev
 from blueprints.ai import ai_bp
 from blueprints.playbook import playbook_bp
 from blueprints.messaging import messaging_bp
-from blueprints.users import users_bp, _current_user
+from blueprints.users import users_bp
 from blueprints.scouting import scouting_bp
 from blueprints.bulk_import import bulk_import_bp
 from blueprints.coach import coach_bp, enforce_coach_ops_denylist
@@ -126,8 +138,6 @@ def nav_active(*names):
     Pass blueprint-qualified endpoints (e.g. ``core.film``). A trailing ``.*``
     matches any function in that blueprint (e.g. ``playbook.*``).
     """
-    from flask import request
-
     endpoint = request.endpoint or ""
     for name in names:
         if name.endswith(".*"):
@@ -170,15 +180,11 @@ def require_auth_for_api():
     pass  # No auth enforced yet — will be enabled in a future phase
 
 
-@app.before_request
-def coach_portal_ops_gate():
-    """Soft denylist for coach portal sessions (does not enable global auth)."""
-    return enforce_coach_ops_denylist()
-
-
 # ── Re-exports (for test conftest and external imports) ──────
-import subprocess
-from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
+# tests/conftest.py calls app_module.init_db(); tests import `from app import get_db`;
+# tests/test_api.py monkeypatches app_module.subprocess.Popen.
+import subprocess  # noqa: E402,F401
+from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess  # noqa: E402,F401
 
 # ── CLI Commands ─────────────────────────────────────────────
 import click
@@ -186,7 +192,6 @@ import click
 @app.cli.command("init-db")
 def init_db_command():
     """Initialize the database."""
-    from helpers import init_db
     init_db()
     click.echo("Database initialized.")
 
@@ -195,7 +200,7 @@ if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
         ensure_db()
-    _debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    _debug = os.environ.get("LIBERTY_DEBUG", os.environ.get("FLASK_DEBUG", "0")) == "1"
     # launch_liberty.py / teach loop expect PORT (default 8080); do not hardcode 5000
     _port = int(os.environ.get("PORT", "8080"))
     app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)

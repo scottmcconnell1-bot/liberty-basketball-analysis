@@ -1,6 +1,5 @@
 """Tests for Approach A Coach Portal soft gate."""
 
-import os
 
 import pytest
 

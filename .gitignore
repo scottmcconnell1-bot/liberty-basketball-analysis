@@ -130,3 +130,12 @@ data/hoopsalytics/full_film_panel_history.jsonl
 # Experiments (non-essential, can be regenerated)
 experiments/
 ball_dataset_v2/
+
+# Transfer bundles are build artifacts (scripts/build_transfer_bundle.sh); never commit them.
+transfer-bundles/*.tar.gz
+# Local clip exports
+clips/
+# Tooling caches
+.ruff_cache/
+# Per-game play-match output written by blueprints/ai.py during analysis (runtime data)
+data/play_matches/

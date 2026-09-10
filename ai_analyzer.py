@@ -8,7 +8,6 @@ import sys
 import math
 import numpy as np
 
-from config import AnalysisConfig
 from settings_store import AI_DEFAULTS, load_all_settings
 
 

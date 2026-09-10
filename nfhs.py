@@ -19,7 +19,6 @@ import threading
 from datetime import datetime
 
 import requests
-from bs4 import BeautifulSoup
 
 NFHS_BASE_URL = "https://www.nfhsnetwork.com"
 MEMBER_SERVICE_URL = "https://member.nfhsnetwork.com"

@@ -17,6 +17,7 @@ import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ def send_email_notification(db, user_id, subject, body_html, body_text=None):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp["from_addr"]
-    msg["To"] = to_addr
+    msg["To"] = formataddr((to_name, to_addr))
 
     if body_text:
         msg.attach(MIMEText(body_text, "plain"))
@@ -176,10 +177,6 @@ def notify_message_received(db, message_id, conversation_id, sender_id, body):
     # Get sender info
     sender = db.execute("SELECT display_name FROM users WHERE id = ?", (sender_id,)).fetchone()
     sender_name = sender["display_name"] if sender else "Someone"
-
-    # Get conversation info
-    conv = db.execute("SELECT name, type FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
-    conv_name = conv["name"] if conv and conv["name"] else "a conversation"
 
     # Get all conversation members except sender
     members = db.execute(

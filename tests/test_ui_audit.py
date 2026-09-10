@@ -2,11 +2,11 @@
 Comprehensive UI audit v2: checks every page, form, button, input, and interactive element.
 Uses requests + HTMLParser for server-side rendering checks.
 """
+import os
 import requests
-import sys
 from html.parser import HTMLParser
 
-BASE = "http://localhost:5000"
+BASE = os.environ.get("LIBERTY_BASE_URL", "http://localhost:8080")
 s = requests.Session()
 
 class ElementExtractor(HTMLParser):

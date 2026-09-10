@@ -1,6 +1,5 @@
 """Tests for PDF import and MaxPreps export features."""
 import io
-import pytest
 
 
 def test_schedule_import_pdf_no_file(client):

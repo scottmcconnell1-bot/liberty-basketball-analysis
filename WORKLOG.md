@@ -1391,3 +1391,45 @@ Verification:
 
 Recommended next move:
 - Fresh repo-truth audit for the next smallest remaining identity seam outside the now-completed review/detections/video-run cluster.
+
+Linux local standup + full issue sweep - 2026-09-09
+----------------------------------------------------
+Claude (Fable 5.1) stood the app up fully local on a Linux workstation (Python 3.13 venv via uv,
+CPU torch/opencv/ultralytics, LFS weights hydrated, gunicorn on 127.0.0.1:8080) and swept the
+tree for issues. Full detail, per-file rationale, and Scott gates:
+`docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`. Branch `claude/local-standup`; NOT pushed.
+
+Implemented in code:
+- app.py: load .env BEFORE importing config.py (LIBERTY_DATABASE / LIBERTY_UPLOAD_FOLDER /
+  LIBERTY_COACH_PASSWORD from .env were silently ignored); removed duplicate before_request
+  coach_portal_ops_gate; honor documented LIBERTY_DEBUG; warn on dev SECRET_KEY fallback
+  (LIBERTY_ALLOW_DEV_SECRET now has a meaning).
+- blueprints/ai.py: missing module-level `import json` (NameError when settings_json set).
+- blueprints/playbook.py:949: sqlite3.Row.get() -> every /play/share/<token> returned 500.
+- settings_store.load_all_settings: tolerate missing app_settings table (ai_analyzer runs it
+  out-of-process against db_path).
+- static/sw.js: cached a nonexistent stylesheet -> service worker never installed.
+- helpers.py: migration loop skips missing tables explicitly; ball-confidence UI note now
+  reads AI_DEFAULTS (said 0.15, truth is 0.25); services/notifications.py To: header uses
+  display name; dead locals/imports removed across ~15 modules (re-exports kept with noqa).
+- scripts/build_transfer_bundle.sh: was omitting stat_book/, static/, data/stat_books/, models/
+  (restore ImportError + no CSS/JS + no weights); adds LIBERTY_TRANSFER_OUT_DIR/_SKIP_MODELS.
+- scripts/smoke_test.sh: /games deliberately 302s -> now 20/20.
+- scripts/launch_liberty.py: accept sys.executable (uv/pyenv interpreters not on PATH).
+- scripts/run_v8.py: repo-relative paths + CLI args (was hard-coded to one box).
+- requirements.txt: + gunicorn (systemd unit needs it; was docker-only).
+- tests: 7 stale/time-bomb/env-coupled tests fixed; suite made hermetic (stat-book confirm
+  and transfer bundle no longer write into tracked files; play-match JSON no longer lands in
+  data/play_matches/ via a conftest autouse fixture); 3 accidentally committed tarballs
+  untracked and gitignored.
+
+Verification:
+- `.venv/bin/python -m pytest tests/ -q` -> 625 passed, 28 skipped (as cloned: 606 passed, 7 failed, 11 skipped)
+- `ruff check --select F821,F811,F823,E9` -> All checks passed
+- `bash scripts/smoke_test.sh http://127.0.0.1:8080 standalone` -> 20 passed, 0 failed
+- `ai_analyzer.py` on data/videos/Q1_snippet.mp4 (CPU) -> 1038 s for 300 s of film, 77,810 detections, analysis_runs=completed
+- git status after full test run -> no tracked files modified
+
+Recommended next move:
+- Scott: review docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md §5 (gates), Pages exposure first.
+- Then transfer Scott's DB + film per §7 and run the Windows-path audit before first boot.

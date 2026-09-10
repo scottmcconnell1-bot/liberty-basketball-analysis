@@ -46,3 +46,16 @@ def db(app):
         from app import get_db
         conn = get_db()
         yield conn
+
+
+@pytest.fixture(autouse=True)
+def _isolate_play_match_store(tmp_path, monkeypatch):
+    """Keep per-game play-match JSON out of the real repo tree.
+
+    blueprints.ai._play_match_store_base() resolves to <app root>/data/play_matches, so any
+    test that renders a film page or hits /api/film/<game>/play-matches would otherwise write
+    into the working copy (seen as an untracked data/play_matches/ after a test run).
+    """
+    import blueprints.ai as ai_mod
+
+    monkeypatch.setattr(ai_mod, "_play_match_store_base", lambda: str(tmp_path / "play_matches"))

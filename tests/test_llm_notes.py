@@ -7,7 +7,6 @@ Tests cover:
   - build_practice_ai_notes() LLM vs heuristic fallback
 """
 
-import json
 import subprocess
 import pytest
 

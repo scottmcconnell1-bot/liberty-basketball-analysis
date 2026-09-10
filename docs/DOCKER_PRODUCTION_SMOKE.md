@@ -64,7 +64,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml exec web nvidia-s
 | `/status` | HTTP 200 |
 | `smoke_test.sh` | all HTTP checks pass; 0 failures |
 | `audit_secrets.py` | runs; may report dev SECRET_KEY / missing VAPID (documented in `docs/SECRETS_AUDIT.md`) |
-| Host pytest (optional) | `python3 -m pytest tests/ -q` — 331 passed, 1 skipped (Python 3.12) |
+| Host pytest (optional) | `python3 -m pytest tests/ -q` — 625 passed, 28 skipped (Python 3.13, 2026-09-09; was 331/1 on 2026-07-05) |
 
 ## Scott gate
 
