@@ -2,7 +2,10 @@ import sqlite3
 
 
 AI_DEFAULTS = {
-    "detector_model": "yolov8n.pt",
+    # Measured 2026-09-11 on data/videos/Q1_snippet.mp4 (16 frames): yolo11n found
+    # more people/frame than yolov8n at similar confidence and higher FPS.
+    # Ball detector / ball_confidence unchanged (Scott gate).
+    "detector_model": "yolo11n.pt",
     "custom_detector_model": "",
     "ball_detector_model": "models/ball_detector.pt",
     "custom_ball_detector_model": "",
