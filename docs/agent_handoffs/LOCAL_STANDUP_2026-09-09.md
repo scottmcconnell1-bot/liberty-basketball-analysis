@@ -281,8 +281,10 @@ hash vs the snippet). Three latent path/table bugs in the scorer were fixed; tes
 | Scorebook OCR tier 2 | `requirements.txt` + `tesseract` (system) | `stat_book.ocr.ocr_backend_name()` → `tesseract` here now (was `none`). |
 | Timestamp stamps | `video_trim.py`, `helpers.build_rerun_game_id` | Local time like upload filenames; DB columns remain UTC. |
 
-**Nightly backup timer (not installed — the agent sandbox blocks writing systemd units; run
-these yourself):**
+**Nightly backup timer (not installed — Claude Code's auto-mode permission classifier declined
+the command that writes systemd user units and enables the timer, since that is a persistent
+system-configuration change; run these yourself, or grant a Bash permission rule for
+`systemctl --user *` and `~/.config/systemd/user/`):**
 
 ```
 ~/.config/systemd/user/liberty-backup.service
