@@ -1493,3 +1493,24 @@ Implemented in code:
 Verification:
 - pytest tests/ -q -> 643 passed, 29 skipped; ruff real-error classes clean
 - score_manual_q1_regression --analysis-key wilder_q1_full_local on the precision output -> REGRESSION PASS
+
+End-to-end suite + demo data - 2026-09-11
+------------------------------------------
+Branch claude/e2e-suite. tests/e2e/ drives every feature through the app's routes with real
+files (whole + chunked video upload, real 12 s film clip, scorebook scan, roster CSV, schedule
+and playbook PDFs, team photo); asserts HTTP + DB after each step; sweeps all parameterless
+GETs; prints endpoint coverage. Three modes: test client synthetic (40 s, in `pytest tests/`),
+test client + real detector (LIBERTY_E2E_REAL_ANALYSIS=1, ~2 min), live gunicorn via
+scripts/run_e2e_live.sh (~2.5 min, scratch DB/uploads). scripts/seed_e2e_data.py builds a
+demo DB with the same generators. Docs: docs/E2E_TESTING.md.
+
+Implemented in code:
+- tests/e2e/{data,conftest,scenarios,test_e2e_flow}.py; scripts/run_e2e_live.sh;
+  scripts/seed_e2e_data.py; pytest marker e2e.
+- Bugs found by the suite and fixed: blueprints/users.py notification prefs INSERT (9 cols /
+  8 values); blueprints/core.py admin reset FK order. Regression tests added.
+
+Verification:
+- pytest tests/e2e -q -> 18 passed (synthetic); LIBERTY_E2E_REAL_ANALYSIS=1 -> 18 passed;
+  scripts/run_e2e_live.sh -> 17 passed, 1 skipped; endpoint coverage 219/251 (87%)
+- pytest tests/ -q -> 663 passed, 29 skipped (incl. e2e); ruff real-error classes clean

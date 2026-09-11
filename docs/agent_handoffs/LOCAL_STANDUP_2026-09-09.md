@@ -77,6 +77,8 @@ or `deploy/deploy_production.sh` here.
 | `blueprints/core.py`, `event_generator.py`, `film_analysis.py` | Dead locals (`most_common`, `is_hs`, `curr_duration`, `effective_fps`); an `event_generator` comment claiming noise segments are skipped when they are not. | Removed dead code; comment now states actual behaviour. **No AI behaviour changed.** |
 | `video_trim.py` | Output filename/game_id keyed on a per-second timestamp → concurrent highlight clips collided on one file. | `trim_stamp(job_id)` adds the job-id suffix. |
 | `video_trim.py` | Job registry was an in-process dict → status polls fail on the non-owning gunicorn worker (`--workers 2` in the systemd unit). | State mirrored to `<UPLOAD_FOLDER>/.trim_jobs/<id>.json`; `get_trim_job` falls back to it. |
+| `blueprints/users.py` | `/settings/notifications` INSERT: 9 columns, 8 values → 500 on every save. | Placeholder added; regression test. |
+| `blueprints/core.py` | `/api/admin/reset` deleted `events`/`videos` before `clips`, `event_participants`, `shot_classifications`, `possessions`… → `FOREIGN KEY constraint failed`. | Dependents deleted first; regression test. |
 | `scripts/score_manual_q1_regression.py` | Unrunnable from a clean checkout after being moved to `scripts/` (table assumption, backup path, `sys.path`). | See `docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md` §4. |
 | ~15 modules | 96 unused imports tree-wide (ruff F401). | Removed **except** re-exports other modules depend on, which are kept with explicit `# noqa: F401` notes: `helpers.jsonify` (→ `blueprints/ai.py`), `helpers.save_settings` (→ `blueprints/core.py`), `app.subprocess` + `app.{get_db,init_db,…}` (→ tests), `event_generator.AnalysisConfig` (→ `experiments/`). |
 
@@ -304,6 +306,15 @@ systemctl --user daemon-reload && systemctl --user enable --now liberty-backup.t
 ```
 The same pattern with `scripts/mark_stale_analysis_runs.py --apply` on an hourly timer gives
 the watchdog.
+
+## 6d. End-to-end suite — `claude/e2e-suite` (2026-09-11)
+
+`tests/e2e/` + `docs/E2E_TESTING.md`. Drives all 15 blueprints through the app's routes with
+real files; three run modes (test client synthetic ~40 s · test client + real detector ~2 min ·
+live gunicorn `scripts/run_e2e_live.sh` ~2.5 min). All green on this machine; 219/251
+endpoints. `scripts/seed_e2e_data.py` builds a demo DB with the same data. Found and fixed:
+the notification-preferences INSERT (9 columns / 8 values → every save 500'd) and admin reset
+failing on foreign keys once clips exist.
 
 ## 7. Next steps for whoever picks this up
 

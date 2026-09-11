@@ -113,6 +113,7 @@ If GitHub commenting is unavailable, use the repo fallback: write the report to
 
 | Question | File |
 | --- | --- |
+| End-to-end suite (3 modes) + demo data | `docs/E2E_TESTING.md` |
 | Full agent rules | `AGENT_PROTOCOL.md` |
 | Who approves what | `AUTHORITY.md` |
 | Stage numbering | `docs/STAGE_INDEX.md` |

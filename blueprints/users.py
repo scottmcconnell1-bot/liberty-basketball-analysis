@@ -223,7 +223,7 @@ def settings_notifications():
             """INSERT OR REPLACE INTO user_notification_prefs
                (user_id, notify_email_messages, notify_email_schedule, notify_push_messages,
                 notify_push_schedule, notify_sms_game_reminder, quiet_hours_start, quiet_hours_end, updated_at)
-               VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
+               VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
             (
                 user["id"],
                 1 if request.form.get("notify_email_messages") else 0,

@@ -315,3 +315,16 @@ class TestMessagesDB:
             "SELECT COUNT(*) FROM message_read_receipts WHERE message_id = 1"
         ).fetchone()[0]
         assert count == 1
+
+
+def test_settings_notifications_save_persists_all_columns(client, app):
+    """Regression: the INSERT had 9 columns and 8 values -> every save of the page 500'd."""
+    client.post("/register", data={"email": "n@example.com", "password": "password-1", "password2": "password-1",
+                                   "display_name": "N", "role": "coach"}, follow_redirects=False)
+    client.post("/login", data={"email": "n@example.com", "password": "password-1"}, follow_redirects=False)
+    r = client.post("/settings/notifications", data={"notify_email_messages": "1", "quiet_hours_start": "22:00", "quiet_hours_end": "07:00"}, follow_redirects=False)
+    assert r.status_code in (200, 302, 303), r.data[:200]
+    with app.app_context():
+        from helpers import get_db
+        row = get_db().execute("SELECT notify_email_messages, quiet_hours_start, quiet_hours_end FROM user_notification_prefs").fetchone()
+    assert tuple(row) == (1, "22:00", "07:00")

@@ -2886,3 +2886,25 @@ def test_delete_video_does_not_delete_verified_events(client):
             (video_data["game_id"],)
         ).fetchone()[0]
         assert verified_count == 1, f"Expected 1 verified event, got {verified_count}"
+
+
+def test_admin_reset_succeeds_with_dependent_rows(client, db):
+    """Regression: reset deleted events/videos while clips etc. still referenced them
+    (FOREIGN KEY constraint failed)."""
+    import json as _json
+
+    db.execute("INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id) VALUES ('v.mp4','v.mp4','/nonexistent/v.mp4',1,'Opp','g1')")
+    db.execute("INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES ('g1','/nonexistent/v.mp4','completed')")
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'reset-game')")
+    game_pk = db.execute("SELECT id FROM games WHERE source_key='reset-game'").fetchone()[0]
+    db.commit()
+    r = client.post("/api/save_event", data=_json.dumps({"event_type": "shot", "timestamp_ms": 1000, "game_id": game_pk, "player": "1", "shot_result": "make", "source_type": "ai"}), content_type="application/json")
+    assert r.status_code == 200, r.data
+    event_id = r.get_json().get("id") or r.get_json().get("event_id") or db.execute("SELECT id FROM events ORDER BY id DESC LIMIT 1").fetchone()[0]
+    r = client.post("/api/clips", data=_json.dumps({"clip_label": "c", "clip_start_ms": 0, "clip_end_ms": 1000, "game_id": "g1", "event_id": event_id}), content_type="application/json")
+    assert r.status_code in (200, 201), r.data
+    r = client.post("/api/admin/reset")
+    assert r.status_code == 200, r.data[:200]
+    assert db.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM clips").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM videos").fetchone()[0] == 0

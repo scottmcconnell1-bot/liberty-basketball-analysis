@@ -2548,14 +2548,20 @@ def admin_reset():
             except OSError:
                 pass
 
-    # Clear all analysis/video data (preserve seasons, games, players)
-    db.executescript("""
-        DELETE FROM events;
-        DELETE FROM detections;
-        DELETE FROM analysis_runs;
-        DELETE FROM stats;
-        DELETE FROM videos;
-    """)
+    # Clear all analysis/video data (preserve seasons, games, players).
+    # Children first: with PRAGMA foreign_keys=ON, deleting events/videos while clips,
+    # participants, corrections, possessions or shot classifications still point at them
+    # fails with "FOREIGN KEY constraint failed" (found by tests/e2e).
+    existing = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    order = [
+        "practice_playlist_clips", "clip_tags", "player_development_clips", "clips",
+        "event_participants", "human_corrections", "shot_classifications", "review_items",
+        "play_recognitions", "player_effect", "player_minutes",
+        "events", "possessions", "detections", "video_assets", "analysis_runs", "stats", "videos",
+    ]
+    for table in order:
+        if table in existing:
+            db.execute(f"DELETE FROM {table}")
     db.commit()
 
     return jsonify({"success": True, "message": "All video data cleared."})
