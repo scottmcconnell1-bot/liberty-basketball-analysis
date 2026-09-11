@@ -139,12 +139,13 @@ docs/            Project docs
 
 ## Local environment (Linux workstation, updated 2026-09-09)
 
-**Read `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` first** — it is the full handoff for
-this machine (setup, every fix made, verification log, Scott gates, next steps).
+**Resuming? Read `docs/agent_handoffs/RESUME_2026-09-11.md` first**, then
+`docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` (the full handoff: setup, every fix made,
+verification log, Scott gates, next steps).
 
 - Shell is **fish**: `VAR=x cmd` fails; use `env VAR=x cmd`. Venv activate: `source .venv/bin/activate.fish`.
 - `.venv/` is Python **3.13.14** (uv-managed; system 3.14 is unsupported) with the CPU CV stack.
-  Always run tests as `.venv/bin/python -m pytest tests/ -q` → **631 passed, 29 skipped**.
+  Always run tests as `.venv/bin/python -m pytest tests/ -q` → **663 passed, 29 skipped** (includes `tests/e2e`).
 - Run the app with `/home/myaccount/LibertyData/run-liberty-local.sh` (gunicorn, **127.0.0.1:8080**).
   Do not use `python app.py` / `scripts/launch_liberty.py` here — they bind `0.0.0.0` and auth is a no-op.
 - `.env` holds a real `SECRET_KEY`; `LIBERTY_UPLOAD_FOLDER=/home/myaccount/LibertyData/uploads`
@@ -152,4 +153,5 @@ this machine (setup, every fix made, verification log, Scott gates, next steps).
 - `models/*.pt` are hydrated (byte-exact). `data/videos/Q1_snippet.mp4` is hydrated for CPU smoke runs
   (~3.5× realtime: 5 min of film ≈ 17 min).
 - `docs/agent_handoffs/ACTIVE.md` describes Scott's **Windows** box; its paths do not apply here.
-- No NVIDIA GPU. No Ollama installed (LLM notes use the heuristic fallback). No tesseract.
+- No NVIDIA GPU. No Ollama installed (LLM notes use the heuristic fallback). `tesseract` + `pytesseract`
+  present (scorebook OCR tier 2). The workstation this described was wiped on 2026-09-11 — see RESUME.
