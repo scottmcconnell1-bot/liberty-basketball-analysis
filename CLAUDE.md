@@ -113,6 +113,8 @@ If GitHub commenting is unavailable, use the repo fallback: write the report to
 
 | Question | File |
 | --- | --- |
+| **Everything left to do, prioritized** | `docs/agent_handoffs/TODO.md` |
+| **Full context of the 2026-09 agent session** | `docs/agent_handoffs/SESSION_CONTEXT_2026-09-11.md` |
 | End-to-end suite (3 modes) + demo data | `docs/E2E_TESTING.md` |
 | Full agent rules | `AGENT_PROTOCOL.md` |
 | Who approves what | `AUTHORITY.md` |
