@@ -2,7 +2,6 @@
 
 import json
 
-import pytest
 
 from assistant_query import answer_question
 

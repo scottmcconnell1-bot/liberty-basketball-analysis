@@ -16,7 +16,7 @@ Routes:
   DELETE /api/plan-items/<int:item_id>              — api_plan_items_delete
 """
 
-from flask import Blueprint, abort, g, redirect, render_template, request, url_for, jsonify
+from flask import Blueprint, abort, redirect, render_template, request, url_for, jsonify
 
 from helpers import require_feature, get_db, render_practices_page, fetch_practices_with_context
 from helpers import build_practice_ai_notes, build_practice_combined_summary, build_practice_range_summary

@@ -11,7 +11,6 @@ import pytest
 def sample_image():
     """Create a minimal valid JPEG bytes for testing uploads."""
     # Minimal JPEG: SOI + minimal data + EOI
-    import struct
     # Create a simple 1x1 pixel JPEG
     # This is a valid minimal JPEG file
     jpeg_bytes = (

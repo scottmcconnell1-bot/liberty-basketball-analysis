@@ -24,13 +24,9 @@ Page Routes:
 """
 
 import json
-import os
-import re
-import subprocess
-import tempfile
 from datetime import date
 
-from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort, current_app
+from flask import Blueprint, render_template, request, jsonify, abort, current_app
 
 from helpers import get_db, require_feature, get_default_team_id
 from module_entitlements import enforce_module_access
@@ -38,7 +34,6 @@ from module_keys import SCOUTING
 from nfhs import (
     _decrypt_password,
     _encrypt_password,
-    extract_nfhs_game_id,
     lookup_game,
     login_nfhs,
     parse_nfhs_input,

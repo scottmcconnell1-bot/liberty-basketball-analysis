@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from stat_book.checksum import apply_validation, run_validation
-from stat_book.demo import LIBERTY_HSB_PLAYERS, create_sample_draft
+from stat_book.demo import LIBERTY_HSB_PLAYERS
 from stat_book.paths import TEMPLATES_ROOT
 from stat_book.schema import SCHEMA_VERSION, build_confirmed_box, stamp_confirmed, validate_confirmed_box
 
@@ -122,6 +122,11 @@ def test_upload_jrhigh_comma_game_id(client, tmp_path, monkeypatch):
 
 def test_routes_sample_and_confirm(client, tmp_path, monkeypatch):
     monkeypatch.setitem(client.application.config, "UPLOAD_FOLDER", str(tmp_path))
+    # Keep the confirmed JSON out of the tracked data/stat_books/confirmed/ tree.
+    import stat_book.paths as sb_paths
+    confirmed_dir = tmp_path / "confirmed"
+    confirmed_dir.mkdir()
+    monkeypatch.setattr(sb_paths, "CONFIRMED_ROOT", confirmed_dir)
     resp = client.get("/stat-books")
     assert resp.status_code == 200
     assert b"Stat Books" in resp.data

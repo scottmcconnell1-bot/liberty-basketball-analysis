@@ -52,7 +52,9 @@ def _python_ok(version: tuple[int, int, int]) -> bool:
 
 
 def _find_system_python() -> list[str]:
-    candidates = []
+    # Prefer the interpreter running this script: on Linux a uv/pyenv-managed
+    # 3.12/3.13 is often NOT on PATH under the name python3.12/python3.13.
+    candidates: list[list[str]] = [[sys.executable]]
     if os.name == "nt":
         candidates.extend([
             ["py", "-3.12"],
@@ -205,7 +207,7 @@ def wait_for_server(base_url: str, timeout: int) -> bool:
 
 def start_server(venv_python: Path, port: int) -> subprocess.Popen:
     env = os.environ.copy()
-    env.setdefault("LIBERTY_DEBUG", "1")
+    env.setdefault("LIBERTY_DEBUG", "0")
     env["PORT"] = str(port)
     env.setdefault("LIBERTY_DATABASE", str(ROOT / "film_analysis.db"))
     env.setdefault("LIBERTY_UPLOAD_FOLDER", str(ROOT / "uploads"))

@@ -20,7 +20,7 @@ import json
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, jsonify, current_app, send_file
+from flask import Blueprint, render_template, request, jsonify, current_app
 
 from helpers import get_db, require_feature
 

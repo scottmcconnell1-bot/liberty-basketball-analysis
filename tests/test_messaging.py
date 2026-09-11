@@ -1,7 +1,6 @@
 """Tests for the Messaging feature."""
 
 import json
-import pytest
 
 
 class TestMessagesPage:

@@ -1,6 +1,5 @@
 """Tests for FastDraw / sticky playbook possession matching MVP."""
 
-import json
 
 from playbook_choreography import save_choreography
 from playbook_play_match import (

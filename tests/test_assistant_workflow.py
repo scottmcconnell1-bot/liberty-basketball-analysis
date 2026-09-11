@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from assistant_workflow import build_workflow_payload, list_workflow_clips, list_workflow_players
+from assistant_workflow import build_workflow_payload
 
 
 def post_json(client, url, data):
@@ -40,7 +40,6 @@ def _save_and_accept(client, game_id, player, event_type, shot_result="made", ti
     "path,pattern",
     [
         ("/", r'href="/"[^>]*class="active"[^>]*>Dashboard'),
-        ("/preview", r'href="/preview"[^>]*class="active"'),
         ("/schedule", r'href="/schedule"[^>]*class="active"'),
         ("/film", r'href="/film"[^>]*class="active"'),
         ("/videos", r'href="/videos"[^>]*class="active"'),

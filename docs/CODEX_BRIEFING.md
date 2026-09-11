@@ -73,6 +73,9 @@ The codebase is significantly more mature than what the old main branch showed:
 
 ## 5. Known Issues and Technical Debt
 
+> **Status check 2026-09-09** (see `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`):
+> 1 open (product); 2 resolved; 3 open — Scott gate; 4 partly resolved (VAPID moved to env; dev `SECRET_KEY` fallback remains, now logs a warning); 5 open (docs); 6 resolved (`requirements.txt` vs `requirements.docker.txt`); 7 resolved via Stages 4–5 (`relational_game_id`); 8 open — Scott gate.
+
 ### Critical
 1. **Ball detection quality is poor** — `experiments/detector_audit_top20/AUDIT_RESULTS.md` shows v14 detector scored 0/20 (0% precision). The detector needs a full rebuild with proper training data, validation methodology, and benchmark evaluation.
 2. **No `.gitignore`** on the jason branch — `film_analysis.db`, `uploads/`, `__pycache__/`, `*.pyc`, `.venv/` could be committed.
