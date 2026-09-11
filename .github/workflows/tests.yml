@@ -1,0 +1,32 @@
+# Runs on pull requests (and on demand). Web stack only: the CV packages (torch/opencv/
+# ultralytics) are not installed here, so those tests skip exactly as they do on a
+# Windows dev laptop. Model weights are Git LFS pointers in CI and are not needed.
+name: tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: python -m pip install --upgrade pip && pip install -r requirements.txt ruff
+      - name: Lint (undefined names, redefinitions, syntax only)
+        run: ruff check --select F821,F811,F823,E9 --exclude '.venv,node_modules,_tmp_*,experiments,benchmark' .
+      - name: Tests
+        run: python -m pytest tests/ -q
+      - name: Secrets audit
+        run: python scripts/audit_secrets.py

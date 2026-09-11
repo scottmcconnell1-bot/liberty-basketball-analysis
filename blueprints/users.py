@@ -17,7 +17,7 @@ Routes included:
 import hashlib, secrets, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
-from helpers import get_db, require_feature
+from helpers import get_db
 
 users_bp = Blueprint("users", __name__)
 
@@ -223,7 +223,7 @@ def settings_notifications():
             """INSERT OR REPLACE INTO user_notification_prefs
                (user_id, notify_email_messages, notify_email_schedule, notify_push_messages,
                 notify_push_schedule, notify_sms_game_reminder, quiet_hours_start, quiet_hours_end, updated_at)
-               VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
+               VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
             (
                 user["id"],
                 1 if request.form.get("notify_email_messages") else 0,
@@ -328,7 +328,6 @@ def api_push_unsubscribe():
 @login_required
 def api_push_vapid_public_key():
     """Return the VAPID public key for push subscription."""
-    from flask import current_app
     key = current_app.config.get("VAPID_PUBLIC_KEY", "")
     # Convert PEM to raw base64url if needed
     if key.startswith("-----"):

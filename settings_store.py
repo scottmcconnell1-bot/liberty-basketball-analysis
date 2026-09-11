@@ -92,7 +92,12 @@ def load_all_settings(feature_defaults, analysis_defaults, ai_defaults=None, db=
         close_conn = True
 
     try:
-        rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+        try:
+            rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc):
+                raise
+            rows = []  # schema not initialised yet: fall back to defaults
         flat = {row["key"]: _parse_value(row["key"], row["value"]) for row in rows}
     finally:
         if close_conn:

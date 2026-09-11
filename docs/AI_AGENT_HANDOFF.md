@@ -2,6 +2,10 @@
 
 Use this file when another AI agent needs to continue work on the project without starting from scratch.
 
+> **2026-09-09:** for the Linux local standup, the issue sweep, and the current test baseline, read
+> `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md` first. Note `LIBERTY_DEBUG` is now honoured by
+> `app.py` (it previously read only `FLASK_DEBUG`), and `.env` is loaded before `config.py` is imported.
+
 ## Read these first
 
 1. `README.md`

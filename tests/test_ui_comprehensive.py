@@ -3,10 +3,8 @@ Comprehensive UI test suite for Liberty Basketball Analysis.
 Tests all pages, forms, buttons, fields, and API endpoints.
 """
 
-import re
 import sys
 import os
-import tempfile
 import requests
 import time
 
@@ -270,7 +268,7 @@ def test_games_page():
     if r.status_code == 302 and "/schedule" in (r.headers.get("Location") or ""):
         pass_("Games page redirects to Schedule")
     else:
-        fail_(f"Games page expected redirect to schedule, got {r.status_code}")
+        fail(f"Games page expected redirect to schedule, got {r.status_code}")
 
     api_get("/api/games", name="List games")
 

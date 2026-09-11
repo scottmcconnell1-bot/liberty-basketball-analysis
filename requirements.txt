@@ -12,3 +12,11 @@
 # but recommended when pre-built wheels exist for your Python version.
 
 -r requirements-dev.txt
+
+# Production WSGI server used by deploy/liberty-basketball-analysis.service and the
+# loopback launcher. Pure Python; keeps the standalone install path self-sufficient.
+gunicorn>=21.0,<24
+
+# Scorebook OCR tier 2 (stat_book/ocr.py tries EasyOCR, then this, then manual entry).
+# Needs the `tesseract` system binary + English data; pure-Python wrapper otherwise.
+pytesseract>=0.3,<1

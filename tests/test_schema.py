@@ -1,7 +1,6 @@
 """
 test_schema.py – Verify all expected tables and key columns exist.
 """
-import pytest
 
 
 EXPECTED_TABLES = [

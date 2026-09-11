@@ -81,3 +81,52 @@ def test_trim_video_file_writes_output(tmp_path):
     trim_video_file(str(input_path), str(output_path), 500, 2000)
     assert output_path.exists()
     assert os.path.getsize(output_path) > 0
+
+
+def test_trim_stamp_is_unique_per_job_within_one_second():
+    from video_trim import trim_stamp
+
+    a, b = trim_stamp("aaaaaaaa11111111"), trim_stamp("bbbbbbbb22222222")
+    assert a != b
+    assert a.endswith("_aaaaaaaa") and b.endswith("_bbbbbbbb")
+
+
+def test_get_trim_job_finds_job_started_by_another_worker(app, tmp_path, monkeypatch):
+    """Simulate gunicorn worker B polling a job that worker A started (A's dict is not shared)."""
+    import json
+    import time
+
+    import video_trim
+
+    monkeypatch.setitem(app.config, "UPLOAD_FOLDER", str(tmp_path))
+    monkeypatch.setattr(video_trim, "_jobs", {})  # this process knows nothing about the job
+    jobs_dir = tmp_path / ".trim_jobs"
+    jobs_dir.mkdir()
+    job_id = "0123456789abcdef0123456789abcdef"
+    (jobs_dir / f"{job_id}.json").write_text(json.dumps({
+        "job_id": job_id, "status": "trimming", "message": "Trimming video with ffmpeg…",
+        "error": None, "source_video_id": 7, "created_at": time.time(), "updated_at": time.time(),
+    }))
+    with app.app_context():
+        job = video_trim.get_trim_job(job_id)
+    assert job and job["status"] == "trimming" and job["source_video_id"] == 7
+
+    # Expired files are ignored; malformed ids never touch the filesystem
+    (jobs_dir / f"{job_id}.json").write_text(json.dumps({"job_id": job_id, "status": "complete", "updated_at": 0}))
+    with app.app_context():
+        assert video_trim.get_trim_job(job_id) is None
+        assert video_trim.get_trim_job("../../etc/passwd") is None
+
+
+def test_start_trim_job_persists_state_for_other_workers(app, tmp_path, monkeypatch):
+    import video_trim
+
+    monkeypatch.setitem(app.config, "UPLOAD_FOLDER", str(tmp_path))
+    monkeypatch.setattr(video_trim, "_jobs", {})
+    monkeypatch.setattr(video_trim.threading, "Thread", lambda *a, **k: type("T", (), {"start": lambda self: None})())
+    video_row = {"id": 3, "stored_filename": "g.mp4", "file_path": str(tmp_path / "g.mp4"),
+                 "original_filename": "g.mp4", "game_id": "g", "opponent": "x"}
+    job_id = video_trim.start_trim_job(app=app, video_row=video_row, start_ms=0, end_ms=1000)
+    persisted = tmp_path / ".trim_jobs" / f"{job_id}.json"
+    assert persisted.is_file()
+    assert "_jobs_dir" not in persisted.read_text()  # private keys never written

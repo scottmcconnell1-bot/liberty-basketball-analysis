@@ -942,6 +942,7 @@ def playbook_share(token):
             404,
             {"Content-Type": "text/html"},
         )
+    play = dict(play)  # sqlite3.Row has no .get(); match the other play helpers
     steps = db.execute(
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
     ).fetchall()
@@ -1531,7 +1532,7 @@ def playbook_choreography_delete(play_id):
 @require_feature("ENABLE_PRACTICES")
 def playbook_categories_api():
     db = get_db()
-    from playbook_taxonomy import build_category_tree, list_categories_flat
+    from playbook_taxonomy import list_categories_flat
 
     tree = _load_playbook_taxonomy(db)
     return jsonify({"tree": tree, "flat": list_categories_flat(db)})
@@ -1660,7 +1661,7 @@ def playbook_import_parse():
     import os
     import uuid
 
-    from playbook_pdf import pdf_page_count, pymupdf_available, render_pdf_pages
+    from playbook_pdf import pdf_page_count, pymupdf_available
 
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400

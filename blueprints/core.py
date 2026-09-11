@@ -691,7 +691,6 @@ def schedule_import_pdf():
         return {"error": "File must be a PDF"}, 400
     pdf_team = (request.form.get("team") or "boys_hs").strip()
     try:
-        import io
         try:
             import pdfplumber
             text = ""
@@ -1399,11 +1398,6 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
                 months_from_dates.append(month)
 
         if years_from_dates:
-            # Count occurrences of each year
-            from collections import Counter
-            year_counts = Counter(years_from_dates)
-            most_common = year_counts.most_common()
-            # The most common year is likely year1 (start of season)
             # If we see two distinct years, the later one is year2
             distinct_years = sorted(set(years_from_dates))
             if len(distinct_years) >= 2:
@@ -1480,7 +1474,6 @@ def _detect_season_from_text(text, pdf_team="boys_hs"):
     # Determine team type for date range (needed for sanity clamp below)
     is_jr_boys = pdf_team == "jr_boys"
     is_jr_girls = pdf_team == "jr_girls"
-    is_hs = pdf_team in ("boys_hs", "girls_hs")
 
     # Sanity clamp: if detected years are more than 1 year in the future,
     # the PDF likely had a typo or misread year — clamp to current year range.
@@ -2555,14 +2548,20 @@ def admin_reset():
             except OSError:
                 pass
 
-    # Clear all analysis/video data (preserve seasons, games, players)
-    db.executescript("""
-        DELETE FROM events;
-        DELETE FROM detections;
-        DELETE FROM analysis_runs;
-        DELETE FROM stats;
-        DELETE FROM videos;
-    """)
+    # Clear all analysis/video data (preserve seasons, games, players).
+    # Children first: with PRAGMA foreign_keys=ON, deleting events/videos while clips,
+    # participants, corrections, possessions or shot classifications still point at them
+    # fails with "FOREIGN KEY constraint failed" (found by tests/e2e).
+    existing = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    order = [
+        "practice_playlist_clips", "clip_tags", "player_development_clips", "clips",
+        "event_participants", "human_corrections", "shot_classifications", "review_items",
+        "play_recognitions", "player_effect", "player_minutes",
+        "events", "possessions", "detections", "video_assets", "analysis_runs", "stats", "videos",
+    ]
+    for table in order:
+        if table in existing:
+            db.execute(f"DELETE FROM {table}")
     db.commit()
 
     return jsonify({"success": True, "message": "All video data cleared."})

@@ -10,7 +10,6 @@ constraint, so re-running the backfill for the same game produces the
 same output without duplicates.
 """
 
-import sqlite3
 
 
 def _resolve_relational_game_id(db, game_id):

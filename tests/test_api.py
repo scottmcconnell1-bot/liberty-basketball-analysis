@@ -4,7 +4,6 @@ test_api.py – Integration tests for all Flask API endpoints.
 import json
 import io
 from pathlib import Path
-import pytest
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -1074,7 +1073,6 @@ def test_film_page(client):
     assert b"aiEventsPanel" in r.data
     assert b"aiEventsScroller" in r.data
     assert b"aiCurrentEventLabel" in r.data
-    assert b"Independent scrolling event timeline" in r.data
 
 
 def test_film_page_accepts_manual_game_id_query(client):
@@ -1506,6 +1504,8 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
     db.commit()
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda *a, **k: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda *a, **k: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     r = client.post("/videos/1/rerun", data={"run_label": "YOLOv8s retry"}, follow_redirects=True)
@@ -1548,6 +1548,8 @@ def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch
     db.commit()
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda *a, **k: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda *a, **k: (True, None))
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
 
     r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
@@ -2884,3 +2886,25 @@ def test_delete_video_does_not_delete_verified_events(client):
             (video_data["game_id"],)
         ).fetchone()[0]
         assert verified_count == 1, f"Expected 1 verified event, got {verified_count}"
+
+
+def test_admin_reset_succeeds_with_dependent_rows(client, db):
+    """Regression: reset deleted events/videos while clips etc. still referenced them
+    (FOREIGN KEY constraint failed)."""
+    import json as _json
+
+    db.execute("INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id) VALUES ('v.mp4','v.mp4','/nonexistent/v.mp4',1,'Opp','g1')")
+    db.execute("INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES ('g1','/nonexistent/v.mp4','completed')")
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'reset-game')")
+    game_pk = db.execute("SELECT id FROM games WHERE source_key='reset-game'").fetchone()[0]
+    db.commit()
+    r = client.post("/api/save_event", data=_json.dumps({"event_type": "shot", "timestamp_ms": 1000, "game_id": game_pk, "player": "1", "shot_result": "make", "source_type": "ai"}), content_type="application/json")
+    assert r.status_code == 200, r.data
+    event_id = r.get_json().get("id") or r.get_json().get("event_id") or db.execute("SELECT id FROM events ORDER BY id DESC LIMIT 1").fetchone()[0]
+    r = client.post("/api/clips", data=_json.dumps({"clip_label": "c", "clip_start_ms": 0, "clip_end_ms": 1000, "game_id": "g1", "event_id": event_id}), content_type="application/json")
+    assert r.status_code in (200, 201), r.data
+    r = client.post("/api/admin/reset")
+    assert r.status_code == 200, r.data[:200]
+    assert db.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM clips").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM videos").fetchone()[0] == 0

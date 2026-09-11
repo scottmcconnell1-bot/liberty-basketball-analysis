@@ -2,11 +2,12 @@
 // Handles push notifications and offline caching
 
 const CACHE_NAME = 'liberty-basketball-v1';
+// Only list assets that exist: cache.addAll() rejects the whole install on any 404.
+// base.html inlines its CSS, so there is no global stylesheet to pre-cache.
 const OFFLINE_URLS = [
   '/',
   '/login',
   '/register',
-  '/static/css/style.css',
 ];
 
 // Install: cache core assets

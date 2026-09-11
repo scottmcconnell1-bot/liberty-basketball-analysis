@@ -201,3 +201,18 @@ If those fail, the issue is the host/container runtime, not the application.
 ### Resource panel shows unavailable power/GPU values
 
 That is expected when the host does not expose the corresponding telemetry sources (`nvidia-smi` or Linux powercap/RAPL).
+
+## 8. Notes added 2026-09-09
+
+- `requirements.txt` now includes `gunicorn`, so the standalone install in §2 can run the
+  systemd unit in §2 without also installing `requirements.docker.txt`.
+- The transfer bundle (§5) now includes `stat_book/`, `static/`, `data/stat_books/` and the
+  real `models/*.pt` weights (LFS pointer stubs are skipped with a message). Set
+  `LIBERTY_TRANSFER_OUT_DIR` to build outside the repo and `LIBERTY_TRANSFER_SKIP_MODELS=1`
+  to omit weights. Bundles are gitignored.
+- `film_analysis.db` in a bundle is a raw copy; with the app running (WAL mode) take a
+  consistent snapshot with `python scripts/backup_db.py` and ship that instead.
+- `app.py` honours `LIBERTY_DEBUG` (documented here all along; previously only `FLASK_DEBUG`
+  was read). Keep it `0` on servers. `.env` is loaded before `config.py` is imported, so
+  `LIBERTY_DATABASE` / `LIBERTY_UPLOAD_FOLDER` / `LIBERTY_COACH_PASSWORD` in `.env` now work.
+- Full Linux runbook: `docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`.

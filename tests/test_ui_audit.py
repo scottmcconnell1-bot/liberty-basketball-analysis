@@ -2,11 +2,20 @@
 Comprehensive UI audit v2: checks every page, form, button, input, and interactive element.
 Uses requests + HTMLParser for server-side rendering checks.
 """
+import os
+
+# This is a standalone audit SCRIPT (no test functions) that issues live HTTP requests at
+# import time. pytest imports every tests/*.py during collection, which would run the audit
+# against whatever is listening. Only run it when invoked directly or explicitly opted in.
+if __name__ != "__main__" and os.environ.get("LIBERTY_RUN_LIVE_UI_TESTS") != "1":
+    import pytest
+    pytest.skip("standalone live-UI audit script; run `python tests/test_ui_audit.py` "
+                "or set LIBERTY_RUN_LIVE_UI_TESTS=1", allow_module_level=True)
+
 import requests
-import sys
 from html.parser import HTMLParser
 
-BASE = "http://localhost:5000"
+BASE = os.environ.get("LIBERTY_BASE_URL", "http://localhost:8080")
 s = requests.Session()
 
 class ElementExtractor(HTMLParser):

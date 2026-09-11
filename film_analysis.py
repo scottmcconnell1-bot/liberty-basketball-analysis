@@ -14,13 +14,11 @@ instead of tracker_id for player identity. Players are identified by spatial
 grid cells (120x120px), producing ~10-15 stable "player slots".
 """
 
-import bisect
 import json
 import sqlite3
 import math
 from collections import defaultdict
 
-import numpy as np
 
 
 # ── Court Position Constants ─────────────────────────────────
@@ -736,7 +734,6 @@ def calculate_player_effect(conn, game_id, fps=30.0, detect_stride=1, min_posses
     """
     print(f"[Effect] Calculating POSITION-BASED effect for game {game_id}")
 
-    effective_fps = fps / detect_stride
     relational_game_id = _resolve_relational_game_id(conn, game_id)
 
     # ── Get all cluster IDs from player_minutes ──

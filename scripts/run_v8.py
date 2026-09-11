@@ -3,12 +3,14 @@
 Shot detection v8: Ultra-low conf ball detection + strict color + basket proximity.
 Works in headless environments by avoiding any GUI/TUI calls.
 """
+import argparse
 import cv2
 import numpy as np
 import pickle
 import time
 import pandas as pd
 import os
+from pathlib import Path
 from scipy.signal import find_peaks
 from ultralytics import YOLO
 
@@ -16,10 +18,19 @@ from ultralytics import YOLO
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 os.environ['OMP_NUM_THREADS'] = '1'
 
-VIDEO = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/uploads/Liberty_Vs_Riverstone_Q1.webm'
-OUT = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/pipeline_output'
-MODEL_PATH = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/ball_finetune/runs/finetune2/weights/best.pt'
-COURT_MODEL_PATH = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+# Paths are repo-relative by default (they used to be hard-coded to one Linux box).
+_ROOT = Path(__file__).resolve().parents[1]
+_ap = argparse.ArgumentParser(description=__doc__)
+_ap.add_argument('--video', default=str(_ROOT / 'uploads' / 'Liberty_Vs_Riverstone_Q1.webm'))
+_ap.add_argument('--out', default=str(_ROOT / 'pipeline_output'))
+_ap.add_argument('--ball-model', default=str(_ROOT / 'ball_finetune' / 'runs' / 'finetune2' / 'weights' / 'best.pt'))
+_ap.add_argument('--court-model', default=str(_ROOT / 'models' / 'court_keypoint_detector.pt'))
+_args = _ap.parse_args()
+VIDEO = _args.video
+OUT = _args.out
+MODEL_PATH = _args.ball_model
+COURT_MODEL_PATH = _args.court_model
+os.makedirs(OUT, exist_ok=True)
 
 print('Loading models...', flush=True)
 ball_m = YOLO(MODEL_PATH, verbose=False)

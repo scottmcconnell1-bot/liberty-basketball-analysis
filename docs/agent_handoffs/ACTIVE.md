@@ -71,3 +71,16 @@ GPU/CV finishing alone is **not** done. **Auto-accept is locked off** (no confid
 - **Inferred:** Flask must use Python312 (system), not a bare `python` without deps
 - **Unknown:** Whether sklearn already installed after partial fix attempt
 
+
+---
+
+## Linux standup note (2026-09-09) — separate machine, separate branch
+
+A second environment now exists: a Linux workstation on branch `claude/local-standup`
+(not pushed). Everything above still describes Scott's Windows box. For the Linux box read
+`docs/agent_handoffs/LOCAL_STANDUP_2026-09-09.md`. Two items from this file are affected:
+
+- **Unknown → Proven (on Linux):** `scikit-learn` is in `requirements-dev.txt` and installed
+  there; the Adrian "install scikit-learn" error does not reproduce on that machine.
+- The `/play/share/<token>` route 500'd on every token (`sqlite3.Row.get`) — fixed on that
+  branch; Scott's box still has the bug until merged.

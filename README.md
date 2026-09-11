@@ -74,7 +74,7 @@ python app.py
 | `LIBERTY_DATABASE` | `film_analysis.db` | SQLite DB path |
 | `LIBERTY_UPLOAD_FOLDER` | `uploads` | Upload/media directory |
 | `PORT` | `8080` | HTTP port |
-| `LIBERTY_DEBUG` | `1` | Enables Flask debug mode when running `python app.py` |
+| `LIBERTY_DEBUG` | `0` | Set to `1` for Flask debug mode when running `python app.py` (dev only) |
 
 ### Production-style standalone launch
 
@@ -119,6 +119,7 @@ These are included in the transfer bundle script so another server can receive b
 ## Documentation map
 
 - `docs/DEV_ENVIRONMENT.md` — Python version and requirements file map
+- `docs/E2E_TESTING.md` — end-to-end suite (test client / real detector / live server) and demo data seeder
 - `docs/COMPLETION_PATH.md` — full path to finish the program (orchestrator drives this)
 - `docs/ORCHESTRATION.md` — Cursor-only orchestration workflow and account setup
 - `docs/DEPLOYMENT.md` — standalone install, Docker, GPU containers, server transfer, restore flow

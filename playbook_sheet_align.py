@@ -100,7 +100,6 @@ def _snap_court_top_past_header(gray, court: tuple[int, int, int, int]) -> tuple
     Press-break pages often return a bbox that starts on the title. After a dense
     header band and a white gap, snap y0 down to the court outline.
     """
-    import numpy as np
 
     x0, y0, x1, y1 = court
     if y1 - y0 < 80 or x1 - x0 < 80:
@@ -259,7 +258,6 @@ def _classify_roi(roi_bgr_or_gray) -> tuple[int, float]:
 
 
 def detect_sheet_digits(gray, court: tuple[int, int, int, int]) -> dict[str, dict[str, float]]:
-    import cv2
 
     x0, y0, x1, y1 = court
     crop = gray[y0:y1, x0:x1]
