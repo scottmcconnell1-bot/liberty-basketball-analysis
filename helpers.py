@@ -712,6 +712,11 @@ def build_settings_catalog():
                 "label": "Expanded heuristic generator",
                 "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
             },
+            {
+                "value": "precision",
+                "label": "Precision generator (opt-in)",
+                "note": "Fewer, better-supported events for the Review queue; measured with scripts/score_manual_q1_regression.py.",
+            },
         ],
         "llm_provider_options": llm_provider_options,
         "llm_model_options": llm_model_options,
