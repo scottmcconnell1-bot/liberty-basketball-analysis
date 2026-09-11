@@ -1,0 +1,24 @@
+{
+  "video": "data\\videos\\Q1_snippet.mp4",
+  "conf": 0.5,
+  "rows": [
+    {
+      "weights": "yolov8n.pt",
+      "frames": 16,
+      "person_detections": 108,
+      "mean_people_per_frame": 6.75,
+      "mean_confidence": 0.6941,
+      "seconds": 3.318,
+      "fps": 4.823
+    },
+    {
+      "weights": "yolo11n.pt",
+      "frames": 16,
+      "person_detections": 116,
+      "mean_people_per_frame": 7.25,
+      "mean_confidence": 0.686,
+      "seconds": 0.955,
+      "fps": 16.76
+    }
+  ]
+}
