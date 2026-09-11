@@ -16,21 +16,28 @@ Base / default: `main` (= former `jason-5-may-updates` tip `05c8475`)
 ## Done (Proven)
 
 - GitHub default branch set to **`main`**
-- Living docs: `AUTHORITY.md`, `AGENT_PROTOCOL.md`, `docs/BRANCH_POLICY.md`, this `ACTIVE.md`
-- Cursor rule targets `main`
-- Ported from `origin/claude/repo-branch-audit` (default `expanded` unchanged):
-  - `.github/workflows/tests.yml`
-  - `scripts/migrate_paths.py` (+ Windows-safe `/` rewrite)
-  - `scripts/mark_stale_analysis_runs.py`
-  - Opt-in **precision** event generator + settings catalog option
-- Unit tests: migrate / stale / precision — **12 passed** locally
+- Living docs + Cursor rule targeting `main`
+- Film Review ports (CI, migrate_paths, mark_stale, opt-in precision; default **expanded**)
+- **Adrian OCR lookaround** ported from `cursor/film-tool-review-layout-ac1f`:
+  - `adrian_identity.py`, `adrian_quality.py`
+  - `scripts/apply_adrian_jersey_lookaround.py`, `scripts/refine_adrian_events.py`
+  - Tests: **16 passed**
+  - Restored Adrian confirmed scorebook (Dayley #40 = Liberty away)
+- **Layout tidy slice 1:** removed **380** tracked `_tmp*` / `_review*` probe artifacts; gitignore those patterns
 
 ## Next (in order)
 
-1. Scott review/merge PR #142  
-2. Branch delete pass after Scott OK on inventory below  
-3. Layout tidy only after Scott OK per step  
-4. Measured YOLO/OCR upgrades later (Adrian-first)
+1. Scott review/merge PR #142 (now includes Adrian OCR + layout slice 1)
+2. Branch delete pass after Scott OK on inventory below
+3. Layout tidy slice 2 (propose family before `git mv`): root CV modules → `src/cv/` **or** root one-off scripts → `scripts/` only
+4. Measured YOLO upgrade **without** touching production `ball_detector.pt` / `ball_confidence` until Scott OK — person-model bake-off (`yolo11*` vs current) on Adrian film
+
+## Still gated (ask Scott)
+
+- Change production `models/ball_detector.pt` or `ball_confidence`
+- Flip any feature flag False→True / unpause teach / raise auto-accept
+- Mass-delete remotes
+- Flip Settings `event_generator_mode` → `precision` in production
 
 ## Branch inventory (await Scott OK before deletes)
 
@@ -40,46 +47,39 @@ Base / default: `main` (= former `jason-5-may-updates` tip `05c8475`)
 | --- | --- |
 | `main` | Default integration line |
 | `cursor/agent-os-ac1f` | Active PR #142 |
-| `origin/claude/repo-branch-audit` | Donor reference until PR merges / tools verified on main |
-| `gh-pages` | GitHub Pages (if still used) |
+| `origin/claude/repo-branch-audit` | Donor until tools verified on main |
+| `gh-pages` | Pages (if still used) |
 
-### Likely delete (merged into `main` — ~43 remotes)
+### Likely delete
 
-Safe candidates once Scott confirms: any `origin/cursor/*` listed by `git branch -r --merged origin/main` except none currently needed. Run after merge:
+- Merged remotes (`git branch -r --merged origin/main`)
+- `jason-5-may-updates` (retired name)
+- `improve/precision-and-migration` (Hermes dirty)
+- `cursor/active-in-progress-devin-ac1f`
+- Most other unmerged historical `cursor/*` / `claude/*` after Scott scan
 
-`git branch -r --merged origin/main`
+### Ask before touching
 
-### Likely delete (unmerged leftovers / superseded)
-
-| Branch | Note |
-| --- | --- |
-| `jason-5-may-updates` | Tip equals old main; name retired |
-| `improve/precision-and-migration` | Hermes dirty / do not merge |
-| `cursor/active-in-progress-devin-ac1f` | Devin era |
-| `claude/e2e-suite`, `claude/local-standup`, `claude/precision-mode` | Folded into repo-branch-audit or superseded |
-| Most other unmerged `cursor/*` | Historical slices; keep only if Scott wants a specific tip |
-
-### Ask Scott before touching
-
-- `dataset-v2` — unknown value  
-- `cursor/film-tool-review-layout-ac1f` — Adrian lookaround tip (`27b99a5` era)  
-- Any branch Scott still references for film/demo work  
+- `dataset-v2`
+- `cursor/film-tool-review-layout-ac1f` (Adrian donor tip — keep until PR merges)
 
 ## Do not
 
 - Schema / flags True / ball detector / unpause teach without Scott  
-- Mass-delete branches without Scott’s list OK  
+- Mass-delete branches without list OK  
 - Treat WSL Hermes dirty tree as source of truth  
-- Flip `event_generator_mode` to `precision` in production without Scott (opt-in only)
+- Hermes-style mass `src/` dump in one shot  
 
 ## Report
 
 ### Proven
-- PR #142 open with agent OS + Film Review tooling ports  
-- Precision is catalog opt-in; default remains `expanded`
+- Adrian lookaround + quality on this branch; 16 tests green  
+- 380 temp artifacts untracked; ignore rules added  
+- Production ball detector / confidence unchanged  
 
 ### Inferred
-- Deleting merged remotes after Scott OK will cut noise without losing main history
+- Next biggest layout win is moving one root module family with import updates, not a full tree rewrite  
 
 ### Unknown
-- Which unmerged `cursor/*` tips Scott wants kept as reference
+- Which unmerged tips Scott wants kept after PR merges  
+- Whether person-model default should move to YOLO11 after a measured Adrian bake-off  

@@ -130,3 +130,10 @@ data/hoopsalytics/full_film_panel_history.jsonl
 # Experiments (non-essential, can be regenerated)
 experiments/
 ball_dataset_v2/
+
+# Local probe / review artifacts (do not commit)
+_tmp*/
+_tmp_*
+_review_frames*/
+_review_frames*
+artifacts/
