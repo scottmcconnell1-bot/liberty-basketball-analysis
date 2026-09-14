@@ -172,22 +172,24 @@ def ai_events(game_id: str) -> list[dict]:
     from event_generator import make_event
 
     ev = []
-    t = 2000
+    # Keep timestamps inside the short synthetic clip (~6s) so highlight ffmpeg
+    # cuts succeed in CI. Spread 8 possessions across ~0.5–5.0s.
+    t = 500
     for i in range(8):
         shooter = str(1 + i % 5)
         result = "make" if i % 3 else "miss"
         ev.append(make_event(game_id, "shot", t, player=shooter, shot_result=result, confidence=0.6,
-                             details={"ball_rise": 120.0, "lateral_travel": 200.0, "peak_frame": t // 33}))
+                             details={"ball_rise": 120.0, "lateral_travel": 200.0, "peak_frame": max(1, t // 33)}))
         ev.append(make_event(game_id, result, t, player=shooter, confidence=0.55, details={"derived_from": "shot"}))
         if result == "miss":
-            ev.append(make_event(game_id, "rebound", t + 900, player=str(6 + i % 4), confidence=0.5))
+            ev.append(make_event(game_id, "rebound", t + 200, player=str(6 + i % 4), confidence=0.5))
         else:
             ev.append(make_event(game_id, "assist", t, player=str(6 + i % 4), confidence=0.4))
-        ev.append(make_event(game_id, "possession_change", t + 2500, player=str(6 + i % 4), confidence=0.6))
+        ev.append(make_event(game_id, "possession_change", t + 350, player=str(6 + i % 4), confidence=0.6))
         if i % 4 == 0:
-            ev.append(make_event(game_id, "turnover", t + 2600, player=shooter, confidence=0.45))
-            ev.append(make_event(game_id, "steal", t + 2600, player=str(6 + i % 4), confidence=0.45))
-        t += 4000
+            ev.append(make_event(game_id, "turnover", t + 400, player=shooter, confidence=0.45))
+            ev.append(make_event(game_id, "steal", t + 400, player=str(6 + i % 4), confidence=0.45))
+        t += 550
     return ev
 
 

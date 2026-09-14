@@ -349,15 +349,23 @@ def review_and_highlights(e):
     assert {m["id"] for m in moments} >= {shot["id"], third["id"]}
     assert all(m["review_status"] in ("accepted", "corrected") for m in moments)
     cut = td.ffmpeg_available()
-    r = _j(e, "post", "/api/highlights/generate", {"game_id": g, "event_ids": [shot["id"], third["id"]], "cut_video": cut, "save_clips": True})
+    r = _j(e, "post", "/api/highlights/generate", {
+        "game_id": g,
+        "event_ids": [shot["id"], third["id"]],
+        "cut_video": cut,
+        "save_clips": True,
+        # Synthetic e2e clip is ~6s; keep windows inside duration.
+        "pad_before_ms": 200,
+        "pad_after_ms": 400,
+    })
     gen = r.get_json(); assert len(gen["saved_clips"]) == 2, gen
     if cut:
         for job in gen["trim_jobs"]:
             for _ in range(90):
                 st = e.json(job["status_url"])
-                if st["status"] in ("complete", "failed"): break
+                if st["status"] in ("complete", "completed", "failed", "error"): break
                 time.sleep(1)
-            assert st["status"] == "complete", st
+            assert st["status"] in ("complete", "completed"), st
     ok(e.get("/highlights")); ok(e.get(f"/highlights?game_id={g}"))
 
     clips = e.json("/api/clips"); assert len(clips) >= 2

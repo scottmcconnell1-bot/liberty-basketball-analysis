@@ -188,6 +188,11 @@ def e2e():
         # synthetic data instead.
         PENDING_REAL.append((game_id, video_path))
 
+    # CI has no CV stack; still allow analysis_runs rows (incl. rerun) to be created.
+    # Patch the names bound in blueprints.ai (imported from helpers at module load).
+    mp.setattr(ai_mod, "ai_runtime_available", lambda: True)
+    mp.setattr(ai_mod, "validate_video_for_analysis", lambda _path: (True, None))
+    mp.setattr(ai_mod, "validate_ai_models_for_analysis", lambda _settings=None: (True, None))
     mp.setattr(ai_mod, "start_analysis_subprocess", fake_start)
     e = E2E(app_module.app.test_client(), db_path, uploads, live=False, app=app_module.app, mp=mp)
     yield e
