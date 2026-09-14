@@ -206,9 +206,9 @@ def users_messaging_issues(e):
     conn = e.db()
     for email, name, role in (("coach.e2e@example.com", "Coach E2E", "coach"), ("admin.e2e@example.com", "Admin E2E", "admin")):
         conn.execute(
-            """INSERT INTO users (username, email, password_hash, display_name, role, is_admin, is_active)
-               VALUES (?,?,?,?,?,?,1)""",
-            (email, email, _hash_password("e2e-password-1"), name, role, 1 if role == "admin" else 0),
+            """INSERT INTO users (email, password_hash, display_name, role, is_active)
+               VALUES (?,?,?,?,1)""",
+            (email, _hash_password("e2e-password-1"), name, role),
         )
     conn.commit()
     users = {r["email"]: r["id"] for r in conn.execute("SELECT id, email FROM users")}

@@ -169,13 +169,11 @@ def register():
 
         db = get_db()
         pw_hash = _hash_password(password)
-        username = email
-        is_admin = 1 if role == "admin" else 0
-        # username is NOT NULL on the base schema; use email as the unique login key.
+        # Match schema.sql users columns (email/password_hash/display_name/role/is_active).
         db.execute(
-            """INSERT INTO users (username, email, password_hash, display_name, role, is_admin, is_active)
-               VALUES (?,?,?,?,?,?,1)""",
-            (username, email, pw_hash, display_name, role, is_admin),
+            """INSERT INTO users (email, password_hash, display_name, role, is_active)
+               VALUES (?,?,?,?,1)""",
+            (email, pw_hash, display_name, role),
         )
         db.commit()
 
