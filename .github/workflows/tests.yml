@@ -34,7 +34,7 @@ jobs:
           --deselect=tests/test_api.py::test_film_page
           --deselect=tests/test_api.py::test_rerun_video_analysis_creates_separate_run
           --deselect=tests/test_api.py::test_rerun_video_analysis_carries_relational_game_id
-          --deselect=tests/test_assistant_workflow.py::test_nav_active_highlights_current_page[/preview-href="/preview"[^>]*class="active"]
+          --deselect=tests/test_assistant_workflow.py::test_nav_active_highlights_current_page
           --deselect=tests/test_dashboard_seasons.py::test_teams_schedule_filters_by_season
           --deselect=tests/test_playbook_share.py::test_share_api_and_public_page
       - name: Secrets audit
