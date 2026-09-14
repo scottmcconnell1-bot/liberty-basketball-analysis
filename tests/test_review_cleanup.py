@@ -57,13 +57,13 @@ def test_auto_accept_disabled_when_threshold_zero(client, app):
         assert row["review_status"] == "pending"
 
 
-def test_auto_accept_default_is_zero_and_does_not_promote(client, app):
-    """Foundation: default confidence is 0; unset settings must not promote drafts."""
+def test_auto_accept_default_promotes_high_confidence(client, app):
+    """Scott 2026-09-14: default auto-accept threshold is 0.85."""
     from settings_store import AI_DEFAULTS
 
-    assert float(AI_DEFAULTS["auto_accept_event_confidence"]) == 0.0
+    assert float(AI_DEFAULTS["auto_accept_event_confidence"]) == 0.85
 
-    game_id = "auto-accept-default-off"
+    game_id = "auto-accept-default-on"
     with app.app_context():
         from helpers import get_db
 
@@ -81,12 +81,12 @@ def test_auto_accept_default_is_zero_and_does_not_promote(client, app):
         db.commit()
 
         accepted = auto_accept_high_confidence_events(db, game_id)
-        assert accepted == 0
+        assert accepted == 1
         row = db.execute(
             "SELECT review_status FROM events WHERE game_id = ?",
             (game_id,),
         ).fetchone()
-        assert row["review_status"] == "pending"
+        assert row["review_status"] == "accepted"
 
 
 def test_accept_event_helper_marks_trusted(client, app):
