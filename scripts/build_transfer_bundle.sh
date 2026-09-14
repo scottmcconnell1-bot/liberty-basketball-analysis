@@ -59,6 +59,7 @@ tar \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='transfer-bundles' \
+  --exclude='scripts/benchmark_*' \
   -czf "${ARCHIVE_PATH}" \
   -C "${ROOT_DIR}" \
   "${INCLUDE_PATHS[@]}"

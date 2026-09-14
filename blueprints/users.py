@@ -328,7 +328,6 @@ def api_push_unsubscribe():
 @login_required
 def api_push_vapid_public_key():
     """Return the VAPID public key for push subscription."""
-    from flask import current_app
     key = current_app.config.get("VAPID_PUBLIC_KEY", "")
     # Convert PEM to raw base64url if needed
     if key.startswith("-----"):

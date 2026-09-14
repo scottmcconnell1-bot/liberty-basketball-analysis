@@ -126,8 +126,6 @@ def nav_active(*names):
     Pass blueprint-qualified endpoints (e.g. ``core.film``). A trailing ``.*``
     matches any function in that blueprint (e.g. ``playbook.*``).
     """
-    from flask import request
-
     endpoint = request.endpoint or ""
     for name in names:
         if name.endswith(".*"):
@@ -170,15 +168,9 @@ def require_auth_for_api():
     pass  # No auth enforced yet — will be enabled in a future phase
 
 
-@app.before_request
-def coach_portal_ops_gate():
-    """Soft denylist for coach portal sessions (does not enable global auth)."""
-    return enforce_coach_ops_denylist()
-
-
 # ── Re-exports (for test conftest and external imports) ──────
-import subprocess
-from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
+import subprocess  # noqa: F401
+from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess  # noqa: F401
 
 # ── CLI Commands ─────────────────────────────────────────────
 import click
@@ -186,7 +178,6 @@ import click
 @app.cli.command("init-db")
 def init_db_command():
     """Initialize the database."""
-    from helpers import init_db
     init_db()
     click.echo("Database initialized.")
 
