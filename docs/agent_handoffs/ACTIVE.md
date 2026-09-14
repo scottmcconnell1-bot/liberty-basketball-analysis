@@ -1,27 +1,29 @@
 ﻿# Active Task
 
 Updated: 2026-09-14  
-Branch: `main`  
+Branch: `cursor/close-public-register-ac1f`  
 Base / default: `main`
 
 ## Meta
 
 | Field | Value |
 | --- | --- |
-| **id** | p0-pages-done-auth-explain |
-| **status** | `awaiting_scott` (auth decision only) |
+| **id** | close-public-register |
+| **status** | `in_progress` |
 | **executor** | cursor-only |
 
 ## Done (Proven)
 
-- PR #142 / #143 on `main`; stale jason-5 PRs closed; 72 remote tips deleted
-- PR #144 merged (ACTIVE handoff)
-- Repo set **private**; GitHub Pages set **`public: false`** (site still exists but not world-readable). Pages cannot be fully deactivated (org/API 422).
+- Public self-signup closed: anonymous `/register` redirects to login; no account created
+- Existing accounts unchanged (login still works)
+- Admins create users via `/register` (linked from Users page)
+- Register/Login nav copy updated; e2e seeds users in DB instead of public register
 
-## Next (await Scott)
+## Next
 
-1. **Auth / `/register`** — decide whether strangers should be able to create accounts (see chat explanation). No code change until you pick an option.
-2. Optional: keep/delete `dataset-v2`, `improve/precision-and-migration`, `fix/game-id-analysis-key`, `jason-5-may-updates`
+1. Verify tests / open PR → merge
+2. Scott: create accounts while signed in as admin (Users → Create user)
+3. Later (when ready): invite codes / email / SMS brainstorm → build
 
 ## Gated
 
@@ -32,4 +34,4 @@ Base / default: `main`
 
 ## Remotes
 
-`main`, `jason-5-may-updates`, `gh-pages`, `dataset-v2`, `improve/precision-and-migration`, `fix/game-id-analysis-key`
+`main`, `jason-5-may-updates`, `gh-pages`, `dataset-v2`, `improve/precision-and-migration`, `fix/game-id-analysis-key`, this branch

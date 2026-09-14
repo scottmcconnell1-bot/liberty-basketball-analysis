@@ -200,13 +200,23 @@ def roster_and_players(e):
 # ── 6. users / messaging / issues ────────────────────────────────────────────
 
 def users_messaging_issues(e):
-    for email, name, role in (("coach.e2e@example.com", "Coach E2E", "coach"), ("admin.e2e@example.com", "Admin E2E", "admin")):
-        ok(e.post("/register", data={"email": email, "password": "e2e-password-1", "password2": "e2e-password-1", "display_name": name, "role": role}, follow_redirects=False), 200, 302, 303)
+    # Public /register is closed; seed accounts directly (admin-created in production).
+    from blueprints.users import _hash_password
+
     conn = e.db()
+    for email, name, role in (("coach.e2e@example.com", "Coach E2E", "coach"), ("admin.e2e@example.com", "Admin E2E", "admin")):
+        conn.execute(
+            """INSERT INTO users (username, email, password_hash, display_name, role, is_admin, is_active)
+               VALUES (?,?,?,?,?,?,1)""",
+            (email, email, _hash_password("e2e-password-1"), name, role, 1 if role == "admin" else 0),
+        )
+    conn.commit()
     users = {r["email"]: r["id"] for r in conn.execute("SELECT id, email FROM users")}
     conn.close()
     assert "coach.e2e@example.com" in users and "admin.e2e@example.com" in users
     e.state["users"] = users
+    # Confirm public signup is closed for anonymous callers.
+    ok(e.get("/register", follow_redirects=False), 302, 303)
     ok(e.post("/login", data={"email": "coach.e2e@example.com", "password": "e2e-password-1"}, follow_redirects=False), 200, 302, 303)
     ok(e.get("/profile"))
     ok(e.post("/profile/edit", data={"display_name": "Coach E2E (edited)", "phone": "555-0100", "avatar_url": ""}, follow_redirects=False), 200, 302, 303)

@@ -5,8 +5,8 @@
   <div class="card auth-card">
     <div class="auth-header">
       <img src="/static/img/patriot-logo.jpg" alt="Liberty Patriots" class="auth-logo">
-      <h2>Create Account</h2>
-      <p class="text-muted">Join Liberty Basketball</p>
+      <h2>{% if admin_create %}Create User{% else %}Create Account{% endif %}</h2>
+      <p class="text-muted">{% if admin_create %}Administrator — add a team account{% else %}Join Liberty Basketball{% endif %}</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -48,8 +48,12 @@
     </form>
 
     <div class="auth-footer">
+      {% if admin_create %}
+      <a href="{{ url_for('core.users_page') }}">Back to Users</a>
+      {% else %}
       <span class="text-muted">Already have an account?</span>
       <a href="{{ url_for('users.login') }}">Sign in</a>
+      {% endif %}
     </div>
   </div>
 </div>
