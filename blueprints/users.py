@@ -6,7 +6,7 @@ User accounts, authentication, profiles, and notification preferences.
 
 Routes included:
 - login (/login)                              — Login page
-- register (/register)                        — Registration page
+- register (/register)                        — Admin-only account creation (public signup closed)
 - logout (/logout)                            — Logout
 - profile (/profile)                          — User profile
 - profile_edit (/profile/edit POST)           — Update profile
@@ -118,9 +118,25 @@ def login():
     return render_template("login.html")
 
 
+def _is_admin_user(user) -> bool:
+    if not user:
+        return False
+    if (user["role"] or "").strip().lower() == "admin":
+        return True
+    try:
+        return int(user["is_admin"] or 0) == 1
+    except (KeyError, IndexError, TypeError, ValueError):
+        return False
+
+
 @users_bp.route("/register", methods=["GET", "POST"])
 def register():
-    """Registration page."""
+    """Admin-only account creation. Public self-signup is closed."""
+    user = _current_user()
+    if not _is_admin_user(user):
+        flash("New accounts are created by an administrator only. Please sign in if you already have an account.", "error")
+        return redirect(url_for("users.login"))
+
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
@@ -149,20 +165,22 @@ def register():
         if errors:
             for e in errors:
                 flash(e, "error")
-            return render_template("register.html", roles=ROLE_OPTIONS)
+            return render_template("register.html", roles=ROLE_OPTIONS, admin_create=True)
 
         db = get_db()
         pw_hash = _hash_password(password)
+        # Match schema.sql users columns (email/password_hash/display_name/role/is_active).
         db.execute(
-            "INSERT INTO users (email, password_hash, display_name, role) VALUES (?,?,?,?)",
+            """INSERT INTO users (email, password_hash, display_name, role, is_active)
+               VALUES (?,?,?,?,1)""",
             (email, pw_hash, display_name, role),
         )
         db.commit()
 
-        flash("Account created! Please log in.", "success")
-        return redirect(url_for("users.login"))
+        flash(f"Account created for {email} ({role}).", "success")
+        return redirect(url_for("core.users_page"))
 
-    return render_template("register.html", roles=ROLE_OPTIONS)
+    return render_template("register.html", roles=ROLE_OPTIONS, admin_create=True)
 
 
 @users_bp.route("/logout")

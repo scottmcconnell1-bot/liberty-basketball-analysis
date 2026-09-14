@@ -931,7 +931,6 @@
     <a href="{{ url_for('users.logout') }}">Logout</a>
     {% else %}
     <a href="{{ url_for('users.login') }}">Sign In</a>
-    <a href="{{ url_for('users.register') }}">Register</a>
     {% endif %}
     {% if not coach_portal %}
     <a href="{{ url_for('core.debug_page', compose='1', source=request.path) }}" class="report-link" data-open-report-overlay>Report Bug / Idea</a>
