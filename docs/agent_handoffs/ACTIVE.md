@@ -1,46 +1,34 @@
 # Active Task
 
-Updated: 2026-09-14 (dual-machine roles locked + home bring-up verified)
+Updated: 2026-09-14 (Jason optimize: precision ON + auto-accept 0.85)
 
 Branch: `cursor/film-tool-review-layout-ac1f`  
-Related: `cursor/full-stack-bringup-ac1f` / PR #147 = auto-accept unlock (**Scott gate — do not merge unless asked**)
+Related: PR #147 ideas applied locally (precision + auto-accept)
 
 ## Dual-machine roles (locked)
 
 | | **Home** | **School / remoted Cursor** |
 | --- | --- | --- |
-| `film_analysis.db` + `uploads/` | **Source of truth** (~14.5 GB + ~106 GB) | Empty — **never** copy school DB onto home |
-| Full app / reanalyze / teach | Run here | Use Funnel only |
-| Coach / walkthrough | Local or Funnel | Funnel → home |
-| Code / docs / PRs | git pull → work → push | Same |
-| Shared brain | GitHub + this `ACTIVE.md` | Same — **not** two databases |
+| Data | Source of truth | Funnel only — never overwrite home DB |
+| Code | git push/pull | Same |
 
-Funnel (home): https://liberty-coach.tail368a37.ts.net → `:8080`  
-School handoff note: `docs/agent_handoffs/HOME_PC_HANDOFF.md` on `origin/cursor/full-stack-bringup-ac1f`
+Funnel: https://liberty-coach.tail368a37.ts.net
 
-## Current product focus
+## Just enabled (Scott asked to optimize)
 
-| Field | Value |
-| --- | --- |
-| **id** | adrian-accuracy-quality |
-| **status** | `in_progress` (infra ready; resume film review) |
-| **scope** | **Adrian JrHigh only** until Scott says accurate |
-| **game** | `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334` |
+| Setting | Value | Effect |
+| --- | --- | --- |
+| `ai.event_generator_mode` | **precision** | Quieter event list on **next** rebuild/reanalyze |
+| `ai.auto_accept_event_confidence` | **0.85** | Auto-keep pending AI events ≥ 85% confidence |
+| Ball detector / `ball_confidence` | **unchanged** | Still gated |
 
-## Home verified (Proven)
+**Restart Flask** so `event_generator.py` code loads. Existing Adrian ledger is **not** rewritten until you rebuild events / reanalyze.
 
-- DB / uploads / Flask `:8080` / `/coach` / Funnel all live
-- Overlay fix, tip_off, steal-vs-rebound already on this Film Tool branch
+## Product focus
 
-## Try (next best step)
-
-1. On **home**: Film Tool → Show ledger → tip_off ~3.3s; steal ~13s (not rebound @ ~11s)
-2. From **school**: open Funnel URL (hits home data) — do not rebuild the library
-3. One feature branch at a time — stay on Film Tool for Adrian; leave #147 alone unless Scott unlocks auto-accept
+Adrian JrHigh accuracy still the review target; precision mode helps future runs.
 
 ## Do not
 
-- Restore empty school DB over home
-- Unpause teach loop / flip auto-accept without Scott
-- Dual-merge Film Tool + full-stack blindly
-- Sync DBs/uploads via git
+- Change production `ball_detector.pt` / `ball_confidence` without Scott
+- Expect gameplans / practice plans / accurate box scores from AI alone yet

@@ -9,7 +9,7 @@ AI_DEFAULTS = {
     "ball_class_id": 0,
     "ball_confidence": 0.25,
     "person_confidence": 0.5,
-    "event_generator_mode": "expanded",
+    "event_generator_mode": "precision",
     "inference_device": "auto",
     "frame_stride": 1,
     "detection_stride": 1,
@@ -22,8 +22,8 @@ AI_DEFAULTS = {
     "auto_apply_jersey_mapping": True,
     "identity_auto_apply_min_confidence": 0.60,
     "identity_auto_apply_min_samples": 4,
-    # 0 disables auto-accept (required for human review / coach ledger).
-    "auto_accept_event_confidence": 0.0,
+    # Scott 2026-09-14: enable Jason high-confidence auto-accept with precision mode.
+    "auto_accept_event_confidence": 0.85,
     "llm_provider": "ollama",
     "llm_model": ""
 }
@@ -110,9 +110,6 @@ def load_all_settings(feature_defaults, analysis_defaults, ai_defaults=None, db=
         name: flat.get(f"ai.{name}", default)
         for name, default in ai_defaults.items()
     }
-    # Foundation / review testing: force disable even if an older DB still has 0.50.
-    # Remove this override when Scott intentionally re-enables auto-accept.
-    ai["auto_accept_event_confidence"] = 0.0
     return {"features": features, "analysis": analysis, "ai": ai}
 
 

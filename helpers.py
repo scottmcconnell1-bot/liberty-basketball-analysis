@@ -711,7 +711,12 @@ def build_settings_catalog():
             {
                 "value": "expanded",
                 "label": "Expanded heuristic generator",
-                "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
+                "note": "High volume (noisy). Emits possession changes, shots, makes/misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
+            },
+            {
+                "value": "precision",
+                "label": "Precision generator (recommended)",
+                "note": "Jason baseline: fewer, better-supported events for Review (~9% precision vs ~1% expanded on Wilder Q1). Requires rebuild/reanalyze to take effect on a game.",
             },
         ],
         "llm_provider_options": llm_provider_options,
