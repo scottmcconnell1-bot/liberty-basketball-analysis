@@ -763,13 +763,65 @@
       <div class="panel" id="aiEventsPanel">
         <div class="panel-head">
           <div>
-            <h2 title="Season-scale workflow: AI drafts a box, you check exceptions vs the scorebook">Program mode</h2>
-            <p>Open a section below when you need it. Film review stays on top.</p>
+            <h2 title="AI drafts counting stats. Check the box against the scorebook. Film clips are optional.">Team stats</h2>
+            <p>The box score is the main job. Watch film only if an exception looks wrong.</p>
           </div>
         </div>
         <div class="panel-body">
-          <details class="ft-secondary ft-program-fold" id="ftProgramStep2" open>
-            <summary>Watch plays on film</summary>
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep1" open>
+            <summary>AI box score vs scorebook</summary>
+            <div class="ft-secondary-body">
+              <p class="ft-control-group-help">Builds counting stats from this game’s AI pass and checks them against the confirmed scorebook. You do not need to accept plays one by one.</p>
+              <div class="ft-program-bar" id="ftProgramBar">
+                <button class="btn btn-primary" type="button" id="programBuildLedgerBtn" title="Build the AI box and compare it to the scorebook. Adrian also drops high-pass fakes and caps team totals to the book.">Build AI box vs scorebook</button>
+                <button class="btn btn-ghost" type="button" id="programRefreshBtn" title="Reload the score line, exceptions, and box without rebuilding.">Refresh box</button>
+              </div>
+              <div class="ft-film-sync-bar" id="ftFilmSyncBar" title="If analysis and review videos differ, set an offset so clip seeks land on the right moment.">
+                <span class="tiny" id="ftFilmSyncStatus">Film sync: loading…</span>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncZeroBtn" title="Clear offset (review time = analysis timestamp)">Sync 0</button>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncHereBtn" title="Treat current playhead as analysis t=0 (tip) on this review film">Playhead = analysis tip</button>
+              </div>
+              <div class="tiny" id="programStatusText" title="Status of the last build/refresh">Load summary for this game.</div>
+              <div class="ft-program-score" id="programScoreLine" title="Compares scorebook team points to AI ledger team points"></div>
+              <div class="ft-program-exceptions" id="programExceptions" title="Mismatches vs scorebook — mostly wrong player IDs until jerseys are linked">
+                <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
+              </div>
+              <div class="ft-program-box-wrap" title="Official box: quarters, team, then individuals.">
+                <div id="officialBoxMount">
+                  <p class="final-score" id="officialFinalScore"></p>
+                  <p class="tiny" id="officialBoxNote"></p>
+                  <h3 class="ft-program-subhead">1. Line score</h3>
+                  <div class="table-responsive" id="officialLineScoreWrap"></div>
+                  <h3 class="ft-program-subhead">2. Team stats</h3>
+                  <div class="table-responsive" id="officialTeamStatsWrap"></div>
+                  <div class="ft-starters-bar">
+                    <button class="btn btn-ghost" type="button" id="officialStartersBtn">Set starting five</button>
+                    <span class="tiny" id="officialStartersSummary">Starting five not set — bench points need this list.</span>
+                  </div>
+                  <h3 class="ft-program-subhead">3. Liberty</h3>
+                  <div class="table-responsive" id="officialLibertyWrap"></div>
+                  <h3 class="ft-program-subhead">3. Opponent</h3>
+                  <p class="tiny" id="officialOppName"></p>
+                  <div class="table-responsive" id="officialOppWrap"></div>
+                  <div id="officialUnassignedWrap"></div>
+                </div>
+                <table class="ft-program-box" id="programBoxTable" style="display:none">
+                  <thead><tr><th>#</th></tr></thead>
+                  <tbody id="programBoxBody"></tbody>
+                </table>
+              </div>
+              {% if analysis_results_url %}
+              <p class="tiny" style="margin:.75rem 0 0;">
+                Shot charts, possessions, and minutes live on
+                <a href="{{ analysis_results_url }}">Analysis Results</a>
+                — not duplicated here.
+              </p>
+              {% endif %}
+            </div>
+          </details>
+
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep2">
+            <summary>Watch plays on film (optional)</summary>
             <div class="ft-secondary-body">
               <p class="ft-control-group-help">Click a row to loop a short clip. Use the dock (or row buttons) to Accept / Correct / Reject, then Next.</p>
               <div class="ft-play-toolbar" role="group" aria-label="Play list controls">
@@ -788,66 +840,12 @@
               <div class="ft-event-list-label">Play list — click a row to loop the clip</div>
               <div class="ai-events-scroll" id="aiEventsScroller" title="Click a row to loop a short clip around that play">
                 <div class="list-stack" id="aiEventsList">
-                  <div class="empty-state">Click <strong>Show ledger plays</strong> (or open Build the team box first if empty).</div>
+                  <div class="empty-state">Build the box score first. Film clips are optional after that.</div>
                 </div>
               </div>
             </div>
           </details>
 
-          <details class="ft-secondary ft-program-fold" id="ftProgramStep1">
-            <summary>Build the team box</summary>
-            <div class="ft-secondary-body">
-              <p class="ft-control-group-help">Creates a draft box score from AI, capped to the Adrian scorebook. Hover buttons for help.</p>
-              <div class="ft-program-bar" id="ftProgramBar">
-                <button class="btn btn-primary" type="button" id="programBuildLedgerBtn" title="Build / refine Adrian ledger: run scorebook quality pass, keep believable team totals, park noise.">Build / refine Adrian ledger</button>
-                <button class="btn btn-ghost" type="button" id="programRefreshBtn" title="Reload the score line, exceptions, and box without rebuilding.">Refresh box</button>
-              </div>
-              <div class="ft-film-sync-bar" id="ftFilmSyncBar" title="If analysis and review videos differ, set an offset so clip seeks land on the right moment.">
-                <span class="tiny" id="ftFilmSyncStatus">Film sync: loading…</span>
-                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncZeroBtn" title="Clear offset (review time = analysis timestamp)">Sync 0</button>
-                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncHereBtn" title="Treat current playhead as analysis t=0 (tip) on this review film">Playhead = analysis tip</button>
-              </div>
-              <div class="tiny" id="programStatusText" title="Status of the last build/refresh">Load summary for this game.</div>
-              <div class="ft-program-score" id="programScoreLine" title="Compares scorebook team points to AI ledger team points"></div>
-              <div class="ft-program-exceptions" id="programExceptions" title="Mismatches vs scorebook — mostly wrong player IDs until jerseys are linked">
-                <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
-              </div>
-              <div class="ft-program-box-wrap" title="Draft counting stats from accepted ledger events.">
-                <h3 class="ft-program-subhead">AI ledger box</h3>
-                <div class="table-responsive">
-                  <table class="ft-program-box" id="programBoxTable">
-                    <thead>
-                      <tr>
-                        <th title="Player jersey or tracker ID">#</th>
-                        <th title="Points">PTS</th>
-                        <th title="Field goals made">FGM</th>
-                        <th title="Field goals attempted">FGA</th>
-                        <th title="Three-pointers made">3PM</th>
-                        <th title="Free throws made">FTM</th>
-                        <th title="Free throws attempted">FTA</th>
-                        <th title="Rebounds">REB</th>
-                        <th title="Assists">AST</th>
-                        <th title="Steals">STL</th>
-                        <th title="Blocks">BLK</th>
-                        <th title="Turnovers">TO</th>
-                        <th title="Personal fouls">PF</th>
-                      </tr>
-                    </thead>
-                    <tbody id="programBoxBody">
-                      <tr><td colspan="13" class="tiny">No ledger yet — open this section and click Build / refine Adrian ledger.</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              {% if analysis_results_url %}
-              <p class="tiny" style="margin:.75rem 0 0;">
-                Shot charts, possessions, and minutes live on
-                <a href="{{ analysis_results_url }}">Analysis Results</a>
-                — not duplicated here.
-              </p>
-              {% endif %}
-            </div>
-          </details>
         </div>
       </div>
     </section>
@@ -1116,15 +1114,25 @@
           <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
         </div>
         <div class="split">
-          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
         </div>
-        <div class="pill-buttons" style="margin:.5rem 0 1rem">
-          <button class="btn roster-side-btn active" type="button" data-side="our">Our</button>
-          <button class="btn roster-side-btn" type="button" data-side="opp">Opp</button>
-          <button class="btn roster-side-btn" type="button" data-side="home">Home</button>
-          <button class="btn roster-side-btn" type="button" data-side="away">Away</button>
+        <div class="split" style="align-items:end;gap:1rem;">
+          <div class="field">
+            <label>Team</label>
+            <div class="pill-buttons">
+              <button class="btn roster-side-btn active" type="button" data-side="our">Liberty</button>
+              <button class="btn roster-side-btn" type="button" data-side="opp">Opponent</button>
+            </div>
+          </div>
+          <div class="field" id="rosterOpponentField" hidden>
+            <label for="rosterOpponentSelect">Opponent</label>
+            <select id="rosterOpponentSelect">
+              <option value="">Select opponent…</option>
+            </select>
+          </div>
         </div>
+        <div id="rosterOpponentStats" class="tiny" style="display:none;margin:.15rem 0 .5rem;color:var(--color-muted);"></div>
         <div class="field">
           <label for="rosterFileTypeSelect">Roster file type</label>
           <select id="rosterFileTypeSelect">
@@ -1161,14 +1169,23 @@
           <select id="rosterImportSeasonSelect" required></select>
         </div>
         <div class="split">
-          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity"> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importGender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="importGender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="importGender" value="coed"> Coed</label></div></div>
         </div>
-        <div class="pill-buttons" style="margin:.35rem 0 .75rem">
-          <button class="btn roster-import-side-btn active" type="button" data-side="our">Our</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="opp">Opp</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="home">Home</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="away">Away</button>
+        <div class="split" style="align-items:end;gap:1rem;">
+          <div class="field">
+            <label>Team</label>
+            <div class="pill-buttons">
+              <button class="btn roster-import-side-btn active" type="button" data-side="our">Liberty</button>
+              <button class="btn roster-import-side-btn" type="button" data-side="opp">Opponent</button>
+            </div>
+          </div>
+          <div class="field" id="rosterImportOpponentField" hidden>
+            <label for="rosterImportOpponentSelect">Opponent</label>
+            <select id="rosterImportOpponentSelect">
+              <option value="">Select opponent…</option>
+            </select>
+          </div>
         </div>
         <p class="tiny" id="rosterImportTargetLabel" style="margin-bottom:.5rem;color:var(--color-muted);"></p>
         <div class="field">
@@ -1273,12 +1290,12 @@
     <form method="dialog">
       <div class="modal-head"><h2>Select Liberty starters</h2></div>
       <div class="modal-body">
-        <p class="tiny" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent is optional.</p>
+        <p class="tiny" id="startersHelp">Choose five Liberty starters and five opponent starters. Bench points use this list.</p>
         <div class="split" style="margin-top:.75rem">
           <div class="field"><label>Liberty starters</label><div class="term-list" id="libertyStartersList"></div></div>
-          <div class="field"><label>Opponent starters (optional)</label><div class="term-list" id="opponentStartersList"></div></div>
+          <div class="field"><label>Opponent starters</label><div class="term-list" id="opponentStartersList"></div></div>
         </div>
-        <p class="tiny" style="margin-top:.75rem">This records who starts; minutes still come from SUB tags.</p>
+        <p class="tiny" style="margin-top:.75rem">Opening-tip detection comes later, after jersey numbers at the jump are stable. +/− is parked until the counting stats work.</p>
       </div>
       <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
     </form>
@@ -1299,6 +1316,10 @@
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
   window.FILM_TOOL_REVIEW_MODE = {{ "true" if review_mode|default(false) else "false" }};
   window.FILM_TOOL_PLAYS_MODE = {{ "true" if plays_mode|default(false) else "false" }};
+  window.FILM_TOOL_ROSTER_SEASON_ID = {{ roster_season_id|tojson|safe }};
+  window.FILM_TOOL_ROSTER_LEVEL = {{ roster_level|tojson|safe }};
+  window.FILM_TOOL_ROSTER_GENDER = {{ roster_gender|tojson|safe }};
+  window.FILM_TOOL_ROSTER_OPPONENT = {{ roster_opponent|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
 <script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>

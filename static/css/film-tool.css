@@ -789,6 +789,29 @@
     background: var(--color-primary);
     transition: width .15s ease;
 }
+#film-tool-root .upload-progress-bar > span.is-live {
+    background-image: linear-gradient(90deg, var(--color-primary), #5eead4, var(--color-primary));
+    background-size: 200% 100%;
+    animation: ft-analysis-pulse 1.6s linear infinite;
+}
+#film-tool-root .upload-progress-bar > span.is-indeterminate {
+    width: 35%;
+    animation: ft-analysis-slide 1.4s ease-in-out infinite;
+}
+#film-tool-root .ft-run-analysis-bar.is-complete {
+    border-color: #166534;
+}
+#film-tool-root .ft-run-analysis-bar.is-failed {
+    border-color: #991b1b;
+}
+@keyframes ft-analysis-pulse {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+@keyframes ft-analysis-slide {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(350%); }
+}
 #film-tool-root .ft-run-analysis-progress-head {
     display: flex;
     align-items: baseline;
@@ -820,6 +843,19 @@
 }
 #film-tool-root .ft-program-section .ai-events-scroll {
     max-height: min(42vh, 420px);
+}
+#film-tool-root .ft-starters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    align-items: center;
+    margin: .75rem 0 1rem;
+}
+#film-tool-root .ft-program-box .role-row td {
+    color: var(--color-muted, #6b7280);
+    font-size: .75rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
 }
 #film-tool-root #aiEventsPanel.ft-review-focus {
     outline: 2px solid var(--color-primary, #2563eb);

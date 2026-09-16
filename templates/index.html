@@ -199,24 +199,34 @@
         lastGameHtml = `<div class="last-game">No games played yet</div>`;
       }
 
-      let scheduleHtml = '<div class="schedule-label">Upcoming</div>';
-      if (t.upcoming.length === 0) {
-        scheduleHtml += '<div class="no-games">No upcoming games</div>';
-      } else {
-        scheduleHtml += '<div class="schedule-list">';
-        scheduleHtml += t.upcoming.map(g => {
+      const upcoming = t.upcoming || [];
+      const recent = t.recent || [];
+      let scheduleHtml = '';
+      const renderSchedRows = (games, withResult) => {
+        return '<div class="schedule-list">' + games.map(g => {
           const loc = g.location_type || 'home';
           const locLabel = loc === 'home' ? 'H' : (loc === 'away' ? 'A' : 'T');
           const locClass = loc === 'home' ? 'loc-home' : (loc === 'away' ? 'loc-away' : 'loc-tournament');
           const shortDate = formatGameDate(g.game_date, g.game_time);
           const tournament = g.tournament_name ? ` <span class="text-muted">(${g.tournament_name})</span>` : '';
+          let resultMark = '';
+          if (withResult && g.result) {
+            const rc = g.result === 'win' ? 'result-win' : (g.result === 'loss' ? 'result-loss' : '');
+            resultMark = ` <span class="${rc}">${g.result === 'win' ? 'W' : (g.result === 'loss' ? 'L' : '')}</span>`;
+          }
           return `<div class="sched-row">
             <span class="sched-date">${shortDate}</span>
-            <span class="sched-opp">${g.opponent_name}${tournament}</span>
+            <span class="sched-opp">${g.opponent_name}${resultMark}${tournament}</span>
             <span class="loc-badge ${locClass}">${locLabel}</span>
           </div>`;
-        }).join('');
-        scheduleHtml += '</div>';
+        }).join('') + '</div>';
+      };
+      if (upcoming.length) {
+        scheduleHtml = '<div class="schedule-label">Upcoming</div>' + renderSchedRows(upcoming, false);
+      } else if (recent.length) {
+        scheduleHtml = '<div class="schedule-label">Recent</div>' + renderSchedRows(recent, true);
+      } else {
+        scheduleHtml = '<div class="schedule-label">Upcoming</div><div class="no-games">No upcoming games</div>';
       }
 
       const seasonLabel = t.season_name ? t.season_name : 'No season selected';
@@ -320,6 +330,9 @@
           const rankLink = card.querySelector('.rank-link');
           if (rankLink && rk.ranking_url) rankLink.href = rk.ranking_url;
         }
+      } else {
+        const err = (d.errors && d.errors[teamKey]) || 'Liberty Charter was not found on MaxPreps.';
+        alert(err);
       }
     } catch(e) {
       alert('Failed to update ranking. Please try again.');

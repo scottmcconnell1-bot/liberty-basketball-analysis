@@ -18,9 +18,13 @@ from typing import Any
 
 COURT_W = 500.0
 COURT_H = 470.0
+# Must match templates/playbook.html drawHalfCourtMarks (basket at top).
+SVG_FT_Y = 160.0
+SVG_THREE_Y = 235.0  # rim y=15 + 3pt radius 220
 
-# FastDraw court outline on letter pages (measured across 1-Game / Rip / Pitt 5).
-_DEFAULT_COURT_PDF = (44.0, 163.4, 569.0, 618.4)
+# FastDraw painted half-court (sidelines + baseline + halfcourt), not the white
+# title panel behind it. Measured on Fast Scout 1-Game / Rip / Pitt 5 / Rub.
+_DEFAULT_COURT_PDF = (87.8, 207.2, 525.2, 618.4)
 
 _PAGE_RE = re.compile(r"page_(\d+)\.(?:png|jpe?g)$", re.I)
 
@@ -148,8 +152,16 @@ def extract_page(
             raise ValueError(f"page {page_1based} out of range (1..{doc.page_count})")
         page = doc[page_1based - 1]
         court = _detect_court_rect(page)
-        positions = _extract_digit_positions(page, court)
-        ink = _extract_ink(page, court, positions, next_positions=next_positions)
+        landmarks = _detect_court_landmarks(page, court)
+        positions, pdf_digits = _extract_digit_positions(page, court, landmarks)
+        ink = _extract_ink(
+            page,
+            court,
+            positions,
+            pdf_digits,
+            landmarks=landmarks,
+            next_positions=next_positions,
+        )
         page_w = float(page.rect.width) or 1.0
         page_h = float(page.rect.height) or 1.0
         x0, y0, x1, y1 = court
@@ -213,43 +225,164 @@ def _page_title(page) -> str:
 
 
 def _detect_court_rect(page) -> tuple[float, float, float, float]:
-    """Largest near-white filled rect on the page ≈ half-court diagram."""
-    best = None
-    best_area = 0.0
+    """Painted half-court outline — not the white panel that includes the title.
+
+    FastDraw puts a large white rect behind the header + court. Mapping digits
+    through that box parks elbows on the 3-point line. Prefer the thick black
+    court stroke (sidelines + baseline + halfcourt).
+    """
+    page_h = float(page.rect.height) or 792.0
+    best_stroke = None
+    best_stroke_area = 0.0
+    best_fill = None
+    best_fill_area = 0.0
     for d in page.get_drawings() or []:
-        fill = d.get("fill")
-        if not fill or len(fill) < 3:
-            continue
-        if min(fill[0], fill[1], fill[2]) < 0.95:
-            continue
         rect = d.get("rect")
         if rect is None:
             continue
+        y0 = float(rect.y0)
+        # FastDraw also emits a mirrored court below the page.
+        if y0 > page_h * 0.75:
+            continue
         area = abs(float(rect.width) * float(rect.height))
-        if area > best_area:
-            best_area = area
-            best = (
+        fill = d.get("fill")
+        width = d.get("width")
+        if fill and len(fill) >= 3 and min(fill[0], fill[1], fill[2]) >= 0.95:
+            if area > best_fill_area:
+                best_fill_area = area
+                best_fill = (
+                    float(rect.x0),
+                    float(rect.y0),
+                    float(rect.x1),
+                    float(rect.y1),
+                )
+            continue
+        if fill:
+            continue
+        if width is not None and float(width) >= 3.0 and area > best_stroke_area:
+            best_stroke_area = area
+            best_stroke = (
                 float(rect.x0),
                 float(rect.y0),
                 float(rect.x1),
                 float(rect.y1),
             )
-    if best and best_area > 50_000:
-        return best
+    if best_stroke and best_stroke_area > 50_000:
+        return best_stroke
+    if best_fill and best_fill_area > 50_000:
+        return best_fill
     return _DEFAULT_COURT_PDF
 
 
-def _pdf_to_svg(x: float, y: float, court: tuple[float, float, float, float]) -> dict[str, float]:
+def _detect_court_landmarks(page, court: tuple[float, float, float, float]) -> dict[str, float] | None:
+    """FastDraw lane (FT) + 3pt peak in PDF y, so elbows map to SVG y=160 not the arc."""
+    x0, y0, x1, y1 = court
+    cw = max(x1 - x0, 1e-6)
+    ch = max(y1 - y0, 1e-6)
+    page_h = float(page.rect.height) or 792.0
+    ft_y = None
+    three_y = None
+    for d in page.get_drawings() or []:
+        rect = d.get("rect")
+        if rect is None:
+            continue
+        if float(rect.y0) > page_h * 0.75:
+            continue
+        bw = abs(float(rect.width))
+        bh = abs(float(rect.height))
+        # Key / lane: hangs from the baseline, ~1/4 court wide, ~2/5 tall.
+        if (
+            abs(float(rect.y0) - y0) < 12
+            and 0.18 * cw < bw < 0.40 * cw
+            and 0.28 * ch < bh < 0.55 * ch
+        ):
+            cand = float(rect.y1)
+            if ft_y is None or cand > ft_y:
+                ft_y = cand
+        # 3-point arc bbox: nearly full court width, mid-court bulge toward halfcourt.
+        if (
+            0.65 * cw < bw < 0.95 * cw
+            and 0.18 * ch < bh < 0.55 * ch
+            and float(rect.y0) > y0 + 40
+            and float(rect.y1) < y1 + 30
+        ):
+            cand = float(rect.y1)
+            if three_y is None or cand > three_y:
+                three_y = cand
+    if ft_y is None or not (y0 + 40 < ft_y < y1 - 40):
+        return None
+    out = {"baseline": y0, "halfcourt": y1, "ft": ft_y}
+    if three_y is not None and ft_y + 20 < three_y < y1 - 20:
+        out["three"] = three_y
+    return out
+
+
+def _piecewise(value: float, src: list[float], dst: list[float]) -> float:
+    v = float(value)
+    if v <= src[0]:
+        return dst[0]
+    if v >= src[-1]:
+        return dst[-1]
+    for i in range(1, len(src)):
+        if v <= src[i]:
+            span = max(src[i] - src[i - 1], 1e-6)
+            t = (v - src[i - 1]) / span
+            return dst[i - 1] + t * (dst[i] - dst[i - 1])
+    return dst[-1]
+
+
+def _pdf_to_svg(
+    x: float,
+    y: float,
+    court: tuple[float, float, float, float],
+    landmarks: dict[str, float] | None = None,
+) -> dict[str, float]:
     x0, y0, x1, y1 = court
     bw = max(x1 - x0, 1e-6)
-    bh = max(y1 - y0, 1e-6)
-    return {
-        "x": round((float(x) - x0) / bw * COURT_W, 2),
-        "y": round((float(y) - y0) / bh * COURT_H, 2),
-    }
+    sx = (float(x) - x0) / bw * COURT_W
+    if landmarks and landmarks.get("ft"):
+        src = [landmarks["baseline"], landmarks["ft"]]
+        dst = [0.0, SVG_FT_Y]
+        if landmarks.get("three"):
+            src.append(landmarks["three"])
+            dst.append(SVG_THREE_Y)
+        src.append(landmarks["halfcourt"])
+        dst.append(COURT_H)
+        sy = _piecewise(float(y), src, dst)
+    else:
+        bh = max(y1 - y0, 1e-6)
+        sy = (float(y) - y0) / bh * COURT_H
+    return {"x": round(sx, 2), "y": round(sy, 2)}
 
 
-def _extract_digit_positions(page, court: tuple[float, float, float, float]) -> dict[str, dict[str, float]]:
+def _svg_to_pdf(
+    pos: dict[str, float],
+    court: tuple[float, float, float, float],
+    landmarks: dict[str, float] | None = None,
+) -> tuple[float, float]:
+    x0, y0, x1, y1 = court
+    bw = max(x1 - x0, 1e-6)
+    px = x0 + float(pos["x"]) / COURT_W * bw
+    if landmarks and landmarks.get("ft"):
+        src = [landmarks["baseline"], landmarks["ft"]]
+        dst = [0.0, SVG_FT_Y]
+        if landmarks.get("three"):
+            src.append(landmarks["three"])
+            dst.append(SVG_THREE_Y)
+        src.append(landmarks["halfcourt"])
+        dst.append(COURT_H)
+        py = _piecewise(float(pos["y"]), dst, src)
+    else:
+        bh = max(y1 - y0, 1e-6)
+        py = y0 + float(pos["y"]) / COURT_H * bh
+    return px, py
+
+
+def _extract_digit_positions(
+    page,
+    court: tuple[float, float, float, float],
+    landmarks: dict[str, float] | None = None,
+) -> tuple[dict[str, dict[str, float]], dict[str, tuple[float, float]]]:
     x0, y0, x1, y1 = court
     pad = 8.0
     by_digit: dict[int, tuple[float, float, float]] = {}
@@ -267,10 +400,13 @@ def _extract_digit_positions(page, court: tuple[float, float, float, float]) -> 
         prev = by_digit.get(digit)
         if prev is None or area >= prev[0]:
             by_digit[digit] = (area, cx, cy)
+    pdf_digits: dict[str, tuple[float, float]] = {}
     out: dict[str, dict[str, float]] = {}
     for digit, (_area, cx, cy) in by_digit.items():
-        out[f"o{digit}"] = _pdf_to_svg(cx, cy, court)
-    return out
+        oid = f"o{digit}"
+        pdf_digits[oid] = (cx, cy)
+        out[oid] = _pdf_to_svg(cx, cy, court, landmarks)
+    return out, pdf_digits
 
 
 def _poly_from_drawing(d: dict) -> list[tuple[float, float]]:
@@ -410,19 +546,15 @@ def _extract_ink(
     page,
     court: tuple[float, float, float, float],
     positions: dict[str, dict[str, float]],
+    pdf_digits: dict[str, tuple[float, float]] | None = None,
     *,
+    landmarks: dict[str, float] | None = None,
     next_positions: dict[str, dict] | None = None,
 ) -> dict[str, Any]:
-    x0, y0, x1, y1 = court
-    # Positions back to PDF for attribution.
-    positions_pdf: dict[str, tuple[float, float]] = {}
-    bw = max(x1 - x0, 1e-6)
-    bh = max(y1 - y0, 1e-6)
-    for oid, pos in positions.items():
-        positions_pdf[oid] = (
-            x0 + float(pos["x"]) / COURT_W * bw,
-            y0 + float(pos["y"]) / COURT_H * bh,
-        )
+    positions_pdf = dict(pdf_digits or {})
+    if not positions_pdf:
+        for oid, pos in positions.items():
+            positions_pdf[oid] = _svg_to_pdf(pos, court, landmarks)
 
     paths: dict[str, list[dict[str, float]]] = {}
     marks: dict[str, Any] = {}
@@ -448,7 +580,7 @@ def _extract_ink(
             oid = _nearest_oid(start, positions_pdf, max_dist=70.0)
             if not oid:
                 continue
-            svg = [_pdf_to_svg(x, y, court) for x, y in pts_s]
+            svg = [_pdf_to_svg(x, y, court, landmarks) for x, y in pts_s]
             # Snap start to digit.
             svg[0] = {"x": float(positions[oid]["x"]), "y": float(positions[oid]["y"])}
             paths[oid] = svg
@@ -484,13 +616,13 @@ def _extract_ink(
         if start_oid is None:
             continue
 
-        svg = [_pdf_to_svg(x, y, court) for x, y in pts_s]
+        svg = [_pdf_to_svg(x, y, court, landmarks) for x, y in pts_s]
         svg[0] = {"x": float(positions[start_oid]["x"]), "y": float(positions[start_oid]["y"])}
 
         if is_pass_style:
             tip_oid = end_oid
             if tip_oid is None and next_positions:
-                tip_oid = _nearest_next(end, next_positions, court)
+                tip_oid = _nearest_next(end, next_positions, court, landmarks)
             if tip_oid and tip_oid != start_oid:
                 if tip_oid in positions:
                     svg[-1] = {
@@ -527,17 +659,14 @@ def _nearest_next(
     pdf_pt: tuple[float, float],
     next_positions: dict[str, dict],
     court: tuple[float, float, float, float],
+    landmarks: dict[str, float] | None = None,
 ) -> str | None:
-    x0, y0, x1, y1 = court
-    bw = max(x1 - x0, 1e-6)
-    bh = max(y1 - y0, 1e-6)
     best = None
     best_d = 70.0
     for oid, pos in (next_positions or {}).items():
         if not isinstance(pos, dict) or "x" not in pos or "y" not in pos:
             continue
-        px = x0 + float(pos["x"]) / COURT_W * bw
-        py = y0 + float(pos["y"]) / COURT_H * bh
+        px, py = _svg_to_pdf(pos, court, landmarks)
         d = ((pdf_pt[0] - px) ** 2 + (pdf_pt[1] - py) ** 2) ** 0.5
         if d < best_d:
             best_d = d

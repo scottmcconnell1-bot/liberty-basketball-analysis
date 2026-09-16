@@ -214,6 +214,15 @@
       </div>
 
       <div class="form-group">
+        <label for="ai_tracker_enabled">Jason tracker wrapper</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input id="ai_tracker_enabled" name="ai_tracker_enabled" type="checkbox" value="1" {% if runtime_settings.ai.tracker_enabled %}checked{% endif %}>
+          Use Jason’s tracker on new analysis (uncheck to undo / use the previous ByteTrack path)
+        </label>
+        <div class="text-muted mt-2">Off = same person tracking as before this update. Ball detector settings are unchanged.</div>
+      </div>
+
+      <div class="form-group">
         <label for="ai_tracker_max_distance">Tracker Max Distance</label>
         <input class="form-control" id="ai_tracker_max_distance" name="ai_tracker_max_distance" type="number" min="1" value="{{ runtime_settings.ai.tracker_max_distance }}">
       </div>

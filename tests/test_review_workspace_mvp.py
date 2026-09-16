@@ -79,6 +79,7 @@ def test_settings_save_forces_auto_accept_zero(client, db, monkeypatch):
             "ai_inference_device": "auto",
             "ai_event_generator_mode": "expanded",
             "ai_frame_stride": "1",
+            "ai_tracker_enabled": "1",
             "ai_tracker_max_distance": "80",
             "ai_tracker_max_frame_gap": "5",
             "ai_llm_provider": "none",

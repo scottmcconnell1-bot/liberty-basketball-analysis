@@ -1,16 +1,13 @@
-"""Program mode — season-scale coaching analytics (not a 17k click queue).
+"""Program mode — AI counting stats first (not a play-by-play click queue).
 
-Big programs treat tracking AI as a *production pipeline*:
-  auto event stream → trusted ledger → coach dashboards / exceptions.
-Liberty program mode mirrors that for one coach across ~95 games:
+Scott 2026-09-15: the product job is a box score. Film clip review is later.
 
   1) Promote useful AI drafts onto the ledger (not confidence auto-accept).
   2) Ignore noise types (e.g. possession_change) for counting stats.
   3) Compare ledger to confirmed scorebook → exception list only.
-  4) Coach spot-checks exceptions + adds rare misses at playhead.
+  4) Coach spot-checks exceptions only; does not walk every AI event.
 
-This is intentionally separate from settings ``auto_accept_event_confidence``
-(which stays locked at 0).
+This is intentionally separate from settings ``auto_accept_event_confidence``.
 """
 
 from __future__ import annotations
@@ -30,6 +27,8 @@ PROGRAM_LEDGER_TYPES = (
     "missed_free_throw",
     "made_free_throw",
     "rebound",
+    "rebound_offensive",
+    "rebound_defensive",
     "assist",
     "turnover",
     "steal",
@@ -69,6 +68,145 @@ def load_scorebook(game_id: str) -> dict[str, Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def _jersey_sort_key(jersey: str) -> tuple:
+    text = str(jersey or "").strip()
+    if text.isdigit():
+        return (0, int(text))
+    return (1, text.lower())
+
+
+def scorebook_named_players(scorebook: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Drop blank spiral rows; keep jersey/name pairs from a confirmed book."""
+    players = []
+    for row in (scorebook or {}).get("players") or []:
+        jersey = str(row.get("jersey") if row.get("jersey") is not None else "").strip()
+        name = (row.get("name") or "").strip()
+        if not jersey and not name:
+            continue
+        team = str(row.get("team") or "").strip().lower()
+        if team in {"h", "home"}:
+            team = "home"
+        elif team in {"a", "away"}:
+            team = "away"
+        else:
+            team = team or "home"
+        team_name = (
+            (scorebook or {}).get("home_team")
+            if team == "home"
+            else (scorebook or {}).get("away_team")
+        )
+        players.append({
+            "jersey": jersey,
+            "jersey_number": jersey,
+            "name": name or "Unknown",
+            "team": team,
+            "team_name": team_name,
+            "label": f"{jersey} - {name or 'Unknown'}" if jersey else (name or "Unknown"),
+        })
+    players.sort(key=lambda p: (_jersey_sort_key(p["jersey"]), p["name"].lower(), p["team"]))
+    return players
+
+
+def _liberty_is_home(scorebook: dict[str, Any] | None) -> bool | None:
+    home = ((scorebook or {}).get("home_team") or "").lower()
+    away = ((scorebook or {}).get("away_team") or "").lower()
+    if "liberty" in home:
+        return True
+    if "liberty" in away:
+        return False
+    return None
+
+
+def film_slots_from_scorebook(scorebook: dict[str, Any] | None) -> dict[str, Any]:
+    """Map a confirmed scorebook onto Liberty vs named-opponent Film Tool slots."""
+    named = scorebook_named_players(scorebook)
+    home = [p for p in named if p["team"] == "home"]
+    away = [p for p in named if p["team"] == "away"]
+    liberty_home = _liberty_is_home(scorebook)
+    if liberty_home is True:
+        our, opp = home, away
+        opponent_name = (scorebook or {}).get("away_team") or "Opponent"
+    else:
+        our, opp = away, home
+        opponent_name = (scorebook or {}).get("home_team") or "Opponent"
+    return {"our": our, "opp": opp, "opponent_name": opponent_name}
+
+
+def analysis_players_from_scorebook(scorebook: dict[str, Any] | None) -> list[dict[str, Any]]:
+    players = []
+    for index, row in enumerate(scorebook_named_players(scorebook)):
+        jersey = row["jersey"]
+        try:
+            jersey_number = int(jersey) if jersey not in ("", None) and str(jersey).lstrip("-").isdigit() else None
+        except (TypeError, ValueError):
+            jersey_number = None
+        players.append({
+            "id": None,
+            "jersey_number": jersey_number,
+            "name": row["name"],
+            "label": row["label"],
+            "position": None,
+            "grade": None,
+            "sort_order": index,
+            "team": row["team"],
+            "team_name": row["team_name"],
+        })
+    return players
+
+
+def import_scorebook_to_film_roster(db, game_id, *, season_id=None, level=None, gender=None) -> dict[str, Any]:
+    """Write confirmed scorebook home/away lists into Film Tool roster slots."""
+    from film_roster import save_film_roster
+
+    book = load_scorebook(game_id)
+    if not book:
+        raise ValueError("No confirmed scorebook for this game")
+
+    if season_id is None or level is None or gender is None:
+        from analysis_helpers import resolve_analysis_game_context
+
+        context = resolve_analysis_game_context(db, game_id)
+        season_id = season_id or context.get("season_id")
+        level = level or context.get("level") or "jrhigh"
+        gender = gender or context.get("gender") or "boys"
+
+    if not season_id:
+        raise ValueError("season_id is required to import a scorebook roster")
+
+    slots = film_slots_from_scorebook(book)
+    saved = {
+        "our": save_film_roster(
+            db,
+            season_id=season_id,
+            level=level,
+            gender=gender,
+            side="our",
+            players=slots["our"],
+            replace=True,
+        ),
+        "opp": save_film_roster(
+            db,
+            season_id=season_id,
+            level=level,
+            gender=gender,
+            side="opp",
+            opponent_name=slots["opponent_name"],
+            players=slots["opp"],
+            replace=True,
+        ),
+    }
+    return {
+        "game_id": game_id,
+        "season_id": season_id,
+        "level": level,
+        "gender": gender,
+        "home_team": book.get("home_team"),
+        "away_team": book.get("away_team"),
+        "opponent_name": slots["opponent_name"],
+        "slots": {side: result["count"] for side, result in saved.items()},
+    }
 
 
 def base_analysis_key(game_id: str) -> str:
@@ -363,6 +501,14 @@ def build_exceptions(scorebook: dict[str, Any] | None, ledger_box: dict[str, Any
     return exceptions
 
 
+def _safe_official_box(db, game_id: str) -> dict[str, Any] | None:
+    try:
+        from game_boxscore import build_official_box
+        return build_official_box(db, game_id)
+    except Exception:
+        return None
+
+
 def program_summary(db, game_id: str) -> dict[str, Any]:
     key = canonical_event_key(db, game_id)
     counts = {}
@@ -421,8 +567,8 @@ def program_summary(db, game_id: str) -> dict[str, Any]:
         "exception_count": len(exceptions),
         "mode": "program",
         "hint": (
-            "You do not clear pending AI drafts. Build the program ledger, "
-            "check exceptions against the scorebook, add rare misses at playhead, "
-            "then use ledger stats + play matches for trends."
+            "Box score first (quarters, then team, then individuals). "
+            "Film clips are optional after the box is built."
         ),
+        "official_box": _safe_official_box(db, game_id),
     }

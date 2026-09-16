@@ -3,7 +3,9 @@ AI and Video Analysis Blueprint.
 
 Routes:
   GET  /api/analysis_status/<game_id>  - Analysis status for an analysis key
+  GET  /api/analysis_jobs              - Pending/running/recent AI jobs (progress banner)
   GET  /api/stats/<game_id>            - Stats for a game/analysis key
+  GET/POST /api/games/<game_id>/starters - Coach-picked starting five (bench points)
   POST /api/upload_video               - Upload a video file
   GET  /api/videos                     - List videos (light by default; ?full=1 for counts;
                                          default active only; ?archived=1|all)
@@ -26,6 +28,7 @@ Routes:
 """
 
 import os
+import json
 from datetime import datetime
 from flask import (
     Blueprint, current_app, jsonify, redirect, render_template,
@@ -48,6 +51,7 @@ from helpers import (
     validate_video_for_analysis,
     validate_ai_models_for_analysis,
     reconcile_stuck_analysis_run,
+    parse_analysis_progress_frames,
     ai_analysis_log_path,
     count_detections_for_analysis, count_events_for_analysis,
     _read_log_tail,
@@ -57,7 +61,7 @@ ai_bp = Blueprint("ai", __name__)
 
 
 def _format_team_level_label(level, gender):
-    level_labels = {"varsity": "Varsity", "jv": "JV", "jr_high": "Jr High"}
+    level_labels = {"varsity": "Varsity", "jv": "JV", "jr_high": "Jr High", "jrhigh": "Jr High"}
     gender_labels = {"boys": "Boys", "girls": "Girls", "coed": "Coed"}
     parts = []
     if gender:
@@ -131,6 +135,12 @@ def _enrich_video_list_row(db, row, *, light=False):
             payload["analysis_key"] = payload.get("game_id")
         payload["detection_count"] = None
         payload["event_count"] = None
+        payload["progress_pct"] = payload.get("progress_pct") or 0
+        payload["progress_step"] = payload.get("progress_step") or ""
+        payload["analysis_started_at"] = payload.get("analysis_started_at")
+        current_frame, total_frames = parse_analysis_progress_frames(payload["progress_step"])
+        payload["current_frame"] = current_frame
+        payload["total_frames"] = total_frames
         return payload
 
     clause = _video_analysis_runs_clause()
@@ -146,6 +156,12 @@ def _enrich_video_list_row(db, row, *, light=False):
         payload["analysis_status"] = run_row["status"]
         payload["error_message"] = run_row["error_message"]
         payload["analysis_key"] = run_row["analysis_key"]
+        payload["progress_pct"] = run_row["progress_pct"] or 0
+        payload["progress_step"] = run_row["progress_step"] or ""
+        payload["analysis_started_at"] = run_row["started_at"]
+        current_frame, total_frames = parse_analysis_progress_frames(payload["progress_step"])
+        payload["current_frame"] = current_frame
+        payload["total_frames"] = total_frames
         count_kwargs = dict(
             analysis_key=run_row["analysis_key"],
             relational_game_id=run_row["game_id"],
@@ -259,6 +275,25 @@ def get_analysis_status(game_id):
     return jsonify(payload)
 
 
+@ai_bp.route("/api/tracker_summary/<game_id>")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def tracker_summary(game_id):
+    """Jason tracker coverage for one analysis key."""
+    db = get_db()
+    row = db.execute(
+        """SELECT COUNT(*) AS total,
+                  SUM(CASE WHEN tracker_id IS NOT NULL THEN 1 ELSE 0 END) AS with_tracker
+             FROM detections
+            WHERE game_id = ?""",
+        (game_id,),
+    ).fetchone()
+    return jsonify({
+        "game_id": game_id,
+        "total_detections": int(row["total"] or 0),
+        "with_tracker_id": int(row["with_tracker"] or 0),
+    })
+
+
 # ── API: Stats ────────────────────────────────────────────
 
 @ai_bp.route("/api/stats/<game_id>")
@@ -303,6 +338,53 @@ def api_ai_runtime():
     })
 
 
+def _progress_frame_fields(step):
+    current_frame, total_frames = parse_analysis_progress_frames(step)
+    return {
+        "current_frame": current_frame,
+        "total_frames": total_frames,
+    }
+
+
+def _video_for_analysis_run(db, run):
+    source_id = run["source_video_id"] if "source_video_id" in run.keys() else None
+    if source_id:
+        row = db.execute("SELECT * FROM videos WHERE id=?", (source_id,)).fetchone()
+        if row:
+            return row
+    path = run["video_path"] if "video_path" in run.keys() else None
+    key = run["analysis_key"] if "analysis_key" in run.keys() else None
+    base = run["base_analysis_key"] if "base_analysis_key" in run.keys() else None
+    if not base and key and "__rerun_" in str(key):
+        base = str(key).split("__rerun_", 1)[0]
+    row = db.execute(
+        """SELECT * FROM videos
+            WHERE (? IS NOT NULL AND file_path = ?)
+               OR (? IS NOT NULL AND game_id = ?)
+               OR (? IS NOT NULL AND game_id = ?)
+            ORDER BY id DESC LIMIT 1""",
+        (path, path, key, key, base, base),
+    ).fetchone()
+    return row
+
+
+def _videos_with_latest_run_sql(archive_where=""):
+    latest_run = latest_analysis_run_id_subquery()
+    return f"""
+        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
+               ar.progress_pct as progress_pct, ar.progress_step as progress_step,
+               ar.started_at as analysis_started_at,
+               (SELECT COUNT(*) FROM analysis_runs ar2
+                 WHERE ar2.source_video_id = v.id
+                    OR ar2.base_analysis_key = v.game_id
+                    OR ar2.analysis_key = v.game_id
+                    OR ar2.video_path = v.file_path) as analysis_run_count
+        FROM videos v
+        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
+        WHERE 1=1{archive_where}
+    """
+
+
 @ai_bp.route("/api/analysis_progress/<game_id>")
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_progress(game_id):
@@ -311,31 +393,104 @@ def get_analysis_progress(game_id):
     reconcile_stuck_analysis_run(db, game_id)
     row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
-        return jsonify({"status": "not_started", "progress_pct": 0, "progress_step": ""})
+        return jsonify({
+            "status": "not_started",
+            "progress_pct": 0,
+            "progress_step": "",
+            "current_frame": None,
+            "total_frames": None,
+        })
     progress_game_id = row["analysis_key"] or game_id
     error_message = row["error_message"]
     if is_superseded_analysis_run(row):
         error_message = None
-    return jsonify({
-        "status": row["status"],
+    step = row["progress_step"] or ""
+    status = row["status"]
+    payload = {
+        "status": status,
         "analysis_key": progress_game_id,
         "progress_pct": row["progress_pct"] or 0,
-        "progress_step": row["progress_step"] or "",
+        "progress_step": step,
         "error_message": error_message,
         "log_path": ai_analysis_log_path(progress_game_id),
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
-        "detection_count": db.execute(
+        **_progress_frame_fields(step),
+    }
+    # COUNT(*) on detections during a long YOLO run can freeze the UI poll.
+    if status in ("completed", "failed"):
+        payload["detection_count"] = db.execute(
             """SELECT COUNT(*) AS c FROM detections d
                WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
                   OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
             (row["game_id"], row["game_id"], progress_game_id),
-        ).fetchone()["c"],
-        "event_count": db.execute(
+        ).fetchone()["c"]
+        payload["event_count"] = db.execute(
             "SELECT COUNT(*) AS c FROM events e WHERE e.game_id = ?",
             (progress_game_id,),
-        ).fetchone()["c"],
-    })
+        ).fetchone()["c"]
+    else:
+        payload["detection_count"] = None
+        payload["event_count"] = None
+    return jsonify(payload)
+
+
+@ai_bp.route("/api/analysis_jobs")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_analysis_jobs():
+    """Live AI jobs for the site-wide progress banner (no detection COUNT)."""
+    db = get_db()
+    rows = db.execute(
+        """SELECT analysis_key, status, progress_pct, progress_step, started_at,
+                  completed_at, error_message, run_label, run_kind, source_video_id,
+                  video_path, base_analysis_key
+             FROM analysis_runs
+            WHERE status IN ('pending', 'running')
+               OR (
+                    status IN ('completed', 'failed')
+                    AND completed_at IS NOT NULL
+                    AND datetime(completed_at) >= datetime('now', '-3 minutes')
+                  )
+            ORDER BY CASE status
+                       WHEN 'running' THEN 0
+                       WHEN 'pending' THEN 1
+                       WHEN 'failed' THEN 2
+                       ELSE 3
+                     END,
+                     id DESC
+            LIMIT 20"""
+    ).fetchall()
+    jobs = []
+    seen_keys = set()
+    for row in rows:
+        key = row["analysis_key"]
+        if not key or key in seen_keys:
+            continue
+        seen_keys.add(key)
+        if row["status"] in ("pending", "running"):
+            reconcile_stuck_analysis_run(db, key)
+        step = row["progress_step"] or ""
+        video = _video_for_analysis_run(db, row)
+        opponent = ((video["opponent"] if video else "") or "").strip()
+        display_game = f"Liberty vs {opponent}" if opponent else (row["run_label"] or "AI analysis")
+        stored_filename = video["stored_filename"] if video else None
+        video_id = video["id"] if video else row["source_video_id"]
+        jobs.append({
+            "analysis_key": key,
+            "status": row["status"],
+            "progress_pct": row["progress_pct"] or 0,
+            "progress_step": step,
+            "started_at": row["started_at"],
+            "completed_at": row["completed_at"],
+            "error_message": row["error_message"],
+            "run_label": row["run_label"],
+            "run_kind": row["run_kind"],
+            "display_game": display_game,
+            "video_id": video_id,
+            "stored_filename": stored_filename,
+            **_progress_frame_fields(step),
+        })
+    return jsonify({"jobs": jobs})
 
 
 # ── API: Full Analysis Results ──────────────────────────────
@@ -482,8 +637,35 @@ def get_analysis_results(game_id):
         "identity_status": identity_status,
         "player_labels": _analysis_player_labels(db, game_id),
         "analysis_version": "2026-07-07-analysis-v2",
+        "official_box": _analysis_official_box(db, game_id),
         **_analysis_film_payload(db, game_id),
     })
+
+
+def _analysis_official_box(db, game_id):
+    try:
+        from game_boxscore import build_official_box
+        return build_official_box(db, game_id)
+    except Exception:
+        current_app.logger.exception("official box failed for %s", game_id)
+        return None
+
+
+@ai_bp.route("/api/games/<game_id>/starters", methods=["GET", "POST"])
+def game_starters(game_id):
+    """Coach-picked starting five for bench points. No schema change; JSON sidecar."""
+    from game_lineups import load_starters, save_starters
+
+    if request.method == "GET":
+        try:
+            return jsonify(load_starters(game_id))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify(save_starters(game_id, data))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 def _analysis_player_labels(db, game_id):
@@ -1024,15 +1206,8 @@ def api_videos():
     sort = (request.args.get("sort") or ("title" if light else "id")).strip().lower()
     archived_filter = _parse_videos_archived_filter()
     archive_where = _videos_archive_where_sql(archived_filter)
-    latest_run = latest_analysis_run_id_subquery()
-    rows = db.execute(f"""
-        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-               (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
-        FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
-        WHERE 1=1{archive_where}
-        ORDER BY v.id DESC
-    """).fetchall()
+    list_sql = _videos_with_latest_run_sql(archive_where) + " ORDER BY v.id DESC"
+    rows = db.execute(list_sql).fetchall()
 
     running_keys = {
         (r["analysis_key"] or r["game_id"])
@@ -1042,14 +1217,7 @@ def api_videos():
     for game_id in running_keys:
         reconcile_stuck_analysis_run(db, game_id)
     if running_keys:
-        rows = db.execute(f"""
-            SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-                   (SELECT COUNT(*) FROM analysis_runs ar2 WHERE ar2.source_video_id = v.id OR ar2.base_analysis_key = v.game_id OR ar2.analysis_key = v.game_id OR ar2.video_path = v.file_path) as analysis_run_count
-            FROM videos v
-            LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
-            WHERE 1=1{archive_where}
-            ORDER BY v.id DESC
-        """).fetchall()
+        rows = db.execute(list_sql).fetchall()
 
     payloads = [_enrich_video_list_row(db, r, light=light) for r in rows]
     if sort == "title":
@@ -1070,41 +1238,15 @@ def api_video_detail(vid_id):
     """Return one video with full analysis status + detection/event counts."""
     db = get_db()
     _ensure_videos_archived_column(db)
-    latest_run = latest_analysis_run_id_subquery()
-    row = db.execute(
-        f"""
-        SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-               (SELECT COUNT(*) FROM analysis_runs ar2
-                 WHERE ar2.source_video_id = v.id
-                    OR ar2.base_analysis_key = v.game_id
-                    OR ar2.analysis_key = v.game_id
-                    OR ar2.video_path = v.file_path) as analysis_run_count
-        FROM videos v
-        LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
-        WHERE v.id = ?
-        """,
-        (vid_id,),
-    ).fetchone()
+    detail_sql = _videos_with_latest_run_sql(" AND v.id = ?")
+    row = db.execute(detail_sql, (vid_id,)).fetchone()
     if not row:
         return jsonify({"error": "Video not found"}), 404
 
     analysis_key = row["analysis_key"] or row["game_id"]
     if row["analysis_status"] == "running" and analysis_key:
         reconcile_stuck_analysis_run(db, analysis_key)
-        row = db.execute(
-            f"""
-            SELECT v.*, ar.status as analysis_status, ar.error_message, ar.analysis_key,
-                   (SELECT COUNT(*) FROM analysis_runs ar2
-                     WHERE ar2.source_video_id = v.id
-                        OR ar2.base_analysis_key = v.game_id
-                        OR ar2.analysis_key = v.game_id
-                        OR ar2.video_path = v.file_path) as analysis_run_count
-            FROM videos v
-            LEFT JOIN analysis_runs ar ON ar.id = {latest_run}
-            WHERE v.id = ?
-            """,
-            (vid_id,),
-        ).fetchone()
+        row = db.execute(detail_sql, (vid_id,)).fetchone()
 
     return jsonify(_enrich_video_list_row(db, row, light=False))
 

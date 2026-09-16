@@ -240,7 +240,7 @@
     {
       "jersey": "32",
       "name": "Unknown",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -658,7 +658,7 @@
     "template_layout_sha256": "ccc8b283c2e17921096f0a02ef40506d1c90716263b062c21c7dc0af24e56dde",
     "upload_sha256": "ecd71bc92fad230404266dc48628a508f4ea610dc788a5c361c39d8df6732325"
   },
-  "confirmed_at": "2026-08-12T04:19:36Z",
+  "confirmed_at": "2026-09-16T01:54:45Z",
   "confirmed_by": "coach",
   "validation": {
     "ok": true,

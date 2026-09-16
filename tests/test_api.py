@@ -1146,6 +1146,116 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
 
 
+def test_parse_analysis_progress_frames():
+    from helpers import parse_analysis_progress_frames
+
+    assert parse_analysis_progress_frames("Detecting objects: frame 1000/97475") == (1000, 97475)
+    assert parse_analysis_progress_frames("Loading AI models…") == (None, None)
+    assert parse_analysis_progress_frames("") == (None, None)
+
+
+def test_analysis_jobs_lists_running_progress(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("adrian.mp4", "adrian.mp4", "uploads/adrian.mp4", 1000, "Adrian", "jrhigh_adrian"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, status, progress_pct, progress_step, run_label)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            "jrhigh_adrian",
+            "uploads/adrian.mp4",
+            1,
+            "running",
+            12.5,
+            "Detecting objects: frame 1000/97475",
+            "Primary",
+        ),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_jobs")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert len(payload["jobs"]) == 1
+    job = payload["jobs"][0]
+    assert job["display_game"] == "Liberty vs Adrian"
+    assert job["status"] == "running"
+    assert job["progress_pct"] == 12.5
+    assert job["current_frame"] == 1000
+    assert job["total_frames"] == 97475
+    assert "detection_count" not in job
+
+
+def test_analysis_progress_skips_counts_while_running(client, db):
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status, progress_pct, progress_step) VALUES (?, ?, ?, ?, ?)",
+        ("running_game", "uploads/demo.mp4", "running", 4, "Detecting objects: frame 500/12000"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("running_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_progress/running_game")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["status"] == "running"
+    assert payload["current_frame"] == 500
+    assert payload["total_frames"] == 12000
+    assert payload["detection_count"] is None
+    assert payload["event_count"] is None
+
+
+def test_analysis_progress_includes_counts_when_completed(client, db):
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status, progress_pct, progress_step) VALUES (?, ?, ?, ?, ?)",
+        ("done_game", "uploads/demo.mp4", "completed", 100, "Done"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("done_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_progress/done_game")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["detection_count"] == 1
+    assert payload["progress_pct"] == 100
+
+
+def test_api_videos_light_includes_progress_fields(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("melba.mp4", "melba.mp4", "uploads/melba.mp4", 1000, "Melba", "melba_key"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, status, progress_pct, progress_step)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("melba_key", "uploads/melba.mp4", 1, "running", 8, "Detecting objects: frame 800/10000"),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos?light=1").get_json()
+    assert payload[0]["analysis_status"] == "running"
+    assert payload[0]["progress_pct"] == 8
+    assert payload[0]["current_frame"] == 800
+    assert payload[0]["total_frames"] == 10000
+    assert payload[0]["detection_count"] is None
+
+
 def test_analysis_status_counts_detections_via_relational_game_id(client, db):
     game_row = db.execute(
         "INSERT INTO games (source_type, source_key) VALUES (?, ?)",
@@ -1409,6 +1519,7 @@ def test_settings_page_persists_updates(client, db, monkeypatch):
         "ai_inference_device": "cpu",
         "ai_event_generator_mode": "expanded",
         "ai_frame_stride": "2",
+        "ai_tracker_enabled": "1",
         "ai_tracker_max_distance": "95",
         "ai_tracker_max_frame_gap": "7",
         "ai_llm_provider": "none",
@@ -1429,6 +1540,7 @@ def test_settings_page_persists_updates(client, db, monkeypatch):
     assert stored["ai.event_generator_mode"] == "expanded"
     assert stored["ai.frame_stride"] == "2"
     assert stored["ai.tracker_max_distance"] == "95"
+    assert stored["ai.tracker_enabled"] == "1"
 
 
 def test_pull_ollama_model_starts_background_pull(client, monkeypatch):

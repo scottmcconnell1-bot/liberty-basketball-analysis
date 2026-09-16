@@ -917,11 +917,29 @@ def api_rosters_import():
         return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
 
 
+@clips_bp.route("/api/film-rosters/opponents", methods=["GET"])
+def api_film_roster_opponents():
+    """List selectable opponents for Liberty vs Opponent roster UI."""
+    from film_roster import list_roster_opponents
+
+    try:
+        opponents = list_roster_opponents(
+            get_db(),
+            season_id=request.args.get("season_id"),
+            level=request.args.get("level"),
+            gender=request.args.get("gender"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"opponents": opponents, "count": len(opponents)})
+
+
 @clips_bp.route("/api/film-rosters", methods=["GET"])
 def api_film_rosters_get():
     """List players for a season-scoped Film Tool roster slot."""
-    from film_roster import list_film_roster_players
+    from film_roster import attach_player_stats, list_film_roster_players, opponent_schedule_stats
 
+    opponent_name = (request.args.get("opponent") or request.args.get("opponent_name") or "").strip() or None
     try:
         players = list_film_roster_players(
             get_db(),
@@ -929,10 +947,26 @@ def api_film_rosters_get():
             level=request.args.get("level"),
             gender=request.args.get("gender"),
             side=request.args.get("side"),
+            opponent_name=opponent_name,
         )
+        if opponent_name:
+            players = attach_player_stats(players, opponent_name)
+        stats = None
+        if opponent_name:
+            stats = opponent_schedule_stats(
+                get_db(),
+                season_id=request.args.get("season_id"),
+                level=request.args.get("level"),
+                opponent_name=opponent_name,
+            )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
-    return jsonify({"players": players, "count": len(players)})
+    return jsonify({
+        "players": players,
+        "count": len(players),
+        "opponent_name": opponent_name,
+        "stats": stats,
+    })
 
 
 @clips_bp.route("/api/film-rosters", methods=["PUT"])
@@ -949,6 +983,7 @@ def api_film_rosters_put():
             level=data.get("level"),
             gender=data.get("gender"),
             side=data.get("side"),
+            opponent_name=data.get("opponent") or data.get("opponent_name"),
             players=data.get("players") or [],
             replace=replace,
         )
@@ -970,6 +1005,7 @@ def api_film_rosters_delete():
             level=request.args.get("level"),
             gender=request.args.get("gender"),
             side=request.args.get("side"),
+            opponent_name=request.args.get("opponent") or request.args.get("opponent_name"),
         )
         get_db().commit()
         return jsonify({"deleted": deleted})
@@ -1004,6 +1040,7 @@ def api_film_rosters_import():
             level=request.form.get("level"),
             gender=request.form.get("gender"),
             side=request.form.get("side"),
+            opponent_name=request.form.get("opponent") or request.form.get("opponent_name"),
             players=players,
             replace=replace,
         )

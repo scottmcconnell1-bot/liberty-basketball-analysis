@@ -109,6 +109,7 @@ const defaultRosters = {};
 let rosters = { ...defaultRosters };
 let savedGames;
 let currentRosterSide = 'our';
+let currentRosterOpponent = '';
 let activeRosterSeasonId = '';
 let rosterSeasonOptions = [];
 let pendingRosterImportFile = null;
@@ -133,6 +134,7 @@ let aiEventsList, aiEventsScroller, aiEventsCount, aiCurrentEventLabel;
 let termDialog, termFieldSelect, termList, newTermInput;
 let rosterDialog, playerList, rosterFileInput, rosterFileTypeSelect;
 let rosterSeasonSelect, rosterImportDialog, rosterImportSeasonSelect, rosterImportReplace, rosterImportFileLabel;
+let rosterOpponentSelect, rosterImportOpponentSelect, rosterOpponentStats;
 let playerDialog, playerPosInput, playerNumInput, playerNameInput, playerGradeInput;
 let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
 let startersDialog, libertyStartersList, opponentStartersList, startersHelp;
@@ -169,6 +171,32 @@ function formatSecondsToMMSS(sec) {
 
 function escapeCsv(v) { return `"${String(v ?? '').replaceAll('"', '""')}"`; }
 
+function inferFilmLevelFromGameId(gameId) {
+    const key = String(gameId || '').toLowerCase();
+    if (!key) return '';
+    if (key.startsWith('jrhigh_') || key.startsWith('jr_high_') || key.startsWith('jh_')) return 'jrhigh';
+    if (key.startsWith('jv_')) return 'jv';
+    if (key.startsWith('varsity_') || key.startsWith('hs_')) return 'varsity';
+    return '';
+}
+
+function gameRosterLevel() {
+    return window.FILM_TOOL_ROSTER_LEVEL
+        || inferFilmLevelFromGameId(window.FILM_TOOL_GAME_ID)
+        || '';
+}
+
+function applyOpenGameRosterContext() {
+    const seasonId = window.FILM_TOOL_ROSTER_SEASON_ID;
+    const level = gameRosterLevel();
+    const gender = window.FILM_TOOL_ROSTER_GENDER;
+    const opponent = window.FILM_TOOL_ROSTER_OPPONENT;
+    if (seasonId) setActiveRosterSeasonId(String(seasonId));
+    if (opponent) currentRosterOpponent = String(opponent);
+    if (level || gender) {
+        setRosterFilters(level || getSelectedLevel(), gender || getSelectedGender(), currentRosterSide);
+    }
+}
 function getSelectedLevel() {
     return document.querySelector('input[name="level"]:checked')?.value
         || loadJson(ROSTER_LEVEL_STORAGE_KEY, 'varsity')
@@ -184,6 +212,102 @@ function getImportLevel() {
 }
 function getImportGender() {
     return document.querySelector('input[name="importGender"]:checked')?.value || getSelectedGender();
+}
+function getSelectedOpponent() {
+    if (currentRosterSide !== 'opp') return '';
+    return (rosterOpponentSelect?.value || currentRosterOpponent || window.FILM_TOOL_ROSTER_OPPONENT || '').trim();
+}
+
+function rosterQueryParams(side = currentRosterSide, opponent = getSelectedOpponent()) {
+    const params = {
+        season_id: getSelectedSeasonId(),
+        level: getSelectedLevel(),
+        gender: getSelectedGender(),
+        side,
+    };
+    if (side === 'opp' && opponent) params.opponent = opponent;
+    return params;
+}
+
+function syncOpponentFields() {
+    const show = currentRosterSide === 'opp' || pendingRosterImportSide === 'opp';
+    const field = document.getElementById('rosterOpponentField');
+    const importField = document.getElementById('rosterImportOpponentField');
+    if (field) field.hidden = currentRosterSide !== 'opp';
+    if (importField) importField.hidden = pendingRosterImportSide !== 'opp';
+    if (rosterOpponentStats && currentRosterSide !== 'opp') {
+        rosterOpponentStats.style.display = 'none';
+        rosterOpponentStats.textContent = '';
+    }
+}
+
+function fillOpponentSelect(selectEl, opponents, selectedName) {
+    if (!selectEl) return;
+    const names = [];
+    const seen = new Set();
+    (opponents || []).forEach((item) => {
+        const name = typeof item === 'string' ? item : item.name;
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        names.push(name);
+    });
+    if (selectedName && !seen.has(selectedName.toLowerCase())) names.unshift(selectedName);
+    selectEl.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = names.length ? 'Select opponent…' : 'No opponents yet — add one on Schedule';
+    selectEl.appendChild(blank);
+    names.forEach((name) => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if (selectedName && name.toLowerCase() === selectedName.toLowerCase()) opt.selected = true;
+        selectEl.appendChild(opt);
+    });
+}
+
+async function loadOpponentOptions() {
+    const seasonId = getSelectedSeasonId();
+    if (!seasonId) {
+        fillOpponentSelect(rosterOpponentSelect, [], currentRosterOpponent);
+        fillOpponentSelect(rosterImportOpponentSelect, [], currentRosterOpponent);
+        return [];
+    }
+    try {
+        const params = new URLSearchParams({
+            season_id: seasonId,
+            level: getSelectedLevel(),
+            gender: getSelectedGender(),
+        });
+        const resp = await fetch(`/api/film-rosters/opponents?${params.toString()}`);
+        const data = await resp.json();
+        const opponents = resp.ok ? (data.opponents || []) : [];
+        const selected = currentRosterOpponent || window.FILM_TOOL_ROSTER_OPPONENT || opponents[0]?.name || '';
+        if (selected) currentRosterOpponent = selected;
+        fillOpponentSelect(rosterOpponentSelect, opponents, selected);
+        fillOpponentSelect(rosterImportOpponentSelect, opponents, selected);
+        return opponents;
+    } catch (_err) {
+        fillOpponentSelect(rosterOpponentSelect, [], currentRosterOpponent);
+        fillOpponentSelect(rosterImportOpponentSelect, [], currentRosterOpponent);
+        return [];
+    }
+}
+
+function renderOpponentStats(stats) {
+    if (!rosterOpponentStats) return;
+    if (currentRosterSide !== 'opp' || !stats) {
+        rosterOpponentStats.style.display = 'none';
+        rosterOpponentStats.textContent = '';
+        return;
+    }
+    const bits = [];
+    if (stats.opponent_name) bits.push(stats.opponent_name);
+    if (stats.record) bits.push(`Liberty record ${stats.record}`);
+    if (stats.games) bits.push(`${stats.games} game${stats.games === 1 ? '' : 's'}`);
+    if (stats.last_score) bits.push(stats.last_score);
+    rosterOpponentStats.style.display = bits.length ? 'block' : 'none';
+    rosterOpponentStats.textContent = bits.join(' · ');
 }
 function persistRosterFilters() {
     saveJson(ROSTER_LEVEL_STORAGE_KEY, getSelectedLevel());
@@ -206,6 +330,10 @@ function syncImportDialogFilters() {
         btn.classList.toggle('active', btn.dataset.side === currentRosterSide);
     });
     pendingRosterImportSide = currentRosterSide;
+    if (rosterImportOpponentSelect && currentRosterOpponent) {
+        rosterImportOpponentSelect.value = currentRosterOpponent;
+    }
+    syncOpponentFields();
     updateRosterImportTargetLabel();
 }
 function updateRosterImportTargetLabel() {
@@ -215,18 +343,25 @@ function updateRosterImportTargetLabel() {
     const level = getImportLevel();
     const gender = getImportGender();
     const side = pendingRosterImportSide || currentRosterSide;
+    const opponent = (rosterImportOpponentSelect?.value || currentRosterOpponent || '').trim();
+    const team = side === 'opp'
+        ? (opponent ? `Opponent (${opponent})` : 'Opponent')
+        : 'Liberty';
     label.textContent = seasonId
-        ? `Importing into ${seasonLabel(seasonId)} · ${level} ${gender} · ${side}`
+        ? `Importing into ${seasonLabel(seasonId)} · ${level} ${gender} · ${team}`
         : 'Select a season for this roster.';
 }
-function rosterSlotDescription(level, gender, side) {
+function rosterSlotDescription(level, gender, side, opponent) {
+    if (side === 'opp') return `${level} ${gender} · ${opponent || 'Opponent'}`;
+    if (side === 'our') return `${level} ${gender} · Liberty`;
     return `${level} ${gender} · ${side}`;
 }
 async function findPopulatedRosterSlot(seasonId) {
     if (!seasonId) return null;
-    const levels = ['varsity', 'jv', 'jrhigh'];
+    const preferred = gameRosterLevel();
+    const levels = preferred ? [preferred] : ['jrhigh', 'jv', 'varsity'];
     const genders = ['boys', 'girls', 'coed'];
-    const sides = ['our', 'home', 'away', 'opp'];
+    const sides = preferred ? ['our', 'opp'] : ['our', 'opp'];
     for (const level of levels) {
         for (const gender of genders) {
             for (const side of sides) {
@@ -264,7 +399,8 @@ function setActiveRosterSeasonId(seasonId) {
 }
 function getRosterKey(side = currentRosterSide) {
     const seasonId = getSelectedSeasonId() || 'unscoped';
-    return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}`;
+    const opponent = side === 'opp' ? (getSelectedOpponent() || 'opponent') : 'liberty';
+    return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}|${opponent}`;
 }
 
 function parsePlayerText(text) {
@@ -435,6 +571,7 @@ async function persistRosters() {
                 level: getSelectedLevel(),
                 gender: getSelectedGender(),
                 side: currentRosterSide,
+                opponent: getSelectedOpponent() || undefined,
                 players,
                 replace: true,
             }),
@@ -1267,30 +1404,35 @@ async function loadRosterFromServer() {
         return;
     }
     try {
-        const params = new URLSearchParams({
-            season_id: seasonId,
-            level: getSelectedLevel(),
-            gender: getSelectedGender(),
-            side: currentRosterSide,
-        });
+        const params = new URLSearchParams(rosterQueryParams());
         const resp = await fetch(`/api/film-rosters?${params.toString()}`);
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not load roster');
         rosters[key] = sortRosterPlayers(data.players || []);
         saveJson(ROSTER_STORAGE_KEY, rosters);
+        renderOpponentStats(data.stats);
         if (!data.players?.length) await migrateLegacyRosterIfNeeded();
         if (!data.players?.length && !(rosters[key] || []).length) {
-            const alternate = await findPopulatedRosterSlot(seasonId);
-            if (alternate) {
-                const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
-                const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
+            const gameLevel = gameRosterLevel();
+            if (gameLevel && getSelectedLevel() === gameLevel) {
                 if (hint) {
+                    const current = rosterSlotDescription(gameLevel, getSelectedGender(), currentRosterSide, getSelectedOpponent());
                     hint.style.display = 'block';
-                    hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
-                    document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
-                        setRosterFilters(alternate.level, alternate.gender, alternate.side);
-                        await loadRosterFromServer();
-                    }, { once: true });
+                    hint.textContent = `This game is ${current}. Import or add that roster here — Varsity / JV lists are not used for this game.`;
+                }
+            } else {
+                const alternate = await findPopulatedRosterSlot(seasonId);
+                if (alternate) {
+                    const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
+                    const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
+                    if (hint) {
+                        hint.style.display = 'block';
+                        hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
+                        document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
+                            setRosterFilters(alternate.level, alternate.gender, alternate.side);
+                            await loadRosterFromServer();
+                        }, { once: true });
+                    }
                 }
             }
         }
@@ -1308,19 +1450,34 @@ function showRoster() {
         playerList.innerHTML = '<div class="empty-state tiny">Select a season to view or import a roster.</div>';
         return;
     }
-    if (!list.length) { playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>'; return; }
+    if (!list.length) {
+        const gameLevel = gameRosterLevel();
+        if (currentRosterSide === 'opp' && !getSelectedOpponent()) {
+            playerList.innerHTML = '<div class="empty-state tiny">Select an opponent to see that team’s roster and stats.</div>';
+            return;
+        }
+        if (gameLevel && getSelectedLevel() === gameLevel) {
+            playerList.innerHTML = `<div class="empty-state tiny">No ${rosterSlotDescription(gameLevel, getSelectedGender(), currentRosterSide, getSelectedOpponent())} roster yet. Import that list here so this game is not matched to a different level.</div>`;
+            return;
+        }
+        playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>';
+        return;
+    }
 
     const table = document.createElement('table');
     table.className = 'roster-table';
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    [
+    const showPts = list.some(player => player.pts != null);
+    const columns = [
         ['POS', 'col-pos'],
         ['#', 'col-num'],
         ['Name', 'col-name'],
         ['Grade', 'col-grade'],
-        ['', 'col-actions'],
-    ].forEach(([text, className]) => {
+    ];
+    if (showPts) columns.push(['PTS', 'col-pts']);
+    columns.push(['', 'col-actions']);
+    columns.forEach(([text, className]) => {
         const th = document.createElement('th');
         th.className = className;
         th.textContent = text;
@@ -1338,6 +1495,7 @@ function showRoster() {
             ['col-name', player.name || ''],
             ['col-grade', player.grade || ''],
         ];
+        if (showPts) fields.push(['col-pts', player.pts == null ? '' : String(player.pts)]);
         fields.forEach(([className, text]) => {
             const td = document.createElement('td');
             td.className = className;
@@ -1372,6 +1530,8 @@ function showRoster() {
 
 async function openRosterDialog() {
     await ensureRosterSeasonsLoaded();
+    await loadOpponentOptions();
+    syncOpponentFields();
     await loadRosterFromServer();
     rosterDialog.showModal();
 }
@@ -1414,6 +1574,11 @@ async function confirmRosterImport() {
     formData.append('level', importLevel);
     formData.append('gender', importGender);
     formData.append('side', importSide);
+    if (importSide === 'opp') {
+        const opponent = (rosterImportOpponentSelect?.value || currentRosterOpponent || '').trim();
+        if (!opponent) { alert('Select an opponent for this roster.'); return; }
+        formData.append('opponent', opponent);
+    }
     formData.append('replace', replace ? 'true' : 'false');
 
     setStatus('Importing roster...');
@@ -1451,12 +1616,7 @@ async function clearCurrentRoster() {
     if (!confirm(`Remove all ${count} players from this roster? This cannot be undone.`)) return;
 
     try {
-        const params = new URLSearchParams({
-            season_id: seasonId,
-            level: getSelectedLevel(),
-            gender: getSelectedGender(),
-            side: currentRosterSide,
-        });
+        const params = new URLSearchParams(rosterQueryParams());
         const resp = await fetch(`/api/film-rosters?${params.toString()}`, { method: 'DELETE' });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not clear roster');
@@ -1513,6 +1673,96 @@ async function savePlayerFromDialog() {
 }
 
 // ── Starters / Lineup ───────────────────────────────────────
+function parsePlayerLabel(label) {
+    const text = String(label || '').trim();
+    const match = text.match(/^#?\s*(\d+)\s*[-–:]?\s*(.*)$/);
+    if (match) {
+        const jersey = String(match[1]).replace(/^0+/, '') || '0';
+        return { jersey, name: (match[2] || '').trim(), label: text };
+    }
+    return { jersey: '', name: text, label: text };
+}
+
+function starterJerseySet(entries) {
+    return new Set((entries || []).map((row) => String(row.jersey || parsePlayerLabel(row).jersey || '').replace(/^0+/, '') || '0'));
+}
+
+function rosterLabelsMatchingStarters(team, entries) {
+    const roster = rosterForTeam(team);
+    const jerseys = starterJerseySet(entries);
+    const labels = new Set((entries || []).map((row) => String(row.label || '').trim()).filter(Boolean));
+    return new Set(roster.filter((player) => {
+        const parsed = parsePlayerLabel(player);
+        return jerseys.has(parsed.jersey) || labels.has(player);
+    }));
+}
+
+function startersSummaryText(payload) {
+    const liberty = (payload && payload.liberty) || [];
+    const opponent = (payload && payload.opponent) || [];
+    const lib = liberty.length === 5 ? `Liberty: ${liberty.map((p) => '#' + p.jersey).join(' ')}` : 'Liberty starters not set';
+    const opp = opponent.length === 5 ? `Opponent: ${opponent.map((p) => '#' + p.jersey).join(' ')}` : 'Opponent starters not set';
+    return `${lib} · ${opp}`;
+}
+
+async function persistGameStarters(libertyLabels, opponentLabels) {
+    const gameId = currentFilmGameId();
+    if (!gameId) {
+        setStatus('No game_id — open film with ?game_id=… first.');
+        return false;
+    }
+    const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/starters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            source: 'coach',
+            liberty: (libertyLabels || []).map(parsePlayerLabel),
+            opponent: (opponentLabels || []).map(parsePlayerLabel),
+        }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(body.error || 'Could not save starters.');
+        return false;
+    }
+    currentStarters = {
+        libertyTeam: ourTeamNameInput.value.trim() || 'Our Team',
+        opponentTeam: opponentInput.value.trim() || 'Opponent',
+        liberty: libertyLabels,
+        opponent: opponentLabels,
+        payload: body,
+    };
+    const summary = document.getElementById('officialStartersSummary');
+    if (summary) summary.textContent = startersSummaryText(body);
+    return true;
+}
+
+async function loadGameStarters() {
+    const gameId = currentFilmGameId();
+    if (!gameId) return null;
+    try {
+        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/starters`);
+        if (!response.ok) return null;
+        const body = await response.json();
+        const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+        const opp = opponentInput.value.trim() || 'Opponent';
+        currentStarters = {
+            libertyTeam: liberty,
+            opponentTeam: opp,
+            liberty: Array.from(rosterLabelsMatchingStarters(liberty, body.liberty)),
+            opponent: Array.from(rosterLabelsMatchingStarters(opp, body.opponent)),
+            payload: body,
+        };
+        currentLineups.liberty = new Set(currentStarters.liberty);
+        currentLineups.opponent = new Set(currentStarters.opponent);
+        const summary = document.getElementById('officialStartersSummary');
+        if (summary) summary.textContent = startersSummaryText(body);
+        return body;
+    } catch (_err) {
+        return null;
+    }
+}
+
 function renderStarterChoices(listEl, team, selectedSet) {
     listEl.innerHTML = '';
     const roster = rosterForTeam(team);
@@ -1543,7 +1793,9 @@ function openStartersDialog(mode = 'initial') {
     if (!video.paused) video.pause();
     const liberty = ourTeamNameInput.value.trim() || 'Our Team';
     const opp = opponentInput.value.trim() || 'Opponent';
-    startersHelp.textContent = mode === 'initial' ? `Choose the five ${liberty} starters before tip. Opponent is optional.` : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
+    startersHelp.textContent = mode === 'initial'
+        ? `Choose five ${liberty} starters and five ${opp} starters. Opponent can wait if you only need Liberty bench points.`
+        : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
     const libertySelected = mode === 'initial' ? new Set(currentStarters?.liberty || []) : new Set(currentLineups.liberty);
     const opponentSelected = mode === 'initial' ? new Set(currentStarters?.opponent || []) : new Set(currentLineups.opponent);
     renderStarterChoices(libertyStartersList, liberty, libertySelected);
@@ -1552,17 +1804,28 @@ function openStartersDialog(mode = 'initial') {
     startersDialog.showModal();
     document.getElementById('startersSaveBtn').onclick = () => {
         if (libertySelected.size !== 5) { alert(`Please pick exactly 5 starters for ${liberty}.`); return; }
+        if (opponentSelected.size && opponentSelected.size !== 5) {
+            alert(`Pick exactly 5 starters for ${opp}, or none.`);
+            return;
+        }
         const libertyArr = Array.from(libertySelected), oppArr = Array.from(opponentSelected);
         if (mode === 'initial') {
-            currentStarters = { libertyTeam: liberty, opponentTeam: opp, liberty: libertyArr, opponent: oppArr };
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
-        } else {
-            tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
-            tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+            persistGameStarters(libertyArr, oppArr).then((ok) => {
+                if (!ok) return;
+                currentLineups.liberty = new Set(libertyArr);
+                currentLineups.opponent = new Set(oppArr);
+                startersDialog.close();
+                setStatus('Starters saved for this game.');
+                fetchProgramSummary();
+            });
+            return;
         }
+        tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
+        tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
+        currentLineups.liberty = new Set(libertyArr);
+        currentLineups.opponent = new Set(oppArr);
         startersDialog.close();
-        setStatus(mode === 'initial' ? 'Starters recorded.' : 'Lineups updated from SUB dialog.');
+        setStatus('Lineups updated from SUB dialog.');
     };
 }
 
@@ -2200,6 +2463,124 @@ function scheduleAiReviewReloadFromSeek() {
     aiSeekReloadTimer = setTimeout(() => fetchAndRenderAIEvents(gameId), 350);
 }
 
+function boxPct(value) {
+    return value == null || value === '' ? '—' : Number(value).toFixed(1) + '%';
+}
+function boxMA(made, att) {
+    return (made || 0) + '-' + (att || 0);
+}
+function boxMin(value) {
+    const n = Number(value || 0);
+    return n ? n.toFixed(1) : '0.0';
+}
+function officialStatHeaders() {
+    return '<tr><th></th><th>MIN</th><th>PTS</th><th>2PM-A</th><th>2P%</th><th>3PM-A</th><th>3P%</th><th>FTM-A</th><th>FT%</th><th>OREB</th><th>DREB</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th></tr>';
+}
+function officialStatRow(label, row, strong) {
+    const name = strong ? `<strong>${escapeHtml(label)}</strong>` : escapeHtml(label);
+    return `<tr><td>${name}</td>
+      <td>${boxMin(row.min)}</td><td>${row.pts || 0}</td>
+      <td>${boxMA(row.fgm2, row.fga2)}</td><td>${boxPct(row.fg2_pct)}</td>
+      <td>${boxMA(row.fgm3, row.fga3)}</td><td>${boxPct(row.fg3_pct)}</td>
+      <td>${boxMA(row.ftm, row.fta)}</td><td>${boxPct(row.ft_pct)}</td>
+      <td>${row.oreb || 0}</td><td>${row.dreb || 0}</td><td>${row.reb || 0}</td>
+      <td>${row.ast || 0}</td><td>${row.stl || 0}</td><td>${row.blk || 0}</td><td>${row.tov || 0}</td></tr>`;
+}
+function officialPlayerLabel(row) {
+    return `#${row.jersey ?? ''} ${row.name || ''}`.trim();
+}
+function officialPlayerBody(rows, teamLine, emptyLabel) {
+    const starters = rows.filter((r) => r.role === 'starter');
+    const bench = rows.filter((r) => r.role === 'bench');
+    const rest = rows.filter((r) => r.role !== 'starter' && r.role !== 'bench');
+    let body = '';
+    const group = (title, list) => {
+        if (!list.length) return;
+        body += `<tr class="role-row"><td colspan="16">${title}</td></tr>`;
+        body += list.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('');
+    };
+    if (starters.length || bench.length) {
+        group('Starters', starters);
+        group('Bench', bench);
+        group('Other', rest);
+    } else {
+        body = rows.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('')
+            || `<tr><td colspan="16">${emptyLabel}</td></tr>`;
+    }
+    body += officialStatRow('Team', teamLine || {}, true);
+    return body;
+}
+function renderOfficialBox(box) {
+    const mount = document.getElementById('officialBoxMount');
+    if (!mount || !box) return false;
+    const liberty = box.liberty_name || 'Liberty';
+    const opp = box.opponent_name || 'Opponent';
+    const finalEl = document.getElementById('officialFinalScore');
+    if (finalEl) {
+        finalEl.textContent = `${liberty} ${(box.final || {}).liberty || 0}  —  ${opp} ${(box.final || {}).opponent || 0}`;
+    }
+    const noteEl = document.getElementById('officialBoxNote');
+    if (noteEl) noteEl.textContent = box.line_score_note || '';
+    const oppName = document.getElementById('officialOppName');
+    if (oppName) oppName.textContent = opp;
+    const line = box.line_score || [];
+    let lineHtml = '<table class="ft-program-box"><thead><tr><th>Team</th>';
+    line.forEach((p) => { lineHtml += `<th>${escapeHtml(p.period)}</th>`; });
+    lineHtml += '<th>Total</th></tr></thead><tbody>';
+    lineHtml += `<tr><td><strong>${escapeHtml(liberty)}</strong></td>`;
+    line.forEach((p) => { lineHtml += `<td>${p.liberty}</td>`; });
+    lineHtml += `<td><strong>${line.length ? line[line.length - 1].liberty_running : 0}</strong></td></tr>`;
+    lineHtml += `<tr><td><strong>${escapeHtml(opp)}</strong></td>`;
+    line.forEach((p) => { lineHtml += `<td>${p.opponent}</td>`; });
+    lineHtml += `<td><strong>${line.length ? line[line.length - 1].opponent_running : 0}</strong></td></tr></tbody></table>`;
+    const lineWrap = document.getElementById('officialLineScoreWrap');
+    if (lineWrap) lineWrap.innerHTML = lineHtml;
+    const teamWrap = document.getElementById('officialTeamStatsWrap');
+    if (teamWrap) {
+        const libLine = (box.team && box.team.liberty) || {};
+        const oppLine = (box.team && box.team.opponent) || {};
+        const pair = (key) => {
+            const a = libLine[key], b = oppLine[key];
+            return `${escapeHtml(liberty)} ${a == null ? '—' : a} · ${escapeHtml(opp)} ${b == null ? '—' : b}`;
+        };
+        const benchNote = libLine.bench_pts == null && oppLine.bench_pts == null
+            ? 'Bench points appear after you save a starting five.'
+            : `Bench points — ${pair('bench_pts')}`;
+        const extraNote = `<p class="tiny">${benchNote} · Paint — ${pair('pts_paint')} · 2nd chance — ${pair('pts_2nd')} · Off TO — ${pair('pts_off_to')}</p>`;
+        teamWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialStatRow(liberty, libLine, true)
+            + officialStatRow(opp, oppLine, true)
+            + '</tbody></table>'
+            + extraNote;
+    }
+    const libWrap = document.getElementById('officialLibertyWrap');
+    if (libWrap) {
+        const rows = (box.players && box.players.liberty) || [];
+        libWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialPlayerBody(rows, (box.team && box.team.liberty) || {}, 'No Liberty players')
+            + '</tbody></table>';
+    }
+    const oppWrap = document.getElementById('officialOppWrap');
+    if (oppWrap) {
+        const rows = (box.players && box.players.opponent) || [];
+        oppWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialPlayerBody(rows, (box.team && box.team.opponent) || {}, 'No opponent players')
+            + '</tbody></table>';
+    }
+    const unWrap = document.getElementById('officialUnassignedWrap');
+    if (unWrap) {
+        const rows = box.unassigned || [];
+        unWrap.innerHTML = rows.length
+            ? `<h3 class="ft-program-subhead">AI IDs not yet mapped to a jersey</h3><table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>${rows.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('')}</tbody></table>`
+            : '';
+    }
+    if (box.starters) {
+        const summary = document.getElementById('officialStartersSummary');
+        if (summary) summary.textContent = startersSummaryText(box.starters);
+    }
+    return true;
+}
+
 function renderProgramSummary(summary) {
     const statusEl = document.getElementById('programStatusText');
     const scoreEl = document.getElementById('programScoreLine');
@@ -2224,8 +2605,7 @@ function renderProgramSummary(summary) {
             window.FILM_GAME_TEAMS = { home_team: home, away_team: away };
             window.FILM_SCOREBOOK_PLAYERS = Array.isArray(sb.players) ? sb.players : [];
             scoreEl.textContent = (
-                `Home ${home} / Away ${away} · Scorebook team PTS ${bookPts} · AI ledger PTS ${aiPts}`
-                + ` · players still tracker IDs (not jerseys yet)`
+                `${home} vs ${away} · Book PTS ${bookPts} · AI ledger PTS ${aiPts}`
             );
         } else {
             window.FILM_SCOREBOOK_PLAYERS = [];
@@ -2241,6 +2621,9 @@ function renderProgramSummary(summary) {
                 `<div class="ft-program-ex ${escapeHtml(item.severity || '')}">${escapeHtml(item.message || '')}</div>`
             )).join('');
         }
+    }
+    if (summary.official_box) {
+        renderOfficialBox(summary.official_box);
     }
     if (body) {
         const players = summary.ledger_box?.players || [];
@@ -2290,6 +2673,7 @@ async function fetchProgramSummary() {
         if (!response.ok) throw new Error('summary failed');
         const summary = await response.json();
         renderProgramSummary(summary);
+        loadGameStarters();
         return summary;
     } catch (_err) {
         if (statusEl) statusEl.textContent = 'Could not load program summary.';
@@ -2615,7 +2999,7 @@ function renderAiEvents(events) {
     aiEventsCache = events.filter(event => event.event_type !== 'bookmark');
     if (!aiEventsCache.length) {
         const emptyMsg = aiReviewFilter === 'ledger'
-            ? 'No ledger plays found. Click “Build / refine Adrian ledger” in step 1 first.'
+            ? 'No ledger plays found. Click “Build AI box vs scorebook” first.'
             : (aiReviewFilter === 'pending'
                 ? 'No AI drafts near this time (Adrian pending was cleared after refine). Use Show ledger plays.'
                 : 'No AI events found for this game.');
@@ -2793,7 +3177,25 @@ function undoLastRow() {
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
-function showRunAnalysisProgress(pct, step, status, elapsedSec) {
+function formatAnalysisElapsed(elapsedSec, startedAt) {
+    let sec = elapsedSec;
+    if (startedAt) {
+        const started = new Date(String(startedAt).includes('T') ? startedAt : `${startedAt}Z`);
+        if (!Number.isNaN(started.getTime())) {
+            sec = Math.max(0, Math.floor((Date.now() - started.getTime()) / 1000));
+        }
+    }
+    if (sec == null || sec < 0) return '';
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const secs = sec % 60;
+    if (hrs) return `${hrs}h ${mins}m elapsed`;
+    if (mins) return `${mins}m ${secs}s elapsed`;
+    return `${secs}s elapsed`;
+}
+
+function showRunAnalysisProgress(pct, step, status, elapsedSec, extra) {
+    extra = extra || {};
     const runBar = document.getElementById('runAnalysisBar');
     const idleRow = document.getElementById('runAnalysisIdleRow');
     const progressBlock = document.getElementById('runAnalysisProgressBlock');
@@ -2804,24 +3206,34 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
     const detail = document.getElementById('runAnalysisDetail');
     const percent = Math.max(0, Math.min(100, pct || 0));
     const jobStatus = status || 'running';
-    const waiting = percent === 0 && (jobStatus === 'pending' || jobStatus === 'running');
-    const gameId = window.FILM_TOOL_GAME_ID || '';
+    const waiting = percent < 1 && (jobStatus === 'pending' || jobStatus === 'running');
+    const gameId = extra.analysis_key || window.FILM_TOOL_GAME_ID || '';
     const isRerun = String(gameId).includes('__rerun_');
+    const currentFrame = extra.current_frame;
+    const totalFrames = extra.total_frames;
 
     if (runBar) {
         runBar.style.display = 'flex';
+        runBar.classList.toggle('is-complete', jobStatus === 'completed');
+        runBar.classList.toggle('is-failed', jobStatus === 'failed');
     }
     if (idleRow) idleRow.style.display = 'none';
     if (progressBlock) progressBlock.style.display = 'block';
     if (btn) btn.style.display = 'none';
-    if (bar) bar.style.width = `${percent}%`;
-    if (pctEl) pctEl.textContent = `${Math.round(percent)}%`;
+    if (bar) {
+        bar.style.width = `${waiting ? 35 : percent}%`;
+        bar.classList.toggle('is-indeterminate', waiting);
+        bar.classList.toggle('is-live', jobStatus === 'pending' || jobStatus === 'running');
+    }
+    if (pctEl) pctEl.textContent = jobStatus === 'completed' ? '100%' : (waiting ? '…' : `${Math.round(percent)}%`);
 
     let phaseText = step || 'Analyzing…';
     if (jobStatus === 'pending') {
         phaseText = step || 'Queued — starting AI worker…';
     } else if (waiting) {
         phaseText = step || 'Loading AI models…';
+    } else if (jobStatus === 'completed') {
+        phaseText = step || 'Analysis complete';
     }
     if (phase) phase.textContent = phaseText;
 
@@ -2830,15 +3242,20 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
         if (jobStatus === 'pending') {
             parts.push('Waiting for the analysis worker to start on the server.');
         } else if (waiting) {
-            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes, then the number appears.');
+            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes.');
+        } else if (jobStatus === 'running') {
+            parts.push('In progress. Frame count updates about every 500 frames.');
         }
-        if (elapsedSec != null && waiting) {
-            const mins = Math.floor(elapsedSec / 60);
-            const secs = elapsedSec % 60;
-            parts.push(mins ? `${mins}m ${secs}s elapsed` : `${secs}s elapsed`);
+        const elapsed = formatAnalysisElapsed(elapsedSec, extra.started_at);
+        if (elapsed) parts.push(elapsed);
+        if (currentFrame != null && totalFrames) {
+            parts.push(`Frame ${Number(currentFrame).toLocaleString()} / ${Number(totalFrames).toLocaleString()}`);
         }
         if (isRerun) {
             parts.push('Comparison rerun opened from Compare AI.');
+        }
+        if (jobStatus === 'completed' && extra.detection_count != null) {
+            parts.push(`${extra.detection_count} detections, ${extra.event_count ?? 0} events`);
         }
         detail.textContent = parts.join(' • ');
     }
@@ -2887,8 +3304,7 @@ function initAnalysisStatus() {
             const step = data.progress_step || (data.status === 'pending' ? 'Queued — starting AI worker…' : 'Loading AI models…');
             const elapsedSec = pollStartedAt ? Math.floor((Date.now() - pollStartedAt) / 1000) : null;
             if (data.status === 'running' || data.status === 'pending') {
-                showRunAnalysisProgress(pct, step, data.status, elapsedSec);
-                showUploadAnalysisProgress(pct, step);
+                showRunAnalysisProgress(pct, step, data.status, elapsedSec, data);
                 pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
                 pollTimer = null;
@@ -2896,9 +3312,8 @@ function initAnalysisStatus() {
                 const evtCount = data.event_count ?? 0;
                 const completeStep = detCount === 0
                     ? `Analysis finished but found 0 detections (${evtCount} events). Check Debug on Video Library or run again on the trimmed clip.`
-                    : 'Analysis complete!';
-                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec);
-                showUploadAnalysisProgress(100, completeStep);
+                    : 'Analysis complete';
+                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec, data);
                 const runDetail = document.getElementById('runAnalysisDetail');
                 if (runDetail && window.FILM_TOOL_VIDEO_ID) {
                     const debugUrl = `/api/videos/${window.FILM_TOOL_VIDEO_ID}/analysis-debug`;
@@ -2906,13 +3321,6 @@ function initAnalysisStatus() {
                         ? `No detections written. <a href="${debugUrl}" target="_blank" rel="noopener">Open debug info</a>`
                         : `${detCount} detections, ${evtCount} events. <a href="${debugUrl}" target="_blank" rel="noopener">Debug</a>`;
                 }
-                setTimeout(() => {
-                    const analysisShell = document.getElementById('analysisProgressShell');
-                    if (analysisShell) analysisShell.style.display = 'none';
-                    if (typeof window.updateRunAnalysisBar === 'function') {
-                        window.updateRunAnalysisBar('completed');
-                    }
-                }, 3000);
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
                 pollTimer = null;
@@ -2921,7 +3329,7 @@ function initAnalysisStatus() {
                     return;
                 }
                 const failStep = data.error_message || data.progress_step || 'Analysis failed';
-                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec);
+                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec, data);
                 if (typeof window.updateRunAnalysisBar === 'function') {
                     window.updateRunAnalysisBar('failed');
                 }
@@ -2956,7 +3364,6 @@ function initAnalysisStatus() {
         }
         pollStartedAt = Date.now();
         showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
-        showUploadAnalysisProgress(0, 'Starting AI analysis…');
         fetchAnalysisProgress();
     };
 
@@ -3053,6 +3460,10 @@ function initRunAnalysis() {
             return;
         }
         if (analysisStatus === 'completed' && !needsDetectionRerun) {
+            if (progressBlock && progressBlock.style.display === 'block') {
+                showRunAnalysisProgress(100, 'Analysis complete', 'completed');
+                return;
+            }
             bar.style.display = 'none';
             return;
         }
@@ -3412,10 +3823,15 @@ function attachEventHandlers() {
     termFieldSelect?.addEventListener('change', renderTermList);
 
     document.getElementById('manageRostersBtn')?.addEventListener('click', () => { openRosterDialog(); });
-    document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
-    document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
-    document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
-    rosterSeasonSelect?.addEventListener('change', async () => { setActiveRosterSeasonId(rosterSeasonSelect.value); await loadRosterFromServer(); });
+    document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); syncOpponentFields(); if (currentRosterSide === 'opp') await loadOpponentOptions(); await loadRosterFromServer(); }); });
+    document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', async () => { persistRosterFilters(); await loadOpponentOptions(); loadRosterFromServer(); }); });
+    document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', async () => { persistRosterFilters(); await loadOpponentOptions(); loadRosterFromServer(); }); });
+    rosterSeasonSelect?.addEventListener('change', async () => { setActiveRosterSeasonId(rosterSeasonSelect.value); await loadOpponentOptions(); await loadRosterFromServer(); });
+    rosterOpponentSelect?.addEventListener('change', async () => {
+        currentRosterOpponent = rosterOpponentSelect.value;
+        await loadRosterFromServer();
+    });
+    rosterImportOpponentSelect?.addEventListener('change', updateRosterImportTargetLabel);
     rosterImportSeasonSelect?.addEventListener('change', updateRosterImportTargetLabel);
     document.querySelectorAll('input[name="importLevel"], input[name="importGender"]').forEach(r => {
         r.addEventListener('change', updateRosterImportTargetLabel);
@@ -3425,6 +3841,7 @@ function attachEventHandlers() {
             document.querySelectorAll('.roster-import-side-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             pendingRosterImportSide = btn.dataset.side;
+            syncOpponentFields();
             updateRosterImportTargetLabel();
         });
     });
@@ -3491,6 +3908,7 @@ function attachEventHandlers() {
     document.getElementById('clearAllBtn')?.addEventListener('click', () => { if (confirm('Clear all tagged events in this game?')) clearAllRows(); });
     document.getElementById('subBtn')?.addEventListener('click', tagSubstitution);
     document.getElementById('startersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
+    document.getElementById('officialStartersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
 
     document.getElementById('newGameBtn')?.addEventListener('click', () => {
         if (!confirm('Start a new game? This clears current tagged rows.')) return;
@@ -3636,6 +4054,9 @@ function init() {
     rosterImportSeasonSelect = document.getElementById('rosterImportSeasonSelect');
     rosterImportReplace = document.getElementById('rosterImportReplace');
     rosterImportFileLabel = document.getElementById('rosterImportFileLabel');
+    rosterOpponentSelect = document.getElementById('rosterOpponentSelect');
+    rosterImportOpponentSelect = document.getElementById('rosterImportOpponentSelect');
+    rosterOpponentStats = document.getElementById('rosterOpponentStats');
     playerDialog = document.getElementById('playerDialog');
     playerPosInput = document.getElementById('playerPosInput');
     playerNumInput = document.getElementById('playerNumInput');
@@ -3656,8 +4077,10 @@ function init() {
 
     loadTheme();
     loadStores();
+    applyOpenGameRosterContext();
     ensureRosterSeasonsLoaded().then(() => {
         restoreRosterFilters();
+        applyOpenGameRosterContext();
         return loadRosterFromServer();
     });
     renderEventButtons();

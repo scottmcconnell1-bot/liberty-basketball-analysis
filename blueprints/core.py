@@ -1753,6 +1753,19 @@ def film(filename=None):
 
     review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
     plays_mode = (request.args.get("plays") or "").strip().lower() in {"1", "true", "yes"}
+    roster_season_id = None
+    roster_level = None
+    roster_gender = None
+    roster_opponent = None
+    if game_id:
+        from analysis_helpers import resolve_analysis_game_context
+
+        ctx = resolve_analysis_game_context(get_db(), game_id)
+        roster_season_id = ctx.get("season_id")
+        roster_level = ctx.get("level")
+        roster_gender = ctx.get("gender")
+        roster_opponent = ctx.get("schedule_opponent_name") or ctx.get("opponent_name")
+
     return render_template(
         "film_tool.html",
         filename=filename,
@@ -1765,6 +1778,10 @@ def film(filename=None):
         analysis_results_url=analysis_results_url_for(game_id),
         review_mode=review_mode,
         plays_mode=plays_mode,
+        roster_season_id=roster_season_id,
+        roster_level=roster_level,
+        roster_gender=roster_gender,
+        roster_opponent=roster_opponent,
     )
 
 
@@ -1926,6 +1943,8 @@ def settings_page():
         except ValueError:
             frame_stride = AI_DEFAULTS["frame_stride"]
         updates["ai.frame_stride"] = frame_stride
+
+        updates["ai.tracker_enabled"] = bool(request.form.get("ai_tracker_enabled"))
 
         try:
             tracker_distance = max(1, int(request.form.get("ai_tracker_max_distance", AI_DEFAULTS["tracker_max_distance"])))
@@ -2166,7 +2185,7 @@ def api_teams_schedule():
     for sec in TEAM_SECTIONS:
         team_seasons = _seasons_for_team_section(db, sec)
         allowed_ids = {s["id"] for s in team_seasons}
-        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, allowed_ids)
+        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, team_seasons)
         season_id = _resolve_dashboard_season_id(
             request, sec["key"], default_season_id, allowed_ids
         )
@@ -2236,8 +2255,14 @@ def _resolve_dashboard_season_id(request, team_key, default_season_id, allowed_s
     return season_id
 
 
-def _default_dashboard_season_id(db, sec, active_seasons, allowed_season_ids):
-    """Dashboard cards default to no season until the user picks one."""
+def _default_dashboard_season_id(db, sec, active_seasons, team_seasons):
+    """Prefer an in-progress season, else the most recent season that has games."""
+    allowed = {s["id"] for s in team_seasons}
+    for season in active_seasons:
+        if season["id"] in allowed:
+            return season["id"]
+    if team_seasons:
+        return team_seasons[0]["id"]
     return None
 
 
@@ -2250,6 +2275,7 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
             "conf_wins": 0,
             "conf_losses": 0,
             "upcoming": [],
+            "recent": [],
             "last_game": None,
         }
 
@@ -2298,92 +2324,37 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
         params,
     ).fetchone()
 
+    recent = db.execute(
+        f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
+                   sg.location_type, sg.status, sg.tournament_name,
+                   g.home_score, g.away_score, g.result
+            FROM scheduled_games sg
+            LEFT JOIN games g ON g.scheduled_game_id = sg.id
+            {where} AND sg.game_date < date('now') AND sg.status != 'cancelled'
+            ORDER BY sg.game_date DESC, sg.game_time DESC
+            LIMIT 5""",
+        params,
+    ).fetchall()
+
     return {
         "wins": wins,
         "losses": losses,
         "conf_wins": conf_wins,
         "conf_losses": conf_losses,
         "upcoming": [dict(r) for r in upcoming],
+        "recent": [dict(r) for r in recent],
         "last_game": dict(last_game) if last_game else None,
     }
 
 
 def _scrape_maxpreps_ranking(state, gender):
     """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
-    Returns (ranking_int, url_str) or (None, None) if not found.
-    Uses Playwright for an isolated browser session (no agent-browser conflicts).
+    Returns (ranking_int, url_str, error_str).
     """
-    from playwright.sync_api import sync_playwright
+    from maxpreps_web import scrape_ranking
 
-    state_slug = state.lower().replace(" ", "-")
-    state_slug_overrides = {"idaho": "id"}
-    state_slug = state_slug_overrides.get(state_slug, state_slug)
-    gender_slug = "boys" if gender == "boys" else "girls"
-
-    division_ids = {
-        ("id", "boys"): "b006084a-35a3-4277-b62e-8782f19ac85a",
-        ("id", "girls"): "17ff4bb2-1a40-4f38-a3e1-637f78af15f2",
-    }
-
-    div_id = division_ids.get((state_slug, gender_slug))
-    if div_id:
-        if gender_slug == "girls":
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-        else:
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-    else:
-        url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
-
-    ranking = None
-    chromium_path = "/snap/bin/chromium"
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                executable_path=chromium_path,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
-            )
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 900},
-            )
-            page = context.new_page()
-            page.set_default_timeout(30000)
-
-            try:
-                page.goto(url, wait_until="domcontentloaded")
-                import time
-                time.sleep(5)
-                page.wait_for_selector("table", timeout=15000)
-            except Exception:
-                pass  # Continue even if table doesn't appear in time
-
-            result = page.evaluate("""() => {
-                const rows = document.querySelectorAll('tr');
-                for (const row of rows) {
-                    const rowText = row.textContent || '';
-                    if (rowText.toLowerCase().includes('liberty')) {
-                        const cells = row.querySelectorAll('td, th');
-                        for (const cell of cells) {
-                            const text = cell.textContent.trim();
-                            const num = parseInt(text, 10);
-                            if (!isNaN(num) && num >= 1 && num <= 50 && text === String(num)) {
-                                return num;
-                            }
-                        }
-                    }
-                }
-                return null;
-            }""")
-            if result:
-                ranking = result
-
-            browser.close()
-    except Exception:
-        pass
-
-    return ranking, url
+    result = scrape_ranking(state, gender)
+    return result.get("ranking"), result.get("url"), result.get("error")
 
 
 @core.route("/api/teams/rankings", methods=["GET", "POST"])
@@ -2395,10 +2366,12 @@ def api_teams_rankings():
     db = get_db()
     state = request.args.get("state", "Idaho") if request.method == "GET" else request.form.get("state", "Idaho")
 
+    scrape_errors = {}
     if request.method == "POST":
-        # Scrape fresh rankings for both varsity teams
         for team_key, gender in [("varsity_boys", "boys"), ("varsity_girls", "girls")]:
-            ranking, url = _scrape_maxpreps_ranking(state, gender)
+            ranking, url, error = _scrape_maxpreps_ranking(state, gender)
+            if error:
+                scrape_errors[team_key] = error
             db.execute(
                 """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -2416,7 +2389,10 @@ def api_teams_rankings():
         (state,),
     ).fetchall()
     rankings = {r["team_key"]: dict(r) for r in rows}
-    return jsonify({"state": state, "rankings": rankings})
+    payload = {"state": state, "rankings": rankings}
+    if scrape_errors:
+        payload["errors"] = scrape_errors
+    return jsonify(payload)
 
 
 @core.route("/api/resource-status")

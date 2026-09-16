@@ -37,7 +37,18 @@
   .badge-ft { background: #1f4a3a; color: #4ade80; }
   .nav { margin-bottom: 20px; }
   .nav a { color: var(--accent); text-decoration: none; font-size: 0.85rem; margin-right: 16px; }
-  .nav a:hover { text-decoration: underline; }
+  .official-box { margin-bottom: 24px; }
+  .official-box h2 { margin-bottom: 8px; }
+  .official-box .box-note { color: var(--muted); font-size: 0.8rem; margin: 0 0 12px; }
+  .official-box .final-score { font-size: 1.35rem; font-weight: 700; margin: 0 0 12px; }
+  .official-box table { min-width: 720px; }
+  .official-box .team-name { font-weight: 700; }
+  .starters-picker { margin: 12px 0 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .starters-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .starters-cols label { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px; }
+  .starter-item { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 0.85rem; }
+  .role-row td { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; }
+
 
   /* Progress bar */
   .progress-wrap { margin: 40px auto; max-width: 400px; text-align: center; }
@@ -131,6 +142,38 @@
   <div id="error" class="error" style="display:none"></div>
 
   <div id="results" style="display:none">
+    <div class="card official-box" id="officialBoxCard" style="margin-bottom:24px;">
+      <h2>Box score</h2>
+      <p class="final-score" id="officialFinalScore"></p>
+      <p class="box-note" id="officialBoxNote"></p>
+      <div class="starters-picker" id="officialStartersWrap">
+        <h3 style="font-size:.85rem;color:var(--muted);margin:0 0 6px;">Starting five</h3>
+        <p class="box-note">Pick five Liberty starters and five opponent starters. Bench points use this list. Opening-tip detection comes after jersey numbers are stable.</p>
+        <div class="starters-cols">
+          <div>
+            <label>Liberty</label>
+            <div id="officialLibertyStarters"></div>
+          </div>
+          <div>
+            <label>Opponent</label>
+            <div id="officialOppStarters"></div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="saveOfficialStartersBtn" style="margin-top:10px;">Save starting five</button>
+        <p class="box-note" id="officialStartersStatus"></p>
+      </div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:16px 0 8px;">1. Line score</h3>
+      <div style="overflow-x:auto" id="officialLineScoreWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">2. Team stats</h3>
+      <div style="overflow-x:auto" id="officialTeamStatsWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">3. Liberty</h3>
+      <div style="overflow-x:auto" id="officialLibertyWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">3. Opponent</h3>
+      <p class="box-note" id="officialOppName"></p>
+      <div style="overflow-x:auto" id="officialOppWrap"></div>
+      <div id="officialUnassignedWrap" style="display:none;margin-top:16px;"></div>
+    </div>
+
     <div class="card" id="slotMappingCard" style="margin-bottom:24px;">
       <h2>✅ Verify AI player mapping <span style="color:var(--muted);font-size:.8rem;font-weight:400;">(optional)</span></h2>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px;line-height:1.5;">
@@ -477,7 +520,10 @@ async function loadResults() {
 
     await sleep(100);
     BASIC_STATS_ROWS = data.basic_stats || [];
-    renderBoxScore(BASIC_STATS_ROWS, data.enhanced || {});
+    renderOfficialBox(data.official_box);
+    if (!data.official_box) {
+      renderBoxScore(BASIC_STATS_ROWS, data.enhanced || {});
+    }
 
     setStep('step-boxscore', 'done');
     setProgress(70, 'Analyzing shots…');
@@ -620,6 +666,193 @@ function renderMinutesSummary(minutes) {
     html += '<p style="color:var(--muted);font-size:0.8rem;margin-top:8px;">+' + (sorted.length - 8) + ' more slots</p>';
   }
   el.innerHTML = html;
+}
+
+function boxPct(value) {
+  return value == null || value === '' ? '—' : Number(value).toFixed(1) + '%';
+}
+function boxMA(made, att) {
+  return (made || 0) + '-' + (att || 0);
+}
+function boxMin(value) {
+  const n = Number(value || 0);
+  return n ? n.toFixed(1) : '0.0';
+}
+function officialStatHeaders() {
+  return '<tr><th></th><th class="num">MIN</th><th class="num">PTS</th><th class="num">2PM-A</th><th class="num">2P%</th><th class="num">3PM-A</th><th class="num">3P%</th><th class="num">FTM-A</th><th class="num">FT%</th><th class="num">OREB</th><th class="num">DREB</th><th class="num">REB</th><th class="num">AST</th><th class="num">STL</th><th class="num">BLK</th><th class="num">TO</th></tr>';
+}
+function officialStatRow(label, row, strong) {
+  const name = strong ? '<strong>' + escapeHtml(label) + '</strong>' : escapeHtml(label);
+  return '<tr><td>' + name + '</td>'
+    + '<td class="num">' + boxMin(row.min) + '</td>'
+    + '<td class="num">' + (row.pts || 0) + '</td>'
+    + '<td class="num">' + boxMA(row.fgm2, row.fga2) + '</td>'
+    + '<td class="num">' + boxPct(row.fg2_pct) + '</td>'
+    + '<td class="num">' + boxMA(row.fgm3, row.fga3) + '</td>'
+    + '<td class="num">' + boxPct(row.fg3_pct) + '</td>'
+    + '<td class="num">' + boxMA(row.ftm, row.fta) + '</td>'
+    + '<td class="num">' + boxPct(row.ft_pct) + '</td>'
+    + '<td class="num">' + (row.oreb || 0) + '</td>'
+    + '<td class="num">' + (row.dreb || 0) + '</td>'
+    + '<td class="num">' + (row.reb || 0) + '</td>'
+    + '<td class="num">' + (row.ast || 0) + '</td>'
+    + '<td class="num">' + (row.stl || 0) + '</td>'
+    + '<td class="num">' + (row.blk || 0) + '</td>'
+    + '<td class="num">' + (row.tov || 0) + '</td></tr>';
+}
+function playerLabel(row) {
+  const jersey = row.jersey != null ? '#' + row.jersey : '';
+  return (jersey + ' ' + (row.name || '')).trim();
+}
+function jerseyKey(value) {
+  return String(value == null ? '' : value).replace(/^#/, '').replace(/^0+/, '') || '0';
+}
+function officialPlayerBody(rows, teamLine, emptyLabel) {
+  const starters = rows.filter(function(r) { return r.role === 'starter'; });
+  const bench = rows.filter(function(r) { return r.role === 'bench'; });
+  const rest = rows.filter(function(r) { return r.role !== 'starter' && r.role !== 'bench'; });
+  let body = '';
+  function group(title, list) {
+    if (!list.length) return;
+    body += '<tr class="role-row"><td colspan="16">' + title + '</td></tr>';
+    body += list.map(function(r) { return officialStatRow(playerLabel(r), r); }).join('');
+  }
+  if (starters.length || bench.length) {
+    group('Starters', starters);
+    group('Bench', bench);
+    group('Other', rest);
+  } else {
+    body = rows.map(function(r) { return officialStatRow(playerLabel(r), r); }).join('')
+      || '<tr><td colspan="16">' + emptyLabel + '</td></tr>';
+  }
+  body += officialStatRow('Team', teamLine || {}, true);
+  return body;
+}
+function benchPtsLine(box) {
+  const lib = (box.team && box.team.liberty) || {};
+  const opp = (box.team && box.team.opponent) || {};
+  const liberty = box.liberty_name || 'Liberty';
+  const oppName = box.opponent_name || 'Opponent';
+  const pair = function(key) {
+    const a = lib[key], b = opp[key];
+    if (a == null && b == null) return '';
+    return escapeHtml(liberty) + ' ' + (a == null ? '—' : a) + ' · ' + escapeHtml(oppName) + ' ' + (b == null ? '—' : b);
+  };
+  const bits = [];
+  const bench = pair('bench_pts');
+  bits.push(bench ? 'Bench points — ' + bench : 'Bench points appear after you save a starting five.');
+  bits.push('Paint — ' + (pair('pts_paint') || (escapeHtml(liberty) + ' 0 · ' + escapeHtml(oppName) + ' 0')));
+  bits.push('2nd chance — ' + (pair('pts_2nd') || (escapeHtml(liberty) + ' 0 · ' + escapeHtml(oppName) + ' 0')));
+  bits.push('Off TO — ' + (pair('pts_off_to') || (escapeHtml(liberty) + ' 0 · ' + escapeHtml(oppName) + ' 0')));
+  return '<p class="box-note">' + bits.join(' · ') + '</p>';
+}
+function renderStarterChecks(container, players, selected) {
+  if (!container) return;
+  const chosen = new Set((selected || []).map(function(row) { return jerseyKey(row.jersey); }));
+  container.innerHTML = '';
+  if (!players.length) {
+    container.innerHTML = '<p class="box-note">No roster yet.</p>';
+    return;
+  }
+  players.forEach(function(player) {
+    const label = document.createElement('label');
+    label.className = 'starter-item';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.value = jerseyKey(player.jersey);
+    box.dataset.name = player.name || '';
+    box.checked = chosen.has(jerseyKey(player.jersey));
+    label.appendChild(box);
+    label.appendChild(document.createTextNode(' ' + playerLabel(player)));
+    container.appendChild(label);
+  });
+}
+function collectedStarters(container) {
+  return Array.from((container || document.createElement('div')).querySelectorAll('input[type="checkbox"]:checked')).map(function(box) {
+    return { jersey: box.value, name: box.dataset.name || '' };
+  });
+}
+function renderStartersPicker(box) {
+  const starters = box.starters || {};
+  renderStarterChecks(document.getElementById('officialLibertyStarters'), (box.players && box.players.liberty) || [], starters.liberty);
+  renderStarterChecks(document.getElementById('officialOppStarters'), (box.players && box.players.opponent) || [], starters.opponent);
+  const status = document.getElementById('officialStartersStatus');
+  if (!status) return;
+  const libOk = starters.complete && starters.complete.liberty;
+  const oppOk = starters.complete && starters.complete.opponent;
+  status.textContent = (libOk ? 'Liberty starters saved. ' : 'Liberty starters not set. ')
+    + (oppOk ? 'Opponent starters saved.' : 'Opponent starters not set.');
+}
+let LAST_OFFICIAL_BOX = null;
+function renderOfficialBox(box) {
+  const card = document.getElementById('officialBoxCard');
+  if (!card) return;
+  if (!box) {
+    card.style.display = 'none';
+    return;
+  }
+  LAST_OFFICIAL_BOX = box;
+  card.style.display = 'block';
+  const liberty = box.liberty_name || 'Liberty';
+  const opp = box.opponent_name || 'Opponent';
+  const finalEl = document.getElementById('officialFinalScore');
+  if (finalEl) {
+    finalEl.textContent = liberty + ' ' + ((box.final || {}).liberty || 0) + '  —  ' + opp + ' ' + ((box.final || {}).opponent || 0);
+  }
+  const noteEl = document.getElementById('officialBoxNote');
+  if (noteEl) noteEl.textContent = box.line_score_note || '';
+  const oppName = document.getElementById('officialOppName');
+  if (oppName) oppName.textContent = opp;
+  const line = box.line_score || [];
+  let lineHtml = '<table><thead><tr><th>Team</th>';
+  line.forEach(function(p) { lineHtml += '<th class="num">' + escapeHtml(p.period) + '</th>'; });
+  lineHtml += '<th class="num">Total</th></tr></thead><tbody>';
+  lineHtml += '<tr><td class="team-name">' + escapeHtml(liberty) + '</td>';
+  line.forEach(function(p) { lineHtml += '<td class="num">' + p.liberty + '</td>'; });
+  lineHtml += '<td class="num"><strong>' + (line.length ? line[line.length - 1].liberty_running : 0) + '</strong></td></tr>';
+  lineHtml += '<tr><td class="team-name">' + escapeHtml(opp) + '</td>';
+  line.forEach(function(p) { lineHtml += '<td class="num">' + p.opponent + '</td>'; });
+  lineHtml += '<td class="num"><strong>' + (line.length ? line[line.length - 1].opponent_running : 0) + '</strong></td></tr>';
+  lineHtml += '</tbody></table>';
+  const lineWrap = document.getElementById('officialLineScoreWrap');
+  if (lineWrap) lineWrap.innerHTML = lineHtml;
+  const teamWrap = document.getElementById('officialTeamStatsWrap');
+  if (teamWrap) {
+    teamWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialStatRow(liberty, box.team && box.team.liberty || {}, true)
+      + officialStatRow(opp, box.team && box.team.opponent || {}, true)
+      + '</tbody></table>'
+      + benchPtsLine(box);
+  }
+  const libWrap = document.getElementById('officialLibertyWrap');
+  if (libWrap) {
+    const rows = (box.players && box.players.liberty) || [];
+    libWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialPlayerBody(rows, box.team && box.team.liberty || {}, 'No Liberty players')
+      + '</tbody></table>';
+  }
+  const oppWrap = document.getElementById('officialOppWrap');
+  if (oppWrap) {
+    const rows = (box.players && box.players.opponent) || [];
+    oppWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialPlayerBody(rows, box.team && box.team.opponent || {}, 'No opponent players')
+      + '</tbody></table>';
+  }
+  const unWrap = document.getElementById('officialUnassignedWrap');
+  if (unWrap) {
+    const rows = box.unassigned || [];
+    if (!rows.length) {
+      unWrap.style.display = 'none';
+      unWrap.innerHTML = '';
+    } else {
+      unWrap.style.display = 'block';
+      unWrap.innerHTML = '<h3 style="font-size:.85rem;color:var(--muted);margin:0 0 8px;">AI IDs not yet mapped to a jersey</h3><table><thead>'
+        + officialStatHeaders() + '</thead><tbody>'
+        + rows.map(function(r) { return officialStatRow(playerLabel(r), r); }).join('')
+        + '</tbody></table>';
+    }
+  }
+  renderStartersPicker(box);
 }
 
 function renderBoxScore(basic, enhanced) {
@@ -935,10 +1168,20 @@ async function loadSlotMappingUI() {
         status.style.display = 'block';
         status.style.color = 'var(--green)';
         const ctx = rosterData.roster_context || {};
+        const levelLabels = { jrhigh: 'Jr High', jr_high: 'Jr High', jv: 'JV', varsity: 'Varsity' };
+        const levelText = levelLabels[ctx.level] || ctx.level || '';
         status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from Film Tool roster'
           + (ctx.season_id ? ' (matched season ' + ctx.season_id + ')' : '')
-          + (ctx.level ? ', ' + ctx.level : '')
+          + (levelText ? ', ' + levelText : '')
           + (ctx.gender ? ' ' + ctx.gender : '') + '.';
+      } else if (status && rosterData.source === 'scorebook') {
+        status.style.display = 'block';
+        status.style.color = 'var(--green)';
+        const ctx = rosterData.roster_context || {};
+        status.textContent = 'Loaded ' + ROSTER_PLAYERS.length + ' players from the confirmed scorebook'
+          + (ctx.home_team || ctx.away_team
+            ? ' (Home ' + (ctx.home_team || '?') + ' / Away ' + (ctx.away_team || '?') + ')'
+            : '') + '.';
       } else if (status && rosterData.source === 'global_players') {
         status.style.display = 'block';
         status.style.color = 'var(--green)';
@@ -1162,6 +1405,35 @@ async function loadExplorerEvents(filters) {
 ['filter-stat', 'filter-team', 'filter-player', 'filter-quarter', 'filter-half'].forEach(function(id) {
   const el = document.getElementById(id);
   if (el) el.addEventListener('change', function() { loadExplorerEvents(getExplorerFilters()); });
+});
+
+document.getElementById('saveOfficialStartersBtn')?.addEventListener('click', async function() {
+  const status = document.getElementById('officialStartersStatus');
+  const liberty = collectedStarters(document.getElementById('officialLibertyStarters'));
+  const opponent = collectedStarters(document.getElementById('officialOppStarters'));
+  if (liberty.length && liberty.length !== 5) {
+    alert('Pick exactly 5 Liberty starters, or none.');
+    return;
+  }
+  if (opponent.length && opponent.length !== 5) {
+    alert('Pick exactly 5 opponent starters, or none.');
+    return;
+  }
+  if (status) status.textContent = 'Saving starting five…';
+  try {
+    const resp = await fetch('/api/games/' + encodeURIComponent(GAME_ID) + '/starters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'coach', liberty: liberty, opponent: opponent }),
+    });
+    const body = await resp.json();
+    if (!resp.ok) throw new Error(body.error || 'Save failed');
+    const analysis = await fetch('/api/analysis/' + encodeURIComponent(GAME_ID));
+    const data = await analysis.json();
+    renderOfficialBox(data.official_box);
+  } catch (err) {
+    if (status) status.textContent = err.message || 'Could not save starters.';
+  }
 });
 
 loadResults();

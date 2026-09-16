@@ -1134,6 +1134,20 @@ def _read_log_tail(log_path: str, limit: int = 500) -> str:
         return ""
 
 
+def _read_log_head_and_tail(log_path: str, head: int = 4000, tail: int = 16000) -> str:
+    """PID is written at start; progress/errors are at the end of a long run."""
+    try:
+        size = os.path.getsize(log_path)
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
+            if size <= head + tail:
+                return handle.read()
+            start = handle.read(head)
+            handle.seek(max(0, size - tail))
+            return start + "\n" + handle.read()
+    except OSError:
+        return ""
+
+
 def count_detections_for_analysis(
     db,
     *,
@@ -1269,12 +1283,192 @@ def heal_failed_analysis_run_with_events(db, game_id: str) -> bool:
     return True
 
 
+_FRAME_STEP_RE = re.compile(r"frame\s+(\d+)\s*/\s*(\d+)", re.I)
+_LAUNCHER_PID_RE = re.compile(r"Started analysis_launcher\.py PID=(\d+)")
+STALE_WATCHDOG_MESSAGE_MARKERS = (
+    "stopped responding",
+    "pip install scikit-learn",
+)
+ANALYSIS_WORKER_STOPPED_MESSAGE = (
+    "Analysis worker stopped. Open Film Tool or Video Library and click Retry."
+)
+
+
+def parse_analysis_progress_frames(step):
+    """Parse YOLO step text like 'Detecting objects: frame 1000/97475'."""
+    match = _FRAME_STEP_RE.search(step or "")
+    if not match:
+        return None, None
+    return int(match.group(1)), int(match.group(2))
+
+
+def parse_analysis_launcher_pid(content: str):
+    match = _LAUNCHER_PID_RE.search(content or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def analysis_log_reports_completed(content: str) -> bool:
+    return "analysis_runs updated to 'completed'" in (content or "")
+
+
+def is_false_stale_watchdog_failure(error_message: str | None) -> bool:
+    msg = (error_message or "").lower()
+    return any(marker in msg for marker in STALE_WATCHDOG_MESSAGE_MARKERS)
+
+
+def progress_from_analysis_log(content: str):
+    """Return (pct, step) from the newest useful log line."""
+    if not content:
+        return None, None
+    if analysis_log_reports_completed(content):
+        return 100, "Done"
+    for line in reversed(content.splitlines()):
+        current, total = parse_analysis_progress_frames(line)
+        if current is not None:
+            pct = int(current / total * 100) if total else 0
+            return pct, f"Detecting objects: frame {current}/{total}"
+        lower = line.lower()
+        if "generating events" in lower:
+            return 50, "Generating events…"
+        if "running enhanced analysis" in lower or "enhanced film analysis" in lower:
+            return 75, "Running enhanced analysis…"
+    return None, None
+
+
+def analysis_worker_is_alive(pid, analysis_key: str | None = None) -> bool:
+    """True when the analysis_launcher PID is still this game's worker."""
+    if not pid:
+        return False
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if psutil is not None:
+        try:
+            proc = psutil.Process(pid)
+            if not proc.is_running():
+                return False
+            cmd = " ".join(proc.cmdline() or []).lower()
+            if "analysis_launcher.py" not in cmd and "ai_analyzer.py" not in cmd:
+                return False
+            if analysis_key and str(analysis_key).lower() not in cmd:
+                return False
+            return True
+        except psutil.NoSuchProcess:
+            return False
+        except psutil.AccessDenied:
+            return True
+        except Exception:
+            return False
+    if os.name == "nt":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return kernel32.GetLastError() == 5
+        except Exception:
+            return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def find_live_analysis_worker(analysis_key: str):
+    """Return PID of a live analysis_launcher for this analysis key, if any."""
+    if not analysis_key or psutil is None:
+        return None
+    needle = str(analysis_key).lower()
+    try:
+        for proc in psutil.process_iter(["pid", "cmdline"]):
+            try:
+                cmd = " ".join((proc.info or {}).get("cmdline") or []).lower()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+            if needle not in cmd:
+                continue
+            if "analysis_launcher.py" in cmd or "ai_analyzer.py" in cmd:
+                return proc.info["pid"]
+    except Exception:
+        return None
+    return None
+
+
+def _analysis_worker_alive_for_run(game_id: str, log_content: str) -> bool:
+    if find_live_analysis_worker(game_id):
+        return True
+    return analysis_worker_is_alive(parse_analysis_launcher_pid(log_content), game_id)
+
+
+def _mark_analysis_run_failed(db, row_id, message: str) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='failed',
+               error_message=?,
+               progress_step='Failed',
+               completed_at=CURRENT_TIMESTAMP
+           WHERE id=?""",
+        (message, row_id),
+    )
+    db.commit()
+
+
+def _mark_analysis_run_completed(db, row_id) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='completed',
+               progress_pct=100,
+               progress_step='Done',
+               completed_at=CURRENT_TIMESTAMP,
+               error_message=NULL
+           WHERE id=?""",
+        (row_id,),
+    )
+    db.commit()
+
+
+def _restore_analysis_run_running(db, row_id, content: str) -> None:
+    pct, step = progress_from_analysis_log(content)
+    if pct is None:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='running',
+                   error_message=NULL,
+                   completed_at=NULL
+               WHERE id=?""",
+            (row_id,),
+        )
+    else:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='running',
+                   progress_pct=?,
+                   progress_step=?,
+                   error_message=NULL,
+                   completed_at=NULL
+               WHERE id=?""",
+            (pct, step, row_id),
+        )
+    db.commit()
+
+
 def reconcile_stuck_analysis_run(db, game_id: str) -> None:
     """Mark orphaned pending/running runs failed or completed based on logs."""
     heal_failed_analysis_run_with_events(db, game_id)
 
     row = db.execute(
-        """SELECT id, status, progress_step
+        """SELECT id, status, progress_step, error_message
            FROM analysis_runs
            WHERE analysis_key=?
            ORDER BY id DESC
@@ -1288,98 +1482,65 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
         status = row["status"]
         progress_step = row["progress_step"]
         row_id = row["id"]
+        error_message = row["error_message"]
     else:
-        row_id, status, progress_step = row[0], row[1], row[2]
-    if status not in {"pending", "running"}:
+        row_id, status, progress_step, error_message = row[0], row[1], row[2], row[3]
+    if status not in {"pending", "running", "failed"}:
         return
 
     log_path = ai_analysis_log_path(game_id)
-    content = _read_log_tail(log_path, 8000) if os.path.exists(log_path) else ""
+    content = _read_log_head_and_tail(log_path) if os.path.exists(log_path) else ""
+    worker_alive = _analysis_worker_alive_for_run(game_id, content)
+
+    if analysis_log_reports_completed(content) and not worker_alive:
+        _mark_analysis_run_completed(db, row_id)
+        return
+
+    if worker_alive:
+        if status == "failed" and (
+            is_false_stale_watchdog_failure(error_message) or not error_message
+        ):
+            _restore_analysis_run_running(db, row_id, content)
+        return
+
+    if status == "failed":
+        return
 
     if status == "running":
-        if "analysis_runs updated to 'completed'" in content:
-            db.execute(
-                """UPDATE analysis_runs
-                   SET status='completed',
-                       progress_pct=100,
-                       progress_step='Done',
-                       completed_at=CURRENT_TIMESTAMP,
-                       error_message=NULL
-                   WHERE id=?""",
-                (row_id,),
-            )
-            db.commit()
-            return
-
-        error_message = _analysis_log_error_message(content)
-        if error_message:
-            db.execute(
-                """UPDATE analysis_runs
-                   SET status='failed',
-                       error_message=?,
-                       progress_step='Failed',
-                       completed_at=CURRENT_TIMESTAMP
-                   WHERE id=?""",
-                (error_message, row_id),
-            )
-            db.commit()
+        log_error = _analysis_log_error_message(content)
+        if log_error:
+            _mark_analysis_run_failed(db, row_id, log_error)
             return
 
         if _is_sync_event_rebuild_step(progress_step):
             return
 
+        if parse_analysis_launcher_pid(content) or "[launcher] Started" in content:
+            _mark_analysis_run_failed(db, row_id, ANALYSIS_WORKER_STOPPED_MESSAGE)
+            return
+
         if content and os.path.exists(log_path):
             age_seconds = time.time() - os.path.getmtime(log_path)
             if age_seconds > 1800:
-                db.execute(
-                    """UPDATE analysis_runs
-                       SET status='failed',
-                           error_message=?,
-                           progress_step='Failed',
-                           completed_at=CURRENT_TIMESTAMP
-                       WHERE id=?""",
-                    (
-                        "Analysis run stopped responding. Check logs, install missing "
-                        "packages (pip install scikit-learn), then click Rebuild again.",
-                        row["id"] if hasattr(row, "keys") else row_id,
-                    ),
-                )
-                db.commit()
+                _mark_analysis_run_failed(db, row_id, ANALYSIS_WORKER_STOPPED_MESSAGE)
         return
 
     if not os.path.exists(log_path):
         return
 
-    error_message = _analysis_log_error_message(content)
-    if error_message:
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='failed',
-                   error_message=?,
-                   progress_step='Failed',
-                   completed_at=CURRENT_TIMESTAMP
-               WHERE id=?""",
-            (error_message, row_id),
-        )
-        db.commit()
+    log_error = _analysis_log_error_message(content)
+    if log_error:
+        _mark_analysis_run_failed(db, row_id, log_error)
         return
 
     age_seconds = time.time() - os.path.getmtime(log_path)
     if age_seconds > 45 and "[launcher] Started" in content:
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='failed',
-                   error_message=?,
-                   progress_step='Failed',
-                   completed_at=CURRENT_TIMESTAMP
-               WHERE id=?""",
-            (
-                "Analysis worker stopped before processing started. "
-                "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
-                row_id,
-            ),
+        _mark_analysis_run_failed(
+            db,
+            row_id,
+            "Analysis worker stopped before processing started. "
+            "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
         )
-        db.commit()
 
 
 def start_analysis_subprocess(game_id, video_path):

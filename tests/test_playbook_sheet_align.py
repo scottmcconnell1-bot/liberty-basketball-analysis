@@ -197,6 +197,12 @@ def test_playbook_html_has_align_ready_banner():
     assert "buildActionBeats" in html
     assert "fetchSheetInkPaths" in html
     assert "orientSheetPass" in html
+    assert "autoStickExtractedChoreography" in html
+    assert "stickySource !== 'auto_extract'" in html
+    assert "playHasSheets()) return out" in html
+    assert "Hug the printed dashed/solid stroke" in html
+    assert "sessionInk" in html
+    assert "Keep printed pass polylines" in html
     assert "orderTriangleBeats" in html
     assert "isTrianglePlay" in html
     assert "orderGameBeats" in html

@@ -524,10 +524,11 @@ PRECISION_DEFAULTS = {
     "shot_min_ball_rise": 80.0,
     # at most one shot per possessor within this window
     "shot_refractory_ms": 6000,
-    # blocks are rare; the expanded heuristic fired on almost every miss
-    "emit_blocks": False,
-    # assist only if the passer held the ball and the hand-off was quick
+    # blocks: deflection near the shooter as the ball goes up; makes are FGs
+    "emit_blocks": True,
+    # assist only if the passer held the ball and the catch-to-shot was 1–2 dribbles
     "assist_max_gap_frames": 15,
+    "assist_max_scorer_hold_ms": 1600,
     # turnover/steal: the lost possession must have been brief and the new possessor must
     # actually keep the ball
     "turnover_min_next_hold_frames": 6,
@@ -568,7 +569,240 @@ def _merge_short_segments(segments, min_hold_frames):
     return merged
 
 
-def generate_precision_events_from_segments(game_id, segments, ball_track, params=None):
+def _rows_at_frame(by_frame, frame_number):
+    if not by_frame or frame_number is None:
+        return []
+    rows = by_frame.get(int(frame_number))
+    if rows is None:
+        return []
+    return rows.to_dict("records")
+
+
+def _ball_deflected_away(ball_track, peak_frame, window=6):
+    if ball_track is None or getattr(ball_track, "empty", True) or not peak_frame:
+        return False
+    peak = ball_track[ball_track["frame_number"] == peak_frame]
+    if peak.empty:
+        return False
+    peak_y = float(peak.iloc[0]["y_center"])
+    peak_x = float(peak.iloc[0]["x_center"])
+    post = ball_track[
+        (ball_track["frame_number"] > peak_frame)
+        & (ball_track["frame_number"] <= peak_frame + window)
+    ]
+    if post.empty:
+        return False
+    dy = float(post["y_center"].max()) - peak_y
+    dx = abs(float(post["x_center"].median()) - peak_x)
+    return dy > 12 or dx > 25
+
+
+def generate_precision_events_from_segments(game_id, segments, ball_track, params=None, detections_df=None):
+    from court_memory import FrameCourtMemory, ball_from_detections, people_from_detections
+    from stat_rules import (
+        classify_rebound,
+        classify_shot_kind,
+        classify_turnover_kind,
+        credit_assist,
+        credit_block,
+        credit_steal,
+        scoring_event_type,
+    )
+
+    p = {**PRECISION_DEFAULTS, **(params or {})}
+    events = []
+    seen_keys = set()
+
+    segments = _merge_short_segments(segments, p["min_hold_frames"])
+    by_frame = {}
+    if detections_df is not None and not getattr(detections_df, "empty", True):
+        for frame, grp in detections_df.groupby("frame_number"):
+            by_frame[int(frame)] = grp
+
+    memory = FrameCourtMemory()
+    offense_ids: list[str] = []
+
+    # Shots: primary detector only, higher rise threshold, one per possessor per window.
+    shot_segments = {}
+    last_shot_ms_by_player = {}
+    for index, segment in enumerate(segments):
+        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
+        shot_info = detect_shot_from_segment(
+            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start
+        )
+        if not shot_info:
+            continue
+        last_ms = last_shot_ms_by_player.get(segment["player"])
+        if last_ms is not None and shot_info["timestamp_ms"] - last_ms < p["shot_refractory_ms"]:
+            continue
+        last_shot_ms_by_player[segment["player"]] = shot_info["timestamp_ms"]
+        shot_segments[index] = shot_info
+
+    def _observe(frame_number):
+        recs = _rows_at_frame(by_frame, frame_number)
+        memory.observe(people_from_detections(recs), ball_from_detections(recs))
+        return recs
+
+    for index, segment in enumerate(segments):
+        hold = segment.get("duration_frames", 1)
+        _observe(segment["start_frame"])
+        if segment["player"] not in offense_ids:
+            offense_ids.append(str(segment["player"]))
+
+        if index > 0:
+            previous = segments[index - 1]
+            if previous["player"] != segment["player"]:
+                prev_hold = previous.get("duration_frames", 1)
+                gap_frames = segment["start_frame"] - previous["end_frame"]
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "possession_change", segment["start_timestamp_ms"],
+                    player=segment["player"],
+                    confidence=_clamp(0.4 + 0.01 * min(hold, prev_hold), 0.4, 0.85),
+                    details={"from_player": previous["player"], "to_player": segment["player"],
+                             "gap_frames": gap_frames, "hold_frames": hold},
+                ))
+                after_shot = (index - 1) in shot_segments
+                is_abrupt = (
+                    prev_hold <= p["turnover_max_prev_hold_frames"]
+                    and gap_frames < 20
+                    and previous.get("mean_ball_distance", 0) > 25
+                    and hold >= p["turnover_min_next_hold_frames"]
+                    and not after_shot
+                )
+                to_kind = classify_turnover_kind(dead_ball=memory.dead_ball, after_shot=after_shot)
+                if to_kind:
+                    conf = _clamp(0.35 + 0.01 * hold, 0.35, 0.7)
+                    append_unique_event(events, seen_keys, make_event(
+                        game_id, "turnover", segment["start_timestamp_ms"], player=previous["player"],
+                        confidence=conf,
+                        details={"next_possessor": segment["player"], "turnover_kind": to_kind}))
+                    if credit_steal(
+                        after_shot=after_shot,
+                        dead_ball=memory.dead_ball,
+                        next_ball_distance=segment.get("mean_ball_distance"),
+                        prev_lost_abruptly=is_abrupt,
+                    ):
+                        append_unique_event(events, seen_keys, make_event(
+                            game_id, "steal", segment["start_timestamp_ms"], player=segment["player"],
+                            confidence=conf, details={"from_player": previous["player"], "live": True}))
+                    if to_kind == "dead":
+                        offense_ids = [str(segment["player"])]
+                    else:
+                        offense_ids = [str(segment["player"])]
+
+        if index not in shot_segments:
+            continue
+
+        shot_info = shot_segments[index]
+        next_segment = segments[index + 1] if index + 1 < len(segments) else None
+        next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
+        peak_frame = shot_info.get("peak_frame")
+        recs = _observe(peak_frame or segment["end_frame"])
+        from court_memory import ball_from_detections, people_from_detections as _people
+        people = _people(recs)
+        ball = ball_from_detections(recs)
+        ft_formation = None
+        if people:
+            from court_memory import detect_ft_formation as _ft
+            ft_formation = _ft(people, ball, abs(memory.pan_dx))
+
+        shooter_x = segment.get("player_x_end") or segment.get("player_x_start")
+        shooter_y = segment.get("player_y_median")
+        in_paint = memory.in_paint(shooter_x, shooter_y)
+        dist = None
+        if memory.key is not None and shooter_x is not None and shooter_y is not None:
+            cx = (memory.key.x0 + memory.key.x1) / 2.0
+            cy = (memory.key.y0 + memory.key.y1) / 2.0
+            width = max(abs(memory.key.x1 - memory.key.x0), 1.0)
+            height = max(abs(memory.key.y1 - memory.key.y0), 1.0)
+            dist = ((float(shooter_x) - cx) ** 2 / width ** 2 + (float(shooter_y) - cy) ** 2 / height ** 2) ** 0.5
+        shot_kind = classify_shot_kind(ft_formation=ft_formation, in_paint=in_paint, dist_from_basket=dist)
+
+        shot_result = "miss"
+        ball_moving_to_basket = False
+        if peak_frame:
+            post_peak = ball_track[(ball_track["frame_number"] > peak_frame) & (ball_track["frame_number"] <= peak_frame + 30)]
+            ball_moving_to_basket = (not post_peak.empty) and post_peak["y_center"].min() < 240
+        if next_segment is None or (next_gap is not None and next_gap > p["make_min_gap_frames"]) or ball_moving_to_basket:
+            shot_result = "make"
+        made = shot_result == "make"
+
+        shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
+        shot_details = {
+            "ball_rise": round(shot_info["ball_rise"], 1),
+            "lateral_travel": round(shot_info["lateral_travel"], 1),
+            "peak_frame": peak_frame,
+            "generator": "precision",
+            "shot_kind": shot_kind,
+            "in_paint": in_paint,
+            "ft_formation": ft_formation,
+        }
+        append_unique_event(events, seen_keys, make_event(
+            game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
+            confidence=shot_conf, details=shot_details,
+        ))
+        scoring_type = scoring_event_type(shot_kind, made)
+        append_unique_event(events, seen_keys, make_event(
+            game_id, scoring_type, shot_info["timestamp_ms"], player=segment["player"],
+            shot_result=shot_result,
+            confidence=round(shot_conf * 0.9, 3),
+            details={"derived_from": "shot", "shot_kind": shot_kind, "in_paint": in_paint}))
+
+        if shot_result == "miss" and next_segment is not None:
+            reb_kind = classify_rebound(
+                shooter_team=None, rebounder_team=None,
+                shooter_id=segment["player"], rebounder_id=next_segment["player"],
+                offense_ids=offense_ids,
+            )
+            reb_type = "rebound_offensive" if reb_kind == "oreb" else "rebound_defensive" if reb_kind == "dreb" else "rebound"
+            append_unique_event(events, seen_keys, make_event(
+                game_id, reb_type, next_segment["start_timestamp_ms"], player=next_segment["player"],
+                confidence=_clamp(0.6 - 0.01 * max(next_gap or 0, 0), 0.3, 0.6),
+                details={"shot_player": segment["player"], "gap_frames": next_gap, "rebound_kind": reb_kind}))
+            deflected = _ball_deflected_away(ball_track, peak_frame)
+            near = (next_segment.get("mean_ball_distance") or 99) <= 45
+            if p["emit_blocks"] and credit_block(
+                shot_went_in=False,
+                defender_is_shooter=str(next_segment["player"]) == str(segment["player"]),
+                gap_frames=next_gap,
+                ball_deflected_away=deflected,
+                defender_near_ball=near,
+            ):
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "block", next_segment["start_timestamp_ms"], player=next_segment["player"],
+                    confidence=0.45, details={"shot_player": segment["player"], "gap_frames": next_gap}))
+            if reb_kind == "dreb":
+                offense_ids = [str(next_segment["player"])]
+            elif str(next_segment["player"]) not in offense_ids:
+                offense_ids.append(str(next_segment["player"]))
+
+        if made and index > 0:
+            previous = segments[index - 1]
+            assist_gap = segment["start_frame"] - previous["end_frame"]
+            scorer_hold_ms = int(segment.get("end_timestamp_ms", 0) or 0) - int(segment.get("start_timestamp_ms", 0) or 0)
+            if credit_assist(
+                shot_made=True,
+                shot_kind=shot_kind,
+                passer_id=previous["player"],
+                scorer_id=segment["player"],
+                pass_gap_frames=assist_gap,
+                scorer_hold_ms=scorer_hold_ms,
+                max_scorer_hold_ms=p["assist_max_scorer_hold_ms"],
+                max_pass_gap_frames=p["assist_max_gap_frames"],
+            ):
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "assist", shot_info["timestamp_ms"], player=previous["player"],
+                    confidence=_clamp(0.5 - 0.01 * assist_gap, 0.3, 0.5),
+                    details={"scorer": segment["player"], "gap_frames": assist_gap, "scorer_hold_ms": scorer_hold_ms}))
+
+        if p["emit_fouls"] and (next_segment is None or (next_gap is not None and next_gap >= 90)):
+            append_unique_event(events, seen_keys, make_event(
+                game_id, "foul", shot_info["timestamp_ms"], player=segment["player"], confidence=0.18,
+                details={"reason": "long_dead_ball_after_shot", "gap_frames": next_gap}))
+        if made:
+            offense_ids = []
+
+    return events
     p = {**PRECISION_DEFAULTS, **(params or {})}
     events = []
     seen_keys = set()
@@ -1050,7 +1284,7 @@ def main(
             ball_track = build_ball_track(detections_df)
             print(f"INFO: Built {len(segments)} possession segments for precision generation.")
             events_to_persist = generate_precision_events_from_segments(
-                game_id, segments, ball_track, params=precision_params
+                game_id, segments, ball_track, params=precision_params, detections_df=detections_df
             )
             print(f"INFO: Precision generator produced {len(events_to_persist)} events.")
             persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)

@@ -16,6 +16,7 @@ AI_DEFAULTS = {
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
     "tracker_backend": "bytetrack",
+    "tracker_enabled": True,
     "jersey_ocr_enabled": True,
     "jersey_ocr_stride": 5,
     "jersey_ocr_min_confidence": 0.55,
@@ -43,6 +44,7 @@ INT_SETTING_KEYS = {
 BOOL_SETTING_KEYS = {
     "ai.jersey_ocr_enabled",
     "ai.auto_apply_jersey_mapping",
+    "ai.tracker_enabled",
 }
 
 

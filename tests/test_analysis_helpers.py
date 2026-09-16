@@ -1,11 +1,13 @@
 """Tests for Analysis Results roster + event explorer helpers."""
 
-from film_roster import save_film_roster
+from film_roster import list_film_roster_players, save_film_roster
 
 from analysis_helpers import (
     get_analysis_roster_players,
+    infer_film_level_from_game_id,
     infer_period_labels,
     list_analysis_events,
+    resolve_analysis_game_context,
     resolve_video_duration_ms,
 )
 
@@ -320,3 +322,179 @@ def test_analysis_results_page_includes_event_explorer(client):
     assert b"event-explorer" in resp.data
     assert b"openEventExplorer" in resp.data
     assert b"/api/analysis/" in resp.data
+
+
+def test_infer_film_level_from_jrhigh_game_id():
+    assert infer_film_level_from_game_id(
+        "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    ) == "jrhigh"
+    assert infer_film_level_from_game_id("nfhs_gam30_analysis") is None
+    assert infer_film_level_from_game_id("jv_demo") == "jv"
+
+
+def test_jrhigh_game_does_not_use_varsity_film_roster(db):
+    season_id = _create_season(db, "2026 Junior High")
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'jr_boys', 'boys', 'jr_high', '2026-02-10', 'Adrian', 'scheduled')""",
+        (season_id,),
+    )
+    analysis_key = "jrhigh_demo_no_scorebook"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/adrian.mp4"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, opponent)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("adrian.mp4", "adrian.mp4", "uploads/adrian.mp4", 1000, analysis_key, "Adrian (JrHigh) - NFHS clean"),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="our",
+        players=[{"label": "0 Caleb Henrickson", "jersey_number": 0, "name": "Caleb Henrickson"}],
+        replace=True,
+    )
+    db.execute(
+        """INSERT INTO players (name, jersey_number, program_name, gender, level)
+           VALUES ('Hunter Colman', 21, 'Liberty', 'boys', 'jr_high')"""
+    )
+    db.commit()
+
+    context = resolve_analysis_game_context(db, analysis_key)
+    assert context["level"] == "jrhigh"
+    assert context["season_id"] == season_id
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    names = {player["name"] for player in payload["players"]}
+    assert "Hunter Colman" in names
+    assert "Caleb Henrickson" not in names
+    assert payload["source"] == "global_players"
+    assert payload["roster_context"]["level"] == "jrhigh"
+
+
+def test_jrhigh_game_uses_jrhigh_film_roster_not_varsity(db):
+    season_id = _create_season(db, "2026 Junior High")
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'jr_boys', 'boys', 'jr_high', '2026-02-10', 'Adrian', 'scheduled')""",
+        (season_id,),
+    )
+    analysis_key = "jrhigh_adrian,_or_roster_slot"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/adrian.mp4"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, opponent)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("adrian.mp4", "adrian.mp4", "uploads/adrian.mp4", 1000, analysis_key, "Adrian (JrHigh) - NFHS clean"),
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="varsity",
+        gender="boys",
+        side="our",
+        players=[{"label": "0 Caleb Henrickson", "jersey_number": 0, "name": "Caleb Henrickson"}],
+        replace=True,
+    )
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="jrhigh",
+        gender="boys",
+        side="our",
+        players=[{"label": "21 Hunter Colman", "jersey_number": 21, "name": "Hunter Colman"}],
+        replace=True,
+    )
+    db.commit()
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    assert payload["source"] == "film_roster"
+    assert payload["roster_context"]["level"] == "jrhigh"
+    assert payload["players"][0]["name"] == "Hunter Colman"
+
+
+def test_adrian_scorebook_home_and_away_rosters():
+    from program_mode import film_slots_from_scorebook, load_scorebook
+
+    book = load_scorebook("jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334")
+    assert book is not None
+    slots = film_slots_from_scorebook(book)
+    home_names = [p["name"] for p in slots["opp"]]
+    away_names = [p["name"] for p in slots["our"]]
+    assert book["home_team"] == "Adrian"
+    assert book["away_team"] == "Liberty"
+    assert slots["opponent_name"] == "Adrian"
+    assert "Mendoza" in home_names
+    assert "Alvarez" in home_names
+    assert "Dayley" in away_names
+    assert "Colman" in away_names
+    assert "Sullivan" in away_names
+
+
+def test_get_analysis_roster_prefers_confirmed_scorebook(db):
+    analysis_key = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/adrian.mp4"),
+    )
+    db.commit()
+
+    payload = get_analysis_roster_players(db, analysis_key)
+    names = {player["name"] for player in payload["players"]}
+    assert payload["source"] == "scorebook"
+    assert payload["roster_context"]["home_team"] == "Adrian"
+    assert payload["roster_context"]["away_team"] == "Liberty"
+    assert "Mendoza" in names
+    assert "Dayley" in names
+    assert "Caleb Henrickson" not in names
+
+
+def test_import_scorebook_to_film_roster_slots(db):
+    from program_mode import import_scorebook_to_film_roster
+
+    season_id = _create_season(db, "2026 Junior High")
+    analysis_key = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, opponent_name, status)
+           VALUES (?, 'Liberty', 'jr_boys', 'boys', 'jr_high', '2026-02-10', 'Adrian', 'scheduled')""",
+        (season_id,),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/adrian.mp4"),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, game_id, opponent)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("adrian.mp4", "adrian.mp4", "uploads/adrian.mp4", 1000, analysis_key, "Adrian (JrHigh) - NFHS clean"),
+    )
+    db.commit()
+
+    result = import_scorebook_to_film_roster(db, analysis_key)
+    db.commit()
+    assert result["slots"]["our"] == 11
+    assert result["slots"]["opp"] == 11
+    assert result["opponent_name"] == "Adrian"
+
+    ours = list_film_roster_players(db, season_id=season_id, level="jrhigh", gender="boys", side="our")
+    opp = list_film_roster_players(
+        db, season_id=season_id, level="jrhigh", gender="boys", side="opp", opponent_name="Adrian"
+    )
+    assert {p["name"] for p in ours} >= {"Colman", "Dayley", "Sullivan"}
+    assert {p["name"] for p in opp} >= {"Mendoza", "Alvarez"}

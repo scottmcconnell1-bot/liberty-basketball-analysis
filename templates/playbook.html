@@ -476,7 +476,11 @@
   }
   .player-token .token-delete-btn {
     cursor: pointer;
-    opacity: 0.85;
+    opacity: 0;
+  }
+  .player-token:hover .token-delete-btn,
+  .player-token.token-selected .token-delete-btn {
+    opacity: 0.9;
   }
   .player-token .token-delete-btn:hover {
     opacity: 1;
@@ -1002,6 +1006,9 @@ function withManDefense(positions) {
     const p = src[k];
     if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
   });
+  // Imported FastDraw/PDF sheets are offense-only. Auto x-defenders sit on the
+  // ball offset and look like every player has a basketball.
+  if (playHasSheets()) return out;
   const hasDefense = Object.keys(out).some((k) => String(k).startsWith('d'));
   if (!hasDefense) {
     for (let i = 1; i <= 5; i += 1) {
@@ -2361,6 +2368,26 @@ function buildChoreographyPayload(source) {
   return { source: source || 'user_save', steps: stepsOut };
 }
 
+async function autoStickExtractedChoreography() {
+  if (!playId || isPlaybackActive()) return;
+  try {
+    const payload = buildChoreographyPayload('auto_extract');
+    const resp = await fetch(`/api/playbook/choreography/${playId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) return;
+    sheetUsingStickyChoreography = true;
+    choreographyDirty = false;
+    if (data.choreography) applyStickyChoreographyDoc(data.choreography);
+    setSheetAlignStatus('ready', 'Ready — animation follows the printed sheet');
+  } catch (err) {
+    console.warn('auto-stick extract', err);
+  }
+}
+
 async function saveStickyChoreography() {
   if (!playId || !viewModeAllowsChoreoEdit()) return;
   if (isPlaybackActive()) {
@@ -2467,10 +2494,13 @@ async function ensureSheetAlignment(options = {}) {
   setSheetAlignStatus('aligning');
   setSheetAnimHint('Extracting play data…');
   sheetAlignPromise = (async () => {
-    // Stage 2 sticky review wins over Stage 1 extract.
+    // Coach-saved sticky wins over Stage 1 extract. auto_extract is a cache of
+    // the last machine read — skip it so mapping fixes apply without Reset.
     if (!forceExtract) {
       const sticky = await loadStickyChoreographyDoc();
-      if (sticky && applyStickyChoreographyDoc(sticky)) {
+      const stickySource = sticky && sticky.source;
+      const coachSaved = stickySource && stickySource !== 'auto_extract';
+      if (coachSaved && applyStickyChoreographyDoc(sticky)) {
         sheetExtractSource = null;
         setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
         setSheetAnimHint('Using saved choreography');
@@ -2560,9 +2590,13 @@ async function ensureSheetAlignment(options = {}) {
     if (!anyPos && !anyFrac) {
       setSheetAlignStatus('error');
     } else if (sheetExtractSource === 'vector') {
-      setSheetAlignStatus('ready', 'Ready — vector extract draft (Save to stick)');
+      setSheetAlignStatus('ready', 'Ready — animation follows the printed sheet');
     } else {
-      setSheetAlignStatus('ready', 'Ready — OCR draft (Save to stick)');
+      setSheetAlignStatus('ready', 'Ready — animation follows extracted ink');
+    }
+    if (playId && typeof viewModeAllowsChoreoEdit === 'function' && viewModeAllowsChoreoEdit()
+        && !sheetUsingStickyChoreography) {
+      autoStickExtractedChoreography();
     }
     setSheetAnimHint('');
     // Refresh tokens/underlay now that digits map to the court.
@@ -2607,10 +2641,14 @@ function orientSheetPass(pass, ballPid, fromRaw) {
   }
   if (!a || !b) return null;
   let pts = null;
-  if (orphan && points && points.length >= 2) {
+  if (points && points.length >= 3) {
+    // Hug the printed dashed/solid stroke; only snap endpoints onto tokens.
+    pts = points.map((pt) => ({ x: pt.x, y: pt.y }));
+    pts[0] = { x: a.x, y: a.y };
+    pts[pts.length - 1] = { x: b.x, y: b.y };
+  } else if (orphan && points && points.length >= 2) {
     pts = points.map((pt) => ({ x: pt.x, y: pt.y }));
   } else {
-    // Digit→digit: straight passer→receiver. Ink midpoints overshoot the token.
     pts = [
       { x: a.x, y: a.y },
       { x: b.x, y: b.y },
@@ -2706,12 +2744,10 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
     const markedMover = marks[oid] === 'screen'
       || marks[oid] === 'dribble'
       || marks[oid] === 'cut';
-    // Prefer this sheet's ink tip when marked — next-sheet OCR is often the
-    // end pose after later actions (Triangle o2 must stop at 3's spot, not
-    // jump to page-130 nail).
-    if (markedMover && tipMove >= 8) b = tip;
+    // Prefer this sheet's ink tip — next-sheet OCR is often a later pose.
+    if (tipMove >= 8) b = tip;
+    else if (markedMover && tipMove >= 8) b = tip;
     else if (sheetMove >= 8) b = sheetB;
-    else if (tipMove >= 8) b = tip;
     else if (sheetMove >= 2) b = sheetB;
     else continue;
     if (sheetB && isDefaultOffensePos(oid, sheetB) && tipMove < 8) continue;
@@ -2719,7 +2755,8 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
     if (poly && poly.length >= 2 && tipMove >= 8) {
       points = poly.map((p) => ({ x: p.x, y: p.y }));
       points[0] = { x: a.x, y: a.y };
-      points[points.length - 1] = { x: b.x, y: b.y };
+      points[points.length - 1] = { x: tip.x, y: tip.y };
+      b = tip;
     }
     const ctrl = points ? null : movementQuadControl(a, b, 0.14);
     const markType = marks[oid] === 'screen'
@@ -2771,6 +2808,13 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     };
     sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
+  }
+  const sessionInk = sheetSessionInkByStep[stepIndex];
+  if (sessionInk && (
+    Object.keys(sessionInk.paths || {}).length
+    || (sessionInk.passes || []).length
+  )) {
+    return sessionInk;
   }
   // Ink tracing anchors: prefer THIS sheet's OCR only (not carry-forward from
   // earlier pages — that invented false passes toward stale digit spots).
@@ -3710,7 +3754,7 @@ function normalizeAnimPath(path, live, toRaw) {
       // Explicit choreography (Pitt 5 drop / multi-point around paths / screens):
       // never yank path.to onto OCR. path.from may be a mid-action tip (screen hold),
       // so sheetMove vs path.from is a false "OCR moved" signal.
-      if (path.pitt5Drop || path.type === 'screen' || (path.points && path.points.length >= 3)) {
+      if (path.pitt5Drop || path.type === 'screen' || path.type === 'cut' || (path.points && path.points.length >= 3)) {
         b = path.to;
       } else {
         const sheetMove = Math.hypot(a.x - sheetPt.x, a.y - sheetPt.y);
@@ -3731,9 +3775,9 @@ function normalizeAnimPath(path, live, toRaw) {
     return null;
   }
 
-  // Non-orphan passes: never keep ink midpoints — dashed arrow tips often
-  // continue past the receiver; midpoints made the ball overshoot then snap.
-  if (p.ballOnly && !p.orphan) {
+  // Keep printed pass polylines (≥3 pts). Only fall back to a straight chord
+  // when extract did not give a dashed stroke.
+  if (p.ballOnly && !p.orphan && !(path.points && path.points.length >= 3)) {
     p.points = [
       { x: p.from.x, y: p.from.y },
       { x: p.to.x, y: p.to.y },

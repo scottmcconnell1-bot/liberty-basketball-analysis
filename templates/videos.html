@@ -29,10 +29,37 @@
   #videos-card .video-table .col-gameid { min-width: 6.5rem; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; }
   #videos-card .video-table .col-date { min-width: 6.5rem; white-space: nowrap; }
   #videos-card .video-table .col-size { min-width: 4.5rem; white-space: nowrap; }
-  #videos-card .video-table .col-status { min-width: 7rem; }
-  #videos-card .video-table .col-status span {
+  #videos-card .video-table .col-status { min-width: 9rem; }
+  #videos-card .video-table .col-status .video-status-badge {
     white-space: nowrap;
     display: inline-block;
+  }
+  #videos-card .video-status-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 8rem;
+  }
+  #videos-card .video-status-mini {
+    width: 100%;
+    max-width: 9rem;
+    height: 7px;
+    border-radius: 999px;
+    background: #dbeafe;
+    overflow: hidden;
+  }
+  #videos-card .video-status-mini > span {
+    display: block;
+    height: 100%;
+    background: #2563eb;
+    width: 0%;
+  }
+  #videos-card .video-status-mini-label {
+    font-size: 0.72rem;
+    color: #1e40af;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   #videos-card .video-table .col-count {
     display: none; /* light list: free space for Actions */
@@ -269,21 +296,34 @@ const STATUS_COLORS = {
   not_started: { bg: '#f3f4f6', color: '#4b5563', label: 'Not started' },
 };
 
-function statusBadge(status, detectionCount, errorMessage, eventCount) {
+function statusBadge(status, detectionCount, errorMessage, eventCount, progress) {
   const countsKnown = detectionCount !== null && detectionCount !== undefined;
   const dets = countsKnown ? detectionCount : null;
   const evts = eventCount ?? 0;
+  let badge;
   if (countsKnown && status === 'completed' && dets === 0 && evts === 0) {
     const hint = errorMessage || 'Analysis finished with no detections. Open in Film Tool and run again.';
-    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
-  }
-  if (countsKnown && status === 'completed' && dets === 0 && evts > 0) {
+    badge = `<span class="video-status-badge" style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ Empty</span>`;
+  } else if (countsKnown && status === 'completed' && dets === 0 && evts > 0) {
     const hint = 'Events exist but no saved detections — Rebuild cannot run. Use Re-run AI or Film Tool → Run AI Analysis.';
-    return `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
+    badge = `<span class="video-status-badge" style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;" title="${escHtml(hint)}">⚠️ No detections</span>`;
+  } else {
+    const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
+    const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
+    badge = `<span class="video-status-badge" style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
   }
-  const s = STATUS_COLORS[status] || STATUS_COLORS.not_started;
-  const title = errorMessage && status === 'failed' ? ` title="${escHtml(errorMessage)}"` : '';
-  return `<span style="background:${s.bg};color:${s.color};padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600;"${title}>${s.label}</span>`;
+  const live = status === 'running' || status === 'pending';
+  if (!live) {
+    return `<div class="video-status-cell">${badge}</div>`;
+  }
+  const pct = Math.max(0, Math.min(100, Number(progress && progress.progress_pct) || 0));
+  const frame = progress && progress.current_frame != null && progress.total_frames
+    ? `${progress.current_frame}/${progress.total_frames}`
+    : (progress && progress.progress_step) || (status === 'pending' ? 'Queued' : 'Working…');
+  return `<div class="video-status-cell">${badge}
+    <div class="video-status-mini"><span style="width:${pct}%"></span></div>
+    <div class="video-status-mini-label">${escHtml(pct ? Math.round(pct) + '% · ' + frame : frame)}</div>
+  </div>`;
 }
 
 function formatBytes(b) {
@@ -361,6 +401,7 @@ async function doResetAll() {
 
 // ── Load video list (light=1 skips global detection/event COUNT scans) ──
 let videosPollTimer = null;
+let videosListLoaded = false;
 const videoCountsCache = {};
 let videosView = (new URLSearchParams(window.location.search).get('view') || 'active').toLowerCase() === 'archive'
   ? 'archive'
@@ -508,7 +549,7 @@ function renderVideoRow(v) {
     <td class="col-gameid" data-label="GameID" title="${gameIdDisplay}">${gameIdDisplay}</td>
     <td class="col-date" data-label="Game Date">${gameDate}</td>
     <td class="col-size" data-label="Size">${formatBytes(v.file_size_bytes)}</td>
-    <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count)}</td>
+    <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count, v)}</td>
     <td class="col-count" data-label="Detections">${formatCount(v.detection_count)}</td>
     <td class="col-count" data-label="Events">${formatCount(v.event_count)}</td>
     <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
@@ -531,17 +572,20 @@ function scheduleVideosPoll(videos) {
     return s === 'running' || s === 'pending';
   });
   if (needsPoll) {
-    videosPollTimer = setInterval(loadVideos, 10000);
+    videosPollTimer = setInterval(() => loadVideos({ silent: true }), 4000);
   }
 }
 
-async function loadVideos() {
+async function loadVideos(opts) {
+  const silent = !!(opts && opts.silent) && videosListLoaded;
   updateViewTabs();
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('video-table').style.display = 'none';
-  document.getElementById('empty-msg').style.display = 'none';
-  const emptyArchive = document.getElementById('empty-archive-msg');
-  if (emptyArchive) emptyArchive.style.display = 'none';
+  if (!silent) {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('video-table').style.display = 'none';
+    document.getElementById('empty-msg').style.display = 'none';
+    const emptyArchive = document.getElementById('empty-archive-msg');
+    if (emptyArchive) emptyArchive.style.display = 'none';
+  }
 
   const archivedParam = videosView === 'archive' ? '1' : '0';
   const resp = await fetch(`/api/videos?light=1&sort=title&archived=${archivedParam}`);
@@ -552,24 +596,47 @@ async function loadVideos() {
 
   if (!videos.length) {
     document.getElementById('video-table').style.display = 'none';
+    const emptyArchive = document.getElementById('empty-archive-msg');
     if (videosView === 'archive' && emptyArchive) {
       emptyArchive.style.display = 'block';
     } else {
       document.getElementById('empty-msg').style.display = 'block';
     }
     scheduleVideosPoll([]);
+    videosListLoaded = true;
     return;
   }
 
   document.getElementById('empty-msg').style.display = 'none';
+  const emptyArchive = document.getElementById('empty-archive-msg');
+  if (emptyArchive) emptyArchive.style.display = 'none';
   const tbody = document.getElementById('video-tbody');
-  tbody.innerHTML = '';
+  const openMore = new Set(
+    [...tbody.querySelectorAll('details.video-actions-more[open]')].map((el) => el.closest('tr')?.id).filter(Boolean)
+  );
+  const keepRows = silent && tbody.children.length > 0;
+  if (!keepRows) tbody.innerHTML = '';
 
+  const seen = new Set();
   for (const v of videos) {
-    tbody.appendChild(renderVideoRow(v));
+    const tr = renderVideoRow(v);
+    seen.add(tr.id);
+    const old = keepRows ? document.getElementById(tr.id) : null;
+    if (old) old.replaceWith(tr);
+    else tbody.appendChild(tr);
+    if (openMore.has(tr.id)) {
+      const details = tr.querySelector('details.video-actions-more');
+      if (details) details.open = true;
+    }
+  }
+  if (keepRows) {
+    [...tbody.querySelectorAll('tr')].forEach((row) => {
+      if (!seen.has(row.id)) row.remove();
+    });
   }
 
   document.getElementById('video-table').style.display = 'table';
+  videosListLoaded = true;
   scheduleVideosPoll(videos);
 }
 
@@ -636,8 +703,7 @@ async function startVideoAnalysis(videoId) {
     const resp = await fetch('/api/videos/' + videoId + '/analyze', { method: 'POST' });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Failed to start analysis');
-    alert(data.message || 'AI analysis started. Refresh this page to watch progress.');
-    loadVideos();
+    loadVideos({ silent: true });
   } catch (err) {
     alert('Could not start analysis: ' + err.message);
   } finally {

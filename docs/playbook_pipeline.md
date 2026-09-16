@@ -32,7 +32,9 @@ native text digits + draw paths). Proven via PyMuPDF.
 ## Stage 3 — Render
 
 Play All prefers sticky positions + outbound ink. It does **not** re-OCR when
-a sticky file exists.
+a sticky file exists. After a successful vector/OCR extract, Liberty
+**auto-saves** that extract as sticky (`auto_extract`) so Play All hugs printed
+polylines without a coach Save click. Reset extract still re-runs Stage 1.
 
 ## How Scott corrects data
 
