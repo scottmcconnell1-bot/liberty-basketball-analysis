@@ -76,9 +76,25 @@ Re-analyze film from Videos when ready.
 
 **Proven:** Confirmed Adrian spiral scorebook now seeds Jr High **Liberty** and a selectable **Adrian** opponent roster (not Home/Away). Analysis roster prefers that confirmed book over a Varsity film list.
 
+## Analysis Results empty after Adrian (Scott 2026-09-16 morning)
+
+**Proven:** The PDF subtitle `jrhigh_adrian%2C_or_…` is a URL-encoding miss, not a missing analysis. The decoded key has ~866k detections and 2,699 events. Videos → Results encodes the comma; Flask left `%2C` in `GAME_ID`; JS encoded again (`%252C`); APIs looked up a key with 0 detections. Starters are coach-picked (not auto-detected); the picker said “No roster yet” because the official box loaded the encoded key.
+
+**Fix:** `normalize_analysis_game_id` unquotes up to 3 times; Analysis Results page + `/api/analysis` + status + starters use it; JS decodes `GAME_ID` on load. Hard refresh after Flask restart.
+
+## Inflated Pos# stats (Scott 2026-09-16)
+
+**Proven:** The 168-shot / 194-point rows were the raw detector tables (Pos # = camera track, not a player). The scorebook named-player helper had been dropping PTS/FG cells, so the official box was filling blanks from 2,699 events. Official box now keeps book PTS/makes as the check. Duplicate jerseys (#11 both teams) use Home = light / Away = dark. Empty REB/AST/STL/BLK/TO/PF and misses come from the 168 accepted film events.
+
 ## Live AI progress (all games)
 
 **Proven:** Video Library hid the whole table every poll while a run was going (blink) and only showed a confirm popup. `/api/analysis_jobs` now feeds a site-wide bar (percent, frame n/N, elapsed). Frame text updates about every 500 frames; the bar stays animated so a long game is not mistaken for stuck. Completed stays on the banner ~3 minutes.
+
+## Manual tagging layout (Scott 2026-09-16)
+
+**Proven:** Film Tool tagging is a slim **Tag** strip on the **right edge of the video**. **Off / Def / More** tabs show one group at a time. **Vs** (this game’s opponent) and **5s** (starting fives) stay on the strip while tagging so Game info can stay hidden. Dropdowns sit above the film. Skip / speed controls under the film stay visible while tagging.
+
+**Proven (2026-09-16 afternoon):** The tag card is a compact centered dialog (not full-bleed). Every tag except Start/End QTR uses the same flow: Liberty vs this game’s opponent, then that team’s roster. Jump Ball asks who won. Steal still adds the matching turnover from the other roster. Add-player is an inline field (no nested `prompt()`), so Cancel / Esc / backdrop still close the card. Opponent roster keys off the team you are playing (Adrian on this game), not a generic Opponent list.
 
 ## Do not
 

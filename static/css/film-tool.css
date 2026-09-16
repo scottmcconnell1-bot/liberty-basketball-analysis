@@ -590,6 +590,69 @@
 #film-tool-root dialog::backdrop {
     background: rgba(0, 0, 0, .45);
 }
+
+#film-tool-root #quickTagDialog,
+#film-tool-root #ftGameTeamsDialog {
+    width: min(24rem, calc(100vw - 4.5rem));
+    max-width: 24rem;
+    border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .4);
+}
+#film-tool-root #quickTagDialog[open],
+#film-tool-root #ftGameTeamsDialog[open] {
+    max-height: min(68vh, 32rem);
+}
+#film-tool-root #quickTagDialog .modal-head,
+#film-tool-root #quickTagDialog .modal-body,
+#film-tool-root #quickTagDialog .modal-foot,
+#film-tool-root #ftGameTeamsDialog .modal-head,
+#film-tool-root #ftGameTeamsDialog .modal-body,
+#film-tool-root #ftGameTeamsDialog .modal-foot {
+    padding: .65rem .85rem;
+}
+#film-tool-root #quickTagDialog .modal-head h2,
+#film-tool-root #ftGameTeamsDialog .modal-head h2 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+#film-tool-root #quickTagDialog .modal-body,
+#film-tool-root #ftGameTeamsDialog .modal-body {
+    max-height: min(42vh, 20rem);
+}
+#film-tool-root #quickTagDialog .modal-foot,
+#film-tool-root #ftGameTeamsDialog .modal-foot {
+    justify-content: space-between;
+    align-items: center;
+}
+#film-tool-root #quickTagDialog .pill-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+}
+#film-tool-root #quickTagDialog .pill-buttons .btn {
+    width: auto;
+    flex: 0 0 auto;
+}
+#film-tool-root .ft-add-player-row {
+    display: flex;
+    gap: .35rem;
+    margin-top: .5rem;
+    align-items: center;
+}
+#film-tool-root .ft-add-player-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    padding: .35rem .5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg, #fff);
+    color: var(--color-text);
+}
+#film-tool-root #startersDialog {
+    width: min(38rem, calc(100vw - 4.5rem));
+    max-width: 38rem;
+}
 #film-tool-root .modal-head {
     padding: var(--space-4);
     border-bottom: 1px solid var(--color-divider);

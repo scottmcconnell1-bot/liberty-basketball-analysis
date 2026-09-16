@@ -79,10 +79,19 @@
     .ft-clip-review-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   .ft-program-section {
-    margin: 0 0 1rem;
+    margin: 0 0 .5rem;
   }
   .ft-program-section #aiEventsPanel {
     margin: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+  .ft-program-section #aiEventsPanel .panel-head {
+    display: none;
+  }
+  .ft-program-section #aiEventsPanel .panel-body {
+    padding: 0;
   }
   .ft-program-section #aiEventsPanel .panel-head h2 {
     font-size: 1.05rem;
@@ -328,6 +337,14 @@
     margin: 0 auto .5rem;
     width: fit-content;
     max-width: 100%;
+    position: relative;
+  }
+  .ft-video-stage {
+    position: relative;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    line-height: 0;
   }
   .ft-video-wrap video,
   #film-tool-root .ft-video-wrap video {
@@ -447,79 +464,146 @@
   }
   .ft-game-info-body.open { display: block; }
 
-  /* Tagging Panel */
-  .ft-tag-panel {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .ft-tag-panel-header {
-    padding: .75rem 1rem;
-    border-bottom: 1px solid var(--color-divider);
+  /* Tagging — slim column on the far right of the film */
+  .ft-tag-overlay {
+    position: absolute;
+    top: 8px;
+    right: 6px;
+    z-index: 6;
+    width: 4rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    pointer-events: none;
   }
-  .ft-tag-panel-header h3 {
-    font-size: .95rem;
-    font-weight: 600;
+  .ft-tag-overlay > * { pointer-events: auto; }
+  #ftManualTagToggle {
+    min-height: 1.7rem;
+    padding: 0;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    background: rgba(15, 23, 42, .84);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.35);
   }
-  .ft-tag-panel-header .ft-event-count {
-    font-size: .75rem;
-    color: var(--color-text-muted);
+  #ftManualTagToggle[aria-pressed="true"] {
+    background: #f8fafc;
+    color: #0f172a;
   }
-  .ft-tag-groups {
-    padding: .75rem;
-  }
-  .ft-tag-group {
-    margin-bottom: .75rem;
-  }
-  .ft-tag-group:last-child { margin-bottom: 0; }
-  .ft-tag-group-label {
-    font-size: .7rem;
+  .ft-tag-overlay-count {
+    display: block;
+    text-align: center;
+    font-size: .62rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--color-text-muted);
-    margin-bottom: .35rem;
-    padding-left: .25rem;
+    color: #fff;
+    text-shadow: 0 1px 2px #000;
+    pointer-events: none;
   }
-  .ft-tag-group-label.flow { color: #6366f1; }
-  .ft-tag-group-label.offense { color: #10b981; }
-  .ft-tag-group-label.defense { color: #f59e0b; }
-
-  .ft-tag-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .3rem;
-  }
-  .ft-tag-grid .btn {
-    padding: .5rem .4rem;
-    min-height: 2.4rem;
-    font-size: .8rem;
-    border-radius: var(--radius-sm);
-    justify-content: flex-start;
-  }
-  .ft-tag-grid .btn .ft-hotkey {
-    margin-left: auto;
-    font-size: .65rem;
-    opacity: .6;
-    font-weight: 600;
-  }
-
-  /* Tag action bar */
-  .ft-tag-actions {
+  .ft-tag-overlay-body {
     display: flex;
-    gap: .35rem;
-    padding: .5rem .75rem;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-surface-offset);
+    flex-direction: column;
+    gap: 2px;
+    max-height: calc(100% - .2rem);
+    overflow-y: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
   }
-  .ft-tag-actions .btn {
-    padding: .35rem .6rem;
-    min-height: 30px;
-    font-size: .75rem;
+  .ft-tag-overlay-body::-webkit-scrollbar { display: none; }
+  .ft-tag-overlay-body[hidden] { display: none !important; }
+  .ft-tag-overlay-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-tab {
+    min-height: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    color: #fff;
+    cursor: pointer;
+    opacity: .5;
+    background: rgba(15, 23, 42, .78);
+    box-shadow: 0 1px 3px rgba(0,0,0,.28);
+  }
+  .ft-tag-overlay-tab[aria-selected="true"] { opacity: 1; }
+  .ft-tag-overlay-tab.offense[aria-selected="true"] { background: rgba(4, 120, 87, .95); }
+  .ft-tag-overlay-tab.defense[aria-selected="true"] { background: rgba(180, 83, 9, .95); }
+  .ft-tag-overlay-tab.flow[aria-selected="true"] { background: rgba(67, 56, 202, .95); }
+  .ft-tag-overlay-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-pane[hidden] { display: none !important; }
+  #ftTagPaneFlow {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-btn {
+    width: 100%;
+    min-height: 1.72rem;
+    margin: 0;
+    padding: 0 .1rem;
+    border: 0;
+    border-radius: 4px;
+    font-size: .62rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    cursor: pointer;
+    background: rgba(15, 23, 42, .78);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,.28);
+  }
+  .ft-tag-overlay-btn:hover { filter: brightness(1.12); }
+  .ft-tag-overlay-btn.offense { background: rgba(4, 120, 87, .86); }
+  .ft-tag-overlay-btn.defense { background: rgba(180, 83, 9, .88); }
+  .ft-tag-overlay-btn.flow { background: rgba(67, 56, 202, .86); }
+  .ft-tag-overlay-btn.action { background: rgba(15, 23, 42, .9); }
+  .ft-tag-overlay-rule {
+    height: 3px;
+    margin: 2px 4px;
+    border-radius: 2px;
+    opacity: .9;
+  }
+  .ft-tag-overlay-rule.offense { background: #34d399; }
+  .ft-tag-overlay-rule.defense { background: #fbbf24; }
+  .ft-tag-overlay-rule.flow { background: #818cf8; }
+  #film-tool-root.ft-manual-tagging-on .ft-tag-overlay {
+    bottom: 48px; /* leave native video controls */
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-tag-overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-video-wrap video {
+    max-height: min(94vh, 1400px);
+    border-radius: var(--radius-md);
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-scoreboard,
+  #film-tool-root.ft-manual-tagging-on .ft-program-section,
+  #film-tool-root.ft-manual-tagging-on #ftIngestDetails,
+  #film-tool-root.ft-manual-tagging-on #ftPlayMatchesDetails,
+  #film-tool-root.ft-manual-tagging-on #ftGameInfoDetails,
+  #film-tool-root.ft-manual-tagging-on #statusText,
+  #film-tool-root.ft-manual-tagging-on #ftClipReviewDock,
+  #film-tool-root.ft-manual-tagging-on #runAnalysisBar {
+    display: none !important;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-vid-controls {
+    display: flex !important;
   }
 
   /* Bookmarks kept in DOM for JS, hidden from main review UX */
@@ -598,12 +682,10 @@
   @media (max-width: 1100px) {
     .ft-video-wrap video,
     #film-tool-root .ft-video-wrap video { max-height: min(78vh, 900px); }
-    .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 760px) {
     .ft-scoreboard { padding: .5rem .75rem; gap: .75rem; }
     .ft-score-team .ft-team-score { font-size: 1.4rem; }
-    .ft-tag-grid { grid-template-columns: 1fr 1fr; }
     .ft-topbar { flex-wrap: wrap; }
     .ft-video-wrap video,
     #film-tool-root .ft-video-wrap video { max-height: min(62vh, 560px); }
@@ -702,62 +784,6 @@
     </details>
     {% endif %}
 
-    <div class="ft-review-stage">
-      <div class="ft-review-video">
-        <div class="ft-video-wrap" id="filmReviewGrid">
-          <video id="video" controls></video>
-          <div class="ft-video-bar">
-            <span class="ft-time" id="timeDisplay">0:00.0</span>
-            <span style="flex:1"></span>
-            <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
-          </div>
-        </div>
-        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
-        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
-          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
-            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
-            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn" title="Run AI analysis on this video (YOLO pipeline). Not needed for Check C if a ledger already exists.">Run AI Analysis</button>
-          </div>
-          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
-            <div class="ft-run-analysis-progress-head">
-              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
-              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
-            </div>
-            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
-            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
-          </div>
-        </div>
-        {% endif %}
-        <div class="ft-vid-controls no-print" aria-label="Video transport controls">
-          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Jump to start of video (0:00)">⏮ Start</button>
-          <button class="btn btn-ghost" type="button" data-skip="-30" title="Jump back 30 seconds">-30s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-10" title="Jump back 10 seconds">-10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-3" title="Jump back 3 seconds">-3s</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow5x" title="Play at half speed (0.5x)">0.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow25x" title="Play at quarter speed (0.25x)">0.25x</button>
-          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn" title="Play or pause the video">▶ / ⏸</button>
-          <button class="btn btn-ghost" type="button" id="vidNormalBtn" title="Play at normal speed (1x)">1x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast25x" title="Play at 2.5x speed">2.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast5x" title="Play at 5x speed">5x</button>
-          <button class="btn btn-ghost" type="button" data-skip="3" title="Jump forward 3 seconds">+3s</button>
-          <button class="btn btn-ghost" type="button" data-skip="10" title="Jump forward 10 seconds">+10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="30" title="Jump forward 30 seconds">+30s</button>
-          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Jump to end of video">⏭ End</button>
-        </div>
-        <div class="status" id="statusText" style="margin-top:.5rem;">Ready.</div>
-        <div id="ftClipReviewDock" class="ft-clip-review-dock" hidden>
-          <div class="ft-clip-review-label" id="ftClipReviewLabel">Clip review</div>
-          <div class="ft-clip-review-actions">
-            <button type="button" class="btn ai-review-btn accept" id="ftClipAcceptBtn" title="Keep this play on the ledger, then go to the next play">✓ Accept</button>
-            <button type="button" class="btn ai-review-btn correct" id="ftClipCorrectBtn" title="Fix player or type for this play">✎ Correct</button>
-            <button type="button" class="btn ai-review-btn reject" id="ftClipRejectBtn" title="Remove this wrong play, then go to the next">✗ Reject</button>
-            <button type="button" class="btn ft-toolbar-btn" id="ftClipNextBtn" title="Leave this play unchanged and loop the next one">Next play →</button>
-            <button type="button" class="btn ft-toolbar-btn" id="ftClipStopBtn" title="Stop the looping clip and return to normal playback">Stop loop</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     {% if features.ENABLE_AUTO_STATS_M1 %}
     <section class="ft-program-section" aria-label="Program mode">
       <div class="panel" id="aiEventsPanel">
@@ -768,7 +794,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <details class="ft-secondary ft-program-fold" id="ftProgramStep1" open>
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep1">
             <summary>AI box score vs scorebook</summary>
             <div class="ft-secondary-body">
               <p class="ft-control-group-help">Builds counting stats from this game’s AI pass and checks them against the confirmed scorebook. You do not need to accept plays one by one.</p>
@@ -850,34 +876,6 @@
       </div>
     </section>
     {% endif %}
-
-    <details class="ft-secondary" id="ftManualTagDetails">
-      <summary>Manual tagging <span class="tiny" id="eventCountText" style="font-weight:500;margin-left:.35rem;">0 tagged</span></summary>
-      <div class="ft-secondary-body">
-        <div class="ft-tag-panel">
-          <div class="ft-tag-groups">
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label flow">Possession / Flow</div>
-              <div class="ft-tag-grid" id="groupFlow"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label offense">Scoring / Offense</div>
-              <div class="ft-tag-grid" id="groupOffense"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label defense">Defense / Misc</div>
-              <div class="ft-tag-grid" id="groupDefense"></div>
-            </div>
-          </div>
-          <div class="ft-tag-actions">
-            <button class="btn btn-ghost" id="undoBtn" type="button" title="Undo the last manual tag">Undo</button>
-            <button class="btn btn-ghost" id="clearAllBtn" type="button" title="Clear all manual tags for this session (careful)">Clear All</button>
-            <button class="btn btn-ghost" id="subBtn" type="button" title="Record a substitution at the current time">SUB</button>
-            <button class="btn btn-ghost" id="startersBtn" type="button" title="Set starting lineup">Starters</button>
-          </div>
-        </div>
-      </div>
-    </details>
 
     {% if features.ENABLE_AUTO_STATS_M1 %}
     <details class="ft-secondary" id="ftPlayMatchesDetails">
@@ -967,6 +965,85 @@
         </div>
       </div>
     </details>
+
+    <div class="ft-review-stage">
+      <div class="ft-review-video">
+        <div class="ft-video-wrap" id="filmReviewGrid">
+          <div class="ft-video-stage">
+            <video id="video" controls></video>
+            <aside class="ft-tag-overlay" id="ftTagOverlay" aria-label="Manual tagging">
+              <button type="button" id="ftManualTagToggle" aria-pressed="false" title="Show tagging buttons on the film">Tag</button>
+              <span class="ft-tag-overlay-count" id="eventCountText">0</span>
+              <div class="ft-tag-overlay-body" id="ftManualTagPanel" hidden>
+                <button class="ft-tag-overlay-btn action" id="undoBtn" type="button" title="Undo the last manual tag">Undo</button>
+                <button class="ft-tag-overlay-btn action" id="ftTagGameBtn" type="button" title="Set opponent and starting lineups">Vs</button>
+                <button class="ft-tag-overlay-btn action" id="startersBtn" type="button" title="Set starting lineup">5s</button>
+                <div class="ft-tag-overlay-tabs" role="tablist" aria-label="Tag group">
+                  <button type="button" class="ft-tag-overlay-tab offense" role="tab" data-tag-tab="offense" aria-selected="true" title="Offense / scoring">Off</button>
+                  <button type="button" class="ft-tag-overlay-tab defense" role="tab" data-tag-tab="defense" aria-selected="false" title="Defense">Def</button>
+                  <button type="button" class="ft-tag-overlay-tab flow" role="tab" data-tag-tab="flow" aria-selected="false" title="More: quarters, timeout, inbound, substitution">More</button>
+                </div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="offense" id="ftTagPaneOffense"></div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="defense" id="ftTagPaneDefense" hidden></div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="flow" hidden>
+                  <div id="ftTagPaneFlow"></div>
+                  <button class="ft-tag-overlay-btn action" id="subBtn" type="button" title="Record a substitution at the current time">SUB</button>
+                  <button class="ft-tag-overlay-btn action" id="clearAllBtn" type="button" title="Clear all manual tags for this session (careful)">Clr</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+          <div class="ft-video-bar">
+            <span class="ft-time" id="timeDisplay">0:00.0</span>
+            <span style="flex:1"></span>
+            <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
+          </div>
+        </div>
+        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
+        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
+          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
+            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn" title="Run AI analysis on this video (YOLO pipeline). Not needed for Check C if a ledger already exists.">Run AI Analysis</button>
+          </div>
+          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
+            <div class="ft-run-analysis-progress-head">
+              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
+              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
+            </div>
+            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
+            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="ft-vid-controls no-print" aria-label="Video transport controls">
+          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Jump to start of video (0:00)">⏮ Start</button>
+          <button class="btn btn-ghost" type="button" data-skip="-30" title="Jump back 30 seconds">-30s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10" title="Jump back 10 seconds">-10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-3" title="Jump back 3 seconds">-3s</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow5x" title="Play at half speed (0.5x)">0.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow25x" title="Play at quarter speed (0.25x)">0.25x</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn" title="Play or pause the video">▶ / ⏸</button>
+          <button class="btn btn-ghost" type="button" id="vidNormalBtn" title="Play at normal speed (1x)">1x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast25x" title="Play at 2.5x speed">2.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast5x" title="Play at 5x speed">5x</button>
+          <button class="btn btn-ghost" type="button" data-skip="3" title="Jump forward 3 seconds">+3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="10" title="Jump forward 10 seconds">+10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="30" title="Jump forward 30 seconds">+30s</button>
+          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Jump to end of video">⏭ End</button>
+        </div>
+        <div class="status" id="statusText" style="margin-top:.5rem;">Ready.</div>
+        <div id="ftClipReviewDock" class="ft-clip-review-dock" hidden>
+          <div class="ft-clip-review-label" id="ftClipReviewLabel">Clip review</div>
+          <div class="ft-clip-review-actions">
+            <button type="button" class="btn ai-review-btn accept" id="ftClipAcceptBtn" title="Keep this play on the ledger, then go to the next play">✓ Accept</button>
+            <button type="button" class="btn ai-review-btn correct" id="ftClipCorrectBtn" title="Fix player or type for this play">✎ Correct</button>
+            <button type="button" class="btn ai-review-btn reject" id="ftClipRejectBtn" title="Remove this wrong play, then go to the next">✗ Reject</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipNextBtn" title="Leave this play unchanged and loop the next one">Next play →</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipStopBtn" title="Stop the looping clip and return to normal playback">Stop loop</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Bookmarks kept for JS compatibility; hidden from review UX -->
     <div class="ft-bookmarks" hidden>
@@ -1280,10 +1357,24 @@
     </form>
   </dialog>
 
-  <dialog id="quickTagDialog">
+  <dialog id="quickTagDialog" class="ft-quick-tag">
     <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
     <div class="modal-body" id="quickTagBody"></div>
-    <div class="modal-foot"><span class="tiny">Select what applies, then tag.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+    <div class="modal-foot"><span class="tiny">Liberty vs this opponent’s roster.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+  </dialog>
+
+  <dialog id="ftGameTeamsDialog" class="ft-quick-tag">
+    <div class="modal-head"><h2>This game</h2></div>
+    <div class="modal-body">
+      <p class="tiny">Tags and lineups use these names. The opponent roster is the team you are playing, not a generic list.</p>
+      <div class="field"><label for="ftTagLibertyName">Liberty</label><input id="ftTagLibertyName" value="Liberty"></div>
+      <div class="field"><label for="ftTagOppName">Opponent</label><input id="ftTagOppName" placeholder="Who are we playing?"></div>
+      <button type="button" class="btn" id="ftTagOpenStartersBtn">Set starting fives</button>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="ftGameTeamsCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="ftGameTeamsSave">Save</button>
+    </div>
   </dialog>
 
   <dialog id="startersDialog">
