@@ -322,6 +322,12 @@ def test_analysis_results_page_includes_event_explorer(client):
     assert b"event-explorer" in resp.data
     assert b"openEventExplorer" in resp.data
     assert b"/api/analysis/" in resp.data
+    html = resp.get_data(as_text=True)
+    assert "Connect to this player" in html
+    assert "officialShootingCard" in html
+    assert "rawDetectorWrap" in html
+    assert "AI track" in html
+    assert ">PF<" in html
 
 
 def test_infer_film_level_from_jrhigh_game_id():
@@ -498,3 +504,15 @@ def test_import_scorebook_to_film_roster_slots(db):
     )
     assert {p["name"] for p in ours} >= {"Colman", "Dayley", "Sullivan"}
     assert {p["name"] for p in opp} >= {"Mendoza", "Alvarez"}
+
+
+def test_normalize_analysis_game_id_unquotes_comma():
+    from helpers import normalize_analysis_game_id
+
+    raw = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    encoded = "jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    double = "jrhigh_adrian%252C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    assert normalize_analysis_game_id(encoded) == raw
+    assert normalize_analysis_game_id(double) == raw
+    assert normalize_analysis_game_id(raw) == raw
+    assert normalize_analysis_game_id("  " + encoded + "  ") == raw

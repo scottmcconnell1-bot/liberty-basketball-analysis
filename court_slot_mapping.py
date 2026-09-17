@@ -116,6 +116,19 @@ def get_court_slots(db, game_id):
             "mapped_label": label,
             "is_mapped": bool(label),
         })
+    try:
+        from jersey_shade import ensure_tracker_shades, side_label
+        shades = ensure_tracker_shades(db, analysis_key)
+    except Exception:
+        shades = {}
+    for slot in slots:
+        info = shades.get(int(slot["tracker_id"])) if slot.get("tracker_id") is not None else None
+        if not info:
+            continue
+        slot["shade"] = info.get("shade")
+        slot["team_side"] = info.get("side")
+        slot["team_label"] = side_label(info.get("side") or "")
+        slot["mean_v"] = info.get("mean_v")
     return slots
 
 

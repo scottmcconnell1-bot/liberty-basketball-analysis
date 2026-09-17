@@ -16,7 +16,7 @@ import threading
 import time
 from datetime import datetime
 from functools import wraps
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 
 from flask import g, current_app, request, render_template, abort, redirect, url_for, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -957,8 +957,20 @@ def _analysis_run_row_video_params(run_row):
     )
 
 
+def normalize_analysis_game_id(game_id: str) -> str:
+    """Undo URL encoding so Jr High keys with commas match the database."""
+    text = str(game_id or "").strip()
+    for _ in range(3):
+        nxt = unquote(text)
+        if nxt == text:
+            break
+        text = nxt
+    return text
+
+
 def resolve_analysis_run_for_progress(db, game_id: str):
     """Return the analysis run row the progress UI should display."""
+    game_id = normalize_analysis_game_id(game_id)
     row = db.execute(
         "SELECT * FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
         (game_id,),

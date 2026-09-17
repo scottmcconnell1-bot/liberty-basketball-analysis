@@ -133,3 +133,6 @@ ball_dataset_v2/
 
 # Coach-picked starting fives (per game)
 data/lineups/*.json
+
+# Film Tool tags (per film; Funnel reads these from home disk)
+data/film_tags/*.json

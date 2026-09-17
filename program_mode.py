@@ -104,6 +104,21 @@ def scorebook_named_players(scorebook: dict[str, Any] | None) -> list[dict[str, 
             "team": team,
             "team_name": team_name,
             "label": f"{jersey} - {name or 'Unknown'}" if jersey else (name or "Unknown"),
+            "pts": row.get("pts"),
+            "fgm": row.get("fgm"),
+            "fga": row.get("fga"),
+            "tpm": row.get("tpm"),
+            "tpa": row.get("tpa"),
+            "ftm": row.get("ftm"),
+            "fta": row.get("fta"),
+            "reb": row.get("reb"),
+            "ast": row.get("ast"),
+            "stl": row.get("stl"),
+            "blk": row.get("blk"),
+            "to": row.get("to"),
+            "fouls": row.get("fouls"),
+            "min": row.get("min"),
+            "extras": row.get("extras") if isinstance(row.get("extras"), dict) else {},
         })
     players.sort(key=lambda p: (_jersey_sort_key(p["jersey"]), p["name"].lower(), p["team"]))
     return players
@@ -142,6 +157,12 @@ def analysis_players_from_scorebook(scorebook: dict[str, Any] | None) -> list[di
             jersey_number = int(jersey) if jersey not in ("", None) and str(jersey).lstrip("-").isdigit() else None
         except (TypeError, ValueError):
             jersey_number = None
+        liberty_home = _liberty_is_home(scorebook)
+        if liberty_home is False:
+            side = "liberty" if row["team"] == "away" else "opponent"
+        else:
+            side = "liberty" if row["team"] == "home" else "opponent"
+        side_label = "Liberty" if side == "liberty" else (row.get("team_name") or "Opponent")
         players.append({
             "id": None,
             "jersey_number": jersey_number,
@@ -152,6 +173,8 @@ def analysis_players_from_scorebook(scorebook: dict[str, Any] | None) -> list[di
             "sort_order": index,
             "team": row["team"],
             "team_name": row["team_name"],
+            "side": side,
+            "side_label": side_label,
         })
     return players
 

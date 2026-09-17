@@ -10,14 +10,15 @@ Layout (same stats major programs keep):
 Counting columns: MIN, PTS, 2PM-A-%, 3PM-A-%, FTM-A-%, OReb, DReb, REB, AST, STL, BLK, TO, PF.
 
 Player shooting/PTS use a confirmed scorebook cell when that cell is filled.
-Empty book cells and quarters (when the book has no period scores) come from
-trusted AI events. Quarters from video time are estimated equal splits, not
-whistle periods.
+Empty book cells (REB/AST/STL/BLK/TO/PF and missed attempts) come from accepted
+AI events. Duplicate jerseys are split by shirt color: Home = light (usually
+white), Away = dark. Quarters without book cells are an even split of the final.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from analysis_helpers import infer_period_labels, resolve_video_duration_ms
@@ -116,8 +117,91 @@ def starter_points(players: list[dict[str, Any]]) -> int | None:
 
 
 def _jersey_key(value) -> str:
-    text = str(value if value is not None else "").strip().lstrip("0")
+    text = str(value if value is not None else "").strip().lstrip("#").strip()
+    m = re.match(r"^0*(\d+)", text)
+    if m:
+        return m.group(1)
+    text = text.lstrip("0")
     return text or "0"
+
+
+def scorebook_filled_keys(player: dict[str, Any]) -> set[str]:
+    """Keys the spiral actually wrote, including explicit zeros."""
+    filled: set[str] = set()
+    extras = player.get("extras") if isinstance(player.get("extras"), dict) else {}
+    if player.get("pts") is not None:
+        filled.add("pts")
+    if extras.get("fg2") is not None or player.get("fgm") is not None:
+        filled.add("fgm2")
+    if extras.get("fg3") is not None or player.get("tpm") is not None:
+        filled.add("fgm3")
+    if player.get("fga") is not None:
+        filled.add("fga2")
+        filled.add("fga3")
+    if player.get("tpa") is not None:
+        filled.add("fga3")
+    if player.get("ftm") is not None:
+        filled.add("ftm")
+    if player.get("fta") is not None:
+        filled.add("fta")
+    mapping = (("reb", "reb"), ("ast", "ast"), ("stl", "stl"), ("blk", "blk"), ("to", "tov"), ("fouls", "pf"))
+    for src, dest in mapping:
+        if player.get(src) is not None:
+            filled.add(dest)
+    return filled
+
+
+_HASH_JERSEY = re.compile(r"^#\s*(\d+)")
+_NUM_NAME = re.compile(r"^(\d+)\s+\S")
+
+
+def _event_jersey_and_tracker(player, extra: dict[str, Any] | None) -> tuple[str | None, int | None]:
+    extra = extra or {}
+    jersey = None
+    tracker = None
+    if extra.get("jersey_number") is not None:
+        jersey = _jersey_key(extra.get("jersey_number"))
+    raw_tracker = extra.get("tracker_id")
+    if raw_tracker is not None and str(raw_tracker).lstrip("-").isdigit():
+        tracker = int(raw_tracker)
+    text = str(player or "").strip()
+    if jersey is None:
+        hashed = _HASH_JERSEY.match(text)
+        named = _NUM_NAME.match(text)
+        if hashed:
+            jersey = _jersey_key(hashed.group(1))
+        elif named:
+            jersey = _jersey_key(named.group(1))
+    if tracker is None and text.isdigit():
+        tracker = int(text)
+        if extra.get("jersey_number") is None:
+            jersey = None
+    return jersey, tracker
+
+
+def _side_from_home_away(team_side: str, liberty_is_home: bool | None) -> str:
+    if liberty_is_home is False:
+        return "liberty" if team_side == "away" else "opponent"
+    return "liberty" if team_side == "home" else "opponent"
+
+
+def _merge_ai_into_book_line(book_line: dict[str, Any], delta: dict[str, Any], event_type: str, extra: dict[str, Any], filled: set[str]) -> None:
+    """Fill unrecorded counting stats from film. Do not overwrite book PTS/makes."""
+    for key_name in ("oreb", "dreb", "reb", "ast", "stl", "blk", "tov", "pf", "pts_paint", "pts_2nd", "pts_off_to"):
+        if key_name in filled:
+            continue
+        book_line[key_name] = int(book_line.get(key_name) or 0) + int(delta.get(key_name) or 0)
+    et = (event_type or "").lower()
+    kind = str(extra.get("shot_kind") or "").lower()
+    if et == "missed_two" or (et == "miss" and kind in ("", "2")):
+        if "fga2" not in filled:
+            book_line["fga2"] = int(book_line.get("fga2") or 0) + 1
+    elif et == "missed_three" or (et == "miss" and kind == "3"):
+        if "fga3" not in filled:
+            book_line["fga3"] = int(book_line.get("fga3") or 0) + 1
+    elif et == "missed_free_throw" or (et == "miss" and kind == "ft"):
+        if "fta" not in filled:
+            book_line["fta"] = int(book_line.get("fta") or 0) + 1
 
 
 def line_from_scorebook_player(player: dict[str, Any]) -> dict[str, Any]:
@@ -266,6 +350,18 @@ def _liberty_home_flag(scorebook: dict[str, Any] | None) -> bool | None:
     return None
 
 
+def even_split_line_score(liberty_pts: int, opponent_pts: int, periods: int = 4) -> list[dict[str, Any]]:
+    """Placeholder quarters when the book has a final but no Q1–Q4 cells."""
+    n = max(int(periods or 4), 1)
+
+    def parts(total: int) -> list[int]:
+        total = int(total or 0)
+        base, rem = divmod(total, n)
+        return [base + (1 if i >= n - rem else 0) for i in range(n)]
+
+    return running_line_score(list(zip(parts(liberty_pts), parts(opponent_pts))))
+
+
 def running_line_score(period_pts: list[tuple[int, int]]) -> list[dict[str, Any]]:
     """period_pts is [(liberty, opponent), ...] for Q1..Q4 (and OT)."""
     lib_run = 0
@@ -321,7 +417,21 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
             "side": side,
             "line": line_from_scorebook_player(person),
             "source": "scorebook",
+            "book_filled": scorebook_filled_keys(person),
         }
+
+    shades: dict[int, dict[str, Any]] = {}
+    roster_index: dict[str, list[dict[str, Any]]] = {}
+    try:
+        from jersey_shade import ensure_tracker_shades
+        shades = ensure_tracker_shades(db, key)
+    except Exception:
+        shades = {}
+    try:
+        from adrian_identity import scorebook_roster_index
+        roster_index = scorebook_roster_index(scorebook) if scorebook else {}
+    except Exception:
+        roster_index = {}
 
     duration_ms = resolve_video_duration_ms(db, game_id, analysis_key=key)
     try:
@@ -350,8 +460,9 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     last_reb_side = None
     last_to_side = None
 
+    identity_by_tracker: dict[int, dict[str, Any] | None] = {}
     for row in events:
-        player = _jersey_key(row["player"] if hasattr(row, "keys") else row[0])
+        raw_player = row["player"] if hasattr(row, "keys") else row[0]
         event_type = row["event_type"] if hasattr(row, "keys") else row[1]
         shot_result = row["shot_result"] if hasattr(row, "keys") else row[2]
         timestamp_ms = row["timestamp_ms"] if hasattr(row, "keys") else row[3]
@@ -360,18 +471,46 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
         q_index = min(max(int(period["quarter"]) - 1, 0), 4)
         delta = empty_line()
         pts = apply_ai_event(delta, event_type, shot_result, extra)
-        lib_key = f"liberty:{player}"
-        opp_key = f"opponent:{player}"
-        if lib_key in roster:
-            target = roster[lib_key]
-            side = "liberty"
-        elif opp_key in roster:
-            target = roster[opp_key]
-            side = "opponent"
-        else:
-            bucket = unassigned.setdefault(player, {
-                "jersey": player,
-                "name": f"AI #{player}",
+        jersey, tracker = _event_jersey_and_tracker(raw_player, extra)
+        team_side = extra.get("team_side")
+        if not team_side and tracker is not None:
+            team_side = (shades.get(int(tracker)) or {}).get("side")
+        if jersey is None and tracker is not None and roster_index:
+            if tracker not in identity_by_tracker:
+                try:
+                    from adrian_identity import resolve_event_identity
+                    identity_by_tracker[tracker] = resolve_event_identity(
+                        db,
+                        key,
+                        {"player": raw_player, "timestamp_ms": timestamp_ms},
+                        roster_index,
+                        shades=shades,
+                    )
+                except Exception:
+                    identity_by_tracker[tracker] = None
+            identity = identity_by_tracker.get(tracker)
+            if identity and identity.get("status") == "matched":
+                jersey = _jersey_key(identity.get("jersey_number"))
+                team_side = identity.get("team_side") or team_side
+                extra["jersey_number"] = identity.get("jersey_number")
+                extra["team_side"] = team_side
+        side = None
+        target = None
+        if jersey and team_side in ("home", "away"):
+            side = _side_from_home_away(team_side, liberty_is_home)
+            target = roster.get(f"{side}:{_jersey_key(jersey)}")
+        if target is None and jersey:
+            lib_key = f"liberty:{_jersey_key(jersey)}"
+            opp_key = f"opponent:{_jersey_key(jersey)}"
+            if lib_key in roster and opp_key not in roster:
+                target, side = roster[lib_key], "liberty"
+            elif opp_key in roster and lib_key not in roster:
+                target, side = roster[opp_key], "opponent"
+        if target is None:
+            bucket_key = f"{team_side or 'unk'}:{jersey or raw_player}"
+            bucket = unassigned.setdefault(str(bucket_key), {
+                "jersey": jersey or str(raw_player or ""),
+                "name": f"AI #{jersey or raw_player}",
                 "side": "unassigned",
                 "line": empty_line(),
                 "source": "ai",
@@ -387,9 +526,7 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
         if pts and last_to_side and last_to_side != side:
             delta["pts_off_to"] = pts
         if target["source"] == "scorebook":
-            for key_name in ("oreb", "dreb", "reb", "ast", "stl", "blk", "tov", "pf", "pts_paint", "pts_2nd", "pts_off_to"):
-                if key_name.startswith("pts_") or not book_line.get(key_name):
-                    book_line[key_name] = int(book_line.get(key_name) or 0) + int(delta.get(key_name) or 0)
+            _merge_ai_into_book_line(book_line, delta, event_type, extra, target.get("book_filled") or set())
         else:
             _add_into(book_line, delta)
         if et in ("rebound_offensive", "offensive_rebound") or extra.get("rebound_kind") == "oreb":
@@ -400,8 +537,6 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
             last_to_side = side
         if pts:
             last_to_side = None
-            if not extra.get("in_paint"):
-                pass
             if last_reb_kind == "oreb" and last_reb_side == side:
                 last_reb_kind = None
         if pts and side == "liberty":
@@ -417,30 +552,25 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     if book_line:
         line_score = book_line
         line_source = "scorebook"
+    elif scorebook and (
+        scorebook.get("final_score_home") is not None
+        or scorebook.get("final_score_away") is not None
+    ):
+        if liberty_is_home is False:
+            lib_final = int(scorebook.get("final_score_away") or 0)
+            opp_final = int(scorebook.get("final_score_home") or 0)
+        else:
+            lib_final = int(scorebook.get("final_score_home") or 0)
+            opp_final = int(scorebook.get("final_score_away") or 0)
+        line_score = even_split_line_score(lib_final, opp_final)
+        line_source = "scorebook_even_split"
     else:
         line_score = running_line_score(period_pairs or [(0, 0), (0, 0), (0, 0), (0, 0)])
         line_source = "ai_video_split"
 
-    minutes_by_jersey = {}
-    try:
-        for row in db.execute(
-            """SELECT jersey_number, minutes_played, player_name, tracker_id
-                 FROM player_minutes
-                WHERE game_id=? OR game_id=?""",
-            (key, str(game_id)),
-        ).fetchall():
-            jersey = _jersey_key(row["jersey_number"] if hasattr(row, "keys") else row[0])
-            minutes_by_jersey[jersey] = float(
-                (row["minutes_played"] if hasattr(row, "keys") else row[1]) or 0
-            )
-    except Exception:
-        minutes_by_jersey = {}
-
     liberty_players = []
     opponent_players = []
     for item in roster.values():
-        if minutes_by_jersey.get(_jersey_key(item["jersey"])):
-            item["line"]["min"] = minutes_by_jersey[_jersey_key(item["jersey"])]
         decorated = decorate_line(item["line"])
         row = {
             "jersey": item["jersey"],
@@ -497,13 +627,22 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     opponent_team["starter_pts"] = starter_points(opponent_players)
 
     if line_source == "scorebook":
-        line_note = "Quarter scores from the confirmed scorebook."
+        line_note = (
+            "Quarter scores from the confirmed scorebook. PTS/makes in the book stay; "
+            "REB/AST/STL/BLK/TO/PF and missed shots come from film. Same jersey on both "
+            "teams is split by color: Home light (usually white), Away dark."
+        )
+    elif line_source == "scorebook_even_split":
+        line_note = (
+            "This scorebook has a final score but no Q1–Q4 cells, so the line score is an even "
+            "split of that final — not the referee's periods. PTS/makes follow the book. "
+            "REB/AST/STL/BLK/TO/PF and misses come from film. Home = light jersey, Away = dark."
+        )
     else:
         line_note = (
-            "This scorebook has no quarter-by-quarter scores, so Q1–Q4 here are four equal "
-            "slices of the video file (timeouts and halftime on the tape sit inside those slices). "
-            "They are not the referee's period endings. Add quarter scores to the confirmed "
-            "scorebook to replace this estimate."
+            "No confirmed scorebook quarters or final, so Q1–Q4 are detector counts in four "
+            "equal time slices of the video file. They are not the referee's period endings. "
+            "Home = light jersey, Away = dark."
         )
 
     return {

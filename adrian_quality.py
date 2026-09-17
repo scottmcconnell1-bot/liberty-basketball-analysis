@@ -1426,7 +1426,9 @@ def apply_quality_to_db(conn: sqlite3.Connection, game_id: str = ADRIAN_BASE) ->
                       reviewed_at=CURRENT_TIMESTAMP,
                       review_notes=?
                 WHERE game_id=?
-                  AND COALESCE(review_notes,'') NOT LIKE '%Corrected in Film Tool%'""",
+                  AND COALESCE(source_type,'ai') != 'manual'
+                  AND COALESCE(review_notes,'') NOT LIKE '%Corrected in Film Tool%'
+                  AND COALESCE(review_notes,'') NOT LIKE '%Film Tool teach%'""",
             (f"{QUALITY_NOTE}:drop", key),
         )
 

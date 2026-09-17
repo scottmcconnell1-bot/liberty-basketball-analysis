@@ -1316,6 +1316,38 @@ def test_analysis_results_and_status_count_events_via_relational_game_id(client,
     assert analysis_payload["recent_events"][0]["player"] == "Player A"
 
 
+def test_analysis_results_decode_percent_encoded_comma_game_id(client, db):
+    from urllib.parse import quote
+
+    analysis_key = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (None, analysis_key, "uploads/adrian-comma.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, shot_result, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (analysis_key, "made_two", "Colman", "made", 1000, 1),
+    )
+    db.commit()
+
+    leftover_encoded = quote(analysis_key, safe="")
+    page = client.get(f"/analysis/{leftover_encoded}")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert analysis_key in html
+    assert "jrhigh_adrian%2C" not in html
+
+    double_path = quote(leftover_encoded, safe="")
+    api = client.get(f"/api/analysis/{double_path}")
+    payload = api.get_json()
+    assert api.status_code == 200
+    assert payload["game_id"] == analysis_key
+    assert payload["event_count"] == 1
+
+
 def test_status_page_shows_product_progress_checklist(client):
     r = client.get("/status")
     assert r.status_code == 200

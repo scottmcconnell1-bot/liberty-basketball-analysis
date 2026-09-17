@@ -92,7 +92,21 @@ Re-analyze film from Videos when ready.
 
 ## Manual tagging layout (Scott 2026-09-16)
 
-**Proven:** Film Tool tagging is a slim **Tag** strip on the **right edge of the video**. **Off / Def / More** tabs show one group at a time. **Vs** (this game’s opponent) and **5s** (starting fives) stay on the strip while tagging so Game info can stay hidden. Dropdowns sit above the film. Skip / speed controls under the film stay visible while tagging.
+**Proven:** Film Tool tagging is a slim **Tag** strip on the **right edge of the video**. **Off / Def / More** tabs show one group at a time. **Vs** (this game’s opponent) and **5s** (starting fives) stay on the strip while tagging so Game info can stay hidden. Dropdowns sit above the film. The running score sits immediately above the video (visible while tagging) so it can be checked against the gym board and the book. Skip / speed controls stay under the film.
+
+**Pickup (work computer tomorrow):** School uses **Funnel only** — https://liberty-coach.tail368a37.ts.net — do not run Flask or copy `film_analysis.db` at school. Open Jr High Adrian Film Tool and hard-refresh. Tags now also save on the **home disk** (`data/film_tags/`) when you **Save** or **Teach AI**, so school Chrome does not have to keep them. If school Chrome still has your Jr High Q1, click **↩ Resume** then **Save** immediately so home stores it. Do **not** Restore Taylor/Blacker/Bradshaw — that 71-row list is Varsity/Wilder, stored separately, not on the Jr High film. Jr High names: Sullivan, Colman, Dayley, Musgrave, Peterson. Q1 whistle **15:58**. Gym: Liberty 16, Adrian 10.
+
+**Proven (2026-09-16 night):** Running score is **only tagged makes** (2PT/3PT/FT Make). It is not the gym board or the book. And-1 is 2 until the FT is tagged. Opponent points count even if the Vs name drifted. Made FG asks Assist? Yes → passer (not the shooter); No → close. BLOB/SLOB are team-only. Player pills are the five currently in the game (5s + SUB); missing name means a sub happened. Team names like Liberty/Adrian are stored on each tag (the old team dropdown only had Our Team/Opponent, which dropped the name and froze the score at 0).
+
+**Proven (2026-09-16 night, teach):** Film Tool Save and **Teach AI** POST tags to `/api/film/<game_id>/teach-manual`. Those rows land as `source_type=manual`, `human_verified=1`, plus `human_corrections`. Nearby AI plays in the tagged window are corrected or rejected. `persist_events` keeps them on the next pass and re-grades new AI. Adrian quality will not park Film Tool teach rows. This still does not retrain `ball_detector.pt`.
+
+## Next session — tags → better counting
+
+**Done:** tags can leave the browser and sit on the home ledger.
+
+**Not done:** YOLO / `ball_detector.pt` are unchanged. `human_corrections.applied_to_model` stays 0. `event_calibrator.py` and `scripts/teach_from_manual_q1.py` are missing on this branch (`teach_from_hoops_pbp.py` imports them).
+
+**Next slice (no detector weights):** after Scott teaches Q1 from Funnel, use those manual rows to set shot-type / timing thresholds for the next precision pass. Ask before any `ball_detector.pt` change.
 
 **Proven (2026-09-16 afternoon):** The tag card is a compact centered dialog (not full-bleed). Every tag except Start/End QTR uses the same flow: Liberty vs this game’s opponent, then that team’s roster. Jump Ball asks who won. Steal still adds the matching turnover from the other roster. Add-player is an inline field (no nested `prompt()`), so Cancel / Esc / backdrop still close the card. Opponent roster keys off the team you are playing (Adrian on this game), not a generic Opponent list.
 

@@ -40,15 +40,22 @@ def test_film_tool_manual_tagging_overlays_film(client):
     assert html.find('id="startersBtn"') > overlay_at
     assert html.find('id="startersBtn"') < html.find('data-tag-tab="offense"')
     assert html.find("</details>", game_info_at) < film_at
+    score_at = html.find('class="ft-scoreboard"')
+    assert game_info_at < score_at < film_at
+    assert 'id="loadTagsBtn"' in html
+    assert 'id="ftScoreHint"' in html
+    assert 'id="ftQ1EndBtn"' in html
+    assert "Score updates from tagged makes" in html
+    hide_css = html.split("#film-tool-root.ft-manual-tagging-on .ft-program-section", 1)[1].split("}", 1)[0]
+    assert "ft-vid-controls" not in hide_css
+    assert "ft-scoreboard" not in hide_css
+    assert 'aria-label="Video transport controls"' in html
     assert 'data-tag-tab="offense"' in html
     assert 'data-tag-tab="defense"' in html
     assert 'data-tag-tab="flow"' in html
     assert 'id="ftTagPaneOffense"' in html
     assert 'id="ftTagPaneDefense"' in html
     assert 'id="ftTagPaneFlow"' in html
-    hide_css = html.split("#film-tool-root.ft-manual-tagging-on .ft-scoreboard", 1)[1].split("}", 1)[0]
-    assert "ft-vid-controls" not in hide_css
-    assert 'aria-label="Video transport controls"' in html
 
 
 def test_settings_includes_film_tool_section(client):
@@ -72,3 +79,26 @@ def test_film_tool_quick_tag_uses_game_roster_flow():
     assert "prompt(" not in js
     assert "#film-tool-root #quickTagDialog" in css
     assert "calc(100vw - 4.5rem)" in css
+    blob = js.split("{ id: 'blob'", 1)[1].split("{ id:", 1)[0]
+    slob = js.split("{ id: 'slob'", 1)[1].split("{ id:", 1)[0]
+    assert "teamMode: 'team-only'" in blob
+    assert "teamMode: 'team-only'" in slob
+    assert "function askAssistAfterMake" in js
+    assert "Did an assist occur?" in js
+    assert "function playersOnFloor" in js
+    assert "Only the five in the game. SUB if this is a replacement." in js
+    assert "function isOurTaggedTeam" in js
+    assert "function knownQ1EndSeconds" in js
+    assert "15 * 60 + 58" in js
+    assert "Q1 ends at 15:58" in js
+    assert "ENDQTR" in js.split("function currentQuarter()", 1)[1].split("function ", 1)[0]
+    assert "function repairEmptyTeams" in js
+    assert "if (selected && !terms.includes(selected))" in js
+    assert "function autosaveStorageKey" in js
+    assert "function autosaveMatchesOpenFilm" in js
+    assert "analysisGameId: openAnalysisGameId()" in js
+    assert "function teachManualTagsToAi" in js
+    assert "/teach-manual" in js
+    assert "function pullServerTagsForOpenFilm" in js
+    assert "/manual-tags" in js
+    assert 'id="teachAiBtn"' in (Path(__file__).resolve().parents[1] / "templates" / "film_tool.html").read_text(encoding="utf-8")

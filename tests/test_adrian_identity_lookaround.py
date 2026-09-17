@@ -17,3 +17,15 @@ def test_ambiguous_jersey_skipped():
     idx = scorebook_roster_index()
     # #11 appears on both Adrian and Liberty in this book
     assert match_scorebook_player(11, idx) is None
+
+
+def test_ambiguous_jersey_resolved_by_home_light():
+    idx = scorebook_roster_index()
+    home = match_scorebook_player(11, idx, team_side="home")
+    away = match_scorebook_player(11, idx, team_side="away")
+    assert home is not None and away is not None
+    assert home["team_side"] == "home"
+    assert away["team_side"] == "away"
+    assert home["name"] != away["name"]
+    assert "Linkhart" in (home.get("name") or "")
+    assert "Flores" in (away.get("name") or "")

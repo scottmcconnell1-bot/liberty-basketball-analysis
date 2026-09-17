@@ -1,16 +1,21 @@
 # Learning Status
 
-Generated (local): **2026-09-15 23:00:03 Mountain Daylight Time**
+Generated (local): **2026-09-16 23:00:02 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
 ## Current learning activity
 
 - **Process map:** ok
-- **Active (live worker-backed):** 1
-  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260915_193718` **(primary)**: 7.0%, step=Failed, PID=16228, kind=analysis_launcher, db_status=failed
+- **Active (live worker-backed):** 0
+- **Hint / key:** `hudl_carey_home_regular_vs_carey`
+- **Status:** inferred_from_teach_state (no live analysis worker)
+- **Progress:** Unknown
+- **Step:** last scored: HUDL Carey
+- **Source:** teach_loop_state (Inferred)
 - **Stale/zombie candidates (DB running, no worker):** 0
 - **analysis_runs counts (raw DB):** completed=1, failed=1 (running includes stale/zombie candidates until reclaimed)
+- Note: no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only
 
 ## Queue summary
 
@@ -34,7 +39,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 0.0% | FAIL |
 
 **Overall:** FAIL (mean P=0.0%, mean R=0.0%)
-- Panel snapshot: `2026-09-16T05:00:02.571857+00:00`
+- Panel snapshot: `2026-09-17T05:00:02.022441+00:00`
 
 ## Per-game panel
 
@@ -66,7 +71,6 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 ### Proven
 
 - Panel metrics from `full_film_panel_latest.json`
-- `analysis_runs` status/progress from `film_analysis.db`
 - Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list
 - HUDL taught key count from `teach_loop_state.json`
 - HUDL film_tool game count from DB
@@ -75,6 +79,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 ### Inferred
 
+- Current activity inferred from last teach score (no live worker)
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
 - Trend deltas from comparing two panel snapshots
 

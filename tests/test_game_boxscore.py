@@ -4,6 +4,7 @@ from game_boxscore import (
     apply_ai_event,
     decorate_line,
     empty_line,
+    even_split_line_score,
     line_from_scorebook_player,
     running_line_score,
     shooting_pct,
@@ -67,3 +68,111 @@ def test_sum_team_lines():
     assert total["pts"] == 26
     assert total["fgm2"] == 10
     assert total["fgm3"] == 2
+
+
+def test_even_split_line_score_sums_to_final():
+    rows = even_split_line_score(51, 26)
+    assert [r["period"] for r in rows] == ["Q1", "Q2", "Q3", "Q4"]
+    assert rows[-1]["liberty_running"] == 51
+    assert rows[-1]["opponent_running"] == 26
+
+
+def test_official_box_does_not_inflate_scorebook_player(db, monkeypatch):
+    from game_boxscore import build_official_box
+
+    analysis_key = "box_keep_book"
+    book = {
+        "home_team": "Adrian",
+        "away_team": "Liberty",
+        "final_score_home": 26,
+        "final_score_away": 51,
+        "players": [
+            {
+                "team": "away",
+                "jersey": "40",
+                "name": "Dayley",
+                "pts": 26,
+                "ftm": 3,
+                "fta": 4,
+                "extras": {"fg2": 10, "fg3": 1},
+            },
+            {"team": "home", "jersey": "13", "name": "Mendoza", "pts": 8},
+        ],
+    }
+    monkeypatch.setattr("game_boxscore.load_scorebook", lambda gid: book)
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/demo.mp4"),
+    )
+    for i in range(80):
+        db.execute(
+            """INSERT INTO events
+               (game_id, event_type, player, shot_result, timestamp_ms, human_verified, review_status)
+               VALUES (?, 'made_two', '40', 'made', ?, 0, 'accepted')""",
+            (analysis_key, 1000 + i * 100),
+        )
+    db.commit()
+
+    box = build_official_box(db, analysis_key)
+    dayley = next(p for p in box["players"]["liberty"] if p["name"] == "Dayley")
+    assert dayley["pts"] == 26
+    assert dayley["fgm2"] == 10
+    assert dayley["ast"] == 0
+    assert box["final"]["liberty"] == 51
+    assert box["final"]["opponent"] == 26
+    assert box["line_score"][-1]["liberty_running"] == 51
+    assert box["line_score"][-1]["opponent_running"] == 26
+    assert box["line_score_source"] == "scorebook_even_split"
+
+
+def test_duplicate_jersey_uses_home_light_away_dark(db, monkeypatch):
+    import json
+    from game_boxscore import build_official_box
+
+    analysis_key = "box_color_11"
+    book = {
+        "home_team": "Adrian",
+        "away_team": "Liberty",
+        "final_score_home": 26,
+        "final_score_away": 51,
+        "players": [
+            {"team": "away", "jersey": "11", "name": "Flores", "pts": 2, "extras": {"fg2": 1, "fg3": 0}},
+            {"team": "home", "jersey": "11", "name": "Linkhart", "pts": 0, "extras": {"fg2": 0, "fg3": 0}},
+        ],
+    }
+    monkeypatch.setattr("game_boxscore.load_scorebook", lambda gid: book)
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/demo.mp4"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, timestamp_ms, human_verified, review_status, details_json)
+           VALUES (?, 'rebound_offensive', '#11', 1000, 0, 'accepted', ?)""",
+        (analysis_key, json.dumps({"jersey_number": 11, "team_side": "away"})),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, timestamp_ms, human_verified, review_status, details_json)
+           VALUES (?, 'rebound_offensive', '#11', 2000, 0, 'accepted', ?)""",
+        (analysis_key, json.dumps({"jersey_number": 11, "team_side": "home"})),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, timestamp_ms, human_verified, review_status, details_json)
+           VALUES (?, 'steal', '#11', 3000, 0, 'accepted', ?)""",
+        (analysis_key, json.dumps({"jersey_number": 11, "team_side": "away"})),
+    )
+    db.commit()
+
+    box = build_official_box(db, analysis_key)
+    flores = next(p for p in box["players"]["liberty"] if p["name"] == "Flores")
+    linkhart = next(p for p in box["players"]["opponent"] if p["name"] == "Linkhart")
+    assert flores["pts"] == 2
+    assert flores["oreb"] == 1
+    assert flores["stl"] == 1
+    assert linkhart["pts"] == 0
+    assert linkhart["oreb"] == 1
+    assert linkhart["stl"] == 0

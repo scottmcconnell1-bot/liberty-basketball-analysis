@@ -1,0 +1,326 @@
+"""Turn Film Tool manual tags into ground truth the AI pass can keep.
+
+Coach tags are stored as events (source_type=manual, human_verified=1) so
+event_generator.persist_events will not wipe them. Nearby AI events in the
+tagged window are corrected or rejected, and human_corrections is written.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from helpers import normalize_analysis_game_id
+from review_actions import reject_event
+
+TEACH_NOTE = "Film Tool teach"
+MATCH_TOLERANCE_MS = 8000
+STAT_EVENTTYPES = {
+    "2PT",
+    "3PT",
+    "FT",
+    "Assist",
+    "Steal",
+    "Turnover",
+    "Foul",
+    "Block",
+    "OffRebound",
+    "DefRebound",
+}
+AI_SHOT_TYPES = {
+    "shot",
+    "make",
+    "miss",
+    "made_two",
+    "missed_two",
+    "made_three",
+    "missed_three",
+    "made_free_throw",
+    "missed_free_throw",
+    "free_throw",
+}
+AI_REBOUND_TYPES = {"rebound", "offensive_rebound", "defensive_rebound"}
+
+
+def time_to_ms(value) -> int:
+    text = str(value or "").strip()
+    if not text:
+        return 0
+    parts = text.split(":")
+    try:
+        if len(parts) == 1:
+            return int(round(float(parts[0]) * 1000))
+        return int(round(((int(parts[0]) or 0) * 60 + float(parts[1] or 0)) * 1000))
+    except (TypeError, ValueError):
+        return 0
+
+
+def map_manual_row(row: dict) -> dict | None:
+    eventtype = str(row.get("eventtype") or "").strip()
+    if eventtype not in STAT_EVENTTYPES:
+        return None
+    result = str(row.get("result") or "NA").strip()
+    player = str(row.get("player") or "").strip()
+    team = str(row.get("team") or "").strip()
+    ms = time_to_ms(row.get("start"))
+    if eventtype in {"2PT", "3PT", "FT"}:
+        shot_type = {"2PT": "2pt", "3PT": "3pt", "FT": "ft"}[eventtype]
+        shot_result = "make" if result == "Make" else "miss"
+        return {
+            "event_type": "shot",
+            "shot_result": shot_result,
+            "player": player,
+            "team": team,
+            "timestamp_ms": ms,
+            "label": row.get("label") or f"{eventtype} {result}",
+            "shot_type": shot_type,
+            "family": "shot",
+        }
+    mapped = {
+        "Assist": ("assist", "assist"),
+        "Steal": ("steal", "steal"),
+        "Turnover": ("turnover", "turnover"),
+        "Foul": ("foul", "foul"),
+        "Block": ("block", "block"),
+        "OffRebound": ("rebound", "rebound"),
+        "DefRebound": ("rebound", "rebound"),
+    }[eventtype]
+    return {
+        "event_type": mapped[0],
+        "shot_result": None,
+        "player": player,
+        "team": team,
+        "timestamp_ms": ms,
+        "label": row.get("label") or eventtype,
+        "shot_type": "offensive" if eventtype == "OffRebound" else ("defensive" if eventtype == "DefRebound" else None),
+        "family": mapped[1],
+    }
+
+
+def _ai_family(event_type: str, details: dict | None = None) -> str | None:
+    et = str(event_type or "").lower()
+    if et in AI_SHOT_TYPES:
+        return "shot"
+    if et in AI_REBOUND_TYPES:
+        return "rebound"
+    if et in {"assist", "steal", "turnover", "foul", "block"}:
+        return et
+    return None
+
+
+def _details(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw or "{}")
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _row_get(row, key, default=None):
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return getattr(row, key, default)
+
+
+def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, Any]:
+    """Replace prior Film Tool teach rows for this analysis key and grade AI events."""
+    game_id = normalize_analysis_game_id(game_id)
+    mapped = [item for item in (map_manual_row(row or {}) for row in rows or []) if item]
+    if not game_id:
+        return {"ok": False, "error": "game_id required", "manual_saved": 0}
+    if not mapped:
+        return {
+            "ok": True,
+            "game_id": game_id,
+            "manual_saved": 0,
+            "corrected": 0,
+            "rejected": 0,
+            "unmatched_manual": 0,
+            "window_ms": None,
+            "replaced": 0,
+        }
+
+    prior = db.execute(
+        """SELECT id FROM events
+            WHERE game_id=? AND source_type='manual'
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'""",
+        (game_id,),
+    ).fetchall()
+    prior_ids = [int(_row_get(r, "id")) for r in prior]
+    if prior_ids:
+        db.execute(
+            f"DELETE FROM events WHERE id IN ({','.join('?' * len(prior_ids))})",
+            prior_ids,
+        )
+
+    inserted = 0
+    for item in mapped:
+        details = {
+            "film_tool_teach": True,
+            "label": item["label"],
+            "team": item["team"],
+            "shot_type": item["shot_type"],
+        }
+        cur = db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+                   human_verified, confidence, review_status, source_type, review_notes, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
+            (
+                game_id,
+                item["player"] or None,
+                item["event_type"],
+                item["shot_result"],
+                item["timestamp_ms"],
+                json.dumps(details),
+                TEACH_NOTE,
+            ),
+        )
+        inserted += 1
+        db.execute(
+            """INSERT INTO human_corrections
+                  (game_id, event_id, correction_type, original_value, corrected_value,
+                   field_changed, timestamp_ms, notes)
+               VALUES (?, ?, 'add_event', '', ?, 'event_type', ?, ?)""",
+            (game_id, cur.lastrowid, item["event_type"], item["timestamp_ms"], TEACH_NOTE),
+        )
+
+    applied = apply_saved_manual_teach(db, game_id, commit=False)
+    db.commit()
+    applied.update({"ok": True, "game_id": game_id, "manual_saved": inserted, "replaced": len(prior_ids)})
+    return applied
+
+
+def apply_saved_manual_teach(db, game_id: str, *, commit: bool = True) -> dict[str, Any]:
+    """Grade AI events in the window covered by saved Film Tool teach rows."""
+    game_id = normalize_analysis_game_id(game_id)
+    manuals = db.execute(
+        """SELECT id, event_type, shot_result, player, timestamp_ms, details_json
+             FROM events
+            WHERE game_id=? AND source_type='manual'
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
+            ORDER BY timestamp_ms""",
+        (game_id,),
+    ).fetchall()
+    if not manuals:
+        return {"corrected": 0, "rejected": 0, "unmatched_manual": 0, "window_ms": None}
+
+    times = [int(_row_get(r, "timestamp_ms") or 0) for r in manuals]
+    start_ms = max(0, min(times) - MATCH_TOLERANCE_MS)
+    end_ms = max(times) + MATCH_TOLERANCE_MS
+
+    ai_rows = db.execute(
+        """SELECT id, game_id, event_type, shot_result, player, timestamp_ms, details_json, review_status
+             FROM events
+            WHERE game_id=?
+              AND COALESCE(source_type,'ai')='ai'
+              AND timestamp_ms BETWEEN ? AND ?
+            ORDER BY timestamp_ms""",
+        (game_id, start_ms, end_ms),
+    ).fetchall()
+
+    used_ai: set[int] = set()
+    corrected = 0
+    unmatched_manual = 0
+
+    for manual in manuals:
+        details = _details(_row_get(manual, "details_json"))
+        family = _ai_family(_row_get(manual, "event_type"), details)
+        if not family:
+            continue
+        want_ms = int(_row_get(manual, "timestamp_ms") or 0)
+        best = None
+        best_dt = None
+        for ai in ai_rows:
+            ai_id = int(_row_get(ai, "id"))
+            if ai_id in used_ai:
+                continue
+            if _ai_family(_row_get(ai, "event_type"), _details(_row_get(ai, "details_json"))) != family:
+                continue
+            dt = abs(int(_row_get(ai, "timestamp_ms") or 0) - want_ms)
+            if dt > MATCH_TOLERANCE_MS:
+                continue
+            if best_dt is None or dt < best_dt:
+                best, best_dt = ai, dt
+        if best is None:
+            unmatched_manual += 1
+            continue
+        used_ai.add(int(_row_get(best, "id")))
+        _correct_ai_from_manual(db, game_id, best, manual, details)
+        corrected += 1
+
+    rejected = 0
+    for ai in ai_rows:
+        ai_id = int(_row_get(ai, "id"))
+        if ai_id in used_ai:
+            continue
+        family = _ai_family(_row_get(ai, "event_type"))
+        if family not in {"shot", "rebound", "assist", "steal", "turnover", "foul", "block"}:
+            continue
+        result = reject_event(
+            db,
+            ai_id,
+            notes=f"{TEACH_NOTE}: extra AI event in tagged window",
+            commit=False,
+        )
+        if result:
+            rejected += 1
+
+    if commit:
+        db.commit()
+    return {
+        "corrected": corrected,
+        "rejected": rejected,
+        "unmatched_manual": unmatched_manual,
+        "window_ms": [start_ms, end_ms],
+    }
+
+
+def _correct_ai_from_manual(db, game_id, ai_row, manual_row, manual_details: dict) -> None:
+    ai_id = int(_row_get(ai_row, "id"))
+    new_player = str(_row_get(manual_row, "player") or "").strip()
+    new_type = _row_get(manual_row, "event_type")
+    new_result = _row_get(manual_row, "shot_result")
+    details = _details(_row_get(ai_row, "details_json"))
+    if manual_details.get("shot_type"):
+        details["shot_type"] = manual_details["shot_type"]
+    if manual_details.get("team"):
+        details["team"] = manual_details["team"]
+    details["film_tool_teach"] = True
+    old_player = _row_get(ai_row, "player")
+    db.execute(
+        """UPDATE events
+              SET player=?,
+                  event_type=?,
+                  shot_result=?,
+                  details_json=?,
+                  review_status='corrected',
+                  human_verified=1,
+                  review_notes=?,
+                  reviewed_at=CURRENT_TIMESTAMP
+            WHERE id=?""",
+        (
+            new_player or old_player,
+            new_type,
+            new_result,
+            json.dumps(details),
+            TEACH_NOTE,
+            ai_id,
+        ),
+    )
+    db.execute(
+        """INSERT INTO human_corrections
+              (game_id, event_id, correction_type, original_value, corrected_value,
+               field_changed, timestamp_ms, notes)
+           VALUES (?, ?, 'change_event', ?, ?, 'player', ?, ?)""",
+        (
+            str(_row_get(ai_row, "game_id") or game_id),
+            ai_id,
+            str(old_player or ""),
+            new_player,
+            int(_row_get(manual_row, "timestamp_ms") or 0),
+            TEACH_NOTE,
+        ),
+    )

@@ -299,8 +299,10 @@
     align-items: center;
     justify-content: center;
     gap: .75rem;
-    padding: .35rem .75rem;
-    margin-bottom: .5rem;
+    padding: .28rem .75rem;
+    margin: 0 auto .35rem;
+    width: fit-content;
+    min-width: min(100%, 16rem);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -327,6 +329,11 @@
     color: var(--color-text-muted);
     font-weight: 500;
     padding: .25rem;
+  }
+  .ft-score-hint {
+    text-align: center;
+    margin: 0 auto .35rem;
+    color: var(--color-text-muted);
   }
 
   /* Video Area — size to the film (no pillarbox black sides) */
@@ -592,7 +599,6 @@
     max-height: min(94vh, 1400px);
     border-radius: var(--radius-md);
   }
-  #film-tool-root.ft-manual-tagging-on .ft-scoreboard,
   #film-tool-root.ft-manual-tagging-on .ft-program-section,
   #film-tool-root.ft-manual-tagging-on #ftIngestDetails,
   #film-tool-root.ft-manual-tagging-on #ftPlayMatchesDetails,
@@ -602,8 +608,12 @@
   #film-tool-root.ft-manual-tagging-on #runAnalysisBar {
     display: none !important;
   }
+  #film-tool-root.ft-manual-tagging-on .ft-scoreboard,
   #film-tool-root.ft-manual-tagging-on .ft-vid-controls {
     display: flex !important;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-score-hint {
+    display: block !important;
   }
 
   /* Bookmarks kept in DOM for JS, hidden from main review UX */
@@ -706,8 +716,11 @@
       <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
     <div class="ft-topbar-actions">
-      <button class="btn" id="resumeLastBtn" type="button">↩ Resume</button>
+      <button class="btn" id="resumeLastBtn" type="button" title="Reload tags saved in this browser">↩ Resume</button>
+      <button class="btn" id="loadTagsBtn" type="button" title="Load a Film Tool tag export from another computer">Load tags</button>
+      <input id="loadTagsFile" type="file" accept="application/json,.json" hidden>
       <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
+      <button class="btn" id="teachAiBtn" type="button" title="Send this film's tags to the AI ledger so the next pass keeps them">Teach AI</button>
       <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
       <a class="btn" href="{{ url_for('core.settings_page') }}#film-tool">⚙ Setup</a>
     </div>
@@ -717,19 +730,6 @@
        TAGGER VIEW
        ═══════════════════════════════════════════════════════ -->
   <section id="taggerView" class="view active" data-frame="5.2">
-
-    <!-- Scoreboard -->
-    <div class="ft-scoreboard">
-      <div class="ft-score-team">
-        <div class="ft-team-name" id="leftScoreName">Our Team</div>
-        <div class="ft-team-score" id="leftScoreValue">0</div>
-      </div>
-      <div class="ft-score-vs">VS</div>
-      <div class="ft-score-team">
-        <div class="ft-team-name" id="rightScoreName">Opponent</div>
-        <div class="ft-team-score" id="rightScoreValue">0</div>
-      </div>
-    </div>
 
     {% if features.ENABLE_AUTO_STATS_M1 %}
     <details class="ft-secondary" id="ftIngestDetails"{% if not filename %} open{% endif %}>
@@ -968,6 +968,18 @@
 
     <div class="ft-review-stage">
       <div class="ft-review-video">
+        <div class="ft-scoreboard" title="Running score from your tags — compare to the gym scoreboard and the book">
+          <div class="ft-score-team">
+            <div class="ft-team-name" id="leftScoreName">Our Team</div>
+            <div class="ft-team-score" id="leftScoreValue">0</div>
+          </div>
+          <div class="ft-score-vs">VS</div>
+          <div class="ft-score-team">
+            <div class="ft-team-name" id="rightScoreName">Opponent</div>
+            <div class="ft-team-score" id="rightScoreValue">0</div>
+          </div>
+        </div>
+        <p class="tiny ft-score-hint" id="ftScoreHint">Score updates from tagged makes (2 / 3 / FT). And-1 is 2 until you tag the free throw.</p>
         <div class="ft-video-wrap" id="filmReviewGrid">
           <div class="ft-video-stage">
             <video id="video" controls></video>
@@ -987,6 +999,7 @@
                 <div class="ft-tag-overlay-pane" data-tag-pane="defense" id="ftTagPaneDefense" hidden></div>
                 <div class="ft-tag-overlay-pane" data-tag-pane="flow" hidden>
                   <div id="ftTagPaneFlow"></div>
+                  <button class="ft-tag-overlay-btn action" id="ftQ1EndBtn" type="button" title="Jump to 15:58, end of Q1 on this film" hidden>15:58</button>
                   <button class="ft-tag-overlay-btn action" id="subBtn" type="button" title="Record a substitution at the current time">SUB</button>
                   <button class="ft-tag-overlay-btn action" id="clearAllBtn" type="button" title="Clear all manual tags for this session (careful)">Clr</button>
                 </div>
@@ -1413,5 +1426,5 @@
   window.FILM_TOOL_ROSTER_OPPONENT = {{ roster_opponent|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=home-tags"></script>
 {% endblock %}

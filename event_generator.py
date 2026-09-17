@@ -1154,6 +1154,18 @@ def _lookup_event_type_id(conn, event_type):
     return row["id"] if row else None
 
 
+def _reapply_film_tool_teach(conn, game_id):
+    """Re-grade new AI events against saved Film Tool tags. No-op on slim test DBs."""
+    try:
+        from manual_tag_teach import apply_saved_manual_teach
+
+        apply_saved_manual_teach(conn, game_id, commit=True)
+    except sqlite3.OperationalError:
+        return
+    except Exception as exc:
+        print(f"WARN: Film Tool teach reapply skipped: {exc}")
+
+
 def persist_events(conn, game_id, events, relational_game_id=None):
     if relational_game_id is not None:
         # Delete unverified events that are either linked to the relational game_id
@@ -1177,6 +1189,7 @@ def persist_events(conn, game_id, events, relational_game_id=None):
         )
     if not events:
         conn.commit()
+        _reapply_film_tool_teach(conn, game_id)
         return
 
     cur = conn.cursor()
@@ -1209,6 +1222,7 @@ def persist_events(conn, game_id, events, relational_game_id=None):
         game_id,
         relational_game_id=relational_game_id,
     )
+    _reapply_film_tool_teach(conn, game_id)
 
 
 def main(

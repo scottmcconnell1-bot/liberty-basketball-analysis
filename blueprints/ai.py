@@ -227,6 +227,8 @@ def _resolve_video_id_for_analysis(db, game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_status(game_id):
     db = get_db()
+    from helpers import normalize_analysis_game_id
+    game_id = normalize_analysis_game_id(game_id)
     row = resolve_analysis_run_for_progress(db, game_id)
     if row is None:
         return jsonify({
@@ -499,7 +501,9 @@ def api_analysis_jobs():
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_results(game_id):
     """Return full analysis results: box score, shots, plays, player effect."""
+    from helpers import normalize_analysis_game_id
     from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview, get_shot_breakdown_preview
+    game_id = normalize_analysis_game_id(game_id)
     db = get_db()
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
@@ -655,6 +659,9 @@ def _analysis_official_box(db, game_id):
 def game_starters(game_id):
     """Coach-picked starting five for bench points. No schema change; JSON sidecar."""
     from game_lineups import load_starters, save_starters
+    from helpers import normalize_analysis_game_id
+
+    game_id = normalize_analysis_game_id(game_id)
 
     if request.method == "GET":
         try:
@@ -928,6 +935,53 @@ def get_film_play_matches(game_id):
     return jsonify(saved)
 
 
+@ai_bp.route("/api/film/<path:game_id>/teach-manual", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def teach_film_tool_manual(game_id):
+    """Store Film Tool tags as verified events and grade nearby AI plays."""
+    from helpers import normalize_analysis_game_id
+    from manual_tag_teach import teach_from_film_tool_rows
+
+    game_id = normalize_analysis_game_id(game_id)
+    data = request.get_json(silent=True) or {}
+    rows = data.get("rows")
+    if not isinstance(rows, list):
+        return jsonify({"ok": False, "error": "rows must be a list"}), 400
+    db = get_db()
+    result = teach_from_film_tool_rows(db, game_id, rows)
+    try:
+        from film_tool_tags import save_manual_tags
+
+        result["tag_file"] = save_manual_tags(game_id, data if isinstance(data, dict) else {"rows": rows}).get("analysisGameId")
+    except ValueError:
+        result["tag_file"] = None
+    status = 200 if result.get("ok") else 400
+    return jsonify(result), status
+
+
+@ai_bp.route("/api/film/<path:game_id>/manual-tags", methods=["GET", "POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_manual_tags(game_id):
+    """Home-disk sidecar so school Funnel can resume tags without localStorage."""
+    from film_tool_tags import load_manual_tags, save_manual_tags
+    from helpers import normalize_analysis_game_id
+
+    game_id = normalize_analysis_game_id(game_id)
+    if request.method == "GET":
+        try:
+            data = load_manual_tags(game_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        if data is None:
+            return jsonify({"analysisGameId": game_id, "rows": []}), 200
+        return jsonify(data)
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(save_manual_tags(game_id, payload))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @ai_bp.route("/api/film/<game_id>/play-matches/run", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def run_film_play_matches(game_id):
@@ -966,7 +1020,8 @@ def run_film_play_matches(game_id):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def analysis_results_page(game_id):
     """Render the analysis results dashboard for a game."""
-    return render_template("analysis_results.html", game_id=game_id)
+    from helpers import normalize_analysis_game_id
+    return render_template("analysis_results.html", game_id=normalize_analysis_game_id(game_id))
 
 
 # ── API: Upload video ─────────────────────────────────────

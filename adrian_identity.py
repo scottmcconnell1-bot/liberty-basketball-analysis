@@ -157,10 +157,17 @@ def lookaround_jersey_votes(
 def match_scorebook_player(
     jersey: int | str,
     roster_index: dict[str, list[dict[str, Any]]],
+    team_side: str | None = None,
 ) -> dict[str, Any] | None:
-    """Unique scorebook match only — skip jerseys that exist on both teams."""
+    """Match a jersey. Duplicate numbers need Home/Away (light/dark)."""
     key = str(int(jersey)) if str(jersey).isdigit() else str(jersey)
     hits = roster_index.get(key) or []
+    if team_side:
+        side = str(team_side).strip().lower()
+        side_hits = [h for h in hits if (h.get("team_side") or "").lower() == side]
+        if len(side_hits) == 1:
+            return dict(side_hits[0])
+        return None
     if len(hits) == 1:
         return dict(hits[0])
     return None
@@ -250,6 +257,7 @@ def resolve_event_identity(
     *,
     min_samples: int = 2,
     min_confidence: float = 0.50,
+    shades: dict[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     """Follow the player around the event until jersey OCR is usable."""
     player = str(event.get("player") or "").strip()
@@ -265,7 +273,11 @@ def resolve_event_identity(
     top = votes[0]
     if int(top["sample_count"]) < min_samples:
         return None
-    matched = match_scorebook_player(top["jersey_number"], roster_index)
+    shade_info = (shades or {}).get(int(tracker_id)) or {}
+    team_side = shade_info.get("side")
+    matched = match_scorebook_player(top["jersey_number"], roster_index, team_side=team_side)
+    if not matched and not team_side:
+        matched = match_scorebook_player(top["jersey_number"], roster_index)
     if not matched:
         return {
             "status": "ambiguous_or_unknown_jersey",
@@ -283,6 +295,7 @@ def resolve_event_identity(
         "player_name": matched.get("name"),
         "team_side": matched.get("team_side"),
         "team_name": matched.get("team_name"),
+        "shade": shade_info.get("shade"),
         "sample_count": top["sample_count"],
         "confidence": top["confidence"],
         "nearest_ms": top["nearest_ms"],
@@ -304,6 +317,9 @@ def apply_lookaround_to_accepted(
     sb = load_adrian_scorebook()
     teams = resolve_adrian_teams(sb, game_id)
     roster_index = scorebook_roster_index(sb)
+    from jersey_shade import ensure_tracker_shades
+
+    shades = ensure_tracker_shades(conn, game_id)
 
     rows = conn.execute(
         """
@@ -330,11 +346,13 @@ def apply_lookaround_to_accepted(
             "details_json": row[4],
         }
         notes = row[5] or ""
-        if "Corrected in Film Tool" in notes:
+        if "Corrected in Film Tool" in notes or "Film Tool teach" in notes:
             skipped += 1
             continue
 
-        result = resolve_event_identity(conn, ADRIAN_BASE, event, roster_index)
+        result = resolve_event_identity(
+            conn, ADRIAN_BASE, event, roster_index, shades=shades
+        )
         if result is None:
             unresolved += 1
             continue

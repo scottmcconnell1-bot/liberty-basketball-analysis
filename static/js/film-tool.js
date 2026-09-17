@@ -72,7 +72,7 @@ const lockedFields = ['quarter', 'team', 'side', 'category', 'eventtype', 'resul
 const eventDefs = [
     { id: 'and1', label: 'And-1', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'assist', label: 'Assist', hotkey: 'A', group: 'offense', teamMode: 'team-player', eventtype: 'Assist', result: 'NA', side: 'Offense', category: 'Offense' },
-    { id: 'blob', label: 'BLOB', hotkey: 'B', group: 'flow', teamMode: 'team-player', eventtype: 'BLOB', result: 'NA', side: 'Offense', category: 'BLOB' },
+    { id: 'blob', label: 'BLOB', hotkey: 'B', group: 'flow', teamMode: 'team-only', eventtype: 'BLOB', result: 'NA', side: 'Offense', category: 'BLOB' },
     { id: 'block', label: 'Block', hotkey: 'K', group: 'defense', teamMode: 'team-player', eventtype: 'Block', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'defreb', label: 'Def Reb', hotkey: 'D', group: 'defense', teamMode: 'team-player', eventtype: 'DefRebound', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'endqtr', label: 'End QTR', hotkey: 'E', group: 'flow', teamMode: 'event-only', eventtype: 'EndQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
@@ -82,7 +82,7 @@ const eventDefs = [
     { id: 'jumpball', label: 'Jump Ball', hotkey: 'J', group: 'flow', teamMode: 'team-player', eventtype: 'JumpBall', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'ob', label: 'OB', hotkey: 'O', group: 'defense', teamMode: 'team-player', eventtype: 'OB', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'offreb', label: 'Off Reb', hotkey: 'R', group: 'offense', teamMode: 'team-player', eventtype: 'OffRebound', result: 'NA', side: 'Offense', category: 'Offense' },
-    { id: 'slob', label: 'SLOB', hotkey: '', group: 'flow', teamMode: 'team-player', eventtype: 'SLOB', result: 'NA', side: 'Offense', category: 'SLOB' },
+    { id: 'slob', label: 'SLOB', hotkey: '', group: 'flow', teamMode: 'team-only', eventtype: 'SLOB', result: 'NA', side: 'Offense', category: 'SLOB' },
     { id: 'startqtr', label: 'Start QTR', hotkey: 'Q', group: 'flow', teamMode: 'event-only', eventtype: 'StartQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'steal', label: 'Steal', hotkey: 'S', group: 'defense', teamMode: 'special-steal', eventtype: 'Steal', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'timeout', label: 'Time Out', hotkey: 'T', group: 'flow', teamMode: 'team-player', eventtype: 'TimeOut', result: 'NA', side: 'Neutral', category: 'Quarter' },
@@ -250,6 +250,7 @@ function syncGameTeamsFromContext(opts = {}) {
         ensureOpponentOption(gameOpp);
     }
     updateTagGameButton();
+    if (leftScoreName) renderScore();
 }
 
 function ensureOpponentOption(name) {
@@ -732,7 +733,14 @@ function createSelect(field, selected) {
     const blank = document.createElement('option');
     blank.value = ''; blank.textContent = 'Select';
     select.appendChild(blank);
-    (vocabulary[field] || []).forEach(term => {
+    const terms = [...(vocabulary[field] || [])];
+    if (field === 'team') {
+        [libertyTeamName(), gameOpponentName()].forEach(name => {
+            if (name && !terms.includes(name)) terms.push(name);
+        });
+    }
+    if (selected && !terms.includes(selected)) terms.push(selected);
+    terms.forEach(term => {
         const opt = document.createElement('option');
         opt.value = term; opt.textContent = term;
         if (term === selected) opt.selected = true;
@@ -740,6 +748,82 @@ function createSelect(field, selected) {
     });
     select.addEventListener('change', handleRowsChanged);
     return select;
+}
+
+function inferTeamFromPlayer(player) {
+    const label = String(player || '').trim();
+    if (!label) return '';
+    const ourName = libertyTeamName();
+    const oppName = gameOpponentName();
+    const ourHit = rosterPlayerMatch(rosterForTeam(ourName), label);
+    const oppHit = rosterPlayerMatch(rosterForTeam(oppName), label);
+    if (ourHit && !oppHit) return ourName;
+    if (oppHit && !ourHit) return oppName;
+    return '';
+}
+
+function rosterPlayerMatch(roster, player) {
+    const parsed = parsePlayerLabel(player);
+    const name = playerCoreName(parsed.name);
+    if (!name) return false;
+    return (roster || []).some(item => {
+        if (item === player) return true;
+        const other = parsePlayerLabel(item);
+        const oname = playerCoreName(other.name);
+        if (!oname) return false;
+        if (name === oname) return true;
+        if (name.startsWith(`${oname} `) || oname.startsWith(`${name} `)) return true;
+        if (parsed.jersey && other.jersey === parsed.jersey) {
+            const last = name.split(' ').pop();
+            const olast = oname.split(' ').pop();
+            return !!(last && last === olast && last.length > 2);
+        }
+        return false;
+    });
+}
+
+function playerCoreName(name) {
+    return String(name || '')
+        .toLowerCase()
+        .replace(/,\s*(fr|so|jr|sr|freshman|sophomore|junior|senior|\d+)\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function ensureSelectValue(select, value) {
+    if (!select || !value) return;
+    if (![...select.options].some(opt => opt.value === value)) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+    }
+    select.value = value;
+}
+
+function repairEmptyTeams() {
+    if (!rowsBody) return false;
+    let changed = false;
+    [...rowsBody.querySelectorAll('tr')].forEach(tr => {
+        const teamEl = tr.querySelector('[data-key="team"]');
+        const playerEl = tr.querySelector('[data-key="player"]');
+        if (!teamEl) return;
+        const player = (playerEl && playerEl.value) || '';
+        const inferred = inferTeamFromPlayer(player);
+        if (inferred) {
+            if (teamEl.value !== inferred) {
+                ensureSelectValue(teamEl, inferred);
+                changed = true;
+            }
+            return;
+        }
+        if (player && teamEl.value && teamEl.value !== 'Our Team' && teamEl.value !== 'Opponent'
+            && !rosterPlayerMatch(rosterForTeam(teamEl.value), player)) {
+            teamEl.value = '';
+            changed = true;
+        }
+    });
+    return changed;
 }
 
 function createInput(type, value, placeholder = '') {
@@ -836,15 +920,29 @@ function getScoreState() {
     getAllRows().forEach(r => {
         const p = (r.eventtype === '3PT' && r.result === 'Make') ? 3 : (r.eventtype === '2PT' && r.result === 'Make') ? 2 : (r.eventtype === 'FT' && r.result === 'Make') ? 1 : 0;
         if (!p) return;
-        const team = r.team;
-        const leftTeam = leftScoreName.textContent;
-        const rightTeam = rightScoreName.textContent;
-        if (team === leftTeam || team === 'Our Team') left += p;
-        else if (team === rightTeam || team === 'Opponent') right += p;
-        else if (gameTypeSelect.value === 'scout' && team === 'Home') left += p;
-        else if (gameTypeSelect.value === 'scout' && team === 'Away') right += p;
+        if (isOurTaggedTeam(r.team)) left += p;
+        else if (isOppTaggedTeam(r.team)) right += p;
     });
     return { left, right };
+}
+
+function isOurTaggedTeam(team) {
+    const t = String(team || '').trim();
+    if (!t || t === 'Opponent') return false;
+    if (gameTypeSelect.value !== 'my') {
+        const home = (homeTeamNameInput?.value || '').trim() || 'Home';
+        return t === home || t === 'Home';
+    }
+    const our = String(libertyTeamName() || '').trim();
+    const left = String(leftScoreName?.textContent || '').trim();
+    if (t === our || t === left || t === 'Our Team') return true;
+    return /^liberty\b/i.test(t);
+}
+
+function isOppTaggedTeam(team) {
+    const t = String(team || '').trim();
+    if (!t || isOurTaggedTeam(t)) return false;
+    return true;
 }
 
 function renderScore() {
@@ -855,8 +953,15 @@ function renderScore() {
 }
 
 function currentQuarter() {
-    const rows = getAllRows().filter(r => r.quarter);
-    return rows.length ? rows[rows.length - 1].quarter : 'Q1';
+    const rows = getAllRows();
+    if (!rows.length) return 'Q1';
+    const last = rows[rows.length - 1];
+    const q = last.quarter || 'Q1';
+    if (String(last.eventtype || '').toUpperCase() === 'ENDQTR') {
+        const n = parseInt(String(q).replace(/\D/g, ''), 10) || 1;
+        return `Q${Math.min(n + 1, 4)}`;
+    }
+    return q;
 }
 
 function defsForTagGroup(group) {
@@ -911,6 +1016,8 @@ function initManualTagging() {
     });
     applyTagTab(loadJson(TAG_TAB_KEY, 'offense') || 'offense');
     document.getElementById('ftTagOverlay')?.addEventListener('mousedown', evt => evt.stopPropagation());
+    document.getElementById('ftQ1EndBtn')?.addEventListener('click', seekToQ1End);
+    syncQ1EndButton();
     document.addEventListener('keydown', onManualTagHotkey);
 }
 
@@ -971,6 +1078,68 @@ function commitTag(def, { team = '', player = '', close = true } = {}) {
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
     setStatus(`Tagged ${def.label}.`);
+}
+
+function isFieldGoalMake(def) {
+    return def && def.result === 'Make' && (def.eventtype === '2PT' || def.eventtype === '3PT');
+}
+
+function lineupSetForTeam(team) {
+    const side = rosterSideForTeam(team);
+    return (side === 'our' || side === 'home') ? currentLineups.liberty : currentLineups.opponent;
+}
+
+function playerInLineup(player, lineupSet) {
+    if (!lineupSet || !lineupSet.size) return false;
+    if (lineupSet.has(player)) return true;
+    const jersey = parsePlayerLabel(player).jersey;
+    if (!jersey) return false;
+    for (const onFloor of lineupSet) {
+        if (parsePlayerLabel(onFloor).jersey === jersey) return true;
+    }
+    return false;
+}
+
+function playersOnFloor(team, { excludePlayer } = {}) {
+    const roster = rosterForTeam(team);
+    const floor = lineupSetForTeam(team);
+    const floorOnly = !!(floor && floor.size);
+    let players = floorOnly ? roster.filter(player => playerInLineup(player, floor)) : roster;
+    if (excludePlayer) {
+        const skipJersey = parsePlayerLabel(excludePlayer).jersey;
+        players = players.filter(player => {
+            if (player === excludePlayer) return false;
+            return !skipJersey || parsePlayerLabel(player).jersey !== skipJersey;
+        });
+    }
+    return { players, floorOnly, floorCount: floor ? floor.size : 0 };
+}
+
+function askAssistAfterMake(shotDef, team, shooter) {
+    quickTagBody.innerHTML = '';
+    quickDialogTitle.textContent = 'Assist?';
+    quickTagLabel.textContent = `After ${shotDef.label}${shooter ? ` by ${shooter}` : ` (${team})`}.`;
+    const title = document.createElement('div');
+    title.className = 'tiny';
+    title.textContent = 'Did an assist occur?';
+    quickTagBody.appendChild(title);
+    const wrap = renderChoicePills(['Yes', 'No'], choice => {
+        if (choice === 'No') {
+            closeQuickTag();
+            return;
+        }
+        const assistDef = eventDefs.find(d => d.id === 'assist');
+        renderPlayerStep({
+            def: assistDef,
+            team,
+            step: 'assist',
+            title: `Who assisted for ${team}?`,
+            unknownLabel: 'Unknown',
+            excludePlayer: shooter,
+            onPick: passer => commitTag(assistDef, { team, player: passer }),
+        });
+    });
+    quickTagBody.appendChild(wrap);
 }
 
 function commitStealPair(def, p) {
@@ -1056,16 +1225,23 @@ function appendAddPlayerRow(parent, team, onAdded) {
     parent.appendChild(row);
 }
 
-function renderPlayerStep({ def, team, step, title, unknownLabel, onPick }) {
+function renderPlayerStep({ def, team, step, title, unknownLabel, onPick, excludePlayer } = {}) {
     quickTagBody.querySelector(`[data-step="${step}"]`)?.remove();
     const sec = document.createElement('div');
     sec.dataset.step = step;
     sec.style.marginTop = '.55rem';
+    const { players, floorOnly } = playersOnFloor(team, { excludePlayer });
     const heading = document.createElement('div');
     heading.className = 'tiny';
-    heading.textContent = title;
+    heading.textContent = floorOnly ? `${title} (on the floor)` : title;
     sec.appendChild(heading);
-    const wrap = renderChoicePills(rosterForTeam(team), onPick);
+    const note = document.createElement('div');
+    note.className = 'tiny';
+    note.textContent = floorOnly
+        ? 'Only the five in the game. SUB if this is a replacement.'
+        : 'Set 5s so this list is only who is in the game.';
+    sec.appendChild(note);
+    const wrap = renderChoicePills(players, onPick);
     const unknown = document.createElement('button');
     unknown.type = 'button';
     unknown.className = 'btn btn-ghost';
@@ -1073,7 +1249,7 @@ function renderPlayerStep({ def, team, step, title, unknownLabel, onPick }) {
     unknown.addEventListener('click', () => onPick(''));
     wrap.appendChild(unknown);
     sec.appendChild(wrap);
-    appendAddPlayerRow(sec, team, onPick);
+    if (!floorOnly) appendAddPlayerRow(sec, team, onPick);
     quickTagBody.appendChild(sec);
 }
 
@@ -1122,7 +1298,14 @@ function openQuickTag(def) {
             step: 'players',
             title: quickTagPlayerPrompt(def, team),
             unknownLabel: 'Unknown / team only',
-            onPick: player => commitTag(def, { team, player }),
+            onPick: player => {
+                if (isFieldGoalMake(def)) {
+                    commitTag(def, { team, player, close: false });
+                    askAssistAfterMake(def, team, player);
+                    return;
+                }
+                commitTag(def, { team, player });
+            },
         });
     }));
     showQuickTag();
@@ -1143,6 +1326,7 @@ function showTurnoverChooser(def, stealTeam, stealer) {
 
 // ── Row Change Handler ──────────────────────────────────────
 function handleRowsChanged() {
+    repairEmptyTeams();
     reindexRows();
     updateEventCount();
     renderScore();
@@ -1243,10 +1427,35 @@ function exportGameData() {
 }
 
 // ── Game Save / Load / Autosave ─────────────────────────────
+function openAnalysisGameId() {
+    return String(window.FILM_TOOL_GAME_ID || new URLSearchParams(window.location.search).get('game_id') || '').trim();
+}
+
+function autosaveStorageKey(analysisId = openAnalysisGameId()) {
+    return analysisId ? `${CURRENT_AUTOSAVE_KEY}:${analysisId}` : CURRENT_AUTOSAVE_KEY;
+}
+
+function autosaveMatchesOpenFilm(game) {
+    if (!game) return false;
+    const openId = openAnalysisGameId();
+    if (!openId) return true;
+    return String(game.analysisGameId || '').trim() === openId;
+}
+
+function readAutosaveForOpenFilm() {
+    const keyed = loadJson(autosaveStorageKey(), null);
+    if (keyed && autosaveMatchesOpenFilm(keyed)) return keyed;
+    const legacy = loadJson(CURRENT_AUTOSAVE_KEY, null);
+    if (legacy && autosaveMatchesOpenFilm(legacy)) return legacy;
+    return null;
+}
+
 function getGameMeta() {
     const score = getScoreState();
     return {
-        id: selectedGameId || `game-${Date.now()}`, gameType: gameTypeSelect.value,
+        id: selectedGameId || openAnalysisGameId() || `game-${Date.now()}`,
+        analysisGameId: openAnalysisGameId(),
+        gameType: gameTypeSelect.value,
         competitionType: competitionTypeSelect.value, date: gameDateInput.value.trim(),
         ourTeam: ourTeamNameInput.value.trim() || 'Our Team', opponent: opponentInput.value.trim(),
         gameResult: gameResultSelect.value, homeTeam: homeTeamNameInput.value.trim(),
@@ -1259,7 +1468,11 @@ function serializeCurrentGame() {
     return { ...getGameMeta(), rows: getAllRows() };
 }
 
-function loadGameIntoUI(game) {
+function loadGameIntoUI(game, opts = {}) {
+    if (opts.requireSameFilm && openAnalysisGameId() && !autosaveMatchesOpenFilm(game)) {
+        setStatus('Skipped tags from another game. This film only restores its own tags.');
+        return;
+    }
     autosavePaused = true;
     selectedGameId = game.id;
     gameTypeSelect.value = game.gameType || 'my';
@@ -1277,19 +1490,27 @@ function loadGameIntoUI(game) {
     autosavePaused = false;
     handleRowsChanged();
     renderGames();
-    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Reload video to continue tagging.`);
+    seekToLastTag();
+    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Video is at the last tag.`);
 }
 
 function autosaveCurrentGame() {
     if (autosavePaused) return;
     const game = serializeCurrentGame();
-    localStorage.setItem(CURRENT_AUTOSAVE_KEY, JSON.stringify(game));
+    saveJson(autosaveStorageKey(), game);
+    if (!openAnalysisGameId()) saveJson(CURRENT_AUTOSAVE_KEY, game);
     localStorage.setItem(LAST_GAME_KEY, game.id);
     selectedGameId = game.id;
 }
 
 let autosaveTimeout = null;
-function queueAutosave() { clearTimeout(autosaveTimeout); autosaveTimeout = setTimeout(() => autosaveCurrentGame(), 800); }
+function queueAutosave() {
+    clearTimeout(autosaveTimeout);
+    autosaveTimeout = setTimeout(() => {
+        autosaveCurrentGame();
+        pushServerTags();
+    }, 800);
+}
 
 function saveCurrentGameToLibrary() {
     const game = serializeCurrentGame();
@@ -1300,15 +1521,181 @@ function saveCurrentGameToLibrary() {
     localStorage.setItem(LAST_GAME_KEY, game.id);
     renderGames();
     setStatus('Game saved.');
+    pushServerTags();
+    teachManualTagsToAi();
 }
 
-function resumeLastGame() {
-    const autosave = loadJson(CURRENT_AUTOSAVE_KEY, null);
+async function teachManualTagsToAi() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) {
+        setStatus('Open this film from Videos so tags can train AI.');
+        return null;
+    }
+    const rows = getAllRows();
+    try {
+        const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/teach-manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Teach failed');
+        setStatus(`Taught AI: ${data.manual_saved || 0} tags saved, ${data.corrected || 0} AI plays corrected, ${data.rejected || 0} extras dropped.`);
+        return data;
+    } catch (err) {
+        setStatus(err.message || 'Could not teach AI from tags.');
+        return null;
+    }
+}
+
+async function pullServerTagsForOpenFilm() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) return null;
+    try {
+        const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data || !Array.isArray(data.rows) || !data.rows.length) return null;
+        data.analysisGameId = data.analysisGameId || gameId;
+        return data;
+    } catch (_err) {
+        return null;
+    }
+}
+
+async function pushServerTags() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) return;
+    const game = serializeCurrentGame();
+    if (!autosaveMatchesOpenFilm(game)) return;
+    try {
+        await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(game),
+        });
+    } catch (_err) {}
+}
+
+async function resumeLastGame() {
+    const autosave = readAutosaveForOpenFilm();
+    if (autosave) {
+        loadGameIntoUI(autosave, { requireSameFilm: true });
+        pushServerTags();
+        return;
+    }
+    const server = await pullServerTagsForOpenFilm();
+    if (server) {
+        loadGameIntoUI(server, { requireSameFilm: true });
+        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
+        return;
+    }
+    if (openAnalysisGameId()) {
+        setStatus('No tags saved for this film yet. The last Restore was from another game and will not load here.');
+        return;
+    }
     const lastId = localStorage.getItem(LAST_GAME_KEY);
-    if (autosave && (!lastId || autosave.id === lastId)) { loadGameIntoUI(autosave); return; }
     const match = savedGames.find(g => g.id === lastId);
     if (match) { loadGameIntoUI(match); return; }
-    setStatus('No saved game to resume yet.');
+    setStatus('No saved game in this browser. Use Load tags if you exported from the other computer.');
+}
+
+function seekToLastTag() {
+    if (!video) return;
+    const rows = getAllRows();
+    if (!rows.length) return;
+    const sec = timeToSeconds(rows[rows.length - 1].start);
+    if (!isFinite(sec) || sec < 0) return;
+    const duration = Number(video.duration);
+    video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, duration) : sec;
+}
+
+function knownQ1EndSeconds() {
+    const id = String(window.FILM_TOOL_GAME_ID || '');
+    if (/jrhigh_adrian/i.test(id)) return 15 * 60 + 58;
+    return null;
+}
+
+function seekToQ1End() {
+    const sec = knownQ1EndSeconds();
+    if (sec == null || !video) return;
+    if (!video.paused) video.pause();
+    const duration = Number(video.duration);
+    video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, duration) : sec;
+    setStatus('Q1 ends at 15:58. Tag End QTR (Q−) on the whistle.');
+}
+
+function syncQ1EndButton() {
+    const btn = document.getElementById('ftQ1EndBtn');
+    if (!btn) return;
+    btn.hidden = knownQ1EndSeconds() == null;
+}
+
+function formatStartFromExport(start) {
+    if (typeof start === 'number' && isFinite(start)) return formatTime(start);
+    return String(start || '0:00.0');
+}
+
+function rowsFromTagPayload(data) {
+    if (!data || typeof data !== 'object') return null;
+    if (Array.isArray(data.rows)) return data.rows;
+    if (Array.isArray(data.events)) {
+        return data.events.map(ev => ({
+            label: ev.label || '',
+            player: ev.player || '',
+            quarter: ev.quarter || 'Q1',
+            team: ev.team || '',
+            side: ev.side || '',
+            category: ev.category || '',
+            eventtype: ev.eventtype || '',
+            result: ev.result || '',
+            start: formatStartFromExport(ev.start),
+            duration: typeof ev.duration === 'number' ? formatTime(ev.duration) : (ev.duration || '0:05.0'),
+            notes: ev.notes || '',
+        }));
+    }
+    if (Array.isArray(data.savedGames) && data.savedGames.length) {
+        const games = data.savedGames.slice().sort((a, b) => (b.rows || []).length - (a.rows || []).length);
+        const named = games.find(g => /adrian/i.test(`${g.opponent || ''} ${g.id || ''}`));
+        return (named || games[0]).rows || [];
+    }
+    return null;
+}
+
+function importTagPayload(data) {
+    if (data && Array.isArray(data.rows) && data.id) {
+        loadGameIntoUI(data);
+        return;
+    }
+    const rows = rowsFromTagPayload(data);
+    if (!rows) {
+        setStatus('That file is not a Film Tool tag export.');
+        return;
+    }
+    if (data.ourTeam && ourTeamNameInput) ourTeamNameInput.value = data.ourTeam;
+    if (data.opponent && opponentInput) opponentInput.value = data.opponent;
+    autosavePaused = true;
+    rowsBody.innerHTML = '';
+    rows.forEach(addRow);
+    autosavePaused = false;
+    handleRowsChanged();
+    seekToLastTag();
+    setStatus(`Loaded ${rows.length} tags. Video is at the last tag — continue Q1 from here.`);
+}
+
+function handleLoadTagsFile(evt) {
+    const file = evt.target?.files?.[0];
+    evt.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            importTagPayload(JSON.parse(String(reader.result || '{}')));
+        } catch (_err) {
+            setStatus('Could not read that tag file.');
+        }
+    };
+    reader.readAsText(file);
 }
 
 function newGame() {
@@ -4176,7 +4563,10 @@ function attachEventHandlers() {
         clearAllRows(); resetGameMetadata();
     });
     document.getElementById('saveGameBtn')?.addEventListener('click', saveCurrentGameToLibrary);
+    document.getElementById('teachAiBtn')?.addEventListener('click', teachManualTagsToAi);
     document.getElementById('resumeLastBtn')?.addEventListener('click', resumeLastGame);
+    document.getElementById('loadTagsBtn')?.addEventListener('click', () => document.getElementById('loadTagsFile')?.click());
+    document.getElementById('loadTagsFile')?.addEventListener('change', handleLoadTagsFile);
     document.getElementById('generateReportBtn')?.addEventListener('click', generateReport);
     document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());
     document.getElementById('saveReportBtn')?.addEventListener('click', saveReportAsFile);
@@ -4263,11 +4653,24 @@ function attachEventHandlers() {
 }
 
 // ── Autosave Restore ────────────────────────────────────────
-function initFromAutosave() {
-    const autosave = loadJson(CURRENT_AUTOSAVE_KEY, null);
-    if (!autosave) return;
-    if (!confirm('Restore autosaved game from last session?')) return;
-    loadGameIntoUI(autosave);
+async function initFromAutosave() {
+    const autosave = readAutosaveForOpenFilm();
+    if (autosave) {
+        if (!confirm('Restore autosaved tags for this film from last session?')) return;
+        loadGameIntoUI(autosave, { requireSameFilm: true });
+        pushServerTags();
+        return;
+    }
+    const server = await pullServerTagsForOpenFilm();
+    if (server) {
+        loadGameIntoUI(server, { requireSameFilm: true });
+        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
+        return;
+    }
+    const leftover = loadJson(CURRENT_AUTOSAVE_KEY, null);
+    if (leftover && openAnalysisGameId() && !autosaveMatchesOpenFilm(leftover)) {
+        setStatus('Did not restore tags from another game. Tag this Jr High film with the players on the floor.');
+    }
 }
 
 // ── Init ────────────────────────────────────────────────────
@@ -4349,7 +4752,10 @@ function init() {
     ensureRosterSeasonsLoaded().then(() => {
         restoreRosterFilters();
         applyOpenGameRosterContext();
-        return loadGameTeamRosters();
+        return loadGameTeamRosters().then(() => loadGameStarters()).then(() => {
+            repairEmptyTeams();
+            renderScore();
+        });
     });
     renderEventButtons();
     renderGames();
@@ -4360,7 +4766,13 @@ function init() {
     renderScore();
     initFromAutosave();
     syncGameTeamsFromContext({ forceGameOpponent: true });
-    loadGameTeamRosters();
+    loadGameTeamRosters().then(() => loadGameStarters()).then(() => {
+        repairEmptyTeams();
+        renderScore();
+    });
+    updateScoreLabels();
+    renderScore();
+    syncQ1EndButton();
 
     if (uploadedVideoUrl) loadHostedVideo(uploadedVideoUrl, uploadedVideoName);
 
