@@ -94,19 +94,25 @@ Re-analyze film from Videos when ready.
 
 **Proven:** Film Tool tagging is a slim **Tag** strip on the **right edge of the video**. **Off / Def / More** tabs show one group at a time. **Vs** (this game’s opponent) and **5s** (starting fives) stay on the strip while tagging so Game info can stay hidden. Dropdowns sit above the film. The running score sits immediately above the video (visible while tagging) so it can be checked against the gym board and the book. Skip / speed controls stay under the film.
 
-**Pickup (work computer tomorrow):** School uses **Funnel only** — https://liberty-coach.tail368a37.ts.net — do not run Flask or copy `film_analysis.db` at school. Open Jr High Adrian Film Tool and hard-refresh. Tags now also save on the **home disk** (`data/film_tags/`) when you **Save** or **Teach AI**, so school Chrome does not have to keep them. If school Chrome still has your Jr High Q1, click **↩ Resume** then **Save** immediately so home stores it. Do **not** Restore Taylor/Blacker/Bradshaw — that 71-row list is Varsity/Wilder, stored separately, not on the Jr High film. Jr High names: Sullivan, Colman, Dayley, Musgrave, Peterson. Q1 whistle **15:58**. Gym: Liberty 16, Adrian 10.
+**Pickup (work computer):** School uses **Funnel only** — https://liberty-coach.tail368a37.ts.net. Scott’s Jr High Q1 tags were in **home Chrome localStorage for the Funnel origin** (not localhost, not Wilder). Recovered 2026-09-17: **134 tags**, last at **16:00.7**, names Sullivan / Colman / Dayley / Musgrave / Peterson (no Taylor/Blacker). Stored at `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json` and `tag-exports/jrhigh_adrian_q1_manual_tags.json`. Funnel Film Tool **↩ Resume** / open this film loads that sidecar. **Save** / **Teach AI** updates it. Gym Q1: Liberty 16, Adrian 10. Do not Restore Varsity names.
 
 **Proven (2026-09-16 night):** Running score is **only tagged makes** (2PT/3PT/FT Make). It is not the gym board or the book. And-1 is 2 until the FT is tagged. Opponent points count even if the Vs name drifted. Made FG asks Assist? Yes → passer (not the shooter); No → close. BLOB/SLOB are team-only. Player pills are the five currently in the game (5s + SUB); missing name means a sub happened. Team names like Liberty/Adrian are stored on each tag (the old team dropdown only had Our Team/Opponent, which dropped the name and froze the score at 0).
 
 **Proven (2026-09-16 night, teach):** Film Tool Save and **Teach AI** POST tags to `/api/film/<game_id>/teach-manual`. Those rows land as `source_type=manual`, `human_verified=1`, plus `human_corrections`. Nearby AI plays in the tagged window are corrected or rejected. `persist_events` keeps them on the next pass and re-grades new AI. Adrian quality will not park Film Tool teach rows. This still does not retrain `ball_detector.pt`.
 
+**Proven (2026-09-17, FT rule vs copy):** Q1 tags were used as a **test**, not stamped onto AI. Ball is already on every tagged shot (15/15 FT, 22/22 2PT, 7/7 3PT) — do not retrain `ball_detector.pt`. The old `n<=3 + ball = technical` rule was why live ISO became FTs. New rule: two walls of the key + shooter at the line, ignore x=1919 edge boxes, require the floor to be still or a dead ball. Technical is coded (1 shooter, empty space) but not applied to shot type yet — zoom-in 1–2 person frames false-trigger it.
+
+**Proven (2026-09-17, extra-shot rule):** Q1 tags trained a live-shot floor (170px rise, 4s gap, arc must come down). Lane FTs keep the lower 80px floor. Scored on Q1 without photocopying: **181 → 113** AI shots vs 44 tagged (73 extras, 40/44 still found). Q2 film 16:00–32:00 is the holdout: **99 AI shots** before Scott tags. Events rebuilt and persisted for this Adrian game. Technical FT still not counted. Ball detector unchanged.
+
+**Proven (2026-09-17 night, rim/net rule):** Arc is the approach, not the make. Attempt = ball close to the hoop (top of the locked key). Make = ball drops through that same column (net), not a dead-ball gap. Q2 after rebuild: you 16 pts 5/19, AI **8 pts 3/58** (was 9/86 then 181). Through-the-nylon is the right rule; YOLO person+ball cannot see the net on this sideline camera (sparse boxes, pan). Did not copy tags. Ball detector unchanged.
+
+**Proven (2026-09-17 night, net detector):** New module `net_detector.py` finds the **red rim + hanging white net** in the video (not a YOLO “net class”). Sidecar `data/hoop_tracks/<game_id>.json`. Precision generator uses it as the hoop. Locked on this Adrian film at FT, Q1 end, Q2, and HT. Events rebuilt against that track. Extra FTs that were a false lane at the far end are gone: a FT now has to be at **this** hoop, and two shots cannot be 1 second apart.
+
 ## Next session — tags → better counting
 
-**Done:** tags can leave the browser and sit on the home ledger.
+**Done:** Q1 extra-shot floor; Q2 make/TO/hoop-aim rewrite; hoop/net track rebuild; FT must be at this hoop + 4s gap.
 
-**Not done:** YOLO / `ball_detector.pt` are unchanged. `human_corrections.applied_to_model` stays 0. `event_calibrator.py` and `scripts/teach_from_manual_q1.py` are missing on this branch (`teach_from_hoops_pbp.py` imports them).
-
-**Next slice (no detector weights):** after Scott teaches Q1 from Funnel, use those manual rows to set shot-type / timing thresholds for the next precision pass. Ask before any `ball_detector.pt` change.
+**Not done:** Q2 extras still ~25 extra FGA (passes/tips near the rim). Makes still short (4 vs 9) because the ball box often vanishes at the nylon — next make rule is net motion, not a higher arc. Player names still Unknown. REB follows extra misses.
 
 **Proven (2026-09-16 afternoon):** The tag card is a compact centered dialog (not full-bleed). Every tag except Start/End QTR uses the same flow: Liberty vs this game’s opponent, then that team’s roster. Jump Ball asks who won. Steal still adds the matching turnover from the other roster. Add-player is an inline field (no nested `prompt()`), so Cancel / Esc / backdrop still close the card. Opponent roster keys off the team you are playing (Adrian on this game), not a generic Opponent list.
 

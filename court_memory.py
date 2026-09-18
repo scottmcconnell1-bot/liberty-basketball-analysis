@@ -44,9 +44,14 @@ class FrameCourtMemory:
     pan_dx: float = 0.0
     dead_ball: bool = False
     recent_heights: list[float] = field(default_factory=list)
+    prev_people: list[dict[str, Any]] = field(default_factory=list)
+    last_formation: str | None = None
+    detected_hoop: tuple[float, float] | None = None
+    detected_rim_r: float | None = None
 
     def observe(self, people: Iterable[dict[str, Any]], ball: dict[str, Any] | None = None) -> None:
         boxes = list(people or [])
+        prior = list(self.prev_people)
         heights = [float(p.get("height") or 0) for p in boxes if float(p.get("height") or 0) > 0]
         xs = [float(p.get("x") or p.get("x_center") or 0) for p in boxes]
         median_h = _median(heights) if heights else None
@@ -75,7 +80,14 @@ class FrameCourtMemory:
             cy = (self.key.y0 + self.key.y1) / 2.0
             self.key = self.key.shifted(self.pan_dx, 0.0, scale, cx, cy)
 
-        formation = detect_ft_formation(boxes, ball, abs(self.pan_dx))
+        formation = detect_ft_formation(
+            boxes,
+            ball,
+            abs(self.pan_dx),
+            prev_people=prior,
+            dead_ball=self.dead_ball,
+        )
+        self.last_formation = formation
         if formation and boxes:
             locked = key_from_people(boxes, ball)
             if locked is not None:
@@ -88,11 +100,99 @@ class FrameCourtMemory:
 
         self.last_median_x = median_x
         self.last_median_h = median_h
+        self.prev_people = boxes
 
     def in_paint(self, x: float | None, y: float | None) -> bool:
         if self.key is None or x is None or y is None:
             return False
         return self.key.contains(float(x), float(y))
+
+    def near_basket(self, x: float | None, y: float | None, x_scale: float = 1.8, y_pad: float = 140.0) -> bool:
+        """True when (x, y) is at the hoop, not merely high in the frame.
+
+        Sideline camera: hoop sits at the top-center of the locked key. A pass
+        that peaks on the sideline is not a shot even if the ball rose a lot.
+        """
+        if self.key is None or x is None or y is None:
+            return False
+        cx = (self.key.x0 + self.key.x1) / 2.0
+        half_w = abs(self.key.x1 - self.key.x0) / 2.0 * x_scale
+        hoop_y = min(self.key.y0, self.key.y1)
+        floor_y = max(self.key.y0, self.key.y1)
+        key_h = max(floor_y - hoop_y, 1.0)
+        return abs(float(x) - cx) <= half_w and (hoop_y - y_pad) <= float(y) <= (hoop_y + key_h * 0.65)
+
+    def aimed_at_hoop(self, x: float | None, y: float | None, max_dx: float = 780.0) -> bool:
+        """Live-shot gate: keep arcs toward this hoop; drop the other end / frame edge.
+
+        Stricter than a high-ball check, looser than near_basket (used for makes).
+        """
+        if self.key is None or x is None:
+            return True
+        if float(x) <= 48 or float(x) >= 1872:
+            return False
+        cx = (self.key.x0 + self.key.x1) / 2.0
+        return abs(float(x) - cx) <= max_dx
+
+    def hoop_xy(self) -> tuple[float, float] | None:
+        """Rim in image pixels. Pixel detector wins over a key estimate."""
+        if self.detected_hoop is not None:
+            return self.detected_hoop
+        if self.key is None:
+            return None
+        hoop_x = (self.key.x0 + self.key.x1) / 2.0
+        floor_y = max(self.key.y0, self.key.y1)
+        line_y = min(self.key.y0, self.key.y1)
+        key_h = max(floor_y - line_y, 1.0)
+        hoop_y = max(12.0, line_y - 0.4 * key_h)
+        return (hoop_x, hoop_y)
+
+    def close_to_rim(self, x: float | None, y: float | None, max_dist: float = 280.0) -> bool:
+        """Attempt gate: the ball got near this hoop, not merely high in the frame."""
+        hoop = self.hoop_xy()
+        if hoop is None or x is None or y is None:
+            return False
+        dx = float(x) - hoop[0]
+        dy = float(y) - hoop[1]
+        return (dx * dx + dy * dy) ** 0.5 <= max_dist
+
+
+def ball_through_rim(
+    ball_track,
+    peak_frame: int | None,
+    hoop: tuple[float, float] | None,
+    *,
+    rim_r: float = 72.0,
+    net_depth: float = 180.0,
+    window: int = 24,
+) -> bool:
+    """True when the ball hits the iron then drops through the same column (the net).
+
+    Sideline camera, sparse YOLO: this is hoop-relative, not 'any high arc'.
+    """
+    if hoop is None or peak_frame is None or ball_track is None or getattr(ball_track, "empty", True):
+        return False
+    hoop_x, hoop_y = hoop
+    track = ball_track
+    window_rows = track[
+        (track["frame_number"] >= int(peak_frame) - 2)
+        & (track["frame_number"] <= int(peak_frame) + int(window))
+    ]
+    if getattr(window_rows, "empty", True) or len(window_rows) < 2:
+        return False
+    at_iron = False
+    through = False
+    for row in window_rows.sort_values("frame_number").itertuples(index=False):
+        x = float(row.x_center)
+        y = float(row.y_center)
+        dist = ((x - hoop_x) ** 2 + (y - hoop_y) ** 2) ** 0.5
+        in_column = abs(x - hoop_x) <= rim_r * 1.15
+        if dist <= rim_r and y <= hoop_y + 40:
+            at_iron = True
+        if at_iron and in_column and (hoop_y + 48) <= y <= (hoop_y + net_depth):
+            through = True
+            break
+    return through
 
 
 def classify_zoom(median_h: float | None, baseline_h: float | None) -> str:
@@ -106,39 +206,165 @@ def classify_zoom(median_h: float | None, baseline_h: float | None) -> str:
     return "mid"
 
 
+def _person_xy(person: dict[str, Any]) -> tuple[float, float]:
+    return (
+        float(person.get("x") or person.get("x_center") or 0),
+        float(person.get("y") or person.get("y_center") or 0),
+    )
+
+
+def _people_stationary(
+    people: list[dict[str, Any]],
+    prev_people: list[dict[str, Any]] | None,
+    max_dx: float = 22.0,
+) -> bool:
+    """True when the same bodies barely moved — FT lane is set before the shot."""
+    if not people or not prev_people:
+        return False
+    prev_xy = [_person_xy(p) for p in prev_people]
+    if not prev_xy:
+        return False
+    deltas = []
+    for person in people:
+        x, y = _person_xy(person)
+        nearest = min((x - px) ** 2 + (y - py) ** 2 for px, py in prev_xy)
+        deltas.append(nearest ** 0.5)
+    if not deltas:
+        return False
+    ordered = sorted(deltas)
+    mid = ordered[len(ordered) // 2]
+    return mid <= max_dx
+
+
+def _on_court_people(
+    people: list[dict[str, Any]],
+    frame_w: float = 1920.0,
+    margin: float = 48.0,
+    min_height: float = 36.0,
+) -> list[dict[str, Any]]:
+    """Drop YOLO boxes glued to the frame edge (score table / huddle)."""
+    kept = []
+    for person in people or []:
+        x, _y = _person_xy(person)
+        height = float(person.get("height") or 0)
+        if x <= margin or x >= frame_w - margin:
+            continue
+        if height and height < min_height:
+            continue
+        kept.append(person)
+    return kept
+
+
 def detect_ft_formation(
     people: list[dict[str, Any]],
     ball: dict[str, Any] | None,
     pan_abs: float,
     pan_max: float = 8.0,
+    prev_people: list[dict[str, Any]] | None = None,
+    dead_ball: bool = False,
 ) -> str | None:
-    """Lane lined up around the key. Technical = one shooter, empty lane. No pan."""
+    """NFHS FT from how the floor looks, not from the ball arc.
+
+    Lane: players lined up on both sides of the key, stationary to start,
+    shooter at the top of the key. Camera is not panning.
+
+    Technical: one player at the top of the key, nobody else near the shooter.
+    """
     if pan_abs > pan_max:
         return None
-    n = len(people)
-    if n <= 3:
-        if n >= 1 and ball is not None:
-            return "technical"
+    people = _on_court_people(people)
+    pts = [_person_xy(p) for p in (people or [])]
+    if not pts:
         return None
-    if n < 6:
+    prev_people = _on_court_people(prev_people or [])
+    prior_n = len(prev_people)
+    stationary = _people_stationary(people, prev_people)
+    # Technical is a whistle isolation, not a zoom-in on a live drive.
+    if prior_n < 5 and _is_technical_ft(pts, ball, set_piece=bool(dead_ball)):
+        return "technical"
+    if not (dead_ball or stationary):
         return None
-    xs = sorted(float(p.get("x") or p.get("x_center") or 0) for p in people)
-    if len(xs) < 6:
+    return "lane" if _is_lane_ft(pts, ball) else None
+
+
+def _ball_xy(ball: dict[str, Any] | None) -> tuple[float, float] | None:
+    if not ball:
         return None
-    gaps = [xs[i + 1] - xs[i] for i in range(len(xs) - 1)]
-    max_gap = max(gaps)
-    gap_i = gaps.index(max_gap)
-    left, right = xs[: gap_i + 1], xs[gap_i + 1 :]
-    # Two lines of the lane with a hole down the middle (not a wing outlier).
-    if len(left) < 3 or len(right) < 3:
+    return (
+        float(ball.get("x") or ball.get("x_center") or 0),
+        float(ball.get("y") or ball.get("y_center") or 0),
+    )
+
+
+def _is_technical_ft(
+    pts: list[tuple[float, float]],
+    ball: dict[str, Any] | None,
+    set_piece: bool,
+    clearance: float = 110.0,
+) -> bool:
+    """One shooter at the line; empty lane. Live ISO is not a technical."""
+    if not set_piece or len(pts) > 2:
+        return False
+    shooter = _shooter_xy(pts, ball)
+    if shooter is None:
+        return False
+    sx, sy = shooter
+    for x, y in pts:
+        if abs(x - sx) < 1 and abs(y - sy) < 1:
+            continue
+        if ((x - sx) ** 2 + (y - sy) ** 2) ** 0.5 < clearance:
+            return False
+    return True
+
+
+def _shooter_xy(
+    pts: list[tuple[float, float]],
+    ball: dict[str, Any] | None,
+) -> tuple[float, float] | None:
+    if not pts:
         return None
-    span = xs[-1] - xs[0]
-    if span <= 0 or max_gap < max(40.0, span * 0.18):
-        return None
-    return "lane"
+    bxy = _ball_xy(ball)
+    if bxy is not None:
+        bx, by = bxy
+        return min(pts, key=lambda p: (p[0] - bx) ** 2 + (p[1] - by) ** 2)
+    # Top of the key is toward the basket (smaller y in this sideline crop).
+    return min(pts, key=lambda p: p[1])
+
+
+def _is_lane_ft(pts: list[tuple[float, float]], ball: dict[str, Any] | None) -> bool:
+    """Two walls of the lane plus a shooter at the top of the key."""
+    if len(pts) < 5:
+        return False
+    bxy = _ball_xy(ball)
+    cx = bxy[0] if bxy is not None else _median([p[0] for p in pts])
+    left = [p for p in pts if p[0] < cx - 28]
+    right = [p for p in pts if p[0] > cx + 28]
+    if len(left) < 2 or len(right) < 2:
+        return False
+    shooter = _shooter_xy(pts, ball)
+    if shooter is None:
+        return False
+    sx, sy = shooter
+    # Shooter stands in the gap / at the line, not as a third body on one wall.
+    on_left_wall = sum(1 for p in left if abs(p[0] - sx) < 20) >= 2
+    on_right_wall = sum(1 for p in right if abs(p[0] - sx) < 20) >= 2
+    if on_left_wall or on_right_wall:
+        return False
+    # Top of the key: shooter is on the high side of the lane cluster (FT line).
+    lane_ys = [p[1] for p in left + right]
+    if not lane_ys:
+        return False
+    lane_mid_y = _median(lane_ys)
+    if sy > lane_mid_y + 50:
+        return False
+    span = max(p[0] for p in pts) - min(p[0] for p in pts)
+    if span < 80:
+        return False
+    return True
 
 
 def key_from_people(people: list[dict[str, Any]], ball: dict[str, Any] | None) -> KeyPolygon | None:
+    people = _on_court_people(people)
     xs = [float(p.get("x") or p.get("x_center") or 0) for p in people]
     ys = [float(p.get("y") or p.get("y_center") or 0) for p in people]
     if len(xs) < 4:

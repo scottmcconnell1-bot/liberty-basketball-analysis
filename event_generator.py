@@ -458,6 +458,8 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
             "peak_frame": int(peak_row["frame_number"]),
             "ball_rise": ball_rise,
             "lateral_travel": lateral_travel,
+            "peak_x": peak_x,
+            "peak_y": peak_y,
             "secondary_pass": True,
         }
 
@@ -500,12 +502,17 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
         # If ball continues rising after "peak", it's not a real arc
         if min_y_after < peak_y - 10:
             return None
+        # Real shots come down. Interpolated passes often peak and stay high.
+        if float(after_peak["y_center"].max()) < peak_y + 8:
+            return None
 
     return {
         "timestamp_ms": int(peak_row["timestamp_ms"]),
         "peak_frame": int(peak_row["frame_number"]),
         "ball_rise": ball_rise,
         "lateral_travel": lateral_travel,
+        "peak_x": peak_x,
+        "peak_y": peak_y,
     }
 
 
@@ -522,8 +529,13 @@ PRECISION_DEFAULTS = {
     "min_hold_frames": 12,
     # primary-pass shot detection only (no low-threshold secondary pass); px of ball rise
     "shot_min_ball_rise": 80.0,
+    # Live FG must rise more than a pass/interpolation blip. Lane FTs keep the 80px floor.
+    # Set from Liberty vs Adrian Q1: extras were the main miss vs Scott's 44 shots.
+    "live_shot_min_ball_rise": 170.0,
     # at most one shot per possessor within this window
     "shot_refractory_ms": 6000,
+    # two cluster-ids on the same release
+    "shot_global_refractory_ms": 4000,
     # blocks: deflection near the shooter as the ball goes up; makes are FGs
     "emit_blocks": True,
     # assist only if the passer held the ball and the catch-to-shot was 1–2 dribbles
@@ -536,8 +548,10 @@ PRECISION_DEFAULTS = {
     # foul-after-dead-ball heuristic is weak; keep it opt-in
     "emit_fouls": False,
     # "make" needs a longer dead-ball gap than expanded mode's 15 frames (inbound after a
-    # score) unless the ball is seen reaching the basket area
-    "make_min_gap_frames": 15,
+    # score). Do not treat "ball went high" as a make — that was 80 Q2 makes vs Scott's 9.
+    "make_min_gap_frames": 120,
+    # a pass is not a turnover; only emit TO when the ball was lost abruptly
+    "turnover_require_abrupt": True,
 }
 
 
@@ -599,6 +613,7 @@ def _ball_deflected_away(ball_track, peak_frame, window=6):
 
 def generate_precision_events_from_segments(game_id, segments, ball_track, params=None, detections_df=None):
     from court_memory import FrameCourtMemory, ball_from_detections, people_from_detections
+    from court_memory import ball_through_rim
     from stat_rules import (
         classify_rebound,
         classify_shot_kind,
@@ -612,6 +627,15 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
     p = {**PRECISION_DEFAULTS, **(params or {})}
     events = []
     seen_keys = set()
+    try:
+        from net_detector import hoop_at, load_hoop_track
+
+        hoop_samples = load_hoop_track(game_id)
+    except Exception:
+        hoop_samples = []
+
+        def hoop_at(*_a, **_k):
+            return None
 
     segments = _merge_short_segments(segments, p["min_hold_frames"])
     by_frame = {}
@@ -643,6 +667,7 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
         memory.observe(people_from_detections(recs), ball_from_detections(recs))
         return recs
 
+    last_kept_shot_ms = None
     for index, segment in enumerate(segments):
         hold = segment.get("duration_frames", 1)
         _observe(segment["start_frame"])
@@ -670,7 +695,7 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
                     and not after_shot
                 )
                 to_kind = classify_turnover_kind(dead_ball=memory.dead_ball, after_shot=after_shot)
-                if to_kind:
+                if to_kind and (is_abrupt or not p.get("turnover_require_abrupt")):
                     conf = _clamp(0.35 + 0.01 * hold, 0.35, 0.7)
                     append_unique_event(events, seen_keys, make_event(
                         game_id, "turnover", segment["start_timestamp_ms"], player=previous["player"],
@@ -697,14 +722,27 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
         peak_frame = shot_info.get("peak_frame")
-        recs = _observe(peak_frame or segment["end_frame"])
-        from court_memory import ball_from_detections, people_from_detections as _people
+        from court_memory import ball_from_detections, detect_ft_formation as _ft
+        from court_memory import people_from_detections as _people, _on_court_people
+        peak = int(peak_frame or segment["end_frame"])
+        start_fr = int(segment["start_frame"])
+        pre = max(peak - 24, start_fr)
+        earlier = max(pre - 18, start_fr)
+        crowd_at_start = len(_on_court_people(_people(_rows_at_frame(by_frame, start_fr)))) >= 4
+        ft_formation = None
+        for fr in sorted({start_fr, earlier, pre, peak}):
+            recs_f = _observe(fr)
+            form = memory.last_formation
+            if form == "technical" and crowd_at_start:
+                form = None
+            if form == "lane":
+                ft_formation = "lane"
+                break
+            # Technical is implemented, but zoom-in 1–2 person frames false-trigger it.
+            # Do not classify those shots as FT until the crowd/zoom prior is stronger.
+        recs = _rows_at_frame(by_frame, peak)
         people = _people(recs)
         ball = ball_from_detections(recs)
-        ft_formation = None
-        if people:
-            from court_memory import detect_ft_formation as _ft
-            ft_formation = _ft(people, ball, abs(memory.pan_dx))
 
         shooter_x = segment.get("player_x_end") or segment.get("player_x_start")
         shooter_y = segment.get("player_y_median")
@@ -717,14 +755,42 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
             height = max(abs(memory.key.y1 - memory.key.y0), 1.0)
             dist = ((float(shooter_x) - cx) ** 2 / width ** 2 + (float(shooter_y) - cy) ** 2 / height ** 2) ** 0.5
         shot_kind = classify_shot_kind(ft_formation=ft_formation, in_paint=in_paint, dist_from_basket=dist)
+        live_min = float(p.get("live_shot_min_ball_rise") or 0)
+        ts = int(shot_info.get("timestamp_ms") or 0)
+        peak_x = shot_info.get("peak_x")
+        peak_y = shot_info.get("peak_y")
+        hoop_hit = hoop_at(hoop_samples, ts) if hoop_samples else None
+        if hoop_hit:
+            memory.detected_hoop = (float(hoop_hit["x"]), float(hoop_hit["y"]))
+            memory.detected_rim_r = float(hoop_hit.get("r") or 0) or None
+        hoop = memory.hoop_xy()
+        if ft_formation != "lane":
+            if live_min and float(shot_info.get("ball_rise") or 0) < live_min:
+                continue
+        # Lane FTs used to skip this, so a false lane at the far end became extra FTs.
+        close = True
+        if hoop is not None:
+            close = memory.close_to_rim(peak_x, peak_y)
+            if not close and peak_frame:
+                post_peak = ball_track[
+                    (ball_track["frame_number"] > peak_frame)
+                    & (ball_track["frame_number"] <= peak_frame + 20)
+                ]
+                if not post_peak.empty:
+                    close = any(
+                        memory.close_to_rim(float(r.x_center), float(r.y_center))
+                        for r in post_peak.itertuples(index=False)
+                    )
+            if not close:
+                continue
+        gap_ms = int(p.get("shot_global_refractory_ms") or 0)
+        if last_kept_shot_ms is not None and gap_ms and ts - last_kept_shot_ms < gap_ms:
+            continue
+        last_kept_shot_ms = ts
 
-        shot_result = "miss"
-        ball_moving_to_basket = False
-        if peak_frame:
-            post_peak = ball_track[(ball_track["frame_number"] > peak_frame) & (ball_track["frame_number"] <= peak_frame + 30)]
-            ball_moving_to_basket = (not post_peak.empty) and post_peak["y_center"].min() < 240
-        if next_segment is None or (next_gap is not None and next_gap > p["make_min_gap_frames"]) or ball_moving_to_basket:
-            shot_result = "make"
+        # Make = through the rim/net. High ball and dead-ball gap are not a make.
+        through = ball_through_rim(ball_track, peak_frame, memory.hoop_xy())
+        shot_result = "make" if through else "miss"
         made = shot_result == "make"
 
         shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
@@ -732,10 +798,13 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
             "ball_rise": round(shot_info["ball_rise"], 1),
             "lateral_travel": round(shot_info["lateral_travel"], 1),
             "peak_frame": peak_frame,
+            "peak_x": None if peak_x is None else round(float(peak_x), 1),
+            "peak_y": None if peak_y is None else round(float(peak_y), 1),
             "generator": "precision",
             "shot_kind": shot_kind,
             "in_paint": in_paint,
             "ft_formation": ft_formation,
+            "through_rim": through,
         }
         append_unique_event(events, seen_keys, make_event(
             game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
@@ -1166,6 +1235,11 @@ def _reapply_film_tool_teach(conn, game_id):
         print(f"WARN: Film Tool teach reapply skipped: {exc}")
 
 
+def _apply_event_calibrator(game_id, events):
+    """Stamp-over calibrator is off. Shot type comes from FT/court rules."""
+    return events
+
+
 def persist_events(conn, game_id, events, relational_game_id=None):
     if relational_game_id is not None:
         # Delete unverified events that are either linked to the relational game_id
@@ -1187,6 +1261,12 @@ def persist_events(conn, game_id, events, relational_game_id=None):
             "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
             (game_id,),
         )
+    if not events:
+        conn.commit()
+        _reapply_film_tool_teach(conn, game_id)
+        return
+
+    events = _apply_event_calibrator(game_id, events)
     if not events:
         conn.commit()
         _reapply_film_tool_teach(conn, game_id)
@@ -1271,7 +1351,7 @@ def main(
         ball_count_before = len(detections_df[detections_df['class_name'] == 'ball'])
         detections_df = _interpolate_ball(detections_df)
         ball_count_after = len(detections_df[detections_df['class_name'] == 'ball'])
-        print(f"INFO: Ball detections: {ball_count_before} → {ball_count_after} (after interpolation)")
+        print(f"INFO: Ball detections: {ball_count_before} -> {ball_count_after} (after interpolation)")
 
         # Step 2: Cluster players spatially (tracker_ids are unstable at imgsz=320)
         # This must happen BEFORE possession analysis so we have stable player identities

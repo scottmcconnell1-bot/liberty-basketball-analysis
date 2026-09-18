@@ -111,7 +111,7 @@ def classify_shot_kind(
     ft_formation: str | None,
     in_paint: bool,
     dist_from_basket: float | None,
-    three_pt_threshold: float = 0.50,
+    three_pt_threshold: float = 1.35,
 ) -> str:
     """ft | 2 | 3. FT formation wins because the camera sits on the key."""
     if ft_formation in {"lane", "technical"}:
