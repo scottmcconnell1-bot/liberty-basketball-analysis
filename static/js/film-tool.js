@@ -85,9 +85,9 @@ const eventDefs = [
     { id: 'slob', label: 'SLOB', hotkey: '', group: 'flow', teamMode: 'team-only', eventtype: 'SLOB', result: 'NA', side: 'Offense', category: 'SLOB' },
     { id: 'startqtr', label: 'Start QTR', hotkey: 'Q', group: 'flow', teamMode: 'event-only', eventtype: 'StartQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'steal', label: 'Steal', hotkey: 'S', group: 'defense', teamMode: 'special-steal', eventtype: 'Steal', result: 'NA', side: 'Defense', category: 'Defense' },
-    { id: 'timeout', label: 'Time Out', hotkey: 'T', group: 'flow', teamMode: 'team-player', eventtype: 'TimeOut', result: 'NA', side: 'Neutral', category: 'Quarter' },
+    { id: 'timeout', label: 'Time Out', hotkey: 'T', group: 'flow', teamMode: 'team-only', eventtype: 'TimeOut', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'tip', label: 'Tip', hotkey: 'P', group: 'flow', teamMode: 'team-player', eventtype: 'Tip', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
+    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-only', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
     { id: 'twoptmake', label: '2PT Make', hotkey: '2', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'twoptmiss', label: '2PT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Miss', side: 'Offense', category: 'Offense' },
     { id: 'threeptmake', label: '3PT Make', hotkey: '3', group: 'offense', teamMode: 'team-player', eventtype: '3PT', result: 'Make', side: 'Offense', category: 'Offense' },
@@ -1145,7 +1145,7 @@ function askAssistAfterMake(shotDef, team, shooter) {
 function commitStealPair(def, p) {
     commitTag(def, { team: p.stealTeam, player: p.stealer, close: false });
     addRow({
-        label: 'Turnover', player: p.turnoverPlayer, quarter: currentQuarter(),
+        label: 'Turnover', player: '', quarter: currentQuarter(),
         team: p.turnoverTeam, side: 'Offense', category: 'Offense', eventtype: 'Turnover', result: 'NA',
         start: formatTime(video.currentTime || 0), duration: '0:05.0',
         notes: `Linked to steal by ${p.stealer || p.stealTeam}`
@@ -1153,7 +1153,7 @@ function commitStealPair(def, p) {
     closeQuickTag();
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
-    setStatus('Tagged steal and turnover.');
+    setStatus('Tagged steal and team turnover.');
 }
 
 function quickTagTeamPrompt(def) {
@@ -1288,7 +1288,14 @@ function openQuickTag(def) {
                 step: 'players',
                 title: quickTagPlayerPrompt(def, team),
                 unknownLabel: 'Unknown / team only',
-                onPick: player => showTurnoverChooser(def, team, player),
+                onPick: player => {
+                    const oppTeams = getTeamChoices().filter(t => t !== team);
+                    commitStealPair(def, {
+                        stealTeam: team,
+                        stealer: player,
+                        turnoverTeam: oppTeams[0] || team,
+                    });
+                },
             });
             return;
         }
@@ -1800,7 +1807,10 @@ function statAccumulator(rows) {
         if (r.eventtype === 'DefRebound') { t.DReb++; t.Reb++; p.DReb++; p.Reb++; }
         if (r.eventtype === 'Steal') { t.Steals++; p.Steals++; }
         if (r.eventtype === 'Block') { t.Blocks++; p.Blocks++; }
-        if (r.eventtype === 'Turnover') { t.Turnovers++; p.Turnovers++; }
+        if (r.eventtype === 'Turnover') {
+            t.Turnovers++;
+            if (player && player !== 'Unknown') p.Turnovers++;
+        }
         if (r.eventtype === 'Foul') { t.Fouls++; p.Fouls++; }
     });
     return { byTeam, byPlayer };

@@ -206,6 +206,10 @@ def test_playbook_html_has_align_ready_banner():
     assert "orderTriangleBeats" in html
     assert "isTrianglePlay" in html
     assert "orderGameBeats" in html
+    assert "canFixAnimation" in html
+    assert "stepHasAuthoredOrder" in html
+    assert "Paused — change action type/order" in html
+    assert "beatFromPath" in html
     assert "isGamePlay" in html
     assert "ensureGameBeats" in html
     assert "heldLandings" in html

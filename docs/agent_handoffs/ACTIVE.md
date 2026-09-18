@@ -53,6 +53,8 @@ Optimum = imported FastDraw/PDF sheets auto-animate. Scott does **not** trace, r
 
 **Proven (2026-09-15):** Vector extract mapped digits through FastDraw’s white title panel, so 1-Game opening parked 4/5 on the 3-point line. Court crop is the painted outline; Y is piecewise (FT→160, 3pt→235) so elbows sit in the lane. Sheet plays no longer auto-spawn man defenders (looked like every player had the ball). `auto_extract` sticky does not block a fresh extract.
 
+**Proven (2026-09-17 night, pause-to-fix Play All):** Pause stays on the current sheet (does not reset). In View or Edit (not a shared link) you can change run/screen/dribble/pass, reorder or delete actions, add/remove steps, then Play All continues from the paused spots. Save choreography stores that action order so Play All does not re-guess sequence.
+
 ## Jason film stack (item 4)
 
 | Item | Status |

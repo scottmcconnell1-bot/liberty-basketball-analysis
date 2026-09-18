@@ -50,9 +50,9 @@ No `schema.sql` change (same pattern as `team_key` / sheet_align_cache).
 2. Drag tokens to match PDF spacing.
 3. **Missing token:** click **＋ Add player** (next free jersey 1–5; if all present, prompt to re-place).
 4. **Extra/wrong token:** click the red **×** on that offense chip (removes it from all sheets’ sticky roster/ink).
-5. Optional: ▶ Play All once (inspect paths).
-6. Click **Save choreography**.
-7. Hard refresh — banner says “saved choreography”; Play All reuses the edited roster.
+5. Pause ▶ Play All on a sheet. Change action type (run/screen/dribble/pass) and ▲/▼ order in **Actions this step**. Add or remove steps if needed. Play All continues from the paused spots (tokens you did not move stay put).
+6. Click **Save choreography** so the next Play All uses your order, not a fresh guess.
+7. Hard refresh — banner says “saved choreography”.
 
 **Reset extract** deletes the sticky file and re-runs Stage 1.
 

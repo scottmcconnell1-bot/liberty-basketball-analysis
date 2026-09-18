@@ -29,6 +29,11 @@ class TestChoreographyStore:
                             "marks": {"o1": "cut"},
                             "passes": [{"fromPid": "o1", "toPid": "o2", "type": "pass"}],
                         },
+                        "movements": [
+                            {"from": "o1", "to": "o2", "type": "pass"},
+                            {"from": "o5", "to": "o5", "type": "cut"},
+                        ],
+                        "coachOrder": True,
                     }
                 ]
             },
@@ -43,6 +48,9 @@ class TestChoreographyStore:
         loaded = load_choreography(98, base=tmp_path)
         assert loaded is not None
         assert loaded["steps"][0]["ink"]["paths"]["o1"][1]["y"] == 180.0
+        assert loaded["steps"][0]["movements"][0]["type"] == "pass"
+        assert loaded["steps"][0]["movements"][1]["type"] == "cut"
+        assert loaded["steps"][0]["coachOrder"] is True
         assert delete_choreography(98, base=tmp_path) is True
         assert load_choreography(98, base=tmp_path) is None
 

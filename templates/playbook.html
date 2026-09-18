@@ -235,7 +235,7 @@
   <div class="card" style="padding:12px;" data-frame="6.3">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        {% if not is_readonly %}
+        {% if view_mode != 'share' %}
         <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Add Step</button>
         <button class="btn btn-secondary btn-sm" onclick="duplicateStep()">Duplicate step</button>
         <button class="btn btn-danger btn-sm" onclick="removeStep()">Delete this step</button>
@@ -257,7 +257,7 @@
           <option value="offense">Offense (O)</option>
           <option value="defense">Defense (x)</option>
         </select>
-        <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span>
+        <span class="text-muted" style="font-size:0.7rem;">Pause Play All, fix type/order, then Play All continues</span>
         {% endif %}
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -268,12 +268,10 @@
         </select>
         <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
         <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
-        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
+        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Prev</button>
         <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
-        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
-        {% if is_readonly %}
-        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play animation">▶ Play All</button>
-        {% endif %}
+        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
+        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play or pause animation">▶ Play All</button>
       </div>
     </div>
 
@@ -435,10 +433,10 @@
     <!-- Step list (play sheets) -->
     <div class="card" data-frame="6.5">
       <h4 style="margin-bottom:4px;">Play sheets <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
-      {% if not is_readonly %}
-      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reorder · click a label to rename · Save Play to keep changes</p>
+      {% if view_mode != 'share' %}
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reorder sheets · change action type/order below · Save choreography to keep Play All order</p>
       {% else %}
-      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Open <strong>Edit</strong> to reorder sheets or change labels</p>
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Shared link is view-only.</p>
       {% endif %}
       <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
         <!-- Populated by JS -->
@@ -660,6 +658,11 @@ const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
 const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
 const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
 const viewMode = {{ view_mode|tojson if view_mode is defined else '"editor"' }};
+function canFixAnimation() {
+  return viewMode !== 'share';
+}
+let lastSyncedBallPid = 'o1';
+let pausedCourtPose = null;
 const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
 let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
 let isExportingVideo = false;
@@ -1096,6 +1099,7 @@ function syncPlayerTokens(positions, ballPid) {
     }
     if (g) g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
   });
+  if (ballPid) lastSyncedBallPid = ballPid;
 
   playerLayer.querySelectorAll('.player-token').forEach((g) => {
     if (!seen.has(g.dataset.player)) g.remove();
@@ -1234,7 +1238,7 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   if (!isReadOnly || canEditChoreo) {
     g.addEventListener('mousedown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
-    if (type === 'offense' && !isReadOnly) {
+    if (type === 'offense' && canFixAnimation()) {
       g.addEventListener('dblclick', (e) => {
         e.preventDefault();
         saveUndoState();
@@ -1528,6 +1532,8 @@ function handleToolClick(e, pid) {
     if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
       const timing = document.getElementById('actionTimingSelect')?.value || 'sync';
       steps[currentStep].movements.push({ from: arrowStart, to: pid, type, timing });
+      steps[currentStep].coachOrder = true;
+      markAnimationOrderDirty();
     }
     highlightPlayer(arrowStart, false);
     arrowStart = null;
@@ -1590,7 +1596,7 @@ function redoStep() {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
     undoStep();
@@ -1613,8 +1619,17 @@ function addStep() {
     source_image: '',
     ball: prevStep.ball || 'o1',
   });
+  if (Array.isArray(sheetAlignByStep)) {
+    sheetAlignByStep.push({
+      court_frac: (sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].court_frac) || null,
+      positions: JSON.parse(JSON.stringify((sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].positions) || prevStep.positions || {})),
+    });
+  }
+  if (Array.isArray(sheetStickyInkByStep)) sheetStickyInkByStep.push(null);
+  if (Array.isArray(sheetSessionInkByStep)) sheetSessionInkByStep.push(null);
   currentStep = steps.length - 1;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1624,14 +1639,26 @@ function duplicateStep() {
   const src = steps[currentStep];
   steps.splice(currentStep + 1, 0, {
     positions: JSON.parse(JSON.stringify(src.positions)),
-    movements: JSON.parse(JSON.stringify(src.movements)),
+    movements: JSON.parse(JSON.stringify(src.movements || [])),
     label: src.label ? src.label + ' (copy)' : '',
     notes: src.notes || '',
     source_image: src.source_image || '',
     ball: src.ball || 'o1',
+    coachOrder: !!src.coachOrder,
   });
+  if (Array.isArray(sheetAlignByStep)) {
+    const srcAlign = sheetAlignByStep[currentStep] || { court_frac: null, positions: {} };
+    sheetAlignByStep.splice(currentStep + 1, 0, JSON.parse(JSON.stringify(srcAlign)));
+  }
+  if (Array.isArray(sheetStickyInkByStep)) {
+    sheetStickyInkByStep.splice(currentStep + 1, 0, sheetStickyInkByStep[currentStep] || null);
+  }
+  if (Array.isArray(sheetSessionInkByStep)) {
+    sheetSessionInkByStep.splice(currentStep + 1, 0, sheetSessionInkByStep[currentStep] || null);
+  }
   currentStep++;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1640,8 +1667,18 @@ function removeStep() {
   if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
   saveUndoState();
   steps.splice(currentStep, 1);
+  if (Array.isArray(sheetAlignByStep) && currentStep < sheetAlignByStep.length) {
+    sheetAlignByStep.splice(currentStep, 1);
+  }
+  if (Array.isArray(sheetStickyInkByStep) && currentStep < sheetStickyInkByStep.length) {
+    sheetStickyInkByStep.splice(currentStep, 1);
+  }
+  if (Array.isArray(sheetSessionInkByStep) && currentStep < sheetSessionInkByStep.length) {
+    sheetSessionInkByStep.splice(currentStep, 1);
+  }
   if (currentStep >= steps.length) currentStep = steps.length - 1;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1666,18 +1703,95 @@ function saveCurrentStepNotes() {
   }
 }
 
+function stepHasAuthoredOrder(step) {
+  return !!(step && (step.movements || []).some((m) => m && !m._meta));
+}
+
+function beatToMovement(beat) {
+  const p = (beat && beat.path) || {};
+  let type = p.type || beat.kind || 'cut';
+  if (type === 'relocate') type = 'run';
+  const from = p.fromPid || p.pid || null;
+  const to = p.toPid || p.pid || from;
+  if (!from) return null;
+  return { from, to, type, timing: 'sync' };
+}
+
+function snapshotCourtPose() {
+  const positions = {};
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid || String(pid).startsWith('d')) return;
+    const tr = g.getAttribute('transform') || '';
+    const m = /translate\(\s*([-.\d]+)\s*,\s*([-.\d]+)\s*\)/.exec(tr);
+    if (!m) return;
+    positions[pid] = { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+  });
+  pausedCourtPose = {
+    sheetIndex: currentStep,
+    positions,
+    ballPid: lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1',
+  };
+}
+
+function markAnimationOrderDirty() {
+  choreographyDirty = true;
+  invalidatePlaybarTimeline();
+  updateChoreographyChrome();
+  updateMovementList();
+}
+
+function reorderMovement(stepIndex, fromIdx, toIdx) {
+  const step = steps[stepIndex];
+  if (!step || !canFixAnimation()) return;
+  const list = (step.movements || []).filter((m) => !(m && m._meta));
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= list.length || toIdx >= list.length) return;
+  saveUndoState();
+  const [item] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, item);
+  step.movements = list;
+  step.coachOrder = true;
+  markAnimationOrderDirty();
+  renderStep();
+}
+
+async function seedMovementsFromCurrentBeats(stepIndex) {
+  const step = steps[stepIndex];
+  if (!step || stepHasAuthoredOrder(step)) return;
+  const fromRaw = withManDefense(positionsForAnim(stepIndex));
+  const toRaw = stepIndex + 1 < steps.length
+    ? withManDefense(positionsForAnim(stepIndex + 1))
+    : fromRaw;
+  let ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex] || null;
+  if (typeof fetchSheetInkPaths === 'function') {
+    try {
+      ink = await fetchSheetInkPaths(stepIndex, fromRaw, toRaw);
+    } catch (err) {
+      console.warn('seed movements ink', err);
+    }
+  }
+  const ball = step.ball || lastSyncedBallPid || 'o1';
+  const paths = buildTravelPaths(fromRaw, toRaw, step, ink, ball);
+  const beats = forceGuaranteeBeats(fromRaw, toRaw, step, paths, ball, stepIndex);
+  const mapped = beats.map(beatToMovement).filter(Boolean);
+  if (mapped.length) {
+    step.movements = mapped;
+  }
+}
+
 function updateMovementList() {
   const list = document.getElementById('movementList');
   const wrap = document.getElementById('movementListWrap');
   if (!list || !wrap) return;
   const step = steps[currentStep];
   const movements = (step?.movements || []).filter((m) => !(m && m._meta));
+  wrap.style.display = canFixAnimation() || movements.length ? 'block' : 'none';
   if (!movements.length) {
-    wrap.style.display = isReadOnly ? 'none' : 'block';
-    list.innerHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool and click two players.</div>';
+    list.innerHTML = canFixAnimation()
+      ? '<div class="text-muted" style="font-size:0.75rem;">No actions yet — Pause Play All (or pick a tool and click two players), then change type and order here.</div>'
+      : '';
     return;
   }
-  wrap.style.display = 'block';
   list.innerHTML = '';
   movements.forEach((m, idx) => {
     const row = document.createElement('div');
@@ -1686,47 +1800,93 @@ function updateMovementList() {
 
     const label = document.createElement('span');
     label.style.flex = '1';
-    label.textContent = `${playerShortId(m.from)} → ${playerShortId(m.to)} · ${movementLabel(m)}`;
+    label.textContent = `${idx + 1}. ${playerShortId(m.from)} → ${playerShortId(m.to)}`;
 
-    if (isReadOnly) {
+    if (!canFixAnimation()) {
       const badge = document.createElement('span');
-      badge.textContent = m.timing === 'optional' ? 'Optional' : 'Sync';
+      badge.textContent = movementLabel(m);
       badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
       row.appendChild(label);
       row.appendChild(badge);
-    } else {
-      const timingSelect = document.createElement('select');
-      timingSelect.className = 'form-control';
-      timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
-      ['sync', 'optional'].forEach((value) => {
-        const opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
-        if ((m.timing || 'sync') === value) opt.selected = true;
-        timingSelect.appendChild(opt);
-      });
-      timingSelect.onchange = () => {
-        saveUndoState();
-        m.timing = timingSelect.value;
-        renderStep();
-      };
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-danger btn-sm';
-      removeBtn.textContent = '×';
-      removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
-      removeBtn.onclick = () => {
-        saveUndoState();
-        step.movements.splice(idx, 1);
-        renderStep();
-        updateMovementList();
-      };
-
-      row.appendChild(label);
-      row.appendChild(timingSelect);
-      row.appendChild(removeBtn);
+      list.appendChild(row);
+      return;
     }
+
+    const typeSelect = document.createElement('select');
+    typeSelect.className = 'form-control';
+    typeSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+    typeSelect.title = 'Change run / screen / dribble / pass';
+    ['dribble', 'pass', 'cut', 'run', 'screen'].forEach((value) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = movementLabel({ type: value });
+      if ((m.type || 'cut') === value) opt.selected = true;
+      typeSelect.appendChild(opt);
+    });
+    typeSelect.onchange = () => {
+      saveUndoState();
+      m.type = typeSelect.value;
+      step.coachOrder = true;
+      markAnimationOrderDirty();
+      renderStep();
+    };
+
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.className = 'btn btn-secondary btn-sm';
+    up.textContent = '▲';
+    up.title = 'Play this earlier';
+    up.disabled = idx === 0;
+    up.style.cssText = 'padding:0 6px;line-height:1.2;';
+    up.onclick = () => reorderMovement(currentStep, idx, idx - 1);
+
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.className = 'btn btn-secondary btn-sm';
+    down.textContent = '▼';
+    down.title = 'Play this later';
+    down.disabled = idx === movements.length - 1;
+    down.style.cssText = 'padding:0 6px;line-height:1.2;';
+    down.onclick = () => reorderMovement(currentStep, idx, idx + 1);
+
+    const timingSelect = document.createElement('select');
+    timingSelect.className = 'form-control';
+    timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+    ['sync', 'optional'].forEach((value) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
+      if ((m.timing || 'sync') === value) opt.selected = true;
+      timingSelect.appendChild(opt);
+    });
+    timingSelect.onchange = () => {
+      saveUndoState();
+      m.timing = timingSelect.value;
+      step.coachOrder = true;
+      markAnimationOrderDirty();
+      renderStep();
+    };
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove this action';
+    removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
+    removeBtn.onclick = () => {
+      saveUndoState();
+      step.movements = movements.filter((_, i) => i !== idx);
+      step.coachOrder = true;
+      markAnimationOrderDirty();
+      renderStep();
+    };
+
+    row.appendChild(label);
+    row.appendChild(typeSelect);
+    row.appendChild(up);
+    row.appendChild(down);
+    row.appendChild(timingSelect);
+    row.appendChild(removeBtn);
     list.appendChild(row);
   });
 }
@@ -1735,7 +1895,7 @@ let stepsDirty = false;
 let stepDragFrom = null;
 
 function markStepsDirty() {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   stepsDirty = true;
   invalidatePlaybarTimeline();
   const banner = document.getElementById('stepsDirtyBanner');
@@ -1749,7 +1909,7 @@ function clearStepsDirty() {
 }
 
 function moveStep(fromIdx, toIdx) {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
   if (fromIdx >= steps.length || toIdx >= steps.length) return;
   saveCurrentStepNotes();
@@ -1780,7 +1940,7 @@ function updateStepList() {
       updateMovementList();
     };
 
-    if (!isReadOnly) {
+    if (canFixAnimation()) {
       const handle = document.createElement('span');
       handle.className = 'step-drag-handle';
       handle.title = 'Drag to reorder';
@@ -1829,9 +1989,9 @@ function updateStepList() {
     labelInput.type = 'text';
     labelInput.className = 'step-label-input';
     labelInput.value = s.label || '';
-    labelInput.placeholder = isReadOnly ? 'Untitled sheet' : 'Sheet label (e.g. Pass to 2)…';
-    labelInput.readOnly = isReadOnly;
-    labelInput.title = isReadOnly ? '' : 'Edit sheet wording';
+    labelInput.placeholder = canFixAnimation() ? 'Sheet label (e.g. Pass to 2)…' : 'Untitled sheet';
+    labelInput.readOnly = !canFixAnimation();
+    labelInput.title = canFixAnimation() ? 'Edit sheet wording' : '';
     labelInput.onclick = (e) => e.stopPropagation();
     labelInput.onmousedown = (e) => e.stopPropagation();
     labelInput.onchange = (e) => {
@@ -1853,7 +2013,7 @@ function updateStepList() {
     div.appendChild(num);
     div.appendChild(labelInput);
 
-    if (!isReadOnly) {
+    if (canFixAnimation()) {
       const movers = document.createElement('div');
       movers.className = 'step-move-btns';
       movers.addEventListener('click', (e) => e.stopPropagation());
@@ -1983,9 +2143,9 @@ function updateChoreographyChrome() {
     hint.style.display = show ? 'block' : 'none';
     if (show) {
       if (choreographyDirty) {
-        hint.textContent = 'Roster/spots edited — Save choreography so the next load keeps them.';
+        hint.textContent = 'Spots or action order edited — Save choreography so Play All keeps your order.';
       } else if (sheetUsingStickyChoreography) {
-        hint.textContent = 'Using saved choreography (sticky). Drag, Add player, or × a token; Save to update. Reset extract to re-run.';
+        hint.textContent = 'Saved choreography. Pause Play All to change run/screen/dribble/pass and reorder actions, then Save.';
       } else if (sheetExtractSource === 'vector') {
         hint.textContent = 'Vector draft from FastDraw PDF. Drag / Add player / × to correct roster, then Save choreography.';
       } else {
@@ -2336,6 +2496,16 @@ function applyStickyChoreographyDoc(doc) {
       || null;
     return (match && match.ink) ? match.ink : null;
   });
+  steps.forEach((step, idx) => {
+    const match = stickySteps.find((s) => Number(s.step_index) === idx)
+      || stickySteps[idx]
+      || null;
+    if (!match) return;
+    if (Array.isArray(match.movements) && match.movements.length) {
+      step.movements = match.movements.slice();
+    }
+    if (match.coachOrder) step.coachOrder = true;
+  });
   sheetSessionInkByStep = sheetStickyInkByStep.map((ink) => (ink ? {
     paths: ink.paths || {},
     marks: ink.marks || {},
@@ -2363,6 +2533,16 @@ function buildChoreographyPayload(source) {
         passes: ink.passes || [],
       };
     }
+    const moves = (step.movements || []).filter((m) => m && !m._meta);
+    if (moves.length) {
+      entry.movements = moves.map((m) => ({
+        from: m.from,
+        to: m.to,
+        type: m.type || 'cut',
+        timing: m.timing || 'sync',
+      }));
+    }
+    if (step.coachOrder) entry.coachOrder = true;
     return entry;
   });
   return { source: source || 'user_save', steps: stepsOut };
@@ -3365,6 +3545,25 @@ function orderTriangleBeats(beats, sheetIndex) {
  * - type=dribble (squiggle) — ball-handler slides with ball
  * - type=cut / solid ink — cut or relocate
  */
+function beatFromPath(p, ballPid) {
+  if (!p) return null;
+  const isPass = !!(p.ballOnly || p.type === 'pass');
+  const type = isPass ? 'pass' : (p.type || 'cut');
+  const pid = isPass ? null : p.pid;
+  return {
+    kind: type === 'run' ? 'cut' : type,
+    label: isPass
+      ? `Pass ${(p.fromPid || ballPid || '').replace(/^o/, '#')} → ${(p.toPid || '').replace(/^o/, '#')}`.trim()
+      : `${type.charAt(0).toUpperCase() + type.slice(1)} ${String(pid || '').replace(/^o/, '#')}`,
+    path: { ...p, type },
+    holdAfterMs: type === 'pass'
+      ? ANIM.HOLD_PASS_MS
+      : (type === 'screen' ? ANIM.HOLD_SCREEN_MS : (type === 'dribble' ? ANIM.HOLD_DRIBBLE_MS : ANIM.HOLD_CUT_MS)),
+    ballTo: isPass ? (p.toPid || null) : null,
+    carryBall: type === 'dribble',
+  };
+}
+
 function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
   const beats = [];
   const remaining = (paths || []).slice();
@@ -3542,6 +3741,9 @@ function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
  * so Play All never completes with 0 rAF frames.
  */
 function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
+  if (stepHasAuthoredOrder(step) && (paths || []).length) {
+    return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+  }
   let beats = buildActionBeats(fromRaw, toRaw, paths || [], ballPid);
   const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
   beats = ensurePitt5Beats(beats, fromRaw, toRaw, paths || [], ballPid, idx);
@@ -4500,6 +4702,9 @@ function playbarStep(delta) {
 
 function stopPlayback(opts) {
   const reset = !!(opts && opts.reset);
+  if (!reset && isPlaybackActive()) {
+    snapshotCourtPose();
+  }
   playAllRunning = false;
   playbarPlaying = false;
   isAnimating = false;
@@ -4717,27 +4922,39 @@ async function playbarPlayThrough(opts) {
 async function playSheetsDirectly(opts) {
   opts = opts || {};
   const resetAtEnd = opts.resetAtEnd !== false;
+  const fromSheet = Math.max(0, Math.min(
+    typeof opts.fromSheet === 'number' ? opts.fromSheet : 0,
+    Math.max(0, steps.length - 1),
+  ));
   playAllRunning = true;
   playbarPlaying = true;
   setPlayAllButton(true);
   updatePlaybarPlayButton();
   addArrowheadMarkers();
 
-  updateStepChrome(0);
-  if (playHasSheets()) showSheetUnderlay(0);
-  const startPos = withManDefense(positionsForAnim(0));
+  const startIdx = fromSheet;
+  updateStepChrome(startIdx);
+  if (playHasSheets()) showSheetUnderlay(startIdx);
+  let startPos = withManDefense(positionsForAnim(startIdx));
+  if (pausedCourtPose && pausedCourtPose.positions && Object.keys(pausedCourtPose.positions).length
+      && pausedCourtPose.sheetIndex === startIdx) {
+    Object.keys(pausedCourtPose.positions).forEach((pid) => {
+      if (pausedCourtPose.positions[pid]) startPos[pid] = pausedCourtPose.positions[pid];
+    });
+    startPos = withManDefense(startPos);
+  }
   if (useSheetSlideshowMode()) {
     const playerLayer = document.getElementById('playerLayer');
     if (playerLayer) playerLayer.innerHTML = '';
   } else {
-    syncPlayerTokens(startPos, steps[0]?.ball || 'o1');
+    syncPlayerTokens(startPos, (pausedCourtPose && pausedCourtPose.ballPid) || steps[startIdx]?.ball || 'o1');
   }
-  setSheetAnimHint(steps.length > 1 ? `Sheet 1 / ${steps.length}` : 'Sheet 1');
-  playbarIndex = 0;
+  setSheetAnimHint(steps.length > 1 ? `Sheet ${startIdx + 1} / ${steps.length}` : 'Sheet 1');
+  playbarIndex = startIdx;
   updatePlaybarUI();
 
   if (useSheetSlideshowMode()) {
-    for (let i = 0; i < steps.length; i += 1) {
+    for (let i = startIdx; i < steps.length; i += 1) {
       if (!isPlaybackActive()) break;
       updateStepChrome(i);
       showSheetUnderlay(i);
@@ -4773,11 +4990,17 @@ async function playSheetsDirectly(opts) {
   } else {
     // Sheet N underlay + ink actions, then advance to sheet N+1 formation.
     // Track ball across sheets — imported steps often lack movements_json ball meta.
-    let liveBall = steps[0].ball || 'o1';
+    let liveBall = (pausedCourtPose && pausedCourtPose.ballPid) || steps[startIdx].ball || steps[0].ball || 'o1';
     // Players who completed a screen/cut/dribble keep that landing across later
     // sheets (Rip 4/5 set and stay — do not snap back to stale OCR seeds).
     const heldLandings = {};
-    for (let i = 0; i < steps.length; i += 1) {
+    if (pausedCourtPose && pausedCourtPose.positions) {
+      Object.keys(pausedCourtPose.positions).forEach((pid) => {
+        if (pausedCourtPose.positions[pid]) heldLandings[pid] = pausedCourtPose.positions[pid];
+      });
+    }
+    pausedCourtPose = null;
+    for (let i = startIdx; i < steps.length; i += 1) {
       if (!isPlaybackActive()) break;
       const isLast = i >= steps.length - 1;
       let fromRaw = withManDefense(positionsForAnim(i));
@@ -4867,6 +5090,12 @@ async function playSheetsDirectly(opts) {
 async function playbarTogglePlay() {
   if (playAllRunning || playbarPlaying) {
     stopPlayback({ reset: false });
+    setSheetAnimHint('Paused — change action type/order, then Play continues from here');
+    if (canFixAnimation()) {
+      await seedMovementsFromCurrentBeats(currentStep);
+      updateMovementList();
+      updateChoreographyChrome();
+    }
     updatePlaybarUI();
     return;
   }
@@ -4903,7 +5132,13 @@ async function playbarTogglePlay() {
  */
 async function playAnimation() {
   if (playAllRunning || playbarPlaying) {
-    stopPlayback({ reset: true });
+    stopPlayback({ reset: false });
+    setSheetAnimHint('Paused — change action type/order, then Play All continues from here');
+    if (canFixAnimation()) {
+      await seedMovementsFromCurrentBeats(currentStep);
+      updateMovementList();
+      updateChoreographyChrome();
+    }
     return;
   }
   if (!steps.length) return;
@@ -4921,7 +5156,6 @@ async function playAnimation() {
     if (!isPlaybackActive()) return;
   }
 
-  // Warm timeline in background for scrubber — never gate Play on it.
   try {
     ensurePlaybarTimeline();
   } catch (err) {
@@ -4929,7 +5163,10 @@ async function playAnimation() {
   }
 
   if (!isPlaybackActive()) return;
-  await playSheetsDirectly({ resetAtEnd: true, alreadyRunning: true });
+  const resumeAt = (pausedCourtPose && typeof pausedCourtPose.sheetIndex === 'number')
+    ? pausedCourtPose.sheetIndex
+    : 0;
+  await playSheetsDirectly({ resetAtEnd: false, alreadyRunning: true, fromSheet: resumeAt });
 }
 
 /** After Play All Stop: return to opening sheet/formation. */

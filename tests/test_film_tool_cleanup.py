@@ -81,8 +81,12 @@ def test_film_tool_quick_tag_uses_game_roster_flow():
     assert "calc(100vw - 4.5rem)" in css
     blob = js.split("{ id: 'blob'", 1)[1].split("{ id:", 1)[0]
     slob = js.split("{ id: 'slob'", 1)[1].split("{ id:", 1)[0]
+    timeout = js.split("{ id: 'timeout'", 1)[1].split("{ id:", 1)[0]
+    turnover = js.split("{ id: 'turnover'", 1)[1].split("{ id:", 1)[0]
     assert "teamMode: 'team-only'" in blob
     assert "teamMode: 'team-only'" in slob
+    assert "teamMode: 'team-only'" in timeout
+    assert "teamMode: 'team-only'" in turnover
     assert "function askAssistAfterMake" in js
     assert "Did an assist occur?" in js
     assert "function playersOnFloor" in js

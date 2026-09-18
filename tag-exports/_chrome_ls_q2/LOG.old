@@ -1,0 +1,72 @@
+2026/09/15-08:29:03.337 5bf4 Reusing MANIFEST C:\Users\scott\AppData\Local\Google\Chrome\User Data\Default\Local Storage\leveldb/MANIFEST-000001
+2026/09/15-08:29:03.338 5bf4 Recovering log #1252
+2026/09/15-08:29:03.343 5bf4 Reusing old log C:\Users\scott\AppData\Local\Google\Chrome\User Data\Default\Local Storage\leveldb/001252.log 
+2026/09/15-09:49:09.561 26c4 Level-0 table #1258: started
+2026/09/15-09:49:09.567 26c4 Level-0 table #1258: 12576 bytes OK
+2026/09/15-09:49:09.569 26c4 Delete type=0 #1252
+2026/09/15-19:34:54.274 26c4 Level-0 table #1260: started
+2026/09/15-19:34:54.279 26c4 Level-0 table #1260: 30013 bytes OK
+2026/09/15-19:34:54.283 26c4 Delete type=0 #1257
+2026/09/15-20:16:12.543 26c4 Level-0 table #1262: started
+2026/09/15-20:16:12.547 26c4 Level-0 table #1262: 21862 bytes OK
+2026/09/15-20:16:12.549 26c4 Delete type=0 #1259
+2026/09/15-20:37:03.161 26c4 Level-0 table #1264: started
+2026/09/15-20:37:03.166 26c4 Level-0 table #1264: 21624 bytes OK
+2026/09/15-20:37:03.168 26c4 Delete type=0 #1261
+2026/09/15-20:37:03.169 26c4 Compacting 4@0 + 2@1 files
+2026/09/15-20:37:03.191 26c4 Generated table #1265@0: 5363 keys, 2109619 bytes
+2026/09/15-20:37:03.209 26c4 Generated table #1266@0: 7003 keys, 1886844 bytes
+2026/09/15-20:37:03.209 26c4 Compacted 4@0 + 2@1 files => 3996463 bytes
+2026/09/15-20:37:03.210 26c4 compacted to: files[ 0 2 1 0 0 0 0 ]
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1254
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1255
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1258
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1260
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1262
+2026/09/15-20:37:03.211 26c4 Delete type=2 #1264
+2026/09/15-20:46:58.417 26c4 Level-0 table #1268: started
+2026/09/15-20:46:58.422 26c4 Level-0 table #1268: 18891 bytes OK
+2026/09/15-20:46:58.427 26c4 Delete type=0 #1263
+2026/09/15-21:27:20.128 26c4 Level-0 table #1270: started
+2026/09/15-21:27:20.133 26c4 Level-0 table #1270: 43330 bytes OK
+2026/09/15-21:27:20.135 26c4 Delete type=0 #1267
+2026/09/15-21:27:31.247 26c4 Level-0 table #1272: started
+2026/09/15-21:27:31.250 26c4 Level-0 table #1272: 57974 bytes OK
+2026/09/15-21:27:31.252 26c4 Delete type=0 #1269
+2026/09/15-21:27:59.451 26c4 Level-0 table #1274: started
+2026/09/15-21:27:59.456 26c4 Level-0 table #1274: 148859 bytes OK
+2026/09/15-21:27:59.457 26c4 Delete type=0 #1271
+2026/09/15-21:27:59.457 26c4 Compacting 4@0 + 2@1 files
+2026/09/15-21:27:59.475 26c4 Generated table #1275@0: 5370 keys, 2106536 bytes
+2026/09/15-21:27:59.493 26c4 Generated table #1276@0: 7024 keys, 1924849 bytes
+2026/09/15-21:27:59.493 26c4 Compacted 4@0 + 2@1 files => 4031385 bytes
+2026/09/15-21:27:59.494 26c4 compacted to: files[ 0 2 1 0 0 0 0 ]
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1265
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1266
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1268
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1270
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1272
+2026/09/15-21:27:59.494 26c4 Delete type=2 #1274
+2026/09/15-21:30:14.627 26c4 Level-0 table #1278: started
+2026/09/15-21:30:14.636 26c4 Level-0 table #1278: 44631 bytes OK
+2026/09/15-21:30:14.696 26c4 Delete type=0 #1273
+2026/09/15-21:38:32.436 26c4 Level-0 table #1280: started
+2026/09/15-21:38:32.445 26c4 Level-0 table #1280: 30969 bytes OK
+2026/09/15-21:38:32.447 26c4 Delete type=0 #1277
+2026/09/15-21:39:00.913 26c4 Level-0 table #1282: started
+2026/09/15-21:39:00.917 26c4 Level-0 table #1282: 180631 bytes OK
+2026/09/15-21:39:00.919 26c4 Delete type=0 #1279
+2026/09/15-22:02:15.214 26c4 Level-0 table #1284: started
+2026/09/15-22:02:15.219 26c4 Level-0 table #1284: 21691 bytes OK
+2026/09/15-22:02:15.221 26c4 Delete type=0 #1281
+2026/09/15-22:02:15.222 26c4 Compacting 4@0 + 2@1 files
+2026/09/15-22:02:15.277 26c4 Generated table #1285@0: 5378 keys, 2109696 bytes
+2026/09/15-22:02:15.333 26c4 Generated table #1286@0: 7032 keys, 1925775 bytes
+2026/09/15-22:02:15.333 26c4 Compacted 4@0 + 2@1 files => 4035471 bytes
+2026/09/15-22:02:15.336 26c4 compacted to: files[ 0 2 1 0 0 0 0 ]
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1275
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1276
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1278
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1280
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1282
+2026/09/15-22:02:15.337 26c4 Delete type=2 #1284

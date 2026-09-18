@@ -72,6 +72,11 @@ def save_choreography(
         }
         if ink is not None:
             entry["ink"] = ink
+        movements = _clean_movements(raw.get("movements"))
+        if movements:
+            entry["movements"] = movements
+        if raw.get("coachOrder"):
+            entry["coachOrder"] = True
         steps_out.append(entry)
 
     if not steps_out:
@@ -165,3 +170,23 @@ def _clean_ink(raw: Any) -> dict[str, Any] | None:
     if not paths and not marks and not passes:
         return None
     return {"paths": paths, "marks": marks, "passes": passes}
+
+
+def _clean_movements(raw: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(raw, list):
+        return out
+    allowed = {"pass", "dribble", "cut", "run", "screen"}
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        from_pid = str(item.get("from") or "").strip()
+        to_pid = str(item.get("to") or from_pid).strip()
+        kind = str(item.get("type") or "cut").strip().lower()
+        if kind not in allowed or not from_pid:
+            continue
+        timing = str(item.get("timing") or "sync").strip().lower()
+        if timing not in {"sync", "optional"}:
+            timing = "sync"
+        out.append({"from": from_pid, "to": to_pid, "type": kind, "timing": timing})
+    return out

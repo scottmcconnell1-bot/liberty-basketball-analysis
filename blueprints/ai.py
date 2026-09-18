@@ -955,6 +955,18 @@ def teach_film_tool_manual(game_id):
         result["tag_file"] = save_manual_tags(game_id, data if isinstance(data, dict) else {"rows": rows}).get("analysisGameId")
     except ValueError:
         result["tag_file"] = None
+    if result.get("ok"):
+        try:
+            from pathlib import Path
+
+            from film_tool_calibrator import rebuild_film_tool_calibrator
+
+            result["calibrator"] = rebuild_film_tool_calibrator(
+                game_id,
+                db_path=Path(current_app.config["DATABASE"]),
+            )
+        except Exception as exc:
+            result["calibrator_error"] = str(exc)
     status = 200 if result.get("ok") else 400
     return jsonify(result), status
 
