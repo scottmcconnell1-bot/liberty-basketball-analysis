@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-09-15 (Stats first)
+Updated: 2026-09-18 (Coaches site / nightly)
 
 Branch: `cursor/playbook-jason-clean-slate-ac1f`  
 Base: `cursor/dashboard-maxpreps-results-ac1f`
@@ -10,6 +10,12 @@ Base: `cursor/dashboard-maxpreps-results-ac1f`
 Home owns data. School uses Funnel only.
 
 Funnel: https://liberty-coach.tail368a37.ts.net
+
+## Coaches site / nightly (Scott 2026-09-18)
+
+**Proven:** Nightly `Liberty Daily Git Save` (11:00 PM) is running. Last success 2026-09-17 23:00 (commit `81ff752`, `docs/LEARNING_STATUS.md` generated, pushed). Server watchdog healthy on `:8080`. Funnel `/coach` is up.
+
+**Proven:** `Liberty Teach Watchdog` was **Disabled** since 2026-08-09 (3,799 missed 15-min runs). Teach loop was not running, so `/coach/progress` HUDL % and panel gates looked frozen. Re-registered Ready; teach loop pid 33872 started; Nyssa `analysis_launcher` running. Nightly panel still shows FAIL 0% until those games have events again (clean-slate wipe).
 
 ## Product priority (Scott 2026-09-15)
 
