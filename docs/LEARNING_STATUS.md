@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-09-18 23:00:03 Mountain Daylight Time**
+Generated (local): **2026-09-19 23:00:03 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -8,7 +8,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 - **Process map:** ok
 - **Active (live worker-backed):** 1
-  - `hoopsalytics_nyssa_2025-12-04` **(primary)**: 29.0%, step=Detecting objects: frame 91500/309120, PID=4960, kind=analysis_launcher, db_status=running
+  - `hoopsalytics_nyssa_2025-12-04` **(primary)**: 79.0%, step=Detecting objects: frame 247000/309120, PID=4960, kind=analysis_launcher, db_status=running
 - **Stale/zombie candidates (DB running, no worker):** 0
 - **Teach loop PID(s):** 33872
 - **analysis_runs counts (raw DB):** completed=1, failed=1, running=1 (running includes stale/zombie candidates until reclaimed)
@@ -36,7 +36,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 0.0% | FAIL |
 
 **Overall:** FAIL (mean P=0.0%, mean R=0.0%)
-- Panel snapshot: `2026-09-19T05:00:02.235366+00:00`
+- Panel snapshot: `2026-09-20T05:00:02.435106+00:00`
 
 ## Per-game panel
 
