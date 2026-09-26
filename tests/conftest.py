@@ -63,7 +63,25 @@ def _isolate_play_match_store(tmp_path, monkeypatch):
     # Analysis launcher logs default to <repo>/logs/ai-<game>.log; keep test logs in tmp_path too.
     log_dir = tmp_path / "logs"
     log_dir.mkdir(exist_ok=True)
-    monkeypatch.setattr(helpers, "ai_analysis_log_path", lambda game_id: str(log_dir / f"ai-{game_id}.log"))
+    log_path = lambda game_id: str(log_dir / f"ai-{game_id}.log")  # noqa: E731
+    monkeypatch.setattr(helpers, "ai_analysis_log_path", log_path)
+    # blueprints.ai imported the name directly, so patch its reference too.
+    monkeypatch.setattr(ai_mod, "ai_analysis_log_path", log_path)
+    # Film Tool tag sidecars (data/film_tags/<game>.json).
+    import film_tool_tags
+
+    monkeypatch.setattr(film_tool_tags, "TAGS_ROOT", tmp_path / "film_tags")
+    # Per-game Film Tool calibrators (models/film_tool_<game>.json).
+    import event_calibrator
+    import film_tool_calibrator
+
+    model_dir = tmp_path / "film_tool_models"
+
+    def _film_tool_model_path(game_id):
+        return model_dir / f"film_tool_{film_tool_tags.sanitize_tag_game_id(game_id)}.json"
+
+    monkeypatch.setattr(event_calibrator, "film_tool_model_path", _film_tool_model_path)
+    monkeypatch.setattr(film_tool_calibrator, "film_tool_model_path", _film_tool_model_path)
 
 
 @pytest.fixture(autouse=True)

@@ -48,15 +48,22 @@ def test_config_does_not_ship_vapid_private_key():
     assert "BEGIN PUBLIC KEY" not in Config.VAPID_PUBLIC_KEY
 
 
-def test_audit_secrets_cli_runs():
+def test_audit_secrets_cli_runs(tmp_path):
     import subprocess
 
+    # The script imports app, which opens LIBERTY_DATABASE; keep it out of the repo.
+    env = dict(
+        os.environ,
+        LIBERTY_DATABASE=str(tmp_path / "audit.db"),
+        LIBERTY_UPLOAD_FOLDER=str(tmp_path / "uploads"),
+    )
     result = subprocess.run(
         [sys.executable, "scripts/audit_secrets.py"],
         cwd=os.path.dirname(os.path.dirname(__file__)),
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
     assert result.returncode == 0
     assert "findings=" in result.stdout
