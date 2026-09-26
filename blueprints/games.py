@@ -26,8 +26,11 @@ Page Routes:
   - /nfhs-matches/<int:match_id>/reject (POST) - Reject an NFHS match
 """
 
+import sqlite3
+
 from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort
 
+import season_management
 from helpers import (
     get_db,
     require_feature,
@@ -41,6 +44,26 @@ from helpers import (
 )
 
 games_bp = Blueprint("games", __name__)
+
+
+def _delete_game(db, game_id):
+    """Delete a games row with its film-source links; return an error if other data needs it."""
+    try:
+        db.execute("DELETE FROM sources WHERE game_id=?", (game_id,))
+        db.execute("DELETE FROM games WHERE id=?", (game_id,))
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return "Game not deleted: film analysis (events, stats, clips or videos) is still linked to it."
+    db.commit()
+    return None
+
+
+def _schedule_team_for(gender, level):
+    """Schedule program key (scheduled_games.team) implied by a game's gender/level."""
+    girls = (gender or "").strip().lower() == "girls"
+    if (level or "").strip().lower() == "jr_high":
+        return "jr_girls" if girls else "jr_boys"
+    return "girls_hs" if girls else "boys_hs"
 
 
 # ── API: Scheduled Games ───────────────────────────────────
@@ -68,16 +91,19 @@ def api_scheduled_games_create():
     if missing:
         return jsonify({"error": f"Missing fields: {missing}"}), 400
     db = get_db()
+    gender = data.get("gender", "boys")
+    level = data.get("level", "jr_high")
     cur = db.execute(
         """INSERT INTO scheduled_games
-           (season_id, program_name, gender, level, game_date, game_time,
+           (season_id, program_name, team, gender, level, game_date, game_time,
             location_type, opponent_name, tournament_name, status, notes)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             data["season_id"],
             data.get("program_name", "Liberty"),
-            data.get("gender", "boys"),
-            data.get("level", "jr_high"),
+            data.get("team") or _schedule_team_for(gender, level),
+            gender,
+            level,
             data["game_date"],
             data.get("game_time"),
             data.get("location_type", "home"),
@@ -110,17 +136,23 @@ def api_scheduled_game_update(game_id):
     row = db.execute("SELECT * FROM scheduled_games WHERE id=?", (game_id,)).fetchone()
     if not row:
         return jsonify({"error": "Not found"}), 404
+    gender = data.get("gender", row["gender"])
+    level = data.get("level", row["level"])
+    team = data.get("team") or row["team"]
+    if not data.get("team") and ("gender" in data or "level" in data):
+        team = _schedule_team_for(gender, level)
     db.execute(
         """UPDATE scheduled_games SET
-           season_id=?, program_name=?, gender=?, level=?, game_date=?, game_time=?,
+           season_id=?, program_name=?, team=?, gender=?, level=?, game_date=?, game_time=?,
            location_type=?, opponent_name=?, tournament_name=?, status=?, notes=?,
            updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
             data.get("season_id", row["season_id"]),
             data.get("program_name", row["program_name"]),
-            data.get("gender", row["gender"]),
-            data.get("level", row["level"]),
+            team,
+            gender,
+            level,
             data.get("game_date", row["game_date"]),
             data.get("game_time", row["game_time"]),
             data.get("location_type", row["location_type"]),
@@ -139,9 +171,8 @@ def api_scheduled_game_update(game_id):
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def api_scheduled_game_delete(game_id):
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE id=?", (game_id,))
-    db.commit()
-    return jsonify({"deleted": True})
+    kept = season_management.delete_scheduled_game(db, game_id)
+    return jsonify({"deleted": True, "unlinked_games": kept})
 
 
 # ── API: Games (completed games) ───────────────────────────
@@ -234,9 +265,9 @@ def api_games_update(game_id):
 @games_bp.route("/api/games/<int:game_id>", methods=["DELETE"])
 @require_feature("ENABLE_GAMES_SOURCES")
 def api_games_delete(game_id):
-    db = get_db()
-    db.execute("DELETE FROM games WHERE id=?", (game_id,))
-    db.commit()
+    error = _delete_game(get_db(), game_id)
+    if error:
+        return jsonify({"error": error}), 409
     return jsonify({"deleted": True})
 
 
@@ -429,10 +460,9 @@ def games_save():
 @games_bp.route("/games/<int:game_id>/delete", methods=["POST"])
 @require_feature("ENABLE_GAMES_SOURCES")
 def games_delete(game_id):
-    db = get_db()
-    db.execute("DELETE FROM sources WHERE game_id=?", (game_id,))
-    db.execute("DELETE FROM games WHERE id=?", (game_id,))
-    db.commit()
+    error = _delete_game(get_db(), game_id)
+    if error:
+        return redirect(url_for("core.schedule", error=error))
     return redirect(url_for("games.games_page", message="Game deleted."))
 
 

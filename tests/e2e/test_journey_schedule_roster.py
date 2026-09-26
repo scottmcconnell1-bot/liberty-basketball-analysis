@@ -218,22 +218,25 @@ def test_journey_season_schedule_scores_dashboard(client, app):
     assert len(_q(app, "SELECT id FROM scheduled_games")) == before
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: POST /api/scheduled_games never sets `team`, so girls/jr-high games "
-                                       "default to team='boys_hs' and count on the Varsity Boys card")
 def test_api_created_girls_game_counts_for_girls_card(client, app):
     season = _j(client, "post", "/api/seasons", {"name": "2025-26", "start_date": "2025-11-01",
                                                  "end_date": "2026-03-31"})["id"]
     g = _j(client, "post", "/api/scheduled_games", {"season_id": season, "game_date": "2025-12-05",
                                                     "opponent_name": "Vale", "gender": "girls",
                                                     "level": "varsity"})
+    assert g["team"] == "girls_hs"
+    jr = _j(client, "post", "/api/scheduled_games", {"season_id": season, "game_date": "2025-12-06",
+                                                     "opponent_name": "Marsing", "gender": "girls",
+                                                     "level": "jr_high"})
+    assert jr["team"] == "jr_girls"
     _record(client, g["id"], 50, 40)
+    _record(client, jr["id"], 20, 30)
     teams = _teams(client)
     assert _record_of(teams["varsity_girls"])[:2] == (1, 0)
+    assert _record_of(teams["jr_high_girls"])[:2] == (0, 1)
     assert _record_of(teams["varsity_boys"])[:2] == (0, 0)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: dashboard record/recent join every games row of a scheduled game, "
-                                       "so a second linked games row (film/API) double-counts it")
 def test_dashboard_counts_each_scheduled_game_once(client, app):
     season = _season_form(client, app, "2025-26", "2025-11-01", "2026-03-31")
     sg = _game_form(client, app, season, team="boys_hs", level="varsity", gender="boys",
@@ -243,13 +246,13 @@ def test_dashboard_counts_each_scheduled_game_once(client, app):
     _j(client, "post", "/api/games", {"scheduled_game_id": sg, "source_type": "manual",
                                       "source_key": "film-vale", "home_score": 60, "away_score": 50,
                                       "result": "win"})
+    assert len(_q(app, "SELECT id FROM games WHERE scheduled_game_id=?", (sg,))) == 2
     vb = _teams(client)["varsity_boys"]
     assert (vb["wins"], vb["losses"]) == (1, 0)
-    assert [g["opponent_name"] for g in vb["recent"]] == ["Vale"]
+    assert [(g["opponent_name"], g["result"]) for g in vb["recent"]] == [("Vale", "win")]
+    assert (vb["last_game"]["opponent_name"], vb["last_game"]["home_score"]) == ("Vale", 60)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: dashboard upcoming/recent compare game_date to SQLite date('now') "
-                                       "(UTC) instead of the local calendar day")
 def test_dashboard_upcoming_uses_local_calendar_day(client, app):
     # Pick a zone whose calendar day differs from UTC right now, so the result is deterministic.
     utc_hour = datetime.now(timezone.utc).hour
@@ -350,27 +353,31 @@ def test_legacy_pdf_jr_high_ab_times(client, app):
     assert _record_of(_teams(client)["varsity_girls"])[:2] == (0, 0)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: legacy PDF parser (no 'DATE OPPONENT TIMES' header) treats "
-                                       "'TUES, DEC 4 ...' rows as continuations and merges the schedule into one game")
 def test_legacy_pdf_rows_without_column_header(client, app):
     rows = ["Liberty Jr High Girls Schedule 2025-26"] + JR_GIRLS_ROWS
     parsed = _upload_schedule_pdf(client, team="jr_girls", rows=rows)
     assert _jr_rows(parsed) == JR_GIRLS_EXPECTED
+    assert _confirm_import(client, parsed, team="jr_girls")["imported"] == 5
+    assert [r["opponent_name"] for r in _q(app, "SELECT opponent_name FROM scheduled_games "
+                                                "WHERE team='jr_girls' ORDER BY game_date")] == [
+        "MARSING", "VALE", "RIMROCK", "NAMPA CHRISTIAN", "IDAHO CITY"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/schedule/import-pdf/confirm always INSERTs; re-importing the "
-                                       "same schedule duplicates every game and double-counts records")
 def test_reimport_same_schedule_does_not_duplicate(client, app):
     parsed = _upload_schedule_pdf(client)
     _confirm_import(client, parsed)
-    _confirm_import(client, _upload_schedule_pdf(client))
+    again = _upload_schedule_pdf(client)
+    games = [dict(g) for g in again["games"]]
+    games[0]["game_time"] = "18:00"  # MaxPreps moved the Marsing tip-off
+    res = _confirm_import(client, again, games=games)
+    assert (res["imported"], res["updated"]) == (0, 6)
+    assert _q(app, "SELECT game_time, status FROM scheduled_games WHERE opponent_name='Marsing'") == [
+        {"game_time": "18:00", "status": "completed"}]
     assert len(_q(app, "SELECT id FROM scheduled_games")) == 6
     assert len(_q(app, "SELECT id FROM games")) == 3
     assert _record_of(_teams(client)["varsity_boys"]) == (2, 1, 1, 1)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: import confirm stores the modal's pdf team for every row and ignores "
-                                       "the per-row Program (team) the review table lets the coach change")
 def test_import_confirm_honours_per_row_team(client, app):
     parsed = _upload_schedule_pdf(client)
     games = [dict(g) for g in parsed["games"]]
@@ -471,8 +478,6 @@ def test_journey_roster_import_reimport_and_slots(client, app):
     assert _roster(client, season, side="opp", opponent="Vale") == []
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: merge-mode roster re-import keys players by label (incl. grade), so a "
-                                       "corrected grade adds a duplicate #45 instead of updating the player")
 def test_roster_merge_reimport_updates_existing_player(client, app):
     season = _j(client, "post", "/api/seasons", {"name": "S", "start_date": "2025-11-01", "end_date": "2026-03-31"})["id"]
     _import_roster(client, "POS,#,NAME,GRADE\nC,45,Emery Tallpine-Reyes,10\n", season_id=season)
@@ -483,17 +488,12 @@ def test_roster_merge_reimport_updates_existing_player(client, app):
 @pytest.mark.parametrize("csv_text, expected", [
     pytest.param("Name,#,Pos,Grade\nAvery Northwind,1,PG,8\n",
                  {"name": "Avery Northwind", "jersey_number": "1", "position": "PG", "grade": "8"},
-                 marks=pytest.mark.xfail(strict=True, reason="BUG: roster CSV ignores its header; name-first "
-                                                             "columns import the position as the player name"),
                  id="name-first-columns"),
     pytest.param("#,Name,Pos,Grade\n3,Blake Ironwood,SG,8\n",
                  {"name": "Blake Ironwood", "jersey_number": "3", "position": "SG", "grade": "8"},
-                 marks=pytest.mark.xfail(strict=True, reason="BUG: roster CSV '#,Name,Pos,Grade' drops the grade"),
                  id="jersey-name-pos-grade"),
     pytest.param("POS,#,NAME,GRADE\nF,,Casey Riverbend,7\n",
                  {"name": "Casey Riverbend", "jersey_number": None, "position": "F", "grade": "7"},
-                 marks=pytest.mark.xfail(strict=True, reason="BUG: roster CSV drops blank cells before mapping "
-                                                             "columns, so a missing jersey turns the grade into #7"),
                  id="blank-jersey-cell"),
     pytest.param("POS,#,NAME,GRADE\nPG,0,Carter Sullivan,8\n\n,,,\nC,45,\"O'Neil, Jasper\",8\n",
                  {"name": "Carter Sullivan", "jersey_number": "0", "position": "PG", "grade": "8"},
@@ -531,8 +531,6 @@ def test_team_photos_upload_list_delete(client, app):
     assert client.delete(f"/api/teams/photos/{ids['jv_boys'][0]}").status_code == 404
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: team photo upload builds the path from an unsanitised team_key "
-                                       "(path traversal out of uploads/team_photos)")
 def test_team_photo_team_key_cannot_escape_folder(client, app):
     upload_root = Path(app.config["UPLOAD_FOLDER"])
     r = client.post("/api/teams/photos/upload", data={"file": (io.BytesIO(td.png_bytes()), "p.png"),
@@ -540,12 +538,10 @@ def test_team_photo_team_key_cannot_escape_folder(client, app):
                     content_type="multipart/form-data")
     escaped = [p.name for p in upload_root.iterdir() if p.is_file()]
     assert escaped == [], f"file written outside team_photos: {escaped}"
-    if r.status_code == 201:
-        assert "/" not in r.get_json()["filename"] and ".." not in r.get_json()["filename"]
+    assert r.status_code == 400 and r.get_json()["error"] == "Invalid team_key"
+    assert _q(app, "SELECT id FROM team_photos") == []
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: team photo filenames are team_key + whole-second timestamp; two "
-                                       "uploads in the same second overwrite one file shared by both rows")
 def test_two_team_photos_in_same_second_keep_both_files(client, app, monkeypatch):
     monkeypatch.setattr(time, "time", lambda: 1_790_000_000.25)
     names = []
@@ -556,6 +552,9 @@ def test_two_team_photos_in_same_second_keep_both_files(client, app, monkeypatch
         assert r.status_code == 201
         names.append(r.get_json()["filename"])
     assert names[0] != names[1]
+    folder = Path(app.config["UPLOAD_FOLDER"]) / "team_photos"
+    assert [(folder / n).read_bytes() for n in names] == [td.png_bytes(color=(200, 0, 0)),
+                                                          td.png_bytes(color=(0, 0, 200))]
 
 
 def test_players_api_create_list_delete(client, app):
@@ -637,18 +636,27 @@ def test_journey_games_sources_nfhs(client, app):
     assert client.get("/nfhs-matches").status_code == 200
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: DELETE /api/games/<id> leaves its sources rows, so with "
-                                       "foreign_keys=ON deleting any game that has film sources raises (500)")
 def test_api_delete_game_with_sources(client, app):
     g = _j(client, "post", "/api/games", {"source_type": "manual", "source_key": "film-1"})
     _j(client, "post", "/api/sources", {"game_id": g["id"], "source_type": "local_file", "source_path": "a.mp4"})
     r = client.delete(f"/api/games/{g['id']}")
-    assert r.status_code == 200
+    assert r.status_code == 200 and r.get_json() == {"deleted": True}
     assert _q(app, "SELECT id FROM games") == []
+    assert _q(app, "SELECT id FROM sources") == []
+    # A game that film analysis still points at is refused cleanly (409), not a 500; nothing is removed.
+    g2 = _j(client, "post", "/api/games", {"source_type": "manual", "source_key": "film-2"})
+    _j(client, "post", "/api/sources", {"game_id": g2["id"], "source_type": "local_file", "source_path": "b.mp4"})
+    conn = sqlite3.connect(app.config["DATABASE"])
+    conn.execute("INSERT INTO events (game_id, event_type, timestamp_ms, relational_game_id) VALUES ('v', 'shot', 1, ?)",
+                 (g2["id"],))
+    conn.commit()
+    conn.close()
+    r = client.delete(f"/api/games/{g2['id']}")
+    assert r.status_code == 409 and "still linked" in r.get_json()["error"]
+    assert [row["id"] for row in _q(app, "SELECT id FROM games")] == [g2["id"]]
+    assert len(_q(app, "SELECT id FROM sources WHERE game_id=?", (g2["id"],))) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: deleting a scheduled game that has a recorded score (games row) "
-                                       "hits the games.scheduled_game_id FK and 500s")
 def test_delete_scored_scheduled_game(client, app):
     season = _season_form(client, app, "2025-26", "2025-11-01", "2026-03-31")
     sg = _game_form(client, app, season, team="boys_hs", level="varsity", gender="boys",
@@ -656,8 +664,18 @@ def test_delete_scored_scheduled_game(client, app):
     _record(client, sg, 60, 50)
     r = client.post(f"/schedule/games/{sg}/delete", data={}, follow_redirects=False)
     assert r.status_code in (302, 303)
+    assert "was+kept" in r.headers["Location"]
     assert _q(app, "SELECT id FROM scheduled_games WHERE id=?", (sg,)) == []
     assert _record_of(_teams(client)["varsity_boys"])[:2] == (0, 0)
+    # The recorded score is kept, just unlinked from the (deleted) schedule entry.
+    assert _q(app, "SELECT scheduled_game_id, home_score, away_score, result FROM games") == [
+        {"scheduled_game_id": None, "home_score": 60, "away_score": 50, "result": "win"}]
+    # The API delete behaves the same way.
+    sg2 = _game_form(client, app, season, team="boys_hs", level="varsity", gender="boys",
+                     game_date="2025-12-12", opponent="Marsing")
+    _record(client, sg2, 41, 44)
+    assert _j(client, "delete", f"/api/scheduled_games/{sg2}", None) == {"deleted": True, "unlinked_games": 1}
+    assert len(_q(app, "SELECT id FROM games WHERE scheduled_game_id IS NULL")) == 2
 
 
 # ── Journey 5: season rollover / archive ───────────────────────────────────────
@@ -698,19 +716,45 @@ def test_journey_season_rollover_keeps_records_separate(client, app):
     assert sorted(s["name"] for s in _j(client, "get", "/api/seasons", None)) == ["2024-25 Varsity", "2025-26 Varsity"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: deleting a season whose games have recorded scores 500s "
-                                       "(games.scheduled_game_id FK) instead of deleting or refusing cleanly")
 def test_delete_season_with_scored_games(client, app):
     old, new = _two_seasons(client, app)
+    # Chosen behaviour: refuse (409) so a season's recorded results are never deleted in bulk.
     r = client.post(f"/schedule/seasons/{old}/delete", data={}, follow_redirects=False)
-    assert r.status_code in (302, 303, 409)
+    assert r.status_code == 409
+    assert "2 of its games have recorded results" in r.get_data(as_text=True)
+    r = client.delete(f"/api/seasons/{old}")
+    assert r.status_code == 409 and "recorded results" in r.get_json()["error"]
+    assert sorted(s["name"] for s in _j(client, "get", "/api/seasons", None)) == ["2024-25 Varsity", "2025-26 Varsity"]
+    assert _record_of(_teams(client, f"?varsity_boys={old}")["varsity_boys"]) == (2, 0, 1, 0)
     assert _record_of(_teams(client, f"?varsity_boys={new}")["varsity_boys"]) == (0, 1, 0, 1)
+    # A season whose games are only scheduled (one has an unscored film row) still deletes;
+    # the film row is kept, unlinked.
+    summer = _season_form(client, app, "Summer 2026", "2026-06-01", "2026-08-31")
+    sg = _game_form(client, app, summer, team="boys_hs", level="varsity", gender="boys",
+                    game_date="2026-06-10", opponent="Summer Opp")
+    film = _j(client, "post", "/api/games", {"scheduled_game_id": sg, "source_type": "manual", "source_key": "summer"})
+    _form(client, f"/schedule/seasons/{summer}/delete", {})
+    assert _q(app, "SELECT id FROM seasons WHERE id=?", (summer,)) == []
+    assert _q(app, "SELECT scheduled_game_id FROM games WHERE id=?", (film["id"],)) == [{"scheduled_game_id": None}]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: scripts/archive_season.py selects games by a non-existent "
-                                       "games.season_id, so archives omit every game result (and its events/stats)")
 def test_archive_season_includes_game_results(client, app, tmp_path):
-    old, _new = _two_seasons(client, app)
+    old, new = _two_seasons(client, app)
+    # Film data for one game in each season: only the archived season's rows go in the archive.
+    by_season = {r["season_id"]: r["id"] for r in _q(
+        app, "SELECT sg.season_id, MIN(g.id) AS id FROM games g JOIN scheduled_games sg "
+             "ON sg.id = g.scheduled_game_id GROUP BY sg.season_id")}
+    for season_id, tag in ((old, "old"), (new, "new")):
+        gid = by_season[season_id]
+        _j(client, "post", "/api/sources", {"game_id": gid, "source_type": "local_file",
+                                            "source_path": f"{tag}.mp4"})
+        conn = sqlite3.connect(app.config["DATABASE"])
+        conn.execute("INSERT INTO events (game_id, event_type, timestamp_ms, relational_game_id) "
+                     "VALUES (?, 'shot', 1, ?)", (f"{tag}.mp4", gid))
+        conn.execute("INSERT INTO stats (game_id, relational_game_id, player_name, pts) VALUES (?, ?, ?, 12)",
+                     (f"{tag}.mp4", gid, f"{tag} player"))
+        conn.commit()
+        conn.close()
     env = dict(os.environ, LIBERTY_DATA_ROOT=str(tmp_path / "data"))
     env.pop("LIBERTY_ARCHIVE_DIR", None)
     p = subprocess.run([sys.executable, str(ROOT / "scripts" / "archive_season.py"), "--db", app.config["DATABASE"],
@@ -724,9 +768,13 @@ def test_archive_season_includes_game_results(client, app, tmp_path):
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert "games" in tables
         scores = sorted(conn.execute("SELECT home_score, away_score, result FROM games").fetchall())
+        film = (conn.execute("SELECT game_id FROM events").fetchall(),
+                conn.execute("SELECT player_name FROM stats").fetchall(),
+                conn.execute("SELECT source_path FROM sources").fetchall())
     finally:
         conn.close()
     assert scores == [(58, 44, "win"), (59, 61, "win")]
+    assert film == ([("old.mp4",)], [("old player",)], [("old.mp4",)])
 
 
 # ── MaxPreps rankings (network stubbed) + playbook bulk import ──────────────────

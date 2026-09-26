@@ -72,6 +72,14 @@ def _player_label(player: dict) -> str:
     return label
 
 
+def _player_identity(player: dict) -> tuple:
+    jersey = str(player.get("jersey_number") or "").strip()
+    name = " ".join(str(player.get("name") or "").split()).lower()
+    if name:
+        return ("player", jersey, name)
+    return ("label", player["label"])
+
+
 def _schedule_levels(level: str) -> list[str]:
     if level == "jrhigh":
         return ["jr_high", "jrhigh", "junior_high"]
@@ -196,10 +204,13 @@ def save_film_roster(
             side=side,
             opponent_name=opponent_name,
         )
-        existing_labels = {row["label"] for row in existing}
-        final_players = existing + [
-            player for player in normalized if player["label"] not in existing_labels
-        ]
+        # Match players by jersey + name (not the label, which embeds the grade), so a
+        # re-import with a corrected grade/position updates the player in place.
+        incoming = {_player_identity(player): player for player in normalized}
+        final_players = []
+        for row in existing:
+            final_players.append(incoming.pop(_player_identity(row), row))
+        final_players += list(incoming.values())
         delete_film_roster(
             db,
             season_id=season_id,

@@ -12,6 +12,7 @@ Routes:
 import sqlite3
 from flask import Blueprint, jsonify, request
 
+import season_management
 from helpers import get_db, require_feature
 from stats import get_four_factors
 
@@ -84,9 +85,10 @@ def api_season_update(season_id):
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def api_season_delete(season_id):
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
-    db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
-    db.commit()
+    try:
+        season_management.delete_season(db, season_id)
+    except season_management.SeasonDeleteError as exc:
+        return jsonify({"error": str(exc)}), 409
     return jsonify({"deleted": True})
 
 

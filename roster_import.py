@@ -232,14 +232,54 @@ def _parse_roster_row_parts(parts: list[str]) -> dict | None:
     )
 
 
+_HEADER_FIELDS = {
+    "#": "jersey_number", "num": "jersey_number", "number": "jersey_number",
+    "jersey": "jersey_number", "no": "jersey_number", "no.": "jersey_number",
+    "name": "name", "player": "name",
+    "grade": "grade", "class": "grade", "yr": "grade", "year": "grade", "gr": "grade",
+    "pos": "position", "position": "position",
+}
+
+
+def _header_column_map(cells: list[str]) -> dict[str, int] | None:
+    """Map field -> column index from a header row; None unless it names the name column."""
+    columns: dict[str, int] = {}
+    for index, cell in enumerate(cells):
+        field = _HEADER_FIELDS.get(cell.lower())
+        if field and field not in columns:
+            columns[field] = index
+    return columns if "name" in columns else None
+
+
 def parse_roster_rows(rows: list[list]) -> list[dict]:
-    """Parse roster rows from CSV or Excel into player dicts."""
+    """Parse roster rows from CSV or Excel into player dicts.
+
+    When the file has a header row (e.g. "Name,#,Pos,Grade"), cells are mapped by that
+    header, keeping blank cells in place; otherwise columns are inferred per row.
+    """
     players: list[dict] = []
+    columns: dict[str, int] | None = None
     for row in rows:
-        parts = [_cell_str(cell) for cell in row if _cell_str(cell)]
-        if not parts or _looks_like_header(parts):
+        cells = [_cell_str(cell) for cell in row]
+        parts = [cell for cell in cells if cell]
+        if not parts:
             continue
-        player = _parse_roster_row_parts(parts)
+        if _looks_like_header(parts):
+            columns = _header_column_map(cells) or columns
+            continue
+        if columns:
+            def _col(field):
+                index = columns.get(field)
+                return cells[index] if index is not None and index < len(cells) else None
+
+            player = _normalize_player(
+                jersey_number=_col("jersey_number"),
+                name=_col("name"),
+                grade=_clean_grade(_col("grade")),
+                position=_col("position"),
+            )
+        else:
+            player = _parse_roster_row_parts(parts)
         if player:
             players.append(player)
     return players
