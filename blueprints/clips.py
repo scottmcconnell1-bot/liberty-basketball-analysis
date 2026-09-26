@@ -45,6 +45,17 @@ from stats import _resolve_relational_game_id
 clips_bp = Blueprint("clips", __name__)
 
 
+def _lookup_event_type_id(db, event_type):
+    """event_types.id for a free-text event_type code (case-insensitive); None if unknown.
+
+    Stats join on events.event_type_id, so every write that sets event_type must set this too.
+    """
+    et_row = db.execute(
+        "SELECT id FROM event_types WHERE code=?", (str(event_type or "").strip().lower(),)
+    ).fetchone()
+    return et_row["id"] if et_row else None
+
+
 # ── API: Events ───────────────────────────────────────────
 
 @clips_bp.route("/api/save_event", methods=["POST"])
@@ -94,12 +105,7 @@ def save_event():
     relational_game_id = game_id_int
 
     # event_type_id: lookup by code (case-insensitive); leave NULL if unknown
-    event_type_id = None
-    et_row = db.execute(
-        "SELECT id FROM event_types WHERE code=?", (event_type.lower(),)
-    ).fetchone()
-    if et_row:
-        event_type_id = et_row["id"]
+    event_type_id = _lookup_event_type_id(db, event_type)
 
     # primary_player_id + team_id: resolve player name → roster_membership
     # Uses case-insensitive trimmed match following Stage 4A backfill pattern
@@ -162,7 +168,7 @@ def save_event():
                 primary_player_id, primary_roster_membership_id,
                 created_by_user_id, updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,
-                       ?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)""",
+                       ?,CASE WHEN ?='accepted' THEN CURRENT_TIMESTAMP END,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)""",
             (
                 game_id,
                 player,
@@ -264,14 +270,19 @@ def update_event(event_id):
     row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
     if not row:
         return jsonify({"error": "Not found"}), 404
+    event_type = data.get("event_type", row["event_type"])
+    event_type_id = row["event_type_id"]
+    if event_type != row["event_type"]:
+        event_type_id = _lookup_event_type_id(db, event_type)
     db.execute(
-        """UPDATE events SET player=?, event_type=?, shot_result=?,
+        """UPDATE events SET player=?, event_type=?, event_type_id=?, shot_result=?,
            timestamp_ms=?, details_json=?, human_verified=?, confidence=?,
            updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
             data.get("player", row["player"]),
-            data.get("event_type", row["event_type"]),
+            event_type,
+            event_type_id,
             data.get("shot_result", row["shot_result"]),
             data.get("timestamp_ms", row["timestamp_ms"]),
             data.get("details_json", row["details_json"]),
@@ -289,8 +300,20 @@ def update_event(event_id):
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def delete_event(event_id):
     db = get_db()
-    row = db.execute("SELECT game_id FROM events WHERE id=?", (event_id,)).fetchone()
+    row = db.execute("SELECT game_id, possession_id FROM events WHERE id=?", (event_id,)).fetchone()
+    # /api/stats assigns possessions whose start/end_event_id reference events (FK):
+    # unlink them first, then drop the event's possession if nothing else uses it.
+    db.execute("UPDATE possessions SET start_event_id=NULL WHERE start_event_id=?", (event_id,))
+    db.execute("UPDATE possessions SET end_event_id=NULL WHERE end_event_id=?", (event_id,))
     db.execute("DELETE FROM events WHERE id=?", (event_id,))
+    if row and row["possession_id"] is not None:
+        db.execute(
+            """DELETE FROM possessions
+                WHERE id=?
+                  AND NOT EXISTS (SELECT 1 FROM events WHERE possession_id=?)
+                  AND NOT EXISTS (SELECT 1 FROM clips WHERE possession_id=?)""",
+            (row["possession_id"], row["possession_id"], row["possession_id"]),
+        )
     db.commit()
     if row:
         refresh_game_stats(db, row["game_id"])
@@ -570,14 +593,16 @@ def create_reviewed_event():
     db = get_db()
     cur = db.execute(
         """INSERT INTO events
-           (game_id, player, event_type, shot_result, timestamp_ms, details_json,
-            source_video, human_verified, confidence, review_status, source_type,
-            reviewed_at, created_by_user_id, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
+           (game_id, relational_game_id, player, event_type, event_type_id, shot_result,
+            timestamp_ms, details_json, source_video, human_verified, confidence,
+            review_status, source_type, reviewed_at, created_by_user_id, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
         (
             game_id,
+            _resolve_relational_game_id(db, game_id),
             player,
             event_type,
+            _lookup_event_type_id(db, event_type),
             shot_result,
             timestamp_ms,
             json.dumps(details),
@@ -779,6 +804,9 @@ def review_event_correct(event_id):
         "confidence": row["confidence"],
     }
     values.update(changed)
+    event_type_id = row["event_type_id"]
+    if "event_type" in changed:
+        event_type_id = _lookup_event_type_id(db, values["event_type"])
 
     # Adrian: coach name/jersey → stamp scorebook jersey + team on details
     # so Film Tool does not keep showing "player unlinked".
@@ -809,6 +837,7 @@ def review_event_correct(event_id):
         """UPDATE events
               SET player=?,
                   event_type=?,
+                  event_type_id=?,
                   shot_result=?,
                   timestamp_ms=?,
                   details_json=?,
@@ -822,6 +851,7 @@ def review_event_correct(event_id):
         (
             values["player"],
             values["event_type"],
+            event_type_id,
             values["shot_result"],
             values["timestamp_ms"],
             values["details_json"],

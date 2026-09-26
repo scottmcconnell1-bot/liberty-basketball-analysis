@@ -16,6 +16,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from stat_book.paths import sanitize_game_id
+from stats import _shot_attempt_already_counted
+
 PROGRAM_LEDGER_TYPES = (
     "shot",
     "miss",
@@ -55,13 +58,17 @@ def _repo_root() -> Path:
 
 
 def scorebook_path(game_id: str) -> Path:
-    return _repo_root() / "data" / "stat_books" / "confirmed" / f"{game_id.strip()}.json"
+    """Confirmed scorebook file for a game; raises ValueError for ids that could escape the dir."""
+    return _repo_root() / "data" / "stat_books" / "confirmed" / f"{sanitize_game_id(game_id)}.json"
 
 
 def load_scorebook(game_id: str) -> dict[str, Any] | None:
-    path = scorebook_path(game_id)
-    if not path.is_file() and "__rerun_" in game_id:
-        path = scorebook_path(game_id.split("__rerun_", 1)[0])
+    try:
+        path = scorebook_path(game_id)
+        if not path.is_file() and "__rerun_" in game_id:
+            path = scorebook_path(game_id.split("__rerun_", 1)[0])
+    except ValueError:
+        return None
     if not path.is_file():
         return None
     try:
@@ -379,6 +386,9 @@ def ledger_box_from_events(db, game_id: str) -> dict[str, Any]:
         n = int(row["n"] or 0)
         b = bucket(player)
         totals["events"] += n
+        # AI shot+make/miss pairs: the derived make/miss row carries the attempt (as in stats).
+        if _shot_attempt_already_counted(et, (row["shot_result"] or "").lower()):
+            continue
         pts = _points_for_event(et, row["shot_result"]) * n
         if pts:
             b["pts"] += pts
@@ -403,7 +413,7 @@ def ledger_box_from_events(db, game_id: str) -> dict[str, Any]:
         if et == "made_free_throw":
             b["ftm"] += n
             totals["ftm"] += n
-        if et == "rebound":
+        if et in ("rebound", "rebound_offensive", "rebound_defensive"):
             b["reb"] += n
             totals["reb"] += n
         if et == "assist":
