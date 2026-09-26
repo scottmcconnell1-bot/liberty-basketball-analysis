@@ -14,7 +14,9 @@ turns it red, so remove the marker in the same change.
 **Suite:** `pytest tests/` → 846 passed, 31 skipped, 95 xfailed (~27 s). The
 run writes nothing outside temp dirs.
 
-No app code was changed in this pass. The fixes need Scott's call (AUTHORITY.md).
+**Status (later on 2026-09-26): all findings are fixed.** Each one was
+validated, fixed and revalidated, and its test is now a normal regression
+test. See docs/validation/README.md. The suite is 975 passed, 0 xfailed.
 
 ## Act on these first
 
