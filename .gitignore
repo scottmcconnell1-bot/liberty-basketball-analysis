@@ -127,6 +127,9 @@ data/hoopsalytics/full_film_panel_history.jsonl
 # Backup files
 *.bak
 
+# Copies of a Chrome profile's Local Storage (personal browser data; never commit)
+tag-exports/_chrome*/
+
 # Experiments (non-essential, can be regenerated)
 experiments/
 ball_dataset_v2/

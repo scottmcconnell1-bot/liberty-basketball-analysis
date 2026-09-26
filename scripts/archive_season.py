@@ -24,7 +24,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from liberty_data_paths import LIVE_DB, archive_dir, ensure_data_dirs  # noqa: E402
+from liberty_data_paths import LIVE_DB, archive_dir, ensure_data_dirs, readonly_uri  # noqa: E402
 
 # Tables copied when present (FK-safe order for a snapshot; archive is self-contained).
 SEASON_SCOPED = [
@@ -103,7 +103,7 @@ def main() -> int:
         print(f"ERROR: live DB not found: {live}", file=sys.stderr)
         return 1
 
-    src = sqlite3.connect(f"file:{live.as_posix()}?mode=ro", uri=True, timeout=60)
+    src = sqlite3.connect(readonly_uri(live), uri=True, timeout=60)
     src.row_factory = sqlite3.Row
     try:
         if args.list or not args.season_id:

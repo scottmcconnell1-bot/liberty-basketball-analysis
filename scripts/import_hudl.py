@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -37,9 +38,13 @@ from boxscore_constraints import (  # noqa: E402
 )
 
 DEFAULT_SOURCE = Path(r"C:\Users\scott\Documents\HUDL")
-DB_PATH = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+
+DB_PATH = live_db_path()
 UPLOADS = ROOT / "uploads"
 OUT_DIR = ROOT / "data" / "hudl"
+TEACH_DONE_MARKER = ROOT / "data" / "hoopsalytics" / "TEACH_LOOP_DONE"
 
 # Filename token → display opponent
 ALIAS = {
@@ -333,6 +338,7 @@ def discover(source: Path) -> dict:
             }
         )
 
+    _disambiguate_ids(paired)
     unmatched_csvs = [c for c in csvs if id(c) not in used_csv]
     return {
         "paired": paired,
@@ -341,6 +347,31 @@ def discover(source: Path) -> dict:
         "video_count": len(videos),
         "csv_count": len(csvs),
     }
+
+
+def _disambiguate_ids(paired: list[dict]) -> None:
+    """Give each pair a unique game_id / film_id / stored_filename.
+
+    The slug drops punctuation, so '@ Marsing' and 'Marsing' (or 'vs Kamiah'
+    and 'vs. Kamiah') share a stored upload name, and a re-import would unlink
+    and overwrite the first video and rewrite its videos row. Names that do not
+    collide keep their historical ids (already in the DB); colliding ones get a
+    short, stable hash of the raw file name appended.
+    """
+    for pair in paired:
+        pair["stored_filename"] = f"hudl_{_slug(pair['video']['raw'])}.mp4"
+    for field in ("game_id", "film_id", "stored_filename"):
+        seen: dict[str, int] = {}
+        for pair in paired:
+            seen[pair[field].lower()] = seen.get(pair[field].lower(), 0) + 1
+        for pair in paired:
+            if seen[pair[field].lower()] < 2:
+                continue
+            tag = hashlib.sha1(pair["video"]["raw"].encode("utf-8")).hexdigest()[:6]
+            if field == "stored_filename":
+                pair[field] = pair[field][: -len(".mp4")] + f"_{tag}.mp4"
+            else:
+                pair[field] = f"{pair[field]}_{tag}"
 
 
 def link_or_copy(src: Path, dest: Path, force_copy: bool = False) -> str:
@@ -508,7 +539,7 @@ def import_all(source: Path, *, force_copy: bool = False, dry_run: bool = False,
         if location == "unknown" and c:
             location = c["location"]
 
-        stored = f"hudl_{_slug(v['raw'])}.mp4"
+        stored = pair["stored_filename"]
         dest = UPLOADS / stored
         link_mode = None
         video_id = None
@@ -636,6 +667,10 @@ def import_all(source: Path, *, force_copy: bool = False, dry_run: bool = False,
             merge_boxscore_model(hudl_caps)
             summary["boxscore_model"] = str(DEFAULT_BOXSCORE_MODEL)
             summary["boxscore_hudl_games"] = len(hudl_caps)
+        if results:
+            # Imported games may need analysis: let the teach watchdog restart a
+            # loop that had finished (hoops_teach_loop writes this marker).
+            TEACH_DONE_MARKER.unlink(missing_ok=True)
 
     return summary
 

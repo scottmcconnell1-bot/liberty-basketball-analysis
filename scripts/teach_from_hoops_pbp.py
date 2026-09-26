@@ -51,7 +51,9 @@ from teach_from_manual_q1 import (  # noqa: E402
 )
 
 HOOPS_MODEL_PATH = ROOT / "models" / "hoopsalytics_event_calibrator.json"
-DB_PATH = ROOT / "film_analysis.db"
+from liberty_data_paths import live_db_path  # noqa: E402
+
+DB_PATH = live_db_path()
 
 # video_id, film_tool client id, analysis/game_id
 HOOPS_GAMES = [
@@ -100,6 +102,28 @@ def _discover_ai_keys(conn: sqlite3.Connection) -> dict[str, list[str]]:
     for (gid,) in rows:
         out[base_analysis_key(gid)].append(gid)
     return out
+
+
+def _pick_analysis_key(conn: sqlite3.Connection, base_key: str, keys: list[str]) -> str:
+    """Newest analysis of this game: the key the teach loop just finished.
+
+    Prefer the most recent *completed* analysis_runs row among *keys*; without
+    run history fall back to the newest __rerun_YYYYMMDD_HHMMSS stamp (the bare
+    primary key sorts first, so it is used only when there is no rerun).
+    """
+    try:
+        placeholders = ",".join("?" for _ in keys)
+        row = conn.execute(
+            f"""SELECT analysis_key FROM analysis_runs
+                 WHERE status = 'completed' AND analysis_key IN ({placeholders})
+                 ORDER BY id DESC LIMIT 1""",
+            tuple(keys),
+        ).fetchone()
+    except sqlite3.Error:
+        row = None
+    if row and row[0]:
+        return str(row[0])
+    return sorted(keys)[-1]
 
 
 def _filter_truth(rows: list[dict], end_ms: int | None) -> list[dict]:
@@ -162,8 +186,7 @@ def build_multi_game_calibrator(
         keys = ai_by_base.get(base_key) or []
         if not keys:
             continue
-        # Prefer primary key if present.
-        analysis_key = base_key if base_key in keys else sorted(keys)[-1]
+        analysis_key = _pick_analysis_key(conn, base_key, keys)
         try:
             truth = _filter_truth(load_truth_rows(conn, film_id), end_ms)
         except SystemExit:

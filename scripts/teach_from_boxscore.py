@@ -32,7 +32,11 @@ from boxscore_constraints import (  # noqa: E402
     compare_caps,
 )
 
-DB_PATH = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+from ops_io import atomic_write_text  # noqa: E402
+
+DB_PATH = live_db_path()
 REPORT_PATH = ROOT / "data" / "hoopsalytics" / "boxscore_teach_report.json"
 
 
@@ -64,6 +68,32 @@ def _load_ai_events(conn: sqlite3.Connection, game_id: str) -> list[dict]:
     return out
 
 
+def _keep_merged_hudl_caps(model: dict) -> dict:
+    """Carry HUDL caps merged by import_hudl into a model rebuilt from data/hoopsalytics.
+
+    build_model_from_hoops_dir only sees Hoopsalytics/MaxPreps imports, so writing
+    it as-is would silently erase every hudl_* game's caps.
+    """
+    if not DEFAULT_BOXSCORE_MODEL.exists():
+        return model
+    try:
+        existing = json.loads(DEFAULT_BOXSCORE_MODEL.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return model
+    old_games = (existing or {}).get("boxscore_by_game") or {}
+    by_game = dict(model.get("boxscore_by_game") or {})
+    carried = 0
+    for game_id, caps in old_games.items():
+        if str(game_id).startswith("hudl_") and game_id not in by_game:
+            by_game[game_id] = caps
+            carried += 1
+    if carried:
+        model = {**model, "boxscore_by_game": by_game, "game_count": len(by_game)}
+        if existing.get("hudl_merged_at"):
+            model["hudl_merged_at"] = existing["hudl_merged_at"]
+    return model
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Teach AI caps from MaxPreps/Hoopsalytics box scores")
     ap.add_argument("--hoops-dir", type=Path, default=HOOPS_DIR)
@@ -72,7 +102,7 @@ def main() -> int:
     ap.add_argument("--db", type=Path, default=DB_PATH)
     args = ap.parse_args()
 
-    model = build_model_from_hoops_dir(args.hoops_dir)
+    model = _keep_merged_hudl_caps(build_model_from_hoops_dir(args.hoops_dir))
     games = model.get("boxscore_by_game") or {}
     print(f"Loaded {len(games)} reference box scores from {args.hoops_dir}")
     print(model.get("principle"))
@@ -138,12 +168,12 @@ def main() -> int:
         conn.close()
 
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    atomic_write_text(REPORT_PATH, json.dumps(report, indent=2))
     print(f"\nReport: {REPORT_PATH}")
 
     if args.write_model:
         DEFAULT_BOXSCORE_MODEL.parent.mkdir(parents=True, exist_ok=True)
-        DEFAULT_BOXSCORE_MODEL.write_text(json.dumps(model, indent=2), encoding="utf-8")
+        atomic_write_text(DEFAULT_BOXSCORE_MODEL, json.dumps(model, indent=2))
         print(f"Wrote model: {DEFAULT_BOXSCORE_MODEL}")
         print("Postprocess will cap AI events to these totals (highest confidence kept).")
     else:

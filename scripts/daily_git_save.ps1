@@ -1,5 +1,6 @@
 # Daily save: refresh learning status, commit safe source changes, push to origin.
-# Never commits secrets, DB, uploads, or teach/panel runtime files.
+# Never commits secrets, DB, uploads, logs, or teach/panel runtime files:
+# only paths on the scripts/git_save_select.py allowlist are staged.
 # Usage: pwsh -File scripts/daily_git_save.ps1
 # Scheduled: Task Scheduler → Liberty Daily Git Save
 
@@ -84,39 +85,25 @@ try {
     Invoke-PySoft "full_film_panel" @("scripts/score_full_film_panel.py")
     Invoke-PySoft "learning_status" @("scripts/generate_learning_status.py") -RetryOnSqliteLock
 
-    # Stage everything, then peel off unsafe / runtime paths.
-    Invoke-Git @("add", "-A")
-
-    $unstage = @(
-        ".env",
-        ".env.*",
-        "*.db",
-        "*.db-shm",
-        "*.db-wal",
-        "film_analysis.db",
-        "uploads",
-        "data/hoopsalytics/*.log",
-        "data/hoopsalytics/*.err.log",
-        "data/hoopsalytics/*.out.log",
-        "data/hoopsalytics/detached_pids.json",
-        "data/hoopsalytics/coach_*.txt",
-        "data/hoopsalytics/improve_pass*",
-        "data/hoopsalytics/compare_*.json",
-        "data/hoopsalytics/detached_*.json",
-        "data/hoopsalytics/teach_loop_state.json",
-        "data/hoopsalytics/boxscore_teach_report.json",
-        "data/hoopsalytics/full_film_panel_latest.json",
-        "data/hoopsalytics/full_film_panel_history.jsonl",
-        "data/hoopsalytics/daily_git_save.log"
-    )
-    foreach ($pattern in $unstage) {
-        & git reset -q HEAD -- $pattern 2>$null
+    # ALLOWLIST staging: scripts/git_save_select.py returns only source/doc files
+    # under known folders (+ docs/LEARNING_STATUS.md etc.). Never `git add -A`:
+    # that pushed browser Local Storage, Flask logs and scratch screenshots.
+    # Start from a clean index so nothing staged earlier rides along.
+    Invoke-Git @("reset", "-q")
+    $pathFile = [System.IO.Path]::GetTempFileName()
+    try {
+        Write-Log "Selecting allowlisted paths: py -3.12 scripts/git_save_select.py"
+        & py -3.12 (Join-Path $RepoRoot "scripts\git_save_select.py") --repo $RepoRoot --out $pathFile
+        if ($LASTEXITCODE -ne 0) {
+            throw "git_save_select.py failed with exit $LASTEXITCODE"
+        }
+        if ((Get-Item -LiteralPath $pathFile).Length -gt 0) {
+            # NUL-separated literal paths: safe for spaces, commas, '#', '*' in names.
+            Invoke-Git @("--literal-pathspecs", "add", "--pathspec-from-file=$pathFile", "--pathspec-file-nul")
+        }
     }
-
-    # Ensure the human-readable status report is staged when present.
-    $statusDoc = Join-Path $RepoRoot "docs\LEARNING_STATUS.md"
-    if (Test-Path $statusDoc) {
-        Invoke-Git @("add", "--", "docs/LEARNING_STATUS.md")
+    finally {
+        Remove-Item -LiteralPath $pathFile -ErrorAction SilentlyContinue
     }
 
     # Refuse if a staged file looks like a secret.

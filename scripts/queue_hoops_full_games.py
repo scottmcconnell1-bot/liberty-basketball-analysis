@@ -21,7 +21,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB_PATH = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+
+DB_PATH = live_db_path()
 BASE = "http://127.0.0.1:8080"
 
 # Games with no analysis first (build multi-game keep_clf), Grace full last.
