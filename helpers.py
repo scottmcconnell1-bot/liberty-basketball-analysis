@@ -540,6 +540,7 @@ def generate_practice_ai_notes_llm(practice, settings_snapshot=None):
     if model not in available_models:
         return None, "none"
 
+    practice = dict(practice)  # callers pass sqlite3.Row, which has no .get()
     plan_text = practice.get("plan_text") or ""
     coach_notes = practice.get("coach_notes") or ""
     practice_date = practice.get("practice_date", "")

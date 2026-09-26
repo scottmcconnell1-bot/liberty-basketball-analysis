@@ -92,12 +92,12 @@ function loadReports() {
       }
       el.innerHTML = '<table><thead><tr><th>Opponent</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
         reports.map(r => `<tr>
-          <td><a href="/scouting/reports/${r.id}">${r.opponent_name || 'Unknown'}</td>
-          <td>${r.scout_date}</td>
-          <td><span class="badge badge-${r.status === 'completed' ? 'success' : r.status === 'in_progress' ? 'warning' : 'secondary'}">${r.status}</span></td>
+          <td><a href="/scouting/reports/${encodeURIComponent(r.id)}">${escapeHtml(r.opponent_name || 'Unknown')}</a></td>
+          <td>${escapeHtml(r.scout_date)}</td>
+          <td><span class="badge badge-${r.status === 'completed' ? 'success' : r.status === 'in_progress' ? 'warning' : 'secondary'}">${escapeHtml(r.status)}</span></td>
           <td>
-            <a href="/scouting/reports/${r.id}" class="btn btn-sm btn-secondary">Edit</a>
-            <a href="/scouting/reports/${r.id}/print" class="btn btn-sm btn-secondary" target="_blank">Print</a>
+            <a href="/scouting/reports/${encodeURIComponent(r.id)}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="/scouting/reports/${encodeURIComponent(r.id)}/print" class="btn btn-sm btn-secondary" target="_blank">Print</a>
           </td>
         </tr>`).join('') + '</tbody></table>';
     });
