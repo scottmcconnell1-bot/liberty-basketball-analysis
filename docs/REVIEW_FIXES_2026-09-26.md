@@ -1,10 +1,12 @@
 # Code review fixes (2026-09-26)
 
 Branch: `claude/review-fixes` (from `cursor/playbook-jason-clean-slate-ac1f` @ 2652e5e).
-Not merged. Each fix has a regression test that fails on 2652e5e and passes here.
+Each fix has a regression test that fails on 2652e5e and passes here. Now part of PR #148
+(see docs/REVIEW_SESSION_2026-09-26.md for the full picture).
 
 Test run (Python 3.14, `requirements.txt` + `opencv-python-headless`):
-`pytest tests/` → **770 passed, 31 skipped**. Before: 703 passed, 23 failed.
+`pytest tests/` after this first pass → **770 passed, 31 skipped**. Before: 703 passed, 23 failed.
+Final state of the branch: 988 passed, 31 skipped, 0 xfailed.
 The suite no longer writes into tracked files.
 
 ## Scott decisions still open

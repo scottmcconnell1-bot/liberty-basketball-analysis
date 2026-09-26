@@ -731,7 +731,7 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
         next_segment = segments[index + 1] if index + 1 < len(segments) else None
         next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
         peak_frame = shot_info.get("peak_frame")
-        from court_memory import ball_from_detections, detect_ft_formation as _ft
+        from court_memory import detect_ft_formation as _ft
         from court_memory import people_from_detections as _people, _on_court_people
         peak = int(peak_frame or segment["end_frame"])
         start_fr = int(segment["start_frame"])

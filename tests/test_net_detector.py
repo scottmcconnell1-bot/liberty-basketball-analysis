@@ -1,13 +1,15 @@
 """Orange rim + hanging net detector."""
 
 import numpy as np
+import pytest
 
 from court_memory import FrameCourtMemory, KeyPolygon
 from net_detector import detect_hoop, detect_hoop_cv, hoop_at
 
 
 def _rim_and_net_frame(w=640, h=360, cx=320, cy=70, cr=22):
-    import cv2
+    # OpenCV is not in requirements.txt (CI / Windows dev installs): skip, don't fail.
+    cv2 = pytest.importorskip("cv2")
 
     frame = np.zeros((h, w, 3), dtype=np.uint8)
     frame[:] = (30, 40, 25)
@@ -27,7 +29,7 @@ def test_detects_orange_rim_with_net_below():
 
 
 def test_detects_red_rim_like_nfhs_camera():
-    import cv2
+    cv2 = pytest.importorskip("cv2")
 
     frame = np.zeros((360, 640, 3), dtype=np.uint8)
     frame[:] = (90, 90, 90)
@@ -42,6 +44,7 @@ def test_detects_red_rim_like_nfhs_camera():
 
 def test_detect_hoop_ignores_empty_frame():
     assert detect_hoop(np.zeros((0, 0, 3), dtype=np.uint8)) is None
+    pytest.importorskip("cv2")  # detect_hoop_cv needs OpenCV
     blank = np.zeros((240, 320, 3), dtype=np.uint8)
     assert detect_hoop_cv(blank) is None
 

@@ -11,7 +11,7 @@ and the unattended ops scripts.
 setup errors. When a bug is fixed, its test starts passing and strict xfail
 turns it red, so remove the marker in the same change.
 
-**Suite:** `pytest tests/` → 846 passed, 31 skipped, 95 xfailed (~27 s). The
+**Suite when this review was written (28e6053):** `pytest tests/` → 846 passed, 31 skipped, 95 xfailed (~27 s). The
 run writes nothing outside temp dirs.
 
 **Status (later on 2026-09-26): all findings are fixed.** Each one was
@@ -182,15 +182,15 @@ section header.
 | M | scripts/hoops_teach_loop.py:162-170 | A truncated state file crashes the loop permanently |
 | M | scripts/teach_from_boxscore.py:75 | `--write-model` erases the merged HUDL caps |
 | M | scripts/teach_from_hoops_pbp.py:166 | Trains on the primary run instead of the newer full rerun |
-| M | scripts/score_full_film_panel.py:449 | Gates average only games with data and can PASS when most are missing (proof tests are in the session scratchpad, not the repo) |
-| M | scripts/compare_ai_to_hoops_pbp.py:126 | Matching ignores event type, which deflates P/R (proof test is in the session scratchpad, not the repo) |
+| M | scripts/score_full_film_panel.py:449 | Gates average only games with data and can PASS when most are missing (tests: test_pr_gates_fail_when_most_games_missing, test_trend_does_not_report_regression_as_improvement) |
+| M | scripts/compare_ai_to_hoops_pbp.py:126 | Matching ignores event type, which deflates P/R (test: test_compare_matching_is_type_aware) |
 | M | liberty_data_paths.py and scripts | The scripts ignore `LIBERTY_DATABASE` and may back up or wipe the wrong DB |
 | M | scripts/wipe_film_analysis.py:20,49 | No backup; drops coach corrections, playlists and dev clips |
 | L | scripts/backup_db.py:74 | A `#` in the path produces an empty backup, then good backups are pruned |
-| L | scripts/score_full_film_panel.py:601 | The panel JSON is written non-atomically (no repo test; proof is in the session scratchpad) |
+| L | scripts/score_full_film_panel.py:601 | The panel JSON is written non-atomically (test: test_panel_latest_write_is_atomic) |
 | L | scripts/import_hudl.py:313 | Slugged filenames collide on re-import |
 | L | scripts/materialize_lfs_models.py:296 | Crashes once weights are materialized |
-| L | hoops_teach_loop.py + watchdog_teach_loop.ps1 | Pause marker is never read, and the watchdog restarts a finished loop (found by reading the code; no test) |
+| L | hoops_teach_loop.py + watchdog_teach_loop.ps1 | Pause marker is never read, and the watchdog restarts a finished loop (tests: test_teach_loop_honours_pause_marker, test_finished_teach_loop_leaves_done_marker, test_watchdog_script_checks_pause_and_done_markers_before_restart) |
 
 ## Not covered
 

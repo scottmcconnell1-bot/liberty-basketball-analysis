@@ -1,5 +1,7 @@
 # Finding validation log (2026-09-26)
 
+Overview of the whole session: [../REVIEW_SESSION_2026-09-26.md](../REVIEW_SESSION_2026-09-26.md).
+
 Every finding in `docs/REVIEW_FINDINGS_2026-09-26.md` went through the same
 four steps:
 

@@ -225,7 +225,6 @@ import click
 @app.cli.command("init-db")
 def init_db_command():
     """Initialize the database."""
-    from helpers import init_db
     init_db()
     click.echo("Database initialized.")
 
