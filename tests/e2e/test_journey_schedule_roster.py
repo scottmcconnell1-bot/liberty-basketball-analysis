@@ -796,8 +796,6 @@ def test_playbook_bulk_import_parse_and_save(client, app):
     assert rows == [{"name": "Box 1", "steps": 2}, {"name": "Cross", "steps": 1}]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: bulk import renders pages to fixed uploads/bulk_imports/page_NNNN.png, "
-                                       "so the next import overwrites the step images of plays already saved")
 def test_playbook_bulk_import_does_not_overwrite_saved_play_images(client, app):
     pytest.importorskip("pymupdf")
     first = _bulk_parse(client, _scout_pdf([("BLOB", "Box 1")], seed=0))

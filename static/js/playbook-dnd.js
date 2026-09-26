@@ -123,10 +123,15 @@
     function updateCategoryChip(row, path) {
       const chip = row.querySelector('.play-cat-chip');
       if (!chip) return;
-      const parts = String(path || '')
+      // Category names are user-entered: escape before building innerHTML.
+      const esc = (text) => String(text).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[ch]));
+      const labels = String(path || '')
         .replace(/_/g, ' ')
         .split('/')
         .filter(Boolean);
+      const parts = labels.map(esc);
       if (!parts.length) {
         chip.innerHTML = '<span>uncategorized</span>';
         return;
@@ -136,7 +141,7 @@
         return;
       }
       chip.innerHTML = `<span class="muted">${parts.slice(0, -1).join(' · ')}</span><span>·</span><span>${parts[parts.length - 1]}</span>`;
-      chip.title = parts.join(' · ');
+      chip.title = labels.join(' · ');
     }
 
     function moveToCategory(categoryId) {

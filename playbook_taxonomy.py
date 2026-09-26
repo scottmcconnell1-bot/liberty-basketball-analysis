@@ -542,18 +542,41 @@ def rename_category(db, category_id, name):
         "UPDATE play_categories SET name = ?, slug = ?, slug_path = ? WHERE id = ?",
         (name, slug, slug_path, category_id),
     )
+    _rewrite_descendant_paths(db, row["slug_path"], slug_path)
 
 
-def move_category(db, category_id, *, parent_id=None, sort_order=None):
+def _rewrite_descendant_paths(db, old_path, new_path):
+    """Re-prefix every descendant's slug_path after a category is renamed or moved."""
+    if not old_path or old_path == new_path:
+        return
+    db.execute(
+        """UPDATE play_categories
+              SET slug_path = ? || substr(slug_path, ?)
+            WHERE substr(slug_path, 1, ?) = ?""",
+        (new_path, len(old_path) + 1, len(old_path) + 1, old_path + "/"),
+    )
+
+
+_KEEP_PARENT = object()
+
+
+def move_category(db, category_id, *, parent_id=_KEEP_PARENT, sort_order=None):
+    """Move a category under ``parent_id`` (None = top level; omitted = keep parent)."""
     row = db.execute(
-        "SELECT id, parent_id, name, is_system FROM play_categories WHERE id = ?",
+        "SELECT id, parent_id, name, slug_path, is_system FROM play_categories WHERE id = ?",
         (category_id,),
     ).fetchone()
     if not row:
         raise ValueError("Category not found")
-    if row["is_system"] and parent_id != row["parent_id"]:
+    if parent_id is _KEEP_PARENT:
+        new_parent_id = row["parent_id"]
+    else:
+        try:
+            new_parent_id = int(parent_id) if parent_id not in (None, "") else None
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Parent category not found") from exc
+    if row["is_system"] and new_parent_id != row["parent_id"]:
         raise ValueError("System categories cannot change parents")
-    new_parent_id = parent_id if parent_id is not None else row["parent_id"]
     parent_path = ""
     if new_parent_id:
         parent = db.execute(
@@ -563,8 +586,23 @@ def move_category(db, category_id, *, parent_id=None, sort_order=None):
         if not parent:
             raise ValueError("Parent category not found")
         parent_path = parent["slug_path"]
+        ancestor_id, seen = parent["id"], set()
+        while ancestor_id and ancestor_id not in seen:
+            if ancestor_id == category_id:
+                raise ValueError("A category cannot be moved under itself or its own subcategory")
+            seen.add(ancestor_id)
+            up = db.execute(
+                "SELECT parent_id FROM play_categories WHERE id = ?", (ancestor_id,)
+            ).fetchone()
+            ancestor_id = up["parent_id"] if up else None
     slug = row["name"].lower().replace(" ", "_").replace("-", "_")
     slug_path = _slug_path(parent_path, slug)
+    conflict = db.execute(
+        "SELECT id FROM play_categories WHERE slug_path = ? AND id != ?",
+        (slug_path, category_id),
+    ).fetchone()
+    if conflict:
+        raise ValueError("A category with that name already exists there")
     new_sort = sort_order if sort_order is not None else _next_sort_order(db, new_parent_id)
     db.execute(
         """UPDATE play_categories
@@ -572,6 +610,12 @@ def move_category(db, category_id, *, parent_id=None, sort_order=None):
             WHERE id = ?""",
         (new_parent_id, slug_path, new_sort, category_id),
     )
+    _rewrite_descendant_paths(db, row["slug_path"], slug_path)
+    for cat_id in leaf_category_ids(db, category_id):
+        db.execute(
+            "UPDATE plays SET category = ? WHERE category_id = ?",
+            (legacy_category_from_id(db, cat_id), cat_id),
+        )
 
 
 def delete_category(db, category_id, *, reassign_to=None):

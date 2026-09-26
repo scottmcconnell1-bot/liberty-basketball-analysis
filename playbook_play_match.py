@@ -20,6 +20,7 @@ Limits (documented for coaches):
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -45,7 +46,11 @@ def matches_dir(base: str | Path | None = None) -> Path:
 
 
 def matches_path(game_id: str, base: str | Path | None = None) -> Path:
-    safe = _SAFE_GAME_RE.sub("_", str(game_id or "unknown"))[:120] or "unknown"
+    raw = str(game_id or "unknown")
+    safe = _SAFE_GAME_RE.sub("_", raw)[:120] or "unknown"
+    if safe != raw:
+        # Sanitising is lossy ('a,_b' and 'a__b' both become 'a__b'): keep names unique.
+        safe = f"{safe}-{hashlib.sha1(raw.encode('utf-8')).hexdigest()[:10]}"
     return matches_dir(base) / f"{safe}.json"
 
 
@@ -58,6 +63,8 @@ def load_match_results(game_id: str, base: str | Path | None = None) -> dict[str
     except (OSError, json.JSONDecodeError):
         return None
     if not isinstance(data, dict) or int(data.get("version") or 0) != MATCH_VERSION:
+        return None
+    if str(data.get("game_id")) != str(game_id):
         return None
     return data
 

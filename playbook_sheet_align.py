@@ -2541,27 +2541,33 @@ def analyze_sheet_image(image_path: str | Path, cache_base: str | Path | None = 
     return result
 
 
-def resolve_upload_path(url_or_path: str, app_root: str | Path | None = None) -> Path:
-    """Map /uploads/... URL to a filesystem path under the app root."""
-    raw = (url_or_path or "").strip()
+def resolve_upload_path(
+    url_or_path: str,
+    app_root: str | Path | None = None,
+    upload_folder: str | Path | None = None,
+) -> Path:
+    """Map a /uploads/... URL to a file inside the upload folder (or app root).
+
+    Anything that resolves outside ``upload_folder`` / ``<app_root>/uploads`` / the app
+    root — absolute paths included — is refused with FileNotFoundError.
+    """
+    raw = (url_or_path or "").strip().replace("\\", "/")
     if not raw:
         raise FileNotFoundError("empty path")
-    if raw.startswith("/uploads/"):
-        rel = raw[len("/") :]
-    elif raw.startswith("uploads/"):
-        rel = raw
-    elif os.path.isfile(raw):
-        return Path(raw)
+    root = Path(app_root or Path.cwd()).resolve()
+    uploads = Path(upload_folder).resolve() if upload_folder else root / "uploads"
+    if raw.startswith("/uploads/") or raw.startswith("uploads/"):
+        rel = raw.split("uploads/", 1)[1]
+        candidates = [uploads / rel, root / "uploads" / rel]
+    elif Path(raw).is_absolute():
+        candidates = [Path(raw)]
     else:
-        rel = raw.lstrip("/")
-    root = Path(app_root) if app_root else Path.cwd()
-    path = (root / rel).resolve()
-    # Stay inside project uploads
-    uploads = (root / "uploads").resolve()
-    if uploads not in path.parents and path != uploads:
-        # still allow absolute paths under root
-        if root not in path.parents and path != root:
+        candidates = [root / raw]
+    for candidate in candidates:
+        path = candidate.resolve()
+        inside = any(path == base or base in path.parents for base in (uploads, root))
+        if not inside:
             raise FileNotFoundError(f"path outside uploads: {url_or_path}")
-    if not path.is_file():
-        raise FileNotFoundError(str(path))
-    return path
+        if path.is_file():
+            return path
+    raise FileNotFoundError(str(candidates[0]))

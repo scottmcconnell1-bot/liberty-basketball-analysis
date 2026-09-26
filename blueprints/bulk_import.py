@@ -20,7 +20,7 @@ import json
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, jsonify, current_app, send_file
+from flask import Blueprint, render_template, request, jsonify, current_app, send_file, session
 
 from helpers import get_db, require_feature
 
@@ -119,7 +119,13 @@ def _extract_pages_with_categories(pdf_path):
     import fitz
 
     doc = fitz.open(pdf_path)
-    upload_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), "bulk_imports")
+    # Pages go in a per-import folder next to the source PDF (bulk_imports/<id>/page_NNNN.png
+    # beside bulk_imports/<id>.pdf): later imports never overwrite saved plays' sheets, and
+    # playbook_vector_extract can map a sheet back to its vector PDF page.
+    import_id = os.path.splitext(os.path.basename(pdf_path))[0]
+    upload_dir = os.path.join(
+        current_app.config.get("UPLOAD_FOLDER", "uploads"), "bulk_imports", import_id
+    )
     os.makedirs(upload_dir, exist_ok=True)
 
     # First pass: extract all page data
@@ -162,7 +168,7 @@ def _extract_pages_with_categories(pdf_path):
             "section": current_section or "Unknown",
             "subsection": current_subsection,
             "play_name": play_name,
-            "image_url": f"/uploads/bulk_imports/{img_name}",
+            "image_url": f"/uploads/bulk_imports/{import_id}/{img_name}",
             "image_path": img_path,
         })
 
@@ -397,14 +403,23 @@ def bulk_import_split():
 @require_feature("ENABLE_PRACTICES")
 def bulk_import_save():
     """Save selected plays from bulk import to the playbook."""
+    from blueprints.playbook import (
+        _SESSION_TEAM_KEY,
+        _ensure_play_progression_columns,
+        normalize_playbook_team,
+    )
+
     data = request.get_json(force=True)
     plays = data.get("plays", [])
     default_playbook_id = data.get("playbook_id", "")
+    # Same rule as /playbook/import/save: explicit team_key, else the active team playbook.
+    team_key = normalize_playbook_team(data.get("team_key") or session.get(_SESSION_TEAM_KEY))
 
     if not plays:
         return jsonify({"error": "No plays to save"}), 400
 
     db = get_db()
+    _ensure_play_progression_columns(db)  # also ensures plays.team_key
     saved = []
     errors = []
 
@@ -443,8 +458,9 @@ def bulk_import_save():
 
             # Create the play
             cur = db.execute(
-                """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json)
-                   VALUES (?,?,?,?,?,?,?)""",
+                """INSERT INTO plays (name, description, category, category_id, tags, playbook_id, diagram_json,
+                                      team_key)
+                   VALUES (?,?,?,?,?,?,?,?)""",
                 (
                     name,
                     f"Imported from bulk PDF — {section}",
@@ -453,6 +469,7 @@ def bulk_import_save():
                     tags,
                     int(playbook_id) if playbook_id else None,
                     json.dumps({"section": section, "source": "bulk_import"}),
+                    team_key,
                 ),
             )
             play_db_id = cur.lastrowid
