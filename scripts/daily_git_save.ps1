@@ -107,7 +107,24 @@ try {
         "data/hoopsalytics/boxscore_teach_report.json",
         "data/hoopsalytics/full_film_panel_latest.json",
         "data/hoopsalytics/full_film_panel_history.jsonl",
-        "data/hoopsalytics/daily_git_save.log"
+        "data/hoopsalytics/daily_git_save.log",
+        # Browser site data / Chrome LevelDB / autosave dumps
+        "tag-exports/_chrome_ls_q2",
+        "tag-exports/*chrome*",
+        "*_chrome_ls*",
+        "**/IndexedDB/**",
+        "**/Local Storage/**",
+        "**/Session Storage/**",
+        # Server / test / transfer noise
+        "_tmp_flask*",
+        "data/flask_*.log",
+        "data/flask_*.err.log",
+        "data/flask_*.out.log",
+        "scripts/backup.log",
+        "transfer-bundles",
+        "*.ldb",
+        "pytest-*.txt",
+        ".pytest_cache"
     )
     foreach ($pattern in $unstage) {
         & git reset -q HEAD -- $pattern 2>$null
@@ -129,7 +146,14 @@ try {
         $_ -match '(^|/)uploads/' -or
         $_ -match 'full_film_panel_latest\.json$' -or
         $_ -match 'full_film_panel_history\.jsonl$' -or
-        $_ -match 'teach_loop_state\.json$'
+        $_ -match 'teach_loop_state\.json$' -or
+        $_ -match '_chrome_ls' -or
+        $_ -match '(^|/)tag-exports/.*chrome' -or
+        $_ -match '\.ldb$' -or
+        $_ -match '(^|/)transfer-bundles/' -or
+        $_ -match '(^|/)_tmp_flask' -or
+        $_ -match '(^|/)data/flask_' -or
+        $_ -match 'backup\.log$'
     }
     if ($blocked) {
         throw ("Refusing to commit sensitive/runtime paths: " + ($blocked -join ", "))

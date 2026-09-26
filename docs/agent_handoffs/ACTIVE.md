@@ -1,9 +1,21 @@
 # Active Task
 
-Updated: 2026-09-18 (Coaches site / nightly)
+Updated: 2026-09-26 (Jason/Claude security + correctness pass)
 
 Branch: `cursor/playbook-jason-clean-slate-ac1f`  
 Base: `cursor/dashboard-maxpreps-results-ac1f`
+
+## Security / correctness (Scott 2026-09-26)
+
+**Proven fixes on this branch:**
+1. **Nightly leak:** untracked Chrome LevelDB / flask logs / transfer bundles; `.gitignore` + `daily_git_save.ps1` blocklist expanded. *(Git history may still contain old blobs — rotate any exposed cookies/tokens.)*
+2. **Messaging:** signed-in only; membership-scoped list/poll/send; client `sender_id` ignored.
+3. **Settings:** admin-only; logout deletes `user_sessions` and production requests require a live token (copied cookie stops working).
+4. **Rebuild dupes:** `persist_events` deletes prior AI rows (including auto-accepted), keeps manual/corrected.
+5. **Stats:** FT no longer counts as FG; Film Tool add/correct set `event_type_id` + refresh stats; ledger skips shot+make pairs and counts O/D rebounds.
+6. **Teach loop:** hung fail won’t leave dual GPU; young runs not zombie-killed; broken games skip after 3 start failures.
+7. **Schedule:** re-import skips duplicates; delete scored game/season clears `games` first; archive copies results via `scheduled_game_id`.
+8. **Paths/XSS:** upload_id / team photos / scorebook contained; HTML uploads forced download; category names sanitized; playbook chip HTML escaped.
 
 ## Dual-machine roles (locked)
 

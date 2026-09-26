@@ -1079,7 +1079,17 @@ def upload_chunk():
     if "file" not in request.files:
         return jsonify({"error": "No file chunk provided"}), 400
 
-    chunk_dir = os.path.join(tempfile.gettempdir(), "liberty_uploads", upload_id)
+    # upload_id must be a single path segment (no traversal into other temp dirs).
+    import re as _re
+    if not _re.fullmatch(r"[A-Za-z0-9_\-]{8,128}", str(upload_id)):
+        return jsonify({"error": "Invalid upload_id"}), 400
+
+    chunk_root = os.path.join(tempfile.gettempdir(), "liberty_uploads")
+    os.makedirs(chunk_root, exist_ok=True)
+    chunk_dir = os.path.join(chunk_root, upload_id)
+    # Containment: resolved path must stay under chunk_root
+    if os.path.commonpath([os.path.realpath(chunk_root), os.path.realpath(chunk_dir)]) != os.path.realpath(chunk_root):
+        return jsonify({"error": "Invalid upload_id"}), 400
     os.makedirs(chunk_dir, exist_ok=True)
 
     # Save chunk

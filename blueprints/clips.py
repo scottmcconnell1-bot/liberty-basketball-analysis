@@ -568,16 +568,27 @@ def create_reviewed_event():
     user_id = _current_review_user_id()
 
     db = get_db()
+    event_type_id = None
+    try:
+        et_row = db.execute(
+            "SELECT id FROM event_types WHERE lower(code) = lower(?)",
+            (event_type,),
+        ).fetchone()
+        if et_row:
+            event_type_id = et_row["id"]
+    except Exception:
+        event_type_id = None
     cur = db.execute(
         """INSERT INTO events
-           (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+           (game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json,
             source_video, human_verified, confidence, review_status, source_type,
             reviewed_at, created_by_user_id, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
         (
             game_id,
             player,
             event_type,
+            event_type_id,
             shot_result,
             timestamp_ms,
             json.dumps(details),
@@ -590,6 +601,11 @@ def create_reviewed_event():
         ),
     )
     db.commit()
+    try:
+        from helpers import refresh_game_stats
+        refresh_game_stats(db, game_id)
+    except Exception:
+        pass
     row = db.execute("SELECT * FROM events WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(dict(row)), 201
 
@@ -701,7 +717,7 @@ def review_event_accept(event_id):
         return jsonify({"error": "Not found"}), 404
 
     user_id = _current_review_user_id()
-    updated = accept_event(db, event_id, user_id=user_id, notes=notes, commit=True)
+    updated = accept_event(db, event_id, user_id=user_id, notes=notes, commit=True, refresh_stats=True)
     return jsonify(updated)
 
 
@@ -716,7 +732,7 @@ def review_event_reject(event_id):
         return jsonify({"error": "Not found"}), 404
 
     user_id = _current_review_user_id()
-    updated = reject_event(db, event_id, user_id=user_id, notes=notes, commit=True)
+    updated = reject_event(db, event_id, user_id=user_id, notes=notes, commit=True, refresh_stats=True)
     return jsonify(updated)
 
 
@@ -805,10 +821,21 @@ def review_event_correct(event_id):
 
     user_id = _current_review_user_id()
     correction_notes = notes or "Corrected in Film Tool"
+    event_type_id = None
+    try:
+        et_row = db.execute(
+            "SELECT id FROM event_types WHERE lower(code) = lower(?)",
+            (values["event_type"],),
+        ).fetchone()
+        if et_row:
+            event_type_id = et_row["id"]
+    except Exception:
+        event_type_id = None
     db.execute(
         """UPDATE events
               SET player=?,
                   event_type=?,
+                  event_type_id=COALESCE(?, event_type_id),
                   shot_result=?,
                   timestamp_ms=?,
                   details_json=?,
@@ -822,6 +849,7 @@ def review_event_correct(event_id):
         (
             values["player"],
             values["event_type"],
+            event_type_id,
             values["shot_result"],
             values["timestamp_ms"],
             values["details_json"],
@@ -840,7 +868,11 @@ def review_event_correct(event_id):
         {"fields_changed": sorted(changed.keys()), "notes": notes},
     )
     db.commit()
-    # Skip full stats rebuild on single corrections — same cost issue as accept/reject.
+    try:
+        from helpers import refresh_game_stats
+        refresh_game_stats(db, row["game_id"])
+    except Exception:
+        pass
     return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
 
 

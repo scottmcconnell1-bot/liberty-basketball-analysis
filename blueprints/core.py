@@ -38,7 +38,7 @@ import sqlite3
 import subprocess
 import tempfile
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort
+from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort, flash
 
 from helpers import (
     AI_DEFAULTS,
@@ -443,6 +443,16 @@ def schedule_save_season():
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def schedule_delete_season(season_id):
     db = get_db()
+    # Clear scored games first — games.scheduled_game_id FK has no ON DELETE CASCADE.
+    sg_ids = [
+        r[0]
+        for r in db.execute(
+            "SELECT id FROM scheduled_games WHERE season_id=?", (season_id,)
+        ).fetchall()
+    ]
+    if sg_ids:
+        ph = ",".join("?" for _ in sg_ids)
+        db.execute(f"DELETE FROM games WHERE scheduled_game_id IN ({ph})", sg_ids)
     db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
     db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
     db.commit()
@@ -551,6 +561,8 @@ def schedule_delete_game(game_id):
         "status": (request.form.get("filter_status") or "").strip(),
     }
     db = get_db()
+    # Scored rows reference scheduled_games — delete children first to avoid FK crash.
+    db.execute("DELETE FROM games WHERE scheduled_game_id=?", (game_id,))
     db.execute("DELETE FROM scheduled_games WHERE id=?", (game_id,))
     db.commit()
     return redirect(
@@ -1236,6 +1248,18 @@ def schedule_import_pdf_confirm():
             continue
         try:
             status = (g.get("status") or "scheduled").strip() or "scheduled"
+            gender = (g.get("gender") or "boys").strip()
+            level = (g.get("level") or "jr_high").strip()
+            # Skip duplicates — re-import must not double W-L.
+            existing = db.execute(
+                """SELECT id FROM scheduled_games
+                   WHERE season_id=? AND game_date=? AND opponent_name=?
+                     AND team=? AND gender=? AND level=?
+                   LIMIT 1""",
+                (season_id, game_date, opponent, pdf_team, gender, level),
+            ).fetchone()
+            if existing:
+                continue
             cur = db.execute(
                 """INSERT INTO scheduled_games
                    (season_id, program_name, team, gender, level, game_date, game_time,
@@ -1246,8 +1270,8 @@ def schedule_import_pdf_confirm():
                     season_id,
                     "Liberty",
                     pdf_team,
-                    (g.get("gender") or "boys").strip(),
-                    (g.get("level") or "jr_high").strip(),
+                    gender,
+                    level,
                     game_date,
                     (g.get("game_time") or "").strip() or None,
                     (g.get("jv_game_time") or "").strip() or None,
@@ -1787,7 +1811,22 @@ def film(filename=None):
 
 @core.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+    """Serve uploads. Force download for HTML/SVG/JS so they cannot XSS coaches."""
+    from flask import abort
+    from werkzeug.utils import safe_join
+
+    upload_root = current_app.config["UPLOAD_FOLDER"]
+    # safe_join returns None when path escapes the root
+    full = safe_join(upload_root, filename)
+    if full is None:
+        abort(404)
+    lower = filename.lower()
+    as_attachment = lower.endswith((".html", ".htm", ".svg", ".xhtml", ".xml", ".js", ".mjs"))
+    resp = send_from_directory(upload_root, filename, as_attachment=as_attachment)
+    if as_attachment:
+        resp.headers["Content-Type"] = "application/octet-stream"
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 # ── Team Photos ──────────────────────────────────────────────
@@ -1830,13 +1869,24 @@ def api_teams_photos_upload():
     team_key = request.form.get("team_key", "")
     caption = request.form.get("caption", "")
 
+    # Sanitize team_key — no path separators / traversal in the stored filename.
+    import re as _re
+    team_key_safe = _re.sub(r"[^\w.\-]+", "_", (team_key or "team").strip())[:64] or "team"
+    caption = (caption or "")[:500]
+
     # Build safe filename: team_key + timestamp + ext
     ext = file.filename.rsplit(".", 1)[1].lower()
-    safe_name = f"{team_key}_{int(__import__('time').time())}.{ext}"
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        return jsonify({"error": "File type not allowed"}), 400
+    safe_name = f"{team_key_safe}_{int(__import__('time').time())}.{ext}"
 
     upload_dir = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(os.path.join(upload_dir, "team_photos"), exist_ok=True)
-    filepath = os.path.join(upload_dir, "team_photos", safe_name)
+    photo_dir = os.path.join(upload_dir, "team_photos")
+    os.makedirs(photo_dir, exist_ok=True)
+    filepath = os.path.join(photo_dir, safe_name)
+    # Final containment check
+    if os.path.commonpath([os.path.realpath(photo_dir), os.path.realpath(os.path.dirname(filepath))]) != os.path.realpath(photo_dir):
+        return jsonify({"error": "Invalid path"}), 400
     file.save(filepath)
 
     # Get current user id (or NULL if not logged in)
@@ -1847,7 +1897,7 @@ def api_teams_photos_upload():
     db.execute(
         """INSERT INTO team_photos (team_key, filename, original_name, caption, uploaded_by)
            VALUES (?, ?, ?, ?, ?)""",
-        (team_key, safe_name, file.filename, caption, user_id),
+        (team_key_safe, safe_name, file.filename, caption, user_id),
     )
     db.commit()
 
@@ -1855,7 +1905,7 @@ def api_teams_photos_upload():
         "id": db.execute("SELECT last_insert_rowid()").fetchone()[0],
         "filename": safe_name,
         "original_name": file.filename,
-        "team_key": team_key,
+        "team_key": team_key_safe,
         "caption": caption,
     }), 201
 
@@ -1882,6 +1932,16 @@ def api_teams_photos_delete(photo_id):
 
 @core.route("/settings", methods=["GET", "POST"])
 def settings_page():
+    from blueprints.users import _current_user, ROLE_HIERARCHY
+
+    # Admin only — any signed-in player must not change Settings (incl. login flags).
+    user = _current_user()
+    if not user:
+        return redirect(url_for("users.login", next=request.url))
+    if ROLE_HIERARCHY.get(user["role"], 0) < ROLE_HIERARCHY.get("admin", 4):
+        flash("Only admins can change Settings.", "error")
+        return redirect(url_for("core.index"))
+
     db = get_db()
     catalog = build_settings_catalog()
     runtime_settings = get_runtime_settings()

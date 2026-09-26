@@ -492,11 +492,20 @@ def _effective_parent_for_new_category(db, parent_id):
 
 
 def create_category(db, *, parent_id, name):
+    import re
     name = (name or "").strip()
     if not name:
         raise ValueError("Category name is required")
+    # Strip tags / control chars so crafted names cannot XSS via path chips.
+    name = re.sub(r"[<>\"'`]", "", name)
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()
+    if not name:
+        raise ValueError("Category name is required")
+    if len(name) > 80:
+        name = name[:80]
     parent_id, parent_path = _effective_parent_for_new_category(db, parent_id)
     slug = name.lower().replace(" ", "_").replace("-", "_")
+    slug = re.sub(r"[^\w]+", "_", slug).strip("_") or "category"
     slug_path = _slug_path(parent_path, slug)
     existing = db.execute(
         "SELECT id FROM play_categories WHERE slug_path = ?",
@@ -514,9 +523,16 @@ def create_category(db, *, parent_id, name):
 
 
 def rename_category(db, category_id, name):
+    import re
     name = (name or "").strip()
     if not name:
         raise ValueError("Category name is required")
+    name = re.sub(r"[<>\"'`]", "", name)
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()
+    if not name:
+        raise ValueError("Category name is required")
+    if len(name) > 80:
+        name = name[:80]
     row = db.execute(
         "SELECT id, parent_id, slug_path FROM play_categories WHERE id = ?",
         (category_id,),
@@ -531,6 +547,7 @@ def rename_category(db, category_id, name):
         ).fetchone()
         parent_path = parent["slug_path"] if parent else ""
     slug = name.lower().replace(" ", "_").replace("-", "_")
+    slug = re.sub(r"[^\w]+", "_", slug).strip("_") or "category"
     slug_path = _slug_path(parent_path, slug)
     conflict = db.execute(
         "SELECT id FROM play_categories WHERE slug_path = ? AND id != ?",

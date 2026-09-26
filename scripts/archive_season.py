@@ -146,19 +146,47 @@ def main() -> int:
                 )
                 counts["seasons"] = 1
 
-            # games for season
-            if table_exists(src, "games") and "season_id" in cols(src, "games"):
-                counts["games"] = copy_table(
-                    src, dst, "games", "season_id = ?", (args.season_id,)
+            # Results live on games via scheduled_game_id (games.season_id is rare/absent).
+            # Copy schedule first, then scored games for those rows.
+            sg_ids: list[int] = []
+            if table_exists(src, "scheduled_games") and "season_id" in cols(src, "scheduled_games"):
+                counts["scheduled_games"] = copy_table(
+                    src, dst, "scheduled_games", "season_id = ?", (args.season_id,)
                 )
-                game_ids = [
-                    r[0]
+                sg_ids = [
+                    int(r[0])
                     for r in src.execute(
-                        "SELECT id FROM games WHERE season_id = ?", (args.season_id,)
+                        "SELECT id FROM scheduled_games WHERE season_id = ?",
+                        (args.season_id,),
                     ).fetchall()
                 ]
-            else:
-                game_ids = []
+
+            game_ids: list[int] = []
+            if table_exists(src, "games"):
+                gcols = cols(src, "games")
+                if sg_ids and "scheduled_game_id" in gcols:
+                    ph = ",".join("?" for _ in sg_ids)
+                    counts["games"] = copy_table(
+                        src, dst, "games", f"scheduled_game_id IN ({ph})", tuple(sg_ids)
+                    )
+                    game_ids = [
+                        int(r[0])
+                        for r in src.execute(
+                            f"SELECT id FROM games WHERE scheduled_game_id IN ({ph})",
+                            tuple(sg_ids),
+                        ).fetchall()
+                    ]
+                elif "season_id" in gcols:
+                    counts["games"] = copy_table(
+                        src, dst, "games", "season_id = ?", (args.season_id,)
+                    )
+                    game_ids = [
+                        int(r[0])
+                        for r in src.execute(
+                            "SELECT id FROM games WHERE season_id = ?",
+                            (args.season_id,),
+                        ).fetchall()
+                    ]
 
             if game_ids:
                 placeholders = ",".join("?" for _ in game_ids)
@@ -166,7 +194,9 @@ def main() -> int:
                     ("stats", "game_id"),
                     ("events", "game_id"),
                     ("game_videos", "game_id"),
+                    ("games_videos", "game_id"),
                     ("game_notes", "game_id"),
+                    ("games_notes", "game_id"),
                 ):
                     if not table_exists(src, table):
                         continue
@@ -175,12 +205,6 @@ def main() -> int:
                     counts[table] = copy_table(
                         src, dst, table, f"{fk} IN ({placeholders})", tuple(game_ids)
                     )
-
-            # scheduled_games if season-linked
-            if table_exists(src, "scheduled_games") and "season_id" in cols(src, "scheduled_games"):
-                counts["scheduled_games"] = copy_table(
-                    src, dst, "scheduled_games", "season_id = ?", (args.season_id,)
-                )
 
             dst.commit()
         finally:

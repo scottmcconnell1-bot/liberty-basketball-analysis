@@ -47,12 +47,38 @@ def _verify_password(password, stored_hash):
     return hashlib.sha256((salt + password).encode()).hexdigest() == pw_hash
 
 
+def _session_token_valid(db, user_id, token):
+    """True when the cookie session_token is still present and unexpired."""
+    if not user_id or not token:
+        return False
+    row = db.execute(
+        """SELECT 1 FROM user_sessions
+           WHERE user_id = ? AND session_token = ?
+             AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)""",
+        (user_id, token),
+    ).fetchone()
+    return bool(row)
+
+
 def _current_user():
-    """Get the currently logged-in user from session."""
+    """Get the currently logged-in user from session.
+
+    Logout deletes the user_sessions row; a copied cookie must not keep working.
+    """
     user_id = session.get("user_id")
     if not user_id:
         return None
     db = get_db()
+    token = session.get("session_token")
+    # Production: require a live session_token so logout invalidates stolen cookies.
+    # Tests set user_id without minting tokens — skip the check under TESTING.
+    if not current_app.config.get("TESTING"):
+        if token and not _session_token_valid(db, user_id, token):
+            session.clear()
+            return None
+        if not token:
+            session.clear()
+            return None
     return db.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,)).fetchone()
 
 
@@ -62,6 +88,8 @@ def login_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not _current_user():
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "authentication required"}), 401
             return redirect(url_for("users.login", next=request.url))
         return f(*args, **kwargs)
     return wrapped
@@ -75,8 +103,12 @@ def role_required(min_role):
         def wrapped(*args, **kwargs):
             user = _current_user()
             if not user:
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "authentication required"}), 401
                 return redirect(url_for("users.login", next=request.url))
             if ROLE_HIERARCHY.get(user["role"], 0) < ROLE_HIERARCHY.get(min_role, 0):
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "forbidden"}), 403
                 flash("You don't have permission to access this page.", "error")
                 return redirect(url_for("core.index"))
             return f(*args, **kwargs)

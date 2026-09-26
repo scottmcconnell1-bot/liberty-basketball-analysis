@@ -132,6 +132,9 @@ def _eligible_event_rows(db, game_id):
     Eligible = events resolved to a known event_type_id with counts_for_stats=1
     and coach-trusted review_status (accepted or corrected). Pending and
     rejected events are excluded from box score aggregation.
+
+    Match relational OR string game_id so Film Tool / coach rows (often
+    relational_game_id NULL) still count when a relational id exists.
     """
     review_clause = _trusted_event_review_clause()
     relational_game_id = _resolve_relational_game_id(db, game_id)
@@ -141,10 +144,13 @@ def _eligible_event_rows(db, game_id):
                       et.counts_for_stats, et.is_scoring_event
                FROM events e
                JOIN event_types et ON et.id = e.event_type_id
-               WHERE e.relational_game_id = ?
+               WHERE (
+                        e.relational_game_id = ?
+                     OR (e.relational_game_id IS NULL AND e.game_id = ?)
+                     )
                  AND {review_clause}
                  AND et.counts_for_stats = 1""",
-            (relational_game_id,),
+            (relational_game_id, str(game_id)),
         ).fetchall()
 
     return db.execute(
@@ -186,6 +192,7 @@ def _aggregate_rows(rows):
             players[p] = {
                 "player": p,
                 "pts": 0, "fgm": 0, "fga": 0,
+                "ftm": 0, "fta": 0,
                 "threes_made": 0, "threes_att": 0,
                 "ast": 0, "reb": 0, "tov": 0,
                 "stl": 0, "blk": 0, "events": 0,
@@ -226,11 +233,12 @@ def _aggregate_rows(rows):
             s["fga"] += 1
             s["threes_att"] += 1
         elif et == "made_free_throw":
-            s["fga"] += 1
-            s["fgm"] += 1
+            # Free throws are not field goals (NFHS / box score).
+            s["fta"] = s.get("fta", 0) + 1
+            s["ftm"] = s.get("ftm", 0) + 1
             s["pts"] += 1
         elif et == "missed_free_throw":
-            s["fga"] += 1
+            s["fta"] = s.get("fta", 0) + 1
         elif et == "make":
             s["fga"] += 1
             s["fgm"] += 1

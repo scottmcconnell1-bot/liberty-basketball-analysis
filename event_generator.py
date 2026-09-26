@@ -1241,13 +1241,20 @@ def _apply_event_calibrator(game_id, events):
 
 
 def persist_events(conn, game_id, events, relational_game_id=None):
+    # Rebuild must replace prior AI drafts *and* prior auto-accepted AI rows.
+    # Keeping only human_verified=0 caused auto-accept (≥0.85) to duplicate:
+    # accepted AI rows survived, then a fresh insert + auto-accept doubled them.
+    # Preserve coach/manual rows and human corrections.
+    ai_delete_clause = """
+            COALESCE(source_type, 'ai') = 'ai'
+              AND COALESCE(review_status, 'pending') != 'corrected'
+              AND COALESCE(review_notes, '') NOT LIKE '%film_tool%'
+    """
     if relational_game_id is not None:
-        # Delete unverified events that are either linked to the relational game_id
-        # or, for legacy rows where relational_game_id is NULL, match by game_id.
         conn.execute(
-            """
+            f"""
             DELETE FROM events
-            WHERE human_verified = 0
+            WHERE {ai_delete_clause}
               AND (
                     relational_game_id = ?
                     OR (relational_game_id IS NULL AND game_id = ?)
@@ -1256,9 +1263,8 @@ def persist_events(conn, game_id, events, relational_game_id=None):
             (relational_game_id, game_id),
         )
     else:
-        # Legacy behavior: delete only unverified events matching game_id
         conn.execute(
-            "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
+            f"DELETE FROM events WHERE game_id = ? AND {ai_delete_clause}",
             (game_id,),
         )
     if not events:

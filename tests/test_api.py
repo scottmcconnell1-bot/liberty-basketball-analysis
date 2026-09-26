@@ -1449,8 +1449,18 @@ def test_status_page_groups_detection_and_event_counts_by_canonical_game_id(clie
     assert "legacy-event-key" not in html
 
 
-def test_settings_page_renders(client, monkeypatch):
+def test_settings_page_renders(client, db, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("admin@example.com", "x", "Admin", "admin"),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email=?", ("admin@example.com",)).fetchone()[0]
+    with client.session_transaction() as sess:
+        sess["user_id"] = uid
+        sess["user_role"] = "admin"
+        sess["user_name"] = "Admin"
     r = client.get("/settings")
     assert r.status_code == 200
     assert b"Settings" in r.data
@@ -1463,6 +1473,22 @@ def test_settings_page_renders(client, monkeypatch):
     assert b"YOLO11 Small" in r.data
     assert b"Custom Ultralytics Model or Weights" in r.data
     assert b"Recommended Ollama Models" in r.data
+
+
+def test_settings_page_rejects_non_admin(client, db, monkeypatch):
+    monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("player@example.com", "x", "Player", "player"),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email=?", ("player@example.com",)).fetchone()[0]
+    with client.session_transaction() as sess:
+        sess["user_id"] = uid
+        sess["user_role"] = "player"
+        sess["user_name"] = "Player"
+    r = client.get("/settings", follow_redirects=False)
+    assert r.status_code in (302, 303)
 
 
 def test_custom_weights_guide_page_renders(client):
@@ -1535,6 +1561,16 @@ def test_debug_page_filters_completed_reports(client, db):
 
 def test_settings_page_persists_updates(client, db, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("admin2@example.com", "x", "Admin", "admin"),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email=?", ("admin2@example.com",)).fetchone()[0]
+    with client.session_transaction() as sess:
+        sess["user_id"] = uid
+        sess["user_role"] = "admin"
+        sess["user_name"] = "Admin"
     r = client.post("/settings", data={
         "feature_ENABLE_MANUAL_TAG_MVP": "on",
         "feature_ENABLE_AUTO_STATS_M1": "on",

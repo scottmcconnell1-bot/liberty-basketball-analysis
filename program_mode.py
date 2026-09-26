@@ -55,7 +55,30 @@ def _repo_root() -> Path:
 
 
 def scorebook_path(game_id: str) -> Path:
-    return _repo_root() / "data" / "stat_books" / "confirmed" / f"{game_id.strip()}.json"
+    """Confirmed scorebook JSON under data/stat_books/confirmed only.
+
+    Reject path traversal (``../``, absolute paths, separators).
+    """
+    raw = (game_id or "").strip()
+    if raw.lower().endswith(".json"):
+        raw = raw[:-5]
+    # Collapse to a single filename segment — never allow absolute/parent paths.
+    safe = raw.replace("\\", "/").split("/")[-1]
+    if (
+        not safe
+        or safe in (".", "..")
+        or ".." in raw
+        or (len(raw) >= 2 and raw[1] == ":")  # Windows drive
+        or raw.startswith(("/", "\\"))
+    ):
+        safe = "__invalid__"
+    confirmed = _repo_root() / "data" / "stat_books" / "confirmed"
+    path = (confirmed / f"{safe}.json").resolve()
+    try:
+        path.relative_to(confirmed.resolve())
+    except ValueError:
+        path = (confirmed / "__invalid__.json").resolve()
+    return path
 
 
 def load_scorebook(game_id: str) -> dict[str, Any] | None:
@@ -376,18 +399,25 @@ def ledger_box_from_events(db, game_id: str) -> dict[str, Any]:
     for row in rows:
         player = _player_key(row["player"])
         et = (row["event_type"] or "").lower()
+        sr = (row["shot_result"] or "").lower()
         n = int(row["n"] or 0)
         b = bucket(player)
         totals["events"] += n
+        # Expanded AI emits shot+make/miss pairs — count the typed row only.
+        if et == "shot" and sr in ("make", "miss", "made", "missed"):
+            continue
         pts = _points_for_event(et, row["shot_result"]) * n
         if pts:
             b["pts"] += pts
             totals["pts"] += pts
-        if et in ("make", "made_two", "made_three", "miss", "missed_two", "missed_three", "shot"):
+        if et in ("make", "made_two", "made_three", "miss", "missed_two", "missed_three"):
+            b["fga"] += n
+            totals["fga"] += n
+        elif et == "shot":
             b["fga"] += n
             totals["fga"] += n
         if et in ("make", "made_two", "made_three") or (
-            et == "shot" and (row["shot_result"] or "").lower() == "make"
+            et == "shot" and sr in ("make", "made")
         ):
             b["fgm"] += n
             totals["fgm"] += n
@@ -403,7 +433,7 @@ def ledger_box_from_events(db, game_id: str) -> dict[str, Any]:
         if et == "made_free_throw":
             b["ftm"] += n
             totals["ftm"] += n
-        if et == "rebound":
+        if et in ("rebound", "rebound_offensive", "rebound_defensive"):
             b["reb"] += n
             totals["reb"] += n
         if et == "assist":

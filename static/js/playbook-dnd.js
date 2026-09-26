@@ -123,10 +123,17 @@
     function updateCategoryChip(row, path) {
       const chip = row.querySelector('.play-cat-chip');
       if (!chip) return;
+      const escape = (s) => String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
       const parts = String(path || '')
         .replace(/_/g, ' ')
         .split('/')
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(escape);
       if (!parts.length) {
         chip.innerHTML = '<span>uncategorized</span>';
         return;
