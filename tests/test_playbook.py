@@ -652,3 +652,28 @@ class TestPlaybookTeams:
         assert kids[0]["name"] == "Child Option"
         assert kids[0]["team_key"] == "hs_girls"
         assert kids[0]["id"] != child
+
+
+class TestPlaybookViewModeEdits:
+    """View mode can edit sheets for Play All but has no Save Play form."""
+
+    def _play_id(self, client, db):
+        client.post("/playbook/save", data={
+            "name": "View Mode Play", "category": "offense", "description": "", "tags": "",
+            "playbook_id": "", "diagram_json": "{}", "steps_json": "[]",
+        }, follow_redirects=True)
+        return db.execute("SELECT id FROM plays WHERE name='View Mode Play'").fetchone()["id"]
+
+    def test_view_banner_points_to_edit_instead_of_missing_save(self, client, db):
+        play_id = self._play_id(client, db)
+        html = client.get(f"/playbook/play/{play_id}").get_data(as_text=True)
+        assert 'id="playForm"' not in html
+        assert "not saved</strong> in View" in html
+        assert f"/playbook/play/{play_id}/edit" in html
+        assert "if (!stepsDirty || viewMode === 'share') return;" in html
+
+    def test_editor_banner_still_says_save_play(self, client, db):
+        play_id = self._play_id(client, db)
+        html = client.get(f"/playbook/play/{play_id}/edit").get_data(as_text=True)
+        assert 'id="playForm"' in html
+        assert "click <strong>Save Play</strong> to keep them" in html

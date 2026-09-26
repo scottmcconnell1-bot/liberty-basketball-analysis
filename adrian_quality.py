@@ -1427,6 +1427,7 @@ def apply_quality_to_db(conn: sqlite3.Connection, game_id: str = ADRIAN_BASE) ->
                       review_notes=?
                 WHERE game_id=?
                   AND COALESCE(source_type,'ai') != 'manual'
+                  AND COALESCE(review_status,'') != 'corrected'
                   AND COALESCE(review_notes,'') NOT LIKE '%Corrected in Film Tool%'
                   AND COALESCE(review_notes,'') NOT LIKE '%Film Tool teach%'""",
             (f"{QUALITY_NOTE}:drop", key),
@@ -1450,7 +1451,8 @@ def apply_quality_to_db(conn: sqlite3.Connection, game_id: str = ADRIAN_BASE) ->
                               player=?,
                               timestamp_ms=?,
                               details_json=?
-                        WHERE id=?""",
+                        WHERE id=?
+                          AND COALESCE(review_status,'') != 'corrected'""",
                     (
                         f"{QUALITY_NOTE}:keep",
                         row.get("event_type"),

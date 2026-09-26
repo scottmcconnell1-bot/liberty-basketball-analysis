@@ -212,6 +212,11 @@ def line_from_scorebook_player(player: dict[str, Any]) -> dict[str, Any]:
     fgm3 = extras.get("fg3")
     if fgm3 is None:
         fgm3 = player.get("tpm")
+    # Book-level fgm/fga are totals (2s + 3s); derive the 2PT split from them
+    # when the per-type extras are missing. scorebook_filled_keys() already
+    # treats them as book-filled, so AI misses cannot fill these cells.
+    if fgm2 is None and player.get("fgm") is not None:
+        fgm2 = max(0, int(player.get("fgm") or 0) - int(fgm3 or 0))
     if player.get("pts") is not None:
         line["pts"] = int(player.get("pts") or 0)
     if fgm2 is not None:
@@ -222,6 +227,8 @@ def line_from_scorebook_player(player: dict[str, Any]) -> dict[str, Any]:
         line["fga3"] = int(fgm3 or 0)
         if player.get("tpa") is not None:
             line["fga3"] = int(player.get("tpa") or 0)
+    if player.get("fga") is not None:
+        line["fga2"] = max(line["fgm2"], int(player.get("fga") or 0) - line["fga3"])
     if player.get("ftm") is not None:
         line["ftm"] = int(player.get("ftm") or 0)
     if player.get("fta") is not None:
@@ -612,12 +619,11 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
         if liberty_is_home is False:
             liberty_team["pts"] = int(scorebook.get("final_score_away") or liberty_team["pts"])
             opponent_team["pts"] = int(scorebook.get("final_score_home") or opponent_team["pts"])
-        elif liberty_is_home is True:
+        else:
+            # Unknown (neither name says Liberty) is treated as Liberty = home,
+            # matching the line score and _side_for_scorebook_player.
             liberty_team["pts"] = int(scorebook.get("final_score_home") or liberty_team["pts"])
             opponent_team["pts"] = int(scorebook.get("final_score_away") or opponent_team["pts"])
-        else:
-            liberty_team["pts"] = int(scorebook.get("final_score_away") or liberty_team["pts"])
-            opponent_team["pts"] = int(scorebook.get("final_score_home") or opponent_team["pts"])
         liberty_team = decorate_line(liberty_team)
         opponent_team = decorate_line(opponent_team)
 

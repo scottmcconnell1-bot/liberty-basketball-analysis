@@ -176,3 +176,44 @@ def test_duplicate_jersey_uses_home_light_away_dark(db, monkeypatch):
     assert linkhart["pts"] == 0
     assert linkhart["oreb"] == 1
     assert linkhart["stl"] == 0
+
+
+def test_scorebook_totals_fill_two_point_line_without_extras():
+    """Book fgm/fga are totals; the 2PT split is derived when extras.fg2 is missing."""
+    player = {"jersey": "5", "name": "Book Only", "team": "home", "pts": 14, "fgm": 6, "fga": 13, "tpm": 0}
+    line = decorate_line(line_from_scorebook_player(player))
+    assert line["fgm2"] == 6
+    assert line["fga2"] == 13
+    assert line["fgm3"] == 0
+    assert line["fg_pct"] == round(6 / 13 * 100, 1)
+
+
+def test_scorebook_totals_subtract_threes_from_two_point_split():
+    player = {"jersey": "3", "name": "Shooter", "team": "home", "pts": 17, "fgm": 7, "fga": 16, "tpm": 3, "tpa": 8}
+    line = decorate_line(line_from_scorebook_player(player))
+    assert (line["fgm2"], line["fga2"]) == (4, 8)
+    assert (line["fgm3"], line["fga3"]) == (3, 8)
+
+
+def test_unknown_home_away_final_matches_line_score(db, monkeypatch):
+    """Neither team name says Liberty: Liberty = home everywhere, including team PTS."""
+    import game_boxscore
+
+    scorebook = {
+        "home_team": "Patriots",
+        "away_team": "Adrian",
+        "final_score_home": 52,
+        "final_score_away": 40,
+        "quarters": [
+            {"home_pts": 12, "away_pts": 10},
+            {"home_pts": 14, "away_pts": 8},
+            {"home_pts": 12, "away_pts": 12},
+            {"home_pts": 14, "away_pts": 10},
+        ],
+    }
+    monkeypatch.setattr(game_boxscore, "load_scorebook", lambda _gid: scorebook)
+    box = game_boxscore.build_official_box(db, "unknown-home-away")
+    assert box["line_score"][-1]["liberty_running"] == 52
+    assert box["team"]["liberty"]["pts"] == 52
+    assert box["team"]["opponent"]["pts"] == 40
+    assert box["final"]["liberty"] == 52

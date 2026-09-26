@@ -95,3 +95,86 @@ def test_season_slug_and_ranking_url():
     url = ranking_url("Idaho", "boys", "25-26")
     assert "25-26" in url
     assert "statedivisionid=" in url
+
+
+def _schedule_db():
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.row_factory = sqlite3.Row
+    db.executescript(
+        """CREATE TABLE scheduled_games (
+               id INTEGER PRIMARY KEY, season_id INTEGER, gender TEXT, level TEXT,
+               game_date TEXT, opponent_name TEXT);
+           INSERT INTO scheduled_games VALUES (1, 3, 'girls', 'varsity', '2026-01-09', 'Nampa Christian');
+           INSERT INTO scheduled_games VALUES (2, 3, 'boys', 'varsity', '2026-01-09', 'Nampa Christian');
+           INSERT INTO scheduled_games VALUES (3, 3, 'boys', 'jv', '2026-01-10', 'Adrian');
+           INSERT INTO scheduled_games VALUES (4, 3, 'boys', 'jv', '2026-01-10', 'Vale');"""
+    )
+    return db
+
+
+def _capture():
+    saved = []
+
+    def save_fn(db, game_id, liberty, opponent, is_conference=False):
+        saved.append((game_id, liberty, opponent))
+
+    return saved, save_fn
+
+
+def test_apply_results_doubleheader_uses_gender_and_level():
+    from maxpreps_web import apply_results_to_season
+
+    saved, save_fn = _capture()
+    parsed = [{"game_date": "2026-01-09", "opponent_name": "Nampa Christian", "liberty_score": 61, "opponent_score": 48}]
+    matched, unmatched = apply_results_to_season(
+        _schedule_db(), 3, parsed, save_fn, gender="boys", level="varsity"
+    )
+    assert (matched, unmatched) == (1, [])
+    assert saved == [(2, 61, 48)]
+
+
+def test_apply_results_same_date_resolved_by_opponent_or_reported():
+    from maxpreps_web import apply_results_to_season
+
+    saved, save_fn = _capture()
+    parsed = [
+        {"game_date": "2026-01-10", "opponent_name": "Vale", "liberty_score": 40, "opponent_score": 30},
+        {"game_date": "2026-01-09", "opponent_name": "Nampa Christian", "liberty_score": 50, "opponent_score": 45},
+    ]
+    matched, unmatched = apply_results_to_season(_schedule_db(), 3, parsed, save_fn)
+    # Vale picks game 4 by name; the 01-09 boys/girls tie cannot be split without gender.
+    assert saved == [(4, 40, 30)]
+    assert matched == 1
+    assert len(unmatched) == 1 and "ambiguous" in unmatched[0]
+
+
+def test_scrape_ranking_tries_browser_when_page_has_no_liberty_row(monkeypatch):
+    import maxpreps_web
+
+    monkeypatch.setattr(maxpreps_web, "fetch_url", lambda url: "<html><table></table></html>")
+    monkeypatch.setattr(maxpreps_web, "_playwright_ranking_fallback", lambda url: 4)
+    result = maxpreps_web.scrape_ranking("Idaho", "boys")
+    assert result["ranking"] == 4
+    assert result["error"] is None
+
+
+def test_failed_ranking_scrape_keeps_cached_value(client, db, monkeypatch):
+    import blueprints.core as core_mod
+
+    db.execute(
+        """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url)
+           VALUES ('varsity_boys', 'Idaho', 3, 'https://example/boys')"""
+    )
+    db.commit()
+    monkeypatch.setattr(
+        core_mod, "_scrape_maxpreps_ranking",
+        lambda state, gender: (None, f"https://example/{gender}", "403 Forbidden"),
+    )
+    resp = client.post("/api/teams/rankings", data={"state": "Idaho"})
+    assert resp.status_code == 200
+    row = db.execute(
+        "SELECT ranking FROM maxpreps_rankings WHERE team_key='varsity_boys' AND state='Idaho'"
+    ).fetchone()
+    assert row["ranking"] == 3

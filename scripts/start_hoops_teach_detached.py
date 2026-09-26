@@ -101,6 +101,40 @@ def _pid_alive(pid: int | None) -> bool:
         return False
 
 
+def _stop_pid(pid: int | None, wait_s: float = 15.0) -> bool:
+    """Terminate a process tree we started. Returns True once it is gone."""
+    if not _pid_alive(pid):
+        return True
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    else:
+        import signal
+
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.time() + wait_s
+    while time.time() < deadline:
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.5)
+    if os.name != "nt":
+        import signal
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+        time.sleep(0.5)
+    return not _pid_alive(pid)
+
+
 def _load_dotenv_into(env: dict) -> dict:
     """Merge repo .env into env dict without overriding existing keys."""
     env_path = ROOT / ".env"

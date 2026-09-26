@@ -1,12 +1,12 @@
 // Service Worker for Liberty Basketball PWA
 // Handles push notifications and offline caching
 
-const CACHE_NAME = 'liberty-basketball-v1';
+const CACHE_NAME = 'liberty-basketball-v2';
+// cache.addAll() rejects the whole install if any URL fails, so list only
+// routes that exist (there is no /static/css/style.css).
 const OFFLINE_URLS = [
   '/',
   '/login',
-  '/register',
-  '/static/css/style.css',
 ];
 
 // Install: cache core assets

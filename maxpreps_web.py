@@ -242,21 +242,55 @@ def parse_schedule_results(text: str, season_start_year: int = 2025) -> list[dic
     return games
 
 
-def apply_results_to_season(db, season_id: int, parsed: list[dict], save_fn) -> tuple[int, list[str]]:
-    """Write parsed MaxPreps scores onto scheduled_games matched by date."""
+def _norm_team_name(name: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
+
+
+def apply_results_to_season(
+    db,
+    season_id: int,
+    parsed: list[dict],
+    save_fn,
+    *,
+    gender: str | None = None,
+    level: str | None = None,
+) -> tuple[int, list[str]]:
+    """Write parsed MaxPreps scores onto scheduled_games matched by date.
+
+    ``gender``/``level`` narrow the match so a boys/girls doubleheader on the
+    same date cannot take the other team's score. When several games are still
+    left, the opponent name decides; an unresolved tie is reported, not guessed.
+    """
     matched = 0
     unmatched = []
     for game in parsed:
-        row = db.execute(
-            "SELECT id FROM scheduled_games WHERE season_id = ? AND game_date = ?",
-            (season_id, game["game_date"]),
-        ).fetchone()
-        if not row:
-            unmatched.append(f"{game['game_date']} {game.get('opponent_name')}")
+        sql = "SELECT id, opponent_name FROM scheduled_games WHERE season_id = ? AND game_date = ?"
+        params: list = [season_id, game["game_date"]]
+        if gender:
+            sql += " AND gender = ?"
+            params.append(gender)
+        if level:
+            sql += " AND level = ?"
+            params.append(level)
+        rows = db.execute(sql, params).fetchall()
+        label = f"{game['game_date']} {game.get('opponent_name')}"
+        if len(rows) > 1:
+            want = _norm_team_name(game.get("opponent_name"))
+            named = []
+            for r in rows:
+                have = _norm_team_name(r["opponent_name"])
+                if want and have and (want in have or have in want):
+                    named.append(r)
+            if len(named) != 1:
+                unmatched.append(f"{label} (ambiguous: {len(rows)} games that date)")
+                continue
+            rows = named
+        if not rows:
+            unmatched.append(label)
             continue
         save_fn(
             db,
-            row["id"],
+            rows[0]["id"],
             game["liberty_score"],
             game["opponent_score"],
             is_conference=bool(game.get("is_conference")),
@@ -277,6 +311,8 @@ def scrape_ranking(state: str, gender: str, season_slug: str | None = None) -> d
             error = "Liberty Charter not found in MaxPreps rankings table."
     except Exception as exc:
         error = str(exc)
+    if ranking is None:
+        # Also covers a 200 page whose table is rendered by JavaScript.
         ranking = _playwright_ranking_fallback(url)
 
     return {"ranking": ranking, "url": url, "error": error if ranking is None else None}

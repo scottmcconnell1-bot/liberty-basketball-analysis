@@ -942,6 +942,7 @@ def playbook_share(token):
             404,
             {"Content-Type": "text/html"},
         )
+    play = dict(play)  # sqlite3.Row has no .get(); match the other play helpers
     steps = db.execute(
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
     ).fetchall()

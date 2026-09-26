@@ -442,7 +442,12 @@
         <!-- Populated by JS -->
       </div>
       <div id="stepsDirtyBanner" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.75rem;">
+        {% if view_mode == 'view' and editing_play %}
+        Sheet changes here only affect Play All and are <strong>not saved</strong> in View.
+        <a href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Open in Edit</a> to keep them.
+        {% else %}
         Sheet order/labels changed — click <strong>Save Play</strong> to keep them.
+        {% endif %}
       </div>
       <div id="movementListWrap" style="margin-top:12px;">
         <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
@@ -5290,7 +5295,8 @@ document.getElementById('playForm')?.addEventListener('submit', function() {
 });
 
 window.addEventListener('beforeunload', (e) => {
-  if (!stepsDirty || isReadOnly) return;
+  // View mode can edit sheets for Play All but cannot save them; warn there too.
+  if (!stepsDirty || viewMode === 'share') return;
   e.preventDefault();
   e.returnValue = '';
 });

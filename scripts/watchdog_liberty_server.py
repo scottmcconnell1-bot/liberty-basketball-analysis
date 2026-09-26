@@ -26,8 +26,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from start_hoops_teach_detached import (  # noqa: E402
     PORT,
     _load_pids,
+    _pid_alive,
     _port_open,
     _save_pids,
+    _stop_pid,
     ensure_server,
 )
 
@@ -45,6 +47,9 @@ def _http_ok(path: str = "/") -> bool:
     try:
         with urllib.request.urlopen(url, timeout=8) as response:
             return 200 <= response.status < 500
+    except urllib.error.HTTPError as exc:
+        # A 4xx (e.g. 401 once login is enforced) still means Flask is answering.
+        return 200 <= exc.code < 500
     except (urllib.error.URLError, TimeoutError, OSError):
         return False
 
@@ -78,12 +83,30 @@ def main() -> int:
         _log("=== liberty server watchdog done ===")
         return 0
 
+    pids = _load_pids()
     if _port_open():
-        _log("Port open but HTTP check failed - restarting app.py")
+        # ensure_server() is a no-op while the port is held, so a hung app.py
+        # must be stopped first or it is never restarted.
+        pid = pids.get("liberty_pid")
+        if not _pid_alive(pid):
+            _log(
+                "Port open but HTTP check failed, and the listener is not the "
+                f"recorded Liberty pid ({pid}) - not killing an unknown process"
+            )
+            _log("=== liberty server watchdog failed ===")
+            return 1
+        _log(f"Port open but HTTP check failed - stopping hung app.py (pid={pid})")
+        if not _stop_pid(pid):
+            _log(f"ERROR: could not stop pid {pid}")
+            _log("=== liberty server watchdog failed ===")
+            return 1
+        for _ in range(20):
+            if not _port_open():
+                break
+            time.sleep(0.5)
     else:
         _log("Port :8080 closed - starting Liberty")
 
-    pids = _load_pids()
     pids = ensure_server(pids)
     _save_pids(pids)
 

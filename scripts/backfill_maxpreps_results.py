@@ -35,7 +35,10 @@ def main(argv: list[str] | None = None) -> int:
 
     with app.app_context():
         db = get_db()
-        matched, unmatched = apply_results_to_season(db, args.season_id, parsed, save_scheduled_game_record)
+        # The MaxPreps team schedule page is the varsity schedule for that gender.
+        matched, unmatched = apply_results_to_season(
+            db, args.season_id, parsed, save_scheduled_game_record, gender=args.gender, level="varsity"
+        )
         print(f"Wrote scores for {matched} scheduled games")
         if unmatched:
             print("Unmatched:", "; ".join(unmatched))

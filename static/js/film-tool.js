@@ -2835,7 +2835,7 @@ function setActiveAiEvent(eventId, shouldScroll = false) {
 function syncAiEventsToPlayback() {
     if (clipReview) return; // clip loop owns the active play
     if (!video || !aiEventsCache.length) { setActiveAiEvent(null); return; }
-    const currentMs = Math.round((video.currentTime || 0) * 1000);
+    const currentMs = playheadAnalysisMs();
     let nearest = null, nearestDistance = Infinity;
     aiEventsCache.forEach(event => { const distance = Math.abs(Number(event.timestamp_ms || 0) - currentMs); if (distance < nearestDistance) { nearestDistance = distance; nearest = event; } });
     if (!nearest || nearestDistance > 5000) { setActiveAiEvent(null); return; }
@@ -2859,6 +2859,13 @@ let filmSyncOffsetMs = 0;
 function eventReviewSeconds(event) {
     const analysisMs = Number(event?.timestamp_ms || 0);
     return Math.max(0, (analysisMs + (filmSyncOffsetMs || 0)) / 1000);
+}
+
+// Inverse of eventReviewSeconds: the review-video playhead in analysis time,
+// which is what events.timestamp_ms stores (review_ms = analysis_ms + offset).
+function playheadAnalysisMs() {
+    const reviewMs = Math.round((video?.currentTime || 0) * 1000);
+    return Math.max(0, reviewMs - (filmSyncOffsetMs || 0));
 }
 
 function updateFilmSyncStatus() {
@@ -3518,7 +3525,7 @@ async function openAiCorrectDialog(eventId) {
             || (await (async () => {
                 const gameId = currentFilmGameId();
                 if (!gameId) return null;
-                const around = Math.round((video?.currentTime || 0) * 1000);
+                const around = playheadAnalysisMs();
                 const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all&limit=40&around_ms=${around}`);
                 if (!response.ok) return null;
                 const rows = await response.json();
@@ -3601,7 +3608,7 @@ async function submitAiCorrection(formEvent) {
                     player: payload.player,
                     shot_result: payload.shot_result,
                     notes: payload.notes || 'Added at playhead in Film Tool',
-                    timestamp_ms: Math.round((video?.currentTime || 0) * 1000),
+                    timestamp_ms: playheadAnalysisMs(),
                     source_video: uploadedVideoName || '',
                 }),
             });
@@ -3738,7 +3745,7 @@ async function fetchAndRenderAIEvents(gameId) {
     aiEventsList.innerHTML = '<div class="empty-state">Loading play list…</div>';
     try {
         const status = aiReviewFilter === 'ledger' ? 'ledger' : 'pending';
-        const around = Math.round((video?.currentTime || 0) * 1000);
+        const around = playheadAnalysisMs();
         const windowMs = status === 'ledger' ? String(3 * 60 * 60 * 1000) : '45000';
         const params = new URLSearchParams({
             game_id: gameId,

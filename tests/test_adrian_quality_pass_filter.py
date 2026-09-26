@@ -287,3 +287,37 @@ def test_infer_opening_tip_winner_first_controlled_hold():
     assert jb["event_type"] == "tip_off"
     assert jb["player"] == "2"
     assert "Opening tip" in (json.loads(jb["details_json"]).get("note") or "")
+
+
+def test_apply_quality_keeps_coach_corrections_with_custom_notes(db, monkeypatch):
+    """A coach correction survives the refine even when its note is not the default text."""
+    import adrian_quality as aq
+
+    key = aq.ADRIAN_BASE
+    rows = [
+        ("made_two", "ai", "pending", 0, None),
+        ("made_two", "ai", "corrected", 1, "wrong player, is #12"),
+        ("made_two", "manual", "accepted", 1, "Film Tool teach"),
+    ]
+    ids = []
+    for event_type, source, status, verified, note in rows:
+        cur = db.execute(
+            """INSERT INTO events
+               (game_id, event_type, timestamp_ms, source_type, review_status, human_verified, review_notes)
+               VALUES (?, ?, 1000, ?, ?, ?, ?)""",
+            (key, event_type, source, status, verified, note),
+        )
+        ids.append(cur.lastrowid)
+    db.commit()
+    # Refine keeps nothing, so every AI row is a drop candidate.
+    monkeypatch.setattr(aq, "refine_adrian_events", lambda raw: ([], {}))
+
+    aq.apply_quality_to_db(db, key)
+
+    status = {
+        r["id"]: (r["review_status"], r["review_notes"])
+        for r in db.execute("SELECT id, review_status, review_notes FROM events")
+    }
+    assert status[ids[0]][0] == "rejected"
+    assert status[ids[1]] == ("corrected", "wrong player, is #12")
+    assert status[ids[2]][0] == "accepted"

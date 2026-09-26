@@ -245,3 +245,34 @@ def test_lane_fts_share_the_four_second_gap(monkeypatch):
     events = eg.generate_precision_events_from_segments("g", segs, ball)
     shots = [e for e in events if e["event_type"] == "shot"]
     assert len(shots) == 1
+
+
+def test_dropped_pump_fake_does_not_block_same_players_real_shot():
+    """A candidate the live-rise filter drops must not start the 6 s per-player refractory.
+
+    Player 1 pump-fakes (rise 100 px: a candidate, but under the 170 px live floor),
+    passes to 2, gets it back and shoots a real 240 px arc ~1.8 s later.
+    """
+
+    def arc(j, top):  # rise to `top` over 10 frames, then fall
+        return 500.0 - (500.0 - top) * min(j, 10) / 10.0 + max(0, j - 10) * 12.0
+
+    frames = list(range(160))
+    ys = []
+    for f in frames:
+        if 25 <= f < 45:
+            ys.append(arc(f - 25, 400.0))
+        elif 81 <= f < 106:
+            ys.append(arc(f - 81, 260.0))
+        else:
+            ys.append(500.0)
+    ball = pd.DataFrame({
+        "frame_number": frames,
+        "timestamp_ms": [f * 33 for f in frames],
+        "x_center": [430.0] * len(frames),
+        "y_center": ys,
+    })
+    segs = [_seg("1", 0, 24), _seg("2", 46, 64), _seg("1", 66, 80), _seg("2", 125, 159)]
+    events = eg.generate_precision_events_from_segments("g", segs, ball)
+    shots = [e for e in events if e["event_type"] == "shot"]
+    assert [(s["player"], s["timestamp_ms"]) for s in shots] == [("1", 91 * 33)]
