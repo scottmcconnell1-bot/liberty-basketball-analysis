@@ -580,7 +580,6 @@ def test_assistant_player_name_prefers_exact_match(web):
     assert p["answer"].startswith("Alice has 3 points")
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: review 'correct' updates event_type text but not event_type_id, so trusted stats/assistant keep the old type")
 def test_assistant_reflects_corrected_event_type(web):
     c = web
     game = create_game(c, "assist-correct")

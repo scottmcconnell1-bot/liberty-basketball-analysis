@@ -197,8 +197,8 @@ def test_journey_manual_tagging_player_and_team_stats(app, client):
     assert set(by_player) == {AVERY, BLAKE, CASEY}
     for name, exp in J1_EXPECTED.items():
         assert _pick(by_player[name], NON_FG_KEYS) == _pick(exp, NON_FG_KEYS), name
-    # players without free throws: FG columns exact
-    for name in (BLAKE, CASEY):
+    # every line exact, incl. FG columns (Avery's 3 free throws stay out of FGM/FGA)
+    for name in (AVERY, BLAKE, CASEY):
         assert _pick(by_player[name]) == J1_EXPECTED[name], name
     assert sum(r["pts"] for r in by_player.values()) == 9 + 2 + 3
     assert body["enhanced"]["basic_stats"] == body["basic"]
@@ -236,15 +236,23 @@ def test_journey_manual_tagging_player_and_team_stats(app, client):
     assert unassigned[CASEY]["pts"] == 3 and unassigned[CASEY]["blk"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: stats._aggregate_rows counts made/missed free throws as FGM/FGA")
-def test_free_throws_are_not_field_goal_attempts(client):
+def test_free_throws_are_not_field_goal_attempts(app, client):
     gid = _create_game(client, "j1-ft")
     _tag_journey_one(client, gid)
     by_player, _ = _stats_by_player(client, gid)
-    assert (by_player[AVERY]["fgm"], by_player[AVERY]["fga"]) == (3, 5)
+    assert (by_player[AVERY]["pts"], by_player[AVERY]["fgm"], by_player[AVERY]["fga"]) == (9, 3, 5)
+    # the persisted stats rows (rebuilt on every tag) agree
+    rows = _query(app, "SELECT pts, fgm, fga FROM stats WHERE relational_game_id=? AND player_name=?",
+                  (gid, AVERY))
+    assert rows == [{"pts": 9, "fgm": 3, "fga": 5}]
+    # a game of only free throws has points but no field goal attempts
+    gid2 = _create_game(client, "j1-ft-only")
+    _tag(client, gid2, "made_free_throw", "7", 1_000, "made")
+    _tag(client, gid2, "missed_free_throw", "7", 2_000, "missed")
+    by_player, _ = _stats_by_player(client, gid2)
+    assert _pick(by_player["7"]) == _line(pts=1)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: get_team_stats/_compute_fgm only credit makes whose shot_result is exactly 'made'")
 def test_four_factors_do_not_depend_on_shot_result_spelling(client):
     """The Film Tool's outcome picker sends 'make'; a coach tagging 'made_two' may send nothing.
     Player PTS already treat made_two/made_three as makes; team eFG% must agree."""
@@ -256,7 +264,6 @@ def test_four_factors_do_not_depend_on_shot_result_spelling(client):
     assert ff["efg_pct"] == round((5 + 0.5 * 2) / 7, 4)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: get_team_stats/_compute_fgm ignore the AI 'make'/'miss' codes, so accepted AI shots give eFG 0")
 def test_four_factors_count_accepted_ai_make_miss(app, client):
     gid = _create_game(client, "j1-ai-make-miss")
     for i, et in enumerate(("make", "make", "miss")):
@@ -267,7 +274,6 @@ def test_four_factors_count_accepted_ai_make_miss(app, client):
     assert _ok(client.get(f"/api/four_factors/{gid}"))["efg_pct"] == round(2 / 3, 4)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: program_mode.ledger_box_from_events ignores rebound_offensive/rebound_defensive for REB")
 def test_program_ledger_counts_offensive_and_defensive_rebounds(client):
     gid = _create_game(client, "j1-ledger-reb")
     _tag_journey_one(client, gid)
@@ -370,7 +376,6 @@ def test_journey_ai_review_accept_correct_reject(app, client):
     assert _pick(by_player["5"]) == _line(pts=3, fgm=1, fga=1, threes_made=1, threes_att=1, reb=1)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/review/events/<id>/correct changes event_type but leaves stale event_type_id, so stats use the old type")
 def test_corrected_event_type_changes_stats(app, client):
     gid = _create_game(client, "j2-correct-type")
     ev = _insert_ai_draft(app, gid, "missed_two", "1", 5_000, "missed")
@@ -379,7 +384,6 @@ def test_corrected_event_type_changes_stats(app, client):
     assert _pick(by_player["1"]) == _line(pts=3, fgm=1, fga=1, threes_made=1, threes_att=1)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: PUT /api/events/<id> changes event_type but leaves stale event_type_id, so stats use the old type")
 def test_edited_event_type_changes_stats(client):
     gid = _create_game(client, "j2-edit-type")
     ev = _tag(client, gid, "made_two", "1", 1_000, "made")
@@ -388,7 +392,6 @@ def test_edited_event_type_changes_stats(client):
     assert (by_player["1"]["pts"], by_player["1"]["threes_made"]) == (3, 1)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: POST /api/review/events stores no event_type_id/relational_game_id, so coach-added ledger events never reach /api/stats")
 @pytest.mark.parametrize("use_analysis_key", [False, True], ids=["game-id", "film-analysis-key"])
 def test_coach_added_ledger_event_counts_in_stats(app, client, use_analysis_key):
     """Film Tool '+ add event' posts to /api/review/events with the key the page is open on."""
@@ -412,7 +415,6 @@ def test_coach_added_ledger_event_counts_in_stats(app, client, use_analysis_key)
     assert by_player.get("1", {}).get("pts") == 3
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: program ledger counts an AI 'shot'(make) + its derived 'make' twice (PTS and FGA doubled)")
 def test_program_ledger_does_not_double_count_shot_make_pairs(app, client):
     """event_generator emits a 'shot' with shot_result plus a derived make/miss row for every attempt;
     stats._aggregate_rows skips the parent 'shot'. The program ledger/auto-ledger must too."""
@@ -550,7 +552,6 @@ def test_scorebook_confirm_rejects_bad_ids_and_shapes(client, program_books):
     assert after == sorted(before + ["shape-check.json"])
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: stat_book.demo sample draft stores running-total quarters; official box sums them (122 vs final 48)")
 def test_sample_scorebook_line_score_matches_final(client, program_books):
     r = client.post("/stat-books/sample", data={"game_id": "sample-e2e"})
     assert r.status_code == 302
@@ -559,6 +560,10 @@ def test_sample_scorebook_line_score_matches_final(client, program_books):
     assert confirmed["box"]["final_score_home"] == 48
     box = _ok(client.get("/api/program/sample-e2e/summary"))["official_box"]
     assert box["line_score"][-1]["liberty_running"] == box["final"]["liberty"] == 48
+    # per-period points, whose running totals are the book's 15-7, 23-22, 36-32, 48-49
+    assert [(q["period"], q["liberty"], q["opponent"], q["liberty_running"], q["opponent_running"])
+            for q in box["line_score"]] == [
+        ("Q1", 15, 7, 15, 7), ("Q2", 8, 15, 23, 22), ("Q3", 13, 10, 36, 32), ("Q4", 12, 17, 48, 49)]
 
 
 # ── Journey 4: edge cases ────────────────────────────────────────────────────
@@ -639,7 +644,6 @@ def test_delete_tag_rebuilds_persisted_stats(app, client):
     assert _ok(client.delete("/api/events/999999")) == {"deleted": True}
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/stats builds possessions whose start/end_event_id FK the events; DELETE /api/events/<id> then 500s")
 def test_delete_tag_after_viewing_stats(app, client):
     gid = _create_game(client, "j4-delete-after-stats")
     _tag(client, gid, "made_two", "1", 1_000, "made")
@@ -647,8 +651,19 @@ def test_delete_tag_after_viewing_stats(app, client):
     _stats_by_player(client, gid)  # coach opens the stats view (assigns possessions)
     resp = client.delete(f"/api/events/{extra}")
     assert resp.status_code == 200
-    by_player, _ = _stats_by_player(client, gid)
+    assert _query(app, "SELECT COUNT(*) AS n FROM events WHERE id=?", (extra,)) == [{"n": 0}]
+    by_player, body = _stats_by_player(client, gid)
     assert (by_player["1"]["pts"], by_player["1"]["tov"]) == (2, 0)
+    # no phantom possession is left behind: same summary as a game that only had the basket
+    only_basket = _create_game(client, "j4-delete-after-stats-ref")
+    _tag(client, only_basket, "made_two", "1", 1_000, "made")
+    _stats_by_player(client, only_basket)  # first view assigns possessions, as above
+    _, ref = _stats_by_player(client, only_basket)
+    assert body["enhanced"]["possession_summary"] == ref["enhanced"]["possession_summary"]
+    # deleting the last tag after viewing stats works too
+    keep = _query(app, "SELECT id FROM events WHERE relational_game_id=?", (gid,))[0]["id"]
+    assert client.delete(f"/api/events/{keep}").status_code == 200
+    assert _stats_by_player(client, gid)[0] == {}
 
 
 def test_pending_manual_event_waits_for_review(app, client):
@@ -664,7 +679,6 @@ def test_pending_manual_event_waits_for_review(app, client):
     assert _query(app, "SELECT review_status FROM review_items")[0]["review_status"] == "accepted"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: save_event writes the review_status string ('accepted'/'pending') into events.reviewed_at")
 def test_save_event_reviewed_at_is_a_timestamp_or_null(app, client):
     gid = _create_game(client, "j4-reviewed-at")
     accepted = _tag(client, gid, "steal", "1", 1_000)
@@ -700,18 +714,29 @@ def test_relational_and_analysis_keys_resolve_to_same_stats(app, client):
         "made_three", "rebound_defensive", "assist"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: program_mode.load_scorebook joins the raw URL game_id into a path (no sanitize_game_id) -> reads JSON outside confirmed/")
-def test_program_summary_does_not_read_scorebooks_outside_confirmed_dir(tmp_path, client):
+def test_program_summary_does_not_read_scorebooks_outside_confirmed_dir(tmp_path, monkeypatch, client):
     import program_mode
 
+    # the real scorebook_path/load_scorebook, rooted in a temp "repo" (not the program_books patch)
+    monkeypatch.setattr(program_mode, "_repo_root", lambda: tmp_path / "repo")
+    confirmed_dir = program_mode.scorebook_path("x").parent
+    confirmed_dir.mkdir(parents=True)
+    book = {"home_team": "Liberty", "away_team": "X", "final_score_home": 1,
+            "players": [{"jersey": "1", "name": "Real Name", "team": "home", "pts": 1}]}
+    (confirmed_dir / "legit-book.json").write_text(json.dumps(book))
     secret = tmp_path / "outside" / "secret.json"
     secret.parent.mkdir()
-    secret.write_text(json.dumps({"home_team": "LEAKED", "away_team": "X", "final_score_home": 1,
-                                  "players": [{"jersey": "1", "name": "Leaked Name", "team": "home", "pts": 1}]}))
-    confirmed_dir = program_mode.scorebook_path("x").parent
+    secret.write_text(json.dumps({**book, "home_team": "LEAKED"}))
+
+    # a confirmed book for a normal game id still loads
+    legit = _ok(client.get("/api/program/legit-book/summary"))
+    assert legit["scorebook"]["present"] is True and legit["scorebook"]["home_team"] == "Liberty"
+
+    # a ../ game id that resolves to a JSON file outside confirmed/ is never read
     rel = os.path.relpath(secret.with_suffix(""), confirmed_dir)
     assert rel.startswith("..")
     summary = client.get(f"/api/program/{rel}/summary")
     body = summary.get_json() or {}
     assert summary.status_code in (200, 400, 404)
     assert (body.get("scorebook") or {}).get("present") is not True
+    assert "LEAKED" not in summary.get_data(as_text=True)

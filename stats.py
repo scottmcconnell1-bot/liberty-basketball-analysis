@@ -226,11 +226,8 @@ def _aggregate_rows(rows):
             s["fga"] += 1
             s["threes_att"] += 1
         elif et == "made_free_throw":
-            s["fga"] += 1
-            s["fgm"] += 1
+            # Free throws are not field goals: they score but never touch FGM/FGA.
             s["pts"] += 1
-        elif et == "missed_free_throw":
-            s["fga"] += 1
         elif et == "make":
             s["fga"] += 1
             s["fgm"] += 1
@@ -579,33 +576,50 @@ def get_team_stats(db, game_id):
         "blocks": 0,
         "turnovers": 0,
         "fga": 0,
+        "fgm": 0,
         "fta": 0,
         "three_pm": 0,
         "orb": 0,
         "drb": 0,
     }
 
+    # Shot semantics mirror _aggregate_rows so team totals agree with the player box:
+    # made_* codes are makes regardless of shot_result spelling, AI make/miss codes count,
+    # and the parent 'shot' of an AI shot+make/miss pair is not counted twice.
     for row in rows:
         et = (row["code"] or "").lower()
         sr = (row["shot_result"] or "").lower()
 
-        if et in ("made_two", "two_attempt", "2pt", "shot"):
+        if _shot_attempt_already_counted(et, sr):
+            continue
+
+        if et in ("made_two", "make"):
             team["fga"] += 1
-            if sr == "made":
+            team["fgm"] += 1
+            team["points"] += 2
+        elif et in ("two_attempt", "2pt", "shot"):
+            team["fga"] += 1
+            if sr in ("made", "make"):
+                team["fgm"] += 1
                 team["points"] += 2
-        elif et in ("missed_two",):
+        elif et in ("missed_two", "miss"):
             team["fga"] += 1
-        elif et in ("made_three", "three_attempt", "3pt"):
+        elif et == "made_three":
             team["fga"] += 1
-            if sr == "made":
+            team["fgm"] += 1
+            team["points"] += 3
+            team["three_pm"] += 1
+        elif et in ("three_attempt", "3pt"):
+            team["fga"] += 1
+            if sr in ("made", "make"):
+                team["fgm"] += 1
                 team["points"] += 3
                 team["three_pm"] += 1
         elif et in ("missed_three",):
             team["fga"] += 1
         elif et == "made_free_throw":
             team["fta"] += 1
-            if sr == "made":
-                team["points"] += 1
+            team["points"] += 1
         elif et == "missed_free_throw":
             team["fta"] += 1
         elif et == "assist":
@@ -642,12 +656,7 @@ def get_four_factors(db, game_id):
     fta = team["fta"]
 
     # eFG% = (FGM + 0.5 * 3PM) / FGA
-    # We need FGM: for the team, FGM = (points from 2pt) / 2 + three_pm
-    # But more directly: count made shots. We can derive from possession data
-    # or compute from the event codes. Since we already have fga and three_pm,
-    # we need total FGM. Let's compute it from the events directly.
-    # Re-query for FGM since team stats aggregate doesn't track it directly.
-    fgm = _compute_fgm(db, game_id)
+    fgm = team["fgm"]
 
     efg_pct = (fgm + 0.5 * three_pm) / fga if fga > 0 else 0.0
 
@@ -671,39 +680,6 @@ def get_four_factors(db, game_id):
         "orb_pct": round(orb_pct, 4),
         "ft_rate": round(ft_rate, 4),
     }
-
-
-def _compute_fgm(db, game_id):
-    """Count total field goals made for a game (2pt + 3pt makes)."""
-    relational_game_id = _resolve_relational_game_id(db, game_id)
-    review_clause = _trusted_event_review_clause()
-
-    if relational_game_id is not None:
-        row = db.execute(
-            f"""SELECT COUNT(*) as cnt
-               FROM events e
-               JOIN event_types et ON et.id = e.event_type_id
-               WHERE e.relational_game_id = ?
-                 AND {review_clause}
-                 AND et.counts_for_stats = 1
-                 AND et.code IN ('made_two', 'made_three')
-                 AND e.shot_result = 'made'""",
-            (relational_game_id,),
-        ).fetchone()
-    else:
-        row = db.execute(
-            f"""SELECT COUNT(*) as cnt
-               FROM events e
-               JOIN event_types et ON et.id = e.event_type_id
-               WHERE e.game_id = ?
-                 AND {review_clause}
-                 AND et.counts_for_stats = 1
-                 AND et.code IN ('made_two', 'made_three')
-                 AND e.shot_result = 'made'""",
-            (game_id,),
-        ).fetchone()
-
-    return row["cnt"] if row else 0
 
 
 def _possessions_game_id(db, game_id):

@@ -64,11 +64,13 @@ def create_sample_draft(
         away_team="HSB",
         final_score_home=48,
         final_score_away=49,
+        # Points scored IN each period (the book's running totals were 15-7, 23-22, 36-32, 48-49);
+        # consumers sum these, so they must add up to the final score.
         quarters=[
             {"period": 1, "home_pts": 15, "away_pts": 7},
-            {"period": "1H", "home_pts": 23, "away_pts": 22},
-            {"period": 3, "home_pts": 36, "away_pts": 32},
-            {"period": "F", "home_pts": 48, "away_pts": 49},
+            {"period": 2, "home_pts": 8, "away_pts": 15},
+            {"period": 3, "home_pts": 13, "away_pts": 10},
+            {"period": 4, "home_pts": 12, "away_pts": 17},
         ],
         checksums={},
     )
