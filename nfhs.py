@@ -445,7 +445,13 @@ def download_nfhs_vod(
     }
     """
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, f"nfhs_{game_id}.mp4")
+    is_section = start_ms is not None and end_ms is not None and end_ms > start_ms
+    # A section download gets its own file: nfhs_<id>.mp4 may already hold the full
+    # game in the library, and yt-dlp would replace it with the short clip.
+    if is_section:
+        output_path = os.path.join(output_dir, f"nfhs_{game_id}_clip_{int(start_ms)}_{int(end_ms)}.mp4")
+    else:
+        output_path = os.path.join(output_dir, f"nfhs_{game_id}.mp4")
 
     _emit_download_status(progress_callback, percent=0, message="Authenticating with NFHS…")
     token = get_nfhs_token(email, password)
@@ -491,7 +497,7 @@ def download_nfhs_vod(
             "--fragment-retries", "3",
             nfhs_url,
         ]
-        if start_ms is not None and end_ms is not None and end_ms > start_ms:
+        if is_section:
             section = f"*{_format_section_time(start_ms)}-{_format_section_time(end_ms)}"
             cmd = cmd[:-1] + ["--download-sections", section, cmd[-1]]
         _emit_download_status(progress_callback, percent=0, message="Connecting to NFHS…")
@@ -601,14 +607,23 @@ def register_nfhs_download(
     stored_filename = os.path.basename(file_path)
     file_size = os.path.getsize(file_path)
     opponent = (opponent_name or away_team or home_team or nfhs_game_id).strip()
-    original_filename = f"nfhs_{nfhs_game_id}.mp4"
+    original_filename = (
+        stored_filename if stored_filename.startswith(f"nfhs_{nfhs_game_id}_clip_")
+        else f"nfhs_{nfhs_game_id}.mp4"
+    )
     nfhs_url = nfhs_url or f"{NFHS_BASE_URL}/game/{nfhs_game_id}"
 
     existing = db.execute(
-        "SELECT id, stored_filename, game_id FROM videos WHERE stored_filename=?",
+        "SELECT id, stored_filename, game_id, file_size_bytes FROM videos WHERE stored_filename=?",
         (stored_filename,),
     ).fetchone()
     if existing:
+        # Same file downloaded again (it was rewritten on disk): keep the row current.
+        if existing["file_size_bytes"] != file_size:
+            db.execute(
+                "UPDATE videos SET file_size_bytes=?, file_path=? WHERE id=?",
+                (file_size, file_path, existing["id"]),
+            )
         return {
             "video_id": existing["id"],
             "stored_filename": existing["stored_filename"],

@@ -55,6 +55,7 @@ from helpers import (
     ai_analysis_log_path,
     count_detections_for_analysis, count_events_for_analysis,
     _read_log_tail,
+    SYNC_EVENT_REBUILD_LOG_MARKER,
 )
 
 ai_bp = Blueprint("ai", __name__)
@@ -391,6 +392,10 @@ def _videos_with_latest_run_sql(archive_where=""):
 @require_feature("ENABLE_AUTO_STATS_M1")
 def get_analysis_progress(game_id):
     """Return current analysis progress for an analysis key."""
+    from helpers import normalize_analysis_game_id
+
+    # Decode first: reconcile looks the run and its log up by the raw key.
+    game_id = normalize_analysis_game_id(game_id)
     db = get_db()
     reconcile_stuck_analysis_run(db, game_id)
     row = resolve_analysis_run_for_progress(db, game_id)
@@ -1057,6 +1062,36 @@ def upload_video():
 # within Cloudflare's ~100MB proxy limit per request.
 
 import tempfile, uuid, json as _json
+import re as _re
+
+_UPLOAD_ID_RE = _re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def _reserve_upload_stamp(db, stem, ext):
+    """Return a timestamp suffix whose ``{stem}_{ts}{ext}`` is free, and reserve that file.
+
+    Two uploads of the same filename in the same second used to share one stored
+    filename: the second overwrote the first file on disk, then hit the UNIQUE
+    constraint on videos.stored_filename. The file is created exclusively so a
+    concurrent request cannot claim the same name.
+    """
+    folder = current_app.config["UPLOAD_FOLDER"]
+    base = datetime.now().strftime("%Y%m%d_%H%M%S")
+    n = 1
+    while True:
+        ts = base if n == 1 else f"{base}_{n}"
+        stored_filename = f"{stem}_{ts}{ext}"
+        dest = os.path.join(folder, stored_filename)
+        taken = db.execute(
+            "SELECT 1 FROM videos WHERE stored_filename=?", (stored_filename,)
+        ).fetchone()
+        if not taken:
+            try:
+                os.close(os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644))
+                return ts, stored_filename, dest
+            except FileExistsError:
+                pass
+        n += 1
 
 CHUNK_SIZE = 80 * 1024 * 1024  # 80 MB per chunk (under Cloudflare limit)
 
@@ -1074,12 +1109,21 @@ def upload_chunk():
 
     if not upload_id:
         return jsonify({"error": "Missing upload_id"}), 400
+    # upload_id becomes a directory name: only allow a plain token so an absolute
+    # path or "../" cannot place chunks outside the staging directory.
+    if not _UPLOAD_ID_RE.fullmatch(upload_id):
+        return jsonify({"error": "Invalid upload_id"}), 400
     if chunk_index is None or total_chunks is None:
         return jsonify({"error": "Missing chunk_index or total_chunks"}), 400
+    if total_chunks < 1 or not 0 <= chunk_index < total_chunks:
+        return jsonify({"error": "Invalid chunk_index or total_chunks"}), 400
     if "file" not in request.files:
         return jsonify({"error": "No file chunk provided"}), 400
 
-    chunk_dir = os.path.join(tempfile.gettempdir(), "liberty_uploads", upload_id)
+    staging_root = os.path.realpath(os.path.join(tempfile.gettempdir(), "liberty_uploads"))
+    chunk_dir = os.path.realpath(os.path.join(staging_root, upload_id))
+    if os.path.dirname(chunk_dir) != staging_root:
+        return jsonify({"error": "Invalid upload_id"}), 400
     os.makedirs(chunk_dir, exist_ok=True)
 
     # Save chunk
@@ -1092,11 +1136,10 @@ def upload_chunk():
 
     if received == total_chunks:
         # All chunks received — reassemble
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = secure_filename(filename)
         stem, ext = os.path.splitext(safe_name)
-        stored_filename = f"{stem}_{ts}{ext}"
-        dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
+        db = get_db()
+        ts, stored_filename, dest = _reserve_upload_stamp(db, stem, ext)
 
         with open(dest, "wb") as outfile:
             for i in range(total_chunks):
@@ -1110,7 +1153,6 @@ def upload_chunk():
         file_size = os.path.getsize(dest)
 
         # Save to DB
-        db = get_db()
         game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
         prior = db.execute(
             "SELECT id, stored_filename, upload_timestamp FROM videos WHERE original_filename=? ORDER BY id DESC LIMIT 1",
@@ -1154,6 +1196,12 @@ def upload_chunk():
         )
         if ai_runtime_available():
             start_analysis_subprocess(run_payload["analysis_key"], dest)
+        else:
+            # Same as /upload: no worker will ever pick this run up.
+            db.execute(
+                "UPDATE analysis_runs SET status='failed', error_message=?, completed_at=CURRENT_TIMESTAMP WHERE id=?",
+                ("Missing AI packages (cv2/ultralytics)", run_payload["id"]),
+            )
         db.commit()
 
         return jsonify({
@@ -1349,7 +1397,7 @@ def compare_video_analysis(vid_id):
     ensure_primary_run_metadata(db, video)
     rows = db.execute(
         """SELECT ar.*,
-                  (SELECT COUNT(*) FROM detections d WHERE (d.relational_game_id = (SELECT id FROM games WHERE game_id = ar.analysis_key) OR (d.relational_game_id IS NULL AND d.game_id = ar.analysis_key))) AS detection_count,
+                  (SELECT COUNT(*) FROM detections d WHERE d.game_id = ar.analysis_key) AS detection_count,
                   (SELECT COUNT(*) FROM events e WHERE e.game_id = ar.analysis_key) AS event_count
            FROM analysis_runs ar
            WHERE ar.source_video_id = ?
@@ -1572,7 +1620,7 @@ def api_regenerate_video_events(vid_id):
     try:
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
         with open(log_path, "a", encoding="utf-8") as handle:
-            handle.write(f"\n[{datetime.utcnow().isoformat()}Z] Rebuild events started in web worker.\n")
+            handle.write(f"\n[{datetime.utcnow().isoformat()}Z] {SYNC_EVENT_REBUILD_LOG_MARKER}\n")
     except OSError:
         pass
 
@@ -1891,15 +1939,13 @@ def upload_and_analyze():
     original_filename = secure_filename(f.filename)
     stem, ext = os.path.splitext(original_filename)
 
-    # ── Timestamped stored filename ───────────────────────────
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stored_filename = f"{stem}_{ts}{ext}"
-    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
+    # ── Timestamped stored filename (unique even within one second) ──
+    db = get_db()
+    ts, stored_filename, dest = _reserve_upload_stamp(db, stem, ext)
     f.save(dest)
     file_size = os.path.getsize(dest)
 
     # ── Duplicate detection ───────────────────────────────────
-    db = get_db()
     prior = db.execute(
         "SELECT id, stored_filename, upload_timestamp FROM videos WHERE original_filename=? ORDER BY id DESC LIMIT 1",
         (original_filename,),
@@ -2016,13 +2062,11 @@ def upload_only():
     original_filename = secure_filename(f.filename)
     stem, ext = os.path.splitext(original_filename)
 
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stored_filename = f"{stem}_{ts}{ext}"
-    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
+    db = get_db()
+    ts, stored_filename, dest = _reserve_upload_stamp(db, stem, ext)
     f.save(dest)
     file_size = os.path.getsize(dest)
 
-    db = get_db()
     game_id = f"{opponent.lower().replace(' ', '_')}_{stem}_{ts}"
 
     # Resolve relational_game_id from games table

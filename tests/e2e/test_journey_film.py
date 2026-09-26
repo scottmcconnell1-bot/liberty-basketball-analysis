@@ -323,16 +323,19 @@ def test_chunked_upload_out_of_order_reassembles_and_queues(env, monkeypatch):
     assert dup_check["is_duplicate"] is True and len(dup_check["previous_uploads"]) == 2
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: chunked upload without AI runtime leaves a 'pending' run forever (/upload marks it failed)")
 def test_chunked_upload_without_ai_runtime_does_not_strand_pending_run(env, monkeypatch):
+    # Regression: the chunked path queued a run but never marked it failed.
     import blueprints.ai as ai_mod
 
     monkeypatch.setattr(ai_mod, "ai_runtime_available", lambda: False)
-    env.chunked_upload(b"x" * 3000, "noai.mp4")
+    final = env.chunked_upload(b"x" * 3000, "noai.mp4")[-1]
     run = env.one("SELECT * FROM analysis_runs")
     assert env.spawned == []
     # /upload in the same situation marks the run failed immediately
-    assert run["status"] == "failed", run
+    assert (run["status"], run["error_message"]) == ("failed", "Missing AI packages (cv2/ultralytics)"), run
+    assert run["completed_at"] is not None
+    assert env.json(f"/api/analysis_progress/{final['game_id']}")["status"] == "failed"
+    assert env.json("/api/analysis_jobs")["jobs"][0]["status"] == "failed"
 
 
 def test_whole_upload_without_ai_runtime_marks_run_failed(env, monkeypatch):
@@ -346,33 +349,53 @@ def test_whole_upload_without_ai_runtime_marks_run_failed(env, monkeypatch):
     assert env.json("/api/analysis_jobs")["jobs"][0]["status"] == "failed"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/upload_chunk joins raw upload_id into a path (absolute/../ ids write outside the staging dir)")
 def test_chunk_upload_id_cannot_escape_staging_dir(env):
+    # Regression: upload_id was joined raw into the staging path.
     escape = env.tmp / "outside" / "evil"
-    r = env.client.post(
-        "/api/upload_chunk",
-        data={"file": (io.BytesIO(b"payload"), "blob"), "upload_id": str(escape), "chunk_index": "0",
-              "total_chunks": "2", "filename": "x.mp4"},
-        content_type="multipart/form-data",
-    )
+    for bad in (str(escape), "../../outside/evil", "..", "a/b"):
+        r = env.client.post(
+            "/api/upload_chunk",
+            data={"file": (io.BytesIO(b"payload"), "blob"), "upload_id": bad, "chunk_index": "0",
+                  "total_chunks": "2", "filename": "x.mp4"},
+            content_type="multipart/form-data",
+        )
+        assert r.status_code == 400 and r.get_json()["error"] == "Invalid upload_id", bad
     assert not escape.exists(), "chunk written outside <tmp>/liberty_uploads"
-    assert r.status_code == 400
+    assert not (env.tmp / "outside").exists()
+    assert env.q("SELECT * FROM videos") == []
+    # the film tool's real id shape (base36 time + random) is still accepted
+    env.chunked_upload(b"z" * 900, "ok.mp4", upload_id="lx3k9a0qz81m2")
+    assert env.one("SELECT COUNT(*) AS c FROM videos")["c"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: two uploads of the same filename in the same second share stored_filename: file overwritten, then UNIQUE error 500")
 def test_same_second_duplicate_upload_keeps_both_files(env, monkeypatch):
+    # Regression: same filename in the same second used to share stored_filename
+    # (first film overwritten on disk, then a UNIQUE-constraint 500).
     import blueprints.ai as ai_mod
 
     _frozen_datetime(ai_mod, monkeypatch)
     first = b"FIRST" * 1000
     second = b"SECOND" * 1000
+    third = b"THIRD" * 1000
     p1, v1 = env.upload("game.mp4", content=first)
     r2 = _post_catching(lambda: env.client.post(
         "/upload", data={"video": (io.BytesIO(second), "game.mp4"), "opponent": "Eagle Ridge"},
         content_type="multipart/form-data", headers=XHR))
     assert Path(v1["file_path"]).read_bytes() == first, "first upload's film was overwritten on disk"
     assert not isinstance(r2, Exception) and r2.status_code == 200, r2
-    assert env.one("SELECT COUNT(*) AS c FROM videos")["c"] == 2
+    p2 = r2.get_json()
+    v2 = env.one("SELECT * FROM videos WHERE stored_filename=?", (p2["stored_filename"],))
+    assert p2["stored_filename"] != p1["stored_filename"] and p2["game_id"] != p1["game_id"]
+    assert Path(v2["file_path"]).read_bytes() == second
+    assert (v2["is_duplicate"], v2["duplicate_of_id"]) == (1, v1["id"])
+    # the chunked path in the same second also gets its own file
+    env.chunked_upload(third, "game.mp4", opponent="Eagle Ridge", upload_id="same-sec")
+    rows = env.q("SELECT stored_filename, file_path, game_id FROM videos ORDER BY id")
+    assert len(rows) == 3 and len({r["stored_filename"] for r in rows}) == 3
+    assert len({r["game_id"] for r in rows}) == 3
+    assert [Path(r["file_path"]).read_bytes() for r in rows] == [first, second, third]
+    runs = env.q("SELECT analysis_key FROM analysis_runs ORDER BY id")
+    assert [r["analysis_key"] for r in runs] == [r["game_id"] for r in rows]
 
 
 # ── 2. event rebuild / regenerate ───────────────────────────────────────────
@@ -427,36 +450,75 @@ def test_rebuild_keeps_film_tool_manual_tags_without_duplicates(env):
     assert [(m["event_type"], m["timestamp_ms"], m["human_verified"]) for m in manual_before] == [
         ("shot", 20000, 1), ("steal", 40000, 1)]
 
-    for _ in range(2):
+    def status_counts():
+        rows = env.q("SELECT source_type, review_status, COUNT(*) AS c FROM events WHERE game_id=? "
+                     "GROUP BY source_type, review_status", (key,))
+        return {(r["source_type"], r["review_status"]): r["c"] for r in rows}
+
+    graded = status_counts()
+    for _ in range(3):
         assert env.client.post(f"/api/videos/{video['id']}/regenerate-events").status_code == 200
         manual = env.q("SELECT id, event_type, timestamp_ms, human_verified FROM events "
                        "WHERE game_id=? AND source_type='manual' ORDER BY id", (key,))
         assert manual == manual_before
+        assert status_counts() == graded  # teach grading is re-derived, not stacked
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: rebuild keeps human_verified AI events and re-inserts them as new drafts (duplicates each rebuild)")
 def test_rebuild_does_not_duplicate_accepted_ai_events(env):
+    # Regression: rebuild kept human_verified AI rows AND re-inserted them as new drafts.
     key, video, _ = _completed_upload(env, mode="expanded")
-    shot = env.q("SELECT * FROM events WHERE game_id=? AND event_type='shot' ORDER BY timestamp_ms", (key,))[0]
+    initial = env.q("SELECT * FROM events WHERE game_id=? ORDER BY timestamp_ms, id", (key,))
+    total_before = len(initial)
+    shot = [e for e in initial if e["event_type"] == "shot"][0]
+    others = [e for e in initial if e["id"] != shot["id"]]
+    to_reject, to_correct = others[0], others[1]
+
     r = env.client.post(f"/api/review/events/{shot['id']}/accept", data="{}", content_type="application/json")
     assert r.status_code == 200 and r.get_json()["review_status"] == "accepted"
+    r = env.client.post(f"/api/review/events/{to_reject['id']}/reject", data="{}", content_type="application/json")
+    assert r.status_code == 200 and r.get_json()["review_status"] == "rejected"
+    r = env.post_json(f"/api/review/events/{to_correct['id']}/correct",
+                      {"event_type": "block", "player": "44", "timestamp_ms": to_correct["timestamp_ms"] + 700})
+    assert r.status_code == 200 and r.get_json()["review_status"] == "corrected"
 
-    assert env.client.post(f"/api/videos/{video['id']}/regenerate-events").status_code == 200
-    same = env.q("SELECT id, review_status FROM events WHERE game_id=? AND event_type='shot' AND timestamp_ms=?",
-                 (key, shot["timestamp_ms"]))
-    assert same == [{"id": shot["id"], "review_status": "accepted"}]
+    def snapshot():
+        rows = env.q("SELECT id, event_type, timestamp_ms, player, review_status FROM events "
+                     "WHERE game_id=? ORDER BY id", (key,))
+        return {r["id"]: r for r in rows}
+
+    decided_before = {i: r for i, r in snapshot().items() if i in (shot["id"], to_reject["id"], to_correct["id"])}
+    for _ in range(3):
+        body = env.client.post(f"/api/videos/{video['id']}/regenerate-events").get_json()
+        assert body["status"] == "events_regenerated"
+        after = snapshot()
+        assert len(after) == total_before  # one row per generated play, every rebuild
+        assert {i: after[i] for i in decided_before} == decided_before  # same ids, same decisions
+        # no fresh draft for any play a person already decided on
+        for ev in (shot, to_reject, to_correct):
+            dupes = [r for r in after.values() if r["id"] != ev["id"]
+                     and (r["event_type"], r["timestamp_ms"]) == (ev["event_type"], ev["timestamp_ms"])]
+            assert dupes == [], (ev["event_type"], ev["timestamp_ms"], dupes)
+    assert env.one("SELECT review_status FROM events WHERE id=?", (shot["id"],))["review_status"] == "accepted"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: default precision mode auto-accepts drafts; each rebuild adds another accepted copy (4 -> 8 -> 12)")
 def test_rebuild_with_default_auto_accept_is_idempotent(env):
+    # Regression: each rebuild added another auto-accepted copy (4 -> 8 -> 12).
     env.setting("ai.auto_accept_event_confidence", "0.85")  # shipped default
     key, video, _ = _completed_upload(env, mode="precision")
-    accepted_before = env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=? AND review_status='accepted'", (key,))["c"]
-    assert accepted_before > 0
-    for _ in range(2):
+
+    def counts():
+        rows = env.q("SELECT review_status, COUNT(*) AS c FROM events WHERE game_id=? GROUP BY review_status", (key,))
+        return {r["review_status"]: r["c"] for r in rows}
+
+    before = counts()
+    assert before.get("accepted", 0) > 0
+    auto = env.q("SELECT review_notes, reviewed_by_user_id FROM events WHERE game_id=? AND review_status='accepted'", (key,))
+    assert {(a["review_notes"], a["reviewed_by_user_id"]) for a in auto} == {("Auto-accepted (high confidence)", None)}
+    for _ in range(3):
         assert env.client.post(f"/api/videos/{video['id']}/regenerate-events").status_code == 200
-    accepted_after = env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=? AND review_status='accepted'", (key,))["c"]
-    assert accepted_after == accepted_before
+        assert counts() == before
+    res = env.json(f"/api/analysis/{key}")
+    assert res["event_count"] == sum(before.values())
 
 
 def test_regenerate_without_detections_is_rejected_and_run_untouched(env):
@@ -467,8 +529,9 @@ def test_regenerate_without_detections_is_rejected_and_run_untouched(env):
     assert env.client.post("/api/videos/999999/regenerate-events").status_code == 404
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: an interrupted in-process rebuild leaves the run 'running' forever (reconcile skips rebuild steps) and blocks new analysis")
 def test_interrupted_rebuild_is_reconciled(env):
+    # Regression: reconcile skipped in-process rebuild steps, so a killed rebuild
+    # stayed 'running' forever and blocked new analysis.
     key, video, _ = _completed_upload(env)
     # the rebuild request died mid-way (e.g. gunicorn --timeout 120 killed the worker)
     env.execute("UPDATE analysis_runs SET status='running', progress_pct=35, "
@@ -477,12 +540,19 @@ def test_interrupted_rebuild_is_reconciled(env):
 
     log = Path(helpers.ai_analysis_log_path(key))
     log.write_text("\n[2026-01-10T19:00:00Z] Rebuild events started in web worker.\n")
+
+    # a rebuild that is still within a request's lifetime is left alone
+    assert env.json(f"/api/analysis_progress/{key}")["status"] == "running"
+
     old = time.time() - 3 * 3600
     os.utime(log, (old, old))
-
-    assert env.json(f"/api/analysis_progress/{key}")["status"] != "running"
+    p = env.json(f"/api/analysis_progress/{key}")
+    assert (p["status"], p["error_message"]) == ("failed", helpers.EVENT_REBUILD_INTERRUPTED_MESSAGE)
+    # Rebuild works again, and so does a new analysis request
+    assert env.client.post(f"/api/videos/{video['id']}/regenerate-events").status_code == 200
+    assert env.one("SELECT status FROM analysis_runs")["status"] == "completed"
     r = env.client.post(f"/api/videos/{video['id']}/analyze")
-    assert r.get_json().get("code") != "already_running"
+    assert r.status_code == 200 and r.get_json()["status"] == "started"
 
 
 # ── 3. reruns, compare page, superseding ────────────────────────────────────
@@ -563,8 +633,9 @@ def test_new_request_supersedes_pending_rerun(env, monkeypatch):
     assert lib[0]["analysis_status"] == "pending" and lib[0]["analysis_key"] == second["analysis_key"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: rerun analysis_key has 1-second resolution; two requests in one second reuse the key of the cancelled run")
 def test_same_second_reruns_get_distinct_keys(env, monkeypatch):
+    # Regression: rerun keys had 1-second resolution, so the replacement reused the
+    # cancelled run's key.
     import helpers
 
     key, video, _ = _completed_upload(env)
@@ -572,6 +643,14 @@ def test_same_second_reruns_get_distinct_keys(env, monkeypatch):
     a = env.client.post(f"/api/videos/{video['id']}/analyze").get_json()
     b = env.client.post(f"/api/videos/{video['id']}/analyze").get_json()
     assert a["analysis_key"] != b["analysis_key"]
+    assert a["analysis_key"].startswith(f"{key}__rerun_") and b["analysis_key"].startswith(f"{key}__rerun_")
+    runs = env.q("SELECT analysis_key, status FROM analysis_runs ORDER BY id")
+    assert [(r["analysis_key"], r["status"]) for r in runs] == [
+        (key, "completed"), (a["analysis_key"], "cancelled"), (b["analysis_key"], "pending")]
+    assert env.spawned[-1][0] == b["analysis_key"]
+    # the cancelled key's progress view follows the replacement run
+    p = env.json(f"/api/analysis_progress/{a['analysis_key']}")
+    assert (p["status"], p["analysis_key"]) == ("pending", b["analysis_key"])
 
 
 # NFHS / library videos carry videos.relational_game_id, so the worker stamps detections
@@ -615,39 +694,62 @@ def test_nfhs_primary_run_uses_relational_game(env):
         saved["relational_game_id"], saved["game_id"], "pending")
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: compare page detection subquery uses games.game_id (no such column) and counts 0 relational detections")
 def test_compare_counts_detections_for_nfhs_runs(env, monkeypatch):
+    # Regression: the subquery used games.game_id (no such column), so NFHS runs showed 0.
     # an earlier game already exists (normal season), so the NFHS game is not games.id=1
     r = env.post_json("/api/games", {"source_type": "manual", "source_key": "earlier-game"})
     assert r.status_code in (200, 201), r.data[:200]
     vid, rel, primary_key, n_primary, rerun_key, n_rerun = _nfhs_primary_and_rerun(env)
     captured = _spy_render(monkeypatch)
     assert env.client.get(f"/videos/{vid}/compare").status_code == 200
-    counts = {x["analysis_key"]: x["detection_count"] for x in captured["analysis_compare.html"]["runs"]}
-    assert counts == {primary_key: n_primary, rerun_key: n_rerun}
+    runs = {x["analysis_key"]: x for x in captured["analysis_compare.html"]["runs"]}
+    assert {k: x["detection_count"] for k, x in runs.items()} == {primary_key: n_primary, rerun_key: n_rerun}
+    assert runs[rerun_key]["detection_delta"] == n_rerun - n_primary
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: rebuilding a rerun of an NFHS video loads the primary run's detections too (shared relational_game_id)")
-def test_nfhs_rerun_rebuild_uses_only_its_own_detections(env):
+def test_nfhs_rerun_rebuild_uses_only_its_own_detections(env, monkeypatch):
+    # Regression: rebuilding a rerun also loaded the primary run's detections
+    # through the shared relational_game_id.
+    import event_generator
+
     vid, rel, primary_key, n_primary, rerun_key, n_rerun = _nfhs_primary_and_rerun(env)
+    loaded = []
+    real = event_generator.get_detections
+
+    def spy(*a, **kw):
+        df = real(*a, **kw)
+        loaded.append(set(df["game_id"]))
+        return df
+
+    monkeypatch.setattr(event_generator, "get_detections", spy)
     body = env.client.post(f"/api/videos/{vid}/regenerate-events").get_json()
     assert body["analysis_key"] == rerun_key
     assert body["detection_count"] == n_rerun
+    assert loaded == [{rerun_key}]
+    assert env.json(f"/api/videos/{vid}/analysis-debug")["detection_count"] == n_rerun
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: persist_events deletes every unverified event of the relational game, wiping the primary run's drafts")
 def test_nfhs_rerun_generation_keeps_primary_run_events(env):
+    # Regression: persist_events deleted every unverified event of the relational
+    # game, so generating a rerun wiped the primary run's drafts.
     env.setting("ai.event_generator_mode", "expanded")
     saved = _nfhs_video(env)
     vid, rel = saved["video_id"], saved["relational_game_id"]
     primary_key = env.client.post(f"/api/videos/{vid}/analyze").get_json()["analysis_key"]
     env.run_worker(primary_key, relational_game_id=rel)
-    primary_events = env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=?", (primary_key,))["c"]
-    assert primary_events > 0
+    primary_rows = env.q("SELECT id FROM events WHERE game_id=? ORDER BY id", (primary_key,))
+    assert primary_rows
     env.client.post(f"/videos/{vid}/rerun", data={})
     rerun_key = env.q("SELECT analysis_key FROM analysis_runs WHERE run_kind='rerun'")[0]["analysis_key"]
     env.run_worker(rerun_key, frames=150, relational_game_id=rel, seed=11)
-    assert env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=?", (primary_key,))["c"] == primary_events
+    assert env.q("SELECT id FROM events WHERE game_id=? ORDER BY id", (primary_key,)) == primary_rows
+    rerun_events = env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=?", (rerun_key,))["c"]
+    assert rerun_events > 0
+    # rebuilding the rerun (latest run) leaves the primary's events alone as well
+    body = env.client.post(f"/api/videos/{vid}/regenerate-events").get_json()
+    assert body["analysis_key"] == rerun_key
+    assert env.q("SELECT id FROM events WHERE game_id=? ORDER BY id", (primary_key,)) == primary_rows
+    assert env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=?", (rerun_key,))["c"] == rerun_events
 
 
 # ── 4. highlights / clips / trim ────────────────────────────────────────────
@@ -752,8 +854,8 @@ def test_trim_job_lifecycle(env):
     assert not Path(video["file_path"]).exists() and Path(new["file_path"]).exists()
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: re-saving Film Tool tags deletes the old manual events while clips still reference them (FK IntegrityError)")
 def test_resaving_film_tool_tags_after_highlight_clip(env):
+    # Regression: re-save deleted the old manual events while clips referenced them (FK 500).
     key, video, _ = _completed_upload(env)
     rows = [{"eventtype": "3PT", "result": "Make", "player": "3", "team": "Liberty", "start": "00:05"}]
     path = f"/api/film/{quote(key, safe='')}/teach-manual"
@@ -766,6 +868,20 @@ def test_resaving_film_tool_tags_after_highlight_clip(env):
     r = _post_catching(lambda: env.post_json(path, {"rows": rows}))
     assert not isinstance(r, Exception), f"teach re-save crashed: {r!r}"
     assert r.status_code == 200 and r.get_json()["replaced"] == 1
+    # the clip still points at the (updated) tag
+    now = env.one("SELECT id, player FROM events WHERE game_id=? AND source_type='manual'", (key,))
+    assert now == {"id": manual["id"], "player": "33"}
+    assert [c["event_id"] for c in env.q("SELECT event_id FROM clips")] == [manual["id"]]
+    assert [c["event_id"] for c in env.q("SELECT event_id FROM player_development_clips")] == [manual["id"]]
+
+    # dropping that tag and adding another: the clip is detached, not a 500
+    rows = [{"eventtype": "Steal", "result": "NA", "player": "5", "team": "Liberty", "start": "00:30"}]
+    r = _post_catching(lambda: env.post_json(path, {"rows": rows}))
+    assert not isinstance(r, Exception), f"teach re-save crashed: {r!r}"
+    assert r.status_code == 200 and (r.get_json()["manual_saved"], r.get_json()["replaced"]) == (1, 1)
+    manual_rows = env.q("SELECT event_type, timestamp_ms FROM events WHERE game_id=? AND source_type='manual'", (key,))
+    assert manual_rows == [{"event_type": "steal", "timestamp_ms": 30000}]
+    assert env.one("SELECT COUNT(*) AS c FROM clips")["c"] == 1
 
 
 # ── 5. game-id encodings (Jr High keys with commas) ─────────────────────────
@@ -789,8 +905,8 @@ def test_comma_game_ids_resolve_under_every_encoding(env):
     assert env.client.get(f"/analysis/{quote(quote(key, safe=''), safe='')}").status_code == 200
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/analysis_progress reconciles with the raw (still-encoded) key, so a dead worker is never detected")
 def test_progress_reconciles_stale_run_for_double_encoded_key(env):
+    # Regression: /api/analysis_progress reconciled with the still-encoded key.
     import helpers
 
     payload, _ = env.upload("jr.mp4", "Riverside, Eagle")
@@ -800,7 +916,10 @@ def test_progress_reconciles_stale_run_for_double_encoded_key(env):
     old = time.time() - 600
     os.utime(log, (old, old))
     enc = quote(quote(key, safe=""), safe="")
-    assert env.json(f"/api/analysis_progress/{enc}")["status"] == "failed"
+    p = env.json(f"/api/analysis_progress/{enc}")
+    assert (p["status"], p["analysis_key"]) == ("failed", key)
+    assert "stopped before processing started" in p["error_message"]
+    assert env.one("SELECT status FROM analysis_runs WHERE analysis_key=?", (key,))["status"] == "failed"
 
 
 def test_plain_key_reconciles_stale_pending_run(env):
@@ -916,8 +1035,9 @@ def test_nfhs_credentials_download_and_analyze(nfhs_env):
     assert env.one("SELECT game_id FROM analysis_runs")["game_id"] == game["id"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: NFHS partial download reuses nfhs_<id>.mp4 and overwrites the full-game film already in the library")
 def test_nfhs_partial_download_does_not_overwrite_full_game(nfhs_env):
+    # Regression: a section download reused nfhs_<id>.mp4, replacing the full game on
+    # disk while the library row still described the full game.
     env = nfhs_env
     env.post_json("/api/scouting/nfhs/credentials", {"email": "coach@example.com", "password": "good-pw"})
     full = _wait_download(env, env.post_json("/api/scouting/nfhs/download", {"game_id": "gamabc12345678"}).get_json()["job_id"])
@@ -927,25 +1047,58 @@ def test_nfhs_partial_download_does_not_overwrite_full_game(nfhs_env):
         "game_id": "gamabc12345678", "start_ms": 0, "end_ms": 60_000}).get_json()["job_id"])
     assert part["status"] == "complete"
     assert Path(full_video["file_path"]).read_bytes() == b"F" * 4000, "full game film replaced by the partial clip"
+    assert (part["already_saved"], part["file_size"]) == (False, 400)
+    assert part["stored_filename"] != full_video["stored_filename"]
+    videos = {v["stored_filename"]: v for v in env.q("SELECT * FROM videos")}
+    assert set(videos) == {full_video["stored_filename"], part["stored_filename"]}
+    assert videos[full_video["stored_filename"]]["file_size_bytes"] == 4000
+    clip = videos[part["stored_filename"]]
+    assert clip["file_size_bytes"] == 400 and Path(clip["file_path"]).read_bytes() == b"P" * 400
+    assert clip["relational_game_id"] == full_video["relational_game_id"] and clip["game_id"] == part["game_id"]
+    # the full game downloaded again maps onto the same library row, refreshed to the new file
+    env.execute("UPDATE videos SET file_size_bytes=1 WHERE id=?", (full_video["id"],))
+    again =_wait_download(env, env.post_json("/api/scouting/nfhs/download", {"game_id": "gamabc12345678"}).get_json()["job_id"])
+    assert (again["status"], again["already_saved"], again["game_id"]) == ("complete", True, full_video["game_id"])
+    assert env.one("SELECT COUNT(*) AS c FROM videos")["c"] == 2
+    assert env.one("SELECT file_size_bytes FROM videos WHERE id=?", (full_video["id"],))["file_size_bytes"] == 4000
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/scouting/nfhs/login with a new, working password records success but keeps the old stored password")
 def test_nfhs_login_with_new_password_updates_stored_password(nfhs_env):
+    # Regression: a successful login with a new password recorded success but kept
+    # the old stored password.
+    import blueprints.scouting as scouting
+
     env = nfhs_env
     env.post_json("/api/scouting/nfhs/credentials", {"email": "coach@example.com", "password": "good-old"})
     r = env.post_json("/api/scouting/nfhs/login", {"email": "coach@example.com", "password": "good-new"})
     assert r.get_json()["success"] is True
     assert env.one("SELECT last_login_status FROM nfhs_credentials")["last_login_status"] == "success"
     assert _stored_password(env, "coach@example.com") == "good-new"
+    with env.app.test_request_context():
+        assert scouting._get_stored_credentials() == ("coach@example.com", "good-new")
+    # logging in again without a password uses the new stored one
+    r = env.post_json("/api/scouting/nfhs/login", {"email": "coach@example.com"})
+    assert r.get_json()["success"] is True
+    assert env.logins[-1] == ("coach@example.com", "good-new")
+    # and the download job authenticates with it
+    job = env.post_json("/api/scouting/nfhs/download", {"game_id": "gamabc12345678"})
+    assert job.status_code == 200
+    assert _wait_download(env, job.get_json()["job_id"])["status"] == "complete"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: a failed /api/scouting/nfhs/login stores the bad password as the newest active credential used for downloads")
 def test_nfhs_failed_login_does_not_replace_working_credentials(nfhs_env):
+    # Regression: a failed login stored the bad password as the newest active credential.
     import blueprints.scouting as scouting
 
     env = nfhs_env
     env.post_json("/api/scouting/nfhs/credentials", {"email": "coach@example.com", "password": "good-pw"})
+    saved = env.one("SELECT * FROM nfhs_credentials")
     r = env.post_json("/api/scouting/nfhs/login", {"email": "typo@example.com", "password": "wrong"})
+    assert r.get_json()["success"] is False
+    r = env.post_json("/api/scouting/nfhs/login", {"email": "coach@example.com", "password": "wrong-too"})
     assert r.get_json()["success"] is False
     with env.app.test_request_context():
         assert scouting._get_stored_credentials() == ("coach@example.com", "good-pw")
+    assert env.q("SELECT * FROM nfhs_credentials") == [saved]  # nothing added or re-labelled
+    info = env.json("/api/scouting/nfhs/credentials")
+    assert (info["email"], info["last_login_status"]) == ("coach@example.com", "success")

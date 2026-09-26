@@ -796,8 +796,19 @@ def build_analysis_settings_snapshot(runtime_settings):
     }
 
 
-def build_rerun_game_id(base_game_id):
-    return f"{base_game_id}__rerun_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+def build_rerun_game_id(base_game_id, db=None):
+    key = f"{base_game_id}__rerun_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    if db is None:
+        return key
+    # Two requests in the same second must not share a key (the second one
+    # supersedes the first, which would then point at the same analysis_key).
+    candidate, n = key, 1
+    while db.execute(
+        "SELECT 1 FROM analysis_runs WHERE analysis_key=? LIMIT 1", (candidate,)
+    ).fetchone():
+        n += 1
+        candidate = f"{key}_{n}"
+    return candidate
 
 
 def default_run_label(run_kind, snapshot):
@@ -856,7 +867,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
 
 def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_label=None):
     settings_snapshot = build_analysis_settings_snapshot(runtime_settings)
-    analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"])
+    analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"], db)
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(
         """INSERT INTO analysis_runs
@@ -1169,7 +1180,19 @@ def count_detections_for_analysis(
     video_relational_game_id=None,
     base_analysis_key=None,
 ) -> int:
-    """Count detections for a video/analysis run across legacy and relational keys."""
+    """Count detections for a video/analysis run across legacy and relational keys.
+
+    When the run's own analysis_key has detections, only those are counted: a rerun
+    shares relational_game_id / base key with the primary run, so the wider lookup
+    would add the other runs' detections. The wider lookup stays as the fallback for
+    legacy rows that were stored under another key.
+    """
+    if analysis_key:
+        own = db.execute(
+            "SELECT COUNT(*) AS c FROM detections d WHERE d.game_id = ?", (analysis_key,)
+        ).fetchone()["c"]
+        if own:
+            return own
     conditions = []
     params = []
     for rel_id in {relational_game_id, video_relational_game_id} - {None}:
@@ -1304,6 +1327,11 @@ STALE_WATCHDOG_MESSAGE_MARKERS = (
 ANALYSIS_WORKER_STOPPED_MESSAGE = (
     "Analysis worker stopped. Open Film Tool or Video Library and click Retry."
 )
+EVENT_REBUILD_INTERRUPTED_MESSAGE = (
+    "Event rebuild was interrupted before it finished. Click Rebuild again."
+)
+SYNC_EVENT_REBUILD_STALE_SECONDS = 3600
+SYNC_EVENT_REBUILD_LOG_MARKER = "Rebuild events started in web worker."
 
 
 def parse_analysis_progress_frames(step):
@@ -1477,6 +1505,7 @@ def _restore_analysis_run_running(db, row_id, content: str) -> None:
 
 def reconcile_stuck_analysis_run(db, game_id: str) -> None:
     """Mark orphaned pending/running runs failed or completed based on logs."""
+    game_id = normalize_analysis_game_id(game_id)
     heal_failed_analysis_run_with_events(db, game_id)
 
     row = db.execute(
@@ -1525,6 +1554,14 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
             return
 
         if _is_sync_event_rebuild_step(progress_step):
+            # In-process rebuild: no worker PID to probe. The web request logs its
+            # start; if nothing has touched the log since, for longer than any
+            # request can live (gunicorn kills it far sooner), the rebuild died.
+            # Without that start line the log age says nothing about the rebuild.
+            if SYNC_EVENT_REBUILD_LOG_MARKER in content and os.path.exists(log_path):
+                age_seconds = time.time() - os.path.getmtime(log_path)
+                if age_seconds > SYNC_EVENT_REBUILD_STALE_SECONDS:
+                    _mark_analysis_run_failed(db, row_id, EVENT_REBUILD_INTERRUPTED_MESSAGE)
             return
 
         if parse_analysis_launcher_pid(content) or "[launcher] Started" in content:
