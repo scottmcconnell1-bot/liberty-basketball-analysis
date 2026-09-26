@@ -18,7 +18,11 @@ from pathlib import Path
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+from ops_io import atomic_write_text  # noqa: E402
+
+DB = live_db_path()
 PY = sys.executable
 BASE = "http://127.0.0.1:8080"
 
@@ -94,6 +98,14 @@ PANEL_EVERY_HOOPS = int(os.environ.get("LIBERTY_PANEL_EVERY_HOOPS", "1"))
 PANEL_EVERY_HUDL = int(os.environ.get("LIBERTY_PANEL_EVERY_HUDL", "2"))
 # No progress_step/pct change for this long while a worker is alive → hung (kill + re-queue)
 HUNG_STALE_SEC = int(os.environ.get("LIBERTY_HUNG_STALE_SEC", str(45 * 60)))
+# Give up on a game after this many failed analyses (since its last completed one)
+# or failed teaches, so one broken game cannot block the queue forever.
+MAX_ANALYZE_FAILURES = int(os.environ.get("LIBERTY_MAX_ANALYZE_FAILURES", "3"))
+MAX_TEACH_FAILURES = int(os.environ.get("LIBERTY_MAX_TEACH_FAILURES", "3"))
+# Operator pause (checked by this loop, start_hoops_teach_detached.py and
+# watchdog_teach_loop.ps1) and the "all games done" marker the watchdog honours.
+PAUSE_MARKER = ROOT / "data" / "hoopsalytics" / "TEACH_LOOP_PAUSED"
+DONE_MARKER = ROOT / "data" / "hoopsalytics" / "TEACH_LOOP_DONE"
 
 # Fixed full-film panel bases (Scott gates). Prefer these over HUDL when queueing.
 PANEL_BASE_KEYS = {
@@ -160,14 +172,35 @@ def games_panel_first(games: list[tuple], *, fail_scores: dict[str, float] | Non
 
 
 def load_state() -> dict:
-    if STATE_PATH.exists():
-        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    return {"taught_keys": [], "scores": []}
+    """Teach state; a truncated/corrupt file is moved aside instead of crashing the loop."""
+    fresh = {"taught_keys": [], "scores": []}
+    if not STATE_PATH.exists():
+        return fresh
+    try:
+        data = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        data = None
+        err = exc
+    else:
+        err = None if isinstance(data, dict) else TypeError(f"state is {type(data).__name__}, not an object")
+    if err is None:
+        return data
+    aside = STATE_PATH.with_name(f"{STATE_PATH.name}.corrupt-{time.strftime('%Y%m%d_%H%M%S')}")
+    try:
+        STATE_PATH.replace(aside)
+    except OSError:
+        aside = None
+    print(f"[state] unreadable {STATE_PATH.name} ({err}); starting fresh, kept copy={aside}", flush=True)
+    return fresh
 
 
 def save_state(state: dict) -> None:
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    # Atomic: a crash/reboot mid-write must not leave a truncated state file.
+    atomic_write_text(STATE_PATH, json.dumps(state, indent=2))
+
+
+def teach_paused() -> bool:
+    return PAUSE_MARKER.exists()
 
 
 def run(cmd: list[str]) -> int:
@@ -290,6 +323,9 @@ def list_live_analysis_workers() -> dict:
             timeout=20,
             creationflags=CREATE_NO_WINDOW,
         )
+        if r.returncode != 0:
+            # Probe failed: we do NOT know whether a worker is alive.
+            return empty
         lines = [ln.strip() for ln in (r.stdout or "").splitlines() if ln.strip()]
         keys: set[str] = set()
         pid_by_key: dict[str, int] = {}
@@ -335,8 +371,14 @@ def list_live_analysis_workers() -> dict:
 
 
 def analysis_worker_alive() -> bool:
-    """True if an analysis_launcher (or ai_analyzer) process is running."""
+    """True if an analysis_launcher (or ai_analyzer) process is (or may be) running.
+
+    A failed probe means "unknown", which must be treated as alive: assuming
+    "dead" reclaims a live run and starts a second GPU job.
+    """
     info = list_live_analysis_workers()
+    if not info.get("ok"):
+        return True
     return bool(info.get("any_worker"))
 
 
@@ -439,6 +481,9 @@ def restart_hung_analysis(
 ) -> bool:
     """Kill live worker for key (if any) and fail the run so teach can re-queue."""
     workers = list_live_analysis_workers()
+    if not workers.get("ok"):
+        print(f"[hung] process probe failed; not failing run_id={run_id} key={key} (unknown)", flush=True)
+        return False
     pid_by_key = dict(workers.get("pid_by_key") or {})
     pids = []
     if key and key in pid_by_key:
@@ -471,6 +516,9 @@ def _reclaim_zombie_runs_once(conn: sqlite3.Connection, *, stale_minutes: int = 
         return 0
 
     workers = list_live_analysis_workers()
+    if not workers.get("ok"):
+        print("[zombie] process probe failed; skipping reclaim (worker state unknown)", flush=True)
+        return 0
     live_keys: set[str] = set(workers.get("keys") or set())
     any_worker = bool(workers.get("any_worker"))
     unkeyed = int(workers.get("unkeyed_workers") or 0)
@@ -589,26 +637,62 @@ def recover_interrupted_runs(conn: sqlite3.Connection) -> int:
     return fixed
 
 
+def _analysis_attempts(conn: sqlite3.Connection, video_id: int, gid: str) -> tuple[int, int]:
+    """(failed runs since the last completed one, completed runs) for this game."""
+    rows = conn.execute(
+        """SELECT id, status FROM analysis_runs
+           WHERE source_video_id=? OR analysis_key=? OR base_game_id=? OR analysis_key LIKE ?
+           ORDER BY id""",
+        (video_id, gid, gid, f"{gid}__rerun_%"),
+    ).fetchall()
+    failed_since = 0
+    completed = 0
+    for _rid, status in rows:
+        if status == "completed":
+            completed += 1
+            failed_since = 0
+        elif status == "failed":
+            failed_since += 1
+    return failed_since, completed
+
+
 def needs_full(conn: sqlite3.Connection, video_id: int, gid: str) -> bool:
-    """True only when we lack usable film coverage — do NOT re-queue after reboot thrash."""
+    """True only when we lack usable film coverage — do NOT re-queue after reboot thrash.
+
+    Bounded: a game whose analysis keeps failing (e.g. missing video) is given up
+    after MAX_ANALYZE_FAILURES, and a film that completed a full analysis is not
+    re-queued just because it is short (Idaho City is ~9 minutes long).
+    """
     mx = det_max_ms_for_base(conn, gid)
-    # Grace: need ~25+ minutes (full game), not Q1-only
+    run = latest_run(conn, video_id, gid)
+    if run and run[1] == "running":
+        return False
+    failed_since, completed = _analysis_attempts(conn, video_id, gid)
+    if failed_since >= MAX_ANALYZE_FAILURES:
+        if mx < 1_200_000:
+            print(
+                f"[give-up] {gid}: {failed_since} failed analyses in a row "
+                f"(limit {MAX_ANALYZE_FAILURES}); not re-queueing. Last error: "
+                f"{(run[5] if run and len(run) > 5 else '') or '-'}",
+                flush=True,
+            )
+        return False
+    last_completed = bool(run) and run[1] == "completed"
+    # Grace: need ~25+ minutes (full game), not Q1-only. The first completed run
+    # was Q1-only, so allow one full re-run; after that trust its coverage.
     if gid.endswith("grace_2026-01-10"):
-        return mx < 1_500_000
-    # Idaho City was thin (~9 min) — keep requesting full coverage
+        return mx < 1_500_000 and not (last_completed and completed >= 2)
+    # Idaho City was thin (~9 min) — request full coverage until a full run completes
     if "idaho_city" in gid and mx < 1_200_000:
-        return True
+        return not last_completed
     # ~20 minutes of detections = keep; skip re-analyze
     if mx >= 1_200_000:
         return False
-    run = latest_run(conn, video_id, gid)
     if not run:
         return True
-    if run[1] == "running":
-        return False
-    # Thin/partial coverage may need another pass
+    # Thin/partial coverage may need another pass (bounded like failures)
     if mx < 50_000:
-        return True
+        return completed < MAX_ANALYZE_FAILURES
     # Partial but present — don't auto-burn another full GPU night unless never completed
     if run[1] == "completed":
         return False
@@ -669,13 +753,37 @@ def run_full_film_panel(state: dict) -> None:
     save_state(state)
 
 
-def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> None:
+def _record_teach_failure(state: dict, analysis_key: str, name: str, mode: str, why: str) -> None:
+    """Failed teach: keep the key un-taught (retried later, up to MAX_TEACH_FAILURES)."""
+    fails = dict(state.get("teach_failures") or {})
+    fails[analysis_key] = int(fails.get(analysis_key) or 0) + 1
+    state["teach_failures"] = fails
+    state.setdefault("scores", []).append(
+        {"name": name, "key": analysis_key, "mode": mode, "ok": False, "error": why,
+         "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    )
+    save_state(state)
+    print(
+        f"TEACH FAILED {name} ({analysis_key}): {why} "
+        f"[failure {fails[analysis_key]}/{MAX_TEACH_FAILURES}]",
+        flush=True,
+    )
+
+
+def teach_given_up(state: dict, analysis_key: str) -> bool:
+    return int((state.get("teach_failures") or {}).get(analysis_key) or 0) >= MAX_TEACH_FAILURES
+
+
+def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> bool:
+    """Teach + score one completed game. Returns False (key NOT marked taught) on failure."""
     print(f"\n=== TEACH after {name} ({analysis_key}) ===", flush=True)
     is_hudl = str(analysis_key).startswith("hudl_")
-    if is_hudl:
-        run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
-    else:
-        run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
+    mode = "hudl_boxscore" if is_hudl else "hoops_pbp"
+    teach_script = "scripts/teach_from_boxscore.py" if is_hudl else "scripts/teach_from_hoops_pbp.py"
+    rc = run([PY, teach_script, "--write-model"])
+    if rc != 0:
+        _record_teach_failure(state, analysis_key, name, mode, f"{teach_script} exit {rc}")
+        return False
     # Regenerate every game that has detections so new keep_clf / caps apply.
     conn = _connect_db()
     keys = [
@@ -686,12 +794,20 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
         )
     ]
     conn.close()
+    regen_failed = []
     for key in keys:
-        run([PY, "scripts/regenerate_events.py", key])
+        if run([PY, "scripts/regenerate_events.py", key]) != 0:
+            regen_failed.append(key)
+    if analysis_key in regen_failed:
+        _record_teach_failure(state, analysis_key, name, mode, "regenerate_events failed for this game")
+        return False
+    if regen_failed:
+        print(f"[teach] regenerate failed for other games (retried next teach): {regen_failed}", flush=True)
 
-    score: dict = {"mode": "hudl_boxscore" if is_hudl else "hoops_pbp"}
+    score: dict = {"mode": mode}
     if not is_hudl:
-        run(
+        score_path = ROOT / "data" / "hoopsalytics" / f"compare_{film_id.replace('-', '_')}.json"
+        rc = run(
             [
                 PY,
                 "scripts/compare_ai_to_hoops_pbp.py",
@@ -701,19 +817,34 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
                 analysis_key,
             ]
         )
-        score_path = ROOT / "data" / "hoopsalytics" / f"compare_{film_id.replace('-', '_')}.json"
-        if score_path.exists():
-            score = {**score, **json.loads(score_path.read_text(encoding="utf-8"))}
+        data = None
+        if rc == 0 and score_path.exists():
+            try:
+                data = json.loads(score_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError, ValueError):
+                data = None
+        # Never merge a scorecard left over from an earlier analysis.
+        if not isinstance(data, dict) or data.get("analysis_key") != analysis_key:
+            _record_teach_failure(state, analysis_key, name, mode, f"compare exit {rc}, no fresh scorecard")
+            return False
+        score = {**score, **data}
     else:
         # Team-total compare via boxscore model vs AI event counts
-        run([PY, "scripts/teach_from_boxscore.py", "--write-model", "--compare-ai"])
+        rc = run([PY, "scripts/teach_from_boxscore.py", "--write-model", "--compare-ai"])
+        if rc != 0:
+            _record_teach_failure(state, analysis_key, name, mode, f"boxscore compare exit {rc}")
+            return False
         report = ROOT / "data" / "hoopsalytics" / "boxscore_teach_report.json"
         if report.exists():
             data = json.loads(report.read_text(encoding="utf-8"))
             games = data.get("games") or data.get("by_game") or {}
-            if isinstance(games, dict) and analysis_key in games:
-                score = {**score, **games[analysis_key]}
+            base = _base_analysis_key(analysis_key)
+            if isinstance(games, list):
+                games = {str(g.get("game_id")): g for g in games if isinstance(g, dict)}
+            if isinstance(games, dict) and base in games:
+                score = {**score, **games[base]}
 
+    (state.get("teach_failures") or {}).pop(analysis_key, None)
     state["taught_keys"] = sorted(set(state.get("taught_keys") or []) | {analysis_key})
     state.setdefault("scores", []).append({"name": name, "key": analysis_key, **score})
     save_state(state)
@@ -732,9 +863,15 @@ def teach_and_score(analysis_key: str, film_id: str, name: str, state: dict) -> 
             f"hudl={is_hudl})",
             flush=True,
         )
+    return True
 
 
 def main() -> int:
+    if teach_paused():
+        print(f"[paused] {PAUSE_MARKER} exists - not starting. Remove it to resume.", flush=True)
+        return 0
+    # Started on purpose (or new games arrived): the previous "done" no longer applies.
+    DONE_MARKER.unlink(missing_ok=True)
     state = load_state()
     print("Hoops+HUDL teach loop starting...", flush=True)
     try:
@@ -753,6 +890,9 @@ def main() -> int:
 
     consecutive_errors = 0
     while True:
+        if teach_paused():
+            print(f"[paused] {PAUSE_MARKER} appeared - stopping before queueing more work.", flush=True)
+            break
         try:
             conn = _connect_db()
             # Every cycle: never wait on dead workers
@@ -847,6 +987,8 @@ def main() -> int:
                     continue
                 if key in (state.get("taught_keys") or []):
                     continue
+                if teach_given_up(state, key):
+                    continue
                 conn.close()
                 teach_and_score(key, film, name, state)
                 conn = _connect_db()
@@ -866,6 +1008,14 @@ def main() -> int:
                 )
                 run([PY, "scripts/teach_from_hoops_pbp.py", "--write-model"])
                 run([PY, "scripts/teach_from_boxscore.py", "--write-model"])
+                # Tell watchdog_teach_loop.ps1 not to restart a loop that finished.
+                atomic_write_text(
+                    DONE_MARKER,
+                    f"DONE {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    "All Hoops + HUDL games analyzed + taught. The watchdog will not restart\n"
+                    "the teach loop while this file exists; import_hudl.py removes it when\n"
+                    "new games arrive, or delete it by hand to resume.\n",
+                )
                 break
 
             vid, film, gid, name = nxt

@@ -16,7 +16,52 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE_DB = Path(os.environ.get("LIBERTY_DB_PATH", str(ROOT / "film_analysis.db")))
+
+
+def _dotenv_value(key: str) -> str:
+    """Read one key from the repo .env (same parsing rules as app._load_dotenv)."""
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        return ""
+    try:
+        text = env_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        if name.strip() != key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        return value
+    return ""
+
+
+def live_db_path() -> Path:
+    """The SQLite file the running app uses.
+
+    Same precedence as app.py: real env LIBERTY_DATABASE, then LIBERTY_DATABASE
+    from the repo .env, then the legacy LIBERTY_DB_PATH, then film_analysis.db.
+    A relative value is resolved against the repo root (the app's working dir).
+    """
+    raw = ""
+    for key in ("LIBERTY_DATABASE", "LIBERTY_DB_PATH"):
+        raw = (os.environ.get(key) or "").strip() or _dotenv_value(key).strip()
+        if raw:
+            break
+    if not raw:
+        return ROOT / "film_analysis.db"
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = ROOT / path
+    return path.resolve()
+
+
+LIVE_DB = live_db_path()
 
 
 def data_root() -> Path:
@@ -65,3 +110,14 @@ def ensure_data_dirs() -> dict[str, Path]:
             encoding="utf-8",
         )
     return paths
+
+
+def readonly_uri(path: Path) -> str:
+    """SQLite read-only URI for *path*, percent-encoded.
+
+    A bare ``f"file:{path}?mode=ro"`` breaks on '#', '?' or '%' in the path
+    (SQLite treats '#' as the start of a fragment and silently opens a
+    different, empty file). ``Path.as_uri()`` escapes them and also produces the
+    ``file:///C:/...`` form SQLite expects on Windows.
+    """
+    return Path(path).resolve().as_uri() + "?mode=ro"

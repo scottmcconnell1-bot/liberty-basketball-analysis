@@ -35,6 +35,22 @@ try {
         exit 0
     }
 
+    # Operator pause: never restart while the marker exists.
+    $PauseMarker = Join-Path $LogDir "TEACH_LOOP_PAUSED"
+    if (Test-Path -LiteralPath $PauseMarker) {
+        Write-Log "Teach loop PAUSED ($PauseMarker) - not restarting"
+        Write-Log "=== teach watchdog done (paused) ==="
+        exit 0
+    }
+    # The loop exits on purpose once every game is analyzed + taught; do not
+    # restart it every 15 minutes (import_hudl.py clears this when new games arrive).
+    $DoneMarker = Join-Path $LogDir "TEACH_LOOP_DONE"
+    if (Test-Path -LiteralPath $DoneMarker) {
+        Write-Log "Teach loop finished ($DoneMarker) - not restarting"
+        Write-Log "=== teach watchdog done (finished) ==="
+        exit 0
+    }
+
     Write-Log "Teach loop DEAD - starting detached teach (keeps Flask if already up)"
     & py -3.12 (Join-Path $RepoRoot "scripts\start_hoops_teach_detached.py")
     $code = $LASTEXITCODE

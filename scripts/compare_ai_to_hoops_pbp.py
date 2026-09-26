@@ -26,11 +26,16 @@ sys.path.insert(0, str(ROOT / "tag-exports"))
 
 from manual_vs_ai_q1_compare import (  # noqa: E402
     convert_ai_events_to_stat_rows,
+    event_level_match,
     match_key,
     time_to_seconds,
 )
 
-DB_PATH = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+from ops_io import atomic_write_text  # noqa: E402
+
+DB_PATH = live_db_path()
 STAT_TYPES = {"2PT", "3PT", "FT", "Assist", "Steal", "Turnover", "Foul", "Block", "OffRebound", "DefRebound"}
 
 
@@ -104,6 +109,11 @@ def main() -> int:
     ap.add_argument("--db", type=Path, default=DB_PATH)
     args = ap.parse_args()
 
+    out = ROOT / "data" / "hoopsalytics" / f"compare_{args.film_id.replace('-', '_')}.json"
+    # A previous run's scorecard must not survive a failed compare: callers read
+    # this file and would otherwise record the old analysis's precision/recall.
+    out.unlink(missing_ok=True)
+
     conn = sqlite3.connect(str(args.db))
     truth = filter_by_end(load_truth_rows(conn, args.film_id), args.end_ms, is_truth=True)
     ai_raw = filter_by_end(load_ai_events(conn, args.analysis_key), args.end_ms, is_truth=False)
@@ -113,40 +123,19 @@ def main() -> int:
     # Keep only Liberty-comparable types
     ai_rows = [r for r in ai_rows if r.get("eventtype") in STAT_TYPES]
 
-    manuals = [
-        {"row": r, "sec": time_to_seconds(r.get("start")), "key": match_key(r), "used": False}
-        for r in truth
-    ]
-    ais = [
-        {"row": r, "sec": time_to_seconds(r.get("start")), "key": match_key(r), "used": False}
-        for r in ai_rows
-    ]
-    matched = 0
-    disagree = 0
-    for m in manuals:
-        best = None
-        best_d = None
-        for a in ais:
-            if a["used"]:
-                continue
-            d = abs(a["sec"] - m["sec"]) * 1000
-            if d > args.tolerance_ms:
-                continue
-            if best_d is None or d < best_d:
-                best = a
-                best_d = d
-        if best is None:
-            continue
-        best["used"] = True
-        m["used"] = True
-        if best["key"] == m["key"]:
-            matched += 1
-        else:
-            disagree += 1
-
-    miss = sum(1 for m in manuals if not m["used"])
-    extra = sum(1 for a in ais if not a["used"])
-    total_truth = len(manuals)
+    # Type-aware matching (same matcher teach_from_hoops_pbp trains on): an AI event
+    # pairs with the nearest truth event of the SAME type/result first, and only
+    # falls back to a same-family "disagree" pairing. Nearest-time-only matching
+    # let a correct steal take the slot of a nearby 2PT and scored both wrong.
+    matches, extras, misses, disagreements = event_level_match(
+        truth, ai_rows, tolerance_ms=args.tolerance_ms
+    )
+    matched = len(matches)
+    disagree = len(disagreements)
+    miss = len(misses)
+    extra = len(extras)
+    total_truth = len(truth)
+    ais = ai_rows
     precision = matched / max(matched + extra + disagree, 1)
     recall = matched / max(total_truth, 1)
 
@@ -175,8 +164,6 @@ def main() -> int:
     print("Top truth keys:", truth_counts.most_common(8))
     print("Top AI keys:   ", ai_counts.most_common(8))
 
-    out = ROOT / "data" / "hoopsalytics" / f"compare_{args.film_id.replace('-', '_')}.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "film_id": args.film_id,
         "analysis_key": args.analysis_key,
@@ -191,7 +178,7 @@ def main() -> int:
         "precision": round(precision, 4),
         "recall": round(recall, 4),
     }
-    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    atomic_write_text(out, json.dumps(payload, indent=2))
     print(f"\nWrote {out}")
     return 0
 
