@@ -90,6 +90,10 @@ def _find_player_stat(stats, player_hint):
     if not stats:
         return None
     if player_hint:
+        hint_l = player_hint.strip().lower()
+        for row in stats:
+            if (row.get("player") or "").strip().lower() == hint_l:
+                return row
         for row in stats:
             if _match_player_name(row.get("player"), player_hint):
                 return row

@@ -215,10 +215,13 @@ def update_clip(db, clip_id, **kwargs):
         if not _canonical_clip_exists(db, canonical_clip_id):
             raise ValueError(f"Canonical clip {canonical_clip_id} not found")
 
-    relational_game_id = kwargs.get(
-        "relational_game_id",
-        row["relational_game_id"] if "relational_game_id" in row.keys() else None,
-    )
+    if "relational_game_id" in kwargs:
+        relational_game_id = kwargs["relational_game_id"]
+    elif "game_id" in kwargs:
+        # The game changed: re-resolve instead of keeping the old game's id.
+        relational_game_id = _resolve_relational_game_id(db, kwargs.get("game_id"))
+    else:
+        relational_game_id = row["relational_game_id"] if "relational_game_id" in row.keys() else None
     if relational_game_id is None and kwargs.get("game_id"):
         relational_game_id = _resolve_relational_game_id(db, kwargs.get("game_id"))
 
@@ -319,6 +322,7 @@ def update_playlist(db, playlist_id, **kwargs):
 
 
 def delete_playlist(db, playlist_id):
+    db.execute("UPDATE practice_plan_items SET playlist_id=NULL WHERE playlist_id=?", (playlist_id,))
     db.execute("DELETE FROM practice_playlist_clips WHERE playlist_id=?", (playlist_id,))
     db.execute("DELETE FROM practice_playlists WHERE id=?", (playlist_id,))
     db.commit()
@@ -345,6 +349,10 @@ def get_playlist_clips(db, playlist_id):
 
 
 def add_clip_to_playlist(db, playlist_id, clip_id, sort_order=0):
+    if db.execute("SELECT 1 FROM practice_playlists WHERE id=?", (playlist_id,)).fetchone() is None:
+        raise KeyError(f"Playlist {playlist_id} not found")
+    if db.execute("SELECT 1 FROM player_development_clips WHERE id=?", (clip_id,)).fetchone() is None:
+        raise KeyError(f"Clip {clip_id} not found")
     db.execute(
         "INSERT OR IGNORE INTO practice_playlist_clips (playlist_id, clip_id, sort_order) VALUES (?,?,?)",
         (playlist_id, clip_id, sort_order),

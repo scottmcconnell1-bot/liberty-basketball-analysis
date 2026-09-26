@@ -203,7 +203,6 @@ def test_scouting_generate_empty_and_no_game(web, app):
     assert c.get("/api/scouting/reports/999999").status_code == 404
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: scouting generate counts pending and rejected events (no review_status filter)")
 def test_scouting_generate_uses_trusted_events_only(web, app):
     c = web
     game = create_game(c, "scout-trust")
@@ -216,7 +215,6 @@ def test_scouting_generate_uses_trusted_events_only(web, app):
     assert out["personnel_found"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: scouting generate joins events.player (name/tracker text) to players.id, so names become 'Unknown' or a roster player")
 def test_scouting_generate_keeps_player_attribution(web, app):
     c = web
     create_player(app, "Liberty Kid", 3)  # players.id == 1
@@ -230,7 +228,6 @@ def test_scouting_generate_keeps_player_attribution(web, app):
     assert "Opp Star" in names
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: scouting generate matches events.game_id to games.id; AI events keyed by analysis key + relational_game_id are never found")
 def test_scouting_generate_finds_ai_events_by_relational_game(web, app):
     from tests.e2e import data as td
 
@@ -240,29 +237,110 @@ def test_scouting_generate_finds_ai_events_by_relational_game(web, app):
     td.insert_ai_events(conn, "scout-ai-video", td.ai_events("scout-ai-video"), relational_game_id=game)
     conn.close()
     assert q(app, "SELECT COUNT(*) AS n FROM events WHERE relational_game_id=?", (game,))[0]["n"] > 0
+    # AI drafts are pending; generate only uses trusted events, so a coach accepts the
+    # turnovers (legacy events.game_id is the analysis key, not games.id).
+    conn = raw(app)
+    conn.execute("UPDATE events SET review_status='accepted' WHERE relational_game_id=? AND event_type='turnover'", (game,))
+    conn.commit()
+    conn.close()
+    accepted = q(app, "SELECT COUNT(*) AS n FROM events WHERE relational_game_id=? AND review_status='accepted'", (game,))[0]["n"]
+    assert accepted > 0
+    assert q(app, "SELECT COUNT(*) AS n FROM events WHERE game_id=?", (str(game),))[0]["n"] == 0
     rid = ok_json(send(c, "post", "/api/scouting/reports", {"opponent_name": "AI", "scout_date": "2026-01-01", "game_id": game}), 201)["id"]
     r = c.post(f"/api/scouting/reports/{rid}/generate")
     assert r.status_code == 200, r.get_json()
+    assert r.get_json()["events_analyzed"] == accepted
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: POST to a child section of a missing scouting report raises IntegrityError (500) instead of 404")
-def test_scouting_child_on_missing_report_is_404(web):
+def test_scouting_child_on_missing_report_is_404(web, app):
     r = send(web, "post", "/api/scouting/reports/424242/clips", {"clip_type": "tendency", "description": "x"})
     assert r.status_code == 404
+    r = send(web, "post", "/api/scouting/reports/424242/personnel", {"player_name": "x"})
+    assert r.status_code == 404
+    assert q(app, "SELECT COUNT(*) AS n FROM scouting_clips WHERE report_id=424242")[0]["n"] == 0
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: scouting print page and dashboard interpolate stored report text into innerHTML unescaped (stored XSS)")
+_XSS = "<img src=x onerror=alert(1)>"
+_SAFE_TAGS = {"table", "thead", "tbody", "tr", "th", "td", "a", "span", "h1", "h2", "h3", "p", "div",
+              "strong", "ul", "li"}
+
+
+def _render_page_js(client, page_url, target_id, *, call=""):
+    """Run the page's own inline scripts (incl. base.html's escapeHtml) under node with the
+    real API responses and return the innerHTML the page writes into #target_id."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+    html = client.get(page_url).get_data(as_text=True)
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    escape_js = next(sc for sc in scripts if "function escapeHtml(" in sc)
+    page_js = next(sc for sc in scripts if "/api/scouting/reports" in sc)
+    report_id = re.search(r"const reportId = (\d+);", page_js)
+    api = {}
+    for url in re.findall(r"fetch\(\s*[`']([^`']+)[`']", page_js):
+        if report_id:
+            url = url.replace("${reportId}", report_id.group(1))
+        api[url] = client.get(url).get_json()
+    harness = """
+const els = {};
+const el = (id) => (els[id] = els[id] || {innerHTML: '', textContent: '', value: '', href: ''});
+globalThis.document = {getElementById: el, addEventListener() {}, querySelector: () => ({})};
+globalThis.window = {location: {}};
+const API = %s;
+globalThis.fetch = (url) => Promise.resolve({json: () => Promise.resolve(API[url])});
+%s
+%s
+%s
+setTimeout(() => process.stdout.write(JSON.stringify(el(%s).innerHTML)), 50);
+""" % (json.dumps(api), escape_js, page_js, call, json.dumps(target_id))
+    out = subprocess.run([node, "-e", harness], capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+def _assert_inert(fragment, payloads):
+    from html.parser import HTMLParser
+
+    class Collect(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.tags, self.attrs, self.text = set(), [], []
+
+        def handle_starttag(self, tag, attrs):
+            self.tags.add(tag)
+            self.attrs.extend(name for name, _ in attrs)
+
+        def handle_data(self, data):
+            self.text.append(data)
+
+    parser = Collect()
+    parser.feed(fragment)
+    assert parser.tags <= _SAFE_TAGS, parser.tags - _SAFE_TAGS
+    assert not [a for a in parser.attrs if a.startswith("on")], parser.attrs
+    text = "".join(parser.text)
+    for payload in payloads:
+        assert payload in text, payload  # shown to the coach as literal text
+
+
 def test_scouting_pages_escape_stored_text(web):
     c = web
-    rid = ok_json(send(c, "post", "/api/scouting/reports", {"opponent_name": "<img src=x onerror=alert(1)>", "scout_date": "2026-01-01"}), 201)["id"]
-    ok_json(send(c, "post", f"/api/scouting/reports/{rid}/clips", {"clip_type": "t", "description": "<script>x()</script>"}), 201)
-    # The API returns raw text; the client templates must escape it before innerHTML.
-    printed = c.get(f"/scouting/reports/{rid}/print").get_data(as_text=True)
-    dashboard = c.get("/scouting").get_data(as_text=True)
-    assert "${r.opponent_name}" not in printed
-    assert "${c.description}" not in printed
-    assert "${p.notes || ''}" not in printed
-    assert "${r.opponent_name || 'Unknown'}" not in dashboard
+    rid = ok_json(send(c, "post", "/api/scouting/reports", {"opponent_name": _XSS, "scout_date": "2026-01-01"}), 201)["id"]
+    ok_json(send(c, "put", f"/api/scouting/reports/{rid}", {"executive_summary": "<b onmouseover=x()>sum</b>"}))
+    ok_json(send(c, "post", f"/api/scouting/reports/{rid}/clips", {"clip_type": "t", "description": "<script>x()</script>",
+                                                                  "game_time": "<svg onload=x()>"}), 201)
+    ok_json(send(c, "post", f"/api/scouting/reports/{rid}/personnel",
+                 {"jersey_number": "<i>1</i>", "player_name": "Opp", "role": "r", "notes": "<iframe src=javascript:x()>"}), 201)
+    ok_json(send(c, "post", f"/api/scouting/reports/{rid}/offensive-sets", {"set_name": "<u>Horns</u>", "frequency": 1}), 201)
+    ok_json(send(c, "post", f"/api/scouting/reports/{rid}/practice-points", {"point_number": 1, "description": "<em>x</em>"}), 201)
+
+    printed = _render_page_js(c, f"/scouting/reports/{rid}/print", "print-report")
+    _assert_inert(printed, [_XSS, "<b onmouseover=x()>sum</b>", "<script>x()</script>", "<svg onload=x()>",
+                            "<iframe src=javascript:x()>", "<u>Horns</u>", "<em>x</em>"])
+    dashboard = _render_page_js(c, "/scouting", "reports-list", call="loadReports();")
+    _assert_inert(dashboard, [_XSS])
 
 
 def test_scouting_module_gate_blocks_when_disabled(web, app):
@@ -372,7 +450,6 @@ def test_practice_pages_render_empty(web):
     assert ok_json(web.get("/api/practices/999/plan-items")) == []
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: deleting a playlist that a practice plan item references fails the FK (500); plan items are not detached")
 def test_delete_playlist_used_by_plan_item(web, app):
     c = web
     season = create_season(c, app)
@@ -384,17 +461,17 @@ def test_delete_playlist_used_by_plan_item(web, app):
     assert r.status_code == 200
     assert c.get(f"/api/playlists/{playlist}").status_code == 404
     items = ok_json(c.get(f"/api/practices/{pid}/plan-items"))
-    assert all(i["playlist_id"] is None for i in items)
+    assert [(i["title"], i["playlist_id"]) for i in items] == [("Film", None)]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: adding a nonexistent clip to a playlist raises IntegrityError (500) instead of 400/404")
 def test_add_missing_clip_to_playlist_is_client_error(web):
     playlist = ok_json(send(web, "post", "/api/playlists", {"name": "P"}), 201)["id"]
     r = send(web, "post", f"/api/playlists/{playlist}/clips", {"clip_id": 987654})
     assert r.status_code in (400, 404)
+    assert "987654" in r.get_json()["error"]
+    assert ok_json(web.get(f"/api/playlists/{playlist}"))["clips"] == []
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /practices/<id>/generate passes a sqlite3.Row to the LLM path, which calls .get() -> AttributeError when Ollama is configured")
 def test_practice_generate_with_llm_configured(web, app, monkeypatch):
     import blueprints.practice as practice_mod
     import helpers
@@ -450,7 +527,6 @@ def test_player_development_clips_scoped_to_player_and_game(web, app):
                                           "canonical_clip_id": 99999}).status_code == 400
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: update_clip keeps the stale relational_game_id when game_id changes, so the clip stays filed under the old game")
 def test_player_development_clip_move_to_other_game(web, app):
     c = web
     alice = create_player(app, "Alice Move", 4)
@@ -570,7 +646,6 @@ def test_assistant_empty_game_and_module_gate(web, app):
     assert c.get("/api/assistant/workflow/games").status_code == 404
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: assistant player lookup uses two-way substring match, so 'Alice' resolves to earlier player 'Al'")
 def test_assistant_player_name_prefers_exact_match(web):
     c = web
     game = create_game(c, "assist-names")
@@ -578,6 +653,7 @@ def test_assistant_player_name_prefers_exact_match(web):
     save_event(c, game, "Alice", "made_three", 5000)
     p = ask(c, "How many points did Alice score?", game, "Alice")
     assert p["answer"].startswith("Alice has 3 points")
+    assert ask(c, "How many points did Al score?", game, "Al")["answer"].startswith("Al has 2 points")
 
 
 def test_assistant_reflects_corrected_event_type(web):
