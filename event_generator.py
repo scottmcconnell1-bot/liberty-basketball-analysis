@@ -26,9 +26,19 @@ def get_detections(
     base_analysis_key=None,
     video_relational_game_id=None,
 ):
-    """Load detections using the same key resolution as the video library counts."""
+    """Load detections using the same key resolution as the video library counts.
+
+    A run's own detections (game_id == analysis key) win: reruns share the
+    relational_game_id and base key with the primary run, so the wider lookup would
+    mix several runs' detections. The wider lookup is only a fallback for legacy
+    rows stored under another key.
+    """
     game_ids = [gid for gid in {game_id, video_game_id, base_analysis_key} if gid]
     rel_ids = [rid for rid in {relational_game_id, video_relational_game_id} if rid is not None]
+    if game_id and conn.execute(
+        "SELECT 1 FROM detections WHERE game_id = ? LIMIT 1", (game_id,)
+    ).fetchone():
+        game_ids, rel_ids = [game_id], []
 
     conditions = []
     params = []
@@ -1119,11 +1129,11 @@ def _lookup_event_type_id(conn, event_type):
 
 
 def _reapply_film_tool_teach(conn, game_id):
-    """Re-grade new AI events against saved Film Tool tags. No-op on slim test DBs."""
+    """Re-grade new AI drafts against saved Film Tool tags. No-op on slim test DBs."""
     try:
         from manual_tag_teach import apply_saved_manual_teach
 
-        apply_saved_manual_teach(conn, game_id, commit=True)
+        apply_saved_manual_teach(conn, game_id, commit=True, pending_only=True)
     except sqlite3.OperationalError:
         return
     except Exception as exc:
@@ -1135,27 +1145,110 @@ def _apply_event_calibrator(game_id, events):
     return events
 
 
-def persist_events(conn, game_id, events, relational_game_id=None):
-    if relational_game_id is not None:
-        # Delete unverified events that are either linked to the relational game_id
-        # or, for legacy rows where relational_game_id is NULL, match by game_id.
-        conn.execute(
-            """
-            DELETE FROM events
-            WHERE human_verified = 0
-              AND (
-                    relational_game_id = ?
-                    OR (relational_game_id IS NULL AND game_id = ?)
-                  )
-            """,
-            (relational_game_id, game_id),
+def _clip_referenced_event_ids_sql(conn):
+    """SQL fragment listing event ids that saved clips point at (tables may be absent)."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name IN ('clips', 'player_development_clips')"
+        ).fetchall()
+    }
+    parts = [f"SELECT event_id FROM {t} WHERE event_id IS NOT NULL" for t in sorted(tables)]
+    return " UNION ".join(parts)
+
+
+def _events_columns(conn):
+    return {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+
+
+def _delete_machine_events(conn, game_id, relational_game_id=None):
+    """Delete this analysis key's machine output so a rebuild can regenerate it.
+
+    Machine output: pending AI drafts, rows auto-accepted by
+    review_actions.auto_accept_high_confidence_events, and AI rows graded by the
+    Film Tool teach pass (re-derived from the saved manual tags after the rebuild).
+    Anything a person decided (manual tags, coach accept/correct/reject) is kept,
+    as are rows a saved clip points at. Only rows of this analysis key are touched,
+    so a rerun never wipes the primary run's events on a shared relational game.
+    Slim/legacy tables without the review columns fall back to human_verified=0.
+    """
+    from review_actions import AUTO_ACCEPT_NOTE
+
+    teach_note = "Film Tool teach"  # manual_tag_teach.TEACH_NOTE (that module needs Flask helpers)
+    cols = _events_columns(conn)
+    where = ["game_id = ?"]
+    params = [game_id]
+    if relational_game_id is not None and "relational_game_id" in cols:
+        where.append("(relational_game_id IS NULL OR relational_game_id = ?)")
+        params.append(relational_game_id)
+    if "source_type" in cols:
+        where.append("COALESCE(source_type, 'ai') = 'ai'")
+    if "reviewed_by_user_id" in cols:
+        where.append("reviewed_by_user_id IS NULL")
+    if {"review_status", "review_notes"} <= cols:
+        where.append(
+            """((review_status = 'pending' AND human_verified = 0)
+                OR (review_status = 'accepted' AND review_notes = ?)
+                OR (review_status IN ('corrected', 'rejected') AND review_notes LIKE ?))"""
         )
+        params += [AUTO_ACCEPT_NOTE, teach_note + "%"]
     else:
-        # Legacy behavior: delete only unverified events matching game_id
-        conn.execute(
-            "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
-            (game_id,),
-        )
+        where.append("human_verified = 0")
+    clip_ids = _clip_referenced_event_ids_sql(conn)
+    if clip_ids and "id" in cols:
+        where.append(f"id NOT IN ({clip_ids})")
+    conn.execute(f"DELETE FROM events WHERE {' AND '.join(where)}", params)
+
+
+def _kept_ai_event_signatures(conn, game_id):
+    """Per kept AI row, its (event_type, timestamp_ms) as generated and as it is now.
+
+    A regenerated draft with one of these signatures is the same play a person
+    already decided on, so it is not inserted again. Corrections keep the generated
+    values in human_corrections (first original event_type / timestamp).
+    """
+    cols = _events_columns(conn)
+    if "id" not in cols:
+        return []
+    source_filter = " AND COALESCE(source_type, 'ai') = 'ai'" if "source_type" in cols else ""
+    rows = conn.execute(
+        f"SELECT id, event_type, timestamp_ms FROM events WHERE game_id = ?{source_filter}",
+        (game_id,),
+    ).fetchall()
+    kept = []
+    for event_id, event_type, timestamp_ms in (tuple(r) for r in rows):
+        current = (event_type, int(timestamp_ms))
+        origin_type, origin_ts = current
+        try:
+            corrections = [
+                tuple(r) for r in conn.execute(
+                    """SELECT field_changed, original_value, timestamp_ms FROM human_corrections
+                        WHERE event_id = ? ORDER BY id""",
+                    (event_id,),
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            corrections = []
+        if corrections and corrections[0][2] is not None:
+            origin_ts = int(corrections[0][2])
+        for field_changed, original_value, _ts in corrections:
+            if field_changed == "event_type" and original_value:
+                origin_type = original_value
+                break
+        kept.append({current, (origin_type, origin_ts)})
+    return kept
+
+
+def persist_events(conn, game_id, events, relational_game_id=None):
+    """Replace this analysis key's machine events; keep every person-made decision.
+
+    Rebuilding is idempotent: pending drafts and auto-accepted rows are regenerated,
+    while manual tags and coach accept/correct/reject survive and do not get a
+    duplicate draft. relational_game_id is stamped on new rows and can only narrow
+    the delete, never widen it (reruns share it with the primary run).
+    """
+    _delete_machine_events(conn, game_id, relational_game_id)
     if not events:
         conn.commit()
         _reapply_film_tool_teach(conn, game_id)
@@ -1167,8 +1260,14 @@ def persist_events(conn, game_id, events, relational_game_id=None):
         _reapply_film_tool_teach(conn, game_id)
         return
 
+    kept = _kept_ai_event_signatures(conn, game_id)
     cur = conn.cursor()
     for ev in events:
+        sig = (ev["event_type"], int(ev["timestamp_ms"]))
+        match = next((i for i, sigs in enumerate(kept) if sig in sigs), None)
+        if match is not None:
+            kept.pop(match)  # one kept row stands in for one regenerated draft
+            continue
         event_type_id = _lookup_event_type_id(conn, ev["event_type"])
         cur.execute(
             """
@@ -1192,11 +1291,9 @@ def persist_events(conn, game_id, events, relational_game_id=None):
 
     from review_actions import auto_accept_high_confidence_events
 
-    auto_accept_high_confidence_events(
-        conn,
-        game_id,
-        relational_game_id=relational_game_id,
-    )
+    # Scoped to this analysis key: a relational lookup would also promote the
+    # primary run's drafts when a rerun is generated.
+    auto_accept_high_confidence_events(conn, game_id)
     _reapply_film_tool_teach(conn, game_id)
 
 

@@ -8,6 +8,7 @@ tagged window are corrected or rejected, and human_corrections is written.
 from __future__ import annotations
 
 import json
+import sqlite3
 from typing import Any
 
 from helpers import normalize_analysis_game_id
@@ -143,48 +144,89 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
         }
 
     prior = db.execute(
-        """SELECT id FROM events
+        """SELECT id, event_type, timestamp_ms FROM events
             WHERE game_id=? AND source_type='manual'
-              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'""",
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
+            ORDER BY timestamp_ms, id""",
         (game_id,),
     ).fetchall()
     prior_ids = [int(_row_get(r, "id")) for r in prior]
-    if prior_ids:
-        db.execute(
-            f"DELETE FROM events WHERE id IN ({','.join('?' * len(prior_ids))})",
-            prior_ids,
-        )
+
+    # Re-saving replaces the tag set, but prior rows are rewritten in place rather
+    # than deleted: highlight clips (clips / player_development_clips) may point at
+    # them and a DELETE would fail the foreign key.
+    reuse: list[int | None] = [None] * len(mapped)
+    free = list(prior)
+    for i, item in enumerate(mapped):
+        for row in free:
+            if (_row_get(row, "event_type"), int(_row_get(row, "timestamp_ms") or 0)) == (
+                item["event_type"], item["timestamp_ms"]
+            ):
+                reuse[i] = int(_row_get(row, "id"))
+                free.remove(row)
+                break
+    for i in range(len(mapped)):
+        if reuse[i] is None and free:
+            reuse[i] = int(_row_get(free.pop(0), "id"))
+    surplus = [int(_row_get(r, "id")) for r in free]
+    if surplus:
+        marks = ",".join("?" * len(surplus))
+        for table in ("clips", "player_development_clips"):
+            try:
+                db.execute(f"UPDATE {table} SET event_id=NULL WHERE event_id IN ({marks})", surplus)
+            except sqlite3.OperationalError:  # table absent on slim DBs
+                pass
+        db.execute(f"DELETE FROM events WHERE id IN ({marks})", surplus)
 
     inserted = 0
-    for item in mapped:
+    for item, event_id in zip(mapped, reuse):
         details = {
             "film_tool_teach": True,
             "label": item["label"],
             "team": item["team"],
             "shot_type": item["shot_type"],
         }
-        cur = db.execute(
-            """INSERT INTO events
-                  (game_id, player, event_type, shot_result, timestamp_ms, details_json,
-                   human_verified, confidence, review_status, source_type, review_notes, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
-            (
-                game_id,
-                item["player"] or None,
-                item["event_type"],
-                item["shot_result"],
-                item["timestamp_ms"],
-                json.dumps(details),
-                TEACH_NOTE,
-            ),
-        )
+        if event_id is None:
+            cur = db.execute(
+                """INSERT INTO events
+                      (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+                       human_verified, confidence, review_status, source_type, review_notes, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
+                (
+                    game_id,
+                    item["player"] or None,
+                    item["event_type"],
+                    item["shot_result"],
+                    item["timestamp_ms"],
+                    json.dumps(details),
+                    TEACH_NOTE,
+                ),
+            )
+            event_id = cur.lastrowid
+        else:
+            db.execute(
+                """UPDATE events
+                      SET player=?, event_type=?, event_type_id=NULL, shot_result=?, timestamp_ms=?,
+                          details_json=?, human_verified=1, confidence=1.0, review_status='accepted',
+                          review_notes=?, updated_at=CURRENT_TIMESTAMP
+                    WHERE id=?""",
+                (
+                    item["player"] or None,
+                    item["event_type"],
+                    item["shot_result"],
+                    item["timestamp_ms"],
+                    json.dumps(details),
+                    TEACH_NOTE,
+                    event_id,
+                ),
+            )
         inserted += 1
         db.execute(
             """INSERT INTO human_corrections
                   (game_id, event_id, correction_type, original_value, corrected_value,
                    field_changed, timestamp_ms, notes)
                VALUES (?, ?, 'add_event', '', ?, 'event_type', ?, ?)""",
-            (game_id, cur.lastrowid, item["event_type"], item["timestamp_ms"], TEACH_NOTE),
+            (game_id, event_id, item["event_type"], item["timestamp_ms"], TEACH_NOTE),
         )
 
     applied = apply_saved_manual_teach(db, game_id, commit=False)
@@ -193,8 +235,14 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
     return applied
 
 
-def apply_saved_manual_teach(db, game_id: str, *, commit: bool = True) -> dict[str, Any]:
-    """Grade AI events in the window covered by saved Film Tool teach rows."""
+def apply_saved_manual_teach(
+    db, game_id: str, *, commit: bool = True, pending_only: bool = False
+) -> dict[str, Any]:
+    """Grade AI events in the window covered by saved Film Tool teach rows.
+
+    pending_only=True (event rebuilds) grades only fresh drafts, so rows a coach
+    already accepted, corrected or rejected are left alone.
+    """
     game_id = normalize_analysis_game_id(game_id)
     manuals = db.execute(
         """SELECT id, event_type, shot_result, player, timestamp_ms, details_json
@@ -217,8 +265,9 @@ def apply_saved_manual_teach(db, game_id: str, *, commit: bool = True) -> dict[s
             WHERE game_id=?
               AND COALESCE(source_type,'ai')='ai'
               AND timestamp_ms BETWEEN ? AND ?
+              AND (? = 0 OR review_status = 'pending')
             ORDER BY timestamp_ms""",
-        (game_id, start_ms, end_ms),
+        (game_id, start_ms, end_ms, 1 if pending_only else 0),
     ).fetchall()
 
     used_ai: set[int] = set()

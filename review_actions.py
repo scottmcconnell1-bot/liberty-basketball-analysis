@@ -2,6 +2,10 @@
 
 import json
 
+# review_notes stamped on rows accept_event promotes without a person. Rebuilds treat
+# these as machine output (regenerated), unlike a coach's accept.
+AUTO_ACCEPT_NOTE = "Auto-accepted (high confidence)"
+
 
 def _stringify_review_value(value):
     if value is None:
@@ -230,7 +234,7 @@ def auto_accept_high_confidence_events(
         result = accept_event(
             db,
             row["id"],
-            notes="Auto-accepted (high confidence)",
+            notes=AUTO_ACCEPT_NOTE,
             provenance_action="auto_accept_event",
             commit=False,
         )

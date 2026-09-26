@@ -105,7 +105,8 @@ def api_nfhs_login():
     password = data.get("password", "")
 
     # If no password provided, try stored credentials
-    if not password:
+    used_stored = not password
+    if used_stored:
         db = get_db()
         cred = db.execute("SELECT password_enc FROM nfhs_credentials WHERE email=? AND is_active=1", (email,)).fetchone()
         if cred:
@@ -115,18 +116,25 @@ def api_nfhs_login():
 
     result = login_nfhs(email, password)
 
-    # Update stored login status
     db = get_db()
-    encrypted = _encrypt_password(password)
-    existing = db.execute("SELECT id FROM nfhs_credentials WHERE email=?", (email,)).fetchone()
-    if existing:
-        db.execute("UPDATE nfhs_credentials SET last_login_at=CURRENT_TIMESTAMP, last_login_status=?, updated_at=CURRENT_TIMESTAMP WHERE email=?",
+    if used_stored:
+        # Only the login status changes; the stored password is what was just tried.
+        db.execute("UPDATE nfhs_credentials SET last_login_at=CURRENT_TIMESTAMP, last_login_status=?, updated_at=CURRENT_TIMESTAMP WHERE email=? AND is_active=1",
                    ("success" if result["success"] else "failed", email))
-    else:
-        db.execute("""
-            INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
-            VALUES (?, ?, 1, CURRENT_TIMESTAMP, ?)
-        """, (email, encrypted, "success" if result["success"] else "failed"))
+    elif result["success"]:
+        # A new password that works replaces the stored one.
+        encrypted = _encrypt_password(password)
+        existing = db.execute("SELECT id FROM nfhs_credentials WHERE email=? AND is_active=1 ORDER BY id DESC LIMIT 1", (email,)).fetchone()
+        if existing:
+            db.execute("UPDATE nfhs_credentials SET password_enc=?, last_login_at=CURRENT_TIMESTAMP, last_login_status='success', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                       (encrypted, existing["id"]))
+        else:
+            db.execute("""
+                INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
+                VALUES (?, ?, 1, CURRENT_TIMESTAMP, 'success')
+            """, (email, encrypted))
+    # A failed login with a typed password stores nothing: it must not become the
+    # active credential that downloads use, nor mark saved credentials as failed.
     db.commit()
 
     return jsonify(result)
