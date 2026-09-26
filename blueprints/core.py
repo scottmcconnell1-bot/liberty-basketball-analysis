@@ -63,6 +63,7 @@ from helpers import (
     save_settings,
     save_scheduled_game_record,
 )
+import season_management
 from module_entitlements import audit_team_entitlements, build_preview_entitlements_view
 from module_keys import (
     BASE_PLATFORM,
@@ -443,9 +444,10 @@ def schedule_save_season():
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def schedule_delete_season(season_id):
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
-    db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
-    db.commit()
+    try:
+        season_management.delete_season(db, season_id)
+    except season_management.SeasonDeleteError as exc:
+        return render_schedule_page(error=str(exc)), 409
     return redirect(url_for("core.schedule", message="Season deleted."))
 
 
@@ -551,8 +553,10 @@ def schedule_delete_game(game_id):
         "status": (request.form.get("filter_status") or "").strip(),
     }
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE id=?", (game_id,))
-    db.commit()
+    kept = season_management.delete_scheduled_game(db, game_id)
+    message = "Scheduled game deleted."
+    if kept:
+        message += " Its recorded result/film was kept (no longer linked to the schedule)."
     return redirect(
         url_for(
             "core.schedule",
@@ -560,7 +564,7 @@ def schedule_delete_game(game_id):
             level=filters["level"] or None,
             gender=filters["gender"] or None,
             status=filters["status"] or None,
-            message="Scheduled game deleted.",
+            message=message,
         )
     )
 
@@ -851,10 +855,15 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
                 i += 1
                 continue
 
-            # Check if this line is a continuation of the previous
+            # Check if this line is a continuation of the previous.  A line that starts
+            # with a year-less month date ("TUES, DEC 4 ...", "DEC 4 ...") is a new game.
             if joined_lines and not re.search(
                 r'\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2}|\w+\s+\d{1,2},?\s+\d{4}',
                 line
+            ) and not re.match(
+                r'^(?:[A-Za-z]{3,9}\.?,?\s+)?'
+                r'(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|SEPT|OCT|NOV|DEC)[A-Za-z]*\.?\s+\d{1,2}\b',
+                line, re.IGNORECASE
             ):
                 prev = joined_lines[-1]
                 if 'TIMES:' not in prev and len(line) < 80:
@@ -1199,6 +1208,7 @@ def schedule_import_pdf_confirm():
         return {"error": "No games to import"}, 400
     db = get_db()
     imported = 0
+    updated = 0
     errors = []
     # Get or create the correct season based on user-confirmed info
     season_id = _get_or_create_season_for_pdf(db, season_info)
@@ -1236,62 +1246,98 @@ def schedule_import_pdf_confirm():
             continue
         try:
             status = (g.get("status") or "scheduled").strip() or "scheduled"
-            cur = db.execute(
-                """INSERT INTO scheduled_games
-                   (season_id, program_name, team, gender, level, game_date, game_time,
-                    jv_game_time, frosh_game_time,
-                    location_type, opponent_name, tournament_name, status, notes)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    season_id,
-                    "Liberty",
-                    pdf_team,
-                    (g.get("gender") or "boys").strip(),
-                    (g.get("level") or "jr_high").strip(),
-                    game_date,
-                    (g.get("game_time") or "").strip() or None,
-                    (g.get("jv_game_time") or "").strip() or None,
-                    (g.get("frosh_game_time") or "").strip() or None,
-                    (g.get("location_type") or "home").strip(),
-                    opponent,
-                    (g.get("tournament_name") or "").strip() or None,
-                    status,
-                    (g.get("notes") or "").strip() or None,
-                ),
-            )
-            scheduled_game_id = cur.lastrowid
+            # The review table lets the coach change each row's program; fall back to the modal's.
+            team = (g.get("team") or pdf_team).strip() or pdf_team
+            gender = (g.get("gender") or "boys").strip()
+            level = (g.get("level") or "jr_high").strip()
+            location_type = (g.get("location_type") or "home").strip()
             liberty_score = g.get("liberty_score")
             opponent_score = g.get("opponent_score")
-            if liberty_score is not None and opponent_score is not None:
+            has_score = liberty_score is not None and opponent_score is not None
+            # Re-importing the same schedule updates the existing game (natural key:
+            # season, date, program/level/gender, opponent) instead of duplicating it.
+            existing = db.execute(
+                """SELECT id, status FROM scheduled_games
+                   WHERE season_id = ? AND game_date = ? AND team = ? AND level = ?
+                     AND gender = ? AND LOWER(TRIM(opponent_name)) = LOWER(?)
+                   ORDER BY id LIMIT 1""",
+                (season_id, game_date, team, level, gender, opponent),
+            ).fetchone()
+            fields = (
+                (g.get("game_time") or "").strip() or None,
+                (g.get("jv_game_time") or "").strip() or None,
+                (g.get("frosh_game_time") or "").strip() or None,
+                location_type,
+                (g.get("tournament_name") or "").strip() or None,
+                (g.get("notes") or "").strip() or None,
+            )
+            if existing:
+                scheduled_game_id = existing["id"]
+                if existing["status"] == "completed" and not has_score:
+                    status = "completed"  # don't un-complete a game the PDF has no score for
+                db.execute(
+                    """UPDATE scheduled_games SET
+                       game_time=?, jv_game_time=?, frosh_game_time=?, location_type=?,
+                       tournament_name=?, notes=?, status=?, updated_at=CURRENT_TIMESTAMP
+                       WHERE id=?""",
+                    fields + (status, scheduled_game_id),
+                )
+            else:
+                cur = db.execute(
+                    """INSERT INTO scheduled_games
+                       (season_id, program_name, team, gender, level, game_date, game_time,
+                        jv_game_time, frosh_game_time,
+                        location_type, tournament_name, notes, opponent_name, status)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (season_id, "Liberty", team, gender, level, game_date)
+                    + fields + (opponent, status),
+                )
+                scheduled_game_id = cur.lastrowid
+            if has_score:
                 from schedule_import import home_away_scores
 
-                location_type = (g.get("location_type") or "home").strip()
                 home_score, away_score = home_away_scores(
                     location_type,
                     int(liberty_score),
                     int(opponent_score),
                 )
-                db.execute(
-                    """INSERT INTO games
-                       (scheduled_game_id, source_type, source_key,
-                        home_score, away_score, result, is_conference)
-                       VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
-                    (
-                        scheduled_game_id,
-                        f"schedule-import-{scheduled_game_id}",
-                        home_score,
-                        away_score,
-                        (g.get("result") or "").strip() or None,
-                        int(bool(g.get("is_conference"))),
-                    ),
+                score_values = (
+                    home_score,
+                    away_score,
+                    (g.get("result") or "").strip() or None,
+                    int(bool(g.get("is_conference"))),
                 )
+                game_row = db.execute(
+                    "SELECT id FROM games WHERE scheduled_game_id = ? ORDER BY id DESC LIMIT 1",
+                    (scheduled_game_id,),
+                ).fetchone()
+                if game_row:
+                    db.execute(
+                        """UPDATE games SET home_score=?, away_score=?, result=?, is_conference=?,
+                           updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+                        score_values + (game_row["id"],),
+                    )
+                else:
+                    db.execute(
+                        """INSERT INTO games
+                           (scheduled_game_id, source_type, source_key,
+                            home_score, away_score, result, is_conference)
+                           VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
+                        (scheduled_game_id, f"schedule-import-{scheduled_game_id}") + score_values,
+                    )
+            if existing:
+                updated += 1
+                continue
             imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)}")
     db.commit()
     if errors:
-        return {"imported": imported, "errors": errors}, 200
-    return {"imported": imported, "message": f"Imported {imported} games"}
+        return {"imported": imported, "updated": updated, "errors": errors}, 200
+    message = f"Imported {imported} games"
+    if updated:
+        message += f", updated {updated} already on the schedule"
+    return {"imported": imported, "updated": updated, "message": message}
 
 
 def _reparse_date_with_map(date_str, month_year_map):
@@ -1827,12 +1873,18 @@ def api_teams_photos_upload():
     if not _allowed_photo(file.filename):
         return jsonify({"error": "File type not allowed"}), 400
 
-    team_key = request.form.get("team_key", "")
+    team_key = request.form.get("team_key", "").strip()
     caption = request.form.get("caption", "")
+    # team_key becomes part of the file path: allow only a plain slug (no "../").
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", team_key):
+        return jsonify({"error": "Invalid team_key"}), 400
 
-    # Build safe filename: team_key + timestamp + ext
+    # Build safe filename: team_key + timestamp + random suffix + ext (the suffix keeps
+    # two uploads in the same second from overwriting one file).
+    import uuid
+
     ext = file.filename.rsplit(".", 1)[1].lower()
-    safe_name = f"{team_key}_{int(__import__('time').time())}.{ext}"
+    safe_name = f"{team_key}_{int(__import__('time').time())}_{uuid.uuid4().hex[:8]}.{ext}"
 
     upload_dir = current_app.config["UPLOAD_FOLDER"]
     os.makedirs(os.path.join(upload_dir, "team_photos"), exist_ok=True)
@@ -2134,6 +2186,8 @@ def complete_issue_report(issue_id):
 
 @core.route("/api/dashboard")
 def api_dashboard():
+    import datetime as _dt
+
     db = get_db()
     seasons   = db.execute("SELECT COUNT(*) FROM seasons").fetchone()[0]
     scheduled = db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0]
@@ -2141,8 +2195,9 @@ def api_dashboard():
     players   = db.execute("SELECT COUNT(*) FROM players").fetchone()[0]
     upcoming  = db.execute(
         """SELECT * FROM scheduled_games
-           WHERE game_date >= date('now') AND status != 'cancelled'
-           ORDER BY game_date, game_time LIMIT 5"""
+           WHERE game_date >= ? AND status != 'cancelled'
+           ORDER BY game_date, game_time LIMIT 5""",
+        (_dt.date.today().isoformat(),),
     ).fetchall()
     recent    = db.execute(
         "SELECT * FROM events ORDER BY created_at DESC LIMIT 10"
@@ -2266,6 +2321,13 @@ def _default_dashboard_season_id(db, sec, active_seasons, team_seasons):
     return None
 
 
+# A scheduled game can have several games rows (score entry, film, NFHS); the dashboard
+# counts it once, using its most recent row that carries a result.
+_LATEST_RESULT_GAME_SQL = """SELECT g2.id FROM games g2
+            WHERE g2.scheduled_game_id = sg.id AND g2.result IS NOT NULL AND g2.result != ''
+            ORDER BY g2.id DESC LIMIT 1"""
+
+
 def _fetch_team_dashboard_summary(db, sec, season_id=None):
     """Return wins/losses, conference record, upcoming, and last game for one team card."""
     if season_id is None:
@@ -2279,13 +2341,17 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
             "last_game": None,
         }
 
+    import datetime as _dt
+
     where, params = _team_section_where(sec, season_id)
+    # Local calendar day (not SQLite's UTC date) so tonight's game is still "upcoming".
+    today = _dt.date.today().isoformat()
 
     record_rows = db.execute(
         f"""SELECT g.result, COUNT(*) as cnt
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where}
             GROUP BY g.result""",
         params,
     ).fetchall()
@@ -2294,9 +2360,9 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
 
     conf_record_rows = db.execute(
         f"""SELECT g.result, COUNT(*) as cnt
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.is_conference = 1 AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where} AND g.is_conference = 1
             GROUP BY g.result""",
         params,
     ).fetchall()
@@ -2307,18 +2373,18 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
         f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
                    sg.location_type, sg.status, sg.tournament_name
             FROM scheduled_games sg
-            {where} AND sg.game_date >= date('now') AND sg.status != 'cancelled'
+            {where} AND sg.game_date >= ? AND sg.status != 'cancelled'
             ORDER BY sg.game_date, sg.game_time
             LIMIT 5""",
-        params,
+        params + [today],
     ).fetchall()
 
     last_game = db.execute(
         f"""SELECT sg.game_date, sg.opponent_name, sg.location_type,
                    g.home_score, g.away_score, g.result
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where}
             ORDER BY sg.game_date DESC
             LIMIT 1""",
         params,
@@ -2329,11 +2395,11 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
                    sg.location_type, sg.status, sg.tournament_name,
                    g.home_score, g.away_score, g.result
             FROM scheduled_games sg
-            LEFT JOIN games g ON g.scheduled_game_id = sg.id
-            {where} AND sg.game_date < date('now') AND sg.status != 'cancelled'
+            LEFT JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where} AND sg.game_date < ? AND sg.status != 'cancelled'
             ORDER BY sg.game_date DESC, sg.game_time DESC
             LIMIT 5""",
-        params,
+        params + [today],
     ).fetchall()
 
     return {

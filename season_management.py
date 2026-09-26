@@ -1,7 +1,18 @@
 """
 season_management.py – Pure-Python helper functions for seasons and
 scheduled_games CRUD.  Accepts a sqlite3.Connection (or Flask g.db).
+
+Deleting keeps recorded results safe:
+  * delete_scheduled_game() removes the schedule entry but keeps its games rows
+    (scores, film, analysis), unlinked from the schedule (still in /api/games).
+  * delete_season() refuses (SeasonDeleteError) while any of its games has a
+    recorded result, or while rosters/players/practices still point at it.
 """
+import sqlite3
+
+
+class SeasonDeleteError(ValueError):
+    """The season cannot be deleted without losing linked data."""
 
 
 def get_seasons(db):
@@ -36,8 +47,31 @@ def update_season(db, season_id, **kwargs):
 
 
 def delete_season(db, season_id):
-    db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
-    db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
+    scored = db.execute(
+        """SELECT COUNT(DISTINCT sg.id) FROM scheduled_games sg
+           JOIN games g ON g.scheduled_game_id = sg.id
+           WHERE sg.season_id = ? AND g.result IS NOT NULL AND g.result != ''""",
+        (season_id,),
+    ).fetchone()[0]
+    if scored:
+        raise SeasonDeleteError(
+            f"Season not deleted: {scored} of its games have recorded results. "
+            "Archive the season, or delete those games first (their scores are kept, unlinked)."
+        )
+    in_season = "SELECT id FROM scheduled_games WHERE season_id = ?"
+    try:
+        db.execute(f"DELETE FROM nfhs_matches WHERE scheduled_game_id IN ({in_season})", (season_id,))
+        db.execute(
+            f"UPDATE games SET scheduled_game_id = NULL WHERE scheduled_game_id IN ({in_season})",
+            (season_id,),
+        )
+        db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
+        db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
+    except sqlite3.IntegrityError as exc:
+        db.rollback()
+        raise SeasonDeleteError(
+            "Season not deleted: rosters, players, practices or clips are still linked to it."
+        ) from exc
     db.commit()
 
 
@@ -110,5 +144,12 @@ def update_scheduled_game(db, game_id, **kwargs):
 
 
 def delete_scheduled_game(db, game_id):
+    """Delete a scheduled game; return how many linked games rows were kept (unlinked)."""
+    db.execute("DELETE FROM nfhs_matches WHERE scheduled_game_id=?", (game_id,))
+    kept = db.execute(
+        "UPDATE games SET scheduled_game_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE scheduled_game_id=?",
+        (game_id,),
+    ).rowcount
     db.execute("DELETE FROM scheduled_games WHERE id=?", (game_id,))
     db.commit()
+    return kept
