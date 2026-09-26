@@ -1208,6 +1208,23 @@ def count_detections_for_analysis(
     return db.execute(query, params).fetchone()["c"]
 
 
+def count_rows_for_run(db, table, analysis_key, relational_game_id=None) -> int:
+    """Rows of `table` (detections/events) belonging to one analysis run.
+
+    Rows stored under the run's own analysis key win. Only when there are none
+    (legacy rows keyed differently) does it fall back to the shared relational game,
+    so a rerun never reports the primary run's rows as its own.
+    """
+    if table not in ("detections", "events"):
+        raise ValueError(f"unsupported table: {table}")
+    own = db.execute(f"SELECT COUNT(*) AS c FROM {table} WHERE game_id = ?", (analysis_key,)).fetchone()["c"]
+    if own or relational_game_id is None:
+        return own
+    return db.execute(
+        f"SELECT COUNT(*) AS c FROM {table} WHERE relational_game_id = ?", (relational_game_id,)
+    ).fetchone()["c"]
+
+
 def count_events_for_analysis(
     db,
     *,
@@ -1216,7 +1233,15 @@ def count_events_for_analysis(
     video_game_id=None,
     base_analysis_key=None,
 ) -> int:
-    """Count events for a video/analysis run across legacy and relational keys."""
+    """Count events for a video/analysis run across legacy and relational keys.
+
+    Same rule as count_detections_for_analysis: a run with its own rows counts only
+    those, because reruns share relational_game_id / base key with the primary run.
+    """
+    if analysis_key:
+        own = count_rows_for_run(db, "events", analysis_key)
+        if own:
+            return own
     conditions = []
     params = []
     if relational_game_id is not None:

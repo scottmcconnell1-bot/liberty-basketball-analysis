@@ -925,9 +925,9 @@
     {% if coach_portal %}
     <span class="coach-view-badge" title="Browse only — changes are not saved in Coach view">Coach view · read only</span>
     <a href="{{ url_for('coach.coach_logout') }}">Sign out</a>
-    {% elif session.get('user_id') %}
+    {% elif signed_in_user %}
     <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-badge" style="display:none;">0</span></a>
-    <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
+    <a href="/profile" class="nav-user-link">{{ signed_in_user.display_name or 'Account' }}</a>
     <a href="{{ url_for('users.logout') }}">Logout</a>
     {% else %}
     <a href="{{ url_for('users.login') }}">Sign In</a>
@@ -1122,7 +1122,7 @@
   {# — Service Worker + Push Subscription — #}
   <script>
   (function() {
-    var userId = {{ session.get('user_id') or 'null' }};
+    var userId = {{ signed_in_user.id if signed_in_user else 'null' }};
     if (!userId) return;
 
     // Register service worker
@@ -1179,7 +1179,7 @@
   {# — Notification polling (logged-in users) — #}
   <script>
   (function() {
-    var userId = {{ session.get('user_id') or 'null' }};
+    var userId = {{ signed_in_user.id if signed_in_user else 'null' }};
     if (!userId) return;
 
     function pollNotifications() {

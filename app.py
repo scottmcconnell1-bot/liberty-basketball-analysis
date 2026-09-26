@@ -117,7 +117,13 @@ from helpers import get_runtime_settings
 def inject_feature_flags():
     settings = get_runtime_settings()
     coach_portal = bool(session.get("coach_portal"))
+    # Verified account (live session token), not the raw cookie, which outlives logout.
+    try:
+        signed_in_user = _current_user()
+    except Exception:
+        signed_in_user = None
     return {
+        "signed_in_user": dict(signed_in_user) if signed_in_user else None,
         "features": settings["features"],
         "analysis_config": settings["analysis"],
         "coach_portal": coach_portal,

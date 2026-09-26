@@ -305,6 +305,9 @@ def delete_event(event_id):
     # unlink them first, then drop the event's possession if nothing else uses it.
     db.execute("UPDATE possessions SET start_event_id=NULL WHERE start_event_id=?", (event_id,))
     db.execute("UPDATE possessions SET end_event_id=NULL WHERE end_event_id=?", (event_id,))
+    # Coach-made clips outlive the tag they were cut from; detach them (FK, no ON DELETE).
+    db.execute("UPDATE clips SET event_id=NULL WHERE event_id=?", (event_id,))
+    db.execute("UPDATE player_development_clips SET event_id=NULL WHERE event_id=?", (event_id,))
     db.execute("DELETE FROM events WHERE id=?", (event_id,))
     if row and row["possession_id"] is not None:
         db.execute(

@@ -74,15 +74,7 @@ page overwrite is one finding, covered in both the playbook and schedule files.
 - **Wipe script** takes a verified backup first and deletes rows instead of
   dropping tables. Coach-authored rows are kept.
 
-## Open items found during fixing (not yet fixed)
+## Open items found during fixing
 
-- `DELETE /api/events/<id>` still returns 500 when a clip or dev clip
-  references the event. This needs a decision on what happens to the clip.
-- The Users page reads fields `/api/users` does not return, so it shows
-  "undefined". Deleting a user referenced by `created_by`/`reviewed_by` still
-  hits the FK.
-- The assistant's turnover and clip lookups still match names with `LIKE %x%`.
-- The scouting report editor leaves a few fields unescaped (`game_time`,
-  `jersey_number`).
-- NFHS progress counters still sum across runs that share a relational game.
-  `/api/upload_video` can still overwrite a same-named file.
+All fixed with the same process; see [open_items.md](open_items.md).
+After that round the suite is 984 passed, 31 skipped, 0 xfailed.

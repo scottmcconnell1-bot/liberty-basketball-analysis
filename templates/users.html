@@ -13,7 +13,7 @@
             <table class="table" data-frame="14.1t">
                 <thead>
                     <tr>
-                        <th>Username</th>
+                        <th>Name</th>
                         <th>Email</th>
                         <th>Role</th>
                         <th>Created</th>
@@ -32,28 +32,36 @@
 {% block scripts %}
 <script>
 async function loadUsers() {
-    const response = await fetch('/api/users');
+    const response = await fetch('/api/admin/users');
     if (!response.ok) {
         document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="text-danger">Access denied</td></tr>';
         return;
     }
     const users = await response.json();
-    document.getElementById('usersBody').innerHTML = users.map(u => `
+    document.getElementById('usersBody').innerHTML = users.map(u => {
+        const isAdmin = (u.role || '').toLowerCase() === 'admin';
+        const badge = isAdmin
+            ? '<span class="badge bg-danger">Admin</span>'
+            : `<span class="badge bg-secondary">${escapeHtml(u.role || 'user')}</span>`;
+        return `
         <tr>
-            <td>${u.username}</td>
-            <td>${u.email}</td>
-            <td>${u.is_admin ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>'}</td>
-            <td>${u.created_at}</td>
-            <td>${!u.is_admin ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id})">Delete</button>` : ''}</td>
-        </tr>
-    `).join('');
+            <td>${escapeHtml(u.display_name)}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${badge}</td>
+            <td>${escapeHtml(u.created_at)}</td>
+            <td>${!isAdmin ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${Number(u.id)})">Delete</button>` : ''}</td>
+        </tr>`;
+    }).join('');
 }
 
 async function deleteUser(id) {
     if (!confirm('Delete this user?')) return;
     const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
     if (response.ok) loadUsers();
-    else alert('Failed to delete user');
+    else {
+        const body = await response.json().catch(() => ({}));
+        alert(body.error || 'Failed to delete user');
+    }
 }
 
 loadUsers();

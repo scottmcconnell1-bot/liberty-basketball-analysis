@@ -84,8 +84,9 @@ class TestMessagesPage:
         # Sender id in JS should be the staff user id, not hardcoded coach guest
         assert f'const MSG_SENDER_ID = "{uid}"' in html or f"const MSG_SENDER_ID = {uid}" in html
 
-    def test_session_identity_without_users_row_still_signed_in(self, client):
-        """If users row is missing, still mirror nav (session user_name) — not Guest."""
+    def test_session_without_live_login_is_not_signed_in(self, client):
+        """A cookie that names a user but has no live login (no users row / session token)
+        is anonymous: neither the messages panel nor the nav may show it as signed in."""
         with client.session_transaction() as sess:
             sess["user_id"] = 4242
             sess["user_name"] = "Scott McConnell"
@@ -94,9 +95,8 @@ class TestMessagesPage:
         r = client.get("/messages")
         assert r.status_code == 200
         html = r.data.decode("utf-8", errors="replace")
-        assert "Not signed in" not in html
-        assert "Scott McConnell" in html
-        assert "Signed in as" in html
+        assert "Signed in as" not in html
+        assert "Scott McConnell" not in html
 
     def test_send_api_uses_session_user_as_sender(self, client, db):
         uid = _sign_in(client, db, "scott2@example.com", "Scott McConnell", "admin")

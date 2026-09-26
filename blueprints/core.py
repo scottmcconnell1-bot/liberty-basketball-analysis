@@ -2629,14 +2629,49 @@ def users_page():
     return render_template("users.html")
 
 
-@core.route("/api/users")
+@core.route("/api/admin/users")
 def api_users_list():
-    """Return all users as JSON."""
+    """All accounts for the User Management page. Admin only.
+
+    (/api/users is the users blueprint's login-required autocomplete list,
+    limited to 20 active users, so the management page needs its own route.)
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required."}), 403
     db = get_db()
     users = db.execute(
-        "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
+        """SELECT id, display_name, email, role, is_active, created_at, last_login_at
+             FROM users ORDER BY created_at DESC, id DESC"""
     ).fetchall()
     return jsonify([dict(u) for u in users])
+
+
+def _detach_user_references(db, user_id):
+    """Null every nullable FK column that points at users(id) with no ON DELETE rule.
+
+    Keeps the user's work (events, clips, review items, ...) and just drops the
+    attribution. Returns the (table, column) pairs that are NOT NULL and still
+    reference the user, which block the delete.
+    """
+    blocking = []
+    tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+    for table in tables:
+        cols = {c[1]: c for c in db.execute(f'PRAGMA table_info("{table}")')}
+        for fk in db.execute(f'PRAGMA foreign_key_list("{table}")'):
+            ref_table, from_col, on_delete = fk[2], fk[3], (fk[6] or "").upper()
+            if ref_table != "users" or on_delete in ("CASCADE", "SET NULL"):
+                continue
+            if cols.get(from_col) and cols[from_col][3]:  # notnull
+                hit = db.execute(
+                    f'SELECT 1 FROM "{table}" WHERE "{from_col}" = ? LIMIT 1', (user_id,)
+                ).fetchone()
+                if hit:
+                    blocking.append((table, from_col))
+                continue
+            db.execute(f'UPDATE "{table}" SET "{from_col}" = NULL WHERE "{from_col}" = ?', (user_id,))
+    return blocking
 
 
 @core.route("/api/users/<int:user_id>", methods=["DELETE"])
@@ -2652,6 +2687,11 @@ def api_users_delete(user_id):
         return jsonify({"error": "User not found"}), 404
     if _is_admin_user(user):
         return jsonify({"error": "Cannot delete admin user"}), 403
+    blocking = _detach_user_references(db, user_id)
+    if blocking:
+        db.rollback()
+        where = ", ".join(f"{t}.{c}" for t, c in blocking)
+        return jsonify({"error": f"User is still required by {where}."}), 409
     db.execute("DELETE FROM users WHERE id = ?", (user_id,))
     db.commit()
     return jsonify({"status": "deleted"})

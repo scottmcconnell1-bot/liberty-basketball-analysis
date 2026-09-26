@@ -147,6 +147,9 @@ def messages():
     identity = _current_messaging_identity(db)
     directory_users = []
     try:
+        if not identity.get("signed_in"):
+            # Anonymous visitors cannot message anyone, so do not list the team's accounts.
+            raise LookupError("anonymous")
         rows = db.execute(
             """SELECT id, display_name, email, role, is_active FROM users
                ORDER BY display_name LIMIT 100"""

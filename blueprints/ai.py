@@ -53,7 +53,7 @@ from helpers import (
     reconcile_stuck_analysis_run,
     parse_analysis_progress_frames,
     ai_analysis_log_path,
-    count_detections_for_analysis, count_events_for_analysis,
+    count_detections_for_analysis, count_events_for_analysis, count_rows_for_run,
     _read_log_tail,
     SYNC_EVENT_REBUILD_LOG_MARKER,
 )
@@ -240,18 +240,8 @@ def get_analysis_status(game_id):
         })
 
     progress_game_id = row["analysis_key"] or game_id
-    detection_count = db.execute(
-        """SELECT COUNT(*) AS c FROM detections d
-           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
-              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
-        (row["game_id"], row["game_id"], progress_game_id),
-    ).fetchone()["c"]
-    event_count = db.execute(
-        """SELECT COUNT(*) AS c FROM events e
-           WHERE e.game_id = ?
-              OR (? IS NOT NULL AND e.relational_game_id = ?)""",
-        (progress_game_id, row["game_id"], row["game_id"]),
-    ).fetchone()["c"]
+    detection_count = count_rows_for_run(db, "detections", progress_game_id, row["game_id"])
+    event_count = count_rows_for_run(db, "events", progress_game_id, row["game_id"])
 
     payload = dict(row)
     payload["analysis_key"] = progress_game_id
@@ -426,16 +416,8 @@ def get_analysis_progress(game_id):
     }
     # COUNT(*) on detections during a long YOLO run can freeze the UI poll.
     if status in ("completed", "failed"):
-        payload["detection_count"] = db.execute(
-            """SELECT COUNT(*) AS c FROM detections d
-               WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
-                  OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
-            (row["game_id"], row["game_id"], progress_game_id),
-        ).fetchone()["c"]
-        payload["event_count"] = db.execute(
-            "SELECT COUNT(*) AS c FROM events e WHERE e.game_id = ?",
-            (progress_game_id,),
-        ).fetchone()["c"]
+        payload["detection_count"] = count_rows_for_run(db, "detections", progress_game_id, row["game_id"])
+        payload["event_count"] = count_rows_for_run(db, "events", progress_game_id, row["game_id"])
     else:
         payload["detection_count"] = None
         payload["event_count"] = None
@@ -540,18 +522,8 @@ def get_analysis_results(game_id):
     )
     db.commit()
 
-    detection_count = db.execute(
-        """SELECT COUNT(*) AS c FROM detections d
-           WHERE (d.relational_game_id = ? AND ? IS NOT NULL)
-              OR (d.relational_game_id IS NULL AND d.game_id = ?)""",
-        (relational_game_id, relational_game_id, game_id),
-    ).fetchone()["c"]
-    event_count = db.execute(
-        """SELECT COUNT(*) AS c FROM events e
-           WHERE (e.relational_game_id = ? AND ? IS NOT NULL)
-              OR (e.relational_game_id IS NULL AND e.game_id = ?)""",
-        (relational_game_id, relational_game_id, game_id),
-    ).fetchone()["c"]
+    detection_count = count_rows_for_run(db, "detections", game_id, relational_game_id)
+    event_count = count_rows_for_run(db, "events", game_id, relational_game_id)
 
     basic = aggregate_stats_preview(db, game_id)
     quality_notes = []
@@ -1052,9 +1024,23 @@ def upload_video():
     if not f.filename:
         return jsonify({"error": "Empty filename"}), 400
     filename = secure_filename(f.filename)
-    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+    if not filename:
+        return jsonify({"error": "Invalid filename"}), 400
+    # Never overwrite an existing upload: pick name, name_2, name_3, ... and create it
+    # exclusively so two requests cannot claim the same file.
+    folder = current_app.config["UPLOAD_FOLDER"]
+    stem, ext = os.path.splitext(filename)
+    n = 1
+    while True:
+        candidate = filename if n == 1 else f"{stem}_{n}{ext}"
+        dest = os.path.join(folder, candidate)
+        try:
+            os.close(os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644))
+            break
+        except FileExistsError:
+            n += 1
     f.save(dest)
-    return jsonify({"status": "uploaded", "filename": filename})
+    return jsonify({"status": "uploaded", "filename": candidate})
 
 
 # ── Chunked Upload ──────────────────────────────────────────
