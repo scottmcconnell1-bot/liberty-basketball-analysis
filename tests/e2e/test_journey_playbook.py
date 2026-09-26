@@ -355,7 +355,6 @@ def test_category_tree_moves_reorders_and_progressions(client, db):
     assert horns_id not in _tree_ids(r.get_json()["tree"])
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: move_category allows moving a category under its own descendant; the subtree drops out of the tree")
 def test_category_move_under_own_child_is_refused(client, db):
     man = _cat(client, "offense/man")
     sets_id = _create_cat(client, man["id"], "Sets")
@@ -367,7 +366,6 @@ def test_category_move_under_own_child_is_refused(client, db):
     assert r.status_code == 400
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: move_category treats parent_id=null ('Top level' in the UI) as 'keep current parent'")
 def test_category_move_to_top_level(client, db):
     man = _cat(client, "offense/man")
     sets_id = _create_cat(client, man["id"], "Sets")
@@ -377,7 +375,6 @@ def test_category_move_to_top_level(client, db):
     assert (row["parent_id"], row["slug_path"]) == (None, "sets")
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: rename/move of a category does not rewrite descendants' slug_path, so paths go stale and collide")
 def test_category_rename_and_move_keep_descendant_paths(client, db):
     man = _cat(client, "offense/man")
     dman = _cat(client, "defense/man")
@@ -399,7 +396,6 @@ def test_category_rename_and_move_keep_descendant_paths(client, db):
     assert db.execute("SELECT category FROM plays WHERE id=?", (pid,)).fetchone()[0] == "defense"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: playbook-dnd.js updateCategoryChip puts the category slug_path into innerHTML unescaped (stored XSS)")
 def test_category_chip_after_drag_does_not_inject_html(client, db):
     man = _cat(client, "offense/man")
     evil = _create_cat(client, man["id"], "<img src=x onerror=alert(1)>")
@@ -473,7 +469,6 @@ def test_duplicate_and_copy_to_team_are_independent_deep_copies(client, db):
     assert _count(db, "SELECT COUNT(*) FROM plays") == before
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: duplicate/copy-to-team do not copy sticky choreography (coach-fixed action types/order lost on the copy)")
 def test_duplicate_keeps_saved_choreography(client, db, choreo_base):
     pid = _save_play(client, name="Sticky", steps_json=STEPS_3[:1])
     doc = {"source": "user_save", "steps": [{"step_index": 0, "positions": {"o1": {"x": 1, "y": 2}},
@@ -484,6 +479,18 @@ def test_duplicate_keeps_saved_choreography(client, db, choreo_base):
     assert got["sticky"] is True
     assert got["choreography"]["steps"][0]["movements"] == [
         {"from": "o1", "to": "o2", "type": "pass", "timing": "sync"}]
+    assert got["choreography"]["play_id"] == dup and got["choreography"]["steps"][0]["coachOrder"] is True
+
+    # Copy to another team carries it too.
+    r = _post(client, f"/playbook/play/{pid}/copy-to-team", data={"target_team": "hs_girls"})
+    copied = int(re.search(r"copied=(\d+)", r.headers["Location"]).group(1))
+    got = client.get(f"/api/playbook/choreography/{copied}").get_json()
+    assert got["sticky"] is True and got["choreography"]["play_id"] == copied
+    assert got["choreography"]["steps"][0]["positions"] == {"o1": {"x": 1.0, "y": 2.0}}
+
+    # The copies are independent: clearing the copy's choreography keeps the original's.
+    client.delete(f"/api/playbook/choreography/{dup}")
+    assert client.get(f"/api/playbook/choreography/{pid}").get_json()["sticky"] is True
 
 
 # ── 4. share links and view/edit/share modes ─────────────────────────────────
@@ -534,17 +541,27 @@ def test_share_link_and_mode_controls(client, db):
     assert client.get(f"/play/share/{r1['token']}").status_code == 404
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: no way to revoke a share link short of deleting the play (404 page claims links can be revoked)")
 def test_share_link_can_be_revoked(client, db):
     pid = _save_play(client, name="Revoke me")
     token = client.post(f"/api/playbook/play/{pid}/share").get_json()["token"]
+    view = client.get(f"/playbook/play/{pid}").get_data(as_text=True)
+    assert 'id="revokeShareBtn"' in view and "revokePlayShareLink()" in view
     r = client.delete(f"/api/playbook/play/{pid}/share")
-    assert r.status_code == 200
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "revoked": True}
     assert client.get(f"/play/share/{token}").status_code == 404
     assert client.get(f"/playbook/play/{pid}").status_code == 200
+    assert db.execute("SELECT share_token FROM plays WHERE id=?", (pid,)).fetchone()[0] is None
+    assert client.delete(f"/api/playbook/play/{pid}/share").get_json()["revoked"] is False
+    assert client.delete("/api/playbook/play/999999/share").status_code == 404
+    # Sharing again mints a fresh token; the revoked one stays dead.
+    new_token = client.post(f"/api/playbook/play/{pid}/share").get_json()["token"]
+    assert new_token != token
+    assert client.get(f"/play/share/{new_token}").status_code == 200
+    assert client.get(f"/play/share/{token}").status_code == 404
+    # The public share page never offers the revoke control.
+    assert 'id="revokeShareBtn"' not in client.get(f"/play/share/{new_token}").get_data(as_text=True)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: with ENABLE_AUTH_MIDDLEWARE on, a public share page cannot load its sheet images (/uploads) or choreography API")
 def test_share_page_assets_reachable_when_sign_in_required(client, db, app, choreo_base):
     upl = Path(app.config["UPLOAD_FOLDER"]) / "play_imports"
     upl.mkdir(parents=True, exist_ok=True)
@@ -557,9 +574,35 @@ def test_share_page_assets_reachable_when_sign_in_required(client, db, app, chor
                   ON CONFLICT(key) DO UPDATE SET value=excluded.value""")
     db.commit()
     anon = app.test_client()
-    assert anon.get(f"/play/share/{token}").status_code == 200
-    assert anon.get("/uploads/play_imports/sheet.png").status_code == 200
-    assert anon.get(f"/api/playbook/choreography/{pid}").status_code == 200
+    page = anon.get(f"/play/share/{token}")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    # The share page loads its sheets + choreography through token-scoped routes ...
+    assert f'const shareAssetBase = "/play/share/{token}"' in html
+    img = anon.get(f"/play/share/{token}/uploads/play_imports/sheet.png")
+    assert img.status_code == 200 and img.data == td.png_bytes()
+    ch = anon.get(f"/play/share/{token}/choreography")
+    assert ch.status_code == 200 and ch.get_json()["sticky"] is True
+    assert ch.get_json()["choreography"]["steps"][0]["positions"] == {"o1": {"x": 1.0, "y": 1.0}}
+    # ... which expose only this play's assets: not the rest of /uploads, not other plays.
+    (upl / "private.png").write_bytes(td.png_bytes())
+    assert anon.get(f"/play/share/{token}/uploads/play_imports/private.png").status_code == 404
+    assert anon.get(f"/play/share/{token}/uploads/../app.db").status_code == 404
+    assert anon.get("/uploads/play_imports/sheet.png").status_code == 302  # global /uploads stays gated
+    assert anon.get(f"/api/playbook/choreography/{pid}").status_code == 401
+    assert anon.post(f"/play/share/{token}/sheet-extract",
+                     json={"image_url": "/uploads/play_imports/private.png"}).status_code == 404
+    assert anon.get("/play/share/bogus/uploads/play_imports/sheet.png").status_code == 404
+    assert anon.get("/play/share/bogus/choreography").status_code == 404
+    # Revoking the link revokes its assets too (the test client is not signed in, so
+    # revoke with the gate off, then turn it back on).
+    db.execute("UPDATE app_settings SET value='0' WHERE key='feature.ENABLE_AUTH_MIDDLEWARE'")
+    db.commit()
+    assert client.delete(f"/api/playbook/play/{pid}/share").get_json()["revoked"] is True
+    db.execute("UPDATE app_settings SET value='1' WHERE key='feature.ENABLE_AUTH_MIDDLEWARE'")
+    db.commit()
+    assert anon.get(f"/play/share/{token}/uploads/play_imports/sheet.png").status_code == 404
+    assert anon.get(f"/play/share/{token}/choreography").status_code == 404
 
 
 # ── 5. import, choreography, play-match ──────────────────────────────────────
@@ -625,14 +668,25 @@ def test_pdf_import_parse_and_save(client, db, app):
     assert client.post("/playbook/import/save", json={"name": ""}).status_code == 400
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /playbook/import/parse stores any extension (e.g. .html) under /uploads, served same-origin as text/html")
-def test_import_parse_rejects_active_content(client, db):
+def test_import_parse_rejects_active_content(client, db, app):
     r = client.post("/playbook/import/parse",
                     data={"file": (io.BytesIO(b"<script>alert(document.cookie)</script>"), "diagram.html")},
                     content_type="multipart/form-data")
     served = client.get(r.get_json()["file_url"]) if r.status_code == 200 else None
     assert r.status_code == 400
     assert served is None or "text/html" not in served.headers.get("Content-Type", "")
+    assert "Unsupported file type" in r.get_json()["error"]
+    for name in ("x.svg", "x.js", "x.htm", "noext"):
+        rr = client.post("/playbook/import/parse", data={"file": (io.BytesIO(b"<svg onload=alert(1)>"), name)},
+                         content_type="multipart/form-data")
+        assert rr.status_code == 400, name
+    # Nothing refused was written under /uploads.
+    imports = Path(app.config["UPLOAD_FOLDER"]) / "play_imports"
+    assert not imports.exists() or not any(imports.iterdir())
+    # Allowed image types still import (extension check is case-insensitive).
+    ok = client.post("/playbook/import/parse", data={"file": (io.BytesIO(td.png_bytes()), "Diagram.JPEG")},
+                     content_type="multipart/form-data")
+    assert ok.status_code == 200 and ok.get_json()["file_url"].endswith(".jpeg")
 
 
 def _bulk_pdf(names):
@@ -657,7 +711,6 @@ def test_bulk_import_parse_and_save(client, db):
         assert [s["source_image"] for s in steps] == [pg["image_url"] for pg in parsed["pages"]]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: bulk import renders every PDF to bulk_imports/page_NNNN.png, so a second import overwrites the first import's sheets")
 def test_bulk_import_does_not_overwrite_earlier_sheets(client, db, app):
     a = client.post("/api/playbook/bulk/parse", data={"file": (io.BytesIO(_bulk_pdf(["Horns"])), "a.pdf")},
                     content_type="multipart/form-data").get_json()
@@ -673,15 +726,20 @@ def test_bulk_import_does_not_overwrite_earlier_sheets(client, db, app):
     assert client.get(url_a).data == bytes_a
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: bulk import save ignores the active team playbook; plays always land in HS Boys")
 def test_bulk_import_saves_into_active_team(client, db):
     client.get("/playbook?team=hs_girls")
     r = client.post("/api/playbook/bulk/save", json={"plays": [{"play_name": "Girls Set", "section": "Offense", "pages": []}]})
     pid = r.get_json()["saved"][0]["id"]
     assert db.execute("SELECT team_key FROM plays WHERE id=?", (pid,)).fetchone()[0] == "hs_girls"
+    assert "Girls Set" in client.get("/playbook?team=hs_girls").get_data(as_text=True)
+    assert "Girls Set" not in client.get("/playbook?team=hs_boys").get_data(as_text=True)
+    # An explicit team_key in the body wins over the session team.
+    r = client.post("/api/playbook/bulk/save", json={"team_key": "jh_boys", "plays": [
+        {"play_name": "JH Set", "section": "Offense", "pages": []}]})
+    pid = r.get_json()["saved"][0]["id"]
+    assert db.execute("SELECT team_key FROM plays WHERE id=?", (pid,)).fetchone()[0] == "jh_boys"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: vector extract never finds the source PDF for a bulk sheet URL (absolute /uploads URL + flat page_NNNN.png layout)")
 def test_bulk_sheet_url_resolves_to_its_vector_pdf(client, db, app, tmp_path):
     from playbook_vector_extract import resolve_pdf_page_from_sheet
 
@@ -694,6 +752,44 @@ def test_bulk_sheet_url_resolves_to_its_vector_pdf(client, db, app, tmp_path):
     assert resolved is not None
     pdf, page = resolved
     assert page == 2 and pdf.parent.resolve() == (tmp_path / "uploads" / "bulk_imports").resolve()
+    assert pdf.is_file() and pdf.read_bytes()[:5] == b"%PDF-"
+    # Same answer when the upload folder is configured away from the app root (as the routes pass it).
+    assert resolve_pdf_page_from_sheet(url, app_root=ROOT, upload_folder=tmp_path / "uploads") == (pdf, 2)
+
+
+def test_sheet_extract_refuses_pdfs_outside_uploads(client, db, app, tmp_path):
+    """Absolute / traversal sheet paths must never reach a PDF or image outside UPLOAD_FOLDER + app root."""
+    import os
+
+    from playbook_sheet_align import resolve_upload_path
+    from playbook_vector_extract import resolve_pdf_page_from_sheet
+
+    outside = tmp_path / "outside"
+    (outside / "secret").mkdir(parents=True)
+    (outside / "secret.pdf").write_bytes(td.pdf_bytes([["1", "2", "3", "4", "5"]], draw_shapes=True))
+    png = outside / "secret" / "page_0001.png"
+    png.write_bytes(td.png_bytes())
+    upload_root = Path(app.config["UPLOAD_FOLDER"]).resolve()
+    assert not png.resolve().is_relative_to(upload_root) and not png.resolve().is_relative_to(ROOT)
+
+    traversal = "/uploads/" + os.path.relpath(png, upload_root).replace(os.sep, "/")
+    assert ".." in traversal
+    for bad in (str(png), traversal):
+        assert resolve_pdf_page_from_sheet(bad, app_root=ROOT, upload_folder=upload_root) is None, bad
+        with pytest.raises(FileNotFoundError):
+            resolve_upload_path(bad, ROOT, upload_root)
+        for route in ("/api/playbook/sheet-extract", "/api/playbook/sheet-align"):
+            r = client.post(route, json={"image_url": bad})
+            assert r.status_code == 404, (route, bad, r.data[:200])
+            assert "outside uploads" in r.get_json()["error"]
+        r = client.post("/api/playbook/sheet-paths", json={
+            "image_url": bad, "from_positions": {"o1": {"x": 1, "y": 1}}, "to_positions": {"o1": {"x": 2, "y": 2}}})
+        assert r.status_code == 404, (bad, r.data[:200])
+
+    # A legit upload still resolves.
+    (upload_root / "play_imports").mkdir(exist_ok=True)
+    (upload_root / "play_imports" / "ok.png").write_bytes(td.png_bytes())
+    assert resolve_upload_path("/uploads/play_imports/ok.png", ROOT, upload_root) == upload_root / "play_imports" / "ok.png"
 
 
 def test_choreography_round_trip(client, db, choreo_base):
@@ -741,7 +837,6 @@ def test_choreography_round_trip(client, db, choreo_base):
     assert client.get(f"/api/playbook/choreography/{pid}").get_json()["sticky"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: moveStep() reorders steps but not sheetAlignByStep/ink arrays, so Save choreography pairs a sheet with another sheet's positions")
 def test_reordered_sheet_keeps_its_choreography_when_saved():
     src = (ROOT / "templates/playbook.html").read_text()
     script = "\n".join([
@@ -762,6 +857,23 @@ const p = buildChoreographyPayload('user_save');
 console.log(JSON.stringify(p.steps.map(s => [s.source_image, s.positions.o1.x, s.ink.paths.o1])));
 """])
     assert _run_node(script) == [["/B.png", 2, "B"], ["/A.png", 1, "A"]]
+
+    # Three sheets, last dragged to the front; sticky ink only known for the first sheet.
+    script3 = "\n".join([
+        _js_function(src, "moveStep"),
+        """
+function canFixAnimation() { return true; }
+function saveCurrentStepNotes() {} function markStepsDirty() {}
+function renderStep() {} function updateStepList() {} function updateMovementList() {}
+var currentStep = 2;
+var steps = ['A', 'B', 'C'];
+var sheetAlignByStep = ['a', 'b', 'c'];
+var sheetSessionInkByStep = ['ia', 'ib', 'ic'];
+var sheetStickyInkByStep = ['sa'];
+moveStep(2, 0);
+console.log(JSON.stringify([steps, sheetAlignByStep, sheetSessionInkByStep, sheetStickyInkByStep, currentStep]));
+"""])
+    assert _run_node(script3) == [["C", "A", "B"], ["c", "a", "b"], ["ic", "ia", "ib"], [None, "sa", None], 0]
 
 
 def _seed_game(db, game_key, samples, events):
@@ -820,7 +932,6 @@ def test_play_match_for_game(client, db, choreo_base, tmp_path):
     assert stored == ["gm-other.json", "gm-rip.json"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: play-match cache file name collapses punctuation, so games like 'a,_b' and 'a__b' read each other's results")
 def test_play_match_cache_is_per_game(client, db, choreo_base):
     rip = _save_play(client, name="Rip")
     client.put(f"/api/playbook/choreography/{rip}", json={"steps": [
@@ -831,6 +942,11 @@ def test_play_match_cache_is_per_game(client, db, choreo_base):
     other = client.get("/api/film/jh_adrian__or_A/play-matches").get_json()
     assert other["game_id"] == "jh_adrian__or_A"
     assert other["possessions"] == []
+    assert other["cached"] is False
+    # The punctuated game still reads back its own cached result.
+    own = client.get("/api/film/jh_adrian,_or_A/play-matches").get_json()
+    assert (own["game_id"], own["cached"]) == ("jh_adrian,_or_A", True)
+    assert own["possessions"][0]["top_play_name"] == "Rip"
 
 
 # ── 6. opponent playbooks ────────────────────────────────────────────────────

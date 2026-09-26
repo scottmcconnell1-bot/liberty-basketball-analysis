@@ -26,6 +26,23 @@ def ensure_share_token(db, play_id: int) -> str:
     return token
 
 
+def revoke_share_token(db, play_id: int) -> bool:
+    """Clear a play's share token so its public link stops working."""
+    row = db.execute(
+        "SELECT id, share_token FROM plays WHERE id = ?",
+        (play_id,),
+    ).fetchone()
+    if not row:
+        raise ValueError("Play not found")
+    if not row["share_token"]:
+        return False
+    db.execute(
+        "UPDATE plays SET share_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (play_id,),
+    )
+    return True
+
+
 def get_play_by_share_token(db, token: str):
     if not token:
         return None

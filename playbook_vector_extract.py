@@ -90,47 +90,63 @@ def classify_pdf(pdf_path: str | Path) -> dict[str, Any]:
         doc.close()
 
 
+def _within(path: Path, root: Path) -> bool:
+    return path == root or root in path.parents
+
+
 def resolve_pdf_page_from_sheet(
     image_url_or_path: str | Path,
     *,
     app_root: str | Path | None = None,
+    upload_folder: str | Path | None = None,
 ) -> tuple[Path, int] | None:
-    """Map ``.../bulk_imports/<id>/page_0032.png`` → (``<id>.pdf``, 32)."""
-    raw = str(image_url_or_path or "").replace("\\", "/")
+    """Map ``/uploads/bulk_imports/<id>/page_0032.png`` → (``bulk_imports/<id>.pdf``, 32).
+
+    ``/uploads/...`` URLs resolve under ``upload_folder`` (else ``<app_root>/uploads``).
+    Filesystem paths are only accepted inside the upload folder or the app root, so a
+    crafted path can never point extraction at an arbitrary PDF on disk.
+    """
+    raw = str(image_url_or_path or "").replace("\\", "/").strip()
     m = _PAGE_RE.search(raw)
     if not m:
         return None
     page_1 = int(m.group(1))
-    png = Path(raw)
-    if not png.is_absolute():
-        root = Path(app_root) if app_root else Path.cwd()
-        cleaned = raw.lstrip("/")
-        if cleaned.startswith("uploads/"):
-            png = root / cleaned
-        elif "/uploads/" in raw:
-            png = root / raw[raw.index("uploads/") :]
-        else:
-            png = root / cleaned
-    pdf = png.parent if png.suffix.lower() == ".pdf" else png.parent.with_suffix(".pdf")
-    # When path is .../hash/page_X.png, sibling PDF is .../hash.pdf
-    if png.parent.name and png.parent.parent.name == "bulk_imports":
+    root = Path(app_root or Path.cwd()).resolve()
+    uploads = Path(upload_folder).resolve() if upload_folder else root / "uploads"
+    allowed = (uploads, root)
+    if raw.startswith(("/uploads/", "uploads/")) or ("://" in raw and "/uploads/" in raw):
+        rel = raw.split("uploads/", 1)[1]
+        candidates = [uploads / rel, root / "uploads" / rel]
+    elif Path(raw).is_absolute():
+        candidates = [Path(raw)]
+    else:
+        candidates = [root / raw]
+    for candidate in candidates:
+        png = candidate.resolve()
+        if not any(_within(png, base) for base in allowed):
+            continue
+        # .../bulk_imports/<id>/page_X.png → sibling .../bulk_imports/<id>.pdf
         pdf = png.parent.with_suffix(".pdf")
-        if not pdf.is_file():
-            pdf = png.parent.parent / f"{png.parent.name}.pdf"
-    if not pdf.is_file():
-        # play_imports: page render next to original pdf name is uncommon; bail.
-        return None
-    return pdf, page_1
+        if not png.parent.name or not pdf.is_file():
+            continue
+        if not any(_within(pdf, base) for base in allowed):
+            continue
+        return pdf, page_1
+    # play_imports: page render next to original pdf name is uncommon; bail.
+    return None
 
 
 def extract_sheet_from_image_url(
     image_url: str,
     *,
     app_root: str | Path | None = None,
+    upload_folder: str | Path | None = None,
     next_positions: dict[str, dict] | None = None,
 ) -> dict[str, Any] | None:
     """Extract structured step data for a sheet PNG if its vector PDF exists."""
-    resolved = resolve_pdf_page_from_sheet(image_url, app_root=app_root)
+    resolved = resolve_pdf_page_from_sheet(
+        image_url, app_root=app_root, upload_folder=upload_folder
+    )
     if not resolved:
         return None
     pdf_path, page_1 = resolved
