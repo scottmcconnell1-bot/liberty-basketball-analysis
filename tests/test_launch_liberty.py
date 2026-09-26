@@ -3,6 +3,8 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 import launch_liberty as launcher
@@ -16,6 +18,8 @@ def test_python_ok_accepts_312_and_313():
 
 
 def test_find_system_python_returns_current_interpreter():
+    if not launcher._python_ok(tuple(sys.version_info[:3])):
+        pytest.skip(f"launcher supports Python {launcher.MIN_PYTHON}-{launcher.MAX_PYTHON}; running {sys.version_info[:2]}")
     cmd = launcher._find_system_python()
     assert cmd
     assert cmd[0]

@@ -57,20 +57,18 @@ def test_auto_accept_disabled_when_threshold_zero(client, app):
         assert row["review_status"] == "pending"
 
 
-def test_auto_accept_default_is_zero_and_does_not_promote(client, app):
-    """Foundation: default confidence is 0; unset settings must not promote drafts."""
-    from settings_store import AI_DEFAULTS
+def test_auto_accept_stored_zero_does_not_promote(client, app):
+    """A stored threshold of 0 turns auto-accept off even though the default is 0.85."""
 
-    assert float(AI_DEFAULTS["auto_accept_event_confidence"]) == 0.0
-
-    game_id = "auto-accept-default-off"
+    game_id = "auto-accept-stored-off"
     with app.app_context():
         from helpers import get_db
 
         db = get_db()
         db.execute(
-            "DELETE FROM app_settings WHERE key = ?",
-            ("ai.auto_accept_event_confidence",),
+            """INSERT INTO app_settings (key, value)
+               VALUES ('ai.auto_accept_event_confidence', '0')
+               ON CONFLICT(key) DO UPDATE SET value=excluded.value"""
         )
         db.execute(
             """INSERT INTO events

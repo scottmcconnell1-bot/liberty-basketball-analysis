@@ -16,6 +16,64 @@ _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 _JOB_TTL_SECONDS = 60 * 60
 
+# Job state is mirrored to <UPLOAD_FOLDER>/.trim_jobs/<job_id>.json so that a status poll
+# served by a *different* gunicorn worker (the shipped systemd unit runs --workers 2) can
+# still find the job. The in-process dict stays authoritative for the worker that owns it.
+_JOBS_DIRNAME = ".trim_jobs"
+
+
+def _jobs_dir(upload_dir: str | None = None) -> str | None:
+    if upload_dir is None:
+        try:
+            from flask import current_app
+
+            upload_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
+        except RuntimeError:  # no app context (unit tests calling helpers directly)
+            return None
+    path = os.path.join(os.path.abspath(upload_dir), _JOBS_DIRNAME)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _job_file(job: dict) -> str | None:
+    d = job.get("_jobs_dir")
+    return os.path.join(d, f"{job['job_id']}.json") if d else None
+
+
+def _persist_job(job: dict) -> None:
+    path = _job_file(job)
+    if not path:
+        return
+    import json
+
+    public = {k: v for k, v in job.items() if not k.startswith("_")}
+    tmp = f"{path}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(public, fh)
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def _load_persisted_job(job_id: str) -> dict | None:
+    d = _jobs_dir()
+    if not d or not re.fullmatch(r"[0-9a-f]{32}", job_id or ""):
+        return None
+    path = os.path.join(d, f"{job_id}.json")
+    if not os.path.isfile(path):
+        return None
+    import json
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            job = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if job.get("updated_at", 0) < _now() - _JOB_TTL_SECONDS:
+        return None
+    return job
+
 
 def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
@@ -105,7 +163,13 @@ def _prune_old_jobs() -> None:
     cutoff = _now() - _JOB_TTL_SECONDS
     stale = [job_id for job_id, job in _jobs.items() if job.get("updated_at", 0) < cutoff]
     for job_id in stale:
-        _jobs.pop(job_id, None)
+        job = _jobs.pop(job_id, None)
+        path = _job_file(job) if job else None
+        if path:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 def _public_job(job: dict) -> dict:
@@ -132,7 +196,11 @@ def get_trim_job(job_id: str) -> dict | None:
     with _jobs_lock:
         _prune_old_jobs()
         job = _jobs.get(job_id)
-        return deepcopy(_public_job(job)) if job else None
+        if job:
+            return deepcopy(_public_job(job))
+    # Not owned by this process: another worker may have started it.
+    job = _load_persisted_job(job_id)
+    return _public_job(job) if job else None
 
 
 def _update_job(job_id: str, **fields) -> None:
@@ -140,6 +208,14 @@ def _update_job(job_id: str, **fields) -> None:
         if job_id in _jobs:
             _jobs[job_id].update(fields)
             _jobs[job_id]["updated_at"] = _now()
+            _persist_job(_jobs[job_id])
+
+
+def trim_stamp(job_id: str) -> str:
+    """Timestamp + job-id suffix for output names. Seconds alone collided when two clips
+    were generated in the same second (the second ffmpeg overwrote the first file)."""
+    # local time, like upload filenames (blueprints/ai.py); the DB itself stores UTC timestamps
+    return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{job_id[:8]}"
 
 
 def start_trim_job(*, app, video_row: dict, start_ms: int, end_ms: int, label: str | None = None) -> str:
@@ -154,7 +230,9 @@ def start_trim_job(*, app, video_row: dict, start_ms: int, end_ms: int, label: s
             "error": None,
             "created_at": _now(),
             "updated_at": _now(),
+            "_jobs_dir": _jobs_dir(app.config.get("UPLOAD_FOLDER", "uploads")),
         }
+        _persist_job(_jobs[job_id])
 
     thread = threading.Thread(
         target=_run_trim_job,
@@ -190,7 +268,7 @@ def _run_trim_job(
             stem, ext = os.path.splitext(video_row["stored_filename"])
             if not ext:
                 ext = ".mp4"
-            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            ts = trim_stamp(job_id)  # unique per job, not per second
             stored_filename = f"{stem}_trim_{ts}{ext}"
             output_path = os.path.join(upload_dir, stored_filename)
 

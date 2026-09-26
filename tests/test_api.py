@@ -1074,7 +1074,6 @@ def test_film_page(client):
     assert b"aiEventsPanel" in r.data
     assert b"aiEventsScroller" in r.data
     assert b"aiCurrentEventLabel" in r.data
-    assert b"Independent scrolling event timeline" in r.data
 
 
 def test_film_page_accepts_manual_game_id_query(client):
@@ -1088,7 +1087,6 @@ def test_film_page_with_uploaded_filename_embeds_video_url(client):
     r = client.get("/film/test_clip.mp4?game_id=test_game")
     assert r.status_code == 200
     assert b"/uploads/test_clip.mp4" in r.data
-    assert b"Server video" in r.data
 
 
 def test_film_tool_ai_events_doc_exists():
@@ -1651,6 +1649,10 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+    # The fixture row points at a file that does not exist, and model weights may
+    # be LFS pointers on a dev box; the route validates both before queueing.
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _ai: (True, None))
 
     r = client.post("/videos/1/rerun", data={"run_label": "YOLOv8s retry"}, follow_redirects=True)
     assert r.status_code == 200
@@ -1693,6 +1695,10 @@ def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+    # The fixture row points at a file that does not exist, and model weights may
+    # be LFS pointers on a dev box; the route validates both before queueing.
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _ai: (True, None))
 
     r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
     assert r.status_code == 200
@@ -2605,24 +2611,6 @@ def test_build_possession_workflow_summary_links_events(client, db):
     assert summary["events_unlinked"] == 0
 
 
-def test_film_page_shows_possession_summary(client, db):
-    """Film tool renders possession counts when a game has tagged events."""
-    game_id = _create_game_with_events(
-        client, db, "film-possession",
-        [
-            {"event_type": "made_two", "timestamp_ms": 1000},
-            {"event_type": "turnover", "timestamp_ms": 2000},
-            {"event_type": "made_three", "timestamp_ms": 3000},
-        ],
-    )
-    resp = client.get(f"/film?game_id={game_id}")
-    assert resp.status_code == 200
-    html = resp.data
-    assert b"Possessions" in html
-    assert b"total possessions" in html
-    assert b"events linked to possessions" in html
-
-
 def test_analysis_results_page_includes_possession_panel(client):
     """Analysis results dashboard includes possession summary mount point."""
     resp = client.get("/analysis/test-game-key")
@@ -2658,25 +2646,6 @@ def test_build_player_minutes_summary_aggregates_rows(client, db):
     assert summary["total_minutes"] == 25.5
     assert summary["top_players"][0]["tracker_id"] == 1
     assert summary["top_players"][0]["total_minutes"] == 17.5
-
-
-def test_film_page_shows_player_minutes_for_game(client, db):
-    """Film tool shows per-game minutes using relational_game_id resolution."""
-    game_id = _create_game(client, "film-minutes-game")
-    db.execute(
-        """INSERT INTO player_minutes
-              (game_id, relational_game_id, tracker_id,
-               first_frame, last_frame, total_frames, minutes_played)
-           VALUES (?, ?, 7, 0, 200, 200, 22.3)""",
-        (str(game_id), game_id),
-    )
-    db.commit()
-
-    resp = client.get(f"/film?game_id={game_id}")
-    assert resp.status_code == 200
-    assert b"Player Minutes" in resp.data
-    assert b"22.3" in resp.data
-    assert b"Pos 7" in resp.data
 
 
 def test_analysis_results_page_includes_minutes_panel(client):

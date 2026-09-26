@@ -42,6 +42,7 @@ def test_resolve_relational_game_id_from_analysis_run(app, tmp_path):
 
 def test_run_ai_analysis_raises_when_video_missing(tmp_path):
     pytest.importorskip("cv2")
+    pytest.importorskip("ultralytics")  # ai_analyzer imports it at module load
     from ai_analyzer import run_ai_analysis
 
     db_path = tmp_path / "test.db"
