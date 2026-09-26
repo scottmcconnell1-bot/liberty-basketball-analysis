@@ -580,6 +580,10 @@ def regenerate_both_modes(e):
 # ── 17. admin reset (temporary DB only) ──────────────────────────────────────
 
 def admin_reset(e):
+    # Anonymous callers are refused; only a signed-in admin may wipe video data.
+    ok(e.get("/logout", follow_redirects=False), 200, 302, 303)
+    ok(e.post("/api/admin/reset", data={}), 403)
+    ok(e.post("/login", data={"email": "admin.e2e@example.com", "password": "e2e-password-1"}, follow_redirects=False), 302, 303)
     ok(e.post("/api/admin/reset", data={}), 200, 302)
     conn = e.db()
     assert conn.execute("SELECT COUNT(*) FROM videos").fetchone()[0] == 0

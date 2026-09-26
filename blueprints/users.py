@@ -14,10 +14,11 @@ Routes included:
 - api_users (/api/users)                      — List users (for mentions, DMs)
 """
 
-import hashlib, secrets, datetime
+import hashlib, hmac, secrets, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
-from helpers import get_db, require_feature
+from helpers import extract_local_path, get_db, require_feature
+from werkzeug.security import check_password_hash, generate_password_hash
 
 users_bp = Blueprint("users", __name__)
 
@@ -33,18 +34,24 @@ ROLE_HIERARCHY = {"player": 0, "parent": 1, "coach": 2, "manager": 3, "admin": 4
 
 
 def _hash_password(password):
-    """Hash a password with SHA-256 + salt."""
-    salt = secrets.token_hex(16)
-    pw_hash = hashlib.sha256((salt + password).encode()).hexdigest()
-    return f"{salt}${pw_hash}"
+    """Hash a password with Werkzeug's salted KDF (scrypt/pbkdf2)."""
+    return generate_password_hash(password)
+
+
+def _is_legacy_hash(stored_hash):
+    """Old accounts store ``salt$sha256hex`` (single-round SHA-256)."""
+    return bool(stored_hash) and ":" not in stored_hash.split("$", 1)[0] and "$" in stored_hash
 
 
 def _verify_password(password, stored_hash):
-    """Verify a password against a stored hash."""
-    if "$" not in stored_hash:
+    """Verify a password against a stored hash (Werkzeug or legacy salted SHA-256)."""
+    if not stored_hash or "$" not in stored_hash:
         return False
-    salt, pw_hash = stored_hash.split("$", 1)
-    return hashlib.sha256((salt + password).encode()).hexdigest() == pw_hash
+    if _is_legacy_hash(stored_hash):
+        salt, pw_hash = stored_hash.split("$", 1)
+        candidate = hashlib.sha256((salt + password).encode()).hexdigest()
+        return hmac.compare_digest(candidate, pw_hash)
+    return check_password_hash(stored_hash, password)
 
 
 def _current_user():
@@ -103,6 +110,12 @@ def login():
                 (user["id"], token, request.remote_addr, request.user_agent.string[:200], expires),
             )
             db.execute("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?", (user["id"],))
+            if _is_legacy_hash(user["password_hash"]):
+                # Upgrade old single-round SHA-256 hashes on successful login.
+                db.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
+                    (_hash_password(password), user["id"]),
+                )
             db.commit()
 
             session["user_id"] = user["id"]
@@ -110,7 +123,7 @@ def login():
             session["user_name"] = user["display_name"]
             session["session_token"] = token
 
-            next_url = request.args.get("next") or url_for("core.index")
+            next_url = extract_local_path(request.args.get("next")) or url_for("core.index")
             return redirect(next_url)
 
         flash("Invalid email or password.", "error")
@@ -241,7 +254,7 @@ def settings_notifications():
             """INSERT OR REPLACE INTO user_notification_prefs
                (user_id, notify_email_messages, notify_email_schedule, notify_push_messages,
                 notify_push_schedule, notify_sms_game_reminder, quiet_hours_start, quiet_hours_end, updated_at)
-               VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
+               VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
             (
                 user["id"],
                 1 if request.form.get("notify_email_messages") else 0,

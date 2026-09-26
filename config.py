@@ -15,6 +15,9 @@ class Features:
     ENABLE_COACH_PORTAL = True  # Approach A — Scott: default True intentional; toggle off in Settings if needed
     ENABLE_WEEKLY_PACKET = False
     ENABLE_SEASON_REVIEW = False
+    # Global sign-in gate (docs/AUTH_REENABLE_PLAN.md). Scott gate: flip to True
+    # in Settings only after at least one admin account exists.
+    ENABLE_AUTH_MIDDLEWARE = False
 
 
 class AnalysisConfig:

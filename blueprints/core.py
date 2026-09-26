@@ -2372,6 +2372,9 @@ def api_teams_rankings():
             ranking, url, error = _scrape_maxpreps_ranking(state, gender)
             if error:
                 scrape_errors[team_key] = error
+            if ranking is None:
+                # Keep the last good cached ranking instead of overwriting it with NULL.
+                continue
             db.execute(
                 """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -2458,10 +2461,44 @@ def status_page():
     )
 
 
+# Children first. Mirrors scripts/wipe_film_analysis.py ANALYSIS_TABLES plus
+# stats and videos, which admin reset also removes.
+_ADMIN_RESET_TABLES = (
+    "clip_tags",
+    "player_development_clips",
+    "practice_playlist_clips",
+    "clips",
+    "event_participants",
+    "review_items",
+    "human_corrections",
+    "shot_classifications",
+    "play_recognitions",
+    "player_effect",
+    "scouting_clips",
+    "provenance_records",
+    "possessions",
+    "events",
+    "detections",
+    "track_identity_labels",
+    "analysis_runs",
+    "stats",
+    "videos",
+)
+
+
 @core.route("/api/admin/reset", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def admin_reset():
-    """Wipe all video uploads, analysis data, and uploaded files. Fresh start."""
+    """Wipe all video uploads, analysis data, and uploaded files. Fresh start.
+
+    Destructive and irreversible, so it requires a signed-in admin even while
+    global auth (ENABLE_AUTH_MIDDLEWARE) is off.
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required to reset all video data."}), 403
+
     db = get_db()
 
     # Collect file paths before deleting
@@ -2474,15 +2511,20 @@ def admin_reset():
             except OSError:
                 pass
 
-    # Clear all analysis/video data (preserve seasons, games, players)
-    db.executescript("""
-        DELETE FROM events;
-        DELETE FROM detections;
-        DELETE FROM analysis_runs;
-        DELETE FROM stats;
-        DELETE FROM videos;
-    """)
+    # Clear all analysis/video data (preserve seasons, games, players). Tables
+    # that reference events/videos (review items, clips, possessions, ...) must
+    # go too or the delete fails the foreign-key check; same list and FK-off
+    # approach as scripts/wipe_film_analysis.py.
+    existing = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     db.commit()
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        for table in _ADMIN_RESET_TABLES:
+            if table in existing:
+                db.execute(f"DELETE FROM {table}")
+        db.commit()
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
 
     return jsonify({"success": True, "message": "All video data cleared."})
 

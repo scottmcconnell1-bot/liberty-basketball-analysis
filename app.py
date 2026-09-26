@@ -17,6 +17,7 @@ Blueprint modules:
   stat_books - Handwritten spiral scorebook extract / confirm
 """
 
+import logging
 import os
 from pathlib import Path
 from flask import Flask, g, jsonify, request, session
@@ -54,13 +55,25 @@ app.config.from_object(Config)
 # Always reload Jinja templates from disk (production-like debug=off otherwise caches them).
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.jinja_env.auto_reload = True
-# Refresh password from env after .env load (Config may have been imported earlier).
+# Refresh env-backed settings after .env load: config.Config read os.environ
+# when it was imported, which is before _load_dotenv() ran.
 app.config["COACH_PASSWORD"] = os.environ.get("LIBERTY_COACH_PASSWORD", "")
+for _config_key, _env_key in (("DATABASE", "LIBERTY_DATABASE"), ("UPLOAD_FOLDER", "LIBERTY_UPLOAD_FOLDER")):
+    if os.environ.get(_env_key):
+        app.config[_config_key] = os.environ[_env_key]
+_DEV_SECRET_KEY = "liberty-basketball-dev-secret-key-2026"
 app.config["SECRET_KEY"] = (
     os.environ.get("SECRET_KEY")
     or app.config.get("SECRET_KEY")
-    or "liberty-basketball-dev-secret-key-2026"
+    or _DEV_SECRET_KEY
 )
+if app.config["SECRET_KEY"] == _DEV_SECRET_KEY:
+    # This key is committed to the repo, so anyone who has read it can forge
+    # a session cookie (including an admin login). Set SECRET_KEY in .env.
+    logging.getLogger(__name__).warning(
+        "SECRET_KEY is unset - using the committed dev fallback. "
+        "Set SECRET_KEY in .env before exposing the app on a network."
+    )
 app.config.setdefault("DATABASE", "film_analysis.db")
 app.config.setdefault("UPLOAD_FOLDER", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024 * 1024  # 4 GB max upload
@@ -164,10 +177,34 @@ def close_db(exception):
 
 
 # ── Auth Middleware ───────────────────────────────────────────
+# Reachable without signing in even when the gate is on.
+_AUTH_PUBLIC_PATHS = {"/login", "/logout", "/register", "/sw.js", "/favicon.ico"}
+_AUTH_PUBLIC_PREFIXES = ("/static/", "/coach", "/play/share/")
+
+
 @app.before_request
 def require_auth_for_api():
-    """Auth middleware — disabled until user system is implemented."""
-    pass  # No auth enforced yet — will be enabled in a future phase
+    """Require a signed-in user when ENABLE_AUTH_MIDDLEWARE is on (default off).
+
+    Coach-portal sessions pass through; enforce_coach_ops_denylist() keeps them
+    read-only. APIs get 401 JSON, pages redirect to /login.
+    """
+    from flask import redirect, url_for
+    from helpers import feature_enabled
+
+    if not feature_enabled("ENABLE_AUTH_MIDDLEWARE"):
+        return None
+    path = request.path or "/"
+    if path in _AUTH_PUBLIC_PATHS or path.startswith(_AUTH_PUBLIC_PREFIXES):
+        return None
+    if session.get("coach_portal"):
+        return None
+    if session.get("user_id") and _current_user() is not None:
+        return None
+    if path.startswith("/api/") or request.is_json:
+        return jsonify({"error": "Sign-in required."}), 401
+    next_path = request.full_path if request.query_string else path
+    return redirect(url_for("users.login", next=next_path))
 
 
 # ── Re-exports (for test conftest and external imports) ──────
