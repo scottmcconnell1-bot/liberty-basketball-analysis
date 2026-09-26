@@ -80,6 +80,8 @@ def login_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not _current_user():
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "authentication required"}), 401
             return redirect(url_for("users.login", next=request.url))
         return f(*args, **kwargs)
     return wrapped
@@ -93,8 +95,12 @@ def role_required(min_role):
         def wrapped(*args, **kwargs):
             user = _current_user()
             if not user:
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "authentication required"}), 401
                 return redirect(url_for("users.login", next=request.url))
             if ROLE_HIERARCHY.get(user["role"], 0) < ROLE_HIERARCHY.get(min_role, 0):
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "forbidden"}), 403
                 flash("You don't have permission to access this page.", "error")
                 return redirect(url_for("core.index"))
             return f(*args, **kwargs)

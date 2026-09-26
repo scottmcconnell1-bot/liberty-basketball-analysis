@@ -377,3 +377,34 @@ def test_messages_page_does_not_show_a_logged_out_cookie_as_signed_in(app, clien
     page = client.get("/messages").get_data(as_text=True)
     assert "Signed in as" not in page
     assert "Cole Coach" not in page
+
+
+# ── 8. /uploads never renders active content (ported from 8853d38) ───────────
+
+def test_uploads_force_download_for_active_content(app, client):
+    import os
+
+    folder = app.config["UPLOAD_FOLDER"]
+    for name, body in (("evil.html", b"<script>alert(1)</script>"), ("evil.svg", b"<svg onload=alert(1)/>"),
+                       ("film.png", b"\x89PNG\r\n\x1a\n")):
+        with open(os.path.join(folder, name), "wb") as fh:
+            fh.write(body)
+    for name in ("evil.html", "evil.svg"):
+        resp = client.get(f"/uploads/{name}")
+        assert resp.status_code == 200
+        assert resp.headers["Content-Type"] == "application/octet-stream", name
+        assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+        assert "attachment" in resp.headers.get("Content-Disposition", "")
+    img = client.get("/uploads/film.png")
+    assert img.headers["Content-Type"].startswith("image/png")
+    assert client.get("/uploads/../app.py").status_code == 404
+
+
+# ── 9. login_required APIs answer JSON 401, not a login redirect ─────────────
+
+def test_login_required_api_returns_json_401(client):
+    resp = client.get("/api/users")  # users blueprint, @login_required
+    assert resp.status_code == 401
+    assert resp.get_json() == {"error": "authentication required"}
+    page = client.get("/profile")  # pages still redirect to the login form
+    assert page.status_code in (302, 303) and "/login" in page.headers["Location"]

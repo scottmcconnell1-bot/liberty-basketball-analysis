@@ -386,7 +386,9 @@ def test_gate_on_non_admin_cannot_change_settings(app, db):
         assert r.status_code == 403 and r.get_json() == {"error": "Only an admin can change settings."}
         r = role_client.post("/settings/ollama/pull", data={"model_name": "llama3"}, follow_redirects=False)
         assert r.status_code == 403
-        assert role_client.get("/settings").status_code == 200    # viewing stays allowed
+        # Non-admins cannot open Settings either (8853d38); they are sent home.
+        view = role_client.get("/settings", follow_redirects=False)
+        assert view.status_code == 302 and urlsplit(view.headers["Location"]).path == "/"
     assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1"
     assert {k: v for k, v in _counts(db).items() if k != "users"} == \
         {k: v for k, v in before.items() if k != "users"}
@@ -419,7 +421,8 @@ def test_gate_off_routes_open_but_admin_reset_needs_admin(app, client, db):
         assert client.get(path).status_code == 200, path
     assert _redirects_to_login(client.get("/register"))
     assert _redirects_to_login(client.get("/profile"))           # login_required still applies
-    assert _redirects_to_login(client.get("/api/notifications"))
+    api = client.get("/api/notifications")  # login_required APIs answer JSON, not a redirect
+    assert api.status_code == 401 and api.get_json() == {"error": "authentication required"}
 
     db.execute("""INSERT INTO videos (original_filename, stored_filename, file_path, file_size_bytes, game_id)
                   VALUES ('g.mp4','g.mp4','/nonexistent/g.mp4',10,'g1')""")

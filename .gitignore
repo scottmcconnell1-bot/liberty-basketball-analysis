@@ -20,6 +20,22 @@ env/
 # Uploaded files
 uploads/
 
+# Browser / LevelDB dumps (never commit — cookies & site data)
+tag-exports/_chrome_ls_q2/
+tag-exports/*chrome*
+*_chrome_ls*/
+**/IndexedDB/**
+**/Local Storage/**
+**/Session Storage/**
+
+# Flask / temp / transfer noise
+_tmp_flask*
+data/flask_*.log
+data/flask_*.err.log
+data/flask_*.out.log
+scripts/backup.log
+transfer-bundles/
+
 # IDE
 .vscode/
 .idea/

@@ -193,18 +193,18 @@ def test_restart_hung_analysis_kills_and_fails(mem_db, monkeypatch):
     )
     conn.commit()
     killed = []
-    monkeypatch.setattr(
-        teach,
-        "list_live_analysis_workers",
-        lambda: {
-            "ok": True,
-            "any_worker": True,
-            "keys": {"hudl_stuck"},
-            "pid_by_key": {"hudl_stuck": 4242},
-            "unkeyed_workers": 0,
-            "unkeyed_pids": [],
-        },
-    )
+    live = {
+        "ok": True,
+        "any_worker": True,
+        "keys": {"hudl_stuck"},
+        "pid_by_key": {"hudl_stuck": 4242},
+        "unkeyed_workers": 0,
+        "unkeyed_pids": [],
+    }
+    gone = {"ok": True, "any_worker": False, "keys": set(), "pid_by_key": {},
+            "unkeyed_workers": 0, "unkeyed_pids": []}
+    # First probe finds the hung worker; the re-probe after the kill finds it gone.
+    monkeypatch.setattr(teach, "list_live_analysis_workers", lambda: gone if killed else live)
     monkeypatch.setattr(teach, "kill_analysis_pids", lambda pids: killed.extend(pids) or pids)
     ok = teach.restart_hung_analysis(
         conn, run_id=9, key="hudl_stuck", fingerprint="2|Detecting", stale_sec=60
@@ -216,6 +216,27 @@ def test_restart_hung_analysis_kills_and_fails(mem_db, monkeypatch):
     ).fetchone()
     assert row[0] == "failed"
     assert "hung" in (row[1] or "")
+
+
+def test_restart_hung_analysis_leaves_run_when_worker_survives_kill(mem_db, monkeypatch):
+    """If the worker is still alive after the kill, failing the run would let teach start a
+    second GPU job next to it; the run must stay running."""
+    conn = mem_db
+    conn.execute(
+        """INSERT INTO analysis_runs
+           (id, analysis_key, status, progress_pct, progress_step, started_at)
+           VALUES (9, 'hudl_stuck', 'running', 2, 'Detecting objects: frame 9', '2026-08-06')"""
+    )
+    conn.commit()
+    live = {"ok": True, "any_worker": True, "keys": {"hudl_stuck"}, "pid_by_key": {"hudl_stuck": 4242},
+            "unkeyed_workers": 0, "unkeyed_pids": []}
+    monkeypatch.setattr(teach, "list_live_analysis_workers", lambda: live)
+    monkeypatch.setattr(teach, "kill_analysis_pids", lambda pids: pids)
+    ok = teach.restart_hung_analysis(
+        conn, run_id=9, key="hudl_stuck", fingerprint="2|Detecting", stale_sec=60
+    )
+    assert ok is False
+    assert conn.execute("SELECT status FROM analysis_runs WHERE id=9").fetchone()[0] == "running"
 
 
 def test_games_panel_first_worst_recall():

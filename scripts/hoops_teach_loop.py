@@ -479,7 +479,11 @@ def restart_hung_analysis(
     fingerprint: str,
     stale_sec: int = HUNG_STALE_SEC,
 ) -> bool:
-    """Kill live worker for key (if any) and fail the run so teach can re-queue."""
+    """Kill live worker for key (if any) and fail the run so teach can re-queue.
+
+    Never mark failed while a worker for this key is still alive after kill —
+    that used to leave a live GPU job running while teach started a second one.
+    """
     workers = list_live_analysis_workers()
     if not workers.get("ok"):
         print(f"[hung] process probe failed; not failing run_id={run_id} key={key} (unknown)", flush=True)
@@ -489,6 +493,22 @@ def restart_hung_analysis(
     if key and key in pid_by_key:
         pids.append(int(pid_by_key[key]))
     killed = kill_analysis_pids(pids)
+    # Re-probe: if this key is still live, do not fail the row (avoid dual GPU).
+    still = list_live_analysis_workers()
+    if key and key in set(still.get("keys") or set()):
+        print(
+            f"[hung] key={key} still live after kill={killed or 'none'}; "
+            "leaving run as running (no dual-queue)",
+            flush=True,
+        )
+        return False
+    # Unkeyed workers still running — be conservative; do not fail this key.
+    if still.get("any_worker") and not (still.get("keys") or set()) and int(still.get("unkeyed_workers") or 0) > 0:
+        print(
+            f"[hung] key={key} unkeyed worker(s) still live; leaving run as running",
+            flush=True,
+        )
+        return False
     detail = f"no progress for >={stale_sec}s ({fingerprint}); killed={killed or 'none'}"
     mark_run_failed_hung(conn, run_id, detail=detail)
     print(f"[hung] key={key} run_id={run_id} {detail}", flush=True)
@@ -544,17 +564,26 @@ def _reclaim_zombie_runs_once(conn: sqlite3.Connection, *, stale_minutes: int = 
         if key_s and key_s in live_keys:
             continue
 
-        # Another game's worker is alive, and this row is not that game → zombie now.
+        # Another game's worker is alive, and this row is not that game → zombie
+        # only after a short grace window (fresh launches may not appear in CIM yet).
         other_live = bool(live_keys) and (not key_s or key_s not in live_keys)
         no_worker = not any_worker
         stuck_regen = no_worker and ("regenerat" in step_l or "event" in step_l)
         aged_out = no_worker and age_min >= stale_minutes
+
+        if other_live and age_min < 5:
+            continue
 
         if not (other_live or no_worker or stuck_regen or aged_out):
             continue
         # When no worker: still honor stale_minutes unless regenerate-stuck or stale_minutes==0
         if no_worker and not stuck_regen and stale_minutes > 0 and age_min < stale_minutes:
             continue
+        # Never fail a young run solely because another keyed worker exists.
+        if other_live and not no_worker and age_min < max(stale_minutes, 15):
+            # Soft: only reclaim aged other-live zombies
+            if age_min < 15:
+                continue
 
         # Cheap coverage gate (full MAX() blocks for minutes under concurrent YOLO writes).
         keep = det_coverage_ok(conn, key_s, min_ms=50_000) if key_s else False
@@ -996,7 +1025,12 @@ def main() -> int:
 
             # Queue next needed full game — worst panel recall before HUDL FIFO
             nxt = None
+            skip_counts = state.setdefault("start_fail_counts", {})
             for vid, film, gid, name in games:
+                # Broken games that keep failing analyze must not block the queue forever.
+                if int(skip_counts.get(gid) or 0) >= 3:
+                    print(f"[skip] {name} ({gid}) — {skip_counts[gid]} start failures", flush=True)
+                    continue
                 if needs_full(conn, vid, gid):
                     nxt = (vid, film, gid, name)
                     break
@@ -1021,11 +1055,24 @@ def main() -> int:
             vid, film, gid, name = nxt
             label = f"full teach - {name}"
             print(f"[start] {name} video={vid}", flush=True)
+            # Never start a second GPU job while any analysis worker is still live.
+            if analysis_worker_alive():
+                print("[start] deferred — analysis worker already live", flush=True)
+                time.sleep(60)
+                consecutive_errors = 0
+                continue
             try:
                 resp = post_analyze(vid, label)
                 print(json.dumps(resp, indent=2), flush=True)
+                if isinstance(resp, dict) and resp.get("error"):
+                    skip_counts[gid] = int(skip_counts.get(gid) or 0) + 1
+                    state["start_fail_counts"] = skip_counts
+                    save_state(state)
             except Exception as exc:
                 print(f"start failed: {exc}", flush=True)
+                skip_counts[gid] = int(skip_counts.get(gid) or 0) + 1
+                state["start_fail_counts"] = skip_counts
+                save_state(state)
                 time.sleep(60)
                 consecutive_errors = 0
                 continue

@@ -402,7 +402,11 @@ def test_category_chip_after_drag_does_not_inject_html(client, db):
     pid = _save_play(client, name="Victim", category_id=str(man["id"]))
     body = client.post("/api/playbook/move-category",
                        json={"play_ids": [pid], "category_id": evil}).get_json()
-    assert "<img" in body["category_path"]
+    # Layer 1: the server strips tag characters from category names.
+    assert "<" not in body["category_path"] and ">" not in body["category_path"]
+    # Layer 2: the chip escapes whatever path it is given (e.g. rows created before the
+    # server-side stripping existed).
+    body["category_path"] = "offense/man/<img src=x onerror=alert(1)>"
     src = (ROOT / "static/js/playbook-dnd.js").read_text()
     fn = _js_function(src, "updateCategoryChip")
     script = fn + """

@@ -38,7 +38,7 @@ import sqlite3
 import subprocess
 import tempfile
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort
+from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort, flash
 
 from helpers import (
     AI_DEFAULTS,
@@ -1833,7 +1833,18 @@ def film(filename=None):
 
 @core.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+    """Serve uploads. HTML/SVG/JS are forced to download so they cannot run as the site."""
+    from werkzeug.utils import safe_join
+
+    upload_root = current_app.config["UPLOAD_FOLDER"]
+    if safe_join(upload_root, filename) is None:
+        abort(404)
+    as_attachment = filename.lower().endswith((".html", ".htm", ".svg", ".xhtml", ".xml", ".js", ".mjs"))
+    resp = send_from_directory(upload_root, filename, as_attachment=as_attachment)
+    if as_attachment:
+        resp.headers["Content-Type"] = "application/octet-stream"
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 # ── Team Photos ──────────────────────────────────────────────
@@ -1955,6 +1966,16 @@ def settings_page():
     db = get_db()
     catalog = build_settings_catalog()
     runtime_settings = get_runtime_settings()
+
+    if request.method == "GET":
+        # A signed-in non-admin may not view Settings either (anonymous access while the
+        # sign-in gate is off stays as before).
+        from blueprints.users import _current_user, _is_admin_user
+
+        viewer = _current_user()
+        if viewer is not None and not _is_admin_user(viewer):
+            flash("Only an admin can open Settings.", "error")
+            return redirect(url_for("core.index"))
 
     if request.method == "POST":
         denied = _settings_change_denied()
