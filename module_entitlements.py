@@ -7,6 +7,14 @@ from datetime import datetime, timezone
 from module_keys import ALL_MODULE_KEYS, BASE_PLATFORM, canonicalize_module_key
 
 
+def _parse_naive_utc(text):
+    """Parse an ISO timestamp; any UTC offset (+hh:mm, -hh:mm or Z) becomes naive UTC."""
+    parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
 def _normalize_at(at):
     if at is None:
         return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -17,7 +25,7 @@ def _normalize_at(at):
     text = str(at).strip()
     if not text:
         return None
-    return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc).replace(tzinfo=None) if ("+" in text or text.endswith("Z")) else datetime.fromisoformat(text)
+    return _parse_naive_utc(text)
 
 
 def _normalize_bound(value):
@@ -30,7 +38,7 @@ def _normalize_bound(value):
     text = str(value).strip()
     if not text:
         return None
-    return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc).replace(tzinfo=None) if ("+" in text or text.endswith("Z")) else datetime.fromisoformat(text)
+    return _parse_naive_utc(text)
 
 
 def _row_is_active(row, at):

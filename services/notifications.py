@@ -177,14 +177,13 @@ def notify_message_received(db, message_id, conversation_id, sender_id, body):
     sender = db.execute("SELECT display_name FROM users WHERE id = ?", (sender_id,)).fetchone()
     sender_name = sender["display_name"] if sender else "Someone"
 
-    # Get conversation info
-    conv = db.execute("SELECT name, type FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
-    conv_name = conv["name"] if conv and conv["name"] else "a conversation"
-
-    # Get all conversation members except sender
+    # Conversation members except the sender. Only real accounts can be notified
+    # (notifications.user_id references users; legacy members like "coach" are skipped).
     members = db.execute(
-        "SELECT user_id FROM conversation_members WHERE conversation_id = ? AND user_id != ?",
-        (conversation_id, sender_id),
+        """SELECT u.id AS user_id FROM conversation_members cm
+           JOIN users u ON CAST(u.id AS TEXT) = cm.user_id
+           WHERE cm.conversation_id = ? AND cm.user_id != ?""",
+        (conversation_id, str(sender_id)),
     ).fetchall()
 
     title = f"New message from {sender_name}"
@@ -198,11 +197,12 @@ def notify_message_received(db, message_id, conversation_id, sender_id, body):
         prefs = db.execute(
             "SELECT * FROM user_notification_prefs WHERE user_id = ?", (member_id,)
         ).fetchone()
+        prefs = dict(prefs) if prefs else None
 
         # 1. Create in-app notification record
         db.execute(
-            "INSERT INTO notifications (user_id, type, title, body, link, source_type, source_id) VALUES (?,?,?,?,?,?,?)",
-            (member_id, "message", title, body_preview, msg_url, "message", message_id),
+            "INSERT INTO notifications (user_id, type, title, body, link) VALUES (?,?,?,?,?)",
+            (member_id, "message", title, body_preview, msg_url),
         )
 
         # 2. Browser push (if enabled)

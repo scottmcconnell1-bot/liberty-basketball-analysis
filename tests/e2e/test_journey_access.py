@@ -214,25 +214,40 @@ def test_login_backslash_next_is_not_protocol_relative(client, db):
     assert not urlsplit(loc).netloc and "\\" not in loc
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /coach?next= is not validated -> open redirect after coach sign-in")
-def test_coach_login_rejects_offsite_next(client, monkeypatch):
+def test_coach_login_rejects_offsite_next(app, client, monkeypatch):
+    # Regression: /coach?next= was not validated -> open redirect after coach sign-in.
     monkeypatch.setenv("LIBERTY_COACH_PASSWORD", COACH_PW)
-    r = client.post("/coach?next=https://evil.example/phish", data={"password": COACH_PW}, follow_redirects=False)
-    assert r.status_code == 302
-    assert not urlsplit(r.headers["Location"]).netloc
+    for nxt in ("https://evil.example/phish", "//evil.example/x"):
+        c = app.test_client()
+        r = c.post(f"/coach?next={nxt}", data={"password": COACH_PW}, follow_redirects=False)
+        assert r.status_code == 302
+        assert not urlsplit(r.headers["Location"]).netloc, nxt
+        assert urlsplit(r.headers["Location"]).path == "/coach/progress", nxt
+    # A local next= is still honoured.
+    r = client.post("/coach?next=/schedule", data={"password": COACH_PW}, follow_redirects=False)
+    assert r.status_code == 302 and r.headers["Location"] == "/schedule"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: logout only deletes user_sessions row; _current_user never checks session_token, so a copied cookie stays valid")
 def test_logged_out_cookie_cannot_be_replayed(app, client, db):
+    # Regression: logout only deleted the user_sessions row and _current_user never checked
+    # session_token, so a copied cookie stayed valid after logout.
     _set_flag(db, "ENABLE_AUTH_MIDDLEWARE", True)
     _add_user(db, "a@example.com", "coach")
     assert _login(client, "a@example.com").status_code == 302
     stolen = client.get_cookie("session").value
     assert client.get("/schedule").status_code == 200
+    replay = app.test_client()
+    replay.set_cookie("session", stolen)
+    assert replay.get("/schedule").status_code == 200          # live copy works before logout
     client.get("/logout")
     attacker = app.test_client()
     attacker.set_cookie("session", stolen)
     assert _redirects_to_login(attacker.get("/schedule"))
+    assert attacker.get("/api/games").status_code == 401
+    assert _redirects_to_login(attacker.get("/profile"))      # login_required too
+    # Signing in again issues a fresh working session.
+    assert _login(client, "a@example.com").status_code == 302
+    assert client.get("/schedule").status_code == 200
 
 
 # ── 2. gate ON ───────────────────────────────────────────────────────────────
@@ -341,24 +356,59 @@ def test_gate_on_coach_portal_reads_but_every_mutation_is_refused(app, db, monke
     assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: with ENABLE_COACH_PORTAL off, a live coach_portal cookie still passes the gate and the read-only denylist is skipped")
 def test_gate_on_stale_coach_cookie_gets_no_access_after_portal_disabled(app, db, monkeypatch):
+    # Regression: with ENABLE_COACH_PORTAL off, a live coach_portal cookie still passed the
+    # gate and the read-only denylist was skipped.
     _set_flag(db, "ENABLE_AUTH_MIDDLEWARE", True)
     c = _coach_client(app, monkeypatch)
+    assert c.get("/schedule").status_code == 200       # portal on: reads allowed
     _set_flag(db, "ENABLE_COACH_PORTAL", False)       # admin switches the portal off
     r = c.post("/debug/issues", data={"details": "planted", "return_to": "/"}, follow_redirects=False)
     assert db.execute("SELECT COUNT(*) FROM issue_reports").fetchone()[0] == 0
     assert _redirects_to_login(r)
     r = c.post("/settings", data={}, follow_redirects=False)   # would switch every flag off
+    assert _redirects_to_login(r)
     assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1"
+    assert _flag(db, "ENABLE_COACH_PORTAL") == "0"
+    assert _redirects_to_login(c.get("/schedule"))     # reads are gone too
+    assert c.get("/api/games").status_code == 401
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: POST /settings has no role check; any signed-in player can switch the sign-in gate off")
 def test_gate_on_non_admin_cannot_change_settings(app, db):
+    # Regression: POST /settings had no role check; any signed-in player could switch the
+    # sign-in gate off.
     _set_flag(db, "ENABLE_AUTH_MIDDLEWARE", True)
     c, _ = _signed_in(app, db, "player@example.com", "player")
-    c.post("/settings", data={}, follow_redirects=False)
+    before = _counts(db)
+    for role_client in (c, _signed_in(app, db, "coach@example.com", "coach")[0],
+                        _signed_in(app, db, "mgr@example.com", "manager")[0]):
+        r = role_client.post("/settings", data={}, follow_redirects=False)
+        assert r.status_code == 403 and r.get_json() == {"error": "Only an admin can change settings."}
+        r = role_client.post("/settings/ollama/pull", data={"model_name": "llama3"}, follow_redirects=False)
+        assert r.status_code == 403
+        assert role_client.get("/settings").status_code == 200    # viewing stays allowed
     assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1"
+    assert {k: v for k, v in _counts(db).items() if k != "users"} == \
+        {k: v for k, v in before.items() if k != "users"}
+    # The admin can still change settings with the gate on.
+    admin, _ = _signed_in(app, db, "admin@example.com", "admin")
+    r = admin.post("/settings", data={"feature_ENABLE_AUTH_MIDDLEWARE": "1"}, follow_redirects=False)
+    assert r.status_code == 302 and urlsplit(r.headers["Location"]).path == "/settings"
+    assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1" and _flag(db, "ENABLE_COACH_PORTAL") == "0"
+
+
+def test_gate_off_settings_open_to_anonymous_but_not_to_signed_in_non_admin(app, client, db):
+    # Documented choice: with the gate OFF the app is intentionally open until the owner
+    # turns sign-in on, so anonymous saves keep working; a signed-in non-admin is refused.
+    assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") is None
+    player, _ = _signed_in(app, db, "player@example.com", "player")
+    r = player.post("/settings", data={"feature_ENABLE_WEEKLY_PACKET": "1"}, follow_redirects=False)
+    assert r.status_code == 403
+    assert _flag(db, "ENABLE_WEEKLY_PACKET") is None
+    assert player.post("/settings/ollama/pull", data={"model_name": "llama3"}).status_code == 403
+    r = client.post("/settings", data={"feature_ENABLE_WEEKLY_PACKET": "1"}, follow_redirects=False)
+    assert r.status_code == 302 and urlsplit(r.headers["Location"]).path == "/settings"
+    assert _flag(db, "ENABLE_WEEKLY_PACKET") == "1"
 
 
 # ── 3. gate OFF (default) ────────────────────────────────────────────────────
@@ -426,39 +476,55 @@ def test_messaging_two_users_converse(trio, db):
     assert t["a"].post("/api/messages/send", json={"body": "orphan"}).status_code == 400
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: conversation list JOINs conversation_members with no user filter -> every conversation, once per member")
 def test_messaging_each_user_lists_only_own_conversations(trio):
+    # Regression: the conversation list JOINed conversation_members with no user filter ->
+    # every conversation, once per member.
     t = trio
     for who in ("a", "b"):
         ids = [c["id"] for c in t[who].get("/api/messages/conversations").get_json()]
         assert ids == [t["conv"]], (who, ids)
     assert t["c"].get("/api/messages/conversations").get_json() == []
+    # Same scoping on the page's sidebar.
+    assert b"Chat with Bob" in t["a"].get("/messages").data
+    assert b"Chat with Bob" not in t["c"].get("/messages").data
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/messages/poll and /messages?c= return any conversation to any caller (IDOR)")
 def test_messaging_outsider_cannot_read_conversation(trio):
+    # Regression: /api/messages/poll and /messages?c= returned any conversation to any caller (IDOR).
     t = trio
     r = t["c"].get(f"/api/messages/poll?conversation_id={t['conv']}")
-    assert r.status_code in (403, 404)
-    assert b"hi bob" not in t["c"].get(f"/messages?c={t['conv']}").data
+    assert r.status_code == 403 and "hi bob" not in r.get_data(as_text=True)
+    page = t["c"].get(f"/messages?c={t['conv']}")
+    assert page.status_code == 200 and b"hi bob" not in page.data and b"hi alice" not in page.data
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/messages/send never checks membership; outsiders can post into any conversation")
 def test_messaging_outsider_cannot_post_into_conversation(trio, db):
+    # Regression: /api/messages/send never checked membership; outsiders could post anywhere.
     t = trio
     r = _send(t["c"], conversation_id=t["conv"], body="intruder")
-    assert r.status_code in (403, 404)
+    assert r.status_code == 403
     assert db.execute("SELECT COUNT(*) FROM messages WHERE body='intruder'").fetchone()[0] == 0
+    # Members still can.
+    assert _send(t["b"], conversation_id=t["conv"], body="still here").status_code == 200
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: notify_message_received selects conversations.name / inserts notifications.source_type (columns do not exist) -> no message notifications ever")
-def test_messaging_recipient_gets_unread_notification_and_can_mark_it_read(trio):
+def test_messaging_recipient_gets_unread_notification_and_can_mark_it_read(trio, db):
+    # Regression: notify_message_received selected conversations.name / inserted
+    # notifications.source_type (columns do not exist) and called Row.get -> no message
+    # notifications ever.
     t = trio
     notes = t["b"].get("/api/notifications").get_json()
     assert [n["title"] for n in notes] == ["New message from Alice"]
-    assert notes[0]["link"] == f"/messages?c={t['conv']}"
+    assert notes[0]["link"] == f"/messages?c={t['conv']}" and notes[0]["body"] == "hi bob"
+    assert [n["title"] for n in t["a"].get("/api/notifications").get_json()] == ["New message from Bob"]
+    assert t["c"].get("/api/notifications").get_json() == []          # outsiders get nothing
     assert t["b"].post("/api/notifications/read", json={"ids": [notes[0]["id"]]}).get_json() == {"ok": True}
     assert t["b"].get("/api/notifications").get_json() == []
+    # With push/email prefs saved (sqlite Row, no SMTP/VAPID configured) it still notifies.
+    assert t["b"].post("/settings/notifications", data={"notify_email_messages": "1",
+                                                        "notify_push_messages": "1"}).status_code == 302
+    assert _send(t["a"], conversation_id=t["conv"], body="second").status_code == 200
+    assert [n["body"] for n in t["b"].get("/api/notifications").get_json()] == ["second"]
 
 
 def test_notifications_unread_list_and_mark_read_are_per_user(trio, db):
@@ -477,8 +543,8 @@ def test_notifications_unread_list_and_mark_read_are_per_user(trio, db):
     assert len([n for n in t["c"].get("/api/notifications").get_json() if n["type"] == "test"]) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: /api/messages/read takes user_id from the payload (default 'coach'), not the session")
 def test_messaging_mark_read_records_the_signed_in_reader(trio, db):
+    # Regression: /api/messages/read took user_id from the payload (default 'coach').
     t = trio
     assert t["b"].post("/api/messages/read", json={"message_ids": [t["m1"]]}).get_json() == {"ok": True}
     t["c"].post("/api/messages/read", json={"message_ids": [t["m1"]], "user_id": str(t["a_id"])})
@@ -495,18 +561,41 @@ def test_messaging_mark_read_counts(trio):
     assert msgs[t["m1"]]["read_count"] == 1 and msgs[t["m2"]]["read_count"] == 0
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: with the gate off an anonymous caller's sender_id is trusted -> can post as any user")
 def test_messaging_anonymous_cannot_impersonate_sender(app, client, db):
-    admin_id = _add_user(db, "admin@example.com", "admin")
+    # Regression: with the gate off an anonymous caller's sender_id was trusted -> could post
+    # as any user. Anonymous callers can neither send nor read, even with the gate off.
+    assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") is None
+    admin, admin_id = _signed_in(app, db, "admin@example.com", "admin")
+    bob_id = _add_user(db, "bob@example.com", "player")
     r = _send(client, recipient_id=str(admin_id), body="wire the money", sender_id=str(admin_id))
-    row = db.execute("SELECT sender_id FROM messages WHERE body='wire the money'").fetchone()
-    assert row is None or row["sender_id"] != str(admin_id)
+    assert r.status_code == 401 and r.get_json() == {"error": "Sign-in required."}
+    assert db.execute("SELECT COUNT(*) FROM messages WHERE body='wire the money'").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM conversations").fetchone()[0] == 0
+
+    conv = _send(admin, recipient_id=str(bob_id), body="real").get_json()["conversation_id"]
+    assert _send(client, conversation_id=conv, body="x", sender_id=str(admin_id)).status_code == 401
+    assert client.get(f"/api/messages/poll?conversation_id={conv}").status_code == 401
+    assert client.get("/api/messages/conversations").status_code == 401
+    assert client.post("/api/messages/read", json={"message_ids": [1], "user_id": str(bob_id)}).status_code == 401
+    assert db.execute("SELECT COUNT(*) FROM message_read_receipts").fetchone()[0] == 0
+    page = client.get(f"/messages?c={conv}")
+    assert page.status_code == 200 and b"real" not in page.data
+    # A logged-out (replayed) cookie is anonymous too.
+    stolen = admin.get_cookie("session").value
+    admin.get("/logout")
+    replay = app.test_client()
+    replay.set_cookie("session", stolen)
+    assert _send(replay, conversation_id=conv, body="replayed").status_code == 401
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: numeric JSON recipient_id crashes send ('int' has no .strip) -> 500")
-def test_messaging_numeric_recipient_id(trio):
+def test_messaging_numeric_recipient_id(trio, db):
+    # Regression: numeric JSON recipient_id crashed send ('int' has no .strip) -> 500.
     r = _send(trio["a"], recipient_id=trio["c_id"], body="numeric id")
     assert r.status_code == 200
+    conv = r.get_json()["conversation_id"]
+    members = {row[0] for row in db.execute("SELECT user_id FROM conversation_members WHERE conversation_id=?", (conv,))}
+    assert members == {str(trio["a_id"]), str(trio["c_id"])}
+    assert [m["body"] for m in trio["c"].get(f"/api/messages/poll?conversation_id={conv}").get_json()] == ["numeric id"]
 
 
 # ── 5. settings / profile / notification prefs / entitlements ────────────────
@@ -614,10 +703,26 @@ def test_entitlements_gate_modules_as_documented(app, client, db):
     assert client.get("/schedule").status_code == 200            # non-module pages unaffected
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: entitlement bound with a negative UTC offset (e.g. -06:00) is parsed tz-aware and compared to naive now -> TypeError/500")
 def test_entitlement_window_with_negative_utc_offset(client, db):
+    # Regression: a bound with a negative UTC offset (e.g. -06:00) was parsed tz-aware and
+    # compared to naive now -> TypeError/500.
     _entitlement(db, "scouting", enabled=1, ends_at="2999-01-01T00:00:00-06:00")
     assert client.get("/scouting").status_code == 200
+    _entitlement(db, "scouting", enabled=1, starts_at="2000-01-01T00:00:00-06:00",
+                 ends_at="2001-01-01T00:00:00-06:00")                            # expired
+    assert client.get("/scouting").status_code == 404
+    _entitlement(db, "scouting", enabled=1, starts_at="2999-01-01T00:00:00-06:00")  # not started
+    assert client.get("/scouting").status_code == 404
+
+
+def test_entitlement_negative_offset_is_converted_to_utc():
+    from datetime import datetime
+
+    from module_entitlements import _row_is_active
+
+    row = {"starts_at": "2026-01-01T00:00:00-06:00", "ends_at": None}   # == 06:00 UTC
+    assert not _row_is_active(row, datetime(2026, 1, 1, 5, 59))
+    assert _row_is_active(row, datetime(2026, 1, 1, 6, 0))
 
 
 # ── issue reports ────────────────────────────────────────────────────────────
@@ -640,16 +745,33 @@ def test_issue_report_notifies_admins_and_is_escaped(app, client, db):
     assert payload.encode() not in page.data and b"&lt;script&gt;alert(1)&lt;/script&gt;" in page.data
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: safe_return_path() falls back to url_for('debug_page') (unqualified) -> BuildError/500 on off-site or missing return_to")
 def test_issue_report_offsite_return_to_falls_back_to_debug(client, db):
-    r = client.post("/debug/issues", data={"details": "x", "return_to": "https://evil.example/"},
-                    follow_redirects=False)
-    assert r.status_code == 302 and urlsplit(r.headers["Location"]).path == "/debug"
+    # Regression: safe_return_path() fell back to url_for('debug_page') (unqualified) ->
+    # BuildError/500 on off-site or missing return_to.
+    for data in ({"details": "x", "return_to": "https://evil.example/"},
+                 {"details": "y", "return_to": "//evil.example/x"},
+                 {"details": "z"}):
+        r = client.post("/debug/issues", data=data, follow_redirects=False)
+        assert r.status_code == 302, data
+        loc = urlsplit(r.headers["Location"])
+        assert loc.path == "/debug" and not loc.netloc, data
+    assert db.execute("SELECT COUNT(*) FROM issue_reports").fetchone()[0] == 3
 
 
-@pytest.mark.xfail(strict=True, reason="BUG: DELETE /api/users/<id> reads users.is_admin, which the users schema lacks -> IndexError/500; user admin page cannot delete anyone")
-def test_admin_can_delete_a_user(app, db):
-    admin, _ = _signed_in(app, db, "admin@example.com", "admin")
+def test_admin_can_delete_a_user(app, client, db):
+    # Regression: DELETE /api/users/<id> read users.is_admin, which the users schema lacks ->
+    # IndexError/500, and had no auth check at all.
+    admin, admin_id = _signed_in(app, db, "admin@example.com", "admin")
+    coach, _ = _signed_in(app, db, "coach@example.com", "coach")
     victim = _add_user(db, "old@example.com", "player")
-    assert admin.delete(f"/api/users/{victim}").status_code == 200
+    # Anonymous (gate off) and non-admins are refused and delete nothing.
+    assert client.delete(f"/api/users/{victim}").status_code == 403
+    assert coach.delete(f"/api/users/{victim}").status_code == 403
+    assert db.execute("SELECT COUNT(*) FROM users WHERE id=?", (victim,)).fetchone()[0] == 1
+    # Admin deletes the player; admins themselves cannot be deleted.
+    r = admin.delete(f"/api/users/{victim}")
+    assert r.status_code == 200 and r.get_json() == {"status": "deleted"}
     assert db.execute("SELECT COUNT(*) FROM users WHERE id=?", (victim,)).fetchone()[0] == 0
+    assert admin.delete(f"/api/users/{victim}").status_code == 404
+    assert admin.delete(f"/api/users/{admin_id}").status_code == 403
+    assert db.execute("SELECT COUNT(*) FROM users WHERE id=?", (admin_id,)).fetchone()[0] == 1

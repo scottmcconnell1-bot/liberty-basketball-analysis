@@ -55,12 +55,23 @@ def _verify_password(password, stored_hash):
 
 
 def _current_user():
-    """Get the currently logged-in user from session."""
+    """Get the currently logged-in user from session.
+
+    The cookie's ``session_token`` must still match a live ``user_sessions`` row for
+    that user, so logout (which deletes the row) invalidates copies of the cookie.
+    """
     user_id = session.get("user_id")
-    if not user_id:
+    token = session.get("session_token")
+    if not user_id or not token:
         return None
     db = get_db()
-    return db.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,)).fetchone()
+    return db.execute(
+        """SELECT u.* FROM users u
+           JOIN user_sessions s ON s.user_id = u.id
+           WHERE u.id = ? AND u.is_active = 1
+             AND s.session_token = ? AND s.expires_at > ?""",
+        (user_id, token, datetime.datetime.utcnow()),
+    ).fetchone()
 
 
 def login_required(f):

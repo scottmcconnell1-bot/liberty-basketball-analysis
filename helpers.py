@@ -1671,7 +1671,7 @@ def extract_local_path(value):
     return urlunsplit(("", "", path, split_value.query, split_value.fragment))
 
 
-def safe_return_path(value, fallback="debug_page"):
+def safe_return_path(value, fallback="core.debug_page"):
     path = extract_local_path(value)
     if path:
         return path

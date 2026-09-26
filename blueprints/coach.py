@@ -31,7 +31,7 @@ from flask import (
     url_for,
 )
 
-from helpers import feature_enabled, require_feature
+from helpers import extract_local_path, feature_enabled, require_feature
 
 coach_bp = Blueprint("coach", __name__)
 
@@ -213,7 +213,7 @@ def coach_login():
             if not session.get("user_name"):
                 session["user_name"] = "Coach"
             flash("Welcome — you are in Coach view.", "success")
-            next_url = request.args.get("next") or url_for("coach.coach_progress")
+            next_url = extract_local_path(request.args.get("next")) or url_for("coach.coach_progress")
             return redirect(next_url)
 
         flash("Incorrect coach password.", "error")

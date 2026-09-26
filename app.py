@@ -186,8 +186,8 @@ _AUTH_PUBLIC_PREFIXES = ("/static/", "/coach", "/play/share/")
 def require_auth_for_api():
     """Require a signed-in user when ENABLE_AUTH_MIDDLEWARE is on (default off).
 
-    Coach-portal sessions pass through; enforce_coach_ops_denylist() keeps them
-    read-only. APIs get 401 JSON, pages redirect to /login.
+    Coach-portal sessions pass through only while ENABLE_COACH_PORTAL is on;
+    enforce_coach_ops_denylist() keeps them read-only. APIs get 401 JSON, pages redirect to /login.
     """
     from flask import redirect, url_for
     from helpers import feature_enabled
@@ -197,7 +197,9 @@ def require_auth_for_api():
     path = request.path or "/"
     if path in _AUTH_PUBLIC_PATHS or path.startswith(_AUTH_PUBLIC_PREFIXES):
         return None
-    if session.get("coach_portal"):
+    # A coach_portal cookie only counts while the portal feature is on; otherwise a
+    # stale cookie would pass here and also skip the read-only denylist.
+    if session.get("coach_portal") and feature_enabled("ENABLE_COACH_PORTAL"):
         return None
     if session.get("user_id") and _current_user() is not None:
         return None

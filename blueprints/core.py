@@ -1880,6 +1880,24 @@ def api_teams_photos_delete(photo_id):
     return jsonify({"ok": True})
 
 
+def _settings_change_denied():
+    """Return a 403 response when the caller may not change app settings, else None.
+
+    Only an admin may change settings. Exception: while ENABLE_AUTH_MIDDLEWARE is off
+    the whole app is intentionally open until the owner turns sign-in on, so an
+    anonymous caller keeps working as before. A signed-in non-admin is refused in
+    both modes (e.g. a player must not be able to switch the sign-in gate off).
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    user = _current_user()
+    if _is_admin_user(user):
+        return None
+    if user is None and not feature_enabled("ENABLE_AUTH_MIDDLEWARE"):
+        return None
+    return jsonify({"error": "Only an admin can change settings."}), 403
+
+
 @core.route("/settings", methods=["GET", "POST"])
 def settings_page():
     db = get_db()
@@ -1887,6 +1905,9 @@ def settings_page():
     runtime_settings = get_runtime_settings()
 
     if request.method == "POST":
+        denied = _settings_change_denied()
+        if denied:
+            return denied
         detector_values = {option["value"] for option in catalog["detector_options"]}
         ball_detector_values = {option["value"] for option in catalog["ball_detector_options"]}
         device_values = {option["value"] for option in catalog["device_options"]}
@@ -1999,6 +2020,9 @@ def custom_weights_guide_page():
 
 @core.route("/settings/ollama/pull", methods=["POST"])
 def pull_ollama_model():
+    denied = _settings_change_denied()
+    if denied:
+        return denied
     model_name = (request.form.get("model_name") or "").strip()
     if not model_name or not re.fullmatch(r"[A-Za-z0-9._:-]+", model_name):
         return redirect(url_for("core.settings_page", message="Invalid Ollama model name."))
@@ -2551,12 +2575,16 @@ def api_users_list():
 
 @core.route("/api/users/<int:user_id>", methods=["DELETE"])
 def api_users_delete(user_id):
-    """Delete a non-admin user."""
+    """Delete a non-admin user. Requires a signed-in admin (even with the gate off)."""
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required to delete users."}), 403
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if not user:
         return jsonify({"error": "User not found"}), 404
-    if user["is_admin"]:
+    if _is_admin_user(user):
         return jsonify({"error": "Cannot delete admin user"}), 403
     db.execute("DELETE FROM users WHERE id = ?", (user_id,))
     db.commit()
