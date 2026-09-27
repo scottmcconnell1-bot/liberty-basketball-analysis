@@ -388,6 +388,53 @@
       white-space: normal;
       overflow-wrap: break-word;
     }
+    #analysis-live-banner {
+      display: none;
+      background: #013f42;
+      color: #f8fffe;
+      padding: 10px 16px 12px;
+      border-bottom: 1px solid #025e63;
+    }
+    #analysis-live-banner.is-visible { display: block; }
+    #analysis-live-banner.is-done { background: #14532d; border-bottom-color: #166534; }
+    #analysis-live-banner.is-failed { background: #7f1d1d; border-bottom-color: #991b1b; }
+    .analysis-live-job { max-width: 1100px; margin: 0 auto; }
+    .analysis-live-job + .analysis-live-job { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.18); }
+    .analysis-live-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 6px;
+    }
+    .analysis-live-title { font-weight: 700; font-size: 0.95rem; }
+    .analysis-live-pct { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.05rem; }
+    .analysis-live-bar {
+      height: 10px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden;
+    }
+    .analysis-live-bar > span {
+      display: block; height: 100%; width: 0%;
+      background: #5eead4;
+      transition: width .4s ease;
+    }
+    .analysis-live-bar.is-indeterminate > span {
+      width: 35%;
+      animation: analysis-live-slide 1.4s ease-in-out infinite;
+    }
+    .analysis-live-bar.is-live:not(.is-indeterminate) > span {
+      background-image: linear-gradient(90deg, #2dd4bf, #99f6e4, #2dd4bf);
+      background-size: 200% 100%;
+      animation: analysis-live-pulse 1.6s linear infinite;
+    }
+    .analysis-live-meta {
+      margin-top: 6px; font-size: 0.8rem; color: #c8eeea; line-height: 1.4;
+    }
+    .analysis-live-meta a { color: #fff; font-weight: 600; }
+    @keyframes analysis-live-slide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(350%); }
+    }
+    @keyframes analysis-live-pulse {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
 
     /* ── Utility ────────────────────────── */
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
@@ -811,7 +858,8 @@
     {% if coach_portal %}
     <a href="{{ url_for('coach.coach_progress') }}" {% if nav_active('coach.coach_progress') %}class="active"{% endif %}>Learning Progress</a>
     {% endif %}
-    <a href="/" {% if nav_active('core.index') %}class="active"{% endif %}>Dashboard</a>
+    <a href="{% if family_viewer %}/my-stats{% else %}/{% endif %}" {% if nav_active('core.index', 'core.my_stats') %}class="active"{% endif %}>{% if family_viewer %}My Stats{% else %}Dashboard{% endif %}</a>
+    {% if not family_viewer %}
     {% if features.ENABLE_SEASONS_SCHEDULE or features.ENABLE_GAMES_SOURCES or features.ENABLE_PRACTICES or features.ENABLE_PRACTICE_PLAYLISTS or features.ENABLE_PLAYER_DEVELOPMENT %}
     <div class="nav-dropdown">
       <a href="javascript:void(0)" role="button" tabindex="0">Teams</a>
@@ -850,6 +898,24 @@
       </div>
     </div>
     {% endif %}
+    {% endif %}
+    {% if family_viewer and (features.ENABLE_AUTO_STATS_M1 or features.ENABLE_MANUAL_TAG_MVP) %}
+    <div class="nav-dropdown">
+      <a href="javascript:void(0)" role="button" tabindex="0">Game Film</a>
+      <div class="dropdown-menu">
+        {% if features.ENABLE_AUTO_STATS_M1 %}
+        <a href="/videos" {% if nav_active('core.videos_page') %}class="active"{% endif %}>All Games</a>
+        {% endif %}
+        {% if features.ENABLE_MANUAL_TAG_MVP %}
+        <a href="/film" {% if nav_active('core.film') %}class="active"{% endif %}>Watch Film</a>
+        <a href="/highlights" {% if nav_active('clips.highlights_page') %}class="active"{% endif %}>Highlights</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if family_viewer and features.ENABLE_SEASONS_SCHEDULE %}
+    <a href="/schedule" {% if nav_active('core.schedule') %}class="active"{% endif %}>Schedule</a>
+    {% endif %}
     {% if features.ENABLE_PRACTICES %}
     <a href="/playbook" {% if nav_active('playbook.*') %}class="active"{% endif %}>Playbook</a>
     <a href="/messages" {% if nav_active('messaging.*') %}class="active"{% endif %}>💬 Messages</a>
@@ -857,7 +923,7 @@
     {% if coach_portal and features.get('ENABLE_RECRUITING') %}
     <a href="/recruiting" {% if nav_active('recruiting.*') %}class="active"{% endif %}>Recruiting</a>
     {% endif %}
-    {% if not coach_portal %}
+    {% if not coach_portal and not family_viewer %}
     <div class="nav-dropdown">
       <a href="javascript:void(0)" role="button" tabindex="0">More</a>
       <div class="dropdown-menu">
@@ -878,9 +944,9 @@
     {% if coach_portal %}
     <span class="coach-view-badge" title="Browse only — changes are not saved in Coach view">Coach view · read only</span>
     <a href="{{ url_for('coach.coach_logout') }}">Sign out</a>
-    {% elif session.get('user_id') %}
+    {% elif signed_in_user %}
     <a href="/messages" class="nav-notif-link" id="nav-msg-link" title="Messages">💬 <span class="nav-badge" id="nav-badge" style="display:none;">0</span></a>
-    <a href="/profile" class="nav-user-link">{{ session.get('user_name', 'Account') }}</a>
+    <a href="/profile" class="nav-user-link">{{ signed_in_user.display_name or 'Account' }}</a>
     <a href="{{ url_for('users.logout') }}">Logout</a>
     {% else %}
     <a href="{{ url_for('users.login') }}">Sign In</a>
@@ -891,7 +957,10 @@
     </div>
   </nav>
   {% if coach_portal or coach_readonly %}
-  <div class="coach-readonly-banner" role="status">Coach view — read only · <a href="{{ url_for('coach.coach_progress') }}" style="color:inherit;text-decoration:underline;">Learning Progress</a></div>
+  <div class="coach-readonly-banner" role="status">Coach view — read only · <a href="{{ url_for('coach.coach_progress') }}" style="color:inherit;text-decoration:underline;">Learning Progress</a> · <a href="{{ url_for('coach.coach_exit_full_app') }}" style="color:inherit;text-decoration:underline;">Open full app</a></div>
+  {% endif %}
+  {% if features.get('ENABLE_AUTO_STATS_M1') %}
+  <div id="analysis-live-banner" role="status" aria-live="polite" hidden></div>
   {% endif %}
   <main>
     {% block content %}{% endblock %}
@@ -946,6 +1015,9 @@
   </aside>
   {% endif %}
   {% block scripts %}{% endblock %}
+  {% if features.get('ENABLE_AUTO_STATS_M1') %}
+  <script src="{{ url_for('static', filename='js/analysis-live.js') }}" defer></script>
+  {% endif %}
 
   {% if not coach_portal %}
   {# — Report Drawer — #}
@@ -1069,7 +1141,7 @@
   {# — Service Worker + Push Subscription — #}
   <script>
   (function() {
-    var userId = {{ session.get('user_id') or 'null' }};
+    var userId = {{ signed_in_user.id if signed_in_user else 'null' }};
     if (!userId) return;
 
     // Register service worker
@@ -1126,7 +1198,7 @@
   {# — Notification polling (logged-in users) — #}
   <script>
   (function() {
-    var userId = {{ session.get('user_id') or 'null' }};
+    var userId = {{ signed_in_user.id if signed_in_user else 'null' }};
     if (!userId) return;
 
     function pollNotifications() {

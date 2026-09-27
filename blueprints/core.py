@@ -38,12 +38,12 @@ import sqlite3
 import subprocess
 import tempfile
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort
+from flask import Blueprint, current_app, redirect, render_template, request, url_for, jsonify, send_from_directory, abort, flash
 
 from helpers import (
     AI_DEFAULTS,
     ai_runtime_available,
-    build_possession_workflow_summary,
+    analysis_results_url_for,
     build_player_minutes_summary,
     build_resource_status,
     build_review_workflow_summary,
@@ -63,6 +63,7 @@ from helpers import (
     save_settings,
     save_scheduled_game_record,
 )
+import season_management
 from module_entitlements import audit_team_entitlements, build_preview_entitlements_view
 from module_keys import (
     BASE_PLATFORM,
@@ -72,7 +73,6 @@ from module_keys import (
     SCOUTING,
     STATS,
 )
-from stats import _resolve_relational_game_id
 
 core = Blueprint("core", __name__)
 
@@ -358,6 +358,72 @@ def index():
     return render_template("index.html")
 
 
+@core.route("/my-stats")
+def my_stats():
+    """A parent or player sees one roster player's lines for a chosen season or game."""
+    from audience_access import is_family_role, resolve_player_id
+    from blueprints.users import _current_user
+
+    user = _current_user()
+    if not user or not is_family_role(user["role"]):
+        flash("My Stats is for parent and player accounts.", "error")
+        return redirect(url_for("core.index"))
+    db = get_db()
+    player_id = resolve_player_id(db, user)
+    player = None
+    if player_id:
+        player = db.execute("SELECT id, name, jersey_number FROM players WHERE id = ?", (player_id,)).fetchone()
+    seasons = db.execute("SELECT id, name FROM seasons ORDER BY start_date DESC, id DESC").fetchall()
+    season_id = request.args.get("season_id", type=int)
+    game_id = request.args.get("game_id", type=int)
+    games = []
+    rows = []
+    if player:
+        game_sql = """
+            SELECT g.id, sg.game_date, sg.opponent_name, sg.season_id
+              FROM games g
+              JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+             WHERE EXISTS (
+                    SELECT 1 FROM stats s
+                     WHERE s.relational_game_id = g.id AND s.player_id = ?
+             )
+        """
+        params = [player["id"]]
+        if season_id:
+            game_sql += " AND sg.season_id = ?"
+            params.append(season_id)
+        game_sql += " ORDER BY sg.game_date DESC, g.id DESC"
+        games = db.execute(game_sql, params).fetchall()
+        stat_sql = """
+            SELECT s.pts, s.fgm, s.fga, s.threes_made, s.threes_att,
+                   s.ast, s.reb, s.tov, s.stl, s.blk,
+                   sg.game_date, sg.opponent_name, se.name AS season_name, g.id AS game_id
+              FROM stats s
+              JOIN games g ON g.id = s.relational_game_id
+              LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+              LEFT JOIN seasons se ON se.id = sg.season_id
+             WHERE s.player_id = ?
+        """
+        stat_params = [player["id"]]
+        if game_id:
+            stat_sql += " AND g.id = ?"
+            stat_params.append(game_id)
+        elif season_id:
+            stat_sql += " AND sg.season_id = ?"
+            stat_params.append(season_id)
+        stat_sql += " ORDER BY sg.game_date DESC, g.id DESC"
+        rows = db.execute(stat_sql, stat_params).fetchall()
+    return render_template(
+        "my_stats.html",
+        player=dict(player) if player else None,
+        seasons=[dict(s) for s in seasons],
+        games=[dict(g) for g in games],
+        rows=[dict(r) for r in rows],
+        season_id=season_id,
+        game_id=game_id,
+    )
+
+
 @core.route("/preview")
 def product_preview_page():
     db = get_db()
@@ -444,9 +510,10 @@ def schedule_save_season():
 @require_feature("ENABLE_SEASONS_SCHEDULE")
 def schedule_delete_season(season_id):
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE season_id=?", (season_id,))
-    db.execute("DELETE FROM seasons WHERE id=?", (season_id,))
-    db.commit()
+    try:
+        season_management.delete_season(db, season_id)
+    except season_management.SeasonDeleteError as exc:
+        return render_schedule_page(error=str(exc)), 409
     return redirect(url_for("core.schedule", message="Season deleted."))
 
 
@@ -552,8 +619,10 @@ def schedule_delete_game(game_id):
         "status": (request.form.get("filter_status") or "").strip(),
     }
     db = get_db()
-    db.execute("DELETE FROM scheduled_games WHERE id=?", (game_id,))
-    db.commit()
+    kept = season_management.delete_scheduled_game(db, game_id)
+    message = "Scheduled game deleted."
+    if kept:
+        message += " Its recorded result/film was kept (no longer linked to the schedule)."
     return redirect(
         url_for(
             "core.schedule",
@@ -561,7 +630,7 @@ def schedule_delete_game(game_id):
             level=filters["level"] or None,
             gender=filters["gender"] or None,
             status=filters["status"] or None,
-            message="Scheduled game deleted.",
+            message=message,
         )
     )
 
@@ -852,10 +921,15 @@ def _parse_schedule_text(text, pdf_team="boys_hs", season_info=None):
                 i += 1
                 continue
 
-            # Check if this line is a continuation of the previous
+            # Check if this line is a continuation of the previous.  A line that starts
+            # with a year-less month date ("TUES, DEC 4 ...", "DEC 4 ...") is a new game.
             if joined_lines and not re.search(
                 r'\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2}|\w+\s+\d{1,2},?\s+\d{4}',
                 line
+            ) and not re.match(
+                r'^(?:[A-Za-z]{3,9}\.?,?\s+)?'
+                r'(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|SEPT|OCT|NOV|DEC)[A-Za-z]*\.?\s+\d{1,2}\b',
+                line, re.IGNORECASE
             ):
                 prev = joined_lines[-1]
                 if 'TIMES:' not in prev and len(line) < 80:
@@ -1200,6 +1274,7 @@ def schedule_import_pdf_confirm():
         return {"error": "No games to import"}, 400
     db = get_db()
     imported = 0
+    updated = 0
     errors = []
     # Get or create the correct season based on user-confirmed info
     season_id = _get_or_create_season_for_pdf(db, season_info)
@@ -1237,62 +1312,98 @@ def schedule_import_pdf_confirm():
             continue
         try:
             status = (g.get("status") or "scheduled").strip() or "scheduled"
-            cur = db.execute(
-                """INSERT INTO scheduled_games
-                   (season_id, program_name, team, gender, level, game_date, game_time,
-                    jv_game_time, frosh_game_time,
-                    location_type, opponent_name, tournament_name, status, notes)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    season_id,
-                    "Liberty",
-                    pdf_team,
-                    (g.get("gender") or "boys").strip(),
-                    (g.get("level") or "jr_high").strip(),
-                    game_date,
-                    (g.get("game_time") or "").strip() or None,
-                    (g.get("jv_game_time") or "").strip() or None,
-                    (g.get("frosh_game_time") or "").strip() or None,
-                    (g.get("location_type") or "home").strip(),
-                    opponent,
-                    (g.get("tournament_name") or "").strip() or None,
-                    status,
-                    (g.get("notes") or "").strip() or None,
-                ),
-            )
-            scheduled_game_id = cur.lastrowid
+            # The review table lets the coach change each row's program; fall back to the modal's.
+            team = (g.get("team") or pdf_team).strip() or pdf_team
+            gender = (g.get("gender") or "boys").strip()
+            level = (g.get("level") or "jr_high").strip()
+            location_type = (g.get("location_type") or "home").strip()
             liberty_score = g.get("liberty_score")
             opponent_score = g.get("opponent_score")
-            if liberty_score is not None and opponent_score is not None:
+            has_score = liberty_score is not None and opponent_score is not None
+            # Re-importing the same schedule updates the existing game (natural key:
+            # season, date, program/level/gender, opponent) instead of duplicating it.
+            existing = db.execute(
+                """SELECT id, status FROM scheduled_games
+                   WHERE season_id = ? AND game_date = ? AND team = ? AND level = ?
+                     AND gender = ? AND LOWER(TRIM(opponent_name)) = LOWER(?)
+                   ORDER BY id LIMIT 1""",
+                (season_id, game_date, team, level, gender, opponent),
+            ).fetchone()
+            fields = (
+                (g.get("game_time") or "").strip() or None,
+                (g.get("jv_game_time") or "").strip() or None,
+                (g.get("frosh_game_time") or "").strip() or None,
+                location_type,
+                (g.get("tournament_name") or "").strip() or None,
+                (g.get("notes") or "").strip() or None,
+            )
+            if existing:
+                scheduled_game_id = existing["id"]
+                if existing["status"] == "completed" and not has_score:
+                    status = "completed"  # don't un-complete a game the PDF has no score for
+                db.execute(
+                    """UPDATE scheduled_games SET
+                       game_time=?, jv_game_time=?, frosh_game_time=?, location_type=?,
+                       tournament_name=?, notes=?, status=?, updated_at=CURRENT_TIMESTAMP
+                       WHERE id=?""",
+                    fields + (status, scheduled_game_id),
+                )
+            else:
+                cur = db.execute(
+                    """INSERT INTO scheduled_games
+                       (season_id, program_name, team, gender, level, game_date, game_time,
+                        jv_game_time, frosh_game_time,
+                        location_type, tournament_name, notes, opponent_name, status)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (season_id, "Liberty", team, gender, level, game_date)
+                    + fields + (opponent, status),
+                )
+                scheduled_game_id = cur.lastrowid
+            if has_score:
                 from schedule_import import home_away_scores
 
-                location_type = (g.get("location_type") or "home").strip()
                 home_score, away_score = home_away_scores(
                     location_type,
                     int(liberty_score),
                     int(opponent_score),
                 )
-                db.execute(
-                    """INSERT INTO games
-                       (scheduled_game_id, source_type, source_key,
-                        home_score, away_score, result, is_conference)
-                       VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
-                    (
-                        scheduled_game_id,
-                        f"schedule-import-{scheduled_game_id}",
-                        home_score,
-                        away_score,
-                        (g.get("result") or "").strip() or None,
-                        int(bool(g.get("is_conference"))),
-                    ),
+                score_values = (
+                    home_score,
+                    away_score,
+                    (g.get("result") or "").strip() or None,
+                    int(bool(g.get("is_conference"))),
                 )
+                game_row = db.execute(
+                    "SELECT id FROM games WHERE scheduled_game_id = ? ORDER BY id DESC LIMIT 1",
+                    (scheduled_game_id,),
+                ).fetchone()
+                if game_row:
+                    db.execute(
+                        """UPDATE games SET home_score=?, away_score=?, result=?, is_conference=?,
+                           updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+                        score_values + (game_row["id"],),
+                    )
+                else:
+                    db.execute(
+                        """INSERT INTO games
+                           (scheduled_game_id, source_type, source_key,
+                            home_score, away_score, result, is_conference)
+                           VALUES (?, 'manual', ?, ?, ?, ?, ?)""",
+                        (scheduled_game_id, f"schedule-import-{scheduled_game_id}") + score_values,
+                    )
+            if existing:
+                updated += 1
+                continue
             imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)}")
     db.commit()
     if errors:
-        return {"imported": imported, "errors": errors}, 200
-    return {"imported": imported, "message": f"Imported {imported} games"}
+        return {"imported": imported, "updated": updated, "errors": errors}, 200
+    message = f"Imported {imported} games"
+    if updated:
+        message += f", updated {updated} already on the schedule"
+    return {"imported": imported, "updated": updated, "message": message}
 
 
 def _reparse_date_with_map(date_str, month_year_map):
@@ -1701,10 +1812,6 @@ def assisted_stat_sample():
 def film(filename=None):
     requested_game_id = (request.args.get("game_id") or "").strip() or None
     game_id = requested_game_id
-    shot_summary = []
-    player_effect_data = []
-    player_minutes_data = []
-    possession_summary = None
     video_id = None
     analysis_status = None
     detection_count = None
@@ -1735,8 +1842,16 @@ def film(filename=None):
             run_row = resolve_analysis_run_for_progress(db, requested_game_id)
             if run_row:
                 analysis_status = run_row["status"]
-                if run_row["analysis_key"]:
-                    game_id = run_row["analysis_key"]
+                # Keep the coach-facing game_id for ledger/events (usually the base
+                # key). Do not replace it with a later __rerun_ analysis_key — those
+                # copies may have zero accepted ledger rows after quality refine.
+                base_key = run_row["base_analysis_key"] or requested_game_id
+                if "__rerun_" in str(requested_game_id):
+                    game_id = base_key
+                else:
+                    game_id = requested_game_id
+            else:
+                game_id = requested_game_id.split("__rerun_", 1)[0]
         if game_id and video_id:
             run_row = resolve_analysis_run_for_progress(db, game_id)
             if run_row:
@@ -1747,74 +1862,22 @@ def film(filename=None):
                     video_game_id=video_row["game_id"] if video_row else None,
                     base_analysis_key=run_row["base_analysis_key"],
                 )
-    if game_id:
-        db = get_db()
-        relational_game_id = _resolve_relational_game_id(db, game_id)
-        # Shot summary: aggregate makes and misses by shot type
-        if relational_game_id is not None:
-            shot_rows = db.execute(
-                """SELECT shot_type, shot_result, COUNT(*) as cnt
-                   FROM shot_classifications
-                   WHERE relational_game_id = ?
-                      OR (relational_game_id IS NULL AND game_id = ?)
-                   GROUP BY shot_type, shot_result
-                   ORDER BY shot_type, shot_result""",
-                (relational_game_id, str(game_id)),
-            ).fetchall()
-        else:
-            shot_rows = db.execute(
-                """SELECT shot_type, shot_result, COUNT(*) as cnt
-                   FROM shot_classifications
-                   WHERE game_id = ?
-                   GROUP BY shot_type, shot_result
-                   ORDER BY shot_type, shot_result""",
-                (game_id,),
-            ).fetchall()
-        # Pivot: build {shot_type: {make: n, miss: n}}
-        shot_pivot = {}
-        for r in shot_rows:
-            st = r["shot_type"]
-            if st not in shot_pivot:
-                shot_pivot[st] = {"make": 0, "miss": 0}
-            shot_pivot[st][r["shot_result"]] = r["cnt"]
-        for st, counts in shot_pivot.items():
-            total = counts["make"] + counts["miss"]
-            pct = (counts["make"] / total * 100) if total > 0 else 0
-            shot_summary.append({
-                "shot_type": st,
-                "makes": counts["make"],
-                "misses": counts["miss"],
-                "total": total,
-                "pct": round(pct, 1),
-            })
-
-        # Player effect: possessions, points, ORTG by tracker
-        effect_rows = db.execute(
-            """SELECT tracker_id, possessions_on, points_for, ortg
-               FROM player_effect
-               WHERE game_id = ?
-               ORDER BY tracker_id""",
-            (game_id,),
-        ).fetchall()
-        player_effect_data = [dict(r) for r in effect_rows]
-
-        # Player minutes
-        from player_minutes import get_player_minutes
-
-        player_minutes_data = [
-            {
-                "tracker_id": row["tracker_id"],
-                "minutes_played": row["minutes_played"],
-                "player_name": row["resolved_name"] or row["player_name"],
-            }
-            for row in get_player_minutes(db, game_id)
-        ]
-
-        if feature_enabled("ENABLE_AUTO_STATS_M1"):
-            possession_summary = build_possession_workflow_summary(db, game_id)
 
     review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
     plays_mode = (request.args.get("plays") or "").strip().lower() in {"1", "true", "yes"}
+    roster_season_id = None
+    roster_level = None
+    roster_gender = None
+    roster_opponent = None
+    if game_id:
+        from analysis_helpers import resolve_analysis_game_context
+
+        ctx = resolve_analysis_game_context(get_db(), game_id)
+        roster_season_id = ctx.get("season_id")
+        roster_level = ctx.get("level")
+        roster_gender = ctx.get("gender")
+        roster_opponent = ctx.get("schedule_opponent_name") or ctx.get("opponent_name")
+
     return render_template(
         "film_tool.html",
         filename=filename,
@@ -1824,18 +1887,30 @@ def film(filename=None):
         detection_count=detection_count,
         ai_runtime_available=ai_runtime_available(),
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
-        shot_summary=shot_summary,
-        player_effect_data=player_effect_data,
-        player_minutes_data=player_minutes_data,
-        possession_summary=possession_summary,
+        analysis_results_url=analysis_results_url_for(game_id),
         review_mode=review_mode,
         plays_mode=plays_mode,
+        roster_season_id=roster_season_id,
+        roster_level=roster_level,
+        roster_gender=roster_gender,
+        roster_opponent=roster_opponent,
     )
 
 
 @core.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+    """Serve uploads. HTML/SVG/JS are forced to download so they cannot run as the site."""
+    from werkzeug.utils import safe_join
+
+    upload_root = current_app.config["UPLOAD_FOLDER"]
+    if safe_join(upload_root, filename) is None:
+        abort(404)
+    as_attachment = filename.lower().endswith((".html", ".htm", ".svg", ".xhtml", ".xml", ".js", ".mjs"))
+    resp = send_from_directory(upload_root, filename, as_attachment=as_attachment)
+    if as_attachment:
+        resp.headers["Content-Type"] = "application/octet-stream"
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 # ── Team Photos ──────────────────────────────────────────────
@@ -1875,12 +1950,18 @@ def api_teams_photos_upload():
     if not _allowed_photo(file.filename):
         return jsonify({"error": "File type not allowed"}), 400
 
-    team_key = request.form.get("team_key", "")
+    team_key = request.form.get("team_key", "").strip()
     caption = request.form.get("caption", "")
+    # team_key becomes part of the file path: allow only a plain slug (no "../").
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", team_key):
+        return jsonify({"error": "Invalid team_key"}), 400
 
-    # Build safe filename: team_key + timestamp + ext
+    # Build safe filename: team_key + timestamp + random suffix + ext (the suffix keeps
+    # two uploads in the same second from overwriting one file).
+    import uuid
+
     ext = file.filename.rsplit(".", 1)[1].lower()
-    safe_name = f"{team_key}_{int(__import__('time').time())}.{ext}"
+    safe_name = f"{team_key}_{int(__import__('time').time())}_{uuid.uuid4().hex[:8]}.{ext}"
 
     upload_dir = current_app.config["UPLOAD_FOLDER"]
     os.makedirs(os.path.join(upload_dir, "team_photos"), exist_ok=True)
@@ -1928,13 +2009,44 @@ def api_teams_photos_delete(photo_id):
     return jsonify({"ok": True})
 
 
+def _settings_change_denied():
+    """Return a 403 response when the caller may not change app settings, else None.
+
+    Only an admin may change settings. Exception: while ENABLE_AUTH_MIDDLEWARE is off
+    the whole app is intentionally open until the owner turns sign-in on, so an
+    anonymous caller keeps working as before. A signed-in non-admin is refused in
+    both modes (e.g. a player must not be able to switch the sign-in gate off).
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    user = _current_user()
+    if _is_admin_user(user):
+        return None
+    if user is None and not feature_enabled("ENABLE_AUTH_MIDDLEWARE"):
+        return None
+    return jsonify({"error": "Only an admin can change settings."}), 403
+
+
 @core.route("/settings", methods=["GET", "POST"])
 def settings_page():
     db = get_db()
     catalog = build_settings_catalog()
     runtime_settings = get_runtime_settings()
 
+    if request.method == "GET":
+        # A signed-in non-admin may not view Settings either (anonymous access while the
+        # sign-in gate is off stays as before).
+        from blueprints.users import _current_user, _is_admin_user
+
+        viewer = _current_user()
+        if viewer is not None and not _is_admin_user(viewer):
+            flash("Only an admin can open Settings.", "error")
+            return redirect(url_for("core.index"))
+
     if request.method == "POST":
+        denied = _settings_change_denied()
+        if denied:
+            return denied
         detector_values = {option["value"] for option in catalog["detector_options"]}
         ball_detector_values = {option["value"] for option in catalog["ball_detector_options"]}
         device_values = {option["value"] for option in catalog["device_options"]}
@@ -1992,6 +2104,8 @@ def settings_page():
             frame_stride = AI_DEFAULTS["frame_stride"]
         updates["ai.frame_stride"] = frame_stride
 
+        updates["ai.tracker_enabled"] = bool(request.form.get("ai_tracker_enabled"))
+
         try:
             tracker_distance = max(1, int(request.form.get("ai_tracker_max_distance", AI_DEFAULTS["tracker_max_distance"])))
         except ValueError:
@@ -2004,8 +2118,16 @@ def settings_page():
             tracker_gap = AI_DEFAULTS["tracker_max_frame_gap"]
         updates["ai.tracker_max_frame_gap"] = tracker_gap
 
-        # Foundation: keep auto-accept disabled on save so Settings cannot silently re-enable.
-        updates["ai.auto_accept_event_confidence"] = 0.0
+        try:
+            auto_accept = float(
+                request.form.get(
+                    "ai_auto_accept_event_confidence",
+                    AI_DEFAULTS["auto_accept_event_confidence"],
+                )
+            )
+        except ValueError:
+            auto_accept = AI_DEFAULTS["auto_accept_event_confidence"]
+        updates["ai.auto_accept_event_confidence"] = min(0.99, max(0.0, auto_accept))
 
         llm_provider = (request.form.get("ai_llm_provider") or "none").strip()
         if llm_provider not in llm_provider_values:
@@ -2037,6 +2159,9 @@ def custom_weights_guide_page():
 
 @core.route("/settings/ollama/pull", methods=["POST"])
 def pull_ollama_model():
+    denied = _settings_change_denied()
+    if denied:
+        return denied
     model_name = (request.form.get("model_name") or "").strip()
     if not model_name or not re.fullmatch(r"[A-Za-z0-9._:-]+", model_name):
         return redirect(url_for("core.settings_page", message="Invalid Ollama model name."))
@@ -2172,6 +2297,8 @@ def complete_issue_report(issue_id):
 
 @core.route("/api/dashboard")
 def api_dashboard():
+    import datetime as _dt
+
     db = get_db()
     seasons   = db.execute("SELECT COUNT(*) FROM seasons").fetchone()[0]
     scheduled = db.execute("SELECT COUNT(*) FROM scheduled_games").fetchone()[0]
@@ -2179,8 +2306,9 @@ def api_dashboard():
     players   = db.execute("SELECT COUNT(*) FROM players").fetchone()[0]
     upcoming  = db.execute(
         """SELECT * FROM scheduled_games
-           WHERE game_date >= date('now') AND status != 'cancelled'
-           ORDER BY game_date, game_time LIMIT 5"""
+           WHERE game_date >= ? AND status != 'cancelled'
+           ORDER BY game_date, game_time LIMIT 5""",
+        (_dt.date.today().isoformat(),),
     ).fetchall()
     recent    = db.execute(
         "SELECT * FROM events ORDER BY created_at DESC LIMIT 10"
@@ -2223,7 +2351,7 @@ def api_teams_schedule():
     for sec in TEAM_SECTIONS:
         team_seasons = _seasons_for_team_section(db, sec)
         allowed_ids = {s["id"] for s in team_seasons}
-        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, allowed_ids)
+        default_season_id = _default_dashboard_season_id(db, sec, active_seasons, team_seasons)
         season_id = _resolve_dashboard_season_id(
             request, sec["key"], default_season_id, allowed_ids
         )
@@ -2293,9 +2421,22 @@ def _resolve_dashboard_season_id(request, team_key, default_season_id, allowed_s
     return season_id
 
 
-def _default_dashboard_season_id(db, sec, active_seasons, allowed_season_ids):
-    """Dashboard cards default to no season until the user picks one."""
+def _default_dashboard_season_id(db, sec, active_seasons, team_seasons):
+    """Prefer an in-progress season, else the most recent season that has games."""
+    allowed = {s["id"] for s in team_seasons}
+    for season in active_seasons:
+        if season["id"] in allowed:
+            return season["id"]
+    if team_seasons:
+        return team_seasons[0]["id"]
     return None
+
+
+# A scheduled game can have several games rows (score entry, film, NFHS); the dashboard
+# counts it once, using its most recent row that carries a result.
+_LATEST_RESULT_GAME_SQL = """SELECT g2.id FROM games g2
+            WHERE g2.scheduled_game_id = sg.id AND g2.result IS NOT NULL AND g2.result != ''
+            ORDER BY g2.id DESC LIMIT 1"""
 
 
 def _fetch_team_dashboard_summary(db, sec, season_id=None):
@@ -2307,16 +2448,21 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
             "conf_wins": 0,
             "conf_losses": 0,
             "upcoming": [],
+            "recent": [],
             "last_game": None,
         }
 
+    import datetime as _dt
+
     where, params = _team_section_where(sec, season_id)
+    # Local calendar day (not SQLite's UTC date) so tonight's game is still "upcoming".
+    today = _dt.date.today().isoformat()
 
     record_rows = db.execute(
         f"""SELECT g.result, COUNT(*) as cnt
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where}
             GROUP BY g.result""",
         params,
     ).fetchall()
@@ -2325,9 +2471,9 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
 
     conf_record_rows = db.execute(
         f"""SELECT g.result, COUNT(*) as cnt
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.is_conference = 1 AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where} AND g.is_conference = 1
             GROUP BY g.result""",
         params,
     ).fetchall()
@@ -2338,22 +2484,34 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
         f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
                    sg.location_type, sg.status, sg.tournament_name
             FROM scheduled_games sg
-            {where} AND sg.game_date >= date('now') AND sg.status != 'cancelled'
+            {where} AND sg.game_date >= ? AND sg.status != 'cancelled'
             ORDER BY sg.game_date, sg.game_time
             LIMIT 5""",
-        params,
+        params + [today],
     ).fetchall()
 
     last_game = db.execute(
         f"""SELECT sg.game_date, sg.opponent_name, sg.location_type,
                    g.home_score, g.away_score, g.result
-            FROM games g
-            JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
-            {where} AND g.result IS NOT NULL AND g.result != ''
+            FROM scheduled_games sg
+            JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where}
             ORDER BY sg.game_date DESC
             LIMIT 1""",
         params,
     ).fetchone()
+
+    recent = db.execute(
+        f"""SELECT sg.game_date, sg.game_time, sg.opponent_name,
+                   sg.location_type, sg.status, sg.tournament_name,
+                   g.home_score, g.away_score, g.result
+            FROM scheduled_games sg
+            LEFT JOIN games g ON g.id = ({_LATEST_RESULT_GAME_SQL})
+            {where} AND sg.game_date < ? AND sg.status != 'cancelled'
+            ORDER BY sg.game_date DESC, sg.game_time DESC
+            LIMIT 5""",
+        params + [today],
+    ).fetchall()
 
     return {
         "wins": wins,
@@ -2361,86 +2519,19 @@ def _fetch_team_dashboard_summary(db, sec, season_id=None):
         "conf_wins": conf_wins,
         "conf_losses": conf_losses,
         "upcoming": [dict(r) for r in upcoming],
+        "recent": [dict(r) for r in recent],
         "last_game": dict(last_game) if last_game else None,
     }
 
 
 def _scrape_maxpreps_ranking(state, gender):
     """Scrape MaxPreps for the Liberty team ranking in a given state/gender.
-    Returns (ranking_int, url_str) or (None, None) if not found.
-    Uses Playwright for an isolated browser session (no agent-browser conflicts).
+    Returns (ranking_int, url_str, error_str).
     """
-    from playwright.sync_api import sync_playwright
+    from maxpreps_web import scrape_ranking
 
-    state_slug = state.lower().replace(" ", "-")
-    state_slug_overrides = {"idaho": "id"}
-    state_slug = state_slug_overrides.get(state_slug, state_slug)
-    gender_slug = "boys" if gender == "boys" else "girls"
-
-    division_ids = {
-        ("id", "boys"): "b006084a-35a3-4277-b62e-8782f19ac85a",
-        ("id", "girls"): "17ff4bb2-1a40-4f38-a3e1-637f78af15f2",
-    }
-
-    div_id = division_ids.get((state_slug, gender_slug))
-    if div_id:
-        if gender_slug == "girls":
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/girls/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-        else:
-            url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/?statedivisionid={div_id}"
-    else:
-        url = f"https://www.maxpreps.com/{state_slug}/basketball/25-26/class/class-2a/rankings/1/"
-
-    ranking = None
-    chromium_path = "/snap/bin/chromium"
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                executable_path=chromium_path,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
-            )
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 900},
-            )
-            page = context.new_page()
-            page.set_default_timeout(30000)
-
-            try:
-                page.goto(url, wait_until="domcontentloaded")
-                import time
-                time.sleep(5)
-                page.wait_for_selector("table", timeout=15000)
-            except Exception:
-                pass  # Continue even if table doesn't appear in time
-
-            result = page.evaluate("""() => {
-                const rows = document.querySelectorAll('tr');
-                for (const row of rows) {
-                    const rowText = row.textContent || '';
-                    if (rowText.toLowerCase().includes('liberty')) {
-                        const cells = row.querySelectorAll('td, th');
-                        for (const cell of cells) {
-                            const text = cell.textContent.trim();
-                            const num = parseInt(text, 10);
-                            if (!isNaN(num) && num >= 1 && num <= 50 && text === String(num)) {
-                                return num;
-                            }
-                        }
-                    }
-                }
-                return null;
-            }""")
-            if result:
-                ranking = result
-
-            browser.close()
-    except Exception:
-        pass
-
-    return ranking, url
+    result = scrape_ranking(state, gender)
+    return result.get("ranking"), result.get("url"), result.get("error")
 
 
 @core.route("/api/teams/rankings", methods=["GET", "POST"])
@@ -2452,10 +2543,15 @@ def api_teams_rankings():
     db = get_db()
     state = request.args.get("state", "Idaho") if request.method == "GET" else request.form.get("state", "Idaho")
 
+    scrape_errors = {}
     if request.method == "POST":
-        # Scrape fresh rankings for both varsity teams
         for team_key, gender in [("varsity_boys", "boys"), ("varsity_girls", "girls")]:
-            ranking, url = _scrape_maxpreps_ranking(state, gender)
+            ranking, url, error = _scrape_maxpreps_ranking(state, gender)
+            if error:
+                scrape_errors[team_key] = error
+            if ranking is None:
+                # Keep the last good cached ranking instead of overwriting it with NULL.
+                continue
             db.execute(
                 """INSERT INTO maxpreps_rankings (team_key, state, ranking, ranking_url, scraped_at)
                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -2473,7 +2569,10 @@ def api_teams_rankings():
         (state,),
     ).fetchall()
     rankings = {r["team_key"]: dict(r) for r in rows}
-    return jsonify({"state": state, "rankings": rankings})
+    payload = {"state": state, "rankings": rankings}
+    if scrape_errors:
+        payload["errors"] = scrape_errors
+    return jsonify(payload)
 
 
 @core.route("/api/resource-status")
@@ -2539,10 +2638,44 @@ def status_page():
     )
 
 
+# Children first. Mirrors scripts/wipe_film_analysis.py ANALYSIS_TABLES plus
+# stats and videos, which admin reset also removes.
+_ADMIN_RESET_TABLES = (
+    "clip_tags",
+    "player_development_clips",
+    "practice_playlist_clips",
+    "clips",
+    "event_participants",
+    "review_items",
+    "human_corrections",
+    "shot_classifications",
+    "play_recognitions",
+    "player_effect",
+    "scouting_clips",
+    "provenance_records",
+    "possessions",
+    "events",
+    "detections",
+    "track_identity_labels",
+    "analysis_runs",
+    "stats",
+    "videos",
+)
+
+
 @core.route("/api/admin/reset", methods=["POST"])
 @require_feature("ENABLE_AUTO_STATS_M1")
 def admin_reset():
-    """Wipe all video uploads, analysis data, and uploaded files. Fresh start."""
+    """Wipe all video uploads, analysis data, and uploaded files. Fresh start.
+
+    Destructive and irreversible, so it requires a signed-in admin even while
+    global auth (ENABLE_AUTH_MIDDLEWARE) is off.
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required to reset all video data."}), 403
+
     db = get_db()
 
     # Collect file paths before deleting
@@ -2555,20 +2688,31 @@ def admin_reset():
             except OSError:
                 pass
 
-    # Clear analysis/video data (keep seasons, games, players).
-    # Children first: with foreign_keys ON, deleting events/videos while clips still
-    # reference them fails (found by Jason's e2e suite).
+    # Clear all analysis/video data (preserve seasons, games, players).
+    # Foreign keys are off for the wipe, then turned back on. Children are
+    # listed first so a later check with keys on still sees an empty set.
     existing = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     order = [
         "practice_playlist_clips", "clip_tags", "player_development_clips", "clips",
         "event_participants", "human_corrections", "shot_classifications", "review_items",
-        "play_recognitions", "player_effect", "player_minutes",
+        "play_recognitions", "player_effect", "player_minutes", "scouting_clips",
+        "provenance_records", "track_identity_labels",
         "events", "possessions", "detections", "video_assets", "analysis_runs", "stats", "videos",
     ]
-    for table in order:
-        if table in existing:
-            db.execute(f"DELETE FROM {table}")
-    db.commit()
+    seen = set()
+    tables = []
+    for table in list(order) + list(_ADMIN_RESET_TABLES):
+        if table not in seen:
+            seen.add(table)
+            tables.append(table)
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        for table in tables:
+            if table in existing:
+                db.execute(f"DELETE FROM {table}")
+        db.commit()
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
 
     return jsonify({"success": True, "message": "All video data cleared."})
 
@@ -2583,25 +2727,98 @@ def users_page():
     return render_template("users.html")
 
 
-@core.route("/api/users")
+@core.route("/api/admin/users")
 def api_users_list():
-    """Return all users as JSON."""
+    """All accounts for the User Management page. Admin only.
+
+    (/api/users is the users blueprint's login-required autocomplete list,
+    limited to 20 active users, so the management page needs its own route.)
+    """
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required."}), 403
     db = get_db()
     users = db.execute(
-        "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
+        """SELECT id, display_name, email, role, is_active, created_at, last_login_at
+             FROM users ORDER BY created_at DESC, id DESC"""
     ).fetchall()
-    return jsonify([dict(u) for u in users])
+    from audience_access import load_links
+    links = load_links()
+    out = []
+    for user in users:
+        row = dict(user)
+        row["linked_player_id"] = links.get(str(row["id"]))
+        out.append(row)
+    return jsonify(out)
+
+
+@core.route("/api/admin/users/<int:user_id>/player-link", methods=["POST"])
+def api_user_player_link(user_id):
+    """Attach one roster player to a parent or player account. Admin only."""
+    from audience_access import save_link
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required."}), 403
+    payload = request.get_json(silent=True) or {}
+    raw = payload.get("player_id", request.form.get("player_id"))
+    player_id = None
+    if raw not in (None, "", "0", 0):
+        try:
+            player_id = int(raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "player_id must be a number."}), 400
+        if not get_db().execute("SELECT id FROM players WHERE id = ?", (player_id,)).fetchone():
+            return jsonify({"error": "Player not found."}), 404
+    save_link(user_id, player_id)
+    return jsonify({"ok": True, "user_id": user_id, "player_id": player_id})
+
+
+def _detach_user_references(db, user_id):
+    """Null every nullable FK column that points at users(id) with no ON DELETE rule.
+
+    Keeps the user's work (events, clips, review items, ...) and just drops the
+    attribution. Returns the (table, column) pairs that are NOT NULL and still
+    reference the user, which block the delete.
+    """
+    blocking = []
+    tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+    for table in tables:
+        cols = {c[1]: c for c in db.execute(f'PRAGMA table_info("{table}")')}
+        for fk in db.execute(f'PRAGMA foreign_key_list("{table}")'):
+            ref_table, from_col, on_delete = fk[2], fk[3], (fk[6] or "").upper()
+            if ref_table != "users" or on_delete in ("CASCADE", "SET NULL"):
+                continue
+            if cols.get(from_col) and cols[from_col][3]:  # notnull
+                hit = db.execute(
+                    f'SELECT 1 FROM "{table}" WHERE "{from_col}" = ? LIMIT 1', (user_id,)
+                ).fetchone()
+                if hit:
+                    blocking.append((table, from_col))
+                continue
+            db.execute(f'UPDATE "{table}" SET "{from_col}" = NULL WHERE "{from_col}" = ?', (user_id,))
+    return blocking
 
 
 @core.route("/api/users/<int:user_id>", methods=["DELETE"])
 def api_users_delete(user_id):
-    """Delete a non-admin user."""
+    """Delete a non-admin user. Requires a signed-in admin (even with the gate off)."""
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required to delete users."}), 403
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if not user:
         return jsonify({"error": "User not found"}), 404
-    if user["is_admin"]:
+    if _is_admin_user(user):
         return jsonify({"error": "Cannot delete admin user"}), 403
+    blocking = _detach_user_references(db, user_id)
+    if blocking:
+        db.rollback()
+        where = ", ".join(f"{t}.{c}" for t, c in blocking)
+        return jsonify({"error": f"User is still required by {where}."}), 409
     db.execute("DELETE FROM users WHERE id = ?", (user_id,))
     db.commit()
     return jsonify({"status": "deleted"})

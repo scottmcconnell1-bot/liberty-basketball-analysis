@@ -12,21 +12,22 @@ AI_DEFAULTS = {
     "ball_class_id": 0,
     "ball_confidence": 0.25,
     "person_confidence": 0.5,
-    "event_generator_mode": "expanded",
+    "event_generator_mode": "precision",
     "inference_device": "auto",
     "frame_stride": 1,
     "detection_stride": 1,
     "tracker_max_distance": 80,
     "tracker_max_frame_gap": 5,
     "tracker_backend": "bytetrack",
+    "tracker_enabled": True,
     "jersey_ocr_enabled": True,
     "jersey_ocr_stride": 5,
     "jersey_ocr_min_confidence": 0.55,
     "auto_apply_jersey_mapping": True,
     "identity_auto_apply_min_confidence": 0.60,
     "identity_auto_apply_min_samples": 4,
-    # 0 disables auto-accept (required for human review / coach ledger).
-    "auto_accept_event_confidence": 0.0,
+    # Scott 2026-09-14: enable Jason high-confidence auto-accept with precision mode.
+    "auto_accept_event_confidence": 0.85,
     "llm_provider": "ollama",
     "llm_model": ""
 }
@@ -46,6 +47,7 @@ INT_SETTING_KEYS = {
 BOOL_SETTING_KEYS = {
     "ai.jersey_ocr_enabled",
     "ai.auto_apply_jersey_mapping",
+    "ai.tracker_enabled",
 }
 
 
@@ -95,7 +97,14 @@ def load_all_settings(feature_defaults, analysis_defaults, ai_defaults=None, db=
         close_conn = True
 
     try:
-        rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+        try:
+            rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+        except sqlite3.OperationalError as exc:
+            # A database created before app_settings existed (or a bare analysis DB)
+            # simply has no overrides yet.
+            if "no such table" not in str(exc):
+                raise
+            rows = []
         flat = {row["key"]: _parse_value(row["key"], row["value"]) for row in rows}
     finally:
         if close_conn:
@@ -113,9 +122,6 @@ def load_all_settings(feature_defaults, analysis_defaults, ai_defaults=None, db=
         name: flat.get(f"ai.{name}", default)
         for name, default in ai_defaults.items()
     }
-    # Foundation / review testing: force disable even if an older DB still has 0.50.
-    # Remove this override when Scott intentionally re-enables auto-accept.
-    ai["auto_accept_event_confidence"] = 0.0
     return {"features": features, "analysis": analysis, "ai": ai}
 
 

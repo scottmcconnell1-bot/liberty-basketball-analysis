@@ -96,8 +96,13 @@ def api_playlists_add_clip(playlist_id):
     clip_id = data.get("clip_id")
     if not clip_id:
         return jsonify({"error": "clip_id is required"}), 400
-    pd_helpers.add_clip_to_playlist(db, playlist_id, int(clip_id),
-                                     sort_order=data.get("sort_order", 0))
+    try:
+        pd_helpers.add_clip_to_playlist(db, playlist_id, int(clip_id),
+                                         sort_order=data.get("sort_order", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "clip_id must be an integer"}), 400
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
     return jsonify({"status": "added"}), 201
 
 

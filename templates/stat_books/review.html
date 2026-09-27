@@ -26,8 +26,12 @@
       <div class="card-header"><h2>Sheet</h2></div>
       <div class="card-body">
         {% if image_name %}
-        <img id="sheet-img" src="/stat-books/games/{{ game_id }}/image/{{ image_name }}" alt="sheet" style="max-width:100%;border:1px solid #ccc;cursor:crosshair;">
-        <p class="text-muted" style="font-size:0.85rem;">Click 4 corners TL→TR→BR→BL, then Align.</p>
+        <img id="sheet-img" src="/stat-books/games/{{ game_id }}/image/{{ image_name }}" alt="sheet" style="max-width:100%;border:1px solid #ccc;cursor:crosshair;" data-original-src="/stat-books/games/{{ game_id }}/image/{{ image_name }}" {% if aligned_name %}data-aligned-src="/stat-books/games/{{ game_id }}/image/{{ aligned_name }}"{% endif %}>
+        <p class="text-muted" style="font-size:0.85rem;">Showing <code>{{ image_name }}</code> (your upload). Click 4 corners TL→TR→BR→BL only if you need Align.</p>
+        {% if aligned_name and aligned_name != image_name %}
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-show-upload">Show upload</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-show-aligned">Show aligned</button>
+        {% endif %}
         <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">Clear</button>
         <button type="button" class="btn btn-primary btn-sm" id="btn-align">Align &amp; re-extract</button>
         <pre id="corners-out" style="font-size:0.75rem;"></pre>
@@ -117,6 +121,14 @@
   });
   var clear = document.getElementById('btn-clear');
   if (clear) clear.addEventListener('click', function () { corners = []; out.textContent = ''; });
+  var showUpload = document.getElementById('btn-show-upload');
+  var showAligned = document.getElementById('btn-show-aligned');
+  if (img && showUpload) showUpload.addEventListener('click', function () {
+    if (img.dataset.originalSrc) img.src = img.dataset.originalSrc;
+  });
+  if (img && showAligned) showAligned.addEventListener('click', function () {
+    if (img.dataset.alignedSrc) img.src = img.dataset.alignedSrc;
+  });
   var align = document.getElementById('btn-align');
   if (align) align.addEventListener('click', function () {
     if (corners.length !== 4) { alert('Need 4 corners'); return; }

@@ -14,10 +14,11 @@ Routes included:
 - api_users (/api/users)                      — List users (for mentions, DMs)
 """
 
-import hashlib, secrets, datetime
+import hashlib, hmac, secrets, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
-from helpers import get_db, require_feature
+from helpers import extract_local_path, get_db, require_feature
+from werkzeug.security import check_password_hash, generate_password_hash
 
 users_bp = Blueprint("users", __name__)
 
@@ -33,27 +34,44 @@ ROLE_HIERARCHY = {"player": 0, "parent": 1, "coach": 2, "manager": 3, "admin": 4
 
 
 def _hash_password(password):
-    """Hash a password with SHA-256 + salt."""
-    salt = secrets.token_hex(16)
-    pw_hash = hashlib.sha256((salt + password).encode()).hexdigest()
-    return f"{salt}${pw_hash}"
+    """Hash a password with Werkzeug's salted KDF (scrypt/pbkdf2)."""
+    return generate_password_hash(password)
+
+
+def _is_legacy_hash(stored_hash):
+    """Old accounts store ``salt$sha256hex`` (single-round SHA-256)."""
+    return bool(stored_hash) and ":" not in stored_hash.split("$", 1)[0] and "$" in stored_hash
 
 
 def _verify_password(password, stored_hash):
-    """Verify a password against a stored hash."""
-    if "$" not in stored_hash:
+    """Verify a password against a stored hash (Werkzeug or legacy salted SHA-256)."""
+    if not stored_hash or "$" not in stored_hash:
         return False
-    salt, pw_hash = stored_hash.split("$", 1)
-    return hashlib.sha256((salt + password).encode()).hexdigest() == pw_hash
+    if _is_legacy_hash(stored_hash):
+        salt, pw_hash = stored_hash.split("$", 1)
+        candidate = hashlib.sha256((salt + password).encode()).hexdigest()
+        return hmac.compare_digest(candidate, pw_hash)
+    return check_password_hash(stored_hash, password)
 
 
 def _current_user():
-    """Get the currently logged-in user from session."""
+    """Get the currently logged-in user from session.
+
+    The cookie's ``session_token`` must still match a live ``user_sessions`` row for
+    that user, so logout (which deletes the row) invalidates copies of the cookie.
+    """
     user_id = session.get("user_id")
-    if not user_id:
+    token = session.get("session_token")
+    if not user_id or not token:
         return None
     db = get_db()
-    return db.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,)).fetchone()
+    return db.execute(
+        """SELECT u.* FROM users u
+           JOIN user_sessions s ON s.user_id = u.id
+           WHERE u.id = ? AND u.is_active = 1
+             AND s.session_token = ? AND s.expires_at > ?""",
+        (user_id, token, datetime.datetime.utcnow()),
+    ).fetchone()
 
 
 def login_required(f):
@@ -62,6 +80,8 @@ def login_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not _current_user():
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "authentication required"}), 401
             return redirect(url_for("users.login", next=request.url))
         return f(*args, **kwargs)
     return wrapped
@@ -75,8 +95,12 @@ def role_required(min_role):
         def wrapped(*args, **kwargs):
             user = _current_user()
             if not user:
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "authentication required"}), 401
                 return redirect(url_for("users.login", next=request.url))
             if ROLE_HIERARCHY.get(user["role"], 0) < ROLE_HIERARCHY.get(min_role, 0):
+                if request.path.startswith("/api/"):
+                    return jsonify({"error": "forbidden"}), 403
                 flash("You don't have permission to access this page.", "error")
                 return redirect(url_for("core.index"))
             return f(*args, **kwargs)
@@ -103,6 +127,12 @@ def login():
                 (user["id"], token, request.remote_addr, request.user_agent.string[:200], expires),
             )
             db.execute("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?", (user["id"],))
+            if _is_legacy_hash(user["password_hash"]):
+                # Upgrade old single-round SHA-256 hashes on successful login.
+                db.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
+                    (_hash_password(password), user["id"]),
+                )
             db.commit()
 
             session["user_id"] = user["id"]
@@ -110,7 +140,7 @@ def login():
             session["user_name"] = user["display_name"]
             session["session_token"] = token
 
-            next_url = request.args.get("next") or url_for("core.index")
+            next_url = extract_local_path(request.args.get("next")) or url_for("core.index")
             return redirect(next_url)
 
         flash("Invalid email or password.", "error")

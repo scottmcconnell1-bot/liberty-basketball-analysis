@@ -1,7 +1,47 @@
-"""Tests for the Messaging feature."""
+"""Tests for the Messaging feature.
+
+Messaging identity comes from the signed-in session only: anonymous callers get 401 and
+non-members get 403 (see tests/e2e/test_journey_access.py for the full journeys).
+"""
 
 import json
 import pytest
+
+from blueprints.users import _hash_password
+
+
+def _sign_in(client, db, email="staff@example.com", name="Staff User", role="coach"):
+    """Create an active user and sign in through /login (real session token)."""
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        (email, _hash_password("messaging-pass-1"), name, role),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()[0]
+    r = client.post("/login", data={"email": email, "password": "messaging-pass-1"})
+    assert r.status_code == 302
+    return uid
+
+
+@pytest.fixture
+def staff(client, db):
+    """Signed-in staff user id; ``client`` carries the session."""
+    return _sign_in(client, db)
+
+
+def _conversation(db, conv_id, member_ids, messages=()):
+    db.execute("INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)", (conv_id, "direct", "coach"))
+    for uid in member_ids:
+        db.execute(
+            "INSERT INTO conversation_members (conversation_id, user_id, role) VALUES (?,?,?)",
+            (conv_id, str(uid), "member"),
+        )
+    for mid, body in messages:
+        db.execute(
+            "INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (?,?,?,?)",
+            (mid, conv_id, "coach", body),
+        )
+    db.commit()
 
 
 class TestMessagesPage:
@@ -29,11 +69,10 @@ class TestMessagesPage:
         )
         db.commit()
         uid = db.execute("SELECT id FROM users WHERE email = ?", ("scott@example.com",)).fetchone()[0]
-
-        with client.session_transaction() as sess:
-            sess["user_id"] = uid
-            sess["user_name"] = "Scott McConnell"
-            sess["user_role"] = "admin"
+        db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (_hash_password("messaging-pass-1"), uid))
+        db.commit()
+        assert client.post("/login", data={"email": "scott@example.com",
+                                           "password": "messaging-pass-1"}).status_code == 302
 
         r = client.get("/messages")
         assert r.status_code == 200
@@ -45,8 +84,9 @@ class TestMessagesPage:
         # Sender id in JS should be the staff user id, not hardcoded coach guest
         assert f'const MSG_SENDER_ID = "{uid}"' in html or f"const MSG_SENDER_ID = {uid}" in html
 
-    def test_session_identity_without_users_row_still_signed_in(self, client):
-        """If users row is missing, still mirror nav (session user_name) — not Guest."""
+    def test_session_without_live_login_is_not_signed_in(self, client):
+        """A cookie that names a user but has no live login (no users row / session token)
+        is anonymous: neither the messages panel nor the nav may show it as signed in."""
         with client.session_transaction() as sess:
             sess["user_id"] = 4242
             sess["user_name"] = "Scott McConnell"
@@ -55,21 +95,11 @@ class TestMessagesPage:
         r = client.get("/messages")
         assert r.status_code == 200
         html = r.data.decode("utf-8", errors="replace")
-        assert "Not signed in" not in html
-        assert "Scott McConnell" in html
-        assert "Signed in as" in html
+        assert "Signed in as" not in html
+        assert "Scott McConnell" not in html
 
     def test_send_api_uses_session_user_as_sender(self, client, db):
-        db.execute(
-            "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
-            ("scott2@example.com", "x", "Scott McConnell", "admin"),
-        )
-        db.commit()
-        uid = db.execute("SELECT id FROM users WHERE email = ?", ("scott2@example.com",)).fetchone()[0]
-
-        with client.session_transaction() as sess:
-            sess["user_id"] = uid
-            sess["user_name"] = "Scott McConnell"
+        uid = _sign_in(client, db, "scott2@example.com", "Scott McConnell", "admin")
 
         r = client.post(
             "/api/messages/send",
@@ -82,33 +112,37 @@ class TestMessagesPage:
         assert data["body"] == "Hello from Scott"
 
 class TestMessagesAPIList:
-    def test_list_conversations_empty(self, client):
+    def test_list_requires_sign_in(self, client):
+        r = client.get("/api/messages/conversations")
+        assert r.status_code == 401
+
+    def test_list_conversations_empty(self, client, staff):
         r = client.get("/api/messages/conversations")
         assert r.status_code == 200
         data = json.loads(r.data)
-        assert isinstance(data, list)
+        assert data == []
 
-    def test_list_conversations_with_data(self, client, db):
-        # Create a conversation
-        db.execute(
-            "INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)",
-            (1, "direct", "coach"),
-        )
-        db.execute(
-            "INSERT INTO conversation_members (conversation_id, user_id, role) VALUES (?,?,?)",
-            (1, "coach", "owner"),
-        )
-        db.commit()
+    def test_list_conversations_with_data(self, client, db, staff):
+        _conversation(db, 1, [staff, "coach"])
+        _conversation(db, 2, ["coach"])            # not a member -> not listed
 
         r = client.get("/api/messages/conversations")
         assert r.status_code == 200
         data = json.loads(r.data)
-        assert len(data) >= 1
-        assert data[0]["id"] == 1
+        assert [c["id"] for c in data] == [1]
 
 
 class TestMessagesSend:
-    def test_send_message(self, client):
+    def test_send_requires_sign_in(self, client, db):
+        r = client.post("/api/messages/send", data={
+            "conversation_id": 1,
+            "body": "Test message",
+            "sender_id": "coach",
+        })
+        assert r.status_code == 401
+        assert db.execute("SELECT COUNT(*) FROM messages").fetchone()[0] == 0
+
+    def test_send_message(self, client, staff):
         r = client.post("/api/messages/send", data={
             "conversation_id": 1,
             "body": "Test message",
@@ -117,9 +151,14 @@ class TestMessagesSend:
         assert r.status_code == 200
         data = json.loads(r.data)
         assert data["body"] == "Test message"
-        assert data["sender_id"] == "coach"
+        assert data["sender_id"] == str(staff)
 
-    def test_send_message_requires_body(self, client):
+    def test_send_to_conversation_without_membership_is_refused(self, client, db, staff):
+        _conversation(db, 7, ["coach"])
+        r = client.post("/api/messages/send", json={"conversation_id": 7, "body": "hi"})
+        assert r.status_code == 403
+
+    def test_send_message_requires_body(self, client, staff):
         r = client.post("/api/messages/send", data={
             "conversation_id": 1,
             "body": "",
@@ -127,14 +166,14 @@ class TestMessagesSend:
         })
         assert r.status_code == 400
 
-    def test_send_message_requires_conversation_id(self, client):
+    def test_send_message_requires_conversation_id(self, client, staff):
         r = client.post("/api/messages/send", data={
             "body": "Test",
             "sender_id": "coach",
         })
         assert r.status_code == 400
 
-    def test_send_message_json(self, client):
+    def test_send_message_json(self, client, staff):
         r = client.post("/api/messages/send",
             data=json.dumps({
                 "conversation_id": 2,
@@ -147,7 +186,7 @@ class TestMessagesSend:
         data = json.loads(r.data)
         assert data["body"] == "JSON message"
 
-    def test_send_creates_conversation_if_missing(self, client):
+    def test_send_creates_conversation_if_missing(self, client, staff):
         r = client.post("/api/messages/send", data={
             "conversation_id": 999,
             "body": "New convo message",
@@ -155,7 +194,7 @@ class TestMessagesSend:
         })
         assert r.status_code == 200
 
-    def test_send_with_recipient_creates_conversation(self, client, db):
+    def test_send_with_recipient_creates_conversation(self, client, db, staff):
         db.execute(
             "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
             ("assist@example.com", "x", "Assistant One", "coach"),
@@ -184,22 +223,12 @@ class TestMessagesSend:
                 (data["conversation_id"],),
             ).fetchall()
         ]
-        assert "coach" in members
-        assert str(recip) in members
+        assert sorted(members) == sorted([str(staff), str(recip)])
 
 
 class TestMessagesPoll:
-    def test_poll_messages(self, client, db):
-        # Create conversation and message
-        db.execute(
-            "INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)",
-            (1, "direct", "coach"),
-        )
-        db.execute(
-            "INSERT INTO messages (conversation_id, sender_id, body) VALUES (?,?,?)",
-            (1, "coach", "Hello"),
-        )
-        db.commit()
+    def test_poll_messages(self, client, db, staff):
+        _conversation(db, 1, [staff], [(1, "Hello")])
 
         r = client.get("/api/messages/poll?conversation_id=1&since_id=0")
         assert r.status_code == 200
@@ -207,24 +236,18 @@ class TestMessagesPoll:
         assert len(data) >= 1
         assert data[0]["body"] == "Hello"
 
+    def test_poll_requires_sign_in_and_membership(self, client, db):
+        _conversation(db, 1, ["coach"], [(1, "Hello")])
+        assert client.get("/api/messages/poll?conversation_id=1").status_code == 401
+        _sign_in(client, db)
+        assert client.get("/api/messages/poll?conversation_id=1").status_code == 403
+
     def test_poll_requires_conversation_id(self, client):
         r = client.get("/api/messages/poll")
         assert r.status_code == 400
 
-    def test_poll_since_id(self, client, db):
-        db.execute(
-            "INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)",
-            (1, "direct", "coach"),
-        )
-        db.execute(
-            "INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (?,?,?,?)",
-            (1, 1, "coach", "First"),
-        )
-        db.execute(
-            "INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (?,?,?,?)",
-            (2, 1, "coach", "Second"),
-        )
-        db.commit()
+    def test_poll_since_id(self, client, db, staff):
+        _conversation(db, 1, [staff], [(1, "First"), (2, "Second")])
 
         r = client.get("/api/messages/poll?conversation_id=1&since_id=1")
         assert r.status_code == 200
@@ -234,16 +257,8 @@ class TestMessagesPoll:
 
 
 class TestMessagesRead:
-    def test_mark_read(self, client, db):
-        db.execute(
-            "INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)",
-            (1, "direct", "coach"),
-        )
-        db.execute(
-            "INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (?,?,?,?)",
-            (1, 1, "coach", "Test"),
-        )
-        db.commit()
+    def test_mark_read(self, client, db, staff):
+        _conversation(db, 1, [staff], [(1, "Test")])
 
         r = client.post("/api/messages/read", data={
             "message_ids": [1],
@@ -252,6 +267,14 @@ class TestMessagesRead:
         assert r.status_code == 200
         data = json.loads(r.data)
         assert data["ok"] is True
+        readers = [row[0] for row in db.execute("SELECT user_id FROM message_read_receipts WHERE message_id = 1")]
+        assert readers == [str(staff)]
+
+    def test_mark_read_requires_sign_in(self, client, db):
+        _conversation(db, 1, ["coach"], [(1, "Test")])
+        r = client.post("/api/messages/read", json={"message_ids": [1], "user_id": "coach"})
+        assert r.status_code == 401
+        assert db.execute("SELECT COUNT(*) FROM message_read_receipts").fetchone()[0] == 0
 
     def test_mark_read_requires_message_ids(self, client):
         r = client.post("/api/messages/read", data={
@@ -259,16 +282,8 @@ class TestMessagesRead:
         })
         assert r.status_code == 400
 
-    def test_mark_read_json(self, client, db):
-        db.execute(
-            "INSERT INTO conversations (id, type, created_by) VALUES (?,?,?)",
-            (1, "direct", "coach"),
-        )
-        db.execute(
-            "INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (?,?,?,?)",
-            (1, 1, "coach", "Test"),
-        )
-        db.commit()
+    def test_mark_read_json(self, client, db, staff):
+        _conversation(db, 1, [staff], [(1, "Test")])
 
         r = client.post("/api/messages/read",
             data=json.dumps({"message_ids": [1], "user_id": "coach"}),

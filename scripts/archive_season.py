@@ -24,15 +24,15 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from liberty_data_paths import LIVE_DB, archive_dir, ensure_data_dirs  # noqa: E402
+from liberty_data_paths import LIVE_DB, archive_dir, ensure_data_dirs, readonly_uri  # noqa: E402
 
 # Tables copied when present (FK-safe order for a snapshot; archive is self-contained).
 SEASON_SCOPED = [
-    "games_videos",
+    "sources",
     "events",
     "stats",
+    "player_minutes",
     "scheduled_games",
-    "games_notes",
     "games",
 ]
 
@@ -103,7 +103,7 @@ def main() -> int:
         print(f"ERROR: live DB not found: {live}", file=sys.stderr)
         return 1
 
-    src = sqlite3.connect(f"file:{live.as_posix()}?mode=ro", uri=True, timeout=60)
+    src = sqlite3.connect(readonly_uri(live), uri=True, timeout=60)
     src.row_factory = sqlite3.Row
     try:
         if args.list or not args.season_id:
@@ -146,15 +146,23 @@ def main() -> int:
                 )
                 counts["seasons"] = 1
 
-            # games for season
-            if table_exists(src, "games") and "season_id" in cols(src, "games"):
+            # games for season: games has no season_id; it links to the season through
+            # its scheduled game.
+            season_games_sql = (
+                "scheduled_game_id IN (SELECT id FROM scheduled_games WHERE season_id = ?)"
+            )
+            if (
+                table_exists(src, "games")
+                and table_exists(src, "scheduled_games")
+                and "scheduled_game_id" in cols(src, "games")
+            ):
                 counts["games"] = copy_table(
-                    src, dst, "games", "season_id = ?", (args.season_id,)
+                    src, dst, "games", season_games_sql, (args.season_id,)
                 )
                 game_ids = [
                     r[0]
                     for r in src.execute(
-                        "SELECT id FROM games WHERE season_id = ?", (args.season_id,)
+                        f"SELECT id FROM games WHERE {season_games_sql}", (args.season_id,)
                     ).fetchall()
                 ]
             else:
@@ -162,9 +170,13 @@ def main() -> int:
 
             if game_ids:
                 placeholders = ",".join("?" for _ in game_ids)
+                # events/stats keep the video key in game_id (TEXT); the games FK is
+                # relational_game_id.
                 for table, fk in (
-                    ("stats", "game_id"),
-                    ("events", "game_id"),
+                    ("stats", "relational_game_id"),
+                    ("events", "relational_game_id"),
+                    ("player_minutes", "relational_game_id"),
+                    ("sources", "game_id"),
                     ("game_videos", "game_id"),
                     ("game_notes", "game_id"),
                 ):

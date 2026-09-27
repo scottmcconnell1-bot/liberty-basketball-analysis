@@ -225,11 +225,11 @@ function renderPersonnel(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No personnel added yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Role</th><th>Usage</th><th>PPP</th><th>Notes</th></tr></thead><tbody>' +
     list.map(p => `<tr>
-      <td>${p.jersey_number || '-'}</td>
+      <td>${escapeHtml(p.jersey_number) || '-'}</td>
       <td>${escapeHtml(p.player_name) || 'Unknown'}</td>
       <td>${escapeHtml(p.role)}</td>
-      <td>${p.usage_rate ? (p.usage_rate * 100).toFixed(0) + '%' : '-'}</td>
-      <td>${p.ppp || '-'}</td>
+      <td>${Number(p.usage_rate) ? (Number(p.usage_rate) * 100).toFixed(0) + '%' : '-'}</td>
+      <td>${escapeHtml(p.ppp) || '-'}</td>
       <td>${escapeHtml(p.notes) || ''}</td>
     </tr>`).join('') + '</tbody></table>';
 }
@@ -254,8 +254,8 @@ function renderOffensiveSets(list) {
     list.map(s => `<tr>
       <td>${escapeHtml(s.set_name)}</td>
       <td>${escapeHtml(s.trigger_action) || '-'}</td>
-      <td>${s.frequency}</td>
-      <td>${s.ppp || '-'}</td>
+      <td>${escapeHtml(s.frequency)}</td>
+      <td>${escapeHtml(s.ppp) || '-'}</td>
       <td>${escapeHtml(s.result_vs_pressure) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
@@ -281,8 +281,8 @@ function renderDefensive(list) {
     list.map(d => `<tr>
       <td>${escapeHtml(d.scheme)}</td>
       <td>${escapeHtml(d.pnr_coverage) || '-'}</td>
-      <td>${d.frequency ? (d.frequency * 100).toFixed(0) + '%' : '-'}</td>
-      <td>${d.ppp_allowed || '-'}</td>
+      <td>${Number(d.frequency) ? (Number(d.frequency) * 100).toFixed(0) + '%' : '-'}</td>
+      <td>${escapeHtml(d.ppp_allowed) || '-'}</td>
       <td>${escapeHtml(d.weak_rotations) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
@@ -334,8 +334,8 @@ function renderSituational(list) {
     list.map(s => `<tr>
       <td>${escapeHtml(s.situation)}</td>
       <td>${escapeHtml(s.description)}</td>
-      <td>${s.frequency}</td>
-      <td>${s.ppp || '-'}</td>
+      <td>${escapeHtml(s.frequency)}</td>
+      <td>${escapeHtml(s.ppp) || '-'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -356,7 +356,7 @@ function renderMismatches(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state">No mismatches identified yet.</div>'; return; }
   el.innerHTML = '<table><thead><tr><th>#</th><th>Name</th><th>Vulnerability</th><th>Exploit With</th></tr></thead><tbody>' +
     list.map(m => `<tr>
-      <td>${m.opponent_jersey || '-'}</td>
+      <td>${escapeHtml(m.opponent_jersey) || '-'}</td>
       <td>${escapeHtml(m.opponent_name) || 'Unknown'}</td>
       <td>${escapeHtml(m.vulnerability)}</td>
       <td>${escapeHtml(m.exploit_action)}</td>
@@ -395,7 +395,7 @@ function renderClips(list) {
   el.innerHTML = '<table><thead><tr><th>Type</th><th>Time</th><th>Description</th><th>Coach Cue</th><th>Source</th></tr></thead><tbody>' +
     list.map(c => `<tr>
       <td>${escapeHtml(c.clip_type)}</td>
-      <td>${c.game_time || '-'}</td>
+      <td>${escapeHtml(c.game_time) || '-'}</td>
       <td>${escapeHtml(c.description)}</td>
       <td>${escapeHtml(c.coach_cue) || '-'}</td>
       <td>${escapeHtml(c.source)}</td>

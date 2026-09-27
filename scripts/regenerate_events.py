@@ -9,12 +9,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Regenerate events for an analysis key")
     parser.add_argument("analysis_key", help="Analysis key / game_id used in detections")
-    parser.add_argument("--db", default=str(ROOT / "film_analysis.db"), help="SQLite database path")
+    parser.add_argument("--db", default=str(live_db_path()), help="SQLite database path")
     parser.add_argument("--video", help="Optional video path for enhanced analysis FPS lookup")
     args = parser.parse_args(argv)
 

@@ -214,7 +214,8 @@ def _update_job(job_id: str, **fields) -> None:
 def trim_stamp(job_id: str) -> str:
     """Timestamp + job-id suffix for output names. Seconds alone collided when two clips
     were generated in the same second (the second ffmpeg overwrote the first file)."""
-    return f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{job_id[:8]}"
+    # local time, like upload filenames (blueprints/ai.py); the DB itself stores UTC timestamps
+    return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{job_id[:8]}"
 
 
 def start_trim_job(*, app, video_row: dict, start_ms: int, end_ms: int, label: str | None = None) -> str:

@@ -1,0 +1,579 @@
+{
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+  "window": "0:00\u201316:00 of film (960s)",
+  "manual_last_tag": "9:49.6",
+  "manual_end_ms": 871200,
+  "manual_rows": 71,
+  "manual_stat_rows": 53,
+  "ai_raw_events": 716,
+  "ai_stat_rows": 292,
+  "ai_compare_rows": 13,
+  "ai_accepted": 13,
+  "ai_type_counts": {
+    "possession_change": 212,
+    "shot": 148,
+    "make": 117,
+    "miss": 63,
+    "rebound": 63,
+    "assist": 47,
+    "turnover": 17,
+    "steal": 17,
+    "missed_free_throw": 13,
+    "made_two": 11,
+    "missed_two": 7,
+    "tip_off": 1
+  },
+  "ai_status_counts": {
+    "rejected": 673,
+    "accepted": 43
+  },
+  "analysis_keys": [
+    "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+    "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260915_193718"
+  ],
+  "runs": [
+    {
+      "analysis_key": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260915_193718",
+      "status": "failed",
+      "run_kind": "rerun",
+      "settings_json": "{\"analysis\": {}, \"ai\": {\"detector_model\": \"yolov8n.pt\", \"custom_detector_model\": \"\", \"ball_detector_model\": \"models/ball_detector.pt\", \"custom_ball_detector_model\": \"\", \"ball_class_id\": 0, \"ball_confidence\": 0.25, \"person_confidence\": 0.5, \"event_generator_mode\": \"precision\", \"inference_device\": \"cuda\", \"frame_stride\": 1, \"detection_stride\": 1, \"tracker_max_distance\": 80, \"tracker_max_frame_gap\": 5, \"tracker_backend\": \"bytetrack\", \"tracker_enabled\": true, \"jersey_ocr_enabled\": true, \"jersey_ocr_stride\": 5, \"jersey_ocr_min_confidence\": 0.55, \"auto_apply_jersey_mapping\": true, \"identity_auto_apply_min_confidence\": 0.6, \"identity_auto_apply_min_samples\": 4, \"auto_accept_event_confidence\": 0.85, \"llm_provider\": \"ollama\", \"llm_model\": \"\"}}",
+      "started_at": "2026-09-15 19:37:18",
+      "completed_at": "2026-09-15 20:07:19"
+    },
+    {
+      "analysis_key": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+      "status": "completed",
+      "run_kind": "primary",
+      "settings_json": "{\"analysis\": {}, \"ai\": {\"detector_model\": \"yolov8n.pt\", \"custom_detector_model\": \"\", \"ball_detector_model\": \"models/ball_detector.pt\", \"custom_ball_detector_model\": \"\", \"ball_class_id\": 0, \"ball_confidence\": 0.25, \"person_confidence\": 0.5, \"event_generator_mode\": \"precision\", \"inference_device\": \"cuda\", \"frame_stride\": 1, \"detection_stride\": 1, \"tracker_max_distance\": 80, \"tracker_max_frame_gap\": 5, \"tracker_backend\": \"bytetrack\", \"tracker_enabled\": true, \"jersey_ocr_enabled\": true, \"jersey_ocr_stride\": 5, \"jersey_ocr_min_confidence\": 0.55, \"auto_apply_jersey_mapping\": true, \"identity_auto_apply_min_confidence\": 0.6, \"identity_auto_apply_min_samples\": 4, \"auto_accept_event_confidence\": 0.85, \"llm_provider\": \"ollama\", \"llm_model\": \"\"}}",
+      "started_at": "2026-09-15 18:23:15",
+      "completed_at": "2026-09-15 18:53:16"
+    }
+  ],
+  "settings": {
+    "ai.inference_device": "cuda",
+    "ai.event_generator_mode": "precision",
+    "ai.auto_accept_event_confidence": "0.85",
+    "ai.tracker_enabled": "1"
+  },
+  "manual_box_liberty": {
+    "PTS": 18,
+    "FGM": 8,
+    "FGA": 11,
+    "2PM": 8,
+    "2PA": 10,
+    "3PM": 0,
+    "3PA": 1,
+    "FTM": 2,
+    "FTA": 2,
+    "OREB": 2,
+    "DREB": 5,
+    "REB": 7,
+    "AST": 5,
+    "STL": 3,
+    "BLK": 0,
+    "TO": 3,
+    "PF": 3
+  },
+  "manual_box_adrian": {
+    "PTS": 4,
+    "FGM": 2,
+    "FGA": 10,
+    "2PM": 2,
+    "2PA": 4,
+    "3PM": 0,
+    "3PA": 6,
+    "FTM": 0,
+    "FTA": 0,
+    "OREB": 0,
+    "DREB": 1,
+    "REB": 1,
+    "AST": 0,
+    "STL": 1,
+    "BLK": 0,
+    "TO": 3,
+    "PF": 4
+  },
+  "ai_box_liberty": {
+    "PTS": 0,
+    "FGM": 0,
+    "FGA": 0,
+    "2PM": 0,
+    "2PA": 0,
+    "3PM": 0,
+    "3PA": 0,
+    "FTM": 0,
+    "FTA": 0,
+    "OREB": 0,
+    "DREB": 0,
+    "REB": 0,
+    "AST": 0,
+    "STL": 0,
+    "BLK": 0,
+    "TO": 0,
+    "PF": 0
+  },
+  "ai_box_adrian": {
+    "PTS": 0,
+    "FGM": 0,
+    "FGA": 0,
+    "2PM": 0,
+    "2PA": 0,
+    "3PM": 0,
+    "3PA": 0,
+    "FTM": 0,
+    "FTA": 0,
+    "OREB": 0,
+    "DREB": 2,
+    "REB": 2,
+    "AST": 0,
+    "STL": 0,
+    "BLK": 0,
+    "TO": 1,
+    "PF": 0
+  },
+  "ai_box_unknown": {
+    "PTS": 0,
+    "FGM": 0,
+    "FGA": 0,
+    "2PM": 0,
+    "2PA": 0,
+    "3PM": 0,
+    "3PA": 0,
+    "FTM": 0,
+    "FTA": 0,
+    "OREB": 0,
+    "DREB": 5,
+    "REB": 5,
+    "AST": 0,
+    "STL": 3,
+    "BLK": 0,
+    "TO": 2,
+    "PF": 0
+  },
+  "manual_counts": {
+    "3PT|Miss": 7,
+    "DefRebound": 6,
+    "2PT|Make": 10,
+    "Assist": 5,
+    "Foul": 7,
+    "Steal": 4,
+    "Turnover": 6,
+    "2PT|Miss": 4,
+    "OffRebound": 2,
+    "FT|Make": 2
+  },
+  "ai_counts": {
+    "DefRebound": 7,
+    "Turnover": 3,
+    "Steal": 3
+  },
+  "matched": 3,
+  "only_manual": 50,
+  "only_ai": 10,
+  "player_name_matches": 0,
+  "matches": [
+    {
+      "type": "DefRebound",
+      "manual_t": "0:37.6",
+      "ai_t": "0:39",
+      "dt_s": 1.4,
+      "manual_player": "15 - Alexander Xavier, So",
+      "ai_player": "#22 Foster",
+      "player_ok": false
+    },
+    {
+      "type": "DefRebound",
+      "manual_t": "11:57.3",
+      "ai_t": "12:02",
+      "dt_s": 5.1,
+      "manual_player": "1 - G. Martinez, 11",
+      "ai_player": "#22 Foster",
+      "player_ok": false
+    },
+    {
+      "type": "DefRebound",
+      "manual_t": "14:13.3",
+      "ai_t": "14:05",
+      "dt_s": -7.9,
+      "manual_player": "33 - Dominic Fischer, Sr",
+      "ai_player": "6",
+      "player_ok": false
+    }
+  ],
+  "only_manual_rows": [
+    {
+      "t": "0:34.3",
+      "type": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "0:40.7",
+      "type": "2PT|Make",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "0:40.7",
+      "type": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "1:34.8",
+      "type": "Foul",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "2:06.7",
+      "type": "Steal",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "2:06.7",
+      "type": "Turnover",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "2:10.8",
+      "type": "2PT|Make",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "2:38.9",
+      "type": "3PT|Miss",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "2:59.7",
+      "type": "Foul",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "3:22.0",
+      "type": "2PT|Make",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty"
+    },
+    {
+      "t": "3:22.0",
+      "type": "Assist",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "4:51.1",
+      "type": "Foul",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "5:22.4",
+      "type": "Foul",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "5:46.0",
+      "type": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "6:07.4",
+      "type": "2PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "6:33.8",
+      "type": "3PT|Miss",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "6:36.8",
+      "type": "DefRebound",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty"
+    },
+    {
+      "t": "6:37.9",
+      "type": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Adrian"
+    },
+    {
+      "t": "7:12.8",
+      "type": "Steal",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "7:12.8",
+      "type": "Turnover",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "8:01.8",
+      "type": "Turnover",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "9:44.0",
+      "type": "3PT|Miss",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "9:46.8",
+      "type": "OffRebound",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "9:49.6",
+      "type": "Foul",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "10:12.1",
+      "type": "FT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "10:25.8",
+      "type": "FT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "10:47.0",
+      "type": "3PT|Miss",
+      "player": "4 - Darius Zamora, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "10:49.1",
+      "type": "DefRebound",
+      "player": "2 - Robbie Colman, Sr",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:01.1",
+      "type": "Foul",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Adrian"
+    },
+    {
+      "t": "11:25.3",
+      "type": "2PT|Miss",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:28.6",
+      "type": "OffRebound",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:31.8",
+      "type": "2PT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:31.8",
+      "type": "Assist",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:51.9",
+      "type": "Steal",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "11:51.9",
+      "type": "Turnover",
+      "player": "20 - Ezra Johnson, 12",
+      "team": "Adrian"
+    },
+    {
+      "t": "11:55.6",
+      "type": "2PT|Miss",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "12:22.9",
+      "type": "3PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "12:26.1",
+      "type": "DefRebound",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "12:37.1",
+      "type": "2PT|Make",
+      "player": "33 - Dominic Fischer, Sr",
+      "team": "Liberty"
+    },
+    {
+      "t": "12:37.1",
+      "type": "Assist",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "12:53.4",
+      "type": "2PT|Make",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "13:08.2",
+      "type": "Turnover",
+      "player": "11 - Jack Taylor, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "13:35.4",
+      "type": "2PT|Make",
+      "player": "2 - Omari Barboza, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "13:41.5",
+      "type": "2PT|Make",
+      "player": "4 - Carson Bradshaw, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "13:41.5",
+      "type": "Assist",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "13:50.9",
+      "type": "Steal",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "13:50.9",
+      "type": "Turnover",
+      "player": "5 - Lance Bryce, 10",
+      "team": "Adrian"
+    },
+    {
+      "t": "13:53.0",
+      "type": "2PT|Make",
+      "player": "15 - Alexander Xavier, So",
+      "team": "Liberty"
+    },
+    {
+      "t": "14:11.1",
+      "type": "2PT|Miss",
+      "player": "1 - G. Martinez, 11",
+      "team": "Adrian"
+    },
+    {
+      "t": "14:19.8",
+      "type": "2PT|Make",
+      "player": "10 - Tyden Blacker, So",
+      "team": "Liberty"
+    }
+  ],
+  "only_ai_rows": [
+    {
+      "t": "2:40",
+      "type": "Turnover",
+      "player": "7",
+      "status": "accepted"
+    },
+    {
+      "t": "2:40",
+      "type": "Steal",
+      "player": "1",
+      "status": "accepted"
+    },
+    {
+      "t": "9:25",
+      "type": "Turnover",
+      "player": "#13 Mendoza",
+      "status": "accepted"
+    },
+    {
+      "t": "9:25",
+      "type": "Steal",
+      "player": "1",
+      "status": "accepted"
+    },
+    {
+      "t": "10:16",
+      "type": "DefRebound",
+      "player": "5",
+      "status": "accepted"
+    },
+    {
+      "t": "13:04",
+      "type": "DefRebound",
+      "player": "6",
+      "status": "accepted"
+    },
+    {
+      "t": "13:32",
+      "type": "Turnover",
+      "player": "1",
+      "status": "accepted"
+    },
+    {
+      "t": "13:32",
+      "type": "Steal",
+      "player": "8",
+      "status": "accepted"
+    },
+    {
+      "t": "13:50",
+      "type": "DefRebound",
+      "player": "6",
+      "status": "accepted"
+    },
+    {
+      "t": "15:13",
+      "type": "DefRebound",
+      "player": "6",
+      "status": "accepted"
+    }
+  ],
+  "flow_manual": {
+    "StartQTR": 1,
+    "OB": 3,
+    "SLOB": 3,
+    "TimeOut": 2,
+    "BLOB": 5,
+    "Violation": 2,
+    "JumpBall": 1,
+    "EndQTR": 1
+  },
+  "liberty_pts_manual": 18,
+  "adrian_pts_manual": 4
+}

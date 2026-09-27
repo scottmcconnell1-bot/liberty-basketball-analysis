@@ -10,6 +10,99 @@ class TestPlaybookList:
         assert r.status_code == 200
         assert b"Playbook" in r.data
 
+    def test_playbook_draw_page_loads(self, client):
+        r = client.get("/playbook/draw")
+        assert r.status_code == 200
+        body = r.get_data(as_text=True)
+        assert "Build a picture" in body
+        assert "Next picture" in body
+        assert "With previous" in body
+        assert "Optional" in body
+        for label in ("Cut", "Pass", "Dribble", "Screen"):
+            assert label in body
+
+    def test_draw_page_reloads_saved_actions(self, client, db):
+        steps = [{
+            "label": "Phase 1",
+            "notes": "Entry",
+            "positions": {"o1": {"x": 250, "y": 360}, "o2": {"x": 390, "y": 270}},
+            "ball": "o1",
+            "movements": [{
+                "from": "o1",
+                "to": "o2",
+                "type": "pass",
+                "timing": "after",
+                "points": [{"x": 250, "y": 360}, {"x": 390, "y": 270}],
+            }],
+        }]
+        saved = client.post("/playbook/save", data={
+            "name": "Horns entry draw",
+            "category": "offense",
+            "description": "",
+            "tags": "",
+            "playbook_id": "",
+            "diagram_json": "{}",
+            "steps_json": json.dumps(steps),
+        }, follow_redirects=False)
+        assert saved.status_code in (302, 303)
+        play_id = db.execute(
+            "SELECT id FROM plays WHERE name = ?", ("Horns entry draw",)
+        ).fetchone()["id"]
+        page = client.get(f"/playbook/draw/{play_id}")
+        assert page.status_code == 200
+        text = page.get_data(as_text=True)
+        assert "Horns entry draw" in text
+        assert '"type": "pass"' in text
+        assert "Edit play" in client.get(f"/playbook/play/{play_id}").get_data(as_text=True)
+
+    def test_existing_play_opens_in_picture_editor(self, client, db):
+        cur = db.execute(
+            "INSERT INTO plays (name, category, diagram_json) VALUES (?, ?, ?)",
+            ("Existing horns", "offense", "{}"),
+        )
+        play_id = cur.lastrowid
+        db.execute(
+            """INSERT INTO play_steps
+               (play_id, step_number, label, positions_json, movements_json, notes, source_image)
+               VALUES (?,?,?,?,?,?,?)""",
+            (
+                play_id, 0, "Picture 1",
+                '{"o1": {"x": 10, "y": 20}}',
+                '[{"from": "o1", "to": "o1", "type": "cut", "points": [{"x": 10, "y": 20}, {"x": 40, "y": 50}]}]',
+                "",
+                "/uploads/sheet.png",
+            ),
+        )
+        db.commit()
+        page = client.get(f"/playbook/draw/{play_id}")
+        assert page.status_code == 200
+        text = page.get_data(as_text=True)
+        assert "Existing horns" in text
+        assert "/uploads/sheet.png" in text
+        assert '"type": "cut"' in text
+        stayed = client.post("/playbook/save", data={
+            "play_id": str(play_id),
+            "name": "Existing horns",
+            "category": "offense",
+            "description": "",
+            "tags": "",
+            "playbook_id": "",
+            "diagram_json": "{}",
+            "stay": "1",
+            "steps_json": json.dumps([{
+                "label": "Picture 1",
+                "positions": {"o1": {"x": 10, "y": 20}},
+                "source_image": "/uploads/sheet.png",
+                "movements": [{"from": "o1", "to": "o1", "type": "cut"}],
+            }]),
+        })
+        assert stayed.status_code == 200
+        assert stayed.get_json()["play_id"] == play_id
+        kept = db.execute(
+            "SELECT source_image FROM play_steps WHERE play_id = ?", (play_id,)
+        ).fetchone()
+        assert kept["source_image"] == "/uploads/sheet.png"
+
     def test_playbook_create_page_loads(self, client):
         r = client.get("/playbook/create")
         assert r.status_code == 200
@@ -652,3 +745,28 @@ class TestPlaybookTeams:
         assert kids[0]["name"] == "Child Option"
         assert kids[0]["team_key"] == "hs_girls"
         assert kids[0]["id"] != child
+
+
+class TestPlaybookViewModeEdits:
+    """View mode can edit sheets for Play All but has no Save Play form."""
+
+    def _play_id(self, client, db):
+        client.post("/playbook/save", data={
+            "name": "View Mode Play", "category": "offense", "description": "", "tags": "",
+            "playbook_id": "", "diagram_json": "{}", "steps_json": "[]",
+        }, follow_redirects=True)
+        return db.execute("SELECT id FROM plays WHERE name='View Mode Play'").fetchone()["id"]
+
+    def test_view_banner_points_to_edit_instead_of_missing_save(self, client, db):
+        play_id = self._play_id(client, db)
+        html = client.get(f"/playbook/play/{play_id}").get_data(as_text=True)
+        assert 'id="playForm"' not in html
+        assert "not saved</strong> in View" in html
+        assert f"/playbook/play/{play_id}/edit" in html
+        assert "if (!stepsDirty || viewMode === 'share') return;" in html
+
+    def test_editor_banner_still_says_save_play(self, client, db):
+        play_id = self._play_id(client, db)
+        html = client.get(f"/playbook/play/{play_id}/edit").get_data(as_text=True)
+        assert 'id="playForm"' in html
+        assert "click <strong>Save Play</strong> to keep them" in html

@@ -26,7 +26,10 @@ ROOT = Path(__file__).resolve().parents[1]
 LATEST_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
 HISTORY_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_history.jsonl"
 TEACH_STATE_PATH = ROOT / "data" / "hoopsalytics" / "teach_loop_state.json"
-DB_PATH = ROOT / "film_analysis.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
+
+DB_PATH = live_db_path()
 OUT_PATH = ROOT / "docs" / "LEARNING_STATUS.md"
 
 # Hide console flashes from PowerShell child processes on Windows (same as teach loop)
@@ -786,6 +789,32 @@ def infer_activity_from_teach(
     return activity
 
 
+def _scored_games(snapshot: dict) -> dict[str, dict] | None:
+    """Panel games keyed by name, or None when the snapshot has no per-game list."""
+    games = snapshot.get("games")
+    if not isinstance(games, list) or not games:
+        return None
+    out: dict[str, dict] = {}
+    for g in games:
+        if isinstance(g, dict):
+            out[str(g.get("name") or g.get("analysis_key") or len(out))] = g
+    return out
+
+
+def _paired_delta(latest: dict[str, dict], prior: dict[str, dict], metric: str) -> float | None:
+    """Mean change of *metric* over games scored in both snapshots (None if none are)."""
+    diffs = []
+    for name, g in latest.items():
+        now, before = g.get(metric), (prior.get(name) or {}).get(metric)
+        if now is None or before is None:
+            continue
+        try:
+            diffs.append(float(now) - float(before))
+        except (TypeError, ValueError):
+            continue
+    return round(sum(diffs) / len(diffs), 4) if diffs else None
+
+
 def compute_trend(latest: dict | None, prior: dict | None) -> dict[str, Any]:
     if not latest:
         return {"available": False, "note": "no latest panel"}
@@ -796,10 +825,24 @@ def compute_trend(latest: dict | None, prior: dict | None) -> dict[str, Any]:
     pev = prior.get("evaluation") or {}
     d_prec = None
     d_rec = None
-    if lev.get("mean_precision") is not None and pev.get("mean_precision") is not None:
-        d_prec = round(float(lev["mean_precision"]) - float(pev["mean_precision"]), 4)
-    if lev.get("mean_recall") is not None and pev.get("mean_recall") is not None:
-        d_rec = round(float(lev["mean_recall"]) - float(pev["mean_recall"]), 4)
+    lost_scores: list[str] = []
+    lgames = _scored_games(latest)
+    pgames = _scored_games(prior)
+    if lgames is not None and pgames is not None:
+        # Compare like with like: only games scored in BOTH snapshots. The panel
+        # means cover whichever games produced a score, so games that crashed in
+        # the latest run would otherwise turn a regression into an "improvement".
+        d_prec = _paired_delta(lgames, pgames, "precision")
+        d_rec = _paired_delta(lgames, pgames, "recall")
+        lost_scores = sorted(
+            name for name, g in pgames.items()
+            if g.get("precision") is not None and (lgames.get(name) or {}).get("precision") is None
+        )
+    else:
+        if lev.get("mean_precision") is not None and pev.get("mean_precision") is not None:
+            d_prec = round(float(lev["mean_precision"]) - float(pev["mean_precision"]), 4)
+        if lev.get("mean_recall") is not None and pev.get("mean_recall") is not None:
+            d_rec = round(float(lev["mean_recall"]) - float(pev["mean_recall"]), 4)
 
     gate_changes: list[str] = []
     lg = (lev.get("gates") or {}) if isinstance(lev.get("gates"), dict) else {}
@@ -815,6 +858,7 @@ def compute_trend(latest: dict | None, prior: dict | None) -> dict[str, Any]:
         "prior_generated_at": prior.get("generated_at"),
         "delta_mean_precision": d_prec,
         "delta_mean_recall": d_rec,
+        "games_lost_score": lost_scores,
         "gate_changes": gate_changes,
         "prior_overall_pass": pev.get("overall_pass"),
         "latest_overall_pass": lev.get("overall_pass"),
@@ -895,6 +939,8 @@ def build_verdict(latest: dict | None, trend: dict[str, Any]) -> list[str]:
             f"Trend vs prior: ΔP={dp if dp is not None else 'Unknown'}, "
             f"ΔR={dr if dr is not None else 'Unknown'}."
         )
+        if trend.get("games_lost_score"):
+            lines.append("Games that lost their score since prior: " + ", ".join(trend["games_lost_score"]) + ".")
     else:
         lines.append(f"Trend: {trend.get('note') or 'baseline / no trend yet'}.")
     return lines
@@ -1170,6 +1216,10 @@ def render_report(
             f"- **Δ mean recall:** {dr if dr is not None else 'Unknown'} "
             f"({_pct((latest or {}).get('evaluation', {}).get('mean_recall'))} now)"
         )
+        lines.append("- Δ is over games scored in both snapshots.")
+        lost = trend.get("games_lost_score") or []
+        if lost:
+            lines.append("- **Games with no score now (had one before):** " + ", ".join(lost))
         changes = trend.get("gate_changes") or []
         if changes:
             lines.append("- **Gate changes:** " + "; ".join(changes))

@@ -6,6 +6,7 @@ Interactive basketball play creator and playbook manager.
 
 Routes included:
 - playbook (/playbook)                          — Playbook list / plays library
+- playbook_draw (/playbook/draw)                — Clipboard play creator
 - playbook_create (/playbook/create)            — Create new play (canvas editor)
 - playbook_edit (/playbook/play/<id>/edit)      — Edit existing play
 - playbook_view (/playbook/play/<id>)           — View play with animation
@@ -41,6 +42,9 @@ playbook_bp = Blueprint("playbook", __name__)
 
 _PUBLIC_ENDPOINTS = frozenset({
     "playbook.playbook_share",
+    "playbook.playbook_share_upload",
+    "playbook.playbook_share_choreography",
+    "playbook.playbook_share_sheet",
 })
 
 # Liberty program playbooks (separate from opponent scout playbooks).
@@ -394,6 +398,18 @@ def _copy_play_steps(db, source_play_id, dest_play_id):
                 step["source_image"] if "source_image" in step.keys() else None,
             ),
         )
+    _copy_play_choreography(source_play_id, dest_play_id)
+
+
+def _copy_play_choreography(source_play_id, dest_play_id):
+    """Carry the coach-saved (sticky) choreography over to a copied play."""
+    from playbook_choreography import load_choreography, save_choreography
+
+    base = _choreography_base()
+    doc = load_choreography(source_play_id, base=base)
+    if not doc:
+        return
+    save_choreography(dest_play_id, doc, base=base, source=doc.get("source") or "user_save")
 
 
 def copy_play_to_team(db, play_id, target_team, *, include_progressions=True):
@@ -791,6 +807,135 @@ def playbook_opponent_detail(playbook_id):
     )
 
 
+def _draw_editor_blocked():
+    """Parents, players, and the coach portal watch plays. They do not draw them."""
+    if session.get("coach_portal"):
+        flash("This sign-in can watch plays, not draw them.", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    from audience_access import is_family_role
+    from blueprints.users import _current_user
+
+    user = _current_user()
+    if user and is_family_role(user["role"]):
+        flash("Parents and players can watch plays, not draw them.", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    return None
+
+
+def _flatten_categories(nodes, prefix=""):
+    out = []
+    for node in nodes or []:
+        label = f"{prefix}{node.get('name') or 'Category'}"
+        out.append({"id": node["id"], "label": label})
+        out.extend(_flatten_categories(node.get("children"), label + " / "))
+    return out
+
+
+def _phases_from_steps(steps, choreography=None):
+    """One picture per saved step. Coach choreography wins over the original sheet."""
+    sticky_by_index = {}
+    for item in (choreography or {}).get("steps") or []:
+        if isinstance(item, dict):
+            sticky_by_index[int(item.get("step_index", len(sticky_by_index)))] = item
+    phases = []
+    for index, step in enumerate(steps or []):
+        row = dict(step)
+        sticky_step = sticky_by_index.get(index)
+        try:
+            positions = json.loads(row.get("positions_json") or "{}")
+        except json.JSONDecodeError:
+            positions = {}
+        try:
+            movements = json.loads(row.get("movements_json") or "[]")
+        except json.JSONDecodeError:
+            movements = []
+        if not isinstance(positions, dict):
+            positions = {}
+        if not isinstance(movements, list):
+            movements = []
+        if sticky_step and isinstance(sticky_step.get("positions"), dict) and sticky_step["positions"]:
+            positions = sticky_step["positions"]
+        if sticky_step and (sticky_step.get("coachOrder") or sticky_step.get("movements")):
+            movements = sticky_step.get("movements") or []
+        ball = "o1"
+        actions = []
+        for movement in movements:
+            if not isinstance(movement, dict):
+                continue
+            if movement.get("_meta"):
+                if movement.get("_ball"):
+                    ball = movement["_ball"]
+                continue
+            anchors = movement.get("anchors") or movement.get("points") or []
+            dest = movement.get("dest")
+            if not dest and isinstance(anchors, list) and len(anchors) >= 2:
+                dest = anchors[-1]
+            actions.append({
+                "type": movement.get("type") or "cut",
+                "from": movement.get("from"),
+                "to": movement.get("to"),
+                "timing": movement.get("timing") or "after",
+                "anchors": anchors,
+                "dest": dest,
+            })
+        if sticky_step and sticky_step.get("ball"):
+            ball = sticky_step["ball"]
+        phases.append({
+            "label": row.get("label") or f"Picture {len(phases) + 1}",
+            "notes": row.get("notes") or "",
+            "ball": ball,
+            "positions": positions,
+            "actions": actions,
+            "source_image": row.get("source_image") or "",
+        })
+    return phases
+
+
+@playbook_bp.route("/playbook/draw")
+@playbook_bp.route("/playbook/draw/<int:play_id>")
+@require_feature("ENABLE_PRACTICES")
+def playbook_draw(play_id=None):
+    """Clipboard editor: drag players, draw actions, play the phase."""
+    blocked = _draw_editor_blocked()
+    if blocked:
+        return blocked
+    db = get_db()
+    team_key = resolve_playbook_team(persist=True)
+    category_tree = _load_playbook_taxonomy(db)
+    play = None
+    phases = []
+    if play_id:
+        play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+        if not play:
+            flash("Play not found.", "error")
+            return redirect(url_for("playbook.playbook_list", team=team_key))
+        steps = db.execute(
+            "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number",
+            (play_id,),
+        ).fetchall()
+        team_key = normalize_playbook_team(play["team_key"] if "team_key" in play.keys() else team_key)
+        session[_SESSION_TEAM_KEY] = team_key
+        from playbook_choreography import load_choreography
+
+        phases = _phases_from_steps(
+            steps,
+            load_choreography(play_id, base=_choreography_base()),
+        )
+        play = dict(play)
+    playbooks = db.execute(
+        "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
+    ).fetchall()
+    return render_template(
+        "play_draw.html",
+        play=play,
+        phases=phases,
+        categories=_flatten_categories(category_tree),
+        playbooks=[dict(row) for row in playbooks],
+        category_id=(play or {}).get("category_id") or _default_category_id(db),
+        **_team_template_kwargs(team_key),
+    )
+
+
 @playbook_bp.route("/playbook/create")
 @require_feature("ENABLE_PRACTICES")
 def playbook_create():
@@ -942,6 +1087,7 @@ def playbook_share(token):
             404,
             {"Content-Type": "text/html"},
         )
+    play = dict(play)  # sqlite3.Row has no .get(); match the other play helpers
     steps = db.execute(
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
     ).fetchall()
@@ -958,8 +1104,84 @@ def playbook_share(token):
         view_mode="share",
         selected_category_id=play["category_id"],
         share_url=url_for("playbook.playbook_share", token=token, _external=True),
+        share_token=token,
         **_team_template_kwargs(team_key),
     )
+
+
+# Token-scoped assets for the public share page. /play/share/ is public even when
+# ENABLE_AUTH_MIDDLEWARE is on, so these expose ONLY the shared play's own sheets and
+# choreography — never the rest of /uploads or other plays.
+
+
+def _shared_play_sheet_urls(db, play_id):
+    """Every /uploads/... sheet URL the shared play itself references."""
+    from playbook_choreography import load_choreography
+
+    urls = {
+        row["source_image"]
+        for row in db.execute(
+            "SELECT source_image FROM play_steps WHERE play_id = ?", (play_id,)
+        ).fetchall()
+        if row["source_image"]
+    }
+    doc = load_choreography(play_id, base=_choreography_base()) or {}
+    for step in doc.get("steps") or []:
+        if isinstance(step, dict) and step.get("source_image"):
+            urls.add(step["source_image"])
+    return {u for u in urls if isinstance(u, str) and u.startswith("/uploads/")}
+
+
+def _shared_play_or_none(token):
+    from playbook_sharing import get_play_by_share_token
+
+    return get_play_by_share_token(get_db(), token)
+
+
+@playbook_bp.route("/play/share/<token>/uploads/<path:filename>")
+def playbook_share_upload(token, filename):
+    """Serve one sheet image of a shared play (only files that play references)."""
+    from flask import send_from_directory
+
+    play = _shared_play_or_none(token)
+    if not play or f"/uploads/{filename}" not in _shared_play_sheet_urls(get_db(), play["id"]):
+        return jsonify({"error": "Not found"}), 404
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+
+
+@playbook_bp.route("/play/share/<token>/choreography")
+def playbook_share_choreography(token):
+    """Read-only sticky choreography for a shared play."""
+    from playbook_choreography import load_choreography
+
+    play = _shared_play_or_none(token)
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    doc = load_choreography(play["id"], base=_choreography_base())
+    if not doc:
+        return jsonify({"ok": True, "sticky": False, "choreography": None})
+    return jsonify({"ok": True, "sticky": True, "choreography": doc})
+
+
+@playbook_bp.route(
+    "/play/share/<token>/<any('sheet-align', 'sheet-extract', 'sheet-paths'):kind>",
+    methods=["POST"],
+)
+def playbook_share_sheet(token, kind):
+    """Sheet align/extract/paths for a shared play's own sheets (Play All on share links)."""
+    play = _shared_play_or_none(token)
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    image_url = (data.get("image_url") or data.get("source_image") or "").strip()
+    if image_url not in _shared_play_sheet_urls(get_db(), play["id"]):
+        return jsonify({"error": "Sheet not part of this shared play"}), 404
+    handler = {
+        "sheet-align": playbook_sheet_align_api,
+        "sheet-extract": playbook_sheet_extract_api,
+        "sheet-paths": playbook_sheet_paths_api,
+    }[kind]
+    return handler()
 
 
 @playbook_bp.route("/playbook/play/<int:play_id>/edit")
@@ -1253,6 +1475,8 @@ def playbook_save():
         pass
 
     db.commit()
+    if (form.get("stay") or "") == "1":
+        return jsonify({"ok": True, "play_id": play_db_id})
     flash("Play saved.", "success")
     return redirect(url_for("playbook.playbook_view", play_id=play_db_id))
 
@@ -1273,6 +1497,20 @@ def playbook_share_api(play_id):
         return jsonify({"error": str(exc)}), 400
     share_url = url_for("playbook.playbook_share", token=token, _external=True)
     return jsonify({"token": token, "url": share_url})
+
+
+@playbook_bp.route("/api/playbook/play/<int:play_id>/share", methods=["DELETE"])
+def playbook_share_revoke_api(play_id):
+    """Revoke a play's public share link (a new Copy Share Link mints a fresh token)."""
+    from playbook_sharing import revoke_share_token
+
+    db = get_db()
+    try:
+        revoked = revoke_share_token(db, play_id)
+        db.commit()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"ok": True, "revoked": revoked})
 
 
 @playbook_bp.route("/api/playbook/play/<int:play_id>")
@@ -1313,7 +1551,9 @@ def playbook_sheet_align_api():
             from playbook_vector_extract import extract_sheet_from_image_url
 
             vec = extract_sheet_from_image_url(
-                image_url, app_root=current_app.root_path
+                image_url,
+                app_root=current_app.root_path,
+                upload_folder=current_app.config.get("UPLOAD_FOLDER"),
             )
             if vec and (vec.get("positions") or {}):
                 return jsonify({
@@ -1329,7 +1569,9 @@ def playbook_sheet_align_api():
 
         from playbook_sheet_align import analyze_sheet_image, resolve_upload_path
 
-        path = resolve_upload_path(image_url, current_app.root_path)
+        path = resolve_upload_path(
+            image_url, current_app.root_path, current_app.config.get("UPLOAD_FOLDER")
+        )
         cache_base = Path(current_app.root_path) / "data" / "playbook"
         result = analyze_sheet_image(path, cache_base=cache_base)
         return jsonify({
@@ -1369,6 +1611,7 @@ def playbook_sheet_extract_api():
             vec = extract_sheet_from_image_url(
                 image_url,
                 app_root=current_app.root_path,
+                upload_folder=current_app.config.get("UPLOAD_FOLDER"),
                 next_positions=to_positions,
             )
             if vec and (vec.get("positions") or {}):
@@ -1383,6 +1626,7 @@ def playbook_sheet_extract_api():
                         "paths": ink.get("paths") or {},
                         "marks": ink.get("marks") or {},
                         "passes": ink.get("passes") or [],
+                        "actions": ink.get("actions") or [],
                     },
                     "title": vec.get("title"),
                     "page": vec.get("page"),
@@ -1390,7 +1634,9 @@ def playbook_sheet_extract_api():
 
         from playbook_sheet_align import analyze_sheet_image, resolve_upload_path
 
-        path = resolve_upload_path(image_url, current_app.root_path)
+        path = resolve_upload_path(
+            image_url, current_app.root_path, current_app.config.get("UPLOAD_FOLDER")
+        )
         cache_base = Path(current_app.root_path) / "data" / "playbook"
         result = analyze_sheet_image(path, cache_base=cache_base)
         return jsonify({
@@ -1435,11 +1681,12 @@ def playbook_sheet_paths_api():
             vec = extract_sheet_from_image_url(
                 image_url,
                 app_root=current_app.root_path,
+                upload_folder=current_app.config.get("UPLOAD_FOLDER"),
                 next_positions=to_positions or None,
             )
             if vec:
                 ink = vec.get("ink") or {}
-                if ink.get("paths") or ink.get("passes"):
+                if ink.get("paths") or ink.get("passes") or ink.get("actions"):
                     return jsonify({
                         "ok": True,
                         "image_url": image_url,
@@ -1447,11 +1694,14 @@ def playbook_sheet_paths_api():
                         "paths": ink.get("paths") or {},
                         "marks": ink.get("marks") or {},
                         "passes": ink.get("passes") or [],
+                        "actions": ink.get("actions") or [],
                     })
 
         from playbook_sheet_align import resolve_upload_path, trace_marked_paths_for_transition
 
-        path = resolve_upload_path(image_url, current_app.root_path)
+        path = resolve_upload_path(
+            image_url, current_app.root_path, current_app.config.get("UPLOAD_FOLDER")
+        )
         marked = trace_marked_paths_for_transition(path, from_positions, to_positions)
         return jsonify({
             "ok": True,
@@ -1579,12 +1829,10 @@ def playbook_categories_move(category_id):
     data = request.get_json(force=True) or {}
     db = get_db()
     try:
-        move_category(
-            db,
-            category_id,
-            parent_id=data.get("parent_id"),
-            sort_order=data.get("sort_order"),
-        )
+        kwargs = {"sort_order": data.get("sort_order")}
+        if "parent_id" in data:  # explicit null = top level
+            kwargs["parent_id"] = data.get("parent_id")
+        move_category(db, category_id, **kwargs)
         db.commit()
         return jsonify({"ok": True, "tree": build_category_tree(db)})
     except ValueError as exc:
@@ -1648,6 +1896,10 @@ def playbook_import():
     )
 
 
+# Uploads are served same-origin from /uploads, so only inert document/image types.
+_PLAY_IMPORT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+
+
 @playbook_bp.route("/playbook/import/parse", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def playbook_import_parse():
@@ -1674,6 +1926,10 @@ def playbook_import_parse():
     os.makedirs(upload_dir, exist_ok=True)
 
     ext = os.path.splitext(filename)[1]
+    if ext not in _PLAY_IMPORT_EXTENSIONS:
+        return jsonify({
+            "error": "Unsupported file type — upload a PDF or an image (PNG, JPG, WEBP, GIF).",
+        }), 400
     safe_name = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join(upload_dir, safe_name)
     uploaded.save(save_path)

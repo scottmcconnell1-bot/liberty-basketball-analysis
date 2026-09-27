@@ -152,3 +152,27 @@ def test_api_film_rosters_import_requires_season(client):
     resp = client.post("/api/film-rosters/import", data=data, content_type="multipart/form-data")
     assert resp.status_code == 400
     assert "season_id" in resp.get_json()["error"].lower()
+
+
+def test_named_opponent_roster_slot(db):
+    season_id = _create_season(db)
+    save_film_roster(
+        db,
+        season_id=season_id,
+        level="jrhigh",
+        gender="boys",
+        side="opp",
+        opponent_name="Adrian",
+        players=[{"label": "13 - Mendoza", "jersey_number": "13", "name": "Mendoza"}],
+        replace=True,
+    )
+    db.commit()
+    players = list_film_roster_players(
+        db, season_id=season_id, level="jrhigh", gender="boys", side="opp", opponent_name="Adrian"
+    )
+    assert len(players) == 1
+    assert players[0]["name"] == "Mendoza"
+    vale = list_film_roster_players(
+        db, season_id=season_id, level="jrhigh", gender="boys", side="opp", opponent_name="Vale"
+    )
+    assert vale == []

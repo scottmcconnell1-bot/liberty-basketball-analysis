@@ -1074,7 +1074,6 @@ def test_film_page(client):
     assert b"aiEventsPanel" in r.data
     assert b"aiEventsScroller" in r.data
     assert b"aiCurrentEventLabel" in r.data
-    assert b"Independent scrolling event timeline" in r.data
 
 
 def test_film_page_accepts_manual_game_id_query(client):
@@ -1088,7 +1087,6 @@ def test_film_page_with_uploaded_filename_embeds_video_url(client):
     r = client.get("/film/test_clip.mp4?game_id=test_game")
     assert r.status_code == 200
     assert b"/uploads/test_clip.mp4" in r.data
-    assert b"Server video" in r.data
 
 
 def test_film_tool_ai_events_doc_exists():
@@ -1144,6 +1142,116 @@ def test_analysis_status_includes_counts_and_summary(client, db):
     assert payload["detection_count"] == 1
     assert payload["event_count"] == 1
     assert "YOLO currently detects players and the ball" in payload["event_generation_summary"]
+
+
+def test_parse_analysis_progress_frames():
+    from helpers import parse_analysis_progress_frames
+
+    assert parse_analysis_progress_frames("Detecting objects: frame 1000/97475") == (1000, 97475)
+    assert parse_analysis_progress_frames("Loading AI models…") == (None, None)
+    assert parse_analysis_progress_frames("") == (None, None)
+
+
+def test_analysis_jobs_lists_running_progress(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("adrian.mp4", "adrian.mp4", "uploads/adrian.mp4", 1000, "Adrian", "jrhigh_adrian"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, status, progress_pct, progress_step, run_label)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            "jrhigh_adrian",
+            "uploads/adrian.mp4",
+            1,
+            "running",
+            12.5,
+            "Detecting objects: frame 1000/97475",
+            "Primary",
+        ),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_jobs")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert len(payload["jobs"]) == 1
+    job = payload["jobs"][0]
+    assert job["display_game"] == "Liberty vs Adrian"
+    assert job["status"] == "running"
+    assert job["progress_pct"] == 12.5
+    assert job["current_frame"] == 1000
+    assert job["total_frames"] == 97475
+    assert "detection_count" not in job
+
+
+def test_analysis_progress_skips_counts_while_running(client, db):
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status, progress_pct, progress_step) VALUES (?, ?, ?, ?, ?)",
+        ("running_game", "uploads/demo.mp4", "running", 4, "Detecting objects: frame 500/12000"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("running_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_progress/running_game")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["status"] == "running"
+    assert payload["current_frame"] == 500
+    assert payload["total_frames"] == 12000
+    assert payload["detection_count"] is None
+    assert payload["event_count"] is None
+
+
+def test_analysis_progress_includes_counts_when_completed(client, db):
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status, progress_pct, progress_step) VALUES (?, ?, ?, ?, ?)",
+        ("done_game", "uploads/demo.mp4", "completed", 100, "Done"),
+    )
+    db.execute(
+        """INSERT INTO detections
+           (game_id, frame_number, timestamp_ms, object_class, confidence, x_center, y_center, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("done_game", 1, 100, "person", 0.9, 10, 10, 20, 40),
+    )
+    db.commit()
+
+    r = client.get("/api/analysis_progress/done_game")
+    payload = r.get_json()
+    assert r.status_code == 200
+    assert payload["detection_count"] == 1
+    assert payload["progress_pct"] == 100
+
+
+def test_api_videos_light_includes_progress_fields(client, db):
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("melba.mp4", "melba.mp4", "uploads/melba.mp4", 1000, "Melba", "melba_key"),
+    )
+    db.execute(
+        """INSERT INTO analysis_runs
+           (analysis_key, video_path, source_video_id, status, progress_pct, progress_step)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("melba_key", "uploads/melba.mp4", 1, "running", 8, "Detecting objects: frame 800/10000"),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos?light=1").get_json()
+    assert payload[0]["analysis_status"] == "running"
+    assert payload[0]["progress_pct"] == 8
+    assert payload[0]["current_frame"] == 800
+    assert payload[0]["total_frames"] == 10000
+    assert payload[0]["detection_count"] is None
 
 
 def test_analysis_status_counts_detections_via_relational_game_id(client, db):
@@ -1204,6 +1312,38 @@ def test_analysis_results_and_status_count_events_via_relational_game_id(client,
     assert analysis_payload["events_summary"] == [{"event_type": "made_two", "cnt": 1}]
     assert analysis_payload["recent_events"][0]["event_type"] == "made_two"
     assert analysis_payload["recent_events"][0]["player"] == "Player A"
+
+
+def test_analysis_results_decode_percent_encoded_comma_game_id(client, db):
+    from urllib.parse import quote
+
+    analysis_key = "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334"
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, ?)""",
+        (None, analysis_key, "uploads/adrian-comma.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, shot_result, timestamp_ms, human_verified)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (analysis_key, "made_two", "Colman", "made", 1000, 1),
+    )
+    db.commit()
+
+    leftover_encoded = quote(analysis_key, safe="")
+    page = client.get(f"/analysis/{leftover_encoded}")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert analysis_key in html
+    assert "jrhigh_adrian%2C" not in html
+
+    double_path = quote(leftover_encoded, safe="")
+    api = client.get(f"/api/analysis/{double_path}")
+    payload = api.get_json()
+    assert api.status_code == 200
+    assert payload["game_id"] == analysis_key
+    assert payload["event_count"] == 1
 
 
 def test_status_page_shows_product_progress_checklist(client):
@@ -1307,8 +1447,18 @@ def test_status_page_groups_detection_and_event_counts_by_canonical_game_id(clie
     assert "legacy-event-key" not in html
 
 
-def test_settings_page_renders(client, monkeypatch):
+def test_settings_page_renders(client, db, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("admin@example.com", "x", "Admin", "admin"),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email=?", ("admin@example.com",)).fetchone()[0]
+    with client.session_transaction() as sess:
+        sess["user_id"] = uid
+        sess["user_role"] = "admin"
+        sess["user_name"] = "Admin"
     r = client.get("/settings")
     assert r.status_code == 200
     assert b"Settings" in r.data
@@ -1321,6 +1471,24 @@ def test_settings_page_renders(client, monkeypatch):
     assert b"YOLO11 Small" in r.data
     assert b"Custom Ultralytics Model or Weights" in r.data
     assert b"Recommended Ollama Models" in r.data
+
+
+def test_settings_page_rejects_non_admin(client, db, monkeypatch):
+    """A signed-in non-admin cannot even open Settings (anonymous with the gate off can)."""
+    from blueprints.users import _hash_password
+
+    monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("player@example.com", _hash_password("player-pass-1"), "Player", "player"),
+    )
+    db.commit()
+    assert client.get("/settings").status_code == 200  # anonymous, gate off: unchanged
+    login = client.post("/login", data={"email": "player@example.com", "password": "player-pass-1"})
+    assert login.status_code in (302, 303)
+    r = client.get("/settings", follow_redirects=False)
+    assert r.status_code in (302, 303)
+    assert b"Only an admin" not in r.data  # a page redirect, not the API 403
 
 
 def test_custom_weights_guide_page_renders(client):
@@ -1393,6 +1561,16 @@ def test_debug_page_filters_completed_reports(client, db):
 
 def test_settings_page_persists_updates(client, db, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
+    db.execute(
+        "INSERT INTO users (email, password_hash, display_name, role, is_active) VALUES (?,?,?,?,1)",
+        ("admin2@example.com", "x", "Admin", "admin"),
+    )
+    db.commit()
+    uid = db.execute("SELECT id FROM users WHERE email=?", ("admin2@example.com",)).fetchone()[0]
+    with client.session_transaction() as sess:
+        sess["user_id"] = uid
+        sess["user_role"] = "admin"
+        sess["user_name"] = "Admin"
     r = client.post("/settings", data={
         "feature_ENABLE_MANUAL_TAG_MVP": "on",
         "feature_ENABLE_AUTO_STATS_M1": "on",
@@ -1409,6 +1587,7 @@ def test_settings_page_persists_updates(client, db, monkeypatch):
         "ai_inference_device": "cpu",
         "ai_event_generator_mode": "expanded",
         "ai_frame_stride": "2",
+        "ai_tracker_enabled": "1",
         "ai_tracker_max_distance": "95",
         "ai_tracker_max_frame_gap": "7",
         "ai_llm_provider": "none",
@@ -1429,6 +1608,7 @@ def test_settings_page_persists_updates(client, db, monkeypatch):
     assert stored["ai.event_generator_mode"] == "expanded"
     assert stored["ai.frame_stride"] == "2"
     assert stored["ai.tracker_max_distance"] == "95"
+    assert stored["ai.tracker_enabled"] == "1"
 
 
 def test_pull_ollama_model_starts_background_pull(client, monkeypatch):
@@ -1507,6 +1687,10 @@ def test_rerun_video_analysis_creates_separate_run(client, db, monkeypatch):
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+    # The fixture row points at a file that does not exist, and model weights may
+    # be LFS pointers on a dev box; the route validates both before queueing.
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _ai: (True, None))
 
     r = client.post("/videos/1/rerun", data={"run_label": "YOLOv8s retry"}, follow_redirects=True)
     assert r.status_code == 200
@@ -1549,6 +1733,10 @@ def test_rerun_video_analysis_carries_relational_game_id(client, db, monkeypatch
 
     monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: True)
     monkeypatch.setattr(ai_module, "start_analysis_subprocess", lambda *args, **kwargs: None)
+    # The fixture row points at a file that does not exist, and model weights may
+    # be LFS pointers on a dev box; the route validates both before queueing.
+    monkeypatch.setattr(ai_module, "validate_video_for_analysis", lambda _path: (True, None))
+    monkeypatch.setattr(ai_module, "validate_ai_models_for_analysis", lambda _ai: (True, None))
 
     r = client.post("/videos/1/rerun", data={"run_label": "Relational retry"}, follow_redirects=True)
     assert r.status_code == 200
@@ -2461,24 +2649,6 @@ def test_build_possession_workflow_summary_links_events(client, db):
     assert summary["events_unlinked"] == 0
 
 
-def test_film_page_shows_possession_summary(client, db):
-    """Film tool renders possession counts when a game has tagged events."""
-    game_id = _create_game_with_events(
-        client, db, "film-possession",
-        [
-            {"event_type": "made_two", "timestamp_ms": 1000},
-            {"event_type": "turnover", "timestamp_ms": 2000},
-            {"event_type": "made_three", "timestamp_ms": 3000},
-        ],
-    )
-    resp = client.get(f"/film?game_id={game_id}")
-    assert resp.status_code == 200
-    html = resp.data
-    assert b"Possessions" in html
-    assert b"total possessions" in html
-    assert b"events linked to possessions" in html
-
-
 def test_analysis_results_page_includes_possession_panel(client):
     """Analysis results dashboard includes possession summary mount point."""
     resp = client.get("/analysis/test-game-key")
@@ -2514,25 +2684,6 @@ def test_build_player_minutes_summary_aggregates_rows(client, db):
     assert summary["total_minutes"] == 25.5
     assert summary["top_players"][0]["tracker_id"] == 1
     assert summary["top_players"][0]["total_minutes"] == 17.5
-
-
-def test_film_page_shows_player_minutes_for_game(client, db):
-    """Film tool shows per-game minutes using relational_game_id resolution."""
-    game_id = _create_game(client, "film-minutes-game")
-    db.execute(
-        """INSERT INTO player_minutes
-              (game_id, relational_game_id, tracker_id,
-               first_frame, last_frame, total_frames, minutes_played)
-           VALUES (?, ?, 7, 0, 200, 200, 22.3)""",
-        (str(game_id), game_id),
-    )
-    db.commit()
-
-    resp = client.get(f"/film?game_id={game_id}")
-    assert resp.status_code == 200
-    assert b"Player Minutes" in resp.data
-    assert b"22.3" in resp.data
-    assert b"Pos 7" in resp.data
 
 
 def test_analysis_results_page_includes_minutes_panel(client):

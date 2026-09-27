@@ -36,6 +36,22 @@ def test_resolve_png_to_pdf_page():
 
 
 @pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_detect_court_uses_outline_not_title_panel():
+    import fitz
+    from playbook_vector_extract import _DEFAULT_COURT_PDF, _detect_court_rect
+
+    doc = fitz.open(PDF)
+    try:
+        court = _detect_court_rect(doc[31])
+    finally:
+        doc.close()
+    # White title panel is y0≈163; painted baseline is y0≈207.
+    assert court[1] > 190, court
+    assert abs(court[0] - _DEFAULT_COURT_PDF[0]) < 2
+    assert abs(court[1] - _DEFAULT_COURT_PDF[1]) < 2
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
 def test_extract_1game_page32_digits():
     step = extract_page(PDF, 32)
     assert step["source"] == "vector"
@@ -48,6 +64,21 @@ def test_extract_1game_page32_digits():
     # 1 is near top of key / FT area on sheet 1 of 1-Game.
     assert pos["o1"]["y"] > 250
     assert "1-Game" in (step.get("title") or "")
+    # Painted-court mapping: 4/5 at elbows (FT band), not on the 3pt arc (~y=235).
+    assert 155 < pos["o4"]["y"] < 200, pos["o4"]
+    assert 155 < pos["o5"]["y"] < 200, pos["o5"]
+    assert pos["o4"]["x"] < 220, pos["o4"]
+    assert pos["o5"]["x"] > 280, pos["o5"]
+    assert pos["o3"]["x"] < 120, pos["o3"]
+    assert pos["o2"]["x"] > 380, pos["o2"]
+    assert pos["o4"]["y"] < pos["o1"]["y"] - 40
+    # Elbows sit inside the 3pt (peak y=235), not on it.
+    assert pos["o4"]["y"] < 220
+    actions = step["ink"]["actions"]
+    assert actions
+    assert [a["seq"] for a in actions] == list(range(1, len(actions) + 1))
+    kinds = [(a["kind"], a["fromPid"], a["toPid"]) for a in actions]
+    assert ("pass", "o1", "o5") in kinds
 
 
 @pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")

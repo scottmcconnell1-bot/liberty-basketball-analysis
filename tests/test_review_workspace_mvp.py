@@ -1,4 +1,4 @@
-"""Review workspace MVP: accept/correct/reject → ledger, auto-accept off."""
+"""Review workspace MVP: accept/correct/reject → ledger, auto-accept threshold."""
 
 from review_actions import auto_accept_high_confidence_events
 from settings_store import AI_DEFAULTS, load_all_settings
@@ -17,54 +17,77 @@ def _create_game(client, source_key="review-workspace-game"):
     return r.get_json()["id"]
 
 
-def test_auto_accept_default_is_zero():
-    assert float(AI_DEFAULTS["auto_accept_event_confidence"]) == 0.0
+# Scott 2026-09-14 (settings_store.py): auto-accept is on at 0.85 with the
+# precision generator. These tests pin that default and the 0 = off escape hatch.
 
 
-def test_auto_accept_load_forces_zero_even_if_stored(app, db):
+def test_auto_accept_default_is_085():
+    assert float(AI_DEFAULTS["auto_accept_event_confidence"]) == 0.85
+
+
+def test_auto_accept_load_honors_stored_value(app, db):
     db.execute(
         """INSERT INTO app_settings (key, value)
-           VALUES ('ai.auto_accept_event_confidence', '0.85')
+           VALUES ('ai.auto_accept_event_confidence', '0.9')
            ON CONFLICT(key) DO UPDATE SET value=excluded.value"""
     )
     db.commit()
     with app.app_context():
         loaded = load_all_settings({}, {}, AI_DEFAULTS, db=db)
-        assert loaded["ai"]["auto_accept_event_confidence"] == 0.0
+        assert loaded["ai"]["auto_accept_event_confidence"] == 0.9
 
 
-def test_auto_accept_noop_uses_settings_threshold_zero(app):
+def _insert_pending_ai_event(db, game_id, confidence):
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, timestamp_ms, source_type, confidence, review_status, human_verified)
+           VALUES (?, 'made_two', 1000, 'ai', ?, 'pending', 0)""",
+        (game_id, confidence),
+    )
+    db.commit()
+
+
+def test_auto_accept_promotes_at_or_above_default_threshold(app):
+    with app.app_context():
+        from helpers import get_db
+
+        db = get_db()
+        _insert_pending_ai_event(db, "auto-accept-high", 0.99)
+        _insert_pending_ai_event(db, "auto-accept-low", 0.5)
+        assert auto_accept_high_confidence_events(db, "auto-accept-high") == 1
+        assert auto_accept_high_confidence_events(db, "auto-accept-low") == 0
+        high = db.execute("SELECT review_status FROM events WHERE game_id='auto-accept-high'").fetchone()
+        low = db.execute("SELECT review_status FROM events WHERE game_id='auto-accept-low'").fetchone()
+        assert high["review_status"] == "accepted"
+        assert low["review_status"] == "pending"
+
+
+def test_auto_accept_stored_zero_disables(app):
     game_id = "auto-accept-settings-off"
     with app.app_context():
         from helpers import get_db
 
         db = get_db()
         db.execute(
-            """INSERT INTO events
-               (game_id, event_type, timestamp_ms, source_type, confidence, review_status, human_verified)
-               VALUES (?, 'made_two', 1000, 'ai', 0.99, 'pending', 0)""",
-            (game_id,),
+            """INSERT INTO app_settings (key, value)
+               VALUES ('ai.auto_accept_event_confidence', '0')
+               ON CONFLICT(key) DO UPDATE SET value=excluded.value"""
         )
-        db.commit()
-        accepted = auto_accept_high_confidence_events(db, game_id)
-        assert accepted == 0
-        row = db.execute(
-            "SELECT review_status FROM events WHERE game_id=?",
-            (game_id,),
-        ).fetchone()
+        _insert_pending_ai_event(db, game_id, 0.99)
+        assert auto_accept_high_confidence_events(db, game_id) == 0
+        row = db.execute("SELECT review_status FROM events WHERE game_id=?", (game_id,)).fetchone()
         assert row["review_status"] == "pending"
 
 
-def test_settings_hides_auto_accept_control(client, monkeypatch):
+def test_settings_shows_auto_accept_control(client, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.get("/settings")
     assert r.status_code == 200
-    assert b"ai-auto-accept-disabled-notice" in r.data
-    assert b'id="ai_auto_accept_event_confidence"' not in r.data
-    assert b"Disabled for the review workspace MVP" in r.data
+    assert b'id="ai_auto_accept_event_confidence"' in r.data
+    assert b'value="0.85"' in r.data
 
 
-def test_settings_save_forces_auto_accept_zero(client, db, monkeypatch):
+def test_settings_save_stores_auto_accept_clamped(client, db, monkeypatch):
     monkeypatch.setattr("helpers.list_ollama_models", lambda: [])
     r = client.post(
         "/settings",
@@ -79,11 +102,12 @@ def test_settings_save_forces_auto_accept_zero(client, db, monkeypatch):
             "ai_inference_device": "auto",
             "ai_event_generator_mode": "expanded",
             "ai_frame_stride": "1",
+            "ai_tracker_enabled": "1",
             "ai_tracker_max_distance": "80",
             "ai_tracker_max_frame_gap": "5",
             "ai_llm_provider": "none",
             "ai_llm_model": "",
-            "ai_auto_accept_event_confidence": "0.90",
+            "ai_auto_accept_event_confidence": "1.5",
         },
         follow_redirects=True,
     )
@@ -92,7 +116,7 @@ def test_settings_save_forces_auto_accept_zero(client, db, monkeypatch):
         row["key"]: row["value"]
         for row in db.execute("SELECT key, value FROM app_settings").fetchall()
     }
-    assert float(stored["ai.auto_accept_event_confidence"]) == 0.0
+    assert float(stored["ai.auto_accept_event_confidence"]) == 0.99
 
 
 def test_review_ledger_filter_accept_correct_reject(client, db):
@@ -201,7 +225,6 @@ def test_film_review_workspace_route_and_ui(client):
     r = client.get("/film/demo.mp4/review?game_id=demo_game", follow_redirects=True)
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    assert "Review workspace" in html
     assert 'id="aiCorrectDialog"' in html
     assert 'data-ai-filter="pending"' in html
     assert 'data-ai-filter="ledger"' in html

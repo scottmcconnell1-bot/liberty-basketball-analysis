@@ -240,7 +240,7 @@
     {
       "jersey": "32",
       "name": "Unknown",
-      "team": "away",
+      "team": "home",
       "pts": 0,
       "fouls": null,
       "fgm": 0,
@@ -652,16 +652,170 @@
       }
     }
   ],
-  "quarters": [],
+  "quarters": [
+    {
+      "period": 1,
+      "home_pts": 10,
+      "away_pts": 16,
+      "notes": "Scott gym / film Q1 ends 15:58"
+    },
+    {
+      "period": 2,
+      "home_pts": 5,
+      "away_pts": 11,
+      "notes": "Q2 ends 32:14. Scorekeeper missed 1 Liberty 2PT (Dayley). True HT Liberty 27 Adrian 15."
+    }
+  ],
   "checksums": {
     "blank_sheet_sha256": "f77c5da5b89aca5158a3a7d77bf34a4b33795a2fce33c68af2af5aca59df5968",
     "template_layout_sha256": "ccc8b283c2e17921096f0a02ef40506d1c90716263b062c21c7dc0af24e56dde",
     "upload_sha256": "ecd71bc92fad230404266dc48628a508f4ea610dc788a5c361c39d8df6732325"
   },
-  "confirmed_at": "2026-08-12T04:19:36Z",
+  "confirmed_at": "2026-09-16T01:54:45Z",
   "confirmed_by": "coach",
   "validation": {
     "ok": true,
     "issues": []
+  },
+  "halftime": {
+    "home_pts": 15,
+    "away_pts": 27,
+    "scorekeeper_listed_away_pts": 25,
+    "scorekeeper_missed": "1 Liberty 2PT (Dayley); listed Dayley 15, true 17 from 7 twos + 1 three",
+    "confirmed_by": "scott",
+    "confirmed_at": "2026-09-18T02:31:22Z",
+    "liberty": [
+      {
+        "jersey": "0",
+        "name": "Sullivan",
+        "pts": 0
+      },
+      {
+        "jersey": "3",
+        "name": "Kariuki",
+        "pts": 0
+      },
+      {
+        "jersey": "5",
+        "name": "Bradshaw",
+        "pts": 0
+      },
+      {
+        "jersey": "11",
+        "name": "Flores",
+        "pts": 0
+      },
+      {
+        "jersey": "21",
+        "name": "Colman",
+        "pts": 8,
+        "fg2": 2,
+        "tpm": 1,
+        "ftm": 1,
+        "fta": 3
+      },
+      {
+        "jersey": "24",
+        "name": "Jenkins",
+        "pts": 0
+      },
+      {
+        "jersey": "40",
+        "name": "Dayley",
+        "pts": 17,
+        "fg2": 7,
+        "tpm": 1,
+        "scorekeeper_pts": 15
+      },
+      {
+        "jersey": "41",
+        "name": "Leach",
+        "pts": 0
+      },
+      {
+        "jersey": "45",
+        "name": "Musgrave",
+        "pts": 0
+      },
+      {
+        "jersey": "51",
+        "name": "Peterson",
+        "pts": 2,
+        "fg2": 1
+      },
+      {
+        "jersey": "53",
+        "name": "Price",
+        "pts": 0
+      }
+    ],
+    "adrian": [
+      {
+        "jersey": "11",
+        "name": "Linkhart",
+        "pts": 0
+      },
+      {
+        "jersey": "12",
+        "name": "Linkhart",
+        "pts": 0,
+        "ftm": 0,
+        "fta": 2
+      },
+      {
+        "jersey": "13",
+        "name": "Mendoza",
+        "pts": 7,
+        "fg2": 1,
+        "tpm": 1,
+        "ftm": 2,
+        "fta": 4
+      },
+      {
+        "jersey": "14",
+        "name": "Dorms",
+        "pts": 0
+      },
+      {
+        "jersey": "15",
+        "name": "Allison",
+        "pts": 0
+      },
+      {
+        "jersey": "22",
+        "name": "Foster",
+        "pts": 2,
+        "fg2": 1
+      },
+      {
+        "jersey": "23",
+        "name": "Rodus",
+        "pts": 2,
+        "ftm": 2,
+        "fta": 4
+      },
+      {
+        "jersey": "24",
+        "name": "Abel",
+        "pts": 0
+      },
+      {
+        "jersey": "25",
+        "name": "Alvarez",
+        "pts": 4,
+        "ftm": 4,
+        "fta": 6
+      },
+      {
+        "jersey": "30",
+        "name": "Gallegos",
+        "pts": 0
+      },
+      {
+        "jersey": "32",
+        "name": "Unknown",
+        "pts": 0
+      }
+    ]
   }
 }

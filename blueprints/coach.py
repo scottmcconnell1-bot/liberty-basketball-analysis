@@ -31,7 +31,7 @@ from flask import (
     url_for,
 )
 
-from helpers import feature_enabled, require_feature
+from helpers import extract_local_path, feature_enabled, require_feature
 
 coach_bp = Blueprint("coach", __name__)
 
@@ -213,7 +213,7 @@ def coach_login():
             if not session.get("user_name"):
                 session["user_name"] = "Coach"
             flash("Welcome — you are in Coach view.", "success")
-            next_url = request.args.get("next") or url_for("coach.coach_progress")
+            next_url = extract_local_path(request.args.get("next")) or url_for("coach.coach_progress")
             return redirect(next_url)
 
         flash("Incorrect coach password.", "error")
@@ -222,6 +222,16 @@ def coach_login():
         "coach_login.html",
         password_set=password_set,
     )
+
+
+@coach_bp.route("/coach/exit")
+@require_feature("ENABLE_COACH_PORTAL")
+def coach_exit_full_app():
+    """Leave read-only Coach view and open the full staff app in this browser."""
+    session.pop("coach_portal", None)
+    session.pop("_coach_readonly_flashed", None)
+    flash("Left Coach view — full app (not read-only).", "success")
+    return redirect(url_for("core.index"))
 
 
 @coach_bp.route("/coach/logout")

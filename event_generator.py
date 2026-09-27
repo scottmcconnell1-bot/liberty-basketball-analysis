@@ -26,9 +26,19 @@ def get_detections(
     base_analysis_key=None,
     video_relational_game_id=None,
 ):
-    """Load detections using the same key resolution as the video library counts."""
+    """Load detections using the same key resolution as the video library counts.
+
+    A run's own detections (game_id == analysis key) win: reruns share the
+    relational_game_id and base key with the primary run, so the wider lookup would
+    mix several runs' detections. The wider lookup is only a fallback for legacy
+    rows stored under another key.
+    """
     game_ids = [gid for gid in {game_id, video_game_id, base_analysis_key} if gid]
     rel_ids = [rid for rid in {relational_game_id, video_relational_game_id} if rid is not None]
+    if game_id and conn.execute(
+        "SELECT 1 FROM detections WHERE game_id = ? LIMIT 1", (game_id,)
+    ).fetchone():
+        game_ids, rel_ids = [game_id], []
 
     conditions = []
     params = []
@@ -458,6 +468,8 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
             "peak_frame": int(peak_row["frame_number"]),
             "ball_rise": ball_rise,
             "lateral_travel": lateral_travel,
+            "peak_x": peak_x,
+            "peak_y": peak_y,
             "secondary_pass": True,
         }
 
@@ -500,14 +512,379 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
         # If ball continues rising after "peak", it's not a real arc
         if min_y_after < peak_y - 10:
             return None
+        # Real shots come down. Interpolated passes often peak and stay high.
+        if float(after_peak["y_center"].max()) < peak_y + 8:
+            return None
 
     return {
         "timestamp_ms": int(peak_row["timestamp_ms"]),
         "peak_frame": int(peak_row["frame_number"]),
         "ball_rise": ball_rise,
         "lateral_travel": lateral_travel,
+        "peak_x": peak_x,
+        "peak_y": peak_y,
     }
 
+
+# -- Precision mode -----------------------------------------------------------
+# Opt-in generator (ai.event_generator_mode = "precision"). Same possession segments and
+# ball track as "expanded", but tuned for the Review queue: it emits far fewer, better-
+# supported events. Measured against Scott's manual Wilder Q1 tags with
+# scripts/score_manual_q1_regression.py ΓÇö see docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
+# "expanded" is untouched; nothing changes for production until the mode is switched.
+PRECISION_DEFAULTS = {
+    # a segment must last this many frames before it counts as a real possession
+    # (12 / 80 below: measured on Scott's manual Wilder Q1 tags -> precision 0.087,
+    #  recall 0.623, AI-only 346; the expanded generator scores 0.014 / 0.660 / 2415)
+    "min_hold_frames": 12,
+    # primary-pass shot detection only (no low-threshold secondary pass); px of ball rise
+    "shot_min_ball_rise": 80.0,
+    # Live FG must rise more than a pass/interpolation blip. Lane FTs keep the 80px floor.
+    # Set from Liberty vs Adrian Q1: extras were the main miss vs Scott's 44 shots.
+    "live_shot_min_ball_rise": 170.0,
+    # at most one shot per possessor within this window
+    "shot_refractory_ms": 6000,
+    # two cluster-ids on the same release
+    "shot_global_refractory_ms": 4000,
+    # blocks: deflection near the shooter as the ball goes up; makes are FGs
+    "emit_blocks": True,
+    # assist only if the passer held the ball and the catch-to-shot was 1–2 dribbles
+    "assist_max_gap_frames": 15,
+    "assist_max_scorer_hold_ms": 1600,
+    # turnover/steal: the lost possession must have been brief and the new possessor must
+    # actually keep the ball
+    "turnover_min_next_hold_frames": 6,
+    "turnover_max_prev_hold_frames": 60,
+    # foul-after-dead-ball heuristic is weak; keep it opt-in
+    "emit_fouls": False,
+    # "make" needs a longer dead-ball gap than expanded mode's 15 frames (inbound after a
+    # score). Do not treat "ball went high" as a make — that was 80 Q2 makes vs Scott's 9.
+    "make_min_gap_frames": 120,
+    # a pass is not a turnover; only emit TO when the ball was lost abruptly
+    "turnover_require_abrupt": True,
+}
+
+
+def _clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def _merge_short_segments(segments, min_hold_frames):
+    """Drop segments shorter than min_hold_frames and merge neighbours with the same player.
+
+    Tracker fragmentation produces many 1ΓÇô5 frame "possessions" that flip between cluster
+    ids; each flip became a possession_change (and often a shot/rebound/block cascade)."""
+    kept = [dict(seg) for seg in segments if seg.get("duration_frames", 1) >= min_hold_frames]
+    merged = []
+    for seg in kept:
+        if merged and merged[-1]["player"] == seg["player"]:
+            last = merged[-1]
+            last["end_frame"] = max(last["end_frame"], seg["end_frame"])
+            last["end_timestamp_ms"] = max(last.get("end_timestamp_ms", 0), seg.get("end_timestamp_ms", 0))
+            last["duration_frames"] = last["end_frame"] - last["start_frame"] + 1
+            n1, n2 = last.get("_n", 1), seg.get("_n", 1)
+            last["mean_ball_distance"] = (
+                last.get("mean_ball_distance", 0) * n1 + seg.get("mean_ball_distance", 0) * n2
+            ) / (n1 + n2)
+            last["_n"] = n1 + n2
+            continue
+        seg["_n"] = 1
+        merged.append(seg)
+    return merged
+
+
+def _rows_at_frame(by_frame, frame_number):
+    if not by_frame or frame_number is None:
+        return []
+    rows = by_frame.get(int(frame_number))
+    if rows is None:
+        return []
+    return rows.to_dict("records")
+
+
+def _ball_deflected_away(ball_track, peak_frame, window=6):
+    if ball_track is None or getattr(ball_track, "empty", True) or not peak_frame:
+        return False
+    peak = ball_track[ball_track["frame_number"] == peak_frame]
+    if peak.empty:
+        return False
+    peak_y = float(peak.iloc[0]["y_center"])
+    peak_x = float(peak.iloc[0]["x_center"])
+    post = ball_track[
+        (ball_track["frame_number"] > peak_frame)
+        & (ball_track["frame_number"] <= peak_frame + window)
+    ]
+    if post.empty:
+        return False
+    dy = float(post["y_center"].max()) - peak_y
+    dx = abs(float(post["x_center"].median()) - peak_x)
+    return dy > 12 or dx > 25
+
+
+def generate_precision_events_from_segments(game_id, segments, ball_track, params=None, detections_df=None):
+    from court_memory import FrameCourtMemory, ball_from_detections, people_from_detections
+    from court_memory import ball_through_rim
+    from stat_rules import (
+        classify_rebound,
+        classify_shot_kind,
+        classify_turnover_kind,
+        credit_assist,
+        credit_block,
+        credit_steal,
+        scoring_event_type,
+    )
+
+    p = {**PRECISION_DEFAULTS, **(params or {})}
+    events = []
+    seen_keys = set()
+    try:
+        from net_detector import hoop_at, load_hoop_track
+
+        hoop_samples = load_hoop_track(game_id)
+    except Exception:
+        hoop_samples = []
+
+        def hoop_at(*_a, **_k):
+            return None
+
+    segments = _merge_short_segments(segments, p["min_hold_frames"])
+    by_frame = {}
+    if detections_df is not None and not getattr(detections_df, "empty", True):
+        for frame, grp in detections_df.groupby("frame_number"):
+            by_frame[int(frame)] = grp
+
+    memory = FrameCourtMemory()
+    offense_ids: list[str] = []
+
+    # Shots: primary detector only, higher rise threshold, one per possessor per window.
+    shot_segments = {}
+    for index, segment in enumerate(segments):
+        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
+        shot_info = detect_shot_from_segment(
+            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start
+        )
+        if not shot_info:
+            continue
+        shot_segments[index] = shot_info
+    # Per-player refractory is applied in the loop below, after the live-rise,
+    # rim and global-gap filters, so a candidate those filters drop (a pump
+    # fake) cannot block the same player's real shot a few seconds later.
+    last_shot_ms_by_player = {}
+
+    def _observe(frame_number):
+        recs = _rows_at_frame(by_frame, frame_number)
+        memory.observe(people_from_detections(recs), ball_from_detections(recs))
+        return recs
+
+    last_kept_shot_ms = None
+    for index, segment in enumerate(segments):
+        hold = segment.get("duration_frames", 1)
+        _observe(segment["start_frame"])
+        if segment["player"] not in offense_ids:
+            offense_ids.append(str(segment["player"]))
+
+        if index > 0:
+            previous = segments[index - 1]
+            if previous["player"] != segment["player"]:
+                prev_hold = previous.get("duration_frames", 1)
+                gap_frames = segment["start_frame"] - previous["end_frame"]
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "possession_change", segment["start_timestamp_ms"],
+                    player=segment["player"],
+                    confidence=_clamp(0.4 + 0.01 * min(hold, prev_hold), 0.4, 0.85),
+                    details={"from_player": previous["player"], "to_player": segment["player"],
+                             "gap_frames": gap_frames, "hold_frames": hold},
+                ))
+                after_shot = (index - 1) in shot_segments
+                is_abrupt = (
+                    prev_hold <= p["turnover_max_prev_hold_frames"]
+                    and gap_frames < 20
+                    and previous.get("mean_ball_distance", 0) > 25
+                    and hold >= p["turnover_min_next_hold_frames"]
+                    and not after_shot
+                )
+                to_kind = classify_turnover_kind(dead_ball=memory.dead_ball, after_shot=after_shot)
+                if to_kind and (is_abrupt or not p.get("turnover_require_abrupt")):
+                    conf = _clamp(0.35 + 0.01 * hold, 0.35, 0.7)
+                    append_unique_event(events, seen_keys, make_event(
+                        game_id, "turnover", segment["start_timestamp_ms"], player=previous["player"],
+                        confidence=conf,
+                        details={"next_possessor": segment["player"], "turnover_kind": to_kind}))
+                    if credit_steal(
+                        after_shot=after_shot,
+                        dead_ball=memory.dead_ball,
+                        next_ball_distance=segment.get("mean_ball_distance"),
+                        prev_lost_abruptly=is_abrupt,
+                    ):
+                        append_unique_event(events, seen_keys, make_event(
+                            game_id, "steal", segment["start_timestamp_ms"], player=segment["player"],
+                            confidence=conf, details={"from_player": previous["player"], "live": True}))
+                    if to_kind == "dead":
+                        offense_ids = [str(segment["player"])]
+                    else:
+                        offense_ids = [str(segment["player"])]
+
+        if index not in shot_segments:
+            continue
+
+        shot_info = shot_segments[index]
+        next_segment = segments[index + 1] if index + 1 < len(segments) else None
+        next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
+        peak_frame = shot_info.get("peak_frame")
+        from court_memory import detect_ft_formation as _ft
+        from court_memory import people_from_detections as _people, _on_court_people
+        peak = int(peak_frame or segment["end_frame"])
+        start_fr = int(segment["start_frame"])
+        pre = max(peak - 24, start_fr)
+        earlier = max(pre - 18, start_fr)
+        crowd_at_start = len(_on_court_people(_people(_rows_at_frame(by_frame, start_fr)))) >= 4
+        ft_formation = None
+        for fr in sorted({start_fr, earlier, pre, peak}):
+            recs_f = _observe(fr)
+            form = memory.last_formation
+            if form == "technical" and crowd_at_start:
+                form = None
+            if form == "lane":
+                ft_formation = "lane"
+                break
+            # Technical is implemented, but zoom-in 1–2 person frames false-trigger it.
+            # Do not classify those shots as FT until the crowd/zoom prior is stronger.
+        recs = _rows_at_frame(by_frame, peak)
+        people = _people(recs)
+        ball = ball_from_detections(recs)
+
+        shooter_x = segment.get("player_x_end") or segment.get("player_x_start")
+        shooter_y = segment.get("player_y_median")
+        in_paint = memory.in_paint(shooter_x, shooter_y)
+        dist = None
+        if memory.key is not None and shooter_x is not None and shooter_y is not None:
+            cx = (memory.key.x0 + memory.key.x1) / 2.0
+            cy = (memory.key.y0 + memory.key.y1) / 2.0
+            width = max(abs(memory.key.x1 - memory.key.x0), 1.0)
+            height = max(abs(memory.key.y1 - memory.key.y0), 1.0)
+            dist = ((float(shooter_x) - cx) ** 2 / width ** 2 + (float(shooter_y) - cy) ** 2 / height ** 2) ** 0.5
+        shot_kind = classify_shot_kind(ft_formation=ft_formation, in_paint=in_paint, dist_from_basket=dist)
+        live_min = float(p.get("live_shot_min_ball_rise") or 0)
+        ts = int(shot_info.get("timestamp_ms") or 0)
+        peak_x = shot_info.get("peak_x")
+        peak_y = shot_info.get("peak_y")
+        hoop_hit = hoop_at(hoop_samples, ts) if hoop_samples else None
+        if hoop_hit:
+            memory.detected_hoop = (float(hoop_hit["x"]), float(hoop_hit["y"]))
+            memory.detected_rim_r = float(hoop_hit.get("r") or 0) or None
+        hoop = memory.hoop_xy()
+        if ft_formation != "lane":
+            if live_min and float(shot_info.get("ball_rise") or 0) < live_min:
+                continue
+        # Lane FTs used to skip this, so a false lane at the far end became extra FTs.
+        close = True
+        if hoop is not None:
+            close = memory.close_to_rim(peak_x, peak_y)
+            if not close and peak_frame:
+                post_peak = ball_track[
+                    (ball_track["frame_number"] > peak_frame)
+                    & (ball_track["frame_number"] <= peak_frame + 20)
+                ]
+                if not post_peak.empty:
+                    close = any(
+                        memory.close_to_rim(float(r.x_center), float(r.y_center))
+                        for r in post_peak.itertuples(index=False)
+                    )
+            if not close:
+                continue
+        gap_ms = int(p.get("shot_global_refractory_ms") or 0)
+        if last_kept_shot_ms is not None and gap_ms and ts - last_kept_shot_ms < gap_ms:
+            continue
+        last_player_ms = last_shot_ms_by_player.get(segment["player"])
+        if last_player_ms is not None and ts - last_player_ms < p["shot_refractory_ms"]:
+            continue
+        last_kept_shot_ms = ts
+        last_shot_ms_by_player[segment["player"]] = ts
+
+        # Make = through the rim/net. High ball and dead-ball gap are not a make.
+        through = ball_through_rim(ball_track, peak_frame, memory.hoop_xy())
+        shot_result = "make" if through else "miss"
+        made = shot_result == "make"
+
+        shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
+        shot_details = {
+            "ball_rise": round(shot_info["ball_rise"], 1),
+            "lateral_travel": round(shot_info["lateral_travel"], 1),
+            "peak_frame": peak_frame,
+            "peak_x": None if peak_x is None else round(float(peak_x), 1),
+            "peak_y": None if peak_y is None else round(float(peak_y), 1),
+            "generator": "precision",
+            "shot_kind": shot_kind,
+            "in_paint": in_paint,
+            "ft_formation": ft_formation,
+            "through_rim": through,
+        }
+        append_unique_event(events, seen_keys, make_event(
+            game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
+            confidence=shot_conf, details=shot_details,
+        ))
+        scoring_type = scoring_event_type(shot_kind, made)
+        append_unique_event(events, seen_keys, make_event(
+            game_id, scoring_type, shot_info["timestamp_ms"], player=segment["player"],
+            shot_result=shot_result,
+            confidence=round(shot_conf * 0.9, 3),
+            details={"derived_from": "shot", "shot_kind": shot_kind, "in_paint": in_paint}))
+
+        if shot_result == "miss" and next_segment is not None:
+            reb_kind = classify_rebound(
+                shooter_team=None, rebounder_team=None,
+                shooter_id=segment["player"], rebounder_id=next_segment["player"],
+                offense_ids=offense_ids,
+            )
+            reb_type = "rebound_offensive" if reb_kind == "oreb" else "rebound_defensive" if reb_kind == "dreb" else "rebound"
+            append_unique_event(events, seen_keys, make_event(
+                game_id, reb_type, next_segment["start_timestamp_ms"], player=next_segment["player"],
+                confidence=_clamp(0.6 - 0.01 * max(next_gap or 0, 0), 0.3, 0.6),
+                details={"shot_player": segment["player"], "gap_frames": next_gap, "rebound_kind": reb_kind}))
+            deflected = _ball_deflected_away(ball_track, peak_frame)
+            near = (next_segment.get("mean_ball_distance") or 99) <= 45
+            if p["emit_blocks"] and credit_block(
+                shot_went_in=False,
+                defender_is_shooter=str(next_segment["player"]) == str(segment["player"]),
+                gap_frames=next_gap,
+                ball_deflected_away=deflected,
+                defender_near_ball=near,
+            ):
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "block", next_segment["start_timestamp_ms"], player=next_segment["player"],
+                    confidence=0.45, details={"shot_player": segment["player"], "gap_frames": next_gap}))
+            if reb_kind == "dreb":
+                offense_ids = [str(next_segment["player"])]
+            elif str(next_segment["player"]) not in offense_ids:
+                offense_ids.append(str(next_segment["player"]))
+
+        if made and index > 0:
+            previous = segments[index - 1]
+            assist_gap = segment["start_frame"] - previous["end_frame"]
+            scorer_hold_ms = int(segment.get("end_timestamp_ms", 0) or 0) - int(segment.get("start_timestamp_ms", 0) or 0)
+            if credit_assist(
+                shot_made=True,
+                shot_kind=shot_kind,
+                passer_id=previous["player"],
+                scorer_id=segment["player"],
+                pass_gap_frames=assist_gap,
+                scorer_hold_ms=scorer_hold_ms,
+                max_scorer_hold_ms=p["assist_max_scorer_hold_ms"],
+                max_pass_gap_frames=p["assist_max_gap_frames"],
+            ):
+                append_unique_event(events, seen_keys, make_event(
+                    game_id, "assist", shot_info["timestamp_ms"], player=previous["player"],
+                    confidence=_clamp(0.5 - 0.01 * assist_gap, 0.3, 0.5),
+                    details={"scorer": segment["player"], "gap_frames": assist_gap, "scorer_hold_ms": scorer_hold_ms}))
+
+        if p["emit_fouls"] and (next_segment is None or (next_gap is not None and next_gap >= 90)):
+            append_unique_event(events, seen_keys, make_event(
+                game_id, "foul", shot_info["timestamp_ms"], player=segment["player"], confidence=0.18,
+                details={"reason": "long_dead_ball_after_shot", "gap_frames": next_gap}))
+        if made:
+            offense_ids = []
+
+    return events
 
 def generate_expanded_events_from_segments(game_id, segments, ball_track):
     events = []
@@ -741,176 +1118,6 @@ def generate_expanded_events_from_segments(game_id, segments, ball_track):
     return events
 
 
-# -- Precision mode -----------------------------------------------------------
-# Opt-in generator (ai.event_generator_mode = "precision"). Same possession segments and
-# ball track as "expanded", but tuned for the Review queue: it emits far fewer, better-
-# supported events. Measured against Scott's manual Wilder Q1 tags with
-# scripts/score_manual_q1_regression.py — see docs/ANALYSIS_QUALITY_BASELINE_2026-09-10.md.
-# "expanded" is untouched; nothing changes for production until the mode is switched.
-PRECISION_DEFAULTS = {
-    # a segment must last this many frames before it counts as a real possession
-    # (12 / 80 below: measured on Scott's manual Wilder Q1 tags -> precision 0.087,
-    #  recall 0.623, AI-only 346; the expanded generator scores 0.014 / 0.660 / 2415)
-    "min_hold_frames": 12,
-    # primary-pass shot detection only (no low-threshold secondary pass); px of ball rise
-    "shot_min_ball_rise": 80.0,
-    # at most one shot per possessor within this window
-    "shot_refractory_ms": 6000,
-    # blocks are rare; the expanded heuristic fired on almost every miss
-    "emit_blocks": False,
-    # assist only if the passer held the ball and the hand-off was quick
-    "assist_max_gap_frames": 15,
-    # turnover/steal: the lost possession must have been brief and the new possessor must
-    # actually keep the ball
-    "turnover_min_next_hold_frames": 6,
-    "turnover_max_prev_hold_frames": 60,
-    # foul-after-dead-ball heuristic is weak; keep it opt-in
-    "emit_fouls": False,
-    # "make" needs a longer dead-ball gap than expanded mode's 15 frames (inbound after a
-    # score) unless the ball is seen reaching the basket area
-    "make_min_gap_frames": 15,
-}
-
-
-def _clamp(x, lo, hi):
-    return max(lo, min(hi, x))
-
-
-def _merge_short_segments(segments, min_hold_frames):
-    """Drop segments shorter than min_hold_frames and merge neighbours with the same player.
-
-    Tracker fragmentation produces many 1–5 frame "possessions" that flip between cluster
-    ids; each flip became a possession_change (and often a shot/rebound/block cascade)."""
-    kept = [dict(seg) for seg in segments if seg.get("duration_frames", 1) >= min_hold_frames]
-    merged = []
-    for seg in kept:
-        if merged and merged[-1]["player"] == seg["player"]:
-            last = merged[-1]
-            last["end_frame"] = max(last["end_frame"], seg["end_frame"])
-            last["end_timestamp_ms"] = max(last.get("end_timestamp_ms", 0), seg.get("end_timestamp_ms", 0))
-            last["duration_frames"] = last["end_frame"] - last["start_frame"] + 1
-            n1, n2 = last.get("_n", 1), seg.get("_n", 1)
-            last["mean_ball_distance"] = (
-                last.get("mean_ball_distance", 0) * n1 + seg.get("mean_ball_distance", 0) * n2
-            ) / (n1 + n2)
-            last["_n"] = n1 + n2
-            continue
-        seg["_n"] = 1
-        merged.append(seg)
-    return merged
-
-
-def generate_precision_events_from_segments(game_id, segments, ball_track, params=None):
-    p = {**PRECISION_DEFAULTS, **(params or {})}
-    events = []
-    seen_keys = set()
-
-    segments = _merge_short_segments(segments, p["min_hold_frames"])
-
-    # Shots: primary detector only, higher rise threshold, one per possessor per window.
-    shot_segments = {}
-    last_shot_ms_by_player = {}
-    for index, segment in enumerate(segments):
-        next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
-        shot_info = detect_shot_from_segment(
-            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start
-        )
-        if not shot_info:
-            continue
-        last_ms = last_shot_ms_by_player.get(segment["player"])
-        if last_ms is not None and shot_info["timestamp_ms"] - last_ms < p["shot_refractory_ms"]:
-            continue
-        last_shot_ms_by_player[segment["player"]] = shot_info["timestamp_ms"]
-        shot_segments[index] = shot_info
-
-    for index, segment in enumerate(segments):
-        hold = segment.get("duration_frames", 1)
-        if index > 0:
-            previous = segments[index - 1]
-            if previous["player"] != segment["player"]:
-                prev_hold = previous.get("duration_frames", 1)
-                gap_frames = segment["start_frame"] - previous["end_frame"]
-                append_unique_event(events, seen_keys, make_event(
-                    game_id, "possession_change", segment["start_timestamp_ms"],
-                    player=segment["player"],
-                    # grows with how long BOTH players held the ball; saturates at 45 frames
-                    confidence=_clamp(0.4 + 0.01 * min(hold, prev_hold), 0.4, 0.85),
-                    details={"from_player": previous["player"], "to_player": segment["player"],
-                             "gap_frames": gap_frames, "hold_frames": hold},
-                ))
-                is_abrupt = (
-                    prev_hold <= p["turnover_max_prev_hold_frames"]
-                    and gap_frames < 20
-                    and previous.get("mean_ball_distance", 0) > 25
-                    and hold >= p["turnover_min_next_hold_frames"]
-                    and (index - 1) not in shot_segments
-                )
-                if is_abrupt:
-                    conf = _clamp(0.35 + 0.01 * hold, 0.35, 0.7)
-                    append_unique_event(events, seen_keys, make_event(
-                        game_id, "turnover", segment["start_timestamp_ms"], player=previous["player"],
-                        confidence=conf, details={"next_possessor": segment["player"]}))
-                    append_unique_event(events, seen_keys, make_event(
-                        game_id, "steal", segment["start_timestamp_ms"], player=segment["player"],
-                        confidence=conf, details={"from_player": previous["player"]}))
-
-        if index not in shot_segments:
-            continue
-
-        shot_info = shot_segments[index]
-        next_segment = segments[index + 1] if index + 1 < len(segments) else None
-        next_gap = None if next_segment is None else next_segment["start_frame"] - segment["end_frame"]
-
-        # make/miss: same gap/trajectory heuristic as expanded mode
-        shot_result = "miss"
-        peak_frame = shot_info.get("peak_frame")
-        ball_moving_to_basket = False
-        if peak_frame:
-            post_peak = ball_track[(ball_track["frame_number"] > peak_frame) & (ball_track["frame_number"] <= peak_frame + 30)]
-            ball_moving_to_basket = (not post_peak.empty) and post_peak["y_center"].min() < 240
-        if next_segment is None or (next_gap is not None and next_gap > p["make_min_gap_frames"]) or ball_moving_to_basket:
-            shot_result = "make"
-
-        shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
-        append_unique_event(events, seen_keys, make_event(
-            game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
-            confidence=shot_conf,
-            details={"ball_rise": round(shot_info["ball_rise"], 1), "lateral_travel": round(shot_info["lateral_travel"], 1),
-                     "peak_frame": peak_frame, "generator": "precision"},
-        ))
-        # keep the derived make/miss row: stats.py and the Review queue expect it
-        append_unique_event(events, seen_keys, make_event(
-            game_id, shot_result, shot_info["timestamp_ms"], player=segment["player"],
-            confidence=round(shot_conf * 0.9, 3), details={"derived_from": "shot"}))
-
-        if shot_result == "miss" and next_segment is not None:
-            append_unique_event(events, seen_keys, make_event(
-                game_id, "rebound", next_segment["start_timestamp_ms"], player=next_segment["player"],
-                confidence=_clamp(0.6 - 0.01 * max(next_gap or 0, 0), 0.3, 0.6),
-                details={"shot_player": segment["player"], "gap_frames": next_gap}))
-            if p["emit_blocks"] and next_segment["player"] != segment["player"] and (next_gap or 0) <= 3:
-                append_unique_event(events, seen_keys, make_event(
-                    game_id, "block", next_segment["start_timestamp_ms"], player=next_segment["player"],
-                    confidence=0.3, details={"shot_player": segment["player"], "gap_frames": next_gap}))
-
-        if shot_result == "make" and index > 0:
-            previous = segments[index - 1]
-            assist_gap = segment["start_frame"] - previous["end_frame"]
-            if (previous["player"] != segment["player"] and assist_gap <= p["assist_max_gap_frames"]
-                    and previous.get("duration_frames", 1) >= p["min_hold_frames"]):
-                append_unique_event(events, seen_keys, make_event(
-                    game_id, "assist", shot_info["timestamp_ms"], player=previous["player"],
-                    confidence=_clamp(0.5 - 0.01 * assist_gap, 0.3, 0.5),
-                    details={"scorer": segment["player"], "gap_frames": assist_gap}))
-
-        if p["emit_fouls"] and (next_segment is None or (next_gap is not None and next_gap >= 90)):
-            append_unique_event(events, seen_keys, make_event(
-                game_id, "foul", shot_info["timestamp_ms"], player=segment["player"], confidence=0.18,
-                details={"reason": "long_dead_ball_after_shot", "gap_frames": next_gap}))
-
-    return events
-
-
 def _lookup_event_type_id(conn, event_type):
     if not event_type:
         return None
@@ -921,33 +1128,165 @@ def _lookup_event_type_id(conn, event_type):
     return row["id"] if row else None
 
 
-def persist_events(conn, game_id, events, relational_game_id=None):
-    if relational_game_id is not None:
-        # Delete unverified events that are either linked to the relational game_id
-        # or, for legacy rows where relational_game_id is NULL, match by game_id.
-        conn.execute(
-            """
-            DELETE FROM events
-            WHERE human_verified = 0
-              AND (
-                    relational_game_id = ?
-                    OR (relational_game_id IS NULL AND game_id = ?)
-                  )
-            """,
-            (relational_game_id, game_id),
+def _reapply_film_tool_teach(conn, game_id):
+    """Re-grade new AI drafts against saved Film Tool tags. No-op on slim test DBs."""
+    try:
+        from manual_tag_teach import apply_saved_manual_teach
+
+        apply_saved_manual_teach(conn, game_id, commit=True, pending_only=True)
+    except sqlite3.OperationalError:
+        return
+    except Exception as exc:
+        print(f"WARN: Film Tool teach reapply skipped: {exc}")
+
+
+def _apply_event_calibrator(game_id, events):
+    """Stamp-over calibrator is off. Shot type comes from FT/court rules."""
+    return events
+
+
+def _clip_referenced_event_ids_sql(conn):
+    """SQL fragment listing event ids that saved clips point at (tables may be absent)."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name IN ('clips', 'player_development_clips')"
+        ).fetchall()
+    }
+    parts = [f"SELECT event_id FROM {t} WHERE event_id IS NOT NULL" for t in sorted(tables)]
+    return " UNION ".join(parts)
+
+
+def _events_columns(conn):
+    return {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+
+
+def _delete_machine_events(conn, game_id, relational_game_id=None):
+    """Delete this analysis key's machine output so a rebuild can regenerate it.
+
+    Machine output: pending AI drafts, rows auto-accepted by
+    review_actions.auto_accept_high_confidence_events, and AI rows graded by the
+    Film Tool teach pass (re-derived from the saved manual tags after the rebuild).
+    Anything a person decided (manual tags, coach accept/correct/reject) is kept,
+    as are rows a saved clip points at. Only rows of this analysis key are touched,
+    so a rerun never wipes the primary run's events on a shared relational game.
+    Slim/legacy tables without the review columns fall back to human_verified=0.
+    """
+    from review_actions import AUTO_ACCEPT_NOTE
+
+    teach_note = "Film Tool teach"  # manual_tag_teach.TEACH_NOTE (that module needs Flask helpers)
+    cols = _events_columns(conn)
+    where = ["game_id = ?"]
+    params = [game_id]
+    if relational_game_id is not None and "relational_game_id" in cols:
+        where.append("(relational_game_id IS NULL OR relational_game_id = ?)")
+        params.append(relational_game_id)
+    if "source_type" in cols:
+        where.append("COALESCE(source_type, 'ai') = 'ai'")
+    if "reviewed_by_user_id" in cols:
+        where.append("reviewed_by_user_id IS NULL")
+    if {"review_status", "review_notes"} <= cols:
+        blank_machine = ""
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "human_corrections" in tables:
+            # Corrected/rejected with no note and no correction row is machine
+            # output (Adrian had 526 of these). A coach decision writes
+            # human_corrections even when review_notes is empty.
+            blank_machine = """
+                OR (review_status IN ('corrected', 'rejected')
+                    AND COALESCE(review_notes, '') = ''
+                    AND id NOT IN (
+                        SELECT event_id FROM human_corrections
+                         WHERE event_id IS NOT NULL
+                    ))"""
+        where.append(
+            f"""((review_status = 'pending' AND human_verified = 0)
+                OR (review_status = 'accepted' AND review_notes = ?)
+                OR (review_status IN ('corrected', 'rejected') AND review_notes LIKE ?)
+                {blank_machine})"""
         )
+        params += [AUTO_ACCEPT_NOTE, teach_note + "%"]
     else:
-        # Legacy behavior: delete only unverified events matching game_id
-        conn.execute(
-            "DELETE FROM events WHERE game_id = ? AND human_verified = 0",
-            (game_id,),
-        )
+        where.append("human_verified = 0")
+    clip_ids = _clip_referenced_event_ids_sql(conn)
+    if clip_ids and "id" in cols:
+        where.append(f"id NOT IN ({clip_ids})")
+    conn.execute(f"DELETE FROM events WHERE {' AND '.join(where)}", params)
+
+
+def _kept_ai_event_signatures(conn, game_id):
+    """Per kept AI row, its (event_type, timestamp_ms) as generated and as it is now.
+
+    A regenerated draft with one of these signatures is the same play a person
+    already decided on, so it is not inserted again. Corrections keep the generated
+    values in human_corrections (first original event_type / timestamp).
+    """
+    cols = _events_columns(conn)
+    if "id" not in cols:
+        return []
+    source_filter = " AND COALESCE(source_type, 'ai') = 'ai'" if "source_type" in cols else ""
+    rows = conn.execute(
+        f"SELECT id, event_type, timestamp_ms FROM events WHERE game_id = ?{source_filter}",
+        (game_id,),
+    ).fetchall()
+    kept = []
+    for event_id, event_type, timestamp_ms in (tuple(r) for r in rows):
+        current = (event_type, int(timestamp_ms))
+        origin_type, origin_ts = current
+        try:
+            corrections = [
+                tuple(r) for r in conn.execute(
+                    """SELECT field_changed, original_value, timestamp_ms FROM human_corrections
+                        WHERE event_id = ? ORDER BY id""",
+                    (event_id,),
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            corrections = []
+        if corrections and corrections[0][2] is not None:
+            origin_ts = int(corrections[0][2])
+        for field_changed, original_value, _ts in corrections:
+            if field_changed == "event_type" and original_value:
+                origin_type = original_value
+                break
+        kept.append({current, (origin_type, origin_ts)})
+    return kept
+
+
+def persist_events(conn, game_id, events, relational_game_id=None):
+    """Replace this analysis key's machine events; keep every person-made decision.
+
+    Rebuilding is idempotent: pending drafts and auto-accepted rows are regenerated,
+    while manual tags and coach accept/correct/reject survive and do not get a
+    duplicate draft. relational_game_id is stamped on new rows and can only narrow
+    the delete, never widen it (reruns share it with the primary run).
+    """
+    _delete_machine_events(conn, game_id, relational_game_id)
     if not events:
         conn.commit()
+        _reapply_film_tool_teach(conn, game_id)
         return
 
+    events = _apply_event_calibrator(game_id, events)
+    if not events:
+        conn.commit()
+        _reapply_film_tool_teach(conn, game_id)
+        return
+
+    kept = _kept_ai_event_signatures(conn, game_id)
     cur = conn.cursor()
     for ev in events:
+        sig = (ev["event_type"], int(ev["timestamp_ms"]))
+        match = next((i for i, sigs in enumerate(kept) if sig in sigs), None)
+        if match is not None:
+            kept.pop(match)  # one kept row stands in for one regenerated draft
+            continue
         event_type_id = _lookup_event_type_id(conn, ev["event_type"])
         cur.execute(
             """
@@ -971,11 +1310,12 @@ def persist_events(conn, game_id, events, relational_game_id=None):
 
     from review_actions import auto_accept_high_confidence_events
 
-    auto_accept_high_confidence_events(
-        conn,
-        game_id,
-        relational_game_id=relational_game_id,
-    )
+    # Grade Film Tool tags while drafts are still pending. Auto-accept after
+    # that only promotes shots the tags did not already count.
+    _reapply_film_tool_teach(conn, game_id)
+    # Scoped to this analysis key: a relational lookup would also promote the
+    # primary run's drafts when a rerun is generated.
+    auto_accept_high_confidence_events(conn, game_id)
 
 
 def main(
@@ -1024,7 +1364,7 @@ def main(
         ball_count_before = len(detections_df[detections_df['class_name'] == 'ball'])
         detections_df = _interpolate_ball(detections_df)
         ball_count_after = len(detections_df[detections_df['class_name'] == 'ball'])
-        print(f"INFO: Ball detections: {ball_count_before} → {ball_count_after} (after interpolation)")
+        print(f"INFO: Ball detections: {ball_count_before} -> {ball_count_after} (after interpolation)")
 
         # Step 2: Cluster players spatially (tracker_ids are unstable at imgsz=320)
         # This must happen BEFORE possession analysis so we have stable player identities
@@ -1051,7 +1391,7 @@ def main(
             ball_track = build_ball_track(detections_df)
             print(f"INFO: Built {len(segments)} possession segments for precision generation.")
             events_to_persist = generate_precision_events_from_segments(
-                game_id, segments, ball_track, params=precision_params
+                game_id, segments, ball_track, params=precision_params, detections_df=detections_df
             )
             print(f"INFO: Precision generator produced {len(events_to_persist)} events.")
             persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)

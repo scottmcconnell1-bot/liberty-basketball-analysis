@@ -11,11 +11,11 @@ def test_teams_schedule_filters_by_season(client, app):
         )
         db.execute(
             "INSERT INTO seasons (name, start_date, end_date, season_type) VALUES (?,?,?,?)",
-            ("Summer 2026", "2026-06-01", "2026-08-31", "summer"),
+            ("Summer 2027", "2027-06-01", "2027-08-31", "summer"),
         )
         db.commit()
         winter_id = db.execute("SELECT id FROM seasons WHERE name='2021-22 Boys'").fetchone()["id"]
-        summer_id = db.execute("SELECT id FROM seasons WHERE name='Summer 2026'").fetchone()["id"]
+        summer_id = db.execute("SELECT id FROM seasons WHERE name='Summer 2027'").fetchone()["id"]
         db.execute(
             """INSERT INTO scheduled_games
                (season_id, program_name, team, gender, level, game_date, opponent_name, status)
@@ -26,7 +26,7 @@ def test_teams_schedule_filters_by_season(client, app):
             """INSERT INTO scheduled_games
                (season_id, program_name, team, gender, level, game_date, opponent_name, status)
                VALUES (?,?,?,?,?,?,?,?)""",
-            (summer_id, "Liberty", "boys_hs", "boys", "varsity", "2026-07-15", "Summer Tourney", "scheduled"),
+            (summer_id, "Liberty", "boys_hs", "boys", "varsity", "2027-07-15", "Summer Tourney", "scheduled"),
         )
         db.execute(
             """INSERT INTO scheduled_games
@@ -75,11 +75,12 @@ def test_teams_schedule_filters_by_season(client, app):
     payload = payload_resp.get_json()
     assert "teams" in payload
     boys_default = next(t for t in payload["teams"] if t["key"] == "varsity_boys")
-    assert boys_default["season_id"] is None
-    assert boys_default["wins"] == 0
-    assert boys_default["default_season_id"] is None
+    assert boys_default["season_id"] == summer_id
+    assert boys_default["default_season_id"] == summer_id
     assert "seasons" in boys_default
     assert summer_id in {s["id"] for s in boys_default["seasons"]}
+    assert "recent" in boys_winter
+    assert boys_winter["recent"][0]["opponent_name"] == "Winter Opponent"
 
 
 def test_dashboard_index_renders_season_select(client):

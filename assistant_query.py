@@ -90,6 +90,10 @@ def _find_player_stat(stats, player_hint):
     if not stats:
         return None
     if player_hint:
+        hint_l = player_hint.strip().lower()
+        for row in stats:
+            if (row.get("player") or "").strip().lower() == hint_l:
+                return row
         for row in stats:
             if _match_player_name(row.get("player"), player_hint):
                 return row
@@ -141,6 +145,20 @@ def _clip_citation(row):
 
 
 def _trusted_events_for_game(db, game_id, *, player_hint=None, event_codes=None, limit=25):
+    if player_hint:
+        # Exact player name first ("Al" must not pull in "Alice"); substring only as a fallback.
+        rows = _trusted_events_query(db, game_id, player_hint, "exact", event_codes, limit)
+        return rows or _trusted_events_query(db, game_id, player_hint, "like", event_codes, limit)
+    return _trusted_events_query(db, game_id, None, None, event_codes, limit)
+
+
+def _player_filter(column, player_hint, mode):
+    if mode == "exact":
+        return f"LOWER(TRIM({column})) = ?", player_hint.strip().lower()
+    return f"LOWER({column}) LIKE ?", f"%{player_hint.lower()}%"
+
+
+def _trusted_events_query(db, game_id, player_hint, mode, event_codes, limit):
     relational_game_id = _resolve_relational_game_id(db, game_id)
     review_clause = _trusted_event_review_clause()
     params = []
@@ -154,8 +172,9 @@ def _trusted_events_for_game(db, game_id, *, player_hint=None, event_codes=None,
         params.append(str(game_id))
 
     if player_hint:
-        filters.append("LOWER(e.player) LIKE ?")
-        params.append(f"%{player_hint.lower()}%")
+        clause, value = _player_filter("e.player", player_hint, mode)
+        filters.append(clause)
+        params.append(value)
 
     if event_codes:
         placeholders = ", ".join("?" for _ in event_codes)
@@ -176,6 +195,13 @@ def _trusted_events_for_game(db, game_id, *, player_hint=None, event_codes=None,
 
 
 def _trusted_clips_for_game(db, game_id, *, player_hint=None, limit=10):
+    if player_hint:
+        rows = _trusted_clips_query(db, game_id, player_hint, "exact", limit)
+        return rows or _trusted_clips_query(db, game_id, player_hint, "like", limit)
+    return _trusted_clips_query(db, game_id, None, None, limit)
+
+
+def _trusted_clips_query(db, game_id, player_hint, mode, limit):
     relational_game_id = _resolve_relational_game_id(db, game_id)
     review_clause = _trusted_event_review_clause("ev.review_status")
     params = []
@@ -189,8 +215,9 @@ def _trusted_clips_for_game(db, game_id, *, player_hint=None, limit=10):
         params.append(game_id)
 
     if player_hint:
-        filters.append("LOWER(ev.player) LIKE ?")
-        params.append(f"%{player_hint.lower()}%")
+        clause, value = _player_filter("ev.player", player_hint, mode)
+        filters.append(clause)
+        params.append(value)
 
     params.append(limit)
     query = f"""
@@ -293,7 +320,12 @@ def _answer_minutes(db, game_id, player_hint):
         return _unknown("No player minutes are recorded for this game yet.", intent="minutes")
 
     if player_hint:
+        hint_l = player_hint.strip().lower()
         matched = [
+            row
+            for row in minutes_rows
+            if str(row.get("name") or row.get("jersey_number") or "").strip().lower() == hint_l
+        ] or [
             row
             for row in minutes_rows
             if _match_player_name(row.get("name") or row.get("jersey_number"), player_hint)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from film_roster import list_film_roster_players
 
 STAT_EVENT_TYPES = {
@@ -10,21 +12,86 @@ STAT_EVENT_TYPES = {
     "stl": ("steal",),
     "blk": ("block",),
     "tov": ("turnover",),
-    "pf": ("foul",),
-    "foul": ("foul",),
+    "pf": ("foul", "foul_personal", "foul_shooting", "foul_technical"),
+    "foul": ("foul", "foul_personal", "foul_shooting", "foul_technical"),
     "pts": ("make", "made_two", "made_three", "made_free_throw", "shot"),
     "fgm": ("make", "made_two", "made_three", "made_free_throw"),
     "fga": ("shot", "make", "miss", "made_two", "made_three", "missed_two", "missed_three"),
 }
 
 
-def _normalize_film_level(level: str | None) -> str:
-    value = (level or "varsity").strip().lower().replace("-", "_")
-    if value in {"jr_high", "junior_high", "jrhigh"}:
+def infer_film_level_from_game_id(game_id: str | None) -> str | None:
+    """Map import prefixes like jrhigh_adrian_… onto Film Tool roster slots."""
+    key = str(game_id or "").strip().lower()
+    if not key:
+        return None
+    if key.startswith(("jrhigh_", "jr_high_", "jh_")):
         return "jrhigh"
-    if value in {"jv", "varsity"}:
-        return value
-    return "varsity"
+    if key.startswith("jv_"):
+        return "jv"
+    if key.startswith(("varsity_", "hs_")):
+        return "varsity"
+    return None
+
+
+def _normalize_film_level(level: str | None) -> str | None:
+    value = str(level or "").strip().lower().replace("-", "_").replace(" ", "_")
+    while "__" in value:
+        value = value.replace("__", "_")
+    if value in {"jr_high", "junior_high", "jrhigh", "jh", "jh_boys", "jh_girls"}:
+        return "jrhigh"
+    if value in {"jv", "junior_varsity"}:
+        return "jv"
+    if value in {"varsity", "hs", "high_school"}:
+        return "varsity"
+    return None
+
+
+def _schedule_level_values(level: str | None) -> list[str]:
+    film_level = _normalize_film_level(level) or infer_film_level_from_game_id(level)
+    if film_level == "jrhigh":
+        return ["jr_high", "jrhigh", "junior_high"]
+    if film_level == "jv":
+        return ["jv"]
+    if film_level == "varsity":
+        return ["varsity"]
+    return []
+
+
+def _player_table_levels(level: str | None) -> list[str]:
+    film_level = _normalize_film_level(level)
+    if film_level == "jrhigh":
+        return ["jr_high", "jrhigh", "junior_high"]
+    if film_level == "jv":
+        return ["jv"]
+    if film_level == "varsity":
+        return ["varsity"]
+    return []
+
+
+def _team_table_levels(level: str | None) -> list[str]:
+    return _player_table_levels(level)
+
+
+def _opponent_lookup_tokens(opponent_name: str | None) -> list[str]:
+    raw = (opponent_name or "").strip()
+    if not raw:
+        return []
+    tokens = [raw]
+    if " - " in raw:
+        tokens.append(raw.split(" - ", 1)[0].strip())
+    stripped = re.sub(r"\s*\([^)]*\)", "", raw).strip()
+    if stripped:
+        tokens.append(stripped.split(" - ", 1)[0].strip())
+    ordered = []
+    seen = set()
+    for token in tokens:
+        key = token.lower()
+        if len(token) < 3 or key in seen:
+            continue
+        seen.add(key)
+        ordered.append(token)
+    return ordered
 
 
 def _resolve_relational_game_id(db, game_id):
@@ -33,19 +100,29 @@ def _resolve_relational_game_id(db, game_id):
     return _resolve_relational_game_id(db, game_id)
 
 
-def _film_roster_sides_to_try(side: str | None) -> list[str]:
+def _film_roster_sides_to_try(side: str | None, opponent_name: str | None = None) -> list[str]:
+    from film_roster import opponent_side_key
+
     primary = (side or "our").strip().lower()
     order = []
-    for candidate in (primary, "our", "home", "away", "opp"):
-        if candidate not in order:
+    if primary in {"our", "liberty"}:
+        order.append("our")
+        return order
+    if opponent_name:
+        order.append(opponent_side_key(opponent_name))
+    for candidate in (primary, "opp"):
+        if candidate and candidate not in order:
             order.append(candidate)
     return order
 
 
 def _film_levels_to_try(level: str | None) -> list[str]:
+    """Keep Jr High / JV / Varsity rosters isolated once the game level is known."""
     primary = _normalize_film_level(level)
+    if primary:
+        return [primary]
     order = []
-    for candidate in (primary, "varsity", "jv", "jrhigh"):
+    for candidate in ("varsity", "jv", "jrhigh"):
         if candidate not in order:
             order.append(candidate)
     return order
@@ -64,10 +141,68 @@ def _load_film_roster_players(db, *, season_id, level, gender, side):
         return []
 
 
+def _lookup_scheduled_game_for_roster(db, *, opponent_name=None, game_date=None, level=None):
+    tokens = _opponent_lookup_tokens(opponent_name)
+    if not tokens:
+        return None
+
+    clauses = []
+    params = []
+    token_clauses = []
+    for token in tokens:
+        token_clauses.append("lower(trim(sg.opponent_name)) = lower(trim(?))")
+        params.append(token)
+        if len(token) >= 3:
+            token_clauses.append(
+                "(length(trim(sg.opponent_name)) >= 3 AND instr(lower(?), lower(trim(sg.opponent_name))) > 0)"
+            )
+            params.append(token)
+    clauses.append("(" + " OR ".join(token_clauses) + ")")
+
+    schedule_levels = _schedule_level_values(level)
+    if schedule_levels:
+        placeholders = ",".join("?" * len(schedule_levels))
+        clauses.append(f"sg.level IN ({placeholders})")
+        params.extend(schedule_levels)
+
+    sql = f"""
+        SELECT sg.season_id, sg.level, sg.gender, sg.game_date, sg.opponent_name
+          FROM scheduled_games sg
+         WHERE {' AND '.join(clauses)}
+         ORDER BY CASE
+                    WHEN ? IS NOT NULL AND sg.game_date = ? THEN 0
+                    ELSE 1
+                  END,
+                  sg.game_date DESC
+         LIMIT 1
+    """
+    params.extend([game_date, game_date])
+    return db.execute(sql, params).fetchone()
+
+
+def _apply_scheduled_game_row(context, row):
+    if not row:
+        return
+    if row["season_id"]:
+        context["season_id"] = row["season_id"]
+    normalized = _normalize_film_level(row["level"])
+    if normalized:
+        context["level"] = normalized
+    if row["gender"]:
+        context["gender"] = str(row["gender"]).lower()
+    if row["game_date"] and not context.get("game_date"):
+        context["game_date"] = row["game_date"]
+    if row["opponent_name"]:
+        context["schedule_opponent_name"] = row["opponent_name"]
+        if not context.get("opponent_name"):
+            context["opponent_name"] = row["opponent_name"]
+            context["opponent_team_name"] = row["opponent_name"]
+
+
 def _find_film_roster_players(db, *, season_id=None, level="varsity", gender="boys", side="our", opponent_name=None, game_date=None):
     """Find Film Tool roster players even when the analysis game lacks a season link."""
     gender = (gender or "boys").strip().lower()
-    sides = _film_roster_sides_to_try(side)
+    sides = _film_roster_sides_to_try(side, opponent_name)
     levels = _film_levels_to_try(level)
 
     def try_season(candidate_season_id):
@@ -98,27 +233,17 @@ def _find_film_roster_players(db, *, season_id=None, level="varsity", gender="bo
             hit["source"] = "film_roster"
             return hit
 
-    opponent = (opponent_name or "").strip()
-    if opponent:
-        row = db.execute(
-            """
-            SELECT sg.season_id
-              FROM scheduled_games sg
-             WHERE lower(trim(sg.opponent_name)) = lower(trim(?))
-             ORDER BY CASE
-                        WHEN ? IS NOT NULL AND sg.game_date = ? THEN 0
-                        ELSE 1
-                      END,
-                      sg.game_date DESC
-             LIMIT 1
-            """,
-            (opponent, game_date, game_date),
-        ).fetchone()
-        if row and row["season_id"]:
-            hit = try_season(row["season_id"])
-            if hit:
-                hit["source"] = "film_roster_opponent_match"
-                return hit
+    scheduled = _lookup_scheduled_game_for_roster(
+        db,
+        opponent_name=opponent_name,
+        game_date=game_date,
+        level=level,
+    )
+    if scheduled and scheduled["season_id"]:
+        hit = try_season(scheduled["season_id"])
+        if hit:
+            hit["source"] = "film_roster_opponent_match"
+            return hit
 
     active_rows = db.execute(
         """
@@ -165,12 +290,13 @@ def resolve_analysis_game_context(db, game_id):
     row = resolve_analysis_run_for_progress(db, game_id)
     analysis_key = row["analysis_key"] if row and row["analysis_key"] else str(game_id)
     relational_game_id = _resolve_relational_game_id(db, analysis_key)
+    inferred_level = infer_film_level_from_game_id(analysis_key) or infer_film_level_from_game_id(game_id)
 
     context = {
         "analysis_key": analysis_key,
         "relational_game_id": relational_game_id,
         "season_id": None,
-        "level": "varsity",
+        "level": inferred_level,
         "gender": "boys",
         "side": "our",
         "opponent_name": None,
@@ -194,43 +320,9 @@ def resolve_analysis_game_context(db, game_id):
             (relational_game_id,),
         ).fetchone()
         if game_row:
-            if game_row["season_id"]:
-                context["season_id"] = game_row["season_id"]
-            if game_row["level"]:
-                context["level"] = _normalize_film_level(game_row["level"])
-            if game_row["gender"]:
-                context["gender"] = str(game_row["gender"]).lower()
-            context["opponent_name"] = game_row["opponent_name"]
-            context["game_date"] = game_row["game_date"]
-            if game_row["opponent_name"]:
-                context["opponent_team_name"] = game_row["opponent_name"]
+            _apply_scheduled_game_row(context, game_row)
             if game_row["program_name"]:
                 context["our_team_name"] = game_row["program_name"]
-
-    if not context["season_id"] and context["opponent_name"]:
-        row = db.execute(
-            """
-            SELECT sg.season_id, sg.level, sg.gender, sg.game_date
-              FROM scheduled_games sg
-             WHERE lower(trim(sg.opponent_name)) = lower(trim(?))
-             ORDER BY CASE
-                        WHEN ? IS NOT NULL AND sg.game_date = ? THEN 0
-                        ELSE 1
-                      END,
-                      sg.game_date DESC
-             LIMIT 1
-            """,
-            (context["opponent_name"], context["game_date"], context["game_date"]),
-        ).fetchone()
-        if row:
-            if row["season_id"]:
-                context["season_id"] = row["season_id"]
-            if row["level"]:
-                context["level"] = _normalize_film_level(row["level"])
-            if row["gender"]:
-                context["gender"] = str(row["gender"]).lower()
-            if not context["game_date"]:
-                context["game_date"] = row["game_date"]
 
     video_row = db.execute(
         """
@@ -255,16 +347,47 @@ def resolve_analysis_game_context(db, game_id):
             context["opponent_name"] = video_row["opponent"]
             context["opponent_team_name"] = video_row["opponent"]
 
-    team_row = db.execute(
-        """
-        SELECT id, team_name
-          FROM teams
-         WHERE lower(program_name) LIKE '%liberty%'
-            OR lower(team_name) LIKE '%liberty%'
-         ORDER BY id ASC
-         LIMIT 1
-        """
-    ).fetchone()
+    if not context["season_id"]:
+        scheduled = _lookup_scheduled_game_for_roster(
+            db,
+            opponent_name=context["opponent_name"],
+            game_date=context["game_date"],
+            level=context["level"],
+        )
+        _apply_scheduled_game_row(context, scheduled)
+
+    if not context["level"]:
+        context["level"] = "varsity"
+
+    team_levels = _team_table_levels(context["level"])
+    team_row = None
+    if team_levels:
+        placeholders = ",".join("?" * len(team_levels))
+        team_row = db.execute(
+            f"""
+            SELECT id, team_name
+              FROM teams
+             WHERE lower(level) IN ({placeholders})
+               AND (
+                    lower(program_name) LIKE '%liberty%'
+                    OR lower(team_name) LIKE '%liberty%'
+               )
+             ORDER BY id ASC
+             LIMIT 1
+            """,
+            tuple(team_levels),
+        ).fetchone()
+    if not team_row:
+        team_row = db.execute(
+            """
+            SELECT id, team_name
+              FROM teams
+             WHERE lower(program_name) LIKE '%liberty%'
+                OR lower(team_name) LIKE '%liberty%'
+             ORDER BY id ASC
+             LIMIT 1
+            """
+        ).fetchone()
     if team_row:
         context["our_team_id"] = team_row["id"]
         context["our_team_name"] = team_row["team_name"] or context["our_team_name"]
@@ -320,7 +443,17 @@ def get_analysis_roster_players(db, game_id):
         "opponent_name": context["opponent_name"],
     }
 
-    roster_hit = _find_film_roster_players(
+    from program_mode import analysis_players_from_scorebook, load_scorebook
+
+    scorebook = load_scorebook(context["analysis_key"]) or load_scorebook(str(game_id))
+    scorebook_players = analysis_players_from_scorebook(scorebook) if scorebook else []
+    if scorebook_players:
+        source = "scorebook"
+        resolved_context["home_team"] = scorebook.get("home_team")
+        resolved_context["away_team"] = scorebook.get("away_team")
+        players = scorebook_players
+
+    roster_hit = None if players else _find_film_roster_players(
         db,
         season_id=context["season_id"],
         level=context["level"],
@@ -352,13 +485,22 @@ def get_analysis_roster_players(db, game_id):
             })
 
     if not players:
-        rows = db.execute(
-            """
-            SELECT p.id, p.name, p.jersey_number, p.position, p.grade
-              FROM players p
-             ORDER BY p.jersey_number ASC, p.name ASC
-            """
-        ).fetchall()
+        player_levels = _player_table_levels(context["level"])
+        gender = (context["gender"] or "boys").strip().lower()
+        if player_levels:
+            placeholders = ",".join("?" * len(player_levels))
+            rows = db.execute(
+                f"""
+                SELECT p.id, p.name, p.jersey_number, p.position, p.grade
+                  FROM players p
+                 WHERE lower(p.level) IN ({placeholders})
+                   AND lower(p.gender) = ?
+                 ORDER BY p.jersey_number ASC, p.name ASC
+                """,
+                (*player_levels, gender),
+            ).fetchall()
+        else:
+            rows = []
         if rows:
             source = "global_players"
             players = [dict(row) for row in rows]

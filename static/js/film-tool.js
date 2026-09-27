@@ -61,8 +61,8 @@ const vocabulary = {
     quarter: ['Q1', 'Q2', 'Q3', 'Q4', 'OT'],
     team: ['Our Team', 'Opponent', 'Home', 'Away'],
     side: ['Offense', 'Defense', 'Neutral'],
-    category: ['ATO', 'Defense', 'Offense', 'Substitution', 'Transition', 'BLOB', 'SLOB', 'Quarter'],
-    eventtype: ['2PT', '3PT', 'Assist', 'BLOB', 'Block', 'DefRebound', 'EndQTR', 'FT', 'Foul', 'JumpBall', 'OB', 'OffRebound', 'SLOB', 'StartQTR', 'Steal', 'SubOut', 'SubIn', 'TimeOut', 'Tip', 'Turnover', 'Violation'],
+    category: ['ATO', 'Defense', 'Foul', 'Offense', 'Substitution', 'Transition', 'BLOB', 'SLOB', 'Quarter'],
+    eventtype: ['2PT', '3PT', 'Assist', 'BLOB', 'Block', 'DefRebound', 'EndQTR', 'FT', 'Foul', 'Shooting', 'Personal', 'Technical', 'JumpBall', 'OB', 'OffRebound', 'SLOB', 'StartQTR', 'Steal', 'SubOut', 'SubIn', 'TimeOut', 'Tip', 'Turnover', 'Violation'],
     result: ['Make', 'Miss', 'NA'],
     player: []
 };
@@ -76,24 +76,61 @@ const eventDefs = [
     { id: 'block', label: 'Block', hotkey: 'K', group: 'defense', teamMode: 'team-player', eventtype: 'Block', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'defreb', label: 'Def Reb', hotkey: 'D', group: 'defense', teamMode: 'team-player', eventtype: 'DefRebound', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'endqtr', label: 'End QTR', hotkey: 'E', group: 'flow', teamMode: 'event-only', eventtype: 'EndQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'foul', label: 'Foul', hotkey: 'F', group: 'defense', teamMode: 'team-player', eventtype: 'Foul', result: 'NA', side: 'Defense', category: 'Defense' },
+    { id: 'foulshooting', label: 'Shooting foul', hotkey: '', group: 'defense', teamMode: 'team-player', eventtype: 'Shooting', result: 'NA', side: 'Defense', category: 'Foul' },
+    { id: 'foulpersonal', label: 'Personal foul', hotkey: 'F', group: 'defense', teamMode: 'team-player', eventtype: 'Personal', result: 'NA', side: 'Defense', category: 'Foul' },
+    { id: 'foultechnical', label: 'Technical foul', hotkey: '', group: 'defense', teamMode: 'team-player', eventtype: 'Technical', result: 'NA', side: 'Defense', category: 'Foul' },
     { id: 'ftmake', label: 'FT Make', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'FT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'ftmiss', label: 'FT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'FT', result: 'Miss', side: 'Offense', category: 'Offense' },
-    { id: 'jumpball', label: 'Jump Ball', hotkey: 'J', group: 'flow', teamMode: 'event-only', eventtype: 'JumpBall', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'ob', label: 'OB', hotkey: 'O', group: 'defense', teamMode: 'team-only', eventtype: 'OB', result: 'NA', side: 'Defense', category: 'Defense' },
+    { id: 'jumpball', label: 'Jump Ball', hotkey: 'J', group: 'flow', teamMode: 'team-player', eventtype: 'JumpBall', result: 'NA', side: 'Neutral', category: 'Quarter' },
+    { id: 'ob', label: 'OB', hotkey: 'O', group: 'defense', teamMode: 'team-player', eventtype: 'OB', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'offreb', label: 'Off Reb', hotkey: 'R', group: 'offense', teamMode: 'team-player', eventtype: 'OffRebound', result: 'NA', side: 'Offense', category: 'Offense' },
     { id: 'slob', label: 'SLOB', hotkey: '', group: 'flow', teamMode: 'team-only', eventtype: 'SLOB', result: 'NA', side: 'Offense', category: 'SLOB' },
     { id: 'startqtr', label: 'Start QTR', hotkey: 'Q', group: 'flow', teamMode: 'event-only', eventtype: 'StartQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'steal', label: 'Steal', hotkey: 'S', group: 'defense', teamMode: 'special-steal', eventtype: 'Steal', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'timeout', label: 'Time Out', hotkey: 'T', group: 'flow', teamMode: 'team-only', eventtype: 'TimeOut', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'tip', label: 'Tip', hotkey: 'P', group: 'flow', teamMode: 'team-only', eventtype: 'Tip', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
+    { id: 'tip', label: 'Tip', hotkey: 'P', group: 'flow', teamMode: 'team-player', eventtype: 'Tip', result: 'NA', side: 'Neutral', category: 'Quarter' },
+    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-only', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
     { id: 'twoptmake', label: '2PT Make', hotkey: '2', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'twoptmiss', label: '2PT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Miss', side: 'Offense', category: 'Offense' },
     { id: 'threeptmake', label: '3PT Make', hotkey: '3', group: 'offense', teamMode: 'team-player', eventtype: '3PT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'threeptmiss', label: '3PT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: '3PT', result: 'Miss', side: 'Offense', category: 'Offense' },
-    { id: 'violation', label: 'Violation', hotkey: 'V', group: 'defense', teamMode: 'team-only', eventtype: 'Violation', result: 'NA', side: 'Defense', category: 'Defense' }
+    { id: 'violation', label: 'Violation', hotkey: 'V', group: 'defense', teamMode: 'team-player', eventtype: 'Violation', result: 'NA', side: 'Defense', category: 'Defense' }
 ].sort((a, b) => a.label.localeCompare(b.label));
+
+const MANUAL_TAGGING_KEY = 'filmToolManualTaggingV1';
+const TAG_TAB_KEY = 'filmToolTagTabV1';
+const TAG_BUTTON_ORDER = {
+    offense: ['twoptmake', 'twoptmiss', 'threeptmake', 'threeptmiss', 'ftmake', 'ftmiss', 'and1', 'assist', 'offreb', 'turnover'],
+    defense: ['defreb', 'steal', 'block', 'foulshooting', 'foulpersonal', 'foultechnical', 'ob', 'violation'],
+    flow: ['startqtr', 'endqtr', 'tip', 'jumpball', 'timeout', 'blob', 'slob']
+};
+const TAG_SHORT_LABEL = {
+    twoptmake: '2+',
+    twoptmiss: '2−',
+    threeptmake: '3+',
+    threeptmiss: '3−',
+    ftmake: 'FT+',
+    ftmiss: 'FT−',
+    and1: 'A1',
+    assist: 'AST',
+    offreb: 'OR',
+    turnover: 'TO',
+    defreb: 'DR',
+    steal: 'STL',
+    block: 'BLK',
+    foulshooting: 'SH',
+    foulpersonal: 'PF',
+    foultechnical: 'TF',
+    ob: 'OB',
+    violation: 'Vio',
+    startqtr: 'Q+',
+    endqtr: 'Q−',
+    tip: 'Tip',
+    jumpball: 'JB',
+    timeout: 'T.O',
+    blob: 'BLB',
+    slob: 'SLB'
+};
 
 // ── Default Rosters ─────────────────────────────────────────
 const defaultRosters = {};
@@ -109,6 +146,7 @@ const defaultRosters = {};
 let rosters = { ...defaultRosters };
 let savedGames;
 let currentRosterSide = 'our';
+let currentRosterOpponent = '';
 let activeRosterSeasonId = '';
 let rosterSeasonOptions = [];
 let pendingRosterImportFile = null;
@@ -133,6 +171,7 @@ let aiEventsList, aiEventsScroller, aiEventsCount, aiCurrentEventLabel;
 let termDialog, termFieldSelect, termList, newTermInput;
 let rosterDialog, playerList, rosterFileInput, rosterFileTypeSelect;
 let rosterSeasonSelect, rosterImportDialog, rosterImportSeasonSelect, rosterImportReplace, rosterImportFileLabel;
+let rosterOpponentSelect, rosterImportOpponentSelect, rosterOpponentStats;
 let playerDialog, playerPosInput, playerNumInput, playerNameInput, playerGradeInput;
 let quickTagDialog, quickDialogTitle, quickTagLabel, quickTagBody, focusExitBtn;
 let startersDialog, libertyStartersList, opponentStartersList, startersHelp;
@@ -169,6 +208,118 @@ function formatSecondsToMMSS(sec) {
 
 function escapeCsv(v) { return `"${String(v ?? '').replaceAll('"', '""')}"`; }
 
+function inferFilmLevelFromGameId(gameId) {
+    const key = String(gameId || '').toLowerCase();
+    if (!key) return '';
+    if (key.startsWith('jrhigh_') || key.startsWith('jr_high_') || key.startsWith('jh_')) return 'jrhigh';
+    if (key.startsWith('jv_')) return 'jv';
+    if (key.startsWith('varsity_') || key.startsWith('hs_')) return 'varsity';
+    return '';
+}
+
+function gameRosterLevel() {
+    return window.FILM_TOOL_ROSTER_LEVEL
+        || inferFilmLevelFromGameId(window.FILM_TOOL_GAME_ID)
+        || '';
+}
+
+function applyOpenGameRosterContext() {
+    const seasonId = window.FILM_TOOL_ROSTER_SEASON_ID;
+    const level = gameRosterLevel();
+    const gender = window.FILM_TOOL_ROSTER_GENDER;
+    const opponent = window.FILM_TOOL_ROSTER_OPPONENT;
+    if (seasonId) setActiveRosterSeasonId(String(seasonId));
+    if (opponent) currentRosterOpponent = String(opponent);
+    if (level || gender) {
+        setRosterFilters(level || getSelectedLevel(), gender || getSelectedGender(), currentRosterSide);
+    }
+    syncGameTeamsFromContext();
+}
+
+function syncGameTeamsFromContext(opts = {}) {
+    if (ourTeamNameInput && !ourTeamNameInput.value.trim()) {
+        ourTeamNameInput.value = 'Liberty';
+    }
+    const gameOpp = (
+        (window.FILM_TOOL_ROSTER_OPPONENT || '').trim()
+        || inferOpponentFromGameId(window.FILM_TOOL_GAME_ID)
+        || ''
+    );
+    if (gameOpp && opponentInput && (opts.forceGameOpponent || !opponentInput.value.trim())) {
+        opponentInput.value = gameOpp;
+        currentRosterOpponent = gameOpp;
+        ensureOpponentOption(gameOpp);
+    } else if (gameOpp && !currentRosterOpponent) {
+        currentRosterOpponent = gameOpp;
+        ensureOpponentOption(gameOpp);
+    }
+    updateTagGameButton();
+    if (leftScoreName) renderScore();
+}
+
+function ensureOpponentOption(name) {
+    if (!rosterOpponentSelect || !name) return;
+    const exists = Array.from(rosterOpponentSelect.options).some(opt => opt.value === name);
+    if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        rosterOpponentSelect.appendChild(opt);
+    }
+    if (currentRosterSide === 'opp' || !rosterOpponentSelect.value) {
+        rosterOpponentSelect.value = name;
+    }
+}
+
+function updateTagGameButton() {
+    const btn = document.getElementById('ftTagGameBtn');
+    if (!btn) return;
+    const opp = gameOpponentName() || 'Opponent';
+    btn.title = `${libertyTeamName()} vs ${opp} — set opponent and starting lineups`;
+}
+
+function openGameTeamsDialog() {
+    syncGameTeamsFromContext();
+    const libEl = document.getElementById('ftTagLibertyName');
+    const oppEl = document.getElementById('ftTagOppName');
+    if (libEl) libEl.value = libertyTeamName();
+    if (oppEl) oppEl.value = gameOpponentName();
+    document.getElementById('ftGameTeamsDialog')?.showModal();
+}
+
+async function saveGameTeamsDialog() {
+    const lib = (document.getElementById('ftTagLibertyName')?.value || '').trim() || 'Liberty';
+    const opp = (document.getElementById('ftTagOppName')?.value || '').trim();
+    if (ourTeamNameInput) ourTeamNameInput.value = lib;
+    if (opponentInput) opponentInput.value = opp;
+    currentRosterOpponent = opp;
+    if (opp) ensureOpponentOption(opp);
+    updateScoreLabels();
+    renderScore();
+    updateTagGameButton();
+    document.getElementById('ftGameTeamsDialog')?.close();
+    await loadGameTeamRosters();
+    setStatus(opp ? `Tagging ${lib} vs ${opp}.` : 'Set the opponent so tags use that roster.');
+}
+
+async function loadRosterForSide(side) {
+    const prev = currentRosterSide;
+    currentRosterSide = side;
+    if (side === 'opp') {
+        const opp = gameOpponentName();
+        if (opp) {
+            currentRosterOpponent = opp;
+            ensureOpponentOption(opp);
+        }
+    }
+    await loadRosterFromServer();
+    currentRosterSide = prev;
+}
+
+async function loadGameTeamRosters() {
+    await loadRosterForSide('our');
+    if (gameOpponentName()) await loadRosterForSide('opp');
+}
 function getSelectedLevel() {
     return document.querySelector('input[name="level"]:checked')?.value
         || loadJson(ROSTER_LEVEL_STORAGE_KEY, 'varsity')
@@ -184,6 +335,125 @@ function getImportLevel() {
 }
 function getImportGender() {
     return document.querySelector('input[name="importGender"]:checked')?.value || getSelectedGender();
+}
+function inferOpponentFromGameId(gameId) {
+    const id = String(gameId || '');
+    const m = id.match(/^(?:jrhigh_|jv_|varsity_|hs_)([^,_/]+)/i);
+    if (!m) return '';
+    return m[1].replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+}
+
+function libertyTeamName() {
+    return (ourTeamNameInput?.value || '').trim() || 'Liberty';
+}
+
+function gameOpponentName() {
+    return (
+        (opponentInput?.value || '').trim()
+        || (currentRosterOpponent || '').trim()
+        || (window.FILM_TOOL_ROSTER_OPPONENT || '').trim()
+        || inferOpponentFromGameId(window.FILM_TOOL_GAME_ID)
+        || ''
+    );
+}
+
+function getSelectedOpponent() {
+    if (currentRosterSide === 'opp' && rosterOpponentSelect?.value) {
+        return rosterOpponentSelect.value.trim();
+    }
+    return gameOpponentName();
+}
+
+function rosterQueryParams(side = currentRosterSide, opponent = getSelectedOpponent()) {
+    const params = {
+        season_id: getSelectedSeasonId(),
+        level: getSelectedLevel(),
+        gender: getSelectedGender(),
+        side,
+    };
+    if (side === 'opp' && opponent) params.opponent = opponent;
+    return params;
+}
+
+function syncOpponentFields() {
+    const show = currentRosterSide === 'opp' || pendingRosterImportSide === 'opp';
+    const field = document.getElementById('rosterOpponentField');
+    const importField = document.getElementById('rosterImportOpponentField');
+    if (field) field.hidden = currentRosterSide !== 'opp';
+    if (importField) importField.hidden = pendingRosterImportSide !== 'opp';
+    if (rosterOpponentStats && currentRosterSide !== 'opp') {
+        rosterOpponentStats.style.display = 'none';
+        rosterOpponentStats.textContent = '';
+    }
+}
+
+function fillOpponentSelect(selectEl, opponents, selectedName) {
+    if (!selectEl) return;
+    const names = [];
+    const seen = new Set();
+    (opponents || []).forEach((item) => {
+        const name = typeof item === 'string' ? item : item.name;
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        names.push(name);
+    });
+    if (selectedName && !seen.has(selectedName.toLowerCase())) names.unshift(selectedName);
+    selectEl.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = names.length ? 'Select opponent…' : 'No opponents yet — add one on Schedule';
+    selectEl.appendChild(blank);
+    names.forEach((name) => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if (selectedName && name.toLowerCase() === selectedName.toLowerCase()) opt.selected = true;
+        selectEl.appendChild(opt);
+    });
+}
+
+async function loadOpponentOptions() {
+    const seasonId = getSelectedSeasonId();
+    if (!seasonId) {
+        fillOpponentSelect(rosterOpponentSelect, [], currentRosterOpponent);
+        fillOpponentSelect(rosterImportOpponentSelect, [], currentRosterOpponent);
+        return [];
+    }
+    try {
+        const params = new URLSearchParams({
+            season_id: seasonId,
+            level: getSelectedLevel(),
+            gender: getSelectedGender(),
+        });
+        const resp = await fetch(`/api/film-rosters/opponents?${params.toString()}`);
+        const data = await resp.json();
+        const opponents = resp.ok ? (data.opponents || []) : [];
+        const selected = currentRosterOpponent || window.FILM_TOOL_ROSTER_OPPONENT || opponents[0]?.name || '';
+        if (selected) currentRosterOpponent = selected;
+        fillOpponentSelect(rosterOpponentSelect, opponents, selected);
+        fillOpponentSelect(rosterImportOpponentSelect, opponents, selected);
+        return opponents;
+    } catch (_err) {
+        fillOpponentSelect(rosterOpponentSelect, [], currentRosterOpponent);
+        fillOpponentSelect(rosterImportOpponentSelect, [], currentRosterOpponent);
+        return [];
+    }
+}
+
+function renderOpponentStats(stats) {
+    if (!rosterOpponentStats) return;
+    if (currentRosterSide !== 'opp' || !stats) {
+        rosterOpponentStats.style.display = 'none';
+        rosterOpponentStats.textContent = '';
+        return;
+    }
+    const bits = [];
+    if (stats.opponent_name) bits.push(stats.opponent_name);
+    if (stats.record) bits.push(`Liberty record ${stats.record}`);
+    if (stats.games) bits.push(`${stats.games} game${stats.games === 1 ? '' : 's'}`);
+    if (stats.last_score) bits.push(stats.last_score);
+    rosterOpponentStats.style.display = bits.length ? 'block' : 'none';
+    rosterOpponentStats.textContent = bits.join(' · ');
 }
 function persistRosterFilters() {
     saveJson(ROSTER_LEVEL_STORAGE_KEY, getSelectedLevel());
@@ -206,6 +476,10 @@ function syncImportDialogFilters() {
         btn.classList.toggle('active', btn.dataset.side === currentRosterSide);
     });
     pendingRosterImportSide = currentRosterSide;
+    if (rosterImportOpponentSelect && currentRosterOpponent) {
+        rosterImportOpponentSelect.value = currentRosterOpponent;
+    }
+    syncOpponentFields();
     updateRosterImportTargetLabel();
 }
 function updateRosterImportTargetLabel() {
@@ -215,18 +489,25 @@ function updateRosterImportTargetLabel() {
     const level = getImportLevel();
     const gender = getImportGender();
     const side = pendingRosterImportSide || currentRosterSide;
+    const opponent = (rosterImportOpponentSelect?.value || currentRosterOpponent || '').trim();
+    const team = side === 'opp'
+        ? (opponent ? `Opponent (${opponent})` : 'Opponent')
+        : 'Liberty';
     label.textContent = seasonId
-        ? `Importing into ${seasonLabel(seasonId)} · ${level} ${gender} · ${side}`
+        ? `Importing into ${seasonLabel(seasonId)} · ${level} ${gender} · ${team}`
         : 'Select a season for this roster.';
 }
-function rosterSlotDescription(level, gender, side) {
+function rosterSlotDescription(level, gender, side, opponent) {
+    if (side === 'opp') return `${level} ${gender} · ${opponent || 'Opponent'}`;
+    if (side === 'our') return `${level} ${gender} · Liberty`;
     return `${level} ${gender} · ${side}`;
 }
 async function findPopulatedRosterSlot(seasonId) {
     if (!seasonId) return null;
-    const levels = ['varsity', 'jv', 'jrhigh'];
+    const preferred = gameRosterLevel();
+    const levels = preferred ? [preferred] : ['jrhigh', 'jv', 'varsity'];
     const genders = ['boys', 'girls', 'coed'];
-    const sides = ['our', 'home', 'away', 'opp'];
+    const sides = preferred ? ['our', 'opp'] : ['our', 'opp'];
     for (const level of levels) {
         for (const gender of genders) {
             for (const side of sides) {
@@ -264,7 +545,8 @@ function setActiveRosterSeasonId(seasonId) {
 }
 function getRosterKey(side = currentRosterSide) {
     const seasonId = getSelectedSeasonId() || 'unscoped';
-    return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}`;
+    const opponent = side === 'opp' ? (getSelectedOpponent() || 'opponent') : 'liberty';
+    return `${seasonId}|${getSelectedLevel()}|${getSelectedGender()}|${side}|${opponent}`;
 }
 
 function parsePlayerText(text) {
@@ -389,18 +671,20 @@ function sortPlayers(list) {
 
 function getTeamChoices() {
     if (gameTypeSelect.value === 'my') {
-        return [ourTeamNameInput.value.trim() || 'Our Team', opponentInput.value.trim() || 'Opponent'];
+        return [libertyTeamName(), gameOpponentName() || 'Opponent'];
     }
     return [homeTeamNameInput.value.trim() || 'Home', awayTeamNameInput.value.trim() || 'Away'];
 }
 
-function mapTeamToRosterKey(team) {
+function rosterSideForTeam(team) {
     if (gameTypeSelect.value === 'my') {
-        const our = ourTeamNameInput.value.trim() || 'Our Team';
-        return (team === our) ? getRosterKey('our') : getRosterKey('opp');
+        return team === libertyTeamName() ? 'our' : 'opp';
     }
-    const home = homeTeamNameInput.value.trim() || 'Home';
-    return (team === home) ? getRosterKey('home') : getRosterKey('away');
+    return team === (homeTeamNameInput.value.trim() || 'Home') ? 'home' : 'away';
+}
+
+function mapTeamToRosterKey(team) {
+    return getRosterKey(rosterSideForTeam(team));
 }
 
 function rosterForTeam(team) {
@@ -420,11 +704,11 @@ function loadStores() {
     savedGames = loadJson(GAMES_STORAGE_KEY, []);
 }
 function persistVocab() { saveJson(VOCAB_STORAGE_KEY, vocabulary); }
-async function persistRosters() {
+async function persistRosters(side = currentRosterSide) {
     saveJson(ROSTER_STORAGE_KEY, rosters);
     const seasonId = getSelectedSeasonId();
     if (!seasonId) return;
-    const key = getRosterKey();
+    const key = getRosterKey(side);
     const players = sortRosterPlayers(rosters[key] || []);
     try {
         await fetch('/api/film-rosters', {
@@ -434,7 +718,8 @@ async function persistRosters() {
                 season_id: Number(seasonId),
                 level: getSelectedLevel(),
                 gender: getSelectedGender(),
-                side: currentRosterSide,
+                side,
+                opponent: side === 'opp' ? (getSelectedOpponent() || undefined) : undefined,
                 players,
                 replace: true,
             }),
@@ -452,7 +737,14 @@ function createSelect(field, selected) {
     const blank = document.createElement('option');
     blank.value = ''; blank.textContent = 'Select';
     select.appendChild(blank);
-    (vocabulary[field] || []).forEach(term => {
+    const terms = [...(vocabulary[field] || [])];
+    if (field === 'team') {
+        [libertyTeamName(), gameOpponentName()].forEach(name => {
+            if (name && !terms.includes(name)) terms.push(name);
+        });
+    }
+    if (selected && !terms.includes(selected)) terms.push(selected);
+    terms.forEach(term => {
         const opt = document.createElement('option');
         opt.value = term; opt.textContent = term;
         if (term === selected) opt.selected = true;
@@ -460,6 +752,82 @@ function createSelect(field, selected) {
     });
     select.addEventListener('change', handleRowsChanged);
     return select;
+}
+
+function inferTeamFromPlayer(player) {
+    const label = String(player || '').trim();
+    if (!label) return '';
+    const ourName = libertyTeamName();
+    const oppName = gameOpponentName();
+    const ourHit = rosterPlayerMatch(rosterForTeam(ourName), label);
+    const oppHit = rosterPlayerMatch(rosterForTeam(oppName), label);
+    if (ourHit && !oppHit) return ourName;
+    if (oppHit && !ourHit) return oppName;
+    return '';
+}
+
+function rosterPlayerMatch(roster, player) {
+    const parsed = parsePlayerLabel(player);
+    const name = playerCoreName(parsed.name);
+    if (!name) return false;
+    return (roster || []).some(item => {
+        if (item === player) return true;
+        const other = parsePlayerLabel(item);
+        const oname = playerCoreName(other.name);
+        if (!oname) return false;
+        if (name === oname) return true;
+        if (name.startsWith(`${oname} `) || oname.startsWith(`${name} `)) return true;
+        if (parsed.jersey && other.jersey === parsed.jersey) {
+            const last = name.split(' ').pop();
+            const olast = oname.split(' ').pop();
+            return !!(last && last === olast && last.length > 2);
+        }
+        return false;
+    });
+}
+
+function playerCoreName(name) {
+    return String(name || '')
+        .toLowerCase()
+        .replace(/,\s*(fr|so|jr|sr|freshman|sophomore|junior|senior|\d+)\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function ensureSelectValue(select, value) {
+    if (!select || !value) return;
+    if (![...select.options].some(opt => opt.value === value)) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+    }
+    select.value = value;
+}
+
+function repairEmptyTeams() {
+    if (!rowsBody) return false;
+    let changed = false;
+    [...rowsBody.querySelectorAll('tr')].forEach(tr => {
+        const teamEl = tr.querySelector('[data-key="team"]');
+        const playerEl = tr.querySelector('[data-key="player"]');
+        if (!teamEl) return;
+        const player = (playerEl && playerEl.value) || '';
+        const inferred = inferTeamFromPlayer(player);
+        if (inferred) {
+            if (teamEl.value !== inferred) {
+                ensureSelectValue(teamEl, inferred);
+                changed = true;
+            }
+            return;
+        }
+        if (player && teamEl.value && teamEl.value !== 'Our Team' && teamEl.value !== 'Opponent'
+            && !rosterPlayerMatch(rosterForTeam(teamEl.value), player)) {
+            teamEl.value = '';
+            changed = true;
+        }
+    });
+    return changed;
 }
 
 function createInput(type, value, placeholder = '') {
@@ -490,7 +858,10 @@ function reindexRows() {
 
 function updateEventCount() {
     const el = document.getElementById('eventCountText');
-    if (el) el.textContent = `Events tagged ${rowsBody.querySelectorAll('tr').length}`;
+    if (!el) return;
+    const n = rowsBody.querySelectorAll('tr').length;
+    el.textContent = String(n);
+    el.title = `${n} tagged`;
 }
 
 function addRow(data = {}) {
@@ -553,15 +924,29 @@ function getScoreState() {
     getAllRows().forEach(r => {
         const p = (r.eventtype === '3PT' && r.result === 'Make') ? 3 : (r.eventtype === '2PT' && r.result === 'Make') ? 2 : (r.eventtype === 'FT' && r.result === 'Make') ? 1 : 0;
         if (!p) return;
-        const team = r.team;
-        const leftTeam = leftScoreName.textContent;
-        const rightTeam = rightScoreName.textContent;
-        if (team === leftTeam || team === 'Our Team') left += p;
-        else if (team === rightTeam || team === 'Opponent') right += p;
-        else if (gameTypeSelect.value === 'scout' && team === 'Home') left += p;
-        else if (gameTypeSelect.value === 'scout' && team === 'Away') right += p;
+        if (isOurTaggedTeam(r.team)) left += p;
+        else if (isOppTaggedTeam(r.team)) right += p;
     });
     return { left, right };
+}
+
+function isOurTaggedTeam(team) {
+    const t = String(team || '').trim();
+    if (!t || t === 'Opponent') return false;
+    if (gameTypeSelect.value !== 'my') {
+        const home = (homeTeamNameInput?.value || '').trim() || 'Home';
+        return t === home || t === 'Home';
+    }
+    const our = String(libertyTeamName() || '').trim();
+    const left = String(leftScoreName?.textContent || '').trim();
+    if (t === our || t === left || t === 'Our Team') return true;
+    return /^liberty\b/i.test(t);
+}
+
+function isOppTaggedTeam(team) {
+    const t = String(team || '').trim();
+    if (!t || isOurTaggedTeam(t)) return false;
+    return true;
 }
 
 function renderScore() {
@@ -572,201 +957,387 @@ function renderScore() {
 }
 
 function currentQuarter() {
-    const rows = getAllRows().filter(r => r.quarter);
-    return rows.length ? rows[rows.length - 1].quarter : 'Q1';
+    const rows = getAllRows();
+    if (!rows.length) return 'Q1';
+    const last = rows[rows.length - 1];
+    const q = last.quarter || 'Q1';
+    if (String(last.eventtype || '').toUpperCase() === 'ENDQTR') {
+        const n = parseInt(String(q).replace(/\D/g, ''), 10) || 1;
+        return `Q${Math.min(n + 1, 4)}`;
+    }
+    return q;
+}
+
+function defsForTagGroup(group) {
+    const order = TAG_BUTTON_ORDER[group] || [];
+    return eventDefs
+        .filter(x => x.group === group)
+        .sort((a, b) => {
+            const ai = order.indexOf(a.id);
+            const bi = order.indexOf(b.id);
+            return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+        });
+}
+
+function isManualTaggingOn() {
+    return document.getElementById('film-tool-root')?.classList.contains('ft-manual-tagging-on');
+}
+
+function applyManualTaggingMode(on, opts = {}) {
+    const root = document.getElementById('film-tool-root');
+    const panel = document.getElementById('ftManualTagPanel');
+    const toggle = document.getElementById('ftManualTagToggle');
+    if (root) root.classList.toggle('ft-manual-tagging-on', !!on);
+    if (panel) panel.hidden = !on;
+    if (toggle) {
+        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+        toggle.textContent = on ? 'Hide' : 'Tag';
+        toggle.title = on ? 'Hide tagging buttons' : 'Show tagging buttons on the film';
+    }
+    try { saveJson(MANUAL_TAGGING_KEY, !!on); } catch (_err) { /* ignore */ }
+    if (on && !opts.silent) setStatus('Manual tagging on — Off / Def / + on the right edge of the film.');
+}
+
+function applyTagTab(group) {
+    const tab = ['offense', 'defense', 'flow'].includes(group) ? group : 'offense';
+    document.querySelectorAll('[data-tag-tab]').forEach(btn => {
+        btn.setAttribute('aria-selected', btn.dataset.tagTab === tab ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-tag-pane]').forEach(pane => {
+        pane.hidden = pane.dataset.tagPane !== tab;
+    });
+    try { saveJson(TAG_TAB_KEY, tab); } catch (_err) { /* ignore */ }
+}
+
+function initManualTagging() {
+    const on = loadJson(MANUAL_TAGGING_KEY, false) === true;
+    applyManualTaggingMode(on, { silent: true });
+    document.getElementById('ftManualTagToggle')?.addEventListener('click', () => {
+        applyManualTaggingMode(!isManualTaggingOn());
+    });
+    document.querySelectorAll('[data-tag-tab]').forEach(btn => {
+        btn.addEventListener('click', () => applyTagTab(btn.dataset.tagTab));
+    });
+    applyTagTab(loadJson(TAG_TAB_KEY, 'offense') || 'offense');
+    document.getElementById('ftTagOverlay')?.addEventListener('mousedown', evt => evt.stopPropagation());
+    document.getElementById('ftQ1EndBtn')?.addEventListener('click', seekToQ1End);
+    syncQ1EndButton();
+    document.addEventListener('keydown', onManualTagHotkey);
+}
+
+function onManualTagHotkey(e) {
+    if (!isManualTaggingOn()) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (document.querySelector('dialog[open]')) return;
+    const key = String(e.key || '').toUpperCase();
+    const def = eventDefs.find(d => d.hotkey && String(d.hotkey).toUpperCase() === key);
+    if (!def) return;
+    e.preventDefault();
+    openQuickTag(def);
 }
 
 // ── Event Buttons ───────────────────────────────────────────
 function renderEventButtons() {
-    const groupMap = { groupFlow: 'flow', groupOffense: 'offense', groupDefense: 'defense' };
-    Object.entries(groupMap).forEach(([id, group]) => {
+    const paneIds = { offense: 'ftTagPaneOffense', defense: 'ftTagPaneDefense', flow: 'ftTagPaneFlow' };
+    Object.entries(paneIds).forEach(([group, id]) => {
         const box = document.getElementById(id);
         if (!box) return;
         box.innerHTML = '';
-                eventDefs.filter(x => x.group === group).forEach(def => {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn';
-                    btn.type = 'button';
-                    btn.innerHTML = `<span>${def.label}</span>${def.hotkey ? `<span class="ft-hotkey">${def.hotkey}</span>` : ''}`;
-                    btn.addEventListener('click', () => openQuickTag(def));
-                    box.appendChild(btn);
-                });
+        defsForTagGroup(group).forEach(def => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `ft-tag-overlay-btn ${group}`;
+            btn.textContent = TAG_SHORT_LABEL[def.id] || def.label;
+            const hk = def.hotkey ? ` (${def.hotkey})` : '';
+            btn.title = `${def.label}${hk}`;
+            btn.setAttribute('aria-label', `${def.label}${hk}`);
+            btn.addEventListener('click', evt => {
+                evt.preventDefault();
+                evt.stopPropagation();
+                openQuickTag(def);
             });
-    }
+            box.appendChild(btn);
+        });
+    });
+}
 
 // ── Quick Tag Dialog ────────────────────────────────────────
-function commitTag(def, { team = '', player = '' }) {
+function closeQuickTag() {
+    if (quickTagDialog?.open) quickTagDialog.close();
+}
+
+function showQuickTag() {
+    if (quickTagDialog && !quickTagDialog.open) quickTagDialog.showModal();
+}
+
+function commitTag(def, { team = '', player = '', close = true } = {}) {
     addRow({
         label: def.label, player, quarter: currentQuarter(), team,
         side: def.side, category: def.category, eventtype: def.eventtype, result: def.result,
         start: formatTime(video.currentTime || 0), duration: '0:05.0', notes: ''
     });
-    quickTagDialog.close();
+    if (close) closeQuickTag();
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
     setStatus(`Tagged ${def.label}.`);
 }
 
+function isFieldGoalMake(def) {
+    return def && def.result === 'Make' && (def.eventtype === '2PT' || def.eventtype === '3PT');
+}
+
+function lineupSetForTeam(team) {
+    const side = rosterSideForTeam(team);
+    return (side === 'our' || side === 'home') ? currentLineups.liberty : currentLineups.opponent;
+}
+
+function playerInLineup(player, lineupSet) {
+    if (!lineupSet || !lineupSet.size) return false;
+    if (lineupSet.has(player)) return true;
+    const jersey = parsePlayerLabel(player).jersey;
+    if (!jersey) return false;
+    for (const onFloor of lineupSet) {
+        if (parsePlayerLabel(onFloor).jersey === jersey) return true;
+    }
+    return false;
+}
+
+function playersOnFloor(team, { excludePlayer } = {}) {
+    const roster = rosterForTeam(team);
+    const floor = lineupSetForTeam(team);
+    const floorOnly = !!(floor && floor.size);
+    let players = floorOnly ? roster.filter(player => playerInLineup(player, floor)) : roster;
+    if (excludePlayer) {
+        const skipJersey = parsePlayerLabel(excludePlayer).jersey;
+        players = players.filter(player => {
+            if (player === excludePlayer) return false;
+            return !skipJersey || parsePlayerLabel(player).jersey !== skipJersey;
+        });
+    }
+    return { players, floorOnly, floorCount: floor ? floor.size : 0 };
+}
+
+function askAssistAfterMake(shotDef, team, shooter) {
+    quickTagBody.innerHTML = '';
+    quickDialogTitle.textContent = 'Assist?';
+    quickTagLabel.textContent = `After ${shotDef.label}${shooter ? ` by ${shooter}` : ` (${team})`}.`;
+    const title = document.createElement('div');
+    title.className = 'tiny';
+    title.textContent = 'Did an assist occur?';
+    quickTagBody.appendChild(title);
+    const wrap = renderChoicePills(['Yes', 'No'], choice => {
+        if (choice === 'No') {
+            closeQuickTag();
+            return;
+        }
+        const assistDef = eventDefs.find(d => d.id === 'assist');
+        renderPlayerStep({
+            def: assistDef,
+            team,
+            step: 'assist',
+            title: `Who assisted for ${team}?`,
+            unknownLabel: 'Unknown',
+            excludePlayer: shooter,
+            onPick: passer => commitTag(assistDef, { team, player: passer }),
+        });
+    });
+    quickTagBody.appendChild(wrap);
+}
+
 function commitStealPair(def, p) {
-    commitTag(def, { team: p.stealTeam, player: p.stealer });
+    commitTag(def, { team: p.stealTeam, player: p.stealer, close: false });
     addRow({
-        label: 'Turnover', player: p.turnoverPlayer, quarter: currentQuarter(),
+        label: 'Turnover', player: '', quarter: currentQuarter(),
         team: p.turnoverTeam, side: 'Offense', category: 'Offense', eventtype: 'Turnover', result: 'NA',
         start: formatTime(video.currentTime || 0), duration: '0:05.0',
         notes: `Linked to steal by ${p.stealer || p.stealTeam}`
     });
-    quickTagDialog.close();
+    closeQuickTag();
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
-    setStatus('Tagged steal and turnover.');
+    setStatus('Tagged steal and team turnover.');
+}
+
+function quickTagTeamPrompt(def) {
+    if (def.id === 'jumpball') return 'Who won the jump?';
+    if (def.id === 'tip') return 'Who got the tip?';
+    if (def.id === 'steal') return 'Which team stole it?';
+    return 'Which team?';
+}
+
+function quickTagPlayerPrompt(def, team) {
+    if (def.id === 'jumpball') return `Who controlled it for ${team}?`;
+    if (def.id === 'tip') return `Who tipped it for ${team}?`;
+    if (def.id === 'steal') return `Who stole it for ${team}?`;
+    return `Who for ${team}?`;
+}
+
+function renderChoicePills(items, onPick) {
+    const wrap = document.createElement('div');
+    wrap.className = 'pill-buttons';
+    items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn';
+        btn.textContent = item;
+        btn.addEventListener('click', () => onPick(item));
+        wrap.appendChild(btn);
+    });
+    return wrap;
+}
+
+function addPlayerToTeamRoster(team, rawName) {
+    const name = String(rawName || '').trim();
+    if (!name) return '';
+    const side = rosterSideForTeam(team);
+    const key = getRosterKey(side);
+    const existing = rosters[key] || [];
+    if (!existing.some(item => playerLabel(item) === name)) {
+        rosters[key] = sortRosterPlayers([...existing, name]);
+        persistRosters(side);
+    }
+    return name;
+}
+
+function appendAddPlayerRow(parent, team, onAdded) {
+    const row = document.createElement('div');
+    row.className = 'ft-add-player-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Jersey or name, then Add';
+    input.setAttribute('aria-label', `Add ${team} player`);
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn';
+    addBtn.textContent = 'Add';
+    const submit = () => {
+        const name = addPlayerToTeamRoster(team, input.value);
+        if (!name) return;
+        input.value = '';
+        onAdded(name);
+    };
+    addBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', evt => {
+        if (evt.key === 'Enter') {
+            evt.preventDefault();
+            submit();
+        }
+    });
+    row.append(input, addBtn);
+    parent.appendChild(row);
+}
+
+function renderPlayerStep({ def, team, step, title, unknownLabel, onPick, excludePlayer } = {}) {
+    quickTagBody.querySelector(`[data-step="${step}"]`)?.remove();
+    const sec = document.createElement('div');
+    sec.dataset.step = step;
+    sec.style.marginTop = '.55rem';
+    const { players, floorOnly } = playersOnFloor(team, { excludePlayer });
+    const heading = document.createElement('div');
+    heading.className = 'tiny';
+    heading.textContent = floorOnly ? `${title} (on the floor)` : title;
+    sec.appendChild(heading);
+    const note = document.createElement('div');
+    note.className = 'tiny';
+    note.textContent = floorOnly
+        ? 'Only the five in the game. SUB if this is a replacement.'
+        : 'Set 5s so this list is only who is in the game.';
+    sec.appendChild(note);
+    const wrap = renderChoicePills(players, onPick);
+    const unknown = document.createElement('button');
+    unknown.type = 'button';
+    unknown.className = 'btn btn-ghost';
+    unknown.textContent = unknownLabel;
+    unknown.addEventListener('click', () => onPick(''));
+    wrap.appendChild(unknown);
+    sec.appendChild(wrap);
+    if (!floorOnly) appendAddPlayerRow(sec, team, onPick);
+    quickTagBody.appendChild(sec);
 }
 
 function openQuickTag(def) {
     if (!video.paused) video.pause();
+    syncGameTeamsFromContext();
     quickDialogTitle.textContent = def.label;
-    quickTagLabel.textContent = `Video paused at ${formatTime(video.currentTime || 0)}.`;
+    const opp = gameOpponentName() || 'Opponent';
+    quickTagLabel.textContent = `Paused ${formatTime(video.currentTime || 0)} · ${libertyTeamName()} vs ${opp}`;
     quickTagBody.innerHTML = '';
 
     if (def.teamMode === 'event-only') {
         const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn btn-primary'; btn.textContent = 'Tag event';
+        btn.type = 'button';
+        btn.className = 'btn btn-primary';
+        btn.textContent = 'Tag';
         btn.addEventListener('click', () => commitTag(def, { team: '', player: '' }));
         quickTagBody.appendChild(btn);
-        quickTagDialog.showModal();
-        return;
-    }
-
-    if (def.teamMode === 'team-only') {
-        const wrap = document.createElement('div');
-        wrap.className = 'pill-buttons';
-        getTeamChoices().forEach(team => {
-            const btn = document.createElement('button');
-            btn.type = 'button'; btn.className = 'btn'; btn.textContent = team;
-            btn.addEventListener('click', () => commitTag(def, { team, player: '' }));
-            wrap.appendChild(btn);
-        });
-        quickTagBody.appendChild(wrap);
-        quickTagDialog.showModal();
+        showQuickTag();
         return;
     }
 
     const title = document.createElement('div');
-    title.className = 'tiny'; title.textContent = 'Select team';
+    title.className = 'tiny';
+    title.textContent = quickTagTeamPrompt(def);
     quickTagBody.appendChild(title);
-    const wrap = document.createElement('div');
-    wrap.className = 'pill-buttons';
-    getTeamChoices().forEach(team => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn'; btn.textContent = team;
-        btn.addEventListener('click', () => {
-            if (def.teamMode === 'special-steal') showStealPlayers(def, team);
-            else showPlayerSelection(def, team);
+    quickTagBody.appendChild(renderChoicePills(getTeamChoices(), team => {
+        if (def.teamMode === 'team-only') {
+            commitTag(def, { team, player: '' });
+            return;
+        }
+        if (def.teamMode === 'special-steal') {
+            renderPlayerStep({
+                def,
+                team,
+                step: 'players',
+                title: quickTagPlayerPrompt(def, team),
+                unknownLabel: 'Unknown / team only',
+                onPick: player => {
+                    const oppTeams = getTeamChoices().filter(t => t !== team);
+                    commitStealPair(def, {
+                        stealTeam: team,
+                        stealer: player,
+                        turnoverTeam: oppTeams[0] || team,
+                    });
+                },
+            });
+            return;
+        }
+        renderPlayerStep({
+            def,
+            team,
+            step: 'players',
+            title: quickTagPlayerPrompt(def, team),
+            unknownLabel: 'Unknown / team only',
+            onPick: player => {
+                if (isFieldGoalMake(def)) {
+                    commitTag(def, { team, player, close: false });
+                    askAssistAfterMake(def, team, player);
+                    return;
+                }
+                commitTag(def, { team, player });
+            },
         });
-        wrap.appendChild(btn);
-    });
-    quickTagBody.appendChild(wrap);
-    quickTagDialog.showModal();
-}
-
-function showPlayerSelection(def, team) {
-    quickTagBody.querySelector('[data-step="players"]')?.remove();
-    const sec = document.createElement('div');
-    sec.dataset.step = 'players'; sec.style.marginTop = '.8rem';
-    const title = document.createElement('div');
-    title.className = 'tiny'; title.textContent = `Select player for ${team}`;
-    sec.appendChild(title);
-    const wrap = document.createElement('div');
-    wrap.className = 'pill-buttons';
-    rosterForTeam(team).forEach(player => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn'; btn.textContent = player;
-        btn.addEventListener('click', () => commitTag(def, { team, player }));
-        wrap.appendChild(btn);
-    });
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(team);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showPlayerSelection(def, team);
-    });
-    const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown / team only';
-    unknown.addEventListener('click', () => commitTag(def, { team, player: '' }));
-    wrap.append(addBtn, unknown);
-    sec.appendChild(wrap);
-    quickTagBody.appendChild(sec);
-}
-
-function showStealPlayers(def, stealTeam) {
-    quickTagBody.querySelector('[data-step="players"]')?.remove();
-    const sec = document.createElement('div');
-    sec.dataset.step = 'players'; sec.style.marginTop = '.8rem';
-    sec.innerHTML = `<div class="tiny">Who got the steal for ${stealTeam}?</div>`;
-    const wrap = document.createElement('div');
-    wrap.className = 'pill-buttons';
-    rosterForTeam(stealTeam).forEach(player => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn'; btn.textContent = player;
-        btn.addEventListener('click', () => showTurnoverChooser(def, stealTeam, player));
-        wrap.appendChild(btn);
-    });
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(stealTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showStealPlayers(def, stealTeam);
-    });
-    const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown stealer';
-    unknown.addEventListener('click', () => showTurnoverChooser(def, stealTeam, ''));
-    wrap.append(addBtn, unknown);
-    sec.appendChild(wrap);
-    quickTagBody.appendChild(sec);
+    }));
+    showQuickTag();
 }
 
 function showTurnoverChooser(def, stealTeam, stealer) {
-    quickTagBody.querySelector('[data-step="turnover"]')?.remove();
-    const sec = document.createElement('div');
-    sec.dataset.step = 'turnover'; sec.style.marginTop = '.8rem';
     const oppTeams = getTeamChoices().filter(t => t !== stealTeam);
     const turnoverTeam = oppTeams[0] || stealTeam;
-    sec.innerHTML = `<div class="tiny">Who turned it over for ${turnoverTeam}?</div>`;
-    const wrap = document.createElement('div');
-    wrap.className = 'pill-buttons';
-    rosterForTeam(turnoverTeam).forEach(player => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn'; btn.textContent = player;
-        btn.addEventListener('click', () => commitStealPair(def, { stealTeam, stealer, turnoverTeam, turnoverPlayer: player }));
-        wrap.appendChild(btn);
+    renderPlayerStep({
+        def,
+        team: turnoverTeam,
+        step: 'turnover',
+        title: `Who turned it over for ${turnoverTeam}?`,
+        unknownLabel: 'Unknown / team only',
+        onPick: player => commitStealPair(def, { stealTeam, stealer, turnoverTeam, turnoverPlayer: player }),
     });
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'btn btn-ghost'; addBtn.textContent = 'Add new player';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number (e.g. 24 - Smith):', '');
-        if (!name) return;
-        const key = mapTeamToRosterKey(turnoverTeam);
-        rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]);
-        persistRosters();
-        showTurnoverChooser(def, stealTeam, stealer);
-    });
-    const unknown = document.createElement('button');
-    unknown.type = 'button'; unknown.className = 'btn btn-ghost'; unknown.textContent = 'Unknown turnover';
-    unknown.addEventListener('click', () => commitStealPair(def, { stealTeam, stealer, turnoverTeam, turnoverPlayer: '' }));
-    wrap.append(addBtn, unknown);
-    sec.appendChild(wrap);
-    quickTagBody.appendChild(sec);
 }
 
 // ── Row Change Handler ──────────────────────────────────────
 function handleRowsChanged() {
+    repairEmptyTeams();
     reindexRows();
     updateEventCount();
     renderScore();
@@ -867,10 +1438,35 @@ function exportGameData() {
 }
 
 // ── Game Save / Load / Autosave ─────────────────────────────
+function openAnalysisGameId() {
+    return String(window.FILM_TOOL_GAME_ID || new URLSearchParams(window.location.search).get('game_id') || '').trim();
+}
+
+function autosaveStorageKey(analysisId = openAnalysisGameId()) {
+    return analysisId ? `${CURRENT_AUTOSAVE_KEY}:${analysisId}` : CURRENT_AUTOSAVE_KEY;
+}
+
+function autosaveMatchesOpenFilm(game) {
+    if (!game) return false;
+    const openId = openAnalysisGameId();
+    if (!openId) return true;
+    return String(game.analysisGameId || '').trim() === openId;
+}
+
+function readAutosaveForOpenFilm() {
+    const keyed = loadJson(autosaveStorageKey(), null);
+    if (keyed && autosaveMatchesOpenFilm(keyed)) return keyed;
+    const legacy = loadJson(CURRENT_AUTOSAVE_KEY, null);
+    if (legacy && autosaveMatchesOpenFilm(legacy)) return legacy;
+    return null;
+}
+
 function getGameMeta() {
     const score = getScoreState();
     return {
-        id: selectedGameId || `game-${Date.now()}`, gameType: gameTypeSelect.value,
+        id: selectedGameId || openAnalysisGameId() || `game-${Date.now()}`,
+        analysisGameId: openAnalysisGameId(),
+        gameType: gameTypeSelect.value,
         competitionType: competitionTypeSelect.value, date: gameDateInput.value.trim(),
         ourTeam: ourTeamNameInput.value.trim() || 'Our Team', opponent: opponentInput.value.trim(),
         gameResult: gameResultSelect.value, homeTeam: homeTeamNameInput.value.trim(),
@@ -883,7 +1479,11 @@ function serializeCurrentGame() {
     return { ...getGameMeta(), rows: getAllRows() };
 }
 
-function loadGameIntoUI(game) {
+function loadGameIntoUI(game, opts = {}) {
+    if (opts.requireSameFilm && openAnalysisGameId() && !autosaveMatchesOpenFilm(game)) {
+        setStatus('Skipped tags from another game. This film only restores its own tags.');
+        return;
+    }
     autosavePaused = true;
     selectedGameId = game.id;
     gameTypeSelect.value = game.gameType || 'my';
@@ -901,19 +1501,27 @@ function loadGameIntoUI(game) {
     autosavePaused = false;
     handleRowsChanged();
     renderGames();
-    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Reload video to continue tagging.`);
+    seekToLastTag();
+    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Video is at the last tag.`);
 }
 
 function autosaveCurrentGame() {
     if (autosavePaused) return;
     const game = serializeCurrentGame();
-    localStorage.setItem(CURRENT_AUTOSAVE_KEY, JSON.stringify(game));
+    saveJson(autosaveStorageKey(), game);
+    if (!openAnalysisGameId()) saveJson(CURRENT_AUTOSAVE_KEY, game);
     localStorage.setItem(LAST_GAME_KEY, game.id);
     selectedGameId = game.id;
 }
 
 let autosaveTimeout = null;
-function queueAutosave() { clearTimeout(autosaveTimeout); autosaveTimeout = setTimeout(() => autosaveCurrentGame(), 800); }
+function queueAutosave() {
+    clearTimeout(autosaveTimeout);
+    autosaveTimeout = setTimeout(() => {
+        autosaveCurrentGame();
+        pushServerTags();
+    }, 800);
+}
 
 function saveCurrentGameToLibrary() {
     const game = serializeCurrentGame();
@@ -924,15 +1532,181 @@ function saveCurrentGameToLibrary() {
     localStorage.setItem(LAST_GAME_KEY, game.id);
     renderGames();
     setStatus('Game saved.');
+    pushServerTags();
+    teachManualTagsToAi();
 }
 
-function resumeLastGame() {
-    const autosave = loadJson(CURRENT_AUTOSAVE_KEY, null);
+async function teachManualTagsToAi() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) {
+        setStatus('Open this film from Videos so tags can train AI.');
+        return null;
+    }
+    const rows = getAllRows();
+    try {
+        const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/teach-manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Teach failed');
+        setStatus(`Taught AI: ${data.manual_saved || 0} tags saved, ${data.corrected || 0} AI plays corrected, ${data.rejected || 0} extras dropped.`);
+        return data;
+    } catch (err) {
+        setStatus(err.message || 'Could not teach AI from tags.');
+        return null;
+    }
+}
+
+async function pullServerTagsForOpenFilm() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) return null;
+    try {
+        const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data || !Array.isArray(data.rows) || !data.rows.length) return null;
+        data.analysisGameId = data.analysisGameId || gameId;
+        return data;
+    } catch (_err) {
+        return null;
+    }
+}
+
+async function pushServerTags() {
+    const gameId = openAnalysisGameId();
+    if (!gameId) return;
+    const game = serializeCurrentGame();
+    if (!autosaveMatchesOpenFilm(game)) return;
+    try {
+        await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(game),
+        });
+    } catch (_err) {}
+}
+
+async function resumeLastGame() {
+    const autosave = readAutosaveForOpenFilm();
+    if (autosave) {
+        loadGameIntoUI(autosave, { requireSameFilm: true });
+        pushServerTags();
+        return;
+    }
+    const server = await pullServerTagsForOpenFilm();
+    if (server) {
+        loadGameIntoUI(server, { requireSameFilm: true });
+        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
+        return;
+    }
+    if (openAnalysisGameId()) {
+        setStatus('No tags saved for this film yet. The last Restore was from another game and will not load here.');
+        return;
+    }
     const lastId = localStorage.getItem(LAST_GAME_KEY);
-    if (autosave && (!lastId || autosave.id === lastId)) { loadGameIntoUI(autosave); return; }
     const match = savedGames.find(g => g.id === lastId);
     if (match) { loadGameIntoUI(match); return; }
-    setStatus('No saved game to resume yet.');
+    setStatus('No saved game in this browser. Use Load tags if you exported from the other computer.');
+}
+
+function seekToLastTag() {
+    if (!video) return;
+    const rows = getAllRows();
+    if (!rows.length) return;
+    const sec = timeToSeconds(rows[rows.length - 1].start);
+    if (!isFinite(sec) || sec < 0) return;
+    const duration = Number(video.duration);
+    video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, duration) : sec;
+}
+
+function knownQ1EndSeconds() {
+    const id = String(window.FILM_TOOL_GAME_ID || '');
+    if (/jrhigh_adrian/i.test(id)) return 15 * 60 + 58;
+    return null;
+}
+
+function seekToQ1End() {
+    const sec = knownQ1EndSeconds();
+    if (sec == null || !video) return;
+    if (!video.paused) video.pause();
+    const duration = Number(video.duration);
+    video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, duration) : sec;
+    setStatus('Q1 ends at 15:58. Tag End QTR (Q−) on the whistle.');
+}
+
+function syncQ1EndButton() {
+    const btn = document.getElementById('ftQ1EndBtn');
+    if (!btn) return;
+    btn.hidden = knownQ1EndSeconds() == null;
+}
+
+function formatStartFromExport(start) {
+    if (typeof start === 'number' && isFinite(start)) return formatTime(start);
+    return String(start || '0:00.0');
+}
+
+function rowsFromTagPayload(data) {
+    if (!data || typeof data !== 'object') return null;
+    if (Array.isArray(data.rows)) return data.rows;
+    if (Array.isArray(data.events)) {
+        return data.events.map(ev => ({
+            label: ev.label || '',
+            player: ev.player || '',
+            quarter: ev.quarter || 'Q1',
+            team: ev.team || '',
+            side: ev.side || '',
+            category: ev.category || '',
+            eventtype: ev.eventtype || '',
+            result: ev.result || '',
+            start: formatStartFromExport(ev.start),
+            duration: typeof ev.duration === 'number' ? formatTime(ev.duration) : (ev.duration || '0:05.0'),
+            notes: ev.notes || '',
+        }));
+    }
+    if (Array.isArray(data.savedGames) && data.savedGames.length) {
+        const games = data.savedGames.slice().sort((a, b) => (b.rows || []).length - (a.rows || []).length);
+        const named = games.find(g => /adrian/i.test(`${g.opponent || ''} ${g.id || ''}`));
+        return (named || games[0]).rows || [];
+    }
+    return null;
+}
+
+function importTagPayload(data) {
+    if (data && Array.isArray(data.rows) && data.id) {
+        loadGameIntoUI(data);
+        return;
+    }
+    const rows = rowsFromTagPayload(data);
+    if (!rows) {
+        setStatus('That file is not a Film Tool tag export.');
+        return;
+    }
+    if (data.ourTeam && ourTeamNameInput) ourTeamNameInput.value = data.ourTeam;
+    if (data.opponent && opponentInput) opponentInput.value = data.opponent;
+    autosavePaused = true;
+    rowsBody.innerHTML = '';
+    rows.forEach(addRow);
+    autosavePaused = false;
+    handleRowsChanged();
+    seekToLastTag();
+    setStatus(`Loaded ${rows.length} tags. Video is at the last tag — continue Q1 from here.`);
+}
+
+function handleLoadTagsFile(evt) {
+    const file = evt.target?.files?.[0];
+    evt.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            importTagPayload(JSON.parse(String(reader.result || '{}')));
+        } catch (_err) {
+            setStatus('Could not read that tag file.');
+        }
+    };
+    reader.readAsText(file);
 }
 
 function newGame() {
@@ -1022,6 +1796,13 @@ function gatherGamesForScope(scope) {
     return savedGames.slice();
 }
 
+function isFoulTag(row) {
+    const et = String((row && row.eventtype) || '');
+    const cat = String((row && row.category) || '');
+    if (et === 'Foul') return true;
+    return cat === 'Foul' && (et === 'Shooting' || et === 'Personal' || et === 'Technical');
+}
+
 function statAccumulator(rows) {
     const byTeam = {}, byPlayer = {};
     rows.forEach(r => {
@@ -1037,8 +1818,11 @@ function statAccumulator(rows) {
         if (r.eventtype === 'DefRebound') { t.DReb++; t.Reb++; p.DReb++; p.Reb++; }
         if (r.eventtype === 'Steal') { t.Steals++; p.Steals++; }
         if (r.eventtype === 'Block') { t.Blocks++; p.Blocks++; }
-        if (r.eventtype === 'Turnover') { t.Turnovers++; p.Turnovers++; }
-        if (r.eventtype === 'Foul') { t.Fouls++; p.Fouls++; }
+        if (r.eventtype === 'Turnover') {
+            t.Turnovers++;
+            if (player && player !== 'Unknown') p.Turnovers++;
+        }
+        if (isFoulTag(r)) { t.Fouls++; p.Fouls++; }
     });
     return { byTeam, byPlayer };
 }
@@ -1267,30 +2051,35 @@ async function loadRosterFromServer() {
         return;
     }
     try {
-        const params = new URLSearchParams({
-            season_id: seasonId,
-            level: getSelectedLevel(),
-            gender: getSelectedGender(),
-            side: currentRosterSide,
-        });
+        const params = new URLSearchParams(rosterQueryParams());
         const resp = await fetch(`/api/film-rosters?${params.toString()}`);
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not load roster');
         rosters[key] = sortRosterPlayers(data.players || []);
         saveJson(ROSTER_STORAGE_KEY, rosters);
+        renderOpponentStats(data.stats);
         if (!data.players?.length) await migrateLegacyRosterIfNeeded();
         if (!data.players?.length && !(rosters[key] || []).length) {
-            const alternate = await findPopulatedRosterSlot(seasonId);
-            if (alternate) {
-                const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
-                const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
+            const gameLevel = gameRosterLevel();
+            if (gameLevel && getSelectedLevel() === gameLevel) {
                 if (hint) {
+                    const current = rosterSlotDescription(gameLevel, getSelectedGender(), currentRosterSide, getSelectedOpponent());
                     hint.style.display = 'block';
-                    hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
-                    document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
-                        setRosterFilters(alternate.level, alternate.gender, alternate.side);
-                        await loadRosterFromServer();
-                    }, { once: true });
+                    hint.textContent = `This game is ${current}. Import or add that roster here — Varsity / JV lists are not used for this game.`;
+                }
+            } else {
+                const alternate = await findPopulatedRosterSlot(seasonId);
+                if (alternate) {
+                    const current = rosterSlotDescription(getSelectedLevel(), getSelectedGender(), currentRosterSide);
+                    const found = rosterSlotDescription(alternate.level, alternate.gender, alternate.side);
+                    if (hint) {
+                        hint.style.display = 'block';
+                        hint.innerHTML = `No roster for <strong>${current}</strong>. Found ${alternate.count} players under <strong>${found}</strong>. <button type="button" class="btn btn-sm" id="switchRosterSlotBtn">Switch and show roster</button>`;
+                        document.getElementById('switchRosterSlotBtn')?.addEventListener('click', async () => {
+                            setRosterFilters(alternate.level, alternate.gender, alternate.side);
+                            await loadRosterFromServer();
+                        }, { once: true });
+                    }
                 }
             }
         }
@@ -1308,19 +2097,34 @@ function showRoster() {
         playerList.innerHTML = '<div class="empty-state tiny">Select a season to view or import a roster.</div>';
         return;
     }
-    if (!list.length) { playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>'; return; }
+    if (!list.length) {
+        const gameLevel = gameRosterLevel();
+        if (currentRosterSide === 'opp' && !getSelectedOpponent()) {
+            playerList.innerHTML = '<div class="empty-state tiny">Select an opponent to see that team’s roster and stats.</div>';
+            return;
+        }
+        if (gameLevel && getSelectedLevel() === gameLevel) {
+            playerList.innerHTML = `<div class="empty-state tiny">No ${rosterSlotDescription(gameLevel, getSelectedGender(), currentRosterSide, getSelectedOpponent())} roster yet. Import that list here so this game is not matched to a different level.</div>`;
+            return;
+        }
+        playerList.innerHTML = '<div class="empty-state tiny">No players yet for this roster.</div>';
+        return;
+    }
 
     const table = document.createElement('table');
     table.className = 'roster-table';
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    [
+    const showPts = list.some(player => player.pts != null);
+    const columns = [
         ['POS', 'col-pos'],
         ['#', 'col-num'],
         ['Name', 'col-name'],
         ['Grade', 'col-grade'],
-        ['', 'col-actions'],
-    ].forEach(([text, className]) => {
+    ];
+    if (showPts) columns.push(['PTS', 'col-pts']);
+    columns.push(['', 'col-actions']);
+    columns.forEach(([text, className]) => {
         const th = document.createElement('th');
         th.className = className;
         th.textContent = text;
@@ -1338,6 +2142,7 @@ function showRoster() {
             ['col-name', player.name || ''],
             ['col-grade', player.grade || ''],
         ];
+        if (showPts) fields.push(['col-pts', player.pts == null ? '' : String(player.pts)]);
         fields.forEach(([className, text]) => {
             const td = document.createElement('td');
             td.className = className;
@@ -1372,6 +2177,8 @@ function showRoster() {
 
 async function openRosterDialog() {
     await ensureRosterSeasonsLoaded();
+    await loadOpponentOptions();
+    syncOpponentFields();
     await loadRosterFromServer();
     rosterDialog.showModal();
 }
@@ -1414,6 +2221,11 @@ async function confirmRosterImport() {
     formData.append('level', importLevel);
     formData.append('gender', importGender);
     formData.append('side', importSide);
+    if (importSide === 'opp') {
+        const opponent = (rosterImportOpponentSelect?.value || currentRosterOpponent || '').trim();
+        if (!opponent) { alert('Select an opponent for this roster.'); return; }
+        formData.append('opponent', opponent);
+    }
     formData.append('replace', replace ? 'true' : 'false');
 
     setStatus('Importing roster...');
@@ -1451,12 +2263,7 @@ async function clearCurrentRoster() {
     if (!confirm(`Remove all ${count} players from this roster? This cannot be undone.`)) return;
 
     try {
-        const params = new URLSearchParams({
-            season_id: seasonId,
-            level: getSelectedLevel(),
-            gender: getSelectedGender(),
-            side: currentRosterSide,
-        });
+        const params = new URLSearchParams(rosterQueryParams());
         const resp = await fetch(`/api/film-rosters?${params.toString()}`, { method: 'DELETE' });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Could not clear roster');
@@ -1513,37 +2320,144 @@ async function savePlayerFromDialog() {
 }
 
 // ── Starters / Lineup ───────────────────────────────────────
+function parsePlayerLabel(label) {
+    const text = String(label || '').trim();
+    const match = text.match(/^#?\s*(\d+)\s*[-–:]?\s*(.*)$/);
+    if (match) {
+        const jersey = String(match[1]).replace(/^0+/, '') || '0';
+        return { jersey, name: (match[2] || '').trim(), label: text };
+    }
+    return { jersey: '', name: text, label: text };
+}
+
+function starterJerseySet(entries) {
+    return new Set((entries || []).map((row) => String(row.jersey || parsePlayerLabel(row).jersey || '').replace(/^0+/, '') || '0'));
+}
+
+function rosterLabelsMatchingStarters(team, entries) {
+    const roster = rosterForTeam(team);
+    const jerseys = starterJerseySet(entries);
+    const labels = new Set((entries || []).map((row) => String(row.label || '').trim()).filter(Boolean));
+    return new Set(roster.filter((player) => {
+        const parsed = parsePlayerLabel(player);
+        return jerseys.has(parsed.jersey) || labels.has(player);
+    }));
+}
+
+function startersSummaryText(payload) {
+    const liberty = (payload && payload.liberty) || [];
+    const opponent = (payload && payload.opponent) || [];
+    const lib = liberty.length === 5 ? `Liberty: ${liberty.map((p) => '#' + p.jersey).join(' ')}` : 'Liberty starters not set';
+    const opp = opponent.length === 5 ? `Opponent: ${opponent.map((p) => '#' + p.jersey).join(' ')}` : 'Opponent starters not set';
+    return `${lib} · ${opp}`;
+}
+
+async function persistGameStarters(libertyLabels, opponentLabels) {
+    const gameId = currentFilmGameId();
+    if (!gameId) {
+        setStatus('No game_id — open film with ?game_id=… first.');
+        return false;
+    }
+    const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/starters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            source: 'coach',
+            liberty: (libertyLabels || []).map(parsePlayerLabel),
+            opponent: (opponentLabels || []).map(parsePlayerLabel),
+        }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(body.error || 'Could not save starters.');
+        return false;
+    }
+    currentStarters = {
+        libertyTeam: ourTeamNameInput.value.trim() || 'Our Team',
+        opponentTeam: opponentInput.value.trim() || 'Opponent',
+        liberty: libertyLabels,
+        opponent: opponentLabels,
+        payload: body,
+    };
+    const summary = document.getElementById('officialStartersSummary');
+    if (summary) summary.textContent = startersSummaryText(body);
+    return true;
+}
+
+async function loadGameStarters() {
+    const gameId = currentFilmGameId();
+    if (!gameId) return null;
+    try {
+        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/starters`);
+        if (!response.ok) return null;
+        const body = await response.json();
+        const liberty = ourTeamNameInput.value.trim() || 'Our Team';
+        const opp = opponentInput.value.trim() || 'Opponent';
+        currentStarters = {
+            libertyTeam: liberty,
+            opponentTeam: opp,
+            liberty: Array.from(rosterLabelsMatchingStarters(liberty, body.liberty)),
+            opponent: Array.from(rosterLabelsMatchingStarters(opp, body.opponent)),
+            payload: body,
+        };
+        currentLineups.liberty = new Set(currentStarters.liberty);
+        currentLineups.opponent = new Set(currentStarters.opponent);
+        const summary = document.getElementById('officialStartersSummary');
+        if (summary) summary.textContent = startersSummaryText(body);
+        return body;
+    } catch (_err) {
+        return null;
+    }
+}
+
 function renderStarterChoices(listEl, team, selectedSet) {
     listEl.innerHTML = '';
     const roster = rosterForTeam(team);
-    if (!roster.length) { listEl.innerHTML = '<div class="empty-state tiny">No players yet for this team.</div>'; return; }
-    roster.forEach(player => {
-        const row = document.createElement('div'); row.className = 'term-item';
-        const label = document.createElement('div'); label.textContent = player;
-        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = selectedSet.has(player);
-        checkbox.addEventListener('change', () => {
-            if (checkbox.checked) { if (selectedSet.size >= 5) { checkbox.checked = false; alert('Only 5 starters allowed for this team.'); return; } selectedSet.add(player); }
-            else selectedSet.delete(player);
+    if (!roster.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state tiny';
+        empty.textContent = 'No players yet for this team.';
+        listEl.appendChild(empty);
+    } else {
+        roster.forEach(player => {
+            const row = document.createElement('div');
+            row.className = 'term-item';
+            const label = document.createElement('div');
+            label.textContent = player;
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = selectedSet.has(player);
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    if (selectedSet.size >= 5) {
+                        checkbox.checked = false;
+                        alert('Only 5 starters allowed for this team.');
+                        return;
+                    }
+                    selectedSet.add(player);
+                } else {
+                    selectedSet.delete(player);
+                }
+            });
+            row.appendChild(label);
+            row.appendChild(checkbox);
+            listEl.appendChild(row);
         });
-        row.appendChild(label); row.appendChild(checkbox); listEl.appendChild(row);
-    });
-    const addRowEl = document.createElement('div'); addRowEl.className = 'term-item';
-    const addLabel = document.createElement('div'); addLabel.textContent = 'Add new player';
-    const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = 'Add';
-    addBtn.addEventListener('click', () => {
-        const name = prompt('New player name/number e.g. 24 - Smith'); if (!name) return;
-        const key = mapTeamToRosterKey(team); rosters[key] = sortRosterPlayers([...(rosters[key] || []), name]); persistRosters();
+    }
+    appendAddPlayerRow(listEl, team, name => {
+        if (selectedSet.size < 5) selectedSet.add(name);
         renderStarterChoices(listEl, team, selectedSet);
     });
-    addRowEl.appendChild(addLabel); addRowEl.appendChild(addBtn); listEl.appendChild(addRowEl);
 }
 
 function openStartersDialog(mode = 'initial') {
     startersMode = mode;
     if (!video.paused) video.pause();
-    const liberty = ourTeamNameInput.value.trim() || 'Our Team';
-    const opp = opponentInput.value.trim() || 'Opponent';
-    startersHelp.textContent = mode === 'initial' ? `Choose the five ${liberty} starters before tip. Opponent is optional.` : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
+    const liberty = libertyTeamName();
+    const opp = gameOpponentName() || 'Opponent';
+    startersHelp.textContent = mode === 'initial'
+        ? `Choose five ${liberty} starters and five ${opp} starters. Opponent can wait if you only need Liberty bench points.`
+        : `Update who is currently on the floor for ${liberty} and ${opp}. Max 5 each.`;
     const libertySelected = mode === 'initial' ? new Set(currentStarters?.liberty || []) : new Set(currentLineups.liberty);
     const opponentSelected = mode === 'initial' ? new Set(currentStarters?.opponent || []) : new Set(currentLineups.opponent);
     renderStarterChoices(libertyStartersList, liberty, libertySelected);
@@ -1552,17 +2466,28 @@ function openStartersDialog(mode = 'initial') {
     startersDialog.showModal();
     document.getElementById('startersSaveBtn').onclick = () => {
         if (libertySelected.size !== 5) { alert(`Please pick exactly 5 starters for ${liberty}.`); return; }
+        if (opponentSelected.size && opponentSelected.size !== 5) {
+            alert(`Pick exactly 5 starters for ${opp}, or none.`);
+            return;
+        }
         const libertyArr = Array.from(libertySelected), oppArr = Array.from(opponentSelected);
         if (mode === 'initial') {
-            currentStarters = { libertyTeam: liberty, opponentTeam: opp, liberty: libertyArr, opponent: oppArr };
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
-        } else {
-            tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
-            tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
-            currentLineups.liberty = new Set(libertyArr); currentLineups.opponent = new Set(oppArr);
+            persistGameStarters(libertyArr, oppArr).then((ok) => {
+                if (!ok) return;
+                currentLineups.liberty = new Set(libertyArr);
+                currentLineups.opponent = new Set(oppArr);
+                startersDialog.close();
+                setStatus('Starters saved for this game.');
+                fetchProgramSummary();
+            });
+            return;
         }
+        tagLineupChanges(liberty, new Set(currentLineups.liberty), libertySelected);
+        tagLineupChanges(opp, new Set(currentLineups.opponent), opponentSelected);
+        currentLineups.liberty = new Set(libertyArr);
+        currentLineups.opponent = new Set(oppArr);
         startersDialog.close();
-        setStatus(mode === 'initial' ? 'Starters recorded.' : 'Lineups updated from SUB dialog.');
+        setStatus('Lineups updated from SUB dialog.');
     };
 }
 
@@ -1662,9 +2587,11 @@ function exitFocusMode() {
 let playMatchesCache = null;
 
 function focusPlayMatchesPanel() {
+    const details = document.getElementById('ftPlayMatchesDetails');
+    if (details) details.open = true;
     const panel = document.getElementById('playMatchesPanel');
     if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function formatPlayMatchTime(ms) {
@@ -1764,7 +2691,7 @@ function initPlayMatchesPanel() {
 }
 
 // ── AI Events / Review Workspace ────────────────────────────
-let aiReviewFilter = 'pending';
+let aiReviewFilter = 'ledger';
 let aiReviewPlayersCache = [];
 
 function escapeHtml(value) {
@@ -1778,10 +2705,101 @@ function escapeHtml(value) {
 
 function parseAiEventDetails(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch (_err) { return {}; } }
 
+/** Prefer scorebook jersey/name from lookaround/correction; else tracker ID. */
+function formatAiPlayerLabel(event, playerField) {
+    const details = parseAiEventDetails(event?.details_json);
+    if (!playerField && (details.jersey_number != null || details.player_name)) {
+        const num = details.jersey_number != null ? `#${details.jersey_number}` : '';
+        const name = details.player_name ? String(details.player_name) : '';
+        return [num, name].filter(Boolean).join(' ').trim();
+    }
+    if (playerField === 'from_player') {
+        if (details.from_jersey_number != null || details.from_player_name) {
+            const num = details.from_jersey_number != null ? `#${details.from_jersey_number}` : '';
+            const name = details.from_player_name ? String(details.from_player_name) : '';
+            return [num, name].filter(Boolean).join(' ').trim();
+        }
+        const fromRaw = String(details.from_player || '').trim();
+        if (fromRaw && /^\d+$/.test(fromRaw)) return `tracker #${fromRaw}`;
+        if (fromRaw) return fromRaw;
+        return '';
+    }
+    const raw = String(event?.player || '').trim();
+    if (!raw) return 'player unknown';
+    if (/^\d+$/.test(raw)) return `tracker #${raw}`;
+    // Coach typed a name without scorebook stamp yet
+    return raw;
+}
+
+function formatAiTeamLabel(event) {
+    const details = parseAiEventDetails(event?.details_json);
+    const linked = event?.team_id ?? event?.team ?? details.team_name ?? details.team;
+    if (linked != null && linked !== '' && linked !== 'unlinked') return String(linked);
+    if (details.player_team && details.player_team !== 'unlinked') return String(details.player_team);
+
+    const home = details.home_team || window.FILM_GAME_TEAMS?.home_team;
+    const away = details.away_team || window.FILM_GAME_TEAMS?.away_team;
+    const playerRaw = String(event?.player || '').trim();
+    const hasNamedPlayer = Boolean(
+        details.player_name
+        || details.jersey_number != null
+        || (playerRaw && !/^\d+$/.test(playerRaw))
+    );
+    // Coach assigned a person — don't say "player unlinked"
+    if (hasNamedPlayer) {
+        if (home || away) return `team not set · Home ${home || '?'} / Away ${away || '?'}`;
+        return 'team not set';
+    }
+    if (home || away) {
+        return `player unlinked · Home ${home || '?'} / Away ${away || '?'}`;
+    }
+    return 'team unknown';
+}
+
+function formatAiEventTypeLabel(event) {
+    const et = String(event?.event_type || '').toLowerCase();
+    const details = parseAiEventDetails(event?.details_json);
+    if (et === 'tip_off' || (et === 'jump_ball' && details.kind === 'opening_tip')) {
+        return 'tip_off';
+    }
+    return event?.event_type || '';
+}
+
+function formatAiIdentityLine(event) {
+    const et = String(event?.event_type || '').toLowerCase();
+    const details = parseAiEventDetails(event?.details_json);
+    if (et === 'tip_off' || (et === 'jump_ball' && details.tip_winner)) {
+        const who = details.tip_winner || event?.player || '?';
+        return `tip → tracker #${who} · ${formatAiTeamLabel(event)}`;
+    }
+    if (et === 'steal') {
+        const stealer = formatAiPlayerLabel(event);
+        const victim = formatAiPlayerLabel(event, 'from_player')
+            || (details.from_player ? `tracker #${details.from_player}` : '');
+        const parts = ['steal', stealer];
+        if (victim) parts.push(`from ${victim}`);
+        parts.push(formatAiTeamLabel(event));
+        return parts.join(' · ');
+    }
+    if (et === 'turnover') {
+        const who = formatAiPlayerLabel(event);
+        const taker = details.next_possessor
+            ? `lost to tracker #${details.next_possessor}`
+            : '';
+        const parts = ['turnover', who];
+        if (taker) parts.push(taker);
+        parts.push(formatAiTeamLabel(event));
+        return parts.join(' · ');
+    }
+    return `${formatAiPlayerLabel(event)} · ${formatAiTeamLabel(event)}`;
+}
+
 function summarizeAiEvent(event) {
     const details = parseAiEventDetails(event.details_json);
     const parts = [];
+    if (details.note) parts.push(details.note);
     if (event.shot_result) parts.push(`result: ${event.shot_result}`);
+    if (details.tip_winner) parts.push(`tip winner tracker #${details.tip_winner}`);
     if (details.from_player && details.to_player) parts.push(`${details.from_player} -> ${details.to_player}`);
     if (details.from_player && !details.to_player) parts.push(`from ${details.from_player}`);
     if (details.next_possessor) parts.push(`to ${details.next_possessor}`);
@@ -1789,26 +2807,29 @@ function summarizeAiEvent(event) {
     if (details.scorer) parts.push(`scorer ${details.scorer}`);
     if (details.gap_frames != null) parts.push(`gap ${details.gap_frames} frames`);
     if (details.ball_rise != null) parts.push(`rise ${details.ball_rise}`);
-    if (details.note) parts.push(details.note);
     if (event.confidence != null) parts.push(`conf ${(Number(event.confidence) * 100).toFixed(0)}%`);
     return parts.length ? parts.join(' · ') : 'Click to jump video playback to this event.';
 }
 
 function currentFilmGameId() {
-    return document.getElementById('gameId')?.value
+    const raw = document.getElementById('gameId')?.value
         || window.FILM_TOOL_GAME_ID
         || new URLSearchParams(window.location.search).get('game_id')
         || '';
+    // Ledger events live on the base analysis key after Adrian quality refine.
+    const text = String(raw || '').trim();
+    if (text.includes('__rerun_')) return text.split('__rerun_')[0];
+    return text;
 }
 
 function updateAiEventsSummary() {
     if (aiEventsCount) {
-        const label = aiReviewFilter === 'ledger' ? 'ledger' : (aiReviewFilter === 'pending' ? 'pending' : '');
-        aiEventsCount.textContent = `${aiEventsCache.length} ${label} event${aiEventsCache.length === 1 ? '' : 's'}`.trim();
+        const label = aiReviewFilter === 'ledger' ? 'ledger plays' : 'AI drafts';
+        aiEventsCount.textContent = `${aiEventsCache.length} ${label}`;
     }
     if (!aiCurrentEventLabel) return;
     const active = aiEventsCache.find(event => String(event.id) === String(activeAiEventId));
-    aiCurrentEventLabel.textContent = active ? `Active event: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No active event at the current playback position.';
+    aiCurrentEventLabel.textContent = active ? `Active: ${active.event_type} at ${formatTime(active.timestamp_ms / 1000)}` : 'No row selected — click a play in the list.';
 }
 
 function setActiveAiEvent(eventId, shouldScroll = false) {
@@ -1823,14 +2844,261 @@ function setActiveAiEvent(eventId, shouldScroll = false) {
 }
 
 function syncAiEventsToPlayback() {
+    if (clipReview) return; // clip loop owns the active play
     if (!video || !aiEventsCache.length) { setActiveAiEvent(null); return; }
-    const currentMs = Math.round((video.currentTime || 0) * 1000);
+    const currentMs = playheadAnalysisMs();
     let nearest = null, nearestDistance = Infinity;
     aiEventsCache.forEach(event => { const distance = Math.abs(Number(event.timestamp_ms || 0) - currentMs); if (distance < nearestDistance) { nearestDistance = distance; nearest = event; } });
     if (!nearest || nearestDistance > 5000) { setActiveAiEvent(null); return; }
-    const shouldScroll = String(nearest.id) !== String(activeAiEventId) && video && !video.paused;
-    setActiveAiEvent(nearest.id, shouldScroll);
+    // Never auto-scroll the play list during playback — that pulls the coach
+    // away from the film after they clicked a row to watch.
+    setActiveAiEvent(nearest.id, false);
 }
+
+const CLIP_PAD_BEFORE_SEC = 2.5;
+const CLIP_PAD_AFTER_SEC = 4;
+/** @type {{ eventId: string, start: number, end: number, token: number } | null} */
+let clipReview = null;
+let clipSeekToken = 0;
+/** Counts seeks we initiate so a stale seeked event cannot cancel the active clip. */
+let clipInternalSeekCount = 0;
+/** True while looping clip waits for seeked (hides black seek flash). */
+let clipLoopSeekPending = false;
+/** Analysis→review film offset (ms). review_time = analysis_timestamp + offset. */
+let filmSyncOffsetMs = 0;
+
+function eventReviewSeconds(event) {
+    const analysisMs = Number(event?.timestamp_ms || 0);
+    return Math.max(0, (analysisMs + (filmSyncOffsetMs || 0)) / 1000);
+}
+
+// Inverse of eventReviewSeconds: the review-video playhead in analysis time,
+// which is what events.timestamp_ms stores (review_ms = analysis_ms + offset).
+function playheadAnalysisMs() {
+    const reviewMs = Math.round((video?.currentTime || 0) * 1000);
+    return Math.max(0, reviewMs - (filmSyncOffsetMs || 0));
+}
+
+function updateFilmSyncStatus() {
+    const el = document.getElementById('ftFilmSyncStatus');
+    if (!el) return;
+    const sec = (filmSyncOffsetMs || 0) / 1000;
+    el.textContent = filmSyncOffsetMs
+        ? `Film sync: +${sec.toFixed(1)}s on review film (analysis timestamps shifted)`
+        : 'Film sync: 0 (analysis time = review playhead)';
+}
+
+async function loadFilmSync(gameId) {
+    if (!gameId) {
+        filmSyncOffsetMs = 0;
+        updateFilmSyncStatus();
+        return;
+    }
+    try {
+        const response = await fetch(`/api/film-sync/${encodeURIComponent(gameId)}`);
+        if (!response.ok) throw new Error('sync load failed');
+        const data = await response.json();
+        filmSyncOffsetMs = Number(data.offset_ms || 0) || 0;
+    } catch (_err) {
+        filmSyncOffsetMs = 0;
+    }
+    updateFilmSyncStatus();
+}
+
+async function saveFilmSync(offsetMs, method, notes) {
+    const gameId = currentFilmGameId();
+    if (!gameId) {
+        setStatus('No game_id — open film with ?game_id=… first.');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/film-sync/${encodeURIComponent(gameId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                offset_ms: Math.round(offsetMs),
+                method: method || 'manual',
+                notes: notes || '',
+            }),
+        });
+        if (!response.ok) throw new Error('sync save failed');
+        const data = await response.json();
+        filmSyncOffsetMs = Number(data.offset_ms || 0) || 0;
+        updateFilmSyncStatus();
+        setStatus(`Film sync saved: offset ${(filmSyncOffsetMs / 1000).toFixed(1)}s.`);
+        if (clipReview) {
+            const event = aiEventsCache.find(row => String(row.id) === String(clipReview.eventId));
+            if (event) startClipReview(event);
+        }
+    } catch (_err) {
+        setStatus('Could not save film sync offset.');
+    }
+}
+
+function updateClipReviewDock(event) {
+    const dock = document.getElementById('ftClipReviewDock');
+    const label = document.getElementById('ftClipReviewLabel');
+    if (!dock) return;
+    if (!event || !clipReview) {
+        dock.hidden = true;
+        return;
+    }
+    dock.hidden = false;
+    const status = event.review_status || 'pending';
+    if (label) {
+        label.textContent = (
+            `Looping ${event.event_type || 'play'}`
+            + ` · ${formatAiIdentityLine(event)}`
+            + ` · ${formatTime(clipReview.start)}–${formatTime(clipReview.end)}`
+            + ` (${reviewStatusLabel(status)})`
+        );
+    }
+    const acceptBtn = document.getElementById('ftClipAcceptBtn');
+    if (acceptBtn) {
+        // Ledger rows are already accepted — Accept means "looks good, next".
+        acceptBtn.textContent = (status === 'accepted' || status === 'corrected')
+            ? '✓ Looks good →'
+            : '✓ Accept';
+        acceptBtn.title = (status === 'accepted' || status === 'corrected')
+            ? 'Keep this play and go to the next looping clip'
+            : 'Accept onto ledger, then go to the next play';
+    }
+}
+
+function stopClipReview({ pause = false } = {}) {
+    clipSeekToken += 1;
+    clipReview = null;
+    clipLoopSeekPending = false;
+    video?.classList.remove('ft-clip-seeking');
+    updateClipReviewDock(null);
+    if (pause && video && !video.paused) video.pause();
+}
+
+function seekVideoForClip(seconds) {
+    if (!video) return;
+    clipInternalSeekCount += 1;
+    try {
+        video.currentTime = seconds;
+    } catch (_err) {
+        clipInternalSeekCount = Math.max(0, clipInternalSeekCount - 1);
+    }
+}
+
+function startClipReview(event, { scroll = true } = {}) {
+    if (!video || !event) return;
+    const center = eventReviewSeconds(event);
+    const duration = Number(video.duration);
+    const endCap = Number.isFinite(duration) && duration > 0 ? duration : center + CLIP_PAD_AFTER_SEC + 1;
+    const start = Math.max(0, center - CLIP_PAD_BEFORE_SEC);
+    const end = Math.min(endCap, center + CLIP_PAD_AFTER_SEC);
+    const token = ++clipSeekToken;
+    clipReview = { eventId: String(event.id), start, end, token };
+    setActiveAiEvent(event.id, false);
+    if (scroll) {
+        const stage = document.querySelector('.ft-review-stage');
+        const wrap = document.getElementById('filmReviewGrid');
+        (stage || wrap || video)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    clipLoopSeekPending = true;
+    video.classList.add('ft-clip-seeking');
+    seekVideoForClip(start);
+    const playPromise = video.play?.();
+    if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => { /* autoplay may be blocked */ });
+    }
+    updateClipReviewDock(event);
+    const off = filmSyncOffsetMs ? ` (sync +${(filmSyncOffsetMs / 1000).toFixed(1)}s)` : '';
+    setStatus(`Looping clip around ${center.toFixed(1)}s${off} — Accept / Reject / Correct, or Next play.`);
+}
+
+function onClipReviewTimeUpdate() {
+    if (!clipReview || !video || clipLoopSeekPending) return;
+    if (video.currentTime >= clipReview.end - 0.04) {
+        clipLoopSeekPending = true;
+        video.classList.add('ft-clip-seeking');
+        seekVideoForClip(clipReview.start);
+    }
+}
+
+function goToNextClip(fromEventId) {
+    if (!aiEventsCache.length) {
+        stopClipReview({ pause: true });
+        setStatus('No more plays in this list.');
+        return;
+    }
+    const idx = aiEventsCache.findIndex(event => String(event.id) === String(fromEventId));
+    if (idx < 0) {
+        stopClipReview({ pause: true });
+        setStatus('End of play list.');
+        return;
+    }
+    const next = aiEventsCache[idx + 1];
+    if (!next) {
+        stopClipReview({ pause: true });
+        setStatus('End of play list.');
+        return;
+    }
+    startClipReview(next, { scroll: false });
+}
+
+function peekNextClipEventId(fromEventId) {
+    const idx = aiEventsCache.findIndex(event => String(event.id) === String(fromEventId));
+    if (idx < 0) return null;
+    return aiEventsCache[idx + 1] ? String(aiEventsCache[idx + 1].id) : null;
+}
+
+function advanceClipReviewAfterDecision(fromEventId, nextEventId) {
+    if (nextEventId) {
+        const next = aiEventsCache.find(event => String(event.id) === String(nextEventId));
+        if (next) {
+            startClipReview(next, { scroll: false });
+            return;
+        }
+    }
+    if (aiEventsCache.some(event => String(event.id) === String(fromEventId))) {
+        goToNextClip(fromEventId);
+        return;
+    }
+    stopClipReview({ pause: true });
+    setStatus('End of play list.');
+}
+
+function applyLocalReviewUpdate(eventId, action) {
+    if (aiReviewFilter === 'pending') {
+        aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
+        renderAiEvents(aiEventsCache);
+        if (action === 'accept') bumpLedgerCount(1);
+        return;
+    }
+    if (aiReviewFilter === 'ledger') {
+        if (action === 'reject') {
+            aiEventsCache = aiEventsCache.filter(event => String(event.id) !== String(eventId));
+            bumpLedgerCount(-1);
+        } else {
+            aiEventsCache = aiEventsCache.map(event => {
+                if (String(event.id) !== String(eventId)) return event;
+                return { ...event, review_status: 'accepted', human_verified: 1 };
+            });
+        }
+        renderAiEvents(aiEventsCache);
+        return;
+    }
+    aiEventsCache = aiEventsCache.map(event => {
+        if (String(event.id) !== String(eventId)) return event;
+        return {
+            ...event,
+            review_status: action === 'accept' ? 'accepted' : 'rejected',
+            human_verified: action === 'accept' ? 1 : 0,
+        };
+    });
+    renderAiEvents(aiEventsCache);
+    if (action === 'accept') bumpLedgerCount(1);
+}
+
+const AI_REVIEW_PAGE_SIZE = 40;
+let aiLedgerCountValue = 0;
+let aiReviewScope = 'useful'; // useful = scoring/box types only (default)
+let aiSeekReloadTimer = null;
 
 function reviewStatusLabel(status) {
     const labels = { pending: 'Pending', accepted: 'Accepted', corrected: 'Corrected', rejected: 'Rejected' };
@@ -1838,12 +3106,287 @@ function reviewStatusLabel(status) {
 }
 
 function setAiReviewFilter(filter) {
-    aiReviewFilter = filter || 'pending';
+    // "all" retired — film-driven review uses near-playhead pending + ledger only.
+    aiReviewFilter = filter === 'ledger' ? 'ledger' : 'pending';
     document.querySelectorAll('.ai-filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aiFilter === aiReviewFilter);
     });
     const gameId = currentFilmGameId();
     if (gameId) fetchAndRenderAIEvents(gameId);
+}
+
+function setAiReviewScope(scope) {
+    aiReviewScope = scope === 'all' ? 'all' : 'useful';
+    document.querySelectorAll('.ai-scope-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aiScope === aiReviewScope);
+    });
+    const gameId = currentFilmGameId();
+    if (gameId) fetchAndRenderAIEvents(gameId);
+}
+
+function scheduleAiReviewReloadFromSeek() {
+    if (aiReviewFilter !== 'pending') return;
+    const gameId = currentFilmGameId();
+    if (!gameId) return;
+    clearTimeout(aiSeekReloadTimer);
+    aiSeekReloadTimer = setTimeout(() => fetchAndRenderAIEvents(gameId), 350);
+}
+
+function boxPct(value) {
+    return value == null || value === '' ? '—' : Number(value).toFixed(1) + '%';
+}
+function boxMA(made, att) {
+    return (made || 0) + '-' + (att || 0);
+}
+function boxMin(value) {
+    const n = Number(value || 0);
+    return n ? n.toFixed(1) : '0.0';
+}
+function officialStatHeaders() {
+    return '<tr><th></th><th>MIN</th><th>PTS</th><th>2PM-A</th><th>2P%</th><th>3PM-A</th><th>3P%</th><th>FTM-A</th><th>FT%</th><th>OREB</th><th>DREB</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th></tr>';
+}
+function officialStatRow(label, row, strong) {
+    const name = strong ? `<strong>${escapeHtml(label)}</strong>` : escapeHtml(label);
+    return `<tr><td>${name}</td>
+      <td>${boxMin(row.min)}</td><td>${row.pts || 0}</td>
+      <td>${boxMA(row.fgm2, row.fga2)}</td><td>${boxPct(row.fg2_pct)}</td>
+      <td>${boxMA(row.fgm3, row.fga3)}</td><td>${boxPct(row.fg3_pct)}</td>
+      <td>${boxMA(row.ftm, row.fta)}</td><td>${boxPct(row.ft_pct)}</td>
+      <td>${row.oreb || 0}</td><td>${row.dreb || 0}</td><td>${row.reb || 0}</td>
+      <td>${row.ast || 0}</td><td>${row.stl || 0}</td><td>${row.blk || 0}</td><td>${row.tov || 0}</td></tr>`;
+}
+function officialPlayerLabel(row) {
+    return `#${row.jersey ?? ''} ${row.name || ''}`.trim();
+}
+function officialPlayerBody(rows, teamLine, emptyLabel) {
+    const starters = rows.filter((r) => r.role === 'starter');
+    const bench = rows.filter((r) => r.role === 'bench');
+    const rest = rows.filter((r) => r.role !== 'starter' && r.role !== 'bench');
+    let body = '';
+    const group = (title, list) => {
+        if (!list.length) return;
+        body += `<tr class="role-row"><td colspan="16">${title}</td></tr>`;
+        body += list.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('');
+    };
+    if (starters.length || bench.length) {
+        group('Starters', starters);
+        group('Bench', bench);
+        group('Other', rest);
+    } else {
+        body = rows.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('')
+            || `<tr><td colspan="16">${emptyLabel}</td></tr>`;
+    }
+    body += officialStatRow('Team', teamLine || {}, true);
+    return body;
+}
+function renderOfficialBox(box) {
+    const mount = document.getElementById('officialBoxMount');
+    if (!mount || !box) return false;
+    const liberty = box.liberty_name || 'Liberty';
+    const opp = box.opponent_name || 'Opponent';
+    const finalEl = document.getElementById('officialFinalScore');
+    if (finalEl) {
+        finalEl.textContent = `${liberty} ${(box.final || {}).liberty || 0}  —  ${opp} ${(box.final || {}).opponent || 0}`;
+    }
+    const noteEl = document.getElementById('officialBoxNote');
+    if (noteEl) noteEl.textContent = box.line_score_note || '';
+    const oppName = document.getElementById('officialOppName');
+    if (oppName) oppName.textContent = opp;
+    const line = box.line_score || [];
+    let lineHtml = '<table class="ft-program-box"><thead><tr><th>Team</th>';
+    line.forEach((p) => { lineHtml += `<th>${escapeHtml(p.period)}</th>`; });
+    lineHtml += '<th>Total</th></tr></thead><tbody>';
+    lineHtml += `<tr><td><strong>${escapeHtml(liberty)}</strong></td>`;
+    line.forEach((p) => { lineHtml += `<td>${p.liberty}</td>`; });
+    lineHtml += `<td><strong>${line.length ? line[line.length - 1].liberty_running : 0}</strong></td></tr>`;
+    lineHtml += `<tr><td><strong>${escapeHtml(opp)}</strong></td>`;
+    line.forEach((p) => { lineHtml += `<td>${p.opponent}</td>`; });
+    lineHtml += `<td><strong>${line.length ? line[line.length - 1].opponent_running : 0}</strong></td></tr></tbody></table>`;
+    const lineWrap = document.getElementById('officialLineScoreWrap');
+    if (lineWrap) lineWrap.innerHTML = lineHtml;
+    const teamWrap = document.getElementById('officialTeamStatsWrap');
+    if (teamWrap) {
+        const libLine = (box.team && box.team.liberty) || {};
+        const oppLine = (box.team && box.team.opponent) || {};
+        const pair = (key) => {
+            const a = libLine[key], b = oppLine[key];
+            return `${escapeHtml(liberty)} ${a == null ? '—' : a} · ${escapeHtml(opp)} ${b == null ? '—' : b}`;
+        };
+        const benchNote = libLine.bench_pts == null && oppLine.bench_pts == null
+            ? 'Bench points appear after you save a starting five.'
+            : `Bench points — ${pair('bench_pts')}`;
+        const extraNote = `<p class="tiny">${benchNote} · Paint — ${pair('pts_paint')} · 2nd chance — ${pair('pts_2nd')} · Off TO — ${pair('pts_off_to')}</p>`;
+        teamWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialStatRow(liberty, libLine, true)
+            + officialStatRow(opp, oppLine, true)
+            + '</tbody></table>'
+            + extraNote;
+    }
+    const libWrap = document.getElementById('officialLibertyWrap');
+    if (libWrap) {
+        const rows = (box.players && box.players.liberty) || [];
+        libWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialPlayerBody(rows, (box.team && box.team.liberty) || {}, 'No Liberty players')
+            + '</tbody></table>';
+    }
+    const oppWrap = document.getElementById('officialOppWrap');
+    if (oppWrap) {
+        const rows = (box.players && box.players.opponent) || [];
+        oppWrap.innerHTML = `<table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>`
+            + officialPlayerBody(rows, (box.team && box.team.opponent) || {}, 'No opponent players')
+            + '</tbody></table>';
+    }
+    const unWrap = document.getElementById('officialUnassignedWrap');
+    if (unWrap) {
+        const rows = box.unassigned || [];
+        unWrap.innerHTML = rows.length
+            ? `<h3 class="ft-program-subhead">AI IDs not yet mapped to a jersey</h3><table class="ft-program-box"><thead>${officialStatHeaders()}</thead><tbody>${rows.map((r) => officialStatRow(officialPlayerLabel(r), r)).join('')}</tbody></table>`
+            : '';
+    }
+    if (box.starters) {
+        const summary = document.getElementById('officialStartersSummary');
+        if (summary) summary.textContent = startersSummaryText(box.starters);
+    }
+    return true;
+}
+
+function renderProgramSummary(summary) {
+    const statusEl = document.getElementById('programStatusText');
+    const scoreEl = document.getElementById('programScoreLine');
+    const exEl = document.getElementById('programExceptions');
+    const body = document.getElementById('programBoxBody');
+    if (!summary) return;
+
+    const counts = summary.counts || {};
+    const sb = summary.scorebook || {};
+    if (statusEl) {
+        statusEl.textContent = (
+            `Ledger ${counts.accepted || 0} accepted · ${counts.pending || 0} pending left · `
+            + `${summary.exception_count || 0} exceptions`
+        );
+    }
+    if (scoreEl) {
+        if (sb.present) {
+            const bookPts = sb.team_pts ?? ((Number(sb.final_score_home) || 0) + (Number(sb.final_score_away) || 0));
+            const aiPts = (summary.ledger_box?.totals || {}).pts ?? 0;
+            const home = sb.home_team || 'Home';
+            const away = sb.away_team || 'Away';
+            window.FILM_GAME_TEAMS = { home_team: home, away_team: away };
+            window.FILM_SCOREBOOK_PLAYERS = Array.isArray(sb.players) ? sb.players : [];
+            scoreEl.textContent = (
+                `${home} vs ${away} · Book PTS ${bookPts} · AI ledger PTS ${aiPts}`
+            );
+        } else {
+            window.FILM_SCOREBOOK_PLAYERS = [];
+            scoreEl.textContent = 'No confirmed scorebook yet — confirm on /stat-books for better exceptions.';
+        }
+    }
+    if (exEl) {
+        const list = summary.exceptions || [];
+        if (!list.length) {
+            exEl.innerHTML = '<div class="tiny">No scorebook exceptions flagged. Spot-check film if totals look off.</div>';
+        } else {
+            exEl.innerHTML = list.map(item => (
+                `<div class="ft-program-ex ${escapeHtml(item.severity || '')}">${escapeHtml(item.message || '')}</div>`
+            )).join('');
+        }
+    }
+    if (summary.official_box) {
+        renderOfficialBox(summary.official_box);
+    }
+    if (body) {
+        const players = summary.ledger_box?.players || [];
+        const totals = summary.ledger_box?.totals || {};
+        if (!players.length) {
+            body.innerHTML = '<tr><td colspan="13" class="tiny">No counting stats on ledger yet.</td></tr>';
+        } else {
+            const rows = players.slice(0, 40).map(p => (
+                `<tr>
+                  <td>${escapeHtml(String(p.player))}</td>
+                  <td>${p.pts}</td><td>${p.fgm}</td><td>${p.fga}</td><td>${p.tpm}</td>
+                  <td>${p.ftm}</td><td>${p.fta}</td><td>${p.reb}</td><td>${p.ast}</td>
+                  <td>${p.stl}</td><td>${p.blk}</td><td>${p.to}</td><td>${p.foul}</td>
+                </tr>`
+            ));
+            rows.push(
+                `<tr style="font-weight:700">
+                  <td>TOT</td>
+                  <td>${totals.pts || 0}</td><td>${totals.fgm || 0}</td><td>${totals.fga || 0}</td>
+                  <td>${totals.tpm || 0}</td><td>${totals.ftm || 0}</td><td>${totals.fta || 0}</td>
+                  <td>${totals.reb || 0}</td><td>${totals.ast || 0}</td><td>${totals.stl || 0}</td>
+                  <td>${totals.blk || 0}</td><td>${totals.to || 0}</td><td>${totals.foul || 0}</td>
+                </tr>`
+            );
+            body.innerHTML = rows.join('');
+        }
+    }
+    if (typeof bumpLedgerCount === 'function' || true) {
+        const el = document.getElementById('aiLedgerCount');
+        if (el) {
+            aiLedgerCountValue = Number(counts.accepted || 0) + Number(counts.corrected || 0);
+            el.textContent = `Ledger: ${aiLedgerCountValue}`;
+        }
+    }
+}
+
+async function fetchProgramSummary() {
+    const gameId = currentFilmGameId();
+    const statusEl = document.getElementById('programStatusText');
+    if (!gameId) {
+        if (statusEl) statusEl.textContent = 'Open film with ?game_id=… first.';
+        return null;
+    }
+    if (statusEl) statusEl.textContent = 'Loading program summary…';
+    try {
+        const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/summary`);
+        if (!response.ok) throw new Error('summary failed');
+        const summary = await response.json();
+        renderProgramSummary(summary);
+        loadGameStarters();
+        return summary;
+    } catch (_err) {
+        if (statusEl) statusEl.textContent = 'Could not load program summary.';
+        return null;
+    }
+}
+
+async function buildProgramLedger() {
+    const gameId = currentFilmGameId();
+    const statusEl = document.getElementById('programStatusText');
+    const btn = document.getElementById('programBuildLedgerBtn');
+    if (!gameId) {
+        if (statusEl) statusEl.textContent = 'Open film with ?game_id=… first.';
+        return;
+    }
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Refining Adrian ledger vs scorebook…';
+    try {
+        const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/auto-ledger`, { method: 'POST' });
+        if (!response.ok) throw new Error('auto-ledger failed');
+        const data = await response.json();
+        renderProgramSummary(data.summary);
+        const q = data.quality;
+        if (q) {
+            setStatus(`Adrian quality: kept ${q.kept || q.kept_ids || 0} of ${q.raw || '?'} events (deduped ${q.after_dedupe || '—'}).`);
+        } else {
+            const promoted = data.promote?.promoted_useful ?? 0;
+            const noise = data.promote?.rejected_noise ?? 0;
+            setStatus(`Program ledger: promoted ${promoted} useful events; parked ${noise} noise events.`);
+        }
+        await fetchAndRenderAIEvents(gameId);
+    } catch (_err) {
+        if (statusEl) statusEl.textContent = 'Build failed — check server logs.';
+        setStatus('Could not build program ledger.');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function bumpLedgerCount(delta) {
+    const el = document.getElementById('aiLedgerCount');
+    if (!el) return;
+    aiLedgerCountValue = Math.max(0, (aiLedgerCountValue || 0) + delta);
+    el.textContent = `Ledger: ${aiLedgerCountValue}`;
 }
 
 async function reviewAiEvent(eventId, action) {
@@ -1852,18 +3395,31 @@ async function reviewAiEvent(eventId, action) {
         return;
     }
     const endpoint = action === 'accept' ? 'accept' : 'reject';
+    const inClip = Boolean(clipReview && String(clipReview.eventId) === String(eventId));
+    const nextEventId = inClip ? peekNextClipEventId(eventId) : null;
+    // Instant UI — do not wait on the network (and never block the next click).
+    applyLocalReviewUpdate(eventId, action);
+    if (inClip) advanceClipReviewAfterDecision(eventId, nextEventId);
+    setStatus(action === 'accept' ? 'Accepted.' : 'Rejected.');
+
     try {
         const response = await fetch(`/api/review/events/${eventId}/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ notes: action === 'accept' ? 'Accepted in Film Tool' : 'Rejected in Film Tool' }),
         });
-        if (!response.ok) throw new Error('Review action failed');
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const msg = err.error || `Review ${endpoint} failed (${response.status})`;
+            if (response.status === 403 && /read-only/i.test(msg)) {
+                throw new Error('Coach view is read-only — use Open full app (or Sign out of Coach view) to Accept/Reject.');
+            }
+            throw new Error(msg);
+        }
+    } catch (err) {
+        setStatus(err.message || 'Could not update event review status.');
         const gameId = currentFilmGameId();
-        if (gameId) await fetchAndRenderAIEvents(gameId);
-        setStatus(action === 'accept' ? 'Event accepted onto ledger.' : 'Event rejected (not on ledger).');
-    } catch (_err) {
-        setStatus('Could not update event review status.');
+        if (gameId) fetchAndRenderAIEvents(gameId);
     }
 }
 
@@ -1878,27 +3434,70 @@ async function loadReviewPlayers() {
     return aiReviewPlayersCache;
 }
 
+function scorebookPlayersAvailable() {
+    return Array.isArray(window.FILM_SCOREBOOK_PLAYERS) && window.FILM_SCOREBOOK_PLAYERS.length > 0;
+}
+
+function syncCorrectTaggingVisibility() {
+    const block = document.getElementById('aiCorrectTaggingBlock');
+    const hint = document.getElementById('aiCorrectPlayerHint');
+    const useBook = scorebookPlayersAvailable();
+    if (block) block.hidden = useBook;
+    if (hint) {
+        hint.textContent = useBook
+            ? 'Scorebook roster only — tagging list is hidden so Correct does not keep old names.'
+            : 'No scorebook roster loaded — you can add a tagging player below.';
+    }
+}
+
 function populateCorrectPlayerSelect(selectedName) {
     const select = document.getElementById('aiCorrectPlayer');
     if (!select) return;
     const names = new Set();
     const options = ['<option value="">(unassigned)</option>'];
-    aiReviewPlayersCache.forEach(player => {
+    const useBook = scorebookPlayersAvailable();
+    const bookPlayers = window.FILM_SCOREBOOK_PLAYERS || [];
+
+    bookPlayers.forEach(player => {
+        const jersey = player.jersey != null ? String(player.jersey) : '';
         const name = (player.name || '').trim();
-        if (!name || names.has(name)) return;
-        names.add(name);
-        const selected = name === selectedName ? ' selected' : '';
-        options.push(`<option value="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`);
+        const team = (player.team_name || player.team || '').trim();
+        const label = [jersey ? `#${jersey}` : '', name, team ? `(${team})` : ''].filter(Boolean).join(' ').trim();
+        const value = [jersey, name].filter(Boolean).join(' ').trim() || name;
+        if (!value || names.has(value)) return;
+        names.add(value);
+        const selected = (value === selectedName || name === selectedName || (jersey && selectedName === jersey)) ? ' selected' : '';
+        options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`);
     });
+
+    // Only merge sticky /api/players tagging names when no scorebook roster.
+    if (!useBook) {
+        aiReviewPlayersCache.forEach(player => {
+            const name = (player.name || '').trim();
+            if (!name || names.has(name)) return;
+            names.add(name);
+            const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
+            const label = jersey ? `#${jersey} ${name}` : name;
+            const value = jersey ? `${jersey} ${name}` : name;
+            const selected = (name === selectedName || value === selectedName) ? ' selected' : '';
+            options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`);
+        });
+    }
     if (selectedName && !names.has(selectedName)) {
-        options.push(`<option value="${escapeHtml(selectedName)}" selected>${escapeHtml(selectedName)} (AI)</option>`);
+        options.push(`<option value="${escapeHtml(selectedName)}" selected>${escapeHtml(selectedName)} (current)</option>`);
     }
     select.innerHTML = options.join('');
+    syncCorrectTaggingVisibility();
 }
 
 function renderCorrectPlayerManageList() {
     const list = document.getElementById('aiCorrectPlayerManageList');
     if (!list) return;
+    if (scorebookPlayersAvailable()) {
+        list.innerHTML = '';
+        syncCorrectTaggingVisibility();
+        return;
+    }
     if (!aiReviewPlayersCache.length) {
         list.innerHTML = '<div class="tiny">No players yet — add one above for tagging.</div>';
         return;
@@ -1930,40 +3529,66 @@ function renderCorrectPlayerManageList() {
 }
 
 async function openAiCorrectDialog(eventId) {
-    const event = aiEventsCache.find(row => String(row.id) === String(eventId))
-        || (await (async () => {
-            const gameId = currentFilmGameId();
-            if (!gameId) return null;
-            const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all`);
-            if (!response.ok) return null;
-            const rows = await response.json();
-            return rows.find(row => String(row.id) === String(eventId)) || null;
-        })());
-    if (!event) {
-        setStatus('Could not load event for correction.');
-        return;
+    const isAdd = !eventId || eventId === 'new';
+    let event = null;
+    if (!isAdd) {
+        event = aiEventsCache.find(row => String(row.id) === String(eventId))
+            || (await (async () => {
+                const gameId = currentFilmGameId();
+                if (!gameId) return null;
+                const around = playheadAnalysisMs();
+                const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=all&limit=40&around_ms=${around}`);
+                if (!response.ok) return null;
+                const rows = await response.json();
+                return rows.find(row => String(row.id) === String(eventId)) || null;
+            })());
+        if (!event) {
+            setStatus('Could not load event for correction.');
+            return;
+        }
+    }
+    // Ensure scorebook roster is loaded so Correct does not fall back to sticky tagging players.
+    if (!scorebookPlayersAvailable()) {
+        const gameId = currentFilmGameId();
+        if (gameId) {
+            try {
+                const response = await fetch(`/api/program/${encodeURIComponent(gameId)}/summary`);
+                if (response.ok) {
+                    const summary = await response.json();
+                    renderProgramSummary(summary);
+                }
+            } catch (_err) { /* keep going */ }
+        }
     }
     await loadReviewPlayers();
-    document.getElementById('aiCorrectEventId').value = String(event.id);
-    document.getElementById('aiCorrectSummary').textContent =
-        `AI draft: ${event.event_type} · ${event.player || 'unassigned'} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
-    populateCorrectPlayerSelect(event.player || '');
+    document.getElementById('aiCorrectEventId').value = isAdd ? 'new' : String(event.id);
+    const head = document.querySelector('#aiCorrectDialog .modal-head h2');
+    if (head) head.textContent = isAdd ? 'Add event at playhead' : 'Correct event';
+    document.getElementById('aiCorrectSummary').textContent = isAdd
+        ? `New ledger event at ${formatTime(video?.currentTime || 0)}. Choose type (e.g. tip_off or miss) and save.`
+        : `AI draft: ${formatAiEventTypeLabel(event)} · ${formatAiIdentityLine(event)} @ ${formatTime((event.timestamp_ms || 0) / 1000)}`;
+    populateCorrectPlayerSelect(isAdd ? '' : (event.player || ''));
     renderCorrectPlayerManageList();
     const typeSelect = document.getElementById('aiCorrectEventType');
     if (typeSelect) {
-        const existing = Array.from(typeSelect.options).some(opt => opt.value === event.event_type);
-        if (!existing && event.event_type) {
+        let desired = isAdd ? 'miss' : (event.event_type || 'shot');
+        const details = parseAiEventDetails(event?.details_json);
+        if (desired === 'jump_ball' && details.kind === 'opening_tip') desired = 'tip_off';
+        const existing = Array.from(typeSelect.options).some(opt => opt.value === desired);
+        if (!existing && desired) {
             const opt = document.createElement('option');
-            opt.value = event.event_type;
-            opt.textContent = event.event_type;
+            opt.value = desired;
+            opt.textContent = desired;
             typeSelect.appendChild(opt);
         }
-        typeSelect.value = event.event_type || 'shot';
+        typeSelect.value = desired;
     }
     const outcome = document.getElementById('aiCorrectOutcome');
-    if (outcome) outcome.value = event.shot_result || '';
+    if (outcome) outcome.value = isAdd ? 'miss' : (event.shot_result || '');
     const notes = document.getElementById('aiCorrectNotes');
     if (notes) notes.value = '';
+    const saveBtn = document.getElementById('aiCorrectSaveBtn');
+    if (saveBtn) saveBtn.textContent = isAdd ? 'Add to ledger' : 'Save correction';
     const dialog = document.getElementById('aiCorrectDialog');
     if (dialog?.showModal) dialog.showModal();
 }
@@ -1972,27 +3597,67 @@ async function submitAiCorrection(formEvent) {
     formEvent.preventDefault();
     const eventId = document.getElementById('aiCorrectEventId')?.value;
     if (!eventId) return;
+    const gameId = currentFilmGameId();
+    const inClip = Boolean(clipReview && eventId !== 'new' && String(clipReview.eventId) === String(eventId));
+    const nextEventId = inClip ? peekNextClipEventId(eventId) : null;
     const payload = {
         player: document.getElementById('aiCorrectPlayer')?.value || '',
         event_type: document.getElementById('aiCorrectEventType')?.value || '',
         shot_result: document.getElementById('aiCorrectOutcome')?.value || null,
-        notes: document.getElementById('aiCorrectNotes')?.value || 'Corrected in Film Tool',
+        notes: document.getElementById('aiCorrectNotes')?.value || '',
     };
     if (!payload.shot_result) payload.shot_result = null;
     try {
+        if (eventId === 'new') {
+            if (!gameId) throw new Error('No game_id — open film with ?game_id=…');
+            const response = await fetch('/api/review/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    game_id: gameId,
+                    event_type: payload.event_type,
+                    player: payload.player,
+                    shot_result: payload.shot_result,
+                    notes: payload.notes || 'Added at playhead in Film Tool',
+                    timestamp_ms: playheadAnalysisMs(),
+                    source_video: uploadedVideoName || '',
+                }),
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'add failed');
+            }
+            document.getElementById('aiCorrectDialog')?.close();
+            bumpLedgerCount(1);
+            if (aiReviewFilter === 'ledger' || aiReviewFilter === 'all') {
+                await fetchAndRenderAIEvents(gameId);
+            }
+            setStatus(`Added ${payload.event_type} at playhead onto ledger.`);
+            return;
+        }
         const response = await fetch(`/api/review/events/${eventId}/correct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                ...payload,
+                notes: payload.notes || 'Corrected in Film Tool',
+            }),
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.error || 'correct failed');
         }
         document.getElementById('aiCorrectDialog')?.close();
-        const gameId = currentFilmGameId();
-        if (gameId) await fetchAndRenderAIEvents(gameId);
+        if (aiReviewFilter === 'pending') {
+            const wasPending = aiEventsCache.some(e => String(e.id) === String(eventId));
+            aiEventsCache = aiEventsCache.filter(e => String(e.id) !== String(eventId));
+            renderAiEvents(aiEventsCache);
+            if (wasPending) bumpLedgerCount(1);
+        } else if (gameId) {
+            await fetchAndRenderAIEvents(gameId);
+        }
         setStatus('Event corrected onto ledger.');
+        if (inClip) advanceClipReviewAfterDecision(eventId, nextEventId);
     } catch (err) {
         setStatus(err.message || 'Could not save correction.');
     }
@@ -2003,45 +3668,53 @@ function renderAiEvents(events) {
     aiEventsCache = events.filter(event => event.event_type !== 'bookmark');
     if (!aiEventsCache.length) {
         const emptyMsg = aiReviewFilter === 'ledger'
-            ? 'No accepted/corrected events on the ledger yet.'
+            ? 'No ledger plays found. Click “Build AI box vs scorebook” first.'
             : (aiReviewFilter === 'pending'
-                ? 'No pending AI drafts for this game.'
+                ? 'No AI drafts near this time (Adrian pending was cleared after refine). Use Show ledger plays.'
                 : 'No AI events found for this game.');
         aiEventsList.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+        stopClipReview();
         setActiveAiEvent(null);
         return;
     }
     aiEventsList.innerHTML = aiEventsCache.map(event => {
         const status = event.review_status || 'pending';
         const statusClass = status === 'pending' ? 'pending' : (status === 'rejected' ? 'rejected' : 'trusted');
-        const reviewControls = status === 'pending'
-            ? `<div class="ai-event-review" data-no-seek="1">
-                <button class="btn btn-ghost btn-sm ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept onto ledger">Accept</button>
-                <button class="btn btn-ghost btn-sm ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct then accept">Correct</button>
-                <button class="btn btn-ghost btn-sm ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject (keep off ledger)">Reject</button>
-               </div>`
-            : '';
+        let reviewControls = '';
+        if (status === 'pending') {
+            reviewControls = `<div class="ai-event-review" data-no-seek="1">
+                <button class="btn ai-review-btn accept" type="button" data-review-action="accept" data-event-id="${event.id}" title="Accept: keep this play on the ledger">✓ Accept</button>
+                <button class="btn ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct: fix player or type, then keep">✎ Correct</button>
+                <button class="btn ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject: this play is wrong — remove it">✗ Reject</button>
+               </div>`;
+        } else if (status === 'accepted' || status === 'corrected') {
+            // Ledger rows are already kept — coach still needs Decline / Correct.
+            reviewControls = `<div class="ai-event-review" data-no-seek="1">
+                <button class="btn ai-review-btn correct" type="button" data-review-action="correct" data-event-id="${event.id}" title="Correct: fix player or type for this play">✎ Correct</button>
+                <button class="btn ai-review-btn reject" type="button" data-review-action="reject" data-event-id="${event.id}" title="Reject / decline: this play is wrong — remove from ledger">✗ Reject</button>
+               </div>`;
+        }
+        const typeLabel = formatAiEventTypeLabel(event);
+        const seekTitle = `Click to loop a short clip around ${formatTime(event.timestamp_ms / 1000)} — ${typeLabel || 'event'} · ${formatAiIdentityLine(event)}`;
         return `
-        <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" aria-label="Jump to ${event.event_type} at ${formatTime(event.timestamp_ms / 1000)}">
+        <div class="ai-event-item" data-ai-event-id="${event.id}" data-ai-event-ts="${event.timestamp_ms}" tabindex="0" role="button" title="${escapeHtml(seekTitle)}" aria-label="${escapeHtml(seekTitle)}">
             <div class="ai-event-row">
-                <strong>${escapeHtml(event.event_type || '')}</strong>
+                <strong>${escapeHtml(typeLabel)}</strong>
                 <span class="ai-event-time">${formatTime(event.timestamp_ms / 1000)}</span>
             </div>
             <div class="ai-event-meta">
                 <span class="ai-event-status ${statusClass}">${reviewStatusLabel(status)}</span>
                 ${reviewControls}
             </div>
-            <div class="tiny">${escapeHtml(event.player || 'AI detected event')}</div>
+            <div class="tiny">${escapeHtml(formatAiIdentityLine(event))}</div>
             <div class="ai-event-details">${escapeHtml(summarizeAiEvent(event))}</div>
         </div>`;
     }).join('');
     aiEventsList.querySelectorAll('[data-ai-event-id]').forEach(item => {
         const seekToEvent = (clickEvent) => {
             if (clickEvent && (clickEvent.target.closest('[data-no-seek]') || clickEvent.target.closest('.ai-review-btn'))) return;
-            const ms = Number(item.dataset.aiEventTs || '0');
-            video.currentTime = ms / 1000;
-            setActiveAiEvent(item.dataset.aiEventId, true);
-            setStatus(`Jumped to AI event at ${(ms / 1000).toFixed(1)}s.`);
+            const event = aiEventsCache.find(row => String(row.id) === String(item.dataset.aiEventId));
+            if (event) startClipReview(event);
         };
         item.addEventListener('click', seekToEvent);
         item.addEventListener('keydown', keyEvent => { if (keyEvent.key === 'Enter' || keyEvent.key === ' ') { keyEvent.preventDefault(); seekToEvent(); } });
@@ -2053,17 +3726,26 @@ function renderAiEvents(events) {
             reviewAiEvent(button.dataset.eventId, button.dataset.reviewAction);
         });
     });
-    syncAiEventsToPlayback();
+    if (clipReview) {
+        const stillThere = aiEventsCache.find(event => String(event.id) === String(clipReview.eventId));
+        if (stillThere) updateClipReviewDock(stillThere);
+        // If the active clip event was removed (reject), leave clipReview alone —
+        // the caller advances to the next play. Only clear when nothing left to show.
+        else if (!aiEventsCache.length) stopClipReview();
+    } else {
+        syncAiEventsToPlayback();
+    }
 }
 
 async function refreshLedgerCount(gameId) {
     const el = document.getElementById('aiLedgerCount');
     if (!el || !gameId) return;
     try {
-        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=ledger`);
+        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=ledger&count_only=1`);
         if (!response.ok) throw new Error('ledger count failed');
-        const rows = await response.json();
-        el.textContent = `Ledger: ${rows.length}`;
+        const data = await response.json();
+        aiLedgerCountValue = Number(data.count || 0);
+        el.textContent = `Ledger: ${aiLedgerCountValue}`;
     } catch (_err) {
         el.textContent = 'Ledger: —';
     }
@@ -2071,22 +3753,72 @@ async function refreshLedgerCount(gameId) {
 
 async function fetchAndRenderAIEvents(gameId) {
     if (!gameId || !aiEventsList) return;
-    aiEventsList.innerHTML = '<div class="empty-state">Loading review events...</div>';
+    aiEventsList.innerHTML = '<div class="empty-state">Loading play list…</div>';
     try {
-        const status = aiReviewFilter === 'all' ? 'all' : aiReviewFilter;
-        const response = await fetch(`/api/review/events?game_id=${encodeURIComponent(gameId)}&review_status=${encodeURIComponent(status)}`);
-        if (!response.ok) { aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); return; }
-        const events = await response.json();
+        const status = aiReviewFilter === 'ledger' ? 'ledger' : 'pending';
+        const around = playheadAnalysisMs();
+        const windowMs = status === 'ledger' ? String(3 * 60 * 60 * 1000) : '45000';
+        const params = new URLSearchParams({
+            game_id: gameId,
+            review_status: status,
+            limit: String(AI_REVIEW_PAGE_SIZE),
+            around_ms: String(around),
+            window_ms: windowMs,
+        });
+        if (aiReviewScope === 'useful') params.set('useful_only', '1');
+        let response = await fetch(`/api/review/events?${params.toString()}`);
+        if (!response.ok) {
+            aiEventsList.innerHTML = '<div class="empty-state">Could not load review events.</div>';
+            aiEventsCache = [];
+            updateAiEventsSummary();
+            return;
+        }
+        let events = await response.json();
+        // If ledger has rows but near-playhead query returned none, load chronologically.
+        if (status === 'ledger' && Array.isArray(events) && events.length === 0) {
+            const fallback = new URLSearchParams({
+                game_id: gameId,
+                review_status: 'ledger',
+                limit: String(AI_REVIEW_PAGE_SIZE),
+                useful_only: aiReviewScope === 'useful' ? '1' : '0',
+            });
+            if (aiReviewScope !== 'useful') fallback.delete('useful_only');
+            response = await fetch(`/api/review/events?${fallback.toString()}`);
+            if (response.ok) {
+                events = await response.json();
+                if (Array.isArray(events) && events.length) {
+                    setStatus('Showing ledger plays from the start of the game — click a row to jump.');
+                }
+            }
+        }
         renderAiEvents(events);
         await refreshLedgerCount(gameId);
-    } catch (_err) { aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>'; aiEventsCache = []; updateAiEventsSummary(); }
+        updateAiEventsSummary();
+        if (aiEventsCount && Array.isArray(events)) {
+            aiEventsCount.textContent = status === 'ledger'
+                ? `${events.length} ledger plays listed`
+                : `${events.length} AI drafts listed`;
+        }
+    } catch (_err) {
+        aiEventsList.innerHTML = '<div class="empty-state">Error loading review events.</div>';
+        aiEventsCache = [];
+        updateAiEventsSummary();
+    }
 }
 
 function focusReviewWorkspace() {
     const panel = document.getElementById('aiEventsPanel');
     if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setAiReviewFilter('pending');
+    const section = document.querySelector('.ft-program-section') || document.querySelector('.ft-review-stage');
+    // Scroll program mode into view under the video (full-width stack).
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    panel.classList.add('ft-review-focus');
+    setTimeout(() => panel.classList.remove('ft-review-focus'), 1200);
+    setAiReviewFilter('ledger');
 }
 
 // ── Video ───────────────────────────────────────────────────
@@ -2114,7 +3846,25 @@ function undoLastRow() {
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
-function showRunAnalysisProgress(pct, step, status, elapsedSec) {
+function formatAnalysisElapsed(elapsedSec, startedAt) {
+    let sec = elapsedSec;
+    if (startedAt) {
+        const started = new Date(String(startedAt).includes('T') ? startedAt : `${startedAt}Z`);
+        if (!Number.isNaN(started.getTime())) {
+            sec = Math.max(0, Math.floor((Date.now() - started.getTime()) / 1000));
+        }
+    }
+    if (sec == null || sec < 0) return '';
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const secs = sec % 60;
+    if (hrs) return `${hrs}h ${mins}m elapsed`;
+    if (mins) return `${mins}m ${secs}s elapsed`;
+    return `${secs}s elapsed`;
+}
+
+function showRunAnalysisProgress(pct, step, status, elapsedSec, extra) {
+    extra = extra || {};
     const runBar = document.getElementById('runAnalysisBar');
     const idleRow = document.getElementById('runAnalysisIdleRow');
     const progressBlock = document.getElementById('runAnalysisProgressBlock');
@@ -2125,24 +3875,34 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
     const detail = document.getElementById('runAnalysisDetail');
     const percent = Math.max(0, Math.min(100, pct || 0));
     const jobStatus = status || 'running';
-    const waiting = percent === 0 && (jobStatus === 'pending' || jobStatus === 'running');
-    const gameId = window.FILM_TOOL_GAME_ID || '';
+    const waiting = percent < 1 && (jobStatus === 'pending' || jobStatus === 'running');
+    const gameId = extra.analysis_key || window.FILM_TOOL_GAME_ID || '';
     const isRerun = String(gameId).includes('__rerun_');
+    const currentFrame = extra.current_frame;
+    const totalFrames = extra.total_frames;
 
     if (runBar) {
         runBar.style.display = 'flex';
+        runBar.classList.toggle('is-complete', jobStatus === 'completed');
+        runBar.classList.toggle('is-failed', jobStatus === 'failed');
     }
     if (idleRow) idleRow.style.display = 'none';
     if (progressBlock) progressBlock.style.display = 'block';
     if (btn) btn.style.display = 'none';
-    if (bar) bar.style.width = `${percent}%`;
-    if (pctEl) pctEl.textContent = `${Math.round(percent)}%`;
+    if (bar) {
+        bar.style.width = `${waiting ? 35 : percent}%`;
+        bar.classList.toggle('is-indeterminate', waiting);
+        bar.classList.toggle('is-live', jobStatus === 'pending' || jobStatus === 'running');
+    }
+    if (pctEl) pctEl.textContent = jobStatus === 'completed' ? '100%' : (waiting ? '…' : `${Math.round(percent)}%`);
 
     let phaseText = step || 'Analyzing…';
     if (jobStatus === 'pending') {
         phaseText = step || 'Queued — starting AI worker…';
     } else if (waiting) {
         phaseText = step || 'Loading AI models…';
+    } else if (jobStatus === 'completed') {
+        phaseText = step || 'Analysis complete';
     }
     if (phase) phase.textContent = phaseText;
 
@@ -2151,15 +3911,20 @@ function showRunAnalysisProgress(pct, step, status, elapsedSec) {
         if (jobStatus === 'pending') {
             parts.push('Waiting for the analysis worker to start on the server.');
         } else if (waiting) {
-            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes, then the number appears.');
+            parts.push('No percent yet — YOLO is loading. This often takes 1–3 minutes.');
+        } else if (jobStatus === 'running') {
+            parts.push('In progress. Frame count updates about every 500 frames.');
         }
-        if (elapsedSec != null && waiting) {
-            const mins = Math.floor(elapsedSec / 60);
-            const secs = elapsedSec % 60;
-            parts.push(mins ? `${mins}m ${secs}s elapsed` : `${secs}s elapsed`);
+        const elapsed = formatAnalysisElapsed(elapsedSec, extra.started_at);
+        if (elapsed) parts.push(elapsed);
+        if (currentFrame != null && totalFrames) {
+            parts.push(`Frame ${Number(currentFrame).toLocaleString()} / ${Number(totalFrames).toLocaleString()}`);
         }
         if (isRerun) {
             parts.push('Comparison rerun opened from Compare AI.');
+        }
+        if (jobStatus === 'completed' && extra.detection_count != null) {
+            parts.push(`${extra.detection_count} detections, ${extra.event_count ?? 0} events`);
         }
         detail.textContent = parts.join(' • ');
     }
@@ -2208,8 +3973,7 @@ function initAnalysisStatus() {
             const step = data.progress_step || (data.status === 'pending' ? 'Queued — starting AI worker…' : 'Loading AI models…');
             const elapsedSec = pollStartedAt ? Math.floor((Date.now() - pollStartedAt) / 1000) : null;
             if (data.status === 'running' || data.status === 'pending') {
-                showRunAnalysisProgress(pct, step, data.status, elapsedSec);
-                showUploadAnalysisProgress(pct, step);
+                showRunAnalysisProgress(pct, step, data.status, elapsedSec, data);
                 pollTimer = setTimeout(fetchAnalysisProgress, 2000);
             } else if (data.status === 'completed') {
                 pollTimer = null;
@@ -2217,9 +3981,8 @@ function initAnalysisStatus() {
                 const evtCount = data.event_count ?? 0;
                 const completeStep = detCount === 0
                     ? `Analysis finished but found 0 detections (${evtCount} events). Check Debug on Video Library or run again on the trimmed clip.`
-                    : 'Analysis complete!';
-                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec);
-                showUploadAnalysisProgress(100, completeStep);
+                    : 'Analysis complete';
+                showRunAnalysisProgress(100, completeStep, 'completed', elapsedSec, data);
                 const runDetail = document.getElementById('runAnalysisDetail');
                 if (runDetail && window.FILM_TOOL_VIDEO_ID) {
                     const debugUrl = `/api/videos/${window.FILM_TOOL_VIDEO_ID}/analysis-debug`;
@@ -2227,13 +3990,6 @@ function initAnalysisStatus() {
                         ? `No detections written. <a href="${debugUrl}" target="_blank" rel="noopener">Open debug info</a>`
                         : `${detCount} detections, ${evtCount} events. <a href="${debugUrl}" target="_blank" rel="noopener">Debug</a>`;
                 }
-                setTimeout(() => {
-                    const analysisShell = document.getElementById('analysisProgressShell');
-                    if (analysisShell) analysisShell.style.display = 'none';
-                    if (typeof window.updateRunAnalysisBar === 'function') {
-                        window.updateRunAnalysisBar('completed');
-                    }
-                }, 3000);
                 fetchAndRenderAIEvents(gameId);
             } else if (data.status === 'failed') {
                 pollTimer = null;
@@ -2242,7 +3998,7 @@ function initAnalysisStatus() {
                     return;
                 }
                 const failStep = data.error_message || data.progress_step || 'Analysis failed';
-                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec);
+                showRunAnalysisProgress(0, failStep, 'failed', elapsedSec, data);
                 if (typeof window.updateRunAnalysisBar === 'function') {
                     window.updateRunAnalysisBar('failed');
                 }
@@ -2277,7 +4033,6 @@ function initAnalysisStatus() {
         }
         pollStartedAt = Date.now();
         showRunAnalysisProgress(0, 'Starting AI analysis…', 'pending', 0);
-        showUploadAnalysisProgress(0, 'Starting AI analysis…');
         fetchAnalysisProgress();
     };
 
@@ -2374,6 +4129,10 @@ function initRunAnalysis() {
             return;
         }
         if (analysisStatus === 'completed' && !needsDetectionRerun) {
+            if (progressBlock && progressBlock.style.display === 'block') {
+                showRunAnalysisProgress(100, 'Analysis complete', 'completed');
+                return;
+            }
             bar.style.display = 'none';
             return;
         }
@@ -2540,52 +4299,29 @@ function initResourceMonitor() {
     setInterval(refreshResourceStatus, 2000);
 }
 
-// ── Report Drawer ───────────────────────────────────────────
-function initReportDrawer() {
-    const drawer = document.getElementById('report-drawer');
-    const backdrop = document.getElementById('report-drawer-backdrop');
-    const form = document.getElementById('report-drawer-form');
-    const message = document.getElementById('report-drawer-message');
-    const closeButton = document.getElementById('report-drawer-close');
-    const cancelButton = document.getElementById('report-drawer-cancel');
-    const submitButton = document.getElementById('report-drawer-submit');
-    const sourceInput = document.getElementById('report-source-path');
-    const returnToInput = document.getElementById('report-return-to');
-    const consoleInput = document.getElementById('report-browser-console');
-    const detailsInput = document.getElementById('report-details');
-    if (!drawer || !backdrop || !form || !sourceInput || !returnToInput || !consoleInput) return;
-
-    function setReportMessage(kind, text) {
-        if (!message) return;
-        if (!text) { message.style.display = 'none'; message.textContent = ''; message.style.color = ''; return; }
-        message.style.display = 'block'; message.textContent = text;
-        message.style.color = kind === 'error' ? 'var(--color-error)' : 'var(--color-success)';
-    }
-    function syncReportContext() {
-        sourceInput.value = window.LibertyIssueReporter?.getCurrentPagePath?.() || `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        returnToInput.value = sourceInput.value;
-        consoleInput.value = window.LibertyIssueReporter?.getConsoleText?.() || '';
-    }
-    function openDrawer() { syncReportContext(); setReportMessage(null, ''); drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); backdrop.classList.add('open'); document.body.classList.add('report-drawer-open'); window.setTimeout(() => detailsInput?.focus(), 0); }
-    function closeDrawer() { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); backdrop.classList.remove('open'); document.body.classList.remove('report-drawer-open'); }
-
-    document.querySelectorAll('[data-open-report-overlay]').forEach(trigger => { trigger.addEventListener('click', (event) => { event.preventDefault(); openDrawer(); }); });
-    [backdrop, closeButton, cancelButton].forEach(el => { el?.addEventListener('click', closeDrawer); });
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
-
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault(); syncReportContext(); setReportMessage(null, '');
-        submitButton.disabled = true; submitButton.textContent = 'Saving…';
+// ── Overlay safety (modals must not block page on load) ───────
+function ensureFilmToolOverlaysClosed() {
+    document.querySelectorAll('#film-tool-root dialog').forEach((dlg) => {
         try {
-            const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            const result = await response.json();
-            if (!response.ok || result.status !== 'ok') throw new Error(result.message || 'Unable to save report.');
-            setReportMessage('success', result.message || 'Report saved.'); form.reset();
-            document.getElementById('report-entry-type').value = 'issue'; syncReportContext();
-            window.setTimeout(closeDrawer, 700);
-        } catch (error) { setReportMessage('error', error.message || 'Unable to save report.'); }
-        finally { submitButton.disabled = false; submitButton.textContent = 'Save Report'; }
+            if (dlg.open) dlg.close();
+        } catch (_err) { /* ignore */ }
     });
+    clipLoopSeekPending = false;
+    document.getElementById('video')?.classList.remove('ft-clip-seeking');
+    // Base layout owns the report drawer — only force-close when not explicitly composing.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('compose') === '1') return;
+    document.getElementById('report-drawer-backdrop')?.classList.remove('open');
+    const drawer = document.getElementById('report-drawer');
+    drawer?.classList.remove('open');
+    drawer?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('report-drawer-open');
+}
+
+// ── Report Drawer ───────────────────────────────────────────
+// Report drawer lives in base.html — do not duplicate init here.
+function initReportDrawer() {
+    /* no-op: base.html initReportDrawer handles global report overlay */
 }
 
 // ── AI Upload Form ──────────────────────────────────────────
@@ -2756,10 +4492,15 @@ function attachEventHandlers() {
     termFieldSelect?.addEventListener('change', renderTermList);
 
     document.getElementById('manageRostersBtn')?.addEventListener('click', () => { openRosterDialog(); });
-    document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); await loadRosterFromServer(); }); });
-    document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
-    document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', () => { persistRosterFilters(); loadRosterFromServer(); }); });
-    rosterSeasonSelect?.addEventListener('change', async () => { setActiveRosterSeasonId(rosterSeasonSelect.value); await loadRosterFromServer(); });
+    document.querySelectorAll('.roster-side-btn').forEach(btn => { btn.addEventListener('click', async () => { document.querySelectorAll('.roster-side-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRosterSide = btn.dataset.side; persistRosterFilters(); syncOpponentFields(); if (currentRosterSide === 'opp') await loadOpponentOptions(); await loadRosterFromServer(); }); });
+    document.querySelectorAll('input[name="level"]').forEach(r => { r.addEventListener('change', async () => { persistRosterFilters(); await loadOpponentOptions(); loadRosterFromServer(); }); });
+    document.querySelectorAll('input[name="gender"]').forEach(r => { r.addEventListener('change', async () => { persistRosterFilters(); await loadOpponentOptions(); loadRosterFromServer(); }); });
+    rosterSeasonSelect?.addEventListener('change', async () => { setActiveRosterSeasonId(rosterSeasonSelect.value); await loadOpponentOptions(); await loadRosterFromServer(); });
+    rosterOpponentSelect?.addEventListener('change', async () => {
+        currentRosterOpponent = rosterOpponentSelect.value;
+        await loadRosterFromServer();
+    });
+    rosterImportOpponentSelect?.addEventListener('change', updateRosterImportTargetLabel);
     rosterImportSeasonSelect?.addEventListener('change', updateRosterImportTargetLabel);
     document.querySelectorAll('input[name="importLevel"], input[name="importGender"]').forEach(r => {
         r.addEventListener('change', updateRosterImportTargetLabel);
@@ -2769,6 +4510,7 @@ function attachEventHandlers() {
             document.querySelectorAll('.roster-import-side-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             pendingRosterImportSide = btn.dataset.side;
+            syncOpponentFields();
             updateRosterImportTargetLabel();
         });
     });
@@ -2782,6 +4524,25 @@ function attachEventHandlers() {
     document.querySelectorAll('.ai-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => setAiReviewFilter(btn.dataset.aiFilter));
     });
+    document.querySelectorAll('.ai-scope-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAiReviewScope(btn.dataset.aiScope));
+    });
+    document.getElementById('aiAddAtPlayheadBtn')?.addEventListener('click', () => openAiCorrectDialog('new'));
+    document.getElementById('aiRefreshNearPlayheadBtn')?.addEventListener('click', () => {
+        const gameId = currentFilmGameId();
+        if (gameId) fetchAndRenderAIEvents(gameId);
+    });
+    document.getElementById('programBuildLedgerBtn')?.addEventListener('click', buildProgramLedger);
+    document.getElementById('programRefreshBtn')?.addEventListener('click', fetchProgramSummary);
+    document.getElementById('ftFilmSyncZeroBtn')?.addEventListener('click', () => {
+        saveFilmSync(0, 'manual_zero', 'Cleared in Film Tool');
+    });
+    document.getElementById('ftFilmSyncHereBtn')?.addEventListener('click', () => {
+        // Current review playhead corresponds to analysis tip (t=0).
+        const reviewMs = Math.round((video?.currentTime || 0) * 1000);
+        saveFilmSync(reviewMs, 'playhead_as_analysis_tip', 'Playhead set as analysis tip in Film Tool');
+    });
+    document.getElementById('video')?.addEventListener('seeked', scheduleAiReviewReloadFromSeek);
     document.getElementById('aiCorrectCancelBtn')?.addEventListener('click', () => {
         document.getElementById('aiCorrectDialog')?.close();
     });
@@ -2816,47 +4577,134 @@ function attachEventHandlers() {
     document.getElementById('clearAllBtn')?.addEventListener('click', () => { if (confirm('Clear all tagged events in this game?')) clearAllRows(); });
     document.getElementById('subBtn')?.addEventListener('click', tagSubstitution);
     document.getElementById('startersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
+    document.getElementById('officialStartersBtn')?.addEventListener('click', () => openStartersDialog('initial'));
+    document.getElementById('ftTagGameBtn')?.addEventListener('click', openGameTeamsDialog);
+    document.getElementById('ftGameTeamsSave')?.addEventListener('click', saveGameTeamsDialog);
+    document.getElementById('ftGameTeamsCancel')?.addEventListener('click', () => document.getElementById('ftGameTeamsDialog')?.close());
+    document.getElementById('ftTagOpenStartersBtn')?.addEventListener('click', () => {
+        document.getElementById('ftGameTeamsDialog')?.close();
+        openStartersDialog('initial');
+    });
 
     document.getElementById('newGameBtn')?.addEventListener('click', () => {
         if (!confirm('Start a new game? This clears current tagged rows.')) return;
         clearAllRows(); resetGameMetadata();
     });
     document.getElementById('saveGameBtn')?.addEventListener('click', saveCurrentGameToLibrary);
+    document.getElementById('teachAiBtn')?.addEventListener('click', teachManualTagsToAi);
     document.getElementById('resumeLastBtn')?.addEventListener('click', resumeLastGame);
+    document.getElementById('loadTagsBtn')?.addEventListener('click', () => document.getElementById('loadTagsFile')?.click());
+    document.getElementById('loadTagsFile')?.addEventListener('change', handleLoadTagsFile);
     document.getElementById('generateReportBtn')?.addEventListener('click', generateReport);
     document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());
     document.getElementById('saveReportBtn')?.addEventListener('click', saveReportAsFile);
     document.getElementById('exportBtn')?.addEventListener('click', exportGameData);
     document.getElementById('toggleInfoBtn')?.addEventListener('click', toggleGameInfo);
     focusExitBtn?.addEventListener('click', exitFocusMode);
-    document.getElementById('quickTagCancelBtn')?.addEventListener('click', () => quickTagDialog.close());
+    document.getElementById('quickTagCancelBtn')?.addEventListener('click', closeQuickTag);
+    quickTagDialog?.addEventListener('click', event => {
+        if (!event.isTrusted) return;
+        const box = quickTagDialog.getBoundingClientRect();
+        if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) {
+            closeQuickTag();
+        }
+    });
 
-    document.querySelectorAll('.video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
+    document.querySelectorAll('.ft-vid-controls [data-skip], .video-controls [data-skip]').forEach(btn => { btn.addEventListener('click', () => { stopClipReview(); video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + parseFloat(btn.dataset.skip || '0'))); }); });
     document.getElementById('vidPlayPauseBtn')?.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
-    document.getElementById('vidToStartBtn')?.addEventListener('click', () => { video.currentTime = 0; });
-    document.getElementById('vidToEndBtn')?.addEventListener('click', () => { video.currentTime = video.duration || 0; });
+    document.getElementById('vidToStartBtn')?.addEventListener('click', () => { stopClipReview(); video.currentTime = 0; });
+    document.getElementById('vidToEndBtn')?.addEventListener('click', () => { stopClipReview(); video.currentTime = video.duration || 0; });
     document.getElementById('vidSlow5x')?.addEventListener('click', () => { video.playbackRate = 0.5; });
     document.getElementById('vidSlow25x')?.addEventListener('click', () => { video.playbackRate = 0.25; });
     document.getElementById('vidNormalBtn')?.addEventListener('click', () => { video.playbackRate = 1; });
     document.getElementById('vidFast25x')?.addEventListener('click', () => { video.playbackRate = 2.5; });
     document.getElementById('vidFast5x')?.addEventListener('click', () => { video.playbackRate = 5; });
 
-    video.addEventListener('timeupdate', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
-    video.addEventListener('seeked', syncAiEventsToPlayback);
+    document.getElementById('ftClipAcceptBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        const event = aiEventsCache.find(row => String(row.id) === String(clipReview.eventId));
+        if (!event) return;
+        const status = event.review_status || 'pending';
+        if (status === 'accepted' || status === 'corrected') {
+            goToNextClip(clipReview.eventId);
+            return;
+        }
+        reviewAiEvent(event.id, 'accept');
+    });
+    document.getElementById('ftClipRejectBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        reviewAiEvent(clipReview.eventId, 'reject');
+    });
+    document.getElementById('ftClipCorrectBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        reviewAiEvent(clipReview.eventId, 'correct');
+    });
+    document.getElementById('ftClipNextBtn')?.addEventListener('click', () => {
+        if (!clipReview) return;
+        goToNextClip(clipReview.eventId);
+    });
+    document.getElementById('ftClipStopBtn')?.addEventListener('click', () => {
+        stopClipReview({ pause: true });
+        setStatus('Clip loop stopped — normal playback.');
+    });
+
+    video.addEventListener('timeupdate', () => {
+        timeDisplay.textContent = formatTime(video.currentTime || 0);
+        onClipReviewTimeUpdate();
+        syncAiEventsToPlayback();
+    });
+    video.addEventListener('seeked', () => {
+        if (clipInternalSeekCount > 0) {
+            clipInternalSeekCount -= 1;
+            if (clipLoopSeekPending) {
+                clipLoopSeekPending = false;
+                video.classList.remove('ft-clip-seeking');
+                video.play?.().catch(() => {});
+            }
+            return;
+        }
+        if (clipLoopSeekPending) {
+            clipLoopSeekPending = false;
+            video.classList.remove('ft-clip-seeking');
+            video.play?.().catch(() => {});
+        }
+        // User scrubbed the native timeline — leave clip mode.
+        if (clipReview) {
+            const t = video.currentTime || 0;
+            if (t < clipReview.start - 0.75 || t > clipReview.end + 0.75) {
+                stopClipReview();
+            }
+        }
+        syncAiEventsToPlayback();
+    });
     video.addEventListener('loadedmetadata', () => { timeDisplay.textContent = formatTime(video.currentTime || 0); syncAiEventsToPlayback(); });
 }
 
 // ── Autosave Restore ────────────────────────────────────────
-function initFromAutosave() {
-    const autosave = loadJson(CURRENT_AUTOSAVE_KEY, null);
-    if (!autosave) return;
-    if (!confirm('Restore autosaved game from last session?')) return;
-    loadGameIntoUI(autosave);
+async function initFromAutosave() {
+    const autosave = readAutosaveForOpenFilm();
+    if (autosave) {
+        if (!confirm('Restore autosaved tags for this film from last session?')) return;
+        loadGameIntoUI(autosave, { requireSameFilm: true });
+        pushServerTags();
+        return;
+    }
+    const server = await pullServerTagsForOpenFilm();
+    if (server) {
+        loadGameIntoUI(server, { requireSameFilm: true });
+        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
+        return;
+    }
+    const leftover = loadJson(CURRENT_AUTOSAVE_KEY, null);
+    if (leftover && openAnalysisGameId() && !autosaveMatchesOpenFilm(leftover)) {
+        setStatus('Did not restore tags from another game. Tag this Jr High film with the players on the floor.');
+    }
 }
 
 // ── Init ────────────────────────────────────────────────────
 function init() {
     try {
+    ensureFilmToolOverlaysClosed();
     // Cache DOM references
     rowsBody = document.getElementById('rowsBody');
     statusText = document.getElementById('statusText');
@@ -2905,6 +4753,9 @@ function init() {
     rosterImportSeasonSelect = document.getElementById('rosterImportSeasonSelect');
     rosterImportReplace = document.getElementById('rosterImportReplace');
     rosterImportFileLabel = document.getElementById('rosterImportFileLabel');
+    rosterOpponentSelect = document.getElementById('rosterOpponentSelect');
+    rosterImportOpponentSelect = document.getElementById('rosterImportOpponentSelect');
+    rosterOpponentStats = document.getElementById('rosterOpponentStats');
     playerDialog = document.getElementById('playerDialog');
     playerPosInput = document.getElementById('playerPosInput');
     playerNumInput = document.getElementById('playerNumInput');
@@ -2925,17 +4776,31 @@ function init() {
 
     loadTheme();
     loadStores();
+    applyOpenGameRosterContext();
     ensureRosterSeasonsLoaded().then(() => {
         restoreRosterFilters();
-        return loadRosterFromServer();
+        applyOpenGameRosterContext();
+        return loadGameTeamRosters().then(() => loadGameStarters()).then(() => {
+            repairEmptyTeams();
+            renderScore();
+        });
     });
     renderEventButtons();
     renderGames();
     attachEventHandlers();
+    initManualTagging();
     applyFilmToolDeepLinks();
     updateScoreLabels();
     renderScore();
     initFromAutosave();
+    syncGameTeamsFromContext({ forceGameOpponent: true });
+    loadGameTeamRosters().then(() => loadGameStarters()).then(() => {
+        repairEmptyTeams();
+        renderScore();
+    });
+    updateScoreLabels();
+    renderScore();
+    syncQ1EndButton();
 
     if (uploadedVideoUrl) loadHostedVideo(uploadedVideoUrl, uploadedVideoName);
 
@@ -2964,19 +4829,23 @@ function init() {
         || window.FILM_TOOL_PLAYS_MODE === 'true'
         || urlParams.get('plays') === '1';
     if (reviewRequested) {
-        aiReviewFilter = 'pending';
+        aiReviewFilter = 'ledger';
         document.querySelectorAll('.ai-filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.aiFilter === 'pending');
+            btn.classList.toggle('active', btn.dataset.aiFilter === 'ledger');
         });
     }
     if (activeGameId) fetchAndRenderAIEvents(activeGameId);
+    if (activeGameId) fetchProgramSummary();
+    if (activeGameId) loadFilmSync(activeGameId);
     if (activeGameId && window.ENABLE_AUTO_STATS_M1) {
         fetchAndRenderPlayMatches(activeGameId, { refresh: false });
     }
     initPlayMatchesPanel();
     updateAiEventsSummary();
     timeDisplay.textContent = formatTime(video.currentTime || 0);
-    setStatus(reviewRequested ? 'Review workspace ready — pending AI drafts shown.' : 'Ready.');
+    setStatus(reviewRequested
+        ? 'Program mode ready — Build ledger, check exceptions, add rare misses.'
+        : 'Ready.');
     if (reviewRequested) {
         setTimeout(focusReviewWorkspace, 250);
     }
@@ -3003,6 +4872,7 @@ function init() {
     initBookmarks();
     initResourceMonitor();
     initReportDrawer();
+    ensureFilmToolOverlaysClosed();
     initAiUpload();
     initAnalysisStatus();
     initRunAnalysis();

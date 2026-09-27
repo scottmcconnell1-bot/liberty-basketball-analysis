@@ -33,6 +33,7 @@ from datetime import date
 from flask import Blueprint, redirect, render_template, request, url_for, jsonify, abort, current_app
 
 from helpers import get_db, require_feature, get_default_team_id
+from stats import _resolve_relational_game_id, _trusted_event_review_clause
 from module_entitlements import enforce_module_access
 from module_keys import SCOUTING
 from nfhs import (
@@ -104,7 +105,8 @@ def api_nfhs_login():
     password = data.get("password", "")
 
     # If no password provided, try stored credentials
-    if not password:
+    used_stored = not password
+    if used_stored:
         db = get_db()
         cred = db.execute("SELECT password_enc FROM nfhs_credentials WHERE email=? AND is_active=1", (email,)).fetchone()
         if cred:
@@ -114,18 +116,25 @@ def api_nfhs_login():
 
     result = login_nfhs(email, password)
 
-    # Update stored login status
     db = get_db()
-    encrypted = _encrypt_password(password)
-    existing = db.execute("SELECT id FROM nfhs_credentials WHERE email=?", (email,)).fetchone()
-    if existing:
-        db.execute("UPDATE nfhs_credentials SET last_login_at=CURRENT_TIMESTAMP, last_login_status=?, updated_at=CURRENT_TIMESTAMP WHERE email=?",
+    if used_stored:
+        # Only the login status changes; the stored password is what was just tried.
+        db.execute("UPDATE nfhs_credentials SET last_login_at=CURRENT_TIMESTAMP, last_login_status=?, updated_at=CURRENT_TIMESTAMP WHERE email=? AND is_active=1",
                    ("success" if result["success"] else "failed", email))
-    else:
-        db.execute("""
-            INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
-            VALUES (?, ?, 1, CURRENT_TIMESTAMP, ?)
-        """, (email, encrypted, "success" if result["success"] else "failed"))
+    elif result["success"]:
+        # A new password that works replaces the stored one.
+        encrypted = _encrypt_password(password)
+        existing = db.execute("SELECT id FROM nfhs_credentials WHERE email=? AND is_active=1 ORDER BY id DESC LIMIT 1", (email,)).fetchone()
+        if existing:
+            db.execute("UPDATE nfhs_credentials SET password_enc=?, last_login_at=CURRENT_TIMESTAMP, last_login_status='success', updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                       (encrypted, existing["id"]))
+        else:
+            db.execute("""
+                INSERT INTO nfhs_credentials (email, password_enc, is_active, last_login_at, last_login_status)
+                VALUES (?, ?, 1, CURRENT_TIMESTAMP, 'success')
+            """, (email, encrypted))
+    # A failed login with a typed password stores nothing: it must not become the
+    # active credential that downloads use, nor mark saved credentials as failed.
     db.commit()
 
     return jsonify(result)
@@ -261,6 +270,12 @@ def api_scouting_report_delete(report_id):
     return jsonify({"status": "deleted"})
 
 
+def _require_report(db, report_id):
+    """404 when a child section is written to a report that does not exist."""
+    if not db.execute("SELECT 1 FROM scouting_reports WHERE id=?", (report_id,)).fetchone():
+        abort(404)
+
+
 # ── Personnel ────────────────────────────────────────────────
 
 @scouting_bp.route("/api/scouting/reports/<int:report_id>/personnel", methods=["GET", "POST"])
@@ -268,6 +283,7 @@ def api_scouting_report_delete(report_id):
 def api_scouting_personnel(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_personnel (report_id, jersey_number, player_name, role, notes, usage_rate, ppp)
@@ -295,6 +311,7 @@ def api_scouting_personnel(report_id):
 def api_scouting_offensive_sets(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_offensive_sets (report_id, set_name, trigger_action, frequency, ppp, result_vs_pressure, notes, clip_timestamps)
@@ -323,6 +340,7 @@ def api_scouting_offensive_sets(report_id):
 def api_scouting_defensive(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_defensive_tendencies (report_id, scheme, pnr_coverage, frequency, ppp_allowed, weak_rotations, notes)
@@ -350,6 +368,7 @@ def api_scouting_defensive(report_id):
 def api_scouting_tendencies(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_tendencies (report_id, tendency_type, category, description, frequency, clip_timestamps, exploitable, practice_drill)
@@ -378,6 +397,7 @@ def api_scouting_tendencies(report_id):
 def api_scouting_situational(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_situational (report_id, situation, description, frequency, ppp, clip_timestamps, notes)
@@ -405,6 +425,7 @@ def api_scouting_situational(report_id):
 def api_scouting_mismatches(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_mismatches (report_id, opponent_jersey, opponent_name, vulnerability, exploit_action, notes)
@@ -431,6 +452,7 @@ def api_scouting_mismatches(report_id):
 def api_scouting_practice_points(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_practice_points (report_id, point_number, description, drill_name, measurable_target, clip_timestamps)
@@ -457,6 +479,7 @@ def api_scouting_practice_points(report_id):
 def api_scouting_clips(report_id):
     db = get_db()
     if request.method == "POST":
+        _require_report(db, report_id)
         data = request.get_json() or request.form
         db.execute("""
             INSERT INTO scouting_clips (report_id, clip_type, game_time, quarter, description, coach_cue, video_timestamp_ms, source)
@@ -586,14 +609,20 @@ def api_scouting_generate(report_id):
     if not game_id:
         return jsonify({"error": "No game associated with this report"}), 400
 
-    # Get all events for this game
-    events = db.execute("""
-        SELECT e.*, p.jersey_number, p.name as player_name
+    # Trusted (accepted/corrected) events for this game, same scope as stats/assistant.
+    # AI events carry the analysis key in events.game_id and the games.id in
+    # relational_game_id; manual events may only have the legacy game_id.
+    # events.player is a name/tracker label (never a players.id); only the relational
+    # primary_player_id links an event to a roster player.
+    relational_game_id = _resolve_relational_game_id(db, game_id)
+    events = db.execute(f"""
+        SELECT e.*, p.jersey_number, COALESCE(p.name, e.player) AS player_name
         FROM events e
-        LEFT JOIN players p ON e.player = p.id
-        WHERE e.game_id = ?
+        LEFT JOIN players p ON p.id = e.primary_player_id
+        WHERE (e.relational_game_id = ? OR (e.relational_game_id IS NULL AND e.game_id = ?))
+          AND {_trusted_event_review_clause()}
         ORDER BY e.timestamp_ms
-    """, (game_id,)).fetchall()
+    """, (relational_game_id, str(game_id))).fetchall()
 
     if not events:
         return jsonify({"error": "No AI events found for this game. Run AI analysis first."}), 400
@@ -602,10 +631,12 @@ def api_scouting_generate(report_id):
 
     # Analyze personnel by possession usage
     player_possessions = {}
+    player_jerseys = {}
     for ev in events:
-        player = ev.get("player_name") or ev.get("jersey_number") or "Unknown"
+        player = ev.get("player_name") or "Unknown"
         if player not in player_possessions:
             player_possessions[player] = {"count": 0, "points": 0, "turnovers": 0, "assists": 0}
+            player_jerseys[player] = ev.get("jersey_number")
         player_possessions[player]["count"] += 1
         if ev["event_type"] == "shot":
             if ev.get("shot_result") == "make":
@@ -630,8 +661,8 @@ def api_scouting_generate(report_id):
 
         # Check if personnel already exists
         existing = db.execute(
-            "SELECT id FROM scouting_personnel WHERE report_id=? AND (player_name=? OR jersey_number=?)",
-            (report_id, player, player if isinstance(player, int) else None)
+            "SELECT id FROM scouting_personnel WHERE report_id=? AND player_name=?",
+            (report_id, player)
         ).fetchone()
 
         if not existing:
@@ -640,8 +671,8 @@ def api_scouting_generate(report_id):
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 report_id,
-                player if isinstance(player, int) else None,
-                player if not isinstance(player, int) else None,
+                player_jerseys.get(player),
+                player,
                 role,
                 round(usage, 2),
                 f"Auto-detected: {stats['count']} possessions, {stats['points']} pts, {stats['assists']} ast, {stats['turnovers']} tov"

@@ -17,6 +17,7 @@ Blueprint modules:
   stat_books - Handwritten spiral scorebook extract / confirm
 """
 
+import logging
 import os
 from pathlib import Path
 from flask import Flask, g, jsonify, request, session
@@ -54,13 +55,25 @@ app.config.from_object(Config)
 # Always reload Jinja templates from disk (production-like debug=off otherwise caches them).
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.jinja_env.auto_reload = True
-# Refresh password from env after .env load (Config may have been imported earlier).
+# Refresh env-backed settings after .env load: config.Config read os.environ
+# when it was imported, which is before _load_dotenv() ran.
 app.config["COACH_PASSWORD"] = os.environ.get("LIBERTY_COACH_PASSWORD", "")
+for _config_key, _env_key in (("DATABASE", "LIBERTY_DATABASE"), ("UPLOAD_FOLDER", "LIBERTY_UPLOAD_FOLDER")):
+    if os.environ.get(_env_key):
+        app.config[_config_key] = os.environ[_env_key]
+_DEV_SECRET_KEY = "liberty-basketball-dev-secret-key-2026"
 app.config["SECRET_KEY"] = (
     os.environ.get("SECRET_KEY")
     or app.config.get("SECRET_KEY")
-    or "liberty-basketball-dev-secret-key-2026"
+    or _DEV_SECRET_KEY
 )
+if app.config["SECRET_KEY"] == _DEV_SECRET_KEY:
+    # This key is committed to the repo, so anyone who has read it can forge
+    # a session cookie (including an admin login). Set SECRET_KEY in .env.
+    logging.getLogger(__name__).warning(
+        "SECRET_KEY is unset - using the committed dev fallback. "
+        "Set SECRET_KEY in .env before exposing the app on a network."
+    )
 app.config.setdefault("DATABASE", "film_analysis.db")
 app.config.setdefault("UPLOAD_FOLDER", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024 * 1024  # 4 GB max upload
@@ -104,12 +117,23 @@ from helpers import get_runtime_settings
 def inject_feature_flags():
     settings = get_runtime_settings()
     coach_portal = bool(session.get("coach_portal"))
+    # Verified account (live session token), not the raw cookie, which outlives logout.
+    try:
+        signed_in_user = _current_user()
+    except Exception:
+        signed_in_user = None
+    from audience_access import is_family_role
+    family_viewer = bool(signed_in_user) and is_family_role(signed_in_user["role"])
     return {
+        "signed_in_user": dict(signed_in_user) if signed_in_user else None,
         "features": settings["features"],
         "analysis_config": settings["analysis"],
         "coach_portal": coach_portal,
         # Alias for templates that hide Save/Delete/Create in coach mode
         "coach_readonly": coach_portal,
+        # Parents and players watch. Coaches edit. Unsigned home use stays editable.
+        "family_viewer": family_viewer,
+        "audience_can_edit": (not family_viewer) and (not coach_portal),
     }
 
 
@@ -117,6 +141,51 @@ def inject_feature_flags():
 def coach_portal_ops_gate():
     """Soft denylist for coach portal sessions (does not enable global auth)."""
     return enforce_coach_ops_denylist()
+
+
+@app.before_request
+def family_viewer_gate():
+    """Parents and players may watch. They may not change coach tools or see the team board.
+
+    Unsigned requests are left alone so the home machine stays usable while
+    sign-in is not required.
+    """
+    from flask import flash, redirect, url_for
+    from audience_access import FAMILY_POST_ALLOW, FAMILY_REDIRECT_PREFIXES, is_family_role
+
+    user = None
+    try:
+        user = _current_user()
+    except Exception:
+        user = None
+    if not user or not is_family_role(user["role"]):
+        return None
+    path = request.path or "/"
+    if path.startswith("/static/") or path in ("/sw.js", "/favicon.ico"):
+        return None
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if path in FAMILY_POST_ALLOW or path.startswith("/play/share/"):
+            return None
+        # Their own messages, notification prefs, and sign-in. Coach settings
+        # still hit the route, which refuses anyone who is not an admin.
+        if path.startswith("/api/messages/") or path.startswith("/api/notifications") or path in (
+            "/settings/notifications",
+            "/settings",
+            "/settings/ollama/pull",
+            "/register",
+        ):
+            return None
+        if path.startswith("/api/"):
+            return jsonify({"error": "Parents and players can view only."}), 403
+        flash("Parents and players can view only.", "error")
+        return redirect(url_for("core.my_stats"))
+    if path == "/settings/notifications":
+        return None
+    if path == "/" or path.startswith(FAMILY_REDIRECT_PREFIXES):
+        if path.startswith("/api/"):
+            return jsonify({"error": "Parents and players can view only their own stats."}), 403
+        return redirect(url_for("core.my_stats"))
+    return None
 
 
 @app.template_global()
@@ -162,12 +231,36 @@ def close_db(exception):
 
 
 # ── Auth Middleware ───────────────────────────────────────────
+# Reachable without signing in even when the gate is on.
+_AUTH_PUBLIC_PATHS = {"/login", "/logout", "/register", "/sw.js", "/favicon.ico"}
+_AUTH_PUBLIC_PREFIXES = ("/static/", "/coach", "/play/share/")
+
+
 @app.before_request
 def require_auth_for_api():
-    """Auth middleware — disabled until user system is implemented."""
-    pass  # No auth enforced yet — will be enabled in a future phase
+    """Require a signed-in user when ENABLE_AUTH_MIDDLEWARE is on (default off).
 
+    Coach-portal sessions pass through only while ENABLE_COACH_PORTAL is on;
+    enforce_coach_ops_denylist() keeps them read-only. APIs get 401 JSON, pages redirect to /login.
+    """
+    from flask import redirect, url_for
+    from helpers import feature_enabled
 
+    if not feature_enabled("ENABLE_AUTH_MIDDLEWARE"):
+        return None
+    path = request.path or "/"
+    if path in _AUTH_PUBLIC_PATHS or path.startswith(_AUTH_PUBLIC_PREFIXES):
+        return None
+    # A coach_portal cookie only counts while the portal feature is on; otherwise a
+    # stale cookie would pass here and also skip the read-only denylist.
+    if session.get("coach_portal") and feature_enabled("ENABLE_COACH_PORTAL"):
+        return None
+    if session.get("user_id") and _current_user() is not None:
+        return None
+    if path.startswith("/api/") or request.is_json:
+        return jsonify({"error": "Sign-in required."}), 401
+    next_path = request.full_path if request.query_string else path
+    return redirect(url_for("users.login", next=next_path))
 # ── Re-exports (for test conftest and external imports) ──────
 import subprocess  # noqa: F401
 from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess  # noqa: F401
@@ -182,6 +275,16 @@ def init_db_command():
     click.echo("Database initialized.")
 
 
+@app.route("/sw.js")
+def service_worker():
+    """Serve service worker with correct MIME type.
+
+    Must be registered before the `__main__` block: `python app.py` (how the home PC
+    runs) never gets past app.run(), so routes defined below it did not exist.
+    """
+    return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}
+
+
 if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
@@ -190,9 +293,3 @@ if __name__ == "__main__":
     # launch_liberty.py / teach loop expect PORT (default 8080); do not hardcode 5000
     _port = int(os.environ.get("PORT", "8080"))
     app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)
-
-
-@app.route("/sw.js")
-def service_worker():
-    """Serve service worker with correct MIME type."""
-    return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}

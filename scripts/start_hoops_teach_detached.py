@@ -21,6 +21,8 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from liberty_data_paths import live_db_path  # noqa: E402
 LOG_DIR = ROOT / "data" / "hoopsalytics"
 PID_PATH = LOG_DIR / "detached_pids.json"
 PORT = 8080
@@ -101,6 +103,40 @@ def _pid_alive(pid: int | None) -> bool:
         return False
 
 
+def _stop_pid(pid: int | None, wait_s: float = 15.0) -> bool:
+    """Terminate a process tree we started. Returns True once it is gone."""
+    if not _pid_alive(pid):
+        return True
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    else:
+        import signal
+
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.time() + wait_s
+    while time.time() < deadline:
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.5)
+    if os.name != "nt":
+        import signal
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+        time.sleep(0.5)
+    return not _pid_alive(pid)
+
+
 def _load_dotenv_into(env: dict) -> dict:
     """Merge repo .env into env dict without overriding existing keys."""
     env_path = ROOT / ".env"
@@ -169,7 +205,7 @@ def ensure_server(pids: dict) -> dict:
     # Start app.py directly with PORT so we do not depend on .venv having AI deps.
     env = _load_dotenv_into(os.environ.copy())
     env["PORT"] = str(PORT)
-    env.setdefault("LIBERTY_DATABASE", str(ROOT / "film_analysis.db"))
+    env.setdefault("LIBERTY_DATABASE", str(live_db_path()))
     env.setdefault("LIBERTY_UPLOAD_FOLDER", str(ROOT / "uploads"))
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     out = open(LOG_DIR / "detached_liberty.out.log", "a", encoding="utf-8")
@@ -208,6 +244,10 @@ def ensure_teach_loop(pids: dict, *, restart: bool = False) -> dict:
         print(f"[detached] Stopping old teach loop pid={old}")
         subprocess.run(["taskkill", "/PID", str(old), "/F"], check=False, capture_output=True)
         time.sleep(1)
+    paused = LOG_DIR / "TEACH_LOOP_PAUSED"
+    if paused.exists():
+        print(f"[detached] Teach loop PAUSED ({paused}) - not starting it. Remove the file to resume.")
+        return pids
     print("[detached] Starting Hoops teach loop...")
     pid = _spawn([sys.executable, str(ROOT / "scripts" / "hoops_teach_loop.py")], "detached_teach_loop")
     pids["teach_loop_pid"] = pid
@@ -235,7 +275,7 @@ def status() -> int:
         try:
             import sqlite3
 
-            conn = sqlite3.connect(str(ROOT / "film_analysis.db"))
+            conn = sqlite3.connect(str(live_db_path()))
             row = conn.execute(
                 "SELECT analysis_key, progress_pct FROM analysis_runs WHERE status='running' ORDER BY id DESC LIMIT 1"
             ).fetchone()

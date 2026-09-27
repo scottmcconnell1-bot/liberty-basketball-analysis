@@ -32,9 +32,18 @@ def _is_pointer(path: Path) -> bool:
 
 
 def _parse_pointer(path: Path) -> tuple[str, int] | None:
+    """(oid, size) for a Git LFS pointer file; None for anything else (e.g. real weights)."""
     try:
-        text = path.read_text(encoding="utf-8")
+        with path.open("rb") as fh:
+            head = fh.read(1025)
     except OSError:
+        return None
+    # LFS pointers are ~130 bytes of ASCII; real .pt weights are large binaries.
+    if len(head) > 1024:
+        return None
+    try:
+        text = head.decode("utf-8")
+    except UnicodeDecodeError:
         return None
     match = POINTER_RE.match(text)
     if not match:

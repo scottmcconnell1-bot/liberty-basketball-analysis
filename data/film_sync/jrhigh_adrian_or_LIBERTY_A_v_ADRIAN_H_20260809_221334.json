@@ -1,0 +1,9 @@
+{
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+  "offset_ms": 0,
+  "analysis_video": "LIBERTY_A_v_ADRIAN_H_20260809_221334.mp4",
+  "review_video": "nfhs_gam0a66d85e12.mp4",
+  "method": "frame_match_median",
+  "notes": "Screencapture vs NFHS body clocks align (~1s). Duration delta is extra NFHS content; ledger timing fixed by adrian_quality_v2 spread pick, not offset.",
+  "calibrated_at": "2026-08-27T02:40:00Z"
+}

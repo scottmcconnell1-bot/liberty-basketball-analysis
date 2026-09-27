@@ -1,0 +1,42 @@
+{
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260915_193718",
+  "home_is_light": true,
+  "split": 120.0,
+  "tracks": {
+    "1": {
+      "mean_s": 71.4,
+      "mean_v": 170.8,
+      "samples": 8,
+      "shade": "light",
+      "side": "home"
+    },
+    "5": {
+      "mean_s": 52.3,
+      "mean_v": 143.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "6": {
+      "mean_s": 71.2,
+      "mean_v": 139.9,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "7": {
+      "mean_s": 71.0,
+      "mean_v": 141.0,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "8": {
+      "mean_s": 73.5,
+      "mean_v": 134.0,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    }
+  }
+}

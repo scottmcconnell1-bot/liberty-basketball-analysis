@@ -1,0 +1,702 @@
+{% extends "base.html" %}
+{% block title %}Draw play – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a class="playbook-back-link" href="{{ url_for('playbook.playbook_list', team=selected_team) }}">← Back to plays</a>
+    <h2 style="margin-top:4px;">Build a picture</h2>
+    <p class="text-muted" style="margin-top:4px;">Open a play you already have, or start a new one. Each picture comes in with the players where they already stand. Click the player who moves, then the action, then where he goes. Next picture saves this picture and opens the next one. You do not rebuild the play from scratch.</p>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('playbook.playbook_save') }}" id="drawForm">
+  <input type="hidden" name="play_id" value="{{ play.id if play else '' }}">
+  <input type="hidden" name="team_key" value="{{ selected_team }}">
+  <input type="hidden" name="category" value="offense">
+  <input type="hidden" name="description" value="{{ play.description if play and play.description else '' }}">
+  <input type="hidden" name="tags" value="{{ play.tags if play and play.tags else '' }}">
+  <input type="hidden" name="diagram_json" value="{}">
+  <input type="hidden" name="steps_json" id="stepsJson" value="[]">
+
+  <div class="draw-tool">
+    <div class="draw-palette card">
+      <div class="draw-label">Action</div>
+      <button type="button" class="draw-tool-btn" data-action="cut">Cut</button>
+      <button type="button" class="draw-tool-btn" data-action="pass">Pass</button>
+      <button type="button" class="draw-tool-btn" data-action="dribble">Dribble</button>
+      <button type="button" class="draw-tool-btn" data-action="screen">Screen</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="ballBtn" style="margin-top:14px;width:100%;">Give him the ball</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="defenseBtn" style="margin-top:8px;width:100%;">Add defense</button>
+      <p class="text-muted" id="drawHint" style="font-size:0.75rem;margin-top:10px;">Drag players into place. Click the player who moves.</p>
+    </div>
+
+    <div class="card draw-court-card">
+      <div class="draw-court-bar">
+        <button type="button" class="btn btn-secondary btn-sm" id="playPhaseBtn">Play this picture</button>
+        <button type="button" class="btn btn-primary btn-sm" id="playAllBtn">Play all</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="stopBtn">Stop</button>
+        <span id="playStatus" class="text-muted" style="font-size:0.75rem;"></span>
+      </div>
+      <svg id="drawCourt" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg">
+        <g id="courtLines"></g>
+        <g id="arrowLayer"></g>
+        <g id="playerLayer"></g>
+      </svg>
+      <div class="draw-phases" id="phaseBar"></div>
+    </div>
+
+    <div class="card draw-side">
+      <label class="draw-label" for="playName">Play name</label>
+      <input class="form-control" id="playName" name="name" required
+             value="{{ play.name if play else '' }}" placeholder="e.g. Horns entry">
+      <label class="draw-label" for="categoryId" style="margin-top:10px;">Category</label>
+      <select class="form-control" id="categoryId" name="category_id">
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if cat.id == category_id %}selected{% endif %}>{{ cat.label }}</option>
+        {% endfor %}
+      </select>
+      <label class="draw-label" for="playbookId" style="margin-top:10px;">Playbook</label>
+      <select class="form-control" id="playbookId" name="playbook_id">
+        <option value="">— None —</option>
+        {% for pb in playbooks %}
+        <option value="{{ pb.id }}" {% if play and play.playbook_id == pb.id %}selected{% endif %}>{{ pb.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="draw-label" style="margin-top:14px;">Actions</div>
+      <div id="actionList"></div>
+      <label class="draw-label" for="phaseNotes" style="margin-top:12px;">Picture notes</label>
+      <textarea class="form-control" id="phaseNotes" rows="3" placeholder="What this phase is for"></textarea>
+      <button class="btn btn-primary" type="submit" style="width:100%;margin-top:12px;">Save and watch</button>
+    </div>
+  </div>
+</form>
+
+<script id="drawBoot" type="application/json">{{ {"phases": phases}|tojson }}</script>
+<style>
+  .draw-tool { display:grid; grid-template-columns: 148px 1fr 280px; gap:14px; align-items:start; }
+  .draw-palette, .draw-side { padding:12px; }
+  .draw-court-card { padding:10px; }
+  .draw-label { font-size:0.72rem; font-weight:700; color:#374151; margin-bottom:6px; }
+  .draw-tool-btn { display:block; width:100%; text-align:left; margin-bottom:4px; border:1px solid #d1d5db; background:#fff; border-radius:6px; padding:6px 8px; font-size:0.8rem; cursor:pointer; }
+  .draw-tool-btn.is-on { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+  .draw-court-bar { display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  #drawCourt { width:100%; height:auto; background:#f6e7c1; border-radius:8px; touch-action:none; }
+  .draw-phases { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; align-items:center; }
+  .draw-phase { border:1px solid #d1d5db; background:#fff; border-radius:6px; padding:4px 8px; font-size:0.75rem; cursor:pointer; }
+  .draw-phase.is-on { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+  .draw-action { display:flex; gap:6px; align-items:center; flex-wrap:wrap; border:1px solid #e5e7eb; border-radius:6px; padding:6px; margin-bottom:6px; font-size:0.75rem; cursor:pointer; }
+  .draw-action.is-on { border-color:#1e3a8a; background:#eff6ff; }
+  @media (max-width: 980px) { .draw-tool { grid-template-columns: 1fr; } }
+</style>
+<script>
+(function () {
+  const boot = JSON.parse(document.getElementById('drawBoot').textContent || '{}');
+  const svg = document.getElementById('drawCourt');
+  const NS = 'http://www.w3.org/2000/svg';
+  const START = {
+    o1: { x: 250, y: 360 }, o2: { x: 390, y: 270 }, o3: { x: 110, y: 270 },
+    o4: { x: 320, y: 175 }, o5: { x: 180, y: 175 },
+  };
+  const DEFENSE = {
+    d1: { x: 250, y: 310 }, d2: { x: 360, y: 240 }, d3: { x: 140, y: 240 },
+    d4: { x: 300, y: 145 }, d5: { x: 200, y: 145 },
+  };
+
+  function freshPhase(label) {
+    return {
+      label: label || 'Picture 1', notes: '', ball: 'o1',
+      positions: JSON.parse(JSON.stringify(START)),
+      actions: [],
+    };
+  }
+
+  let phases = (boot.phases && boot.phases.length) ? boot.phases : [freshPhase('Picture 1')];
+  phases.forEach((phase) => {
+    phase.positions = phase.positions || JSON.parse(JSON.stringify(START));
+    phase.actions = phase.actions || [];
+    phase.ball = phase.ball || 'o1';
+    phase.actions.forEach((action) => {
+      if (!action.anchors || action.anchors.length < 2) {
+        const from = phase.positions[action.from] || { x: 250, y: 300 };
+        const to = (action.to && phase.positions[action.to]) || { x: from.x + 40, y: from.y - 40 };
+        action.anchors = [{ x: from.x, y: from.y }, { x: to.x, y: to.y }];
+      }
+      if (action.timing === 'sync') action.timing = 'after';
+      action.timing = action.timing || 'after';
+      action.shape = action.shape || 'straight';
+    });
+  });
+
+  let phaseIndex = 0;
+  let actor = null;
+  let armed = null;
+  let selected = null;
+  let drag = null;
+  let playRun = 0;
+  let playing = false;
+  let playBall = null;
+  const live = {};
+
+  function phase() { return phases[phaseIndex]; }
+  function el(name, attrs) {
+    const node = document.createElementNS(NS, name);
+    Object.keys(attrs || {}).forEach((key) => node.setAttribute(key, attrs[key]));
+    return node;
+  }
+  function svgPoint(e) {
+    const rect = svg.getBoundingClientRect();
+    const box = svg.viewBox.baseVal;
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * box.width,
+      y: ((e.clientY - rect.top) / rect.height) * box.height,
+    };
+  }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function posOf(pid) {
+    if (live[pid]) return live[pid];
+    return phase().positions[pid];
+  }
+  function samples(action) {
+    const a = action.anchors && action.anchors[0];
+    const b = action.anchors && action.anchors[1];
+    if (!a || !b) return [];
+    return [{ x: a.x, y: a.y }, { x: b.x, y: b.y }];
+  }
+  function layoutActions(item) {
+    const pos = JSON.parse(JSON.stringify(item.positions || {}));
+    return (item.actions || []).map((action) => {
+      const standing = pos[action.from];
+      const dest = action.dest || (action.anchors && action.anchors[1]) || null;
+      let anchors = action.anchors;
+      if (action.type === 'pass' && standing && pos[action.to]) {
+        anchors = [
+          { x: standing.x, y: standing.y },
+          { x: pos[action.to].x, y: pos[action.to].y },
+        ];
+      } else if (standing && dest) {
+        anchors = [{ x: standing.x, y: standing.y }, { x: dest.x, y: dest.y }];
+        if (action.timing !== 'optional') pos[action.from] = { x: dest.x, y: dest.y };
+      }
+      return Object.assign({}, action, { anchors: anchors });
+    });
+  }
+  function hitPlayer(p) {
+    let best = null;
+    let bestD = 26;
+    Object.keys(phase().positions).forEach((pid) => {
+      const at = posOf(pid);
+      if (!at) return;
+      const d = dist(p, at);
+      if (d < bestD) { best = pid; bestD = d; }
+    });
+    return best;
+  }
+  function hitHandle(p) {
+    if (selected == null) return null;
+    const action = phase().actions[selected];
+    if (!action) return null;
+    if (dist(p, action.anchors[0]) < 14) return { kind: 'start' };
+    if (dist(p, action.anchors[1]) < 14) return { kind: 'end' };
+    return null;
+  }
+  function setHint(text) {
+    document.getElementById('drawHint').textContent = text;
+  }
+
+  function drawCourt() {
+    const g = document.getElementById('courtLines');
+    g.innerHTML = '';
+    const line = (attrs) => g.appendChild(el('path', Object.assign({
+      fill: 'none', stroke: '#1f2937', 'stroke-width': '2',
+    }, attrs)));
+    line({ d: 'M 30 40 H 470 V 440 H 30 Z' });
+    line({ d: 'M 170 40 H 330 V 150 H 170 Z' });
+    g.appendChild(el('circle', { cx: '250', cy: '40', r: '8', fill: 'none', stroke: '#1f2937', 'stroke-width': '2' }));
+    g.appendChild(el('circle', { cx: '250', cy: '140', r: '60', fill: 'none', stroke: '#1f2937', 'stroke-width': '2' }));
+    line({ d: 'M 60 40 A 190 190 0 0 0 440 40' });
+  }
+
+  function render() {
+    const arrows = document.getElementById('arrowLayer');
+    const players = document.getElementById('playerLayer');
+    arrows.innerHTML = '';
+    players.innerHTML = '';
+    Object.keys(phase().positions).forEach((pid) => {
+      const at = posOf(pid);
+      if (!at) return;
+      const g = el('g', {});
+      if (String(pid).startsWith('d')) {
+        g.appendChild(el('line', { x1: at.x - 10, y1: at.y - 10, x2: at.x + 10, y2: at.y + 10, stroke: '#b91c1c', 'stroke-width': '3' }));
+        g.appendChild(el('line', { x1: at.x - 10, y1: at.y + 10, x2: at.x + 10, y2: at.y - 10, stroke: '#b91c1c', 'stroke-width': '3' }));
+      } else {
+        if ((playBall || phase().ball) === pid && !live.ball) {
+          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '16', fill: 'none', stroke: '#d97706', 'stroke-width': '3' }));
+        }
+        if (actor === pid) {
+          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '18', fill: 'none', stroke: '#16a34a', 'stroke-width': '2', 'stroke-dasharray': '3 2' }));
+        }
+        g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '13', fill: '#1e3a8a' }));
+        const label = el('text', {
+          x: at.x, y: at.y + 4, 'text-anchor': 'middle', fill: '#fff', 'font-size': '12', 'font-weight': '700',
+        });
+        label.textContent = String(pid).replace(/^o/, '');
+        g.appendChild(label);
+      }
+      players.appendChild(g);
+    });
+    if (live.ball) {
+      players.appendChild(el('circle', { cx: live.ball.x, cy: live.ball.y, r: '6', fill: '#d97706' }));
+    }
+    renderActions();
+    renderPhases();
+    const notes = document.getElementById('phaseNotes');
+    if (document.activeElement !== notes) notes.value = phase().notes || '';
+    const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
+    document.getElementById('defenseBtn').textContent = hasD ? 'Remove defense' : 'Add defense';
+  }
+
+  function renderActions() {
+    const list = document.getElementById('actionList');
+    list.innerHTML = '';
+    if (!phase().actions.length) {
+      list.innerHTML = '<p class="text-muted" style="font-size:0.75rem;">No actions yet.</p>';
+      return;
+    }
+    phase().actions.forEach((action, index) => {
+      const row = document.createElement('div');
+      row.className = 'draw-action' + (selected === index ? ' is-on' : '');
+      const who = String(action.from || '').replace(/^[od]/, '#');
+      const title = document.createElement('strong');
+      title.textContent = `${index + 1}. ${action.type} ${who}`;
+      row.appendChild(title);
+      const withPrev = document.createElement('label');
+      withPrev.innerHTML = '<input type="checkbox"> With previous';
+      const withBox = withPrev.querySelector('input');
+      withBox.checked = action.timing === 'with';
+      withBox.disabled = index === 0;
+      withBox.addEventListener('click', (e) => e.stopPropagation());
+      withBox.addEventListener('change', () => {
+        action.timing = withBox.checked ? 'with' : 'after';
+        render();
+      });
+      const optional = document.createElement('label');
+      optional.innerHTML = '<input type="checkbox"> Optional';
+      const optBox = optional.querySelector('input');
+      optBox.checked = action.timing === 'optional';
+      optBox.addEventListener('click', (e) => e.stopPropagation());
+      optBox.addEventListener('change', () => {
+        action.timing = optBox.checked ? 'optional' : 'after';
+        render();
+      });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-danger btn-sm';
+      del.textContent = 'Delete';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        phase().actions.splice(index, 1);
+        selected = null;
+        render();
+      });
+      row.appendChild(withPrev);
+      row.appendChild(optional);
+      row.appendChild(del);
+      row.addEventListener('click', () => { selected = index; render(); });
+      list.appendChild(row);
+    });
+  }
+
+  function renderPhases() {
+    const bar = document.getElementById('phaseBar');
+    bar.innerHTML = '';
+    phases.forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'draw-phase' + (index === phaseIndex ? ' is-on' : '');
+      btn.textContent = item.label || `Picture ${index + 1}`;
+      btn.addEventListener('click', async () => {
+        if (index === phaseIndex) return;
+        const ok = await savePictures();
+        if (!ok) return;
+        phaseIndex = index;
+        selected = null;
+        actor = null;
+        armed = null;
+        setHint('Picture saved. You are on the one you picked.');
+        render();
+      });
+      bar.appendChild(btn);
+    });
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'btn btn-secondary btn-sm';
+    add.textContent = 'Next picture';
+    add.addEventListener('click', async () => {
+      const ok = await savePictures();
+      if (!ok) return;
+      if (phaseIndex < phases.length - 1) {
+        phaseIndex += 1;
+        selected = null;
+        actor = null;
+        armed = null;
+        setHint('Picture saved. Edit this next one.');
+        render();
+        return;
+      }
+      const landed = endState(phase());
+      phases.push({
+        label: `Picture ${phases.length + 1}`,
+        notes: '',
+        ball: landed.ball,
+        positions: landed.positions,
+        actions: [],
+        source_image: '',
+      });
+      phaseIndex = phases.length - 1;
+      selected = null;
+      actor = null;
+      armed = null;
+      setHint('Picture saved. This new picture starts where the last one finished.');
+      render();
+    });
+    const dup = document.createElement('button');
+    dup.type = 'button';
+    dup.className = 'btn btn-secondary btn-sm';
+    dup.textContent = 'Duplicate';
+    dup.addEventListener('click', () => {
+      const copy = JSON.parse(JSON.stringify(phase()));
+      copy.label = `Picture ${phases.length + 1}`;
+      phases.splice(phaseIndex + 1, 0, copy);
+      phaseIndex += 1;
+      render();
+    });
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn btn-secondary btn-sm';
+    remove.textContent = 'Delete picture';
+    remove.disabled = phases.length < 2;
+    remove.addEventListener('click', () => {
+      if (phases.length < 2) return;
+      phases.splice(phaseIndex, 1);
+      phaseIndex = Math.max(0, phaseIndex - 1);
+      selected = null;
+      render();
+    });
+    bar.appendChild(add);
+    bar.appendChild(dup);
+    bar.appendChild(remove);
+  }
+
+  function endState(item) {
+    const positions = JSON.parse(JSON.stringify(item.positions));
+    let ball = item.ball || 'o1';
+    layoutActions(item).forEach((action) => {
+      if (action.timing === 'optional') return;
+      const pts = samples(action);
+      if (action.type === 'pass' && action.to) ball = action.to;
+      else if (action.from && pts.length) positions[action.from] = Object.assign({}, pts[pts.length - 1]);
+    });
+    return { positions, ball };
+  }
+
+  function pointAlong(pts, t) {
+    if (!pts.length) return { x: 0, y: 0 };
+    if (pts.length === 1 || t <= 0) return pts[0];
+    if (t >= 1) return pts[pts.length - 1];
+    let total = 0;
+    const seg = [];
+    for (let i = 1; i < pts.length; i += 1) {
+      const len = dist(pts[i - 1], pts[i]);
+      seg.push(len);
+      total += len;
+    }
+    let left = t * (total || 1);
+    for (let i = 0; i < seg.length; i += 1) {
+      if (left <= seg[i] || i === seg.length - 1) {
+        const u = seg[i] ? left / seg[i] : 1;
+        return {
+          x: pts[i].x + (pts[i + 1].x - pts[i].x) * u,
+          y: pts[i].y + (pts[i + 1].y - pts[i].y) * u,
+        };
+      }
+      left -= seg[i];
+    }
+    return pts[pts.length - 1];
+  }
+
+  function groupsOf(actions) {
+    const groups = [];
+    actions.forEach((action) => {
+      if (action.timing === 'optional') return;
+      if (action.timing === 'with' && groups.length) groups[groups.length - 1].push(action);
+      else groups.push([action]);
+    });
+    return groups;
+  }
+
+  function animateGroup(group, token) {
+    return new Promise((resolve) => {
+      const start = performance.now();
+      const duration = 700;
+      function frame(now) {
+        if (token !== playRun) { resolve(); return; }
+        const t = Math.min(1, (now - start) / duration);
+        group.forEach((action) => {
+          const pts = samples(action);
+          const at = pointAlong(pts, t);
+          if (action.type === 'pass') {
+            live.ball = at;
+          } else if (action.from) {
+            live[action.from] = at;
+            if (action.type === 'dribble' && playBall === action.from) live.ball = at;
+          }
+        });
+        render();
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function playPhases(onlyCurrent) {
+    const token = ++playRun;
+    playing = true;
+    document.getElementById('playStatus').textContent = 'Playing…';
+    const from = onlyCurrent ? phaseIndex : 0;
+    const to = onlyCurrent ? phaseIndex : phases.length - 1;
+    const home = phaseIndex;
+    for (let i = from; i <= to; i += 1) {
+      if (token !== playRun) break;
+      phaseIndex = i;
+      selected = null;
+      Object.keys(live).forEach((key) => delete live[key]);
+      playBall = phase().ball;
+      render();
+      const groups = groupsOf(layoutActions(phase()));
+      for (let g = 0; g < groups.length; g += 1) {
+        if (token !== playRun) break;
+        groups[g].forEach((action) => {
+          if (action.type !== 'pass' && action.from && action.anchors[0]) {
+            live[action.from] = { x: action.anchors[0].x, y: action.anchors[0].y };
+          }
+        });
+        await animateGroup(groups[g], token);
+        groups[g].forEach((action) => {
+          const pts = samples(action);
+          if (action.type === 'pass' && action.to) {
+            playBall = action.to;
+            delete live.ball;
+          } else if (action.from && pts.length) {
+            live[action.from] = { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y };
+          }
+        });
+        render();
+      }
+    }
+    Object.keys(live).forEach((key) => delete live[key]);
+    playBall = null;
+    phaseIndex = home;
+    playing = false;
+    document.getElementById('playStatus').textContent = token === playRun ? 'Done' : 'Stopped';
+    render();
+  }
+
+  document.getElementById('playPhaseBtn').addEventListener('click', () => playPhases(true));
+  document.getElementById('playAllBtn').addEventListener('click', () => playPhases(false));
+  document.getElementById('stopBtn').addEventListener('click', () => { playRun += 1; playing = false; });
+
+  document.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!actor) {
+        setHint('Click the player first. Where he is standing is the start.');
+        return;
+      }
+      armed = btn.dataset.action;
+      document.querySelectorAll('[data-action]').forEach((other) => other.classList.toggle('is-on', other === btn));
+      setHint(armed === 'pass'
+        ? 'Click the player who catches the pass.'
+        : 'Click where he goes.');
+    });
+  });
+  document.getElementById('ballBtn').addEventListener('click', () => {
+    if (!actor || !String(actor).startsWith('o')) {
+      setHint('Click an offensive player, then give him the ball.');
+      return;
+    }
+    phase().ball = actor;
+    setHint('He has the ball.');
+    render();
+  });
+  document.getElementById('defenseBtn').addEventListener('click', () => {
+    const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
+    if (hasD) {
+      Object.keys(phase().positions).forEach((pid) => {
+        if (String(pid).startsWith('d')) delete phase().positions[pid];
+      });
+    } else {
+      Object.keys(DEFENSE).forEach((pid) => { phase().positions[pid] = Object.assign({}, DEFENSE[pid]); });
+    }
+    render();
+  });
+  document.getElementById('phaseNotes').addEventListener('input', (e) => { phase().notes = e.target.value; });
+
+  function commitAction(action) {
+    action.timing = 'after';
+    if (action.type === 'dribble' && action.from) phase().ball = action.from;
+    phase().actions.push(action);
+    selected = phase().actions.length - 1;
+    armed = null;
+    document.querySelectorAll('[data-action]').forEach((btn) => btn.classList.remove('is-on'));
+    setHint('Added. Click the next player, or press Play this picture.');
+    render();
+  }
+
+  function onCourtRelease(p, moved) {
+    const pid = hitPlayer(p);
+    if (pid && !moved) {
+      if (armed === 'pass') {
+        if (!actor) {
+          actor = pid;
+          setHint('Click Pass, then click who catches it.');
+          render();
+          return;
+        }
+        if (pid === actor || !String(pid).startsWith('o')) {
+          setHint('Click another offensive player to catch the pass.');
+          return;
+        }
+        const from = phase().positions[actor];
+        const to = phase().positions[pid];
+        phase().ball = pid;
+        commitAction({
+          type: 'pass',
+          from: actor,
+          to: pid,
+          dest: { x: to.x, y: to.y },
+          anchors: [{ x: from.x, y: from.y }, { x: to.x, y: to.y }],
+        });
+        return;
+      }
+      if (armed && armed !== 'pass' && pid !== actor) {
+        const spot = phase().positions[pid];
+        const start = phase().positions[actor];
+        commitAction({
+          type: armed,
+          from: actor,
+          to: actor,
+          dest: { x: spot.x, y: spot.y },
+          anchors: [{ x: start.x, y: start.y }, { x: spot.x, y: spot.y }],
+        });
+        return;
+      }
+      actor = pid;
+      armed = null;
+      document.querySelectorAll('[data-action]').forEach((btn) => btn.classList.remove('is-on'));
+      setHint('He starts here. Click Cut, Pass, Dribble, or Screen, then where he goes.');
+      render();
+      return;
+    }
+    if (!pid && armed && armed !== 'pass' && actor) {
+      const start = phase().positions[actor];
+      if (!start || dist(start, p) < 12) {
+        setHint('Click a spot away from where he is standing.');
+        return;
+      }
+      commitAction({
+        type: armed,
+        from: actor,
+        to: actor,
+        dest: { x: p.x, y: p.y },
+        anchors: [{ x: start.x, y: start.y }, { x: p.x, y: p.y }],
+      });
+      return;
+    }
+    if (!pid && armed === 'pass') setHint('Click the player who catches the pass.');
+    else if (!actor) setHint('Click the player who moves. That spot is the start.');
+  }
+
+  svg.addEventListener('pointerdown', (e) => {
+    if (playing) { playRun += 1; playing = false; return; }
+    const p = svgPoint(e);
+    const pid = hitPlayer(p);
+    if (!pid) { drag = { kind: 'court', start: p, moved: false }; return; }
+    drag = { kind: 'player', pid, start: p, moved: false };
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag || drag.kind !== 'player') return;
+    const p = svgPoint(e);
+    drag.moved = drag.moved || dist(drag.start, p) > 4;
+    if (drag.moved) phase().positions[drag.pid] = { x: p.x, y: p.y };
+    render();
+  });
+  svg.addEventListener('pointerup', (e) => {
+    if (!drag) return;
+    const moved = !!drag.moved;
+    const p = svgPoint(e);
+    drag = null;
+    if (moved) { render(); return; }
+    onCourtRelease(p, false);
+  });
+
+  function picturePayload() {
+    return phases.map((item, index) => ({
+      label: item.label || `Picture ${index + 1}`,
+      notes: item.notes || '',
+      positions: item.positions,
+      ball: item.ball || 'o1',
+      source_image: item.source_image || '',
+      movements: layoutActions(item).map((action) => ({
+        from: action.from,
+        to: action.to || action.from,
+        type: action.type,
+        timing: action.timing || 'after',
+        dest: action.dest || (action.anchors && action.anchors[1]) || null,
+        anchors: action.anchors,
+        points: samples(action),
+      })),
+    }));
+  }
+
+  async function savePictures() {
+    const nameInput = document.getElementById('playName');
+    if (!nameInput.value.trim()) {
+      setHint('Type a play name so this picture can be saved.');
+      nameInput.focus();
+      return false;
+    }
+    document.getElementById('stepsJson').value = JSON.stringify(picturePayload());
+    const body = new FormData(document.getElementById('drawForm'));
+    body.set('stay', '1');
+    setHint('Saving this picture…');
+    try {
+      const resp = await fetch(document.getElementById('drawForm').action, { method: 'POST', body: body });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        setHint('This picture did not save. Try again.');
+        return false;
+      }
+      const idInput = document.querySelector('input[name="play_id"]');
+      if (data.play_id && idInput) {
+        idInput.value = String(data.play_id);
+        const nextUrl = `/playbook/draw/${data.play_id}`;
+        if (location.pathname !== nextUrl) history.replaceState(null, '', nextUrl);
+      }
+      return true;
+    } catch (err) {
+      setHint('This picture did not save. Try again.');
+      return false;
+    }
+  }
+
+  document.getElementById('drawForm').addEventListener('submit', () => {
+    document.getElementById('stepsJson').value = JSON.stringify(picturePayload());
+  });
+
+  drawCourt();
+  render();
+})();
+</script>
+{% endblock %}

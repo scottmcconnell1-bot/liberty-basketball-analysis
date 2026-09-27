@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "play_id": 85,
+  "updated_at": "2026-09-18T03:28:40Z",
+  "source": "auto_extract",
+  "sticky": true,
+  "steps": [
+    {
+      "step_index": 0,
+      "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0014.png",
+      "court_frac": {
+        "h": 0.5193,
+        "w": 0.7149,
+        "x": 0.1434,
+        "y": 0.2237
+      },
+      "positions": {
+        "o1": {
+          "x": 246.84,
+          "y": 230.47
+        },
+        "o2": {
+          "x": 347.19,
+          "y": 168.38
+        },
+        "o3": {
+          "x": 150.71,
+          "y": 168.38
+        },
+        "o4": {
+          "x": 322.89,
+          "y": 69.18
+        },
+        "o5": {
+          "x": 179.24,
+          "y": 65.63
+        }
+      }
+    }
+  ]
+}

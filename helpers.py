@@ -16,7 +16,7 @@ import threading
 import time
 from datetime import datetime
 from functools import wraps
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 
 from flask import g, current_app, request, render_template, abort, redirect, url_for, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -54,11 +54,14 @@ EVENT_TYPE_SEEDS = [
     ("steal", "Steal", "defense", 1, 0, 1),
     ("block", "Block", "defense", 1, 0, 0),
     ("turnover", "Turnover", "turnover", 1, 0, 1),
+    ("foul", "Foul", "foul", 1, 0, 0),
     ("foul_personal", "Personal foul", "foul", 1, 0, 0),
     ("foul_shooting", "Shooting foul", "foul", 1, 0, 0),
+    ("foul_technical", "Technical foul", "foul", 1, 0, 0),
     ("substitution", "Substitution", "rotation", 0, 0, 0),
     ("timeout", "Timeout", "game_management", 0, 0, 0),
     ("jump_ball", "Jump ball", "game_management", 0, 0, 1),
+    ("tip_off", "Tip-off", "game_management", 0, 0, 1),
     ("period_start", "Period start", "clock", 0, 0, 1),
     ("period_end", "Period end", "clock", 0, 0, 1),
     # Legacy event_type aliases. These bridge pre-taxonomy events so the
@@ -73,6 +76,14 @@ EVENT_TYPE_SEEDS = [
     ("miss", "Missed field goal (AI)", "shot", 1, 0, 0),
     ("possession_change", "Possession change (AI)", "possession", 0, 0, 1),
 ]
+
+FOUL_EVENT_CODES = ("foul", "foul_personal", "foul_shooting", "foul_technical")
+
+
+def is_foul_event(code: str | None) -> bool:
+    """True for the Foul category and its Shooting, Personal, and Technical types."""
+    return str(code or "").strip().lower() in FOUL_EVENT_CODES
+
 
 BASE_MODULE_ENTITLEMENT = {
     "module_key": BASE_PLATFORM,
@@ -539,6 +550,7 @@ def generate_practice_ai_notes_llm(practice, settings_snapshot=None):
     if model not in available_models:
         return None, "none"
 
+    practice = dict(practice)  # callers pass sqlite3.Row, which has no .get()
     plan_text = practice.get("plan_text") or ""
     coach_notes = practice.get("coach_notes") or ""
     practice_date = practice.get("practice_date", "")
@@ -710,7 +722,12 @@ def build_settings_catalog():
             {
                 "value": "expanded",
                 "label": "Expanded heuristic generator",
-                "note": "Recommended. Builds on the current detections to emit possession changes, shots, makes, misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
+                "note": "High volume (noisy). Emits possession changes, shots, makes/misses, rebounds, assists, steals, turnovers, blocks, and fouls.",
+            },
+            {
+                "value": "precision",
+                "label": "Precision generator (recommended)",
+                "note": "Jason baseline: fewer, better-supported events for Review (~9% precision vs ~1% expanded on Wilder Q1). Requires rebuild/reanalyze to take effect on a game.",
             },
             {
                 "value": "precision",
@@ -795,8 +812,19 @@ def build_analysis_settings_snapshot(runtime_settings):
     }
 
 
-def build_rerun_game_id(base_game_id):
-    return f"{base_game_id}__rerun_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+def build_rerun_game_id(base_game_id, db=None):
+    key = f"{base_game_id}__rerun_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    if db is None:
+        return key
+    # Two requests in the same second must not share a key (the second one
+    # supersedes the first, which would then point at the same analysis_key).
+    candidate, n = key, 1
+    while db.execute(
+        "SELECT 1 FROM analysis_runs WHERE analysis_key=? LIMIT 1", (candidate,)
+    ).fetchone():
+        n += 1
+        candidate = f"{key}_{n}"
+    return candidate
 
 
 def default_run_label(run_kind, snapshot):
@@ -855,7 +883,7 @@ def ensure_primary_run_metadata(db, video_row, settings_snapshot=None):
 
 def queue_analysis_run(db, video_row, runtime_settings, run_kind="rerun", run_label=None):
     settings_snapshot = build_analysis_settings_snapshot(runtime_settings)
-    analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"])
+    analysis_key = video_row["game_id"] if run_kind == "primary" else build_rerun_game_id(video_row["game_id"], db)
     run_label = (run_label or "").strip() or default_run_label(run_kind, settings_snapshot)
     run_cur = db.execute(
         """INSERT INTO analysis_runs
@@ -956,8 +984,20 @@ def _analysis_run_row_video_params(run_row):
     )
 
 
+def normalize_analysis_game_id(game_id: str) -> str:
+    """Undo URL encoding so Jr High keys with commas match the database."""
+    text = str(game_id or "").strip()
+    for _ in range(3):
+        nxt = unquote(text)
+        if nxt == text:
+            break
+        text = nxt
+    return text
+
+
 def resolve_analysis_run_for_progress(db, game_id: str):
     """Return the analysis run row the progress UI should display."""
+    game_id = normalize_analysis_game_id(game_id)
     row = db.execute(
         "SELECT * FROM analysis_runs WHERE analysis_key=? ORDER BY id DESC LIMIT 1",
         (game_id,),
@@ -1133,6 +1173,20 @@ def _read_log_tail(log_path: str, limit: int = 500) -> str:
         return ""
 
 
+def _read_log_head_and_tail(log_path: str, head: int = 4000, tail: int = 16000) -> str:
+    """PID is written at start; progress/errors are at the end of a long run."""
+    try:
+        size = os.path.getsize(log_path)
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
+            if size <= head + tail:
+                return handle.read()
+            start = handle.read(head)
+            handle.seek(max(0, size - tail))
+            return start + "\n" + handle.read()
+    except OSError:
+        return ""
+
+
 def count_detections_for_analysis(
     db,
     *,
@@ -1142,7 +1196,19 @@ def count_detections_for_analysis(
     video_relational_game_id=None,
     base_analysis_key=None,
 ) -> int:
-    """Count detections for a video/analysis run across legacy and relational keys."""
+    """Count detections for a video/analysis run across legacy and relational keys.
+
+    When the run's own analysis_key has detections, only those are counted: a rerun
+    shares relational_game_id / base key with the primary run, so the wider lookup
+    would add the other runs' detections. The wider lookup stays as the fallback for
+    legacy rows that were stored under another key.
+    """
+    if analysis_key:
+        own = db.execute(
+            "SELECT COUNT(*) AS c FROM detections d WHERE d.game_id = ?", (analysis_key,)
+        ).fetchone()["c"]
+        if own:
+            return own
     conditions = []
     params = []
     for rel_id in {relational_game_id, video_relational_game_id} - {None}:
@@ -1157,6 +1223,23 @@ def count_detections_for_analysis(
     return db.execute(query, params).fetchone()["c"]
 
 
+def count_rows_for_run(db, table, analysis_key, relational_game_id=None) -> int:
+    """Rows of `table` (detections/events) belonging to one analysis run.
+
+    Rows stored under the run's own analysis key win. Only when there are none
+    (legacy rows keyed differently) does it fall back to the shared relational game,
+    so a rerun never reports the primary run's rows as its own.
+    """
+    if table not in ("detections", "events"):
+        raise ValueError(f"unsupported table: {table}")
+    own = db.execute(f"SELECT COUNT(*) AS c FROM {table} WHERE game_id = ?", (analysis_key,)).fetchone()["c"]
+    if own or relational_game_id is None:
+        return own
+    return db.execute(
+        f"SELECT COUNT(*) AS c FROM {table} WHERE relational_game_id = ?", (relational_game_id,)
+    ).fetchone()["c"]
+
+
 def count_events_for_analysis(
     db,
     *,
@@ -1165,7 +1248,15 @@ def count_events_for_analysis(
     video_game_id=None,
     base_analysis_key=None,
 ) -> int:
-    """Count events for a video/analysis run across legacy and relational keys."""
+    """Count events for a video/analysis run across legacy and relational keys.
+
+    Same rule as count_detections_for_analysis: a run with its own rows counts only
+    those, because reruns share relational_game_id / base key with the primary run.
+    """
+    if analysis_key:
+        own = count_rows_for_run(db, "events", analysis_key)
+        if own:
+            return own
     conditions = []
     params = []
     if relational_game_id is not None:
@@ -1268,12 +1359,198 @@ def heal_failed_analysis_run_with_events(db, game_id: str) -> bool:
     return True
 
 
+_FRAME_STEP_RE = re.compile(r"frame\s+(\d+)\s*/\s*(\d+)", re.I)
+_LAUNCHER_PID_RE = re.compile(r"Started analysis_launcher\.py PID=(\d+)")
+STALE_WATCHDOG_MESSAGE_MARKERS = (
+    "stopped responding",
+    "pip install scikit-learn",
+)
+ANALYSIS_WORKER_STOPPED_MESSAGE = (
+    "Analysis worker stopped. Open Film Tool or Video Library and click Retry."
+)
+EVENT_REBUILD_INTERRUPTED_MESSAGE = (
+    "Event rebuild was interrupted before it finished. Click Rebuild again."
+)
+SYNC_EVENT_REBUILD_STALE_SECONDS = 3600
+SYNC_EVENT_REBUILD_LOG_MARKER = "Rebuild events started in web worker."
+
+
+def parse_analysis_progress_frames(step):
+    """Parse YOLO step text like 'Detecting objects: frame 1000/97475'."""
+    match = _FRAME_STEP_RE.search(step or "")
+    if not match:
+        return None, None
+    return int(match.group(1)), int(match.group(2))
+
+
+def parse_analysis_launcher_pid(content: str):
+    match = _LAUNCHER_PID_RE.search(content or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def analysis_log_reports_completed(content: str) -> bool:
+    return "analysis_runs updated to 'completed'" in (content or "")
+
+
+def is_false_stale_watchdog_failure(error_message: str | None) -> bool:
+    msg = (error_message or "").lower()
+    return any(marker in msg for marker in STALE_WATCHDOG_MESSAGE_MARKERS)
+
+
+def progress_from_analysis_log(content: str):
+    """Return (pct, step) from the newest useful log line."""
+    if not content:
+        return None, None
+    if analysis_log_reports_completed(content):
+        return 100, "Done"
+    for line in reversed(content.splitlines()):
+        current, total = parse_analysis_progress_frames(line)
+        if current is not None:
+            pct = int(current / total * 100) if total else 0
+            return pct, f"Detecting objects: frame {current}/{total}"
+        lower = line.lower()
+        if "generating events" in lower:
+            return 50, "Generating events…"
+        if "running enhanced analysis" in lower or "enhanced film analysis" in lower:
+            return 75, "Running enhanced analysis…"
+    return None, None
+
+
+def analysis_worker_is_alive(pid, analysis_key: str | None = None) -> bool:
+    """True when the analysis_launcher PID is still this game's worker."""
+    if not pid:
+        return False
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if psutil is not None:
+        try:
+            proc = psutil.Process(pid)
+            if not proc.is_running():
+                return False
+            cmd = " ".join(proc.cmdline() or []).lower()
+            if "analysis_launcher.py" not in cmd and "ai_analyzer.py" not in cmd:
+                return False
+            if analysis_key and str(analysis_key).lower() not in cmd:
+                return False
+            return True
+        except psutil.NoSuchProcess:
+            return False
+        except psutil.AccessDenied:
+            return True
+        except Exception:
+            return False
+    if os.name == "nt":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return kernel32.GetLastError() == 5
+        except Exception:
+            return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def find_live_analysis_worker(analysis_key: str):
+    """Return PID of a live analysis_launcher for this analysis key, if any."""
+    if not analysis_key or psutil is None:
+        return None
+    needle = str(analysis_key).lower()
+    try:
+        for proc in psutil.process_iter(["pid", "cmdline"]):
+            try:
+                cmd = " ".join((proc.info or {}).get("cmdline") or []).lower()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+            if needle not in cmd:
+                continue
+            if "analysis_launcher.py" in cmd or "ai_analyzer.py" in cmd:
+                return proc.info["pid"]
+    except Exception:
+        return None
+    return None
+
+
+def _analysis_worker_alive_for_run(game_id: str, log_content: str) -> bool:
+    if find_live_analysis_worker(game_id):
+        return True
+    return analysis_worker_is_alive(parse_analysis_launcher_pid(log_content), game_id)
+
+
+def _mark_analysis_run_failed(db, row_id, message: str) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='failed',
+               error_message=?,
+               progress_step='Failed',
+               completed_at=CURRENT_TIMESTAMP
+           WHERE id=?""",
+        (message, row_id),
+    )
+    db.commit()
+
+
+def _mark_analysis_run_completed(db, row_id) -> None:
+    db.execute(
+        """UPDATE analysis_runs
+           SET status='completed',
+               progress_pct=100,
+               progress_step='Done',
+               completed_at=CURRENT_TIMESTAMP,
+               error_message=NULL
+           WHERE id=?""",
+        (row_id,),
+    )
+    db.commit()
+
+
+def _restore_analysis_run_running(db, row_id, content: str) -> None:
+    pct, step = progress_from_analysis_log(content)
+    if pct is None:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='running',
+                   error_message=NULL,
+                   completed_at=NULL
+               WHERE id=?""",
+            (row_id,),
+        )
+    else:
+        db.execute(
+            """UPDATE analysis_runs
+               SET status='running',
+                   progress_pct=?,
+                   progress_step=?,
+                   error_message=NULL,
+                   completed_at=NULL
+               WHERE id=?""",
+            (pct, step, row_id),
+        )
+    db.commit()
+
+
 def reconcile_stuck_analysis_run(db, game_id: str) -> None:
     """Mark orphaned pending/running runs failed or completed based on logs."""
+    game_id = normalize_analysis_game_id(game_id)
     heal_failed_analysis_run_with_events(db, game_id)
 
     row = db.execute(
-        """SELECT id, status, progress_step
+        """SELECT id, status, progress_step, error_message
            FROM analysis_runs
            WHERE analysis_key=?
            ORDER BY id DESC
@@ -1287,98 +1564,73 @@ def reconcile_stuck_analysis_run(db, game_id: str) -> None:
         status = row["status"]
         progress_step = row["progress_step"]
         row_id = row["id"]
+        error_message = row["error_message"]
     else:
-        row_id, status, progress_step = row[0], row[1], row[2]
-    if status not in {"pending", "running"}:
+        row_id, status, progress_step, error_message = row[0], row[1], row[2], row[3]
+    if status not in {"pending", "running", "failed"}:
         return
 
     log_path = ai_analysis_log_path(game_id)
-    content = _read_log_tail(log_path, 8000) if os.path.exists(log_path) else ""
+    content = _read_log_head_and_tail(log_path) if os.path.exists(log_path) else ""
+    worker_alive = _analysis_worker_alive_for_run(game_id, content)
+
+    if analysis_log_reports_completed(content) and not worker_alive:
+        _mark_analysis_run_completed(db, row_id)
+        return
+
+    if worker_alive:
+        if status == "failed" and (
+            is_false_stale_watchdog_failure(error_message) or not error_message
+        ):
+            _restore_analysis_run_running(db, row_id, content)
+        return
+
+    if status == "failed":
+        return
 
     if status == "running":
-        if "analysis_runs updated to 'completed'" in content:
-            db.execute(
-                """UPDATE analysis_runs
-                   SET status='completed',
-                       progress_pct=100,
-                       progress_step='Done',
-                       completed_at=CURRENT_TIMESTAMP,
-                       error_message=NULL
-                   WHERE id=?""",
-                (row_id,),
-            )
-            db.commit()
-            return
-
-        error_message = _analysis_log_error_message(content)
-        if error_message:
-            db.execute(
-                """UPDATE analysis_runs
-                   SET status='failed',
-                       error_message=?,
-                       progress_step='Failed',
-                       completed_at=CURRENT_TIMESTAMP
-                   WHERE id=?""",
-                (error_message, row_id),
-            )
-            db.commit()
+        log_error = _analysis_log_error_message(content)
+        if log_error:
+            _mark_analysis_run_failed(db, row_id, log_error)
             return
 
         if _is_sync_event_rebuild_step(progress_step):
+            # In-process rebuild: no worker PID to probe. The web request logs its
+            # start; if nothing has touched the log since, for longer than any
+            # request can live (gunicorn kills it far sooner), the rebuild died.
+            # Without that start line the log age says nothing about the rebuild.
+            if SYNC_EVENT_REBUILD_LOG_MARKER in content and os.path.exists(log_path):
+                age_seconds = time.time() - os.path.getmtime(log_path)
+                if age_seconds > SYNC_EVENT_REBUILD_STALE_SECONDS:
+                    _mark_analysis_run_failed(db, row_id, EVENT_REBUILD_INTERRUPTED_MESSAGE)
+            return
+
+        if parse_analysis_launcher_pid(content) or "[launcher] Started" in content:
+            _mark_analysis_run_failed(db, row_id, ANALYSIS_WORKER_STOPPED_MESSAGE)
             return
 
         if content and os.path.exists(log_path):
             age_seconds = time.time() - os.path.getmtime(log_path)
             if age_seconds > 1800:
-                db.execute(
-                    """UPDATE analysis_runs
-                       SET status='failed',
-                           error_message=?,
-                           progress_step='Failed',
-                           completed_at=CURRENT_TIMESTAMP
-                       WHERE id=?""",
-                    (
-                        "Analysis run stopped responding. Check logs, install missing "
-                        "packages (pip install scikit-learn), then click Rebuild again.",
-                        row["id"] if hasattr(row, "keys") else row_id,
-                    ),
-                )
-                db.commit()
+                _mark_analysis_run_failed(db, row_id, ANALYSIS_WORKER_STOPPED_MESSAGE)
         return
 
     if not os.path.exists(log_path):
         return
 
-    error_message = _analysis_log_error_message(content)
-    if error_message:
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='failed',
-                   error_message=?,
-                   progress_step='Failed',
-                   completed_at=CURRENT_TIMESTAMP
-               WHERE id=?""",
-            (error_message, row_id),
-        )
-        db.commit()
+    log_error = _analysis_log_error_message(content)
+    if log_error:
+        _mark_analysis_run_failed(db, row_id, log_error)
         return
 
     age_seconds = time.time() - os.path.getmtime(log_path)
     if age_seconds > 45 and "[launcher] Started" in content:
-        db.execute(
-            """UPDATE analysis_runs
-               SET status='failed',
-                   error_message=?,
-                   progress_step='Failed',
-                   completed_at=CURRENT_TIMESTAMP
-               WHERE id=?""",
-            (
-                "Analysis worker stopped before processing started. "
-                "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
-                row_id,
-            ),
+        _mark_analysis_run_failed(
+            db,
+            row_id,
+            "Analysis worker stopped before processing started. "
+            "Check logs/ for details, install AI packages if needed, then click Run AI Analysis again.",
         )
-        db.commit()
 
 
 def start_analysis_subprocess(game_id, video_path):
@@ -1497,7 +1749,7 @@ def extract_local_path(value):
     return urlunsplit(("", "", path, split_value.query, split_value.fragment))
 
 
-def safe_return_path(value, fallback="debug_page"):
+def safe_return_path(value, fallback="core.debug_page"):
     path = extract_local_path(value)
     if path:
         return path
@@ -2170,9 +2422,31 @@ def _backfill_event_participants_stage4a(db):
     )
 
 
+def ensure_detection_indexes(db):
+    """Index the per-frame detection lookup (game_id, frame_number).
+
+    The analyzer reads each frame's detections back by game and frame. Without this
+    index SQLite scans the whole detections table for every frame, so analysis gets
+    slower as the table grows (~1 fps on the live table). Idempotent; a database
+    without the table yet is left alone. Creating it on a large table takes a while once.
+    """
+    if not db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='detections'"
+    ).fetchone():
+        return
+    # A playbook reload must not build this index while an analysis run is writing.
+    if os.environ.get("LIBERTY_SKIP_DETECTION_INDEX") == "1":
+        return
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_detections_game_frame ON detections(game_id, frame_number)"
+    )
+    db.commit()
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
+    ensure_detection_indexes(db)
 
     # ── New tables (idempotent) ──────────────────────────────
     db.executescript("""
@@ -3300,6 +3574,15 @@ def render_practices_page(*, error=None, message=None, filters=None, edit_practi
         practice_status_options=PRACTICE_STATUS_OPTIONS,
         practice_plan_source_options=PRACTICE_PLAN_SOURCE_OPTIONS,
     )
+
+
+def analysis_results_url_for(game_id) -> str | None:
+    """Build a path-safe Analysis Results URL (commas and other chars encoded)."""
+    if not game_id:
+        return None
+    from urllib.parse import quote
+
+    return f"/analysis/{quote(str(game_id), safe='')}"
 
 
 def refresh_game_stats(db, game_id):

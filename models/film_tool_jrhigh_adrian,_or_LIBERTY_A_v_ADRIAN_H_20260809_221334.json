@@ -1,0 +1,2000 @@
+{
+  "version": 1,
+  "source": "teach_from_film_tags",
+  "analysis_key": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+  "match_tolerance_ms": 10000,
+  "clock_offset_ms": 0,
+  "window_end_ms": 960700,
+  "shot_label_anchors": [
+    {
+      "family": "shot",
+      "center_ms": 19800,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 21300
+    },
+    {
+      "family": "shot",
+      "center_ms": 38000,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 39400
+    },
+    {
+      "family": "shot",
+      "center_ms": 40800,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 41900
+    },
+    {
+      "family": "shot",
+      "center_ms": 48200,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 48600
+    },
+    {
+      "family": "shot",
+      "center_ms": 89400,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 88400
+    },
+    {
+      "family": "shot",
+      "center_ms": 118000,
+      "radius_ms": 5300,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 120800
+    },
+    {
+      "family": "shot",
+      "center_ms": 135000,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 134600
+    },
+    {
+      "family": "shot",
+      "center_ms": 167400,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "make",
+      "manual_ts_ms": 167200
+    },
+    {
+      "family": "shot",
+      "center_ms": 192800,
+      "radius_ms": 9300,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 186000
+    },
+    {
+      "family": "shot",
+      "center_ms": 192800,
+      "radius_ms": 5100,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 190200
+    },
+    {
+      "family": "shot",
+      "center_ms": 217200,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 217000
+    },
+    {
+      "family": "shot",
+      "center_ms": 238000,
+      "radius_ms": 4100,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 236400
+    },
+    {
+      "family": "shot",
+      "center_ms": 249600,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 250200
+    },
+    {
+      "family": "shot",
+      "center_ms": 261000,
+      "radius_ms": 10000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 268500
+    },
+    {
+      "family": "shot",
+      "center_ms": 280800,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 280200
+    },
+    {
+      "family": "shot",
+      "center_ms": 342200,
+      "radius_ms": 9200,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 335500
+    },
+    {
+      "family": "shot",
+      "center_ms": 342200,
+      "radius_ms": 6000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 338700
+    },
+    {
+      "family": "shot",
+      "center_ms": 342200,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 342800
+    },
+    {
+      "family": "shot",
+      "center_ms": 372640,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 373700
+    },
+    {
+      "family": "shot",
+      "center_ms": 391680,
+      "radius_ms": 4280,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 389900
+    },
+    {
+      "family": "shot",
+      "center_ms": 460640,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 461000
+    },
+    {
+      "family": "shot",
+      "center_ms": 502200,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 501900
+    },
+    {
+      "family": "shot",
+      "center_ms": 514600,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 515000
+    },
+    {
+      "family": "shot",
+      "center_ms": 531000,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 530600
+    },
+    {
+      "family": "shot",
+      "center_ms": 539000,
+      "radius_ms": 4600,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 536900
+    },
+    {
+      "family": "shot",
+      "center_ms": 568000,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 566900
+    },
+    {
+      "family": "shot",
+      "center_ms": 590600,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 590900
+    },
+    {
+      "family": "shot",
+      "center_ms": 639400,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 638300
+    },
+    {
+      "family": "shot",
+      "center_ms": 666000,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 666800
+    },
+    {
+      "family": "shot",
+      "center_ms": 672400,
+      "radius_ms": 4200,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 674100
+    },
+    {
+      "family": "shot",
+      "center_ms": 707400,
+      "radius_ms": 4700,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 705200
+    },
+    {
+      "family": "shot",
+      "center_ms": 721800,
+      "radius_ms": 7300,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 717000
+    },
+    {
+      "family": "shot",
+      "center_ms": 728800,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 728800
+    },
+    {
+      "family": "shot",
+      "center_ms": 755000,
+      "radius_ms": 4000,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 755400
+    },
+    {
+      "family": "shot",
+      "center_ms": 788000,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 787500
+    },
+    {
+      "family": "shot",
+      "center_ms": 803400,
+      "radius_ms": 4100,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 801800
+    },
+    {
+      "family": "shot",
+      "center_ms": 831800,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 832400
+    },
+    {
+      "family": "shot",
+      "center_ms": 847800,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 846800
+    },
+    {
+      "family": "shot",
+      "center_ms": 858200,
+      "radius_ms": 4500,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 856200
+    },
+    {
+      "family": "shot",
+      "center_ms": 895400,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 896600
+    },
+    {
+      "family": "shot",
+      "center_ms": 912000,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "miss",
+      "manual_ts_ms": 912600
+    },
+    {
+      "family": "shot",
+      "center_ms": 937400,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 936200
+    },
+    {
+      "family": "shot",
+      "center_ms": 949440,
+      "radius_ms": 4000,
+      "shot_type": "ft",
+      "shot_result": "make",
+      "manual_ts_ms": 949300
+    },
+    {
+      "family": "shot",
+      "center_ms": 949440,
+      "radius_ms": 11260,
+      "shot_type": "3pt",
+      "shot_result": "miss",
+      "manual_ts_ms": 958200
+    }
+  ],
+  "positive_windows": [
+    {
+      "center_ms": 8900,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 8900,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 21300,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 23700,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 35200,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 35200,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 39400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 40000,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 41900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 41900,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist|NA"
+    },
+    {
+      "center_ms": 46200,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 46200,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 48600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 56700,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 88400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 101200,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 120800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 134600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 167200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Make"
+    },
+    {
+      "center_ms": 167200,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist|NA"
+    },
+    {
+      "center_ms": 186000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 188400,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 190200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 190200,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 200600,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 217000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 220200,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 236400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 250200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 268500,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 270000,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 280200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 298700,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 317200,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 335500,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 338500,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 338700,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 341700,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 342800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 373700,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 376000,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 387200,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 387200,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 389900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 414700,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 414700,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 421600,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 443500,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 461000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 464900,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 482700,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 501900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 515000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 516500,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 530600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 532800,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 536900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 538600,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 539900,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 566900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 590900,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 613000,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 638300,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 666800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 669700,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 674100,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 705200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 708600,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 717000,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 728800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Miss"
+    },
+    {
+      "center_ms": 755400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 787500,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 787500,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist|NA"
+    },
+    {
+      "center_ms": 797400,
+      "radius_ms": 10000,
+      "family": "steal",
+      "manual_key": "Steal|NA"
+    },
+    {
+      "center_ms": 797400,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 801800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    },
+    {
+      "center_ms": 801800,
+      "radius_ms": 10000,
+      "family": "assist",
+      "manual_key": "Assist|NA"
+    },
+    {
+      "center_ms": 809300,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 832400,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 846800,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 850000,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "DefRebound|NA"
+    },
+    {
+      "center_ms": 856200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    },
+    {
+      "center_ms": 859500,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 862600,
+      "radius_ms": 10000,
+      "family": "turnover",
+      "manual_key": "Turnover|NA"
+    },
+    {
+      "center_ms": 873700,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 896600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 912600,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Miss"
+    },
+    {
+      "center_ms": 916000,
+      "radius_ms": 10000,
+      "family": "rebound",
+      "manual_key": "OffRebound|NA"
+    },
+    {
+      "center_ms": 915600,
+      "radius_ms": 10000,
+      "family": "foul",
+      "manual_key": "Foul|NA"
+    },
+    {
+      "center_ms": 936200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 949300,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "FT|Make"
+    },
+    {
+      "center_ms": 958200,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "3PT|Miss"
+    }
+  ],
+  "shot_type_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "classes": {
+      "2pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          43.169109,
+          -8.561788,
+          0.0,
+          0.81695,
+          1.10521
+        ],
+        "bias": 1.656227
+      },
+      "3pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          12.271784,
+          1.343039,
+          0.0,
+          0.673354,
+          0.083133
+        ],
+        "bias": 1.29068
+      },
+      "ft": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          -35.873881,
+          -23.190322,
+          0.0,
+          -1.46411,
+          -1.039316
+        ],
+        "bias": -2.975132
+      }
+    },
+    "min_margin": 0.2
+  },
+  "make_miss_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "weights": [
+      -16.907683,
+      14.923545,
+      0.0,
+      0.272077,
+      6.445123
+    ],
+    "bias": 0.514447,
+    "threshold": 0.35,
+    "train_accuracy": 0.5349
+  },
+  "keep_clf": {
+    "features": [
+      "conf",
+      "is_shot",
+      "is_rebound",
+      "is_steal",
+      "is_turnover",
+      "is_assist",
+      "lat_norm",
+      "rise_norm",
+      "secondary",
+      "local_density"
+    ],
+    "weights": [
+      -0.81501,
+      3.287109,
+      0.245181,
+      -0.168947,
+      -0.047871,
+      -0.232647,
+      -0.181085,
+      0.458763,
+      0.0,
+      0.452251
+    ],
+    "bias": -2.781061,
+    "threshold": 0.54,
+    "train_f1": 0.84
+  },
+  "fp_suppress": {
+    "orphan_steal_to": true,
+    "orphan_steal_to_max_shot_gap_ms": 6000,
+    "require_shot_positive_window": true,
+    "drop_unanchored_shot_misses": true,
+    "require_steal_to_positive_window": true,
+    "cap_shots_to_manual_windows": true
+  },
+  "supervised_templates": [
+    {
+      "timestamp_ms": 8900,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 8900,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 21300,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "11 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 23700,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 35200,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 35200,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 39400,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 40000,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 41900,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 41900,
+      "radius_ms": 10000,
+      "match_key": "Assist|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 46200,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 46200,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 48600,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 56700,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "23 - Rodus",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 88400,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 101200,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 120800,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "23 - Rodus",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 134600,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "23 - Rodus",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 167200,
+      "radius_ms": 10000,
+      "match_key": "3PT|Make",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 167200,
+      "radius_ms": 10000,
+      "match_key": "Assist|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 186000,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 188400,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 190200,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 190200,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 200600,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 217000,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 220200,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 236400,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "25 - Alvarez",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 250200,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "25 - Alvarez",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 268500,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 270000,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 280200,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 298700,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "11 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 317200,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 335500,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 338500,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 338700,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 341700,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 342800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 373700,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 376000,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "11 - Flores",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 387200,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 387200,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 389900,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 414700,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 414700,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "3 - Kariuki",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 421600,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 443500,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "3 - Kariuki",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 461000,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 464900,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "53 - Price",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 482700,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "11 - Flores",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 501900,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "23 - Rodus",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 515000,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "23 - Rodus",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 516500,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "11 - Flores",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 530600,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 532800,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 536900,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 538600,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "15 - Allison",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 539900,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "53 - Price",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 566900,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 590900,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 613000,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 638300,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 666800,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 669700,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 674100,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 705200,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 708600,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 717000,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 728800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Miss",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 755400,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 787500,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 787500,
+      "radius_ms": 10000,
+      "match_key": "Assist|NA",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 797400,
+      "radius_ms": 10000,
+      "match_key": "Steal|NA",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "steal"
+    },
+    {
+      "timestamp_ms": 797400,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "22 - Foster",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 801800,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 801800,
+      "radius_ms": 10000,
+      "match_key": "Assist|NA",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "assist"
+    },
+    {
+      "timestamp_ms": 809300,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "0 - Sullivan",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 832400,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 846800,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "12 - Linkhart",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 850000,
+      "radius_ms": 10000,
+      "match_key": "DefRebound|NA",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "defensive"
+    },
+    {
+      "timestamp_ms": 856200,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "40 - Dayley",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 859500,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 862600,
+      "radius_ms": 10000,
+      "match_key": "Turnover|NA",
+      "player": "45 - Musgrave",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "turnover"
+    },
+    {
+      "timestamp_ms": 873700,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 896600,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 912600,
+      "radius_ms": 10000,
+      "match_key": "FT|Miss",
+      "player": "13 - Mendoza",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "miss"
+    },
+    {
+      "timestamp_ms": 916000,
+      "radius_ms": 10000,
+      "match_key": "OffRebound|NA",
+      "player": "25 - Alvarez",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "rebound",
+      "rebound_type": "offensive"
+    },
+    {
+      "timestamp_ms": 915600,
+      "radius_ms": 10000,
+      "match_key": "Foul|NA",
+      "player": "51 - Peterson",
+      "team": "",
+      "confidence": 0.55,
+      "event_type": "foul"
+    },
+    {
+      "timestamp_ms": 936200,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "25 - Alvarez",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 949300,
+      "radius_ms": 10000,
+      "match_key": "FT|Make",
+      "player": "25 - Alvarez",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "ft",
+      "shot_result": "make"
+    },
+    {
+      "timestamp_ms": 958200,
+      "radius_ms": 10000,
+      "match_key": "3PT|Miss",
+      "player": "21 - Colman",
+      "team": "",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "3pt",
+      "shot_result": "miss"
+    }
+  ],
+  "learned_event_min_confidence": {
+    "shot": 0.48,
+    "make": 0.4,
+    "miss": 0.4,
+    "rebound": 0.52,
+    "block": 0.95,
+    "assist": 0.4,
+    "steal": 0.48,
+    "turnover": 0.48,
+    "foul": 0.55
+  },
+  "train_snapshot": {
+    "manual_tags": 92,
+    "ai_window": 1432,
+    "shot_anchors": 44,
+    "shot_train_rows": 43,
+    "keep_train_rows": 1432,
+    "keep_train_f1": 0.84,
+    "make_train_accuracy": 0.5349,
+    "manual_type_counts": {
+      "Steal": 6,
+      "Turnover": 11,
+      "3PT": 7,
+      "OffRebound": 10,
+      "2PT": 22,
+      "Assist": 4,
+      "Foul": 11,
+      "FT": 15,
+      "DefRebound": 6
+    }
+  }
+}

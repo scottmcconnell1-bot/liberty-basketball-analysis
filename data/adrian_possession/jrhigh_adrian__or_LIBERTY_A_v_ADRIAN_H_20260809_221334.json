@@ -1,0 +1,21 @@
+{
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+  "opening_tip": {
+    "tip_ms": 960,
+    "winner_tracker": "5",
+    "control_ms": 1720,
+    "hold_ms": 13000,
+    "from_tracker": "8",
+    "method": "first_hold_ge_800ms",
+    "arrow_note": "NFHS alternating-possession arrow starts with the team that did not gain the tip \u2014 needs jersey/team link.",
+    "teams": {
+      "home_team": "Adrian",
+      "away_team": "Liberty",
+      "title_home": "Adrian",
+      "title_away": "Liberty",
+      "source": "scorebook+filename_HA",
+      "label": "Home Adrian / Away Liberty"
+    }
+  },
+  "quality_version": "adrian_quality_v3"
+}

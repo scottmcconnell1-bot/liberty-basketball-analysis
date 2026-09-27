@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS detections (
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Per-frame lookup in ai_analyzer; without it every frame scans the whole table.
+CREATE INDEX IF NOT EXISTS idx_detections_game_frame ON detections(game_id, frame_number);
+
 CREATE TABLE IF NOT EXISTS track_identity_labels (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id            TEXT NOT NULL,

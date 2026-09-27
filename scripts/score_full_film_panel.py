@@ -41,7 +41,10 @@ from compare_ai_to_hoops_pbp import (  # noqa: E402
 )
 from manual_vs_ai_q1_compare import convert_ai_events_to_stat_rows  # noqa: E402
 
-DB_PATH = ROOT / "film_analysis.db"
+from liberty_data_paths import live_db_path  # noqa: E402
+from ops_io import atomic_write_text  # noqa: E402
+
+DB_PATH = live_db_path()
 TARGETS_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_targets.json"
 LATEST_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_latest.json"
 HISTORY_PATH = ROOT / "data" / "hoopsalytics" / "full_film_panel_history.jsonl"
@@ -362,12 +365,18 @@ def run_compare(film_id: str, analysis_key: str, db: Path) -> dict[str, Any]:
     ]
     proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
     score_path = ROOT / "data" / "hoopsalytics" / f"compare_{film_id.replace('-', '_')}.json"
-    if not score_path.exists():
+    # A failed compare leaves the previous run's file behind; never score from it.
+    if proc.returncode != 0 or not score_path.exists():
         raise RuntimeError(
-            f"compare did not write {score_path}\n"
+            f"compare failed for {analysis_key} (file present={score_path.exists()})\n"
             f"exit={proc.returncode}\nstdout={proc.stdout[-2000:]}\nstderr={proc.stderr[-2000:]}"
         )
     payload = json.loads(score_path.read_text(encoding="utf-8"))
+    if payload.get("analysis_key") != analysis_key or payload.get("end_ms") is not None:
+        raise RuntimeError(
+            f"compare output {score_path.name} is for analysis_key={payload.get('analysis_key')!r} "
+            f"end_ms={payload.get('end_ms')!r}, expected full-film {analysis_key!r}"
+        )
     payload["_compare_exit"] = proc.returncode
     return payload
 
@@ -445,11 +454,18 @@ def score_game(conn: sqlite3.Connection, game: dict[str, str], db: Path) -> dict
 
 
 def evaluate_gates(games: list[dict[str, Any]], targets: dict[str, float]) -> dict[str, Any]:
-    """Aggregate panel gates. Unknown/partial final_score or player_points → FAIL (never fake 100%)."""
+    """Aggregate panel gates. Unknown/partial final_score or player_points → FAIL (never fake 100%).
+
+    The P/R means cover only games that produced a score, so a P/R gate can pass
+    only when EVERY panel game has one; otherwise one good game would pass the
+    gate while the rest crashed. With no scored game the mean is None (Unknown).
+    """
     precisions = [g["precision"] for g in games if g.get("precision") is not None]
     recalls = [g["recall"] for g in games if g.get("recall") is not None]
-    mean_prec = (sum(precisions) / len(precisions)) if precisions else 0.0
-    mean_rec = (sum(recalls) / len(recalls)) if recalls else 0.0
+    mean_prec = (sum(precisions) / len(precisions)) if precisions else None
+    mean_rec = (sum(recalls) / len(recalls)) if recalls else None
+    all_prec = bool(games) and len(precisions) == len(games)
+    all_rec = bool(games) and len(recalls) == len(games)
 
     all_final = all(bool(g.get("final_score_exact")) for g in games) if games else False
     all_players = all(bool(g.get("player_points_exact")) for g in games) if games else False
@@ -470,23 +486,29 @@ def evaluate_gates(games: list[dict[str, Any]], targets: dict[str, float]) -> di
         },
         "event_precision_min": {
             "required": targets["event_precision_min"],
-            "actual": round(mean_prec, 4),
-            "pass": mean_prec >= targets["event_precision_min"],
-            "note": "Mean event precision across panel games",
+            "actual": None if mean_prec is None else round(mean_prec, 4),
+            "pass": all_prec and mean_prec >= targets["event_precision_min"],
+            "games_scored": len(precisions),
+            "games_total": len(games),
+            "note": "Mean event precision across panel games (every game must have a score)",
         },
         "event_recall_min": {
             "required": targets["event_recall_min"],
-            "actual": round(mean_rec, 4),
-            "pass": mean_rec >= targets["event_recall_min"],
-            "note": "Mean event recall across panel games",
+            "actual": None if mean_rec is None else round(mean_rec, 4),
+            "pass": all_rec and mean_rec >= targets["event_recall_min"],
+            "games_scored": len(recalls),
+            "games_total": len(games),
+            "note": "Mean event recall across panel games (every game must have a score)",
         },
     }
     overall = all(g["pass"] for g in gates.values())
     return {
         "gates": gates,
         "overall_pass": overall,
-        "mean_precision": round(mean_prec, 4),
-        "mean_recall": round(mean_rec, 4),
+        "mean_precision": None if mean_prec is None else round(mean_prec, 4),
+        "mean_recall": None if mean_rec is None else round(mean_rec, 4),
+        "games_scored": min(len(precisions), len(recalls)),
+        "games_total": len(games),
     }
 
 
@@ -597,8 +619,8 @@ def main() -> int:
         },
     }
 
-    LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    LATEST_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    # Atomic: the teach loop and generate_learning_status read this file concurrently.
+    atomic_write_text(LATEST_PATH, json.dumps(payload, indent=2))
     with HISTORY_PATH.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(payload, separators=(",", ":")) + "\n")
 

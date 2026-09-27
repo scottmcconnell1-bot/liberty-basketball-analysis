@@ -3,6 +3,7 @@
 import cv2
 from ultralytics import YOLO
 from event_generator import main as generate_events
+import os
 import sqlite3
 import sys
 import math
@@ -10,6 +11,15 @@ import numpy as np
 
 from config import AnalysisConfig
 from settings_store import AI_DEFAULTS, load_all_settings
+from helpers import ensure_detection_indexes
+
+try:
+    from src import tracker_wrapper as jason_tracker_wrapper
+except Exception:
+    jason_tracker_wrapper = None
+
+# Smoke tests import this. Runtime still honors Settings → Jason tracker wrapper.
+TRACKER_ENABLED = jason_tracker_wrapper is not None
 
 
 def resolve_detector_model(ai_settings):
@@ -50,6 +60,33 @@ def person_detector_settings(ai_settings):
     return max(0.01, min(confidence, 0.99))
 
 
+def _apply_jason_tracker_ids(db, detections_per_frame, ai_settings):
+    """Assign tracker_id via Jason's wrapper. No-op if the wrapper is missing."""
+    if not jason_tracker_wrapper or not detections_per_frame:
+        return 0
+    backend = str(ai_settings.get("tracker_backend") or "bytetrack").lower()
+    if backend not in ("bytetrack", "deep_sort"):
+        backend = "bytetrack"
+    device = str(ai_settings.get("inference_device") or "cpu")
+    if device in ("", "auto"):
+        device = "cpu"
+    config = {
+        "max_distance": int(ai_settings.get("tracker_max_distance") or 80),
+    }
+    jason_tracker_wrapper.initialize(tracker_name=backend, device=device, config=config)
+    assigned = jason_tracker_wrapper.track_frames(detections_per_frame)
+    updated = 0
+    for frame_map in assigned:
+        for det_id, tid in (frame_map or {}).items():
+            if det_id is None or tid is None:
+                continue
+            db.execute("UPDATE detections SET tracker_id = ? WHERE id = ?", (int(tid), int(det_id)))
+            updated += 1
+    db.commit()
+    print(f"[AI] Jason tracker assigned {updated} detection IDs via {jason_tracker_wrapper.backend_name()}")
+    return updated
+
+
 def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
     """Run object detection + tracking on a video and save results to the database.
 
@@ -81,6 +118,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             db_path=db_path,
         )
         ai_settings = runtime_settings["ai"]
+        # Fail fast on a missing video before validating/loading ~170 MB of weights.
+        if not os.path.isfile(video_path):
+            raise RuntimeError(f"Could not open video file: {video_path}")
         person_model_path = resolve_detector_model(ai_settings)
         ball_model_path, ball_class_id, ball_confidence = ball_detector_settings(ai_settings)
         person_confidence = person_detector_settings(ai_settings)
@@ -115,13 +155,18 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
         tracker_backend = str(ai_settings.get("tracker_backend") or "bytetrack").lower()
         jersey_ocr_enabled = bool(ai_settings.get("jersey_ocr_enabled", True))
         jersey_ocr_stride = max(1, int(ai_settings.get("jersey_ocr_stride", 5)))
+        use_jason_tracker = bool(ai_settings.get("tracker_enabled", True)) and jason_tracker_wrapper is not None
         infer_size = 640
         scale_x = orig_w / infer_size
         scale_y = orig_h / infer_size
-        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px, tracker={tracker_backend}")
+        print(f"[AI] Video: {total_frames} frames @ {fps:.2f}fps, {orig_w}x{orig_h}, YOLO every {detect_stride} frame(s) @ {infer_size}px, tracker={tracker_backend} jason_wrapper={'on' if use_jason_tracker else 'off'}")
 
         frame_number = 0
         db = get_db()
+        # The live DB may predate the index; without it the per-frame lookup below
+        # scans every detection row, which slowed runs to ~1 fps.
+        ensure_detection_indexes(db)
+        detections_per_frame = []
 
         if relational_game_id is None:
             from helpers import resolve_relational_game_id_for_analysis
@@ -165,7 +210,37 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             new_detections = []
             person_rows = []
             if frame_number % detect_stride == 0:
-                if tracker_backend == "bytetrack":
+                if use_jason_tracker:
+                    results = model(frame, classes=[0], conf=person_confidence, verbose=False, imgsz=infer_size)
+                    for result in results:
+                        if result.boxes is None:
+                            continue
+                        for box in result.boxes:
+                            class_id = int(box.cls[0])
+                            if model.names[class_id] != 'person':
+                                continue
+                            confidence = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            x1 = int(x1 * scale_x)
+                            y1 = int(y1 * scale_y)
+                            x2 = int(x2 * scale_x)
+                            y2 = int(y2 * scale_y)
+                            x1 = max(0, min(x1, orig_w - 1))
+                            y1 = max(0, min(y1, orig_h - 1))
+                            x2 = max(x1 + 1, min(x2, orig_w - 1))
+                            y2 = max(y1 + 1, min(y2, orig_h - 1))
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            w, h = x2 - x1, y2 - y1
+                            jersey_read, jersey_conf = None, None
+                            if jersey_ocr_enabled and frame_number % jersey_ocr_stride == 0:
+                                from jersey_ocr import read_jersey_from_bbox
+                                jersey_read, jersey_conf = read_jersey_from_bbox(frame, x1, y1, x2, y2)
+                            person_rows.append((
+                                game_id, relational_game_id, frame_number, timestamp_ms,
+                                'person', confidence, cx, cy, w, h, None, jersey_read, jersey_conf,
+                            ))
+                            new_detections.append((cx, cy, confidence, x1, y1, x2, y2, w, h))
+                elif tracker_backend == "bytetrack":
                     track_kwargs = {
                         "persist": True,
                         "tracker": "bytetrack.yaml",
@@ -227,7 +302,7 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
                                 new_detections.append((cx, cy, confidence, x1, y1, x2, y2, x2-x1, y2-y1))
 
-            if tracker_backend != "bytetrack":
+            if tracker_backend != "bytetrack" and not use_jason_tracker:
                 # --- Match detections to active tracks (greedy nearest-neighbor) ---
                 used_tracks = set()
                 used_dets = set()
@@ -368,6 +443,31 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
                 )
                 db.commit()
 
+            if use_jason_tracker:
+                if frame_number % detect_stride == 0:
+                    person_ids = db.execute(
+                        """SELECT id, x_center, y_center, width, height, confidence
+                           FROM detections
+                           WHERE game_id = ? AND frame_number = ? AND object_class = 'person'
+                           ORDER BY id""",
+                        (game_id, frame_number),
+                    ).fetchall()
+                    frame_dets = []
+                    for row in person_ids:
+                        w = int(row["width"])
+                        h = int(row["height"])
+                        cx = int(row["x_center"])
+                        cy = int(row["y_center"])
+                        frame_dets.append({
+                            "detection_id": row["id"],
+                            "bbox": [cx - w // 2, cy - h // 2, cx + w // 2, cy + h // 2],
+                            "score": float(row["confidence"]),
+                            "class": "person",
+                        })
+                    detections_per_frame.append(frame_dets)
+                else:
+                    detections_per_frame.append([])
+
             frame_number += 1
             if frame_number % 500 == 0:
                 elapsed = frame_number / fps
@@ -409,6 +509,12 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
     else:
         # Only run post-processing if no exception occurred
         print(f"[AI] Finished detection for {game_id}. Processed {frame_number} frames.")
+        if use_jason_tracker:
+            try:
+                _apply_jason_tracker_ids(db, detections_per_frame, ai_settings)
+            except Exception as tracker_err:
+                print(f"[AI] Jason tracker wrapper failed (continuing with detections): {tracker_err}")
+
         # Update progress: detection done
         try:
             _pconn = sqlite3.connect(f'file:{db_path}?mode=rwc', uri=True)

@@ -181,12 +181,12 @@
 
       <div class="form-group">
         <label for="ai_auto_accept_event_confidence">Auto-Accept Event Confidence</label>
-        <input class="form-control" <div class="form-group">
-        <label>Auto-Accept Event Confidence</label>
-        <input type="hidden" name="ai_auto_accept_event_confidence" value="0">
-        <div class="alert alert-info" style="margin:0;" id="ai-auto-accept-disabled-notice">
-          Disabled for the review workspace MVP. AI drafts stay <code>pending</code> until you
-          Accept / Correct / Reject them in Film Tool. Threshold is locked to <code>0</code> (no-op).
+        <input class="form-control" type="number" step="0.01" min="0" max="0.99"
+               id="ai_auto_accept_event_confidence" name="ai_auto_accept_event_confidence"
+               value="{{ runtime_settings.ai.auto_accept_event_confidence }}">
+        <div class="text-muted mt-2">
+          Pending AI events at or above this confidence are auto-kept on the ledger (0 = off).
+          Jason baseline uses <strong>0.85</strong> with the <strong>precision</strong> generator.
         </div>
       </div>
 
@@ -211,6 +211,15 @@
           <option value="{{ option.value }}" {% if runtime_settings.ai.frame_stride == option.value %}selected{% endif %}>{{ option.label }}</option>
           {% endfor %}
         </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ai_tracker_enabled">Jason tracker wrapper</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input id="ai_tracker_enabled" name="ai_tracker_enabled" type="checkbox" value="1" {% if runtime_settings.ai.tracker_enabled %}checked{% endif %}>
+          Use Jason’s tracker on new analysis (uncheck to undo / use the previous ByteTrack path)
+        </label>
+        <div class="text-muted mt-2">Off = same person tracking as before this update. Ball detector settings are unchanged.</div>
       </div>
 
       <div class="form-group">

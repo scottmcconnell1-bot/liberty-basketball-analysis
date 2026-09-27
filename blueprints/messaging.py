@@ -14,23 +14,37 @@ Routes included:
 
 from flask import Blueprint, render_template, request, jsonify, session
 
-from helpers import get_db, require_feature
+from helpers import feature_enabled, get_db, require_feature
 
 messaging_bp = Blueprint("messaging", __name__)
 
 
-def _resolve_sender_id(explicit=None):
-    """Prefer logged-in staff user id; fall back to coach portal or explicit/default.
+def _resolve_sender_id():
+    """Messaging identity from the signed-in session only — never from the payload.
 
-    Matches nav auth: ``session['user_id']`` is the staff login key (not coach_portal).
+    A validated staff login (``_current_user``) gives its user id; a coach-portal
+    session (portal feature on) is the shared ``"coach"`` identity. Anonymous
+    callers get None and may not read or post, even while the global gate is off.
     """
-    user_id = session.get("user_id")
-    if user_id is not None and str(user_id).strip() != "":
-        return str(user_id)
-    if session.get("coach_portal"):
+    from blueprints.users import _current_user
+
+    user = _current_user()
+    if user is not None:
+        return str(user["id"])
+    if session.get("coach_portal") and feature_enabled("ENABLE_COACH_PORTAL"):
         return "coach"
-    explicit = (explicit or "").strip()
-    return explicit or "coach"
+    return None
+
+
+def _sign_in_required():
+    return jsonify({"error": "Sign-in required."}), 401
+
+
+def _is_member(db, conversation_id, user_id):
+    return db.execute(
+        "SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?",
+        (conversation_id, str(user_id)),
+    ).fetchone() is not None
 
 
 def _user_row_is_active(row):
@@ -55,38 +69,21 @@ def _user_row_is_active(row):
 def _current_messaging_identity(db):
     """Return display identity for the messages UI (staff login or coach portal).
 
-    Must stay aligned with ``base.html`` nav, which shows the account link whenever
-    ``session['user_id']`` is set (using ``session['user_name']``). Do not require a
-    successful users-table join to treat the staff session as signed in.
+    Only a validated session counts as signed in (same check as the auth gate);
+    a stale or logged-out cookie is shown as a guest and cannot read or post.
     """
-    user_id = session.get("user_id")
-    if user_id is not None and str(user_id).strip() != "":
-        row = None
-        try:
-            row = db.execute(
-                "SELECT id, display_name, email, role, is_active FROM users WHERE id = ?",
-                (user_id,),
-            ).fetchone()
-        except Exception:
-            row = None
-        if row is not None and _user_row_is_active(row):
-            return {
-                "sender_id": str(row["id"]),
-                "display_name": row["display_name"] or session.get("user_name") or "Account",
-                "email": row["email"],
-                "role": row["role"] or session.get("user_role") or "staff",
-                "signed_in": True,
-            }
-        # Session cookie present (nav would show this user) — trust session even if
-        # the users row is missing/inactive in this DB copy.
+    from blueprints.users import _current_user
+
+    row = _current_user()
+    if row is not None:
         return {
-            "sender_id": str(user_id),
-            "display_name": session.get("user_name") or "Account",
-            "email": None,
-            "role": session.get("user_role") or "staff",
+            "sender_id": str(row["id"]),
+            "display_name": row["display_name"] or session.get("user_name") or "Account",
+            "email": row["email"],
+            "role": row["role"] or session.get("user_role") or "staff",
             "signed_in": True,
         }
-    if session.get("coach_portal"):
+    if session.get("coach_portal") and feature_enabled("ENABLE_COACH_PORTAL"):
         return {
             "sender_id": "coach",
             "display_name": session.get("user_name") or "Coach",
@@ -103,27 +100,36 @@ def _current_messaging_identity(db):
     }
 
 
-@messaging_bp.route("/messages")
-@require_feature("ENABLE_PRACTICES")
-def messages():
-    """Main messaging page — conversation list + active conversation."""
-    db = get_db()
-    conversations = db.execute(
+def _conversations_for(db, user_id):
+    """Conversations ``user_id`` belongs to (one row each); none for anonymous."""
+    if user_id is None:
+        return []
+    return db.execute(
         """SELECT c.*,
                   (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count,
                   (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_message,
                   (SELECT m.created_at FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at
            FROM conversations c
-           JOIN conversation_members cm ON cm.conversation_id = c.id
-           ORDER BY c.updated_at DESC"""
+           JOIN conversation_members cm ON cm.conversation_id = c.id AND cm.user_id = ?
+           ORDER BY c.updated_at DESC""",
+        (str(user_id),),
     ).fetchall()
+
+
+@messaging_bp.route("/messages")
+@require_feature("ENABLE_PRACTICES")
+def messages():
+    """Main messaging page — conversation list + active conversation."""
+    db = get_db()
+    viewer_id = _resolve_sender_id()
+    conversations = _conversations_for(db, viewer_id)
 
     active_conversation = None
     active_messages = []
     active_members = []
 
     conv_id = request.args.get("c", type=int)
-    if conv_id:
+    if conv_id and viewer_id is not None and _is_member(db, conv_id, viewer_id):
         active_conversation = db.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone()
         if active_conversation:
             active_messages = db.execute(
@@ -141,6 +147,9 @@ def messages():
     identity = _current_messaging_identity(db)
     directory_users = []
     try:
+        if not identity.get("signed_in"):
+            # Anonymous visitors cannot message anyone, so do not list the team's accounts.
+            raise LookupError("anonymous")
         rows = db.execute(
             """SELECT id, display_name, email, role, is_active FROM users
                ORDER BY display_name LIMIT 100"""
@@ -174,17 +183,11 @@ def messages():
 @messaging_bp.route("/api/messages/conversations", methods=["GET"])
 @require_feature("ENABLE_PRACTICES")
 def messages_api_list():
-    """List all conversations for the current user."""
-    db = get_db()
-    conversations = db.execute(
-        """SELECT c.*,
-                  (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count,
-                  (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_message,
-                  (SELECT m.created_at FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at
-           FROM conversations c
-           JOIN conversation_members cm ON cm.conversation_id = c.id
-           ORDER BY c.updated_at DESC"""
-    ).fetchall()
+    """List the conversations the current user is a member of."""
+    viewer_id = _resolve_sender_id()
+    if viewer_id is None:
+        return _sign_in_required()
+    conversations = _conversations_for(get_db(), viewer_id)
     return jsonify([dict(c) for c in conversations])
 
 
@@ -199,11 +202,13 @@ def messages_api_send():
     data = request.get_json(force=True) if request.is_json else request.form
     conversation_id = data.get("conversation_id")
     body = (data.get("body") or "").strip()
-    sender_id = _resolve_sender_id(data.get("sender_id"))
-    recipient_id = (data.get("recipient_id") or "").strip() or None
+    sender_id = _resolve_sender_id()
+    recipient_id = str(data.get("recipient_id") or "").strip() or None
     attachment_url = (data.get("attachment_url") or "").strip() or None
     title = (data.get("title") or "").strip() or None
 
+    if sender_id is None:
+        return _sign_in_required()
     if not body:
         return jsonify({"error": "body required"}), 400
     if not conversation_id and not recipient_id:
@@ -255,6 +260,8 @@ def messages_api_send():
                     "INSERT OR IGNORE INTO conversation_members (conversation_id, user_id, role) VALUES (?,?,?)",
                     (conversation_id, str(recipient_id), "member"),
                 )
+        elif not _is_member(db, conversation_id, sender_id):
+            return jsonify({"error": "Not a member of this conversation."}), 403
 
     cur = db.execute(
         "INSERT INTO messages (conversation_id, sender_id, body, attachment_url) VALUES (?,?,?,?)",
@@ -293,7 +300,12 @@ def messages_api_poll():
     if not conversation_id:
         return jsonify({"error": "conversation_id required"}), 400
 
+    viewer_id = _resolve_sender_id()
+    if viewer_id is None:
+        return _sign_in_required()
     db = get_db()
+    if not _is_member(db, conversation_id, viewer_id):
+        return jsonify({"error": "Not a member of this conversation."}), 403
     messages = db.execute(
         """SELECT m.*,
                   (SELECT COUNT(*) FROM message_read_receipts mr WHERE mr.message_id = m.id) as read_count
@@ -309,20 +321,30 @@ def messages_api_poll():
 @messaging_bp.route("/api/messages/read", methods=["POST"])
 @require_feature("ENABLE_PRACTICES")
 def messages_api_read():
-    """Mark messages as read."""
+    """Mark messages as read for the signed-in reader (any payload user_id is ignored).
+
+    Only messages in conversations the reader belongs to get a receipt.
+    """
     data = request.get_json(force=True) if request.is_json else request.form
     message_ids = data.get("message_ids", [])
-    user_id = (data.get("user_id") or "coach").strip()
 
     if not message_ids:
         return jsonify({"error": "message_ids required"}), 400
+
+    user_id = _resolve_sender_id()
+    if user_id is None:
+        return _sign_in_required()
 
     db = get_db()
     for mid in message_ids:
         try:
             db.execute(
-                "INSERT OR IGNORE INTO message_read_receipts (message_id, user_id) VALUES (?,?)",
-                (int(mid), user_id),
+                """INSERT OR IGNORE INTO message_read_receipts (message_id, user_id)
+                   SELECT m.id, ? FROM messages m
+                   JOIN conversation_members cm
+                     ON cm.conversation_id = m.conversation_id AND cm.user_id = ?
+                   WHERE m.id = ?""",
+                (user_id, user_id, int(mid)),
             )
         except Exception:
             pass

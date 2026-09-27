@@ -45,6 +45,17 @@ from stats import _resolve_relational_game_id
 clips_bp = Blueprint("clips", __name__)
 
 
+def _lookup_event_type_id(db, event_type):
+    """event_types.id for a free-text event_type code (case-insensitive); None if unknown.
+
+    Stats join on events.event_type_id, so every write that sets event_type must set this too.
+    """
+    et_row = db.execute(
+        "SELECT id FROM event_types WHERE code=?", (str(event_type or "").strip().lower(),)
+    ).fetchone()
+    return et_row["id"] if et_row else None
+
+
 # ── API: Events ───────────────────────────────────────────
 
 @clips_bp.route("/api/save_event", methods=["POST"])
@@ -94,12 +105,7 @@ def save_event():
     relational_game_id = game_id_int
 
     # event_type_id: lookup by code (case-insensitive); leave NULL if unknown
-    event_type_id = None
-    et_row = db.execute(
-        "SELECT id FROM event_types WHERE code=?", (event_type.lower(),)
-    ).fetchone()
-    if et_row:
-        event_type_id = et_row["id"]
+    event_type_id = _lookup_event_type_id(db, event_type)
 
     # primary_player_id + team_id: resolve player name → roster_membership
     # Uses case-insensitive trimmed match following Stage 4A backfill pattern
@@ -162,7 +168,7 @@ def save_event():
                 primary_player_id, primary_roster_membership_id,
                 created_by_user_id, updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,
-                       ?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)""",
+                       ?,CASE WHEN ?='accepted' THEN CURRENT_TIMESTAMP END,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)""",
             (
                 game_id,
                 player,
@@ -264,14 +270,19 @@ def update_event(event_id):
     row = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
     if not row:
         return jsonify({"error": "Not found"}), 404
+    event_type = data.get("event_type", row["event_type"])
+    event_type_id = row["event_type_id"]
+    if event_type != row["event_type"]:
+        event_type_id = _lookup_event_type_id(db, event_type)
     db.execute(
-        """UPDATE events SET player=?, event_type=?, shot_result=?,
+        """UPDATE events SET player=?, event_type=?, event_type_id=?, shot_result=?,
            timestamp_ms=?, details_json=?, human_verified=?, confidence=?,
            updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
             data.get("player", row["player"]),
-            data.get("event_type", row["event_type"]),
+            event_type,
+            event_type_id,
             data.get("shot_result", row["shot_result"]),
             data.get("timestamp_ms", row["timestamp_ms"]),
             data.get("details_json", row["details_json"]),
@@ -289,8 +300,23 @@ def update_event(event_id):
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def delete_event(event_id):
     db = get_db()
-    row = db.execute("SELECT game_id FROM events WHERE id=?", (event_id,)).fetchone()
+    row = db.execute("SELECT game_id, possession_id FROM events WHERE id=?", (event_id,)).fetchone()
+    # /api/stats assigns possessions whose start/end_event_id reference events (FK):
+    # unlink them first, then drop the event's possession if nothing else uses it.
+    db.execute("UPDATE possessions SET start_event_id=NULL WHERE start_event_id=?", (event_id,))
+    db.execute("UPDATE possessions SET end_event_id=NULL WHERE end_event_id=?", (event_id,))
+    # Coach-made clips outlive the tag they were cut from; detach them (FK, no ON DELETE).
+    db.execute("UPDATE clips SET event_id=NULL WHERE event_id=?", (event_id,))
+    db.execute("UPDATE player_development_clips SET event_id=NULL WHERE event_id=?", (event_id,))
     db.execute("DELETE FROM events WHERE id=?", (event_id,))
+    if row and row["possession_id"] is not None:
+        db.execute(
+            """DELETE FROM possessions
+                WHERE id=?
+                  AND NOT EXISTS (SELECT 1 FROM events WHERE possession_id=?)
+                  AND NOT EXISTS (SELECT 1 FROM clips WHERE possession_id=?)""",
+            (row["possession_id"], row["possession_id"], row["possession_id"]),
+        )
     db.commit()
     if row:
         refresh_game_stats(db, row["game_id"])
@@ -378,6 +404,28 @@ def _sync_event_review_item(db, event_id, status, user_id=None, notes=None):
     return _sync(db, event_id, status, user_id=user_id, notes=notes)
 
 
+USEFUL_REVIEW_EVENT_TYPES = (
+    "shot",
+    "miss",
+    "make",
+    "missed_two",
+    "made_two",
+    "missed_three",
+    "made_three",
+    "missed_free_throw",
+    "made_free_throw",
+    "rebound",
+    "assist",
+    "turnover",
+    "steal",
+    "block",
+    "foul",
+    "foul_personal",
+    "foul_shooting",
+    "foul_technical",
+)
+
+
 @clips_bp.route("/api/review/events", methods=["GET"])
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def review_events():
@@ -393,11 +441,38 @@ def review_events():
         clauses.append("e.review_status = ?")
         params.append(review_status)
 
-    for key in ["game_id", "event_type", "source_type", "player"]:
+    for key in ["event_type", "source_type", "player"]:
         value = (request.args.get(key) or "").strip()
         if value:
             clauses.append(f"e.{key} = ?")
             params.append(value)
+
+    # Prefer the canonical event key (base, not empty __rerun_ copies).
+    game_id_value = (request.args.get("game_id") or "").strip()
+    if game_id_value:
+        try:
+            from program_mode import canonical_event_key
+
+            game_id_value = canonical_event_key(db, game_id_value)
+        except Exception:
+            if "__rerun_" in game_id_value:
+                game_id_value = game_id_value.split("__rerun_", 1)[0]
+        clauses.append("e.game_id = ?")
+        params.append(game_id_value)
+
+    useful_only = (request.args.get("useful_only") or "").strip().lower() in ("1", "true", "yes")
+    if useful_only and not (request.args.get("event_type") or "").strip():
+        placeholders = ",".join("?" for _ in USEFUL_REVIEW_EVENT_TYPES)
+        clauses.append(f"e.event_type IN ({placeholders})")
+        params.extend(USEFUL_REVIEW_EVENT_TYPES)
+
+    exclude_raw = (request.args.get("exclude_types") or "").strip()
+    if exclude_raw:
+        excluded = [part.strip() for part in exclude_raw.split(",") if part.strip()]
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            clauses.append(f"e.event_type NOT IN ({placeholders})")
+            params.extend(excluded)
 
     min_conf = request.args.get("min_confidence")
     if min_conf not in (None, ""):
@@ -409,20 +484,241 @@ def review_events():
         params.append(float(max_conf))
 
     where = "WHERE " + " AND ".join(clauses) if clauses else ""
-    rows = db.execute(
-        f"""SELECT e.*,
+
+    if (request.args.get("count_only") or "").strip().lower() in ("1", "true", "yes"):
+        count = db.execute(
+            f"SELECT COUNT(*) AS c FROM events e {where}",
+            params,
+        ).fetchone()["c"]
+        return jsonify({"count": int(count or 0)})
+
+    around_ms = request.args.get("around_ms", type=int)
+    limit = request.args.get("limit", type=int)
+    offset = request.args.get("offset", type=int) or 0
+    if limit is not None and limit <= 0:
+        limit = None
+    if offset < 0:
+        offset = 0
+
+    select_cols = """e.*,
                   ri.id AS review_item_id,
                   ri.priority AS review_priority,
                   ri.reason AS review_reason,
-                  ri.notes AS queue_notes
-             FROM events e
+                  ri.notes AS queue_notes"""
+    join_sql = """FROM events e
              LEFT JOIN review_items ri
-               ON ri.entity_type='event' AND ri.entity_id=e.id
+               ON ri.entity_type='event' AND ri.entity_id=e.id"""
+    where_sql = where if where else "WHERE 1=1"
+
+    # Near playhead: window of events around current video time.
+    if around_ms is not None and limit:
+        half = max(limit // 2, 1)
+        window_ms = request.args.get("window_ms", type=int)
+        if window_ms is None or window_ms <= 0:
+            window_ms = 45_000
+        lo = max(0, around_ms - window_ms)
+        hi = around_ms + window_ms
+        before_rows = db.execute(
+            f"""SELECT {select_cols}
+                 {join_sql}
+                 {where_sql}
+                   AND e.timestamp_ms <= ?
+                   AND e.timestamp_ms >= ?
+                ORDER BY e.timestamp_ms DESC, e.id DESC
+                LIMIT ?""",
+            (*params, around_ms, lo, half + (limit % 2)),
+        ).fetchall()
+        after_rows = db.execute(
+            f"""SELECT {select_cols}
+                 {join_sql}
+                 {where_sql}
+                   AND e.timestamp_ms > ?
+                   AND e.timestamp_ms <= ?
+                ORDER BY e.timestamp_ms ASC, e.id ASC
+                LIMIT ?""",
+            (*params, around_ms, hi, half),
+        ).fetchall()
+        rows = list(reversed(before_rows)) + list(after_rows)
+        # If nothing in the short window, return nearest events in the game
+        # (Adrian quality keeps are often clustered early — mid-film must still list).
+        if not rows:
+            nearest = db.execute(
+                f"""SELECT {select_cols}
+                     {join_sql}
+                     {where_sql}
+                    ORDER BY ABS(e.timestamp_ms - ?) ASC, e.id ASC
+                    LIMIT ?""",
+                (*params, around_ms, limit),
+            ).fetchall()
+            rows = sorted(
+                nearest,
+                key=lambda r: (int(r["timestamp_ms"] or 0), int(r["id"] or 0)),
+            )
+        return jsonify([dict(r) for r in rows])
+
+    order_sql = "ORDER BY e.timestamp_ms ASC, e.id ASC"
+    limit_sql = ""
+    limit_params: list = []
+    if limit is not None:
+        limit_sql = " LIMIT ? OFFSET ?"
+        limit_params = [limit, offset]
+
+    rows = db.execute(
+        f"""SELECT {select_cols}
+             {join_sql}
              {where}
-            ORDER BY e.game_id, e.timestamp_ms, e.id""",
-        params,
+            {order_sql}{limit_sql}""",
+        (*params, *limit_params),
     ).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+@clips_bp.route("/api/review/events", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def create_reviewed_event():
+    """Coach-added ledger event at a video timestamp (string analysis game_id OK)."""
+    data = request.get_json(silent=True) or {}
+    game_id = str(data.get("game_id") or "").strip()
+    event_type = str(data.get("event_type") or "").strip()
+    if not game_id:
+        return jsonify({"error": "game_id required"}), 400
+    if not event_type:
+        return jsonify({"error": "event_type required"}), 400
+    try:
+        timestamp_ms = int(data.get("timestamp_ms"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "timestamp_ms must be an integer"}), 400
+
+    player = str(data.get("player") or "").strip()[:128] or None
+    notes = str(data.get("notes") or "").strip() or None
+    details = {"source": "film_tool_add", "notes": notes} if notes else {"source": "film_tool_add"}
+    shot_result = str(data.get("shot_result") or "").strip()[:32] or None
+    source_video = str(data.get("source_video") or "").strip()[:256] or None
+    user_id = _current_review_user_id()
+
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO events
+           (game_id, relational_game_id, player, event_type, event_type_id, shot_result,
+            timestamp_ms, details_json, source_video, human_verified, confidence,
+            review_status, source_type, reviewed_at, created_by_user_id, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?, CURRENT_TIMESTAMP)""",
+        (
+            game_id,
+            _resolve_relational_game_id(db, game_id),
+            player,
+            event_type,
+            _lookup_event_type_id(db, event_type),
+            shot_result,
+            timestamp_ms,
+            json.dumps(details),
+            source_video,
+            1,
+            1.0,
+            "accepted",
+            "manual",
+            user_id,
+        ),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM events WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@clips_bp.route("/api/program/<path:game_id>/summary", methods=["GET"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_summary_api(game_id):
+    """Season-ops view: ledger box, scorebook exceptions, pending counts."""
+    from program_mode import program_summary
+
+    db = get_db()
+    return jsonify(program_summary(db, game_id))
+
+
+@clips_bp.route("/api/film-sync/<path:game_id>", methods=["GET"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_sync_get(game_id):
+    """Return analysis→review timestamp offset for this game (ms)."""
+    from film_sync import load_film_sync
+
+    data = load_film_sync(game_id) or {
+        "game_id": (game_id or "").split("__rerun_", 1)[0],
+        "offset_ms": 0,
+        "method": "none",
+        "notes": "No sync file — review_ms = analysis timestamp_ms.",
+    }
+    return jsonify(data)
+
+
+@clips_bp.route("/api/film-sync/<path:game_id>", methods=["POST"])
+@require_feature("ENABLE_MANUAL_TAG_MVP")
+def film_sync_set(game_id):
+    """Set analysis→review offset. Body: {offset_ms, notes?, method?}."""
+    from datetime import datetime, timezone
+
+    from film_sync import (
+        ADRIAN_ANALYSIS_VIDEO,
+        ADRIAN_BASE,
+        ADRIAN_REVIEW_VIDEO,
+        save_film_sync,
+    )
+
+    body = request.get_json(silent=True) or {}
+    try:
+        offset_ms = int(body.get("offset_ms") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "offset_ms must be an integer"}), 400
+    base = (game_id or "").split("__rerun_", 1)[0]
+    payload = {
+        "offset_ms": offset_ms,
+        "method": (body.get("method") or "manual").strip() or "manual",
+        "notes": (body.get("notes") or "").strip(),
+        "calibrated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "analysis_video": body.get("analysis_video")
+        or (ADRIAN_ANALYSIS_VIDEO if base == ADRIAN_BASE else ""),
+        "review_video": body.get("review_video")
+        or (ADRIAN_REVIEW_VIDEO if base == ADRIAN_BASE else ""),
+    }
+    saved = save_film_sync(base, payload)
+    return jsonify(saved)
+
+
+@clips_bp.route("/api/program/<path:game_id>/auto-ledger", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_auto_ledger_api(game_id):
+    """Promote useful AI drafts → program ledger; reject noise types.
+
+    Distinct from confidence auto-accept (still locked at 0).
+    Adrian games run scorebook quality refine first.
+    """
+    from adrian_quality import is_adrian_game, apply_quality_to_db
+    from program_mode import program_summary, promote_useful_events_to_ledger
+
+    db = get_db()
+    quality = None
+    if is_adrian_game(game_id):
+        quality = apply_quality_to_db(db, game_id)
+        # Quality already set accepted/rejected; skip blind promote.
+        summary = program_summary(db, game_id)
+        return jsonify({"ok": True, "quality": quality, "promote": None, "summary": summary})
+
+    result = promote_useful_events_to_ledger(db, game_id, commit=True)
+    summary = program_summary(db, game_id)
+    return jsonify({"ok": True, "promote": result, "summary": summary})
+
+
+@clips_bp.route("/api/program/<path:game_id>/refine", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def program_refine_api(game_id):
+    """Adrian-only scorebook quality refine."""
+    from adrian_quality import apply_quality_to_db, is_adrian_game
+    from program_mode import program_summary
+
+    if not is_adrian_game(game_id):
+        return jsonify({"error": "refine is Adrian-only for now"}), 400
+    db = get_db()
+    quality = apply_quality_to_db(db, game_id)
+    return jsonify({"ok": True, "quality": quality, "summary": program_summary(db, game_id)})
 
 
 @clips_bp.route("/api/review/events/<int:event_id>/accept", methods=["POST"])
@@ -514,11 +810,40 @@ def review_event_correct(event_id):
         "confidence": row["confidence"],
     }
     values.update(changed)
+    event_type_id = row["event_type_id"]
+    if "event_type" in changed:
+        event_type_id = _lookup_event_type_id(db, values["event_type"])
+
+    # Adrian: coach name/jersey → stamp scorebook jersey + team on details
+    # so Film Tool does not keep showing "player unlinked".
+    try:
+        from adrian_quality import is_adrian_game, resolve_adrian_teams, load_adrian_scorebook, _details
+        from adrian_identity import resolve_label_to_scorebook, enrich_details_with_identity
+
+        game_key = row["game_id"] if "game_id" in row.keys() else None
+        if is_adrian_game(game_key) and values.get("player"):
+            identity = resolve_label_to_scorebook(values["player"])
+            if identity:
+                details = _details({"details_json": values.get("details_json")})
+                details = enrich_details_with_identity(
+                    details, identity, teams=resolve_adrian_teams(load_adrian_scorebook())
+                )
+                values["details_json"] = json.dumps(details)
+                # Prefer canonical scorebook jersey as player id for ledger alignment
+                values["player"] = str(identity.get("jersey") or values["player"])
+                if "details_json" not in changed:
+                    changed["details_json"] = values["details_json"]
+                changed["player"] = values["player"]
+    except Exception:
+        pass
+
     user_id = _current_review_user_id()
+    correction_notes = notes or "Corrected in Film Tool"
     db.execute(
         """UPDATE events
               SET player=?,
                   event_type=?,
+                  event_type_id=?,
                   shot_result=?,
                   timestamp_ms=?,
                   details_json=?,
@@ -527,17 +852,18 @@ def review_event_correct(event_id):
                   human_verified=1,
                   reviewed_by_user_id=?,
                   reviewed_at=CURRENT_TIMESTAMP,
-                  review_notes=COALESCE(?, review_notes)
+                  review_notes=?
             WHERE id=?""",
         (
             values["player"],
             values["event_type"],
+            event_type_id,
             values["shot_result"],
             values["timestamp_ms"],
             values["details_json"],
             values["confidence"],
             user_id,
-            notes,
+            correction_notes,
             event_id,
         ),
     )
@@ -550,7 +876,7 @@ def review_event_correct(event_id):
         {"fields_changed": sorted(changed.keys()), "notes": notes},
     )
     db.commit()
-    refresh_game_stats(db, row["game_id"])
+    # Skip full stats rebuild on single corrections — same cost issue as accept/reject.
     return jsonify(dict(db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()))
 
 
@@ -627,11 +953,29 @@ def api_rosters_import():
         return jsonify({"error": f"Failed to parse roster: {exc}"}), 500
 
 
+@clips_bp.route("/api/film-rosters/opponents", methods=["GET"])
+def api_film_roster_opponents():
+    """List selectable opponents for Liberty vs Opponent roster UI."""
+    from film_roster import list_roster_opponents
+
+    try:
+        opponents = list_roster_opponents(
+            get_db(),
+            season_id=request.args.get("season_id"),
+            level=request.args.get("level"),
+            gender=request.args.get("gender"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"opponents": opponents, "count": len(opponents)})
+
+
 @clips_bp.route("/api/film-rosters", methods=["GET"])
 def api_film_rosters_get():
     """List players for a season-scoped Film Tool roster slot."""
-    from film_roster import list_film_roster_players
+    from film_roster import attach_player_stats, list_film_roster_players, opponent_schedule_stats
 
+    opponent_name = (request.args.get("opponent") or request.args.get("opponent_name") or "").strip() or None
     try:
         players = list_film_roster_players(
             get_db(),
@@ -639,10 +983,26 @@ def api_film_rosters_get():
             level=request.args.get("level"),
             gender=request.args.get("gender"),
             side=request.args.get("side"),
+            opponent_name=opponent_name,
         )
+        if opponent_name:
+            players = attach_player_stats(players, opponent_name)
+        stats = None
+        if opponent_name:
+            stats = opponent_schedule_stats(
+                get_db(),
+                season_id=request.args.get("season_id"),
+                level=request.args.get("level"),
+                opponent_name=opponent_name,
+            )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
-    return jsonify({"players": players, "count": len(players)})
+    return jsonify({
+        "players": players,
+        "count": len(players),
+        "opponent_name": opponent_name,
+        "stats": stats,
+    })
 
 
 @clips_bp.route("/api/film-rosters", methods=["PUT"])
@@ -659,6 +1019,7 @@ def api_film_rosters_put():
             level=data.get("level"),
             gender=data.get("gender"),
             side=data.get("side"),
+            opponent_name=data.get("opponent") or data.get("opponent_name"),
             players=data.get("players") or [],
             replace=replace,
         )
@@ -680,6 +1041,7 @@ def api_film_rosters_delete():
             level=request.args.get("level"),
             gender=request.args.get("gender"),
             side=request.args.get("side"),
+            opponent_name=request.args.get("opponent") or request.args.get("opponent_name"),
         )
         get_db().commit()
         return jsonify({"deleted": deleted})
@@ -714,6 +1076,7 @@ def api_film_rosters_import():
             level=request.form.get("level"),
             gender=request.form.get("gender"),
             side=request.form.get("side"),
+            opponent_name=request.form.get("opponent") or request.form.get("opponent_name"),
             players=players,
             replace=replace,
         )

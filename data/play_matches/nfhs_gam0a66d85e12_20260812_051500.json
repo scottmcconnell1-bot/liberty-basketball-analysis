@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "game_id": "nfhs_gam0a66d85e12_20260812_051500",
+  "updated_at": "2026-08-12T17:32:22Z",
+  "method": "formation_path_rank",
+  "limits": [
+    "Film points are cloud-normalized (no court homography).",
+    "Scores are ranks within the loaded playbook library, not probabilities.",
+    "Sticky choreography preferred; missing sticky/steps weakens matches.",
+    "Suggestions only \u2014 never auto-accepted into the ledger."
+  ],
+  "library_size": 29,
+  "possessions": []
+}

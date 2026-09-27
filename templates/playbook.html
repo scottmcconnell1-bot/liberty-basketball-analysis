@@ -23,8 +23,9 @@
         {% endfor %}
       </select>
     </label>
-    {% if not coach_readonly %}
-    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create', team=selected_team) }}">+ New Play</a>
+    {% if not coach_readonly and audience_can_edit %}
+    <a class="btn btn-primary btn-sm" id="drawPlayBtn" href="{{ url_for('playbook.playbook_draw', team=selected_team) }}">Draw play</a>
+    <a class="btn btn-secondary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create', team=selected_team) }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
     {% endif %}
@@ -232,49 +233,69 @@
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <!-- Left: Court Canvas -->
-  <div class="card" style="padding:12px;" data-frame="6.3">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        {% if not is_readonly %}
-        <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Add Step</button>
-        <button class="btn btn-secondary btn-sm" onclick="duplicateStep()">Duplicate step</button>
-        <button class="btn btn-danger btn-sm" onclick="removeStep()">Delete this step</button>
-        <button class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo (Ctrl+Z)">↩ Undo</button>
-        <button class="btn btn-secondary btn-sm" onclick="redoStep()" title="Redo (Ctrl+Y)">↪ Redo</button>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
-          <option value="select">Select / Move</option>
-          <option value="dribble">Dribble</option>
+    <div class="card" style="padding:12px;" data-frame="6.3">
+    {% if view_mode != "share" %}
+    <div style="display:none;" aria-hidden="true">
+      <button type="button" onclick="addStep()">+ Add Step</button>
+      <button type="button" onclick="duplicateStep()">Duplicate step</button>
+      <button type="button" onclick="removeStep()">Delete this step</button>
+      <button type="button" onclick="undoStep()">Undo</button>
+      <button type="button" onclick="redoStep()">Redo</button>
+      <select id="toolSelect" onchange="setTool(this.value)">
+        <option value="select" selected>Select / Move</option>
+        <option value="dribble">Dribble</option>
+        <option value="pass">Pass</option>
+        <option value="cut">Cut</option>
+        <option value="run">Run</option>
+        <option value="screen">Screen</option>
+      </select>
+      <select id="actionTimingSelect">
+        <option value="sync" selected>Sync</option>
+        <option value="optional">Optional</option>
+      </select>
+      <select id="playerTypeSelect" onchange="setPlayerType(this.value)">
+        <option value="offense" selected>Offense (O)</option>
+        <option value="defense">Defense (x)</option>
+      </select>
+      <select id="courtModeSelect" onchange="setCourtMode(this.value)">
+        <option value="half" selected>Half Court</option>
+        <option value="full">Full Court</option>
+      </select>
+      <button type="button" onclick="exportPng()">PNG</button>
+      <button type="button" onclick="exportVideo()">Video</button>
+    </div>
+    {% endif %}
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Previous</button>
+      <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
+      <span id="stepLabel" style="font-size:0.8rem;font-weight:600;margin:0 4px;">Step 1 / 1</span>
+      <button id="playBackBtn" class="btn btn-secondary btn-sm" onclick="rewindPlay()" title="Back up one action and stop">⏮ Back</button>
+      <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next step</button>
+      <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only">▶ Play step</button>
+      <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet. After a pause, continues from here.">▶ Play All</button>
+    </div>
+    <div id="movementListWrap" style="margin:0 0 8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;">
+      <div id="movementEditBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:0.75rem;font-weight:600;color:#374151;">Movements</span>
+        <select id="addMovementType" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Kind of movement to add" onchange="syncMovementAddMode()">
           <option value="pass">Pass</option>
-          <option value="cut">Cut</option>
+          <option value="dribble">Dribble</option>
+          <option value="cut" selected>Cut</option>
           <option value="run">Run</option>
           <option value="screen">Screen</option>
         </select>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="actionTimingSelect" title="Timing for next action drawn">
-          <option value="sync">Sync</option>
-          <option value="optional">Optional</option>
+        <select id="cutShapeSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Shape of a cut or screen" onchange="setArmedCutShape(this.value)">
+          <option value="straight" selected>Straight</option>
+          <option value="curve">Curve</option>
+          <option value="flex">Adjustable curve</option>
+          <option value="straight-curve">Straight then curve</option>
+          <option value="curve-straight">Curve then straight</option>
         </select>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
-          <option value="offense">Offense (O)</option>
-          <option value="defense">Defense (x)</option>
-        </select>
-        <span class="text-muted" style="font-size:0.7rem;">Dbl-click offense = ball</span>
-        {% endif %}
+        <button type="button" id="addMovementBtn" class="btn btn-secondary btn-sm" onclick="armAddMovement()">Add movement</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="saveStickyChoreography()" title="Keep these movements for the next time you open the play">Save</button>
+        <span id="movementAddHint" class="text-muted" style="font-size:0.68rem;">Cut or screen: an arrow appears. Drag its ends to the start and the spot.</span>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="courtModeSelect"
-                onchange="setCourtMode(this.value)" title="Court size">
-          <option value="half" selected>Half Court</option>
-          <option value="full">Full Court</option>
-        </select>
-        <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
-        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if is_readonly %}disabled{% endif %}>◀ Prev</button>
-        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
-        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if is_readonly %}disabled{% endif %}>Next ▶</button>
-        {% if is_readonly %}
-        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play animation">▶ Play All</button>
-        {% endif %}
-      </div>
+      <div id="movementList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
     </div>
 
     <div id="sheetAlignBanner" role="status" aria-live="polite"
@@ -297,7 +318,7 @@
         </span>
       </div>
       <div id="choreographyHint" style="display:none;margin-top:6px;font-size:0.72rem;font-weight:500;opacity:0.9;">
-        Drag tokens to fix spacing; ＋ Add player or × on a token to fix roster — then Save choreography.
+        Click anywhere on the court to pause. Drag a player, the ball, or an arrow, then release. Change pass, dribble, cut, or screen from the Arrow menu. Play continues from here. Back rewinds one action.
       </div>
     </div>
 
@@ -305,7 +326,27 @@
     <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
         <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;">Animated court</div>
-        <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label id="arrowEditBar" style="display:none;align-items:center;gap:4px;font-size:0.72rem;font-weight:600;color:#374151;">
+            Arrow
+            <select id="arrowKindSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Change this arrow" onchange="setSelectedArrowKind(this.value)">
+              <option value="pass">Pass</option>
+              <option value="dribble">Dribble</option>
+              <option value="cut">Cut</option>
+              <option value="run">Run</option>
+              <option value="screen">Screen</option>
+            </select>
+            <select id="arrowShapeSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Path shape" onchange="setSelectedArrowShape(this.value)">
+              <option value="straight">Straight</option>
+              <option value="curve">Curve</option>
+              <option value="flex">Adjustable curve</option>
+              <option value="straight-curve">Straight then curve</option>
+              <option value="curve-straight">Curve then straight</option>
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedArrow()">Delete arrow</button>
+          </label>
+          <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+        </div>
       </div>
       <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
            xmlns="http://www.w3.org/2000/svg">
@@ -317,7 +358,7 @@
         <g id="playerLayer"></g>
       </svg>
       <!-- Discussion playbar: scrub sheets + beats under the animated court -->
-      <div id="playbar" class="playbook-playbar" role="group" aria-label="Play timeline">
+      <div id="playbar" class="playbook-playbar" role="group" aria-label="Play timeline" style="display:none;">
         <button type="button" id="playbarPrevBtn" class="playbook-playbar-btn" title="Previous beat / sheet"
                 onclick="playbarStep(-1)">⏮</button>
         <button type="button" id="playbarPlayBtn" class="playbook-playbar-btn playbook-playbar-play" title="Play from here"
@@ -419,7 +460,8 @@
       </div>
       {% endif %}
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        {% if editing_play and editing_play.id and view_mode != "share" %}
+        {% if editing_play and editing_play.id and view_mode != "share" and audience_can_edit %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_draw', play_id=editing_play.id) }}">Edit play</a>
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
         {% endif %}
         {% if view_mode != "share" %}
@@ -427,6 +469,9 @@
         {% endif %}
         {% if editing_play and editing_play.id %}
         <button class="btn btn-secondary btn-sm" type="button" onclick="copyPlayShareLink()">🔗 Copy Share Link</button>
+        {% if view_mode != "share" %}
+        <button class="btn btn-secondary btn-sm" type="button" id="revokeShareBtn" onclick="revokePlayShareLink()"{% if not (share_url is defined and share_url) %} style="display:none;"{% endif %}>Revoke Share Link</button>
+        {% endif %}
         {% endif %}
       </div>
       {% endif %}
@@ -435,21 +480,21 @@
     <!-- Step list (play sheets) -->
     <div class="card" data-frame="6.5">
       <h4 style="margin-bottom:4px;">Play sheets <span id="stepCount" style="color:#9ca3af;font-weight:400;">({{ editing_steps|length or 1 }})</span></h4>
-      {% if not is_readonly %}
-      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reorder · click a label to rename · Save Play to keep changes</p>
+      {% if view_mode != 'share' %}
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Drag ☰ to reorder sheets · change action type/order below · Save choreography to keep Play All order</p>
       {% else %}
-      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Open <strong>Edit</strong> to reorder sheets or change labels</p>
+      <p class="text-muted" style="font-size:0.72rem;margin:0 0 10px;">Shared link is view-only.</p>
       {% endif %}
       <div id="stepList" style="display:flex;flex-direction:column;gap:4px;">
         <!-- Populated by JS -->
       </div>
       <div id="stepsDirtyBanner" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.75rem;">
+        {% if view_mode == 'view' and editing_play %}
+        Sheet changes here only affect Play All and are <strong>not saved</strong> in View.
+        <a href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Open in Edit</a> to keep them.
+        {% else %}
         Sheet order/labels changed — click <strong>Save Play</strong> to keep them.
-      </div>
-      <div id="movementListWrap" style="margin-top:12px;">
-        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
-        <div id="movementList" style="display:flex;flex-direction:column;gap:4px;"></div>
-        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs with other actions · Optional = reads/decisions</p>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -476,7 +521,11 @@
   }
   .player-token .token-delete-btn {
     cursor: pointer;
-    opacity: 0.85;
+    opacity: 0;
+  }
+  .player-token:hover .token-delete-btn,
+  .player-token.token-selected .token-delete-btn {
+    opacity: 0.9;
   }
   .player-token .token-delete-btn:hover {
     opacity: 1;
@@ -579,6 +628,10 @@ let selectedPlayer = null;
 let choreographySelectedPid = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
+let courtPointerId = null;
+let selectedArrowIndex = null;
+let selectedArrowStep = 0;
+let arrowDrag = null;
 let currentTool = 'select';
 let currentPathStyle = 'straight';
 let currentPlayerType = 'offense';
@@ -656,8 +709,39 @@ const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
 const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
 const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
 const viewMode = {{ view_mode|tojson if view_mode is defined else '"editor"' }};
+const audienceCanEdit = {{ audience_can_edit|tojson if audience_can_edit is defined else 'true' }};
+function canFixAnimation() {
+  return audienceCanEdit && viewMode !== 'share';
+}
+let lastSyncedBallPid = 'o1';
+let pausedCourtPose = null;
+/** Bumped on every stop so an in-flight play loop cannot start the next beat. */
+let playbackRunId = 0;
+/** Resolves the current rAF promise when Stop cancels the frame. */
+let animFinish = null;
+const delayCancels = new Set();
+/** Start-of-beat poses so Back can replay the action just watched. */
+let beatSnapshots = [];
+/** Next beat index to play on the paused sheet. */
+let resumeBeat = 0;
+/** Absolute spots the coach dragged, keyed by sheet then player id. */
+let spacingEdits = [];
+/** Ball anchor (same space as a player center) when it is not sitting on a handler. */
+let ballOverride = null;
+/** Set when a token click pauses, so the arrow tool does not also fire. */
+let suppressToolClick = false;
+let dragMoved = false;
+let dragOrigin = null;
 const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
 let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
+/** Share links read sheets/choreography via token-scoped routes (public even when sign-in is required). */
+const shareAssetBase = {{ ('/play/share/' ~ share_token)|tojson if share_token is defined and share_token else 'null' }};
+function sheetImageSrc(url) {
+  return shareAssetBase && url && url.startsWith('/uploads/') ? shareAssetBase + url : url;
+}
+function sheetApiUrl(kind) {
+  return shareAssetBase ? `${shareAssetBase}/${kind}` : `/api/playbook/${kind}`;
+}
 let isExportingVideo = false;
 
 function movementQuadControl(from, to, bend = 0.12) {
@@ -711,6 +795,8 @@ function renderCourt() {
   } else {
     layer.setAttribute('viewBox', '0 0 500 940');
   }
+  ensureCourtHitPad();
+  fitCourtToViewport();
 
   // Sheet slideshow: white plate only — play-sheet image provides court + lines.
   // Animation view keeps full SVG court (underlay not composited).
@@ -816,6 +902,36 @@ function setCourtMode(mode) {
   renderCourt();
   renderStep();
 }
+
+/** Full-court catcher so a click on empty floor hits the play window. */
+function ensureCourtHitPad() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg) return;
+  let pad = document.getElementById('courtHitPad');
+  if (!pad) {
+    pad = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    pad.setAttribute('id', 'courtHitPad');
+    pad.setAttribute('x', '0');
+    pad.setAttribute('y', '0');
+    pad.setAttribute('fill', '#fff');
+    pad.setAttribute('stroke', 'none');
+    svg.insertBefore(pad, svg.firstChild);
+  }
+  pad.setAttribute('width', '500');
+  pad.setAttribute('height', String(isFullCourt ? 940 : 470));
+}
+
+/** The court uses the full editor column. A short window scrolls; it does not shrink the play. */
+function fitCourtToViewport() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg) return;
+  svg.style.width = '100%';
+  svg.style.maxWidth = '100%';
+  svg.style.height = 'auto';
+  svg.style.display = 'block';
+  svg.style.margin = '0';
+}
+window.addEventListener('resize', fitCourtToViewport);
 
 function toggleCourt() {
   setCourtMode(isFullCourt ? 'half' : 'full');
@@ -985,8 +1101,8 @@ function showStepSourceImage(index) {
   if (!currentWrap || !currentImg) return;
   const step = steps[index];
   if (step && step.source_image) {
-    if (currentImg.getAttribute('src') !== step.source_image) {
-      currentImg.src = step.source_image;
+    if (currentImg.getAttribute('src') !== sheetImageSrc(step.source_image)) {
+      currentImg.src = sheetImageSrc(step.source_image);
     }
     currentImg.alt = step.label || `Step ${index + 1}`;
     currentWrap.style.display = 'block';
@@ -1002,6 +1118,9 @@ function withManDefense(positions) {
     const p = src[k];
     if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
   });
+  // Imported FastDraw/PDF sheets are offense-only. Auto x-defenders sit on the
+  // ball offset and look like every player has a basketball.
+  if (playHasSheets()) return out;
   const hasDefense = Object.keys(out).some((k) => String(k).startsWith('d'));
   if (!hasDefense) {
     for (let i = 1; i <= 5; i += 1) {
@@ -1036,7 +1155,7 @@ function renderStep() {
   if (!isAnimating) {
     arrowLayer.innerHTML = '';
     // Opt-in slideshow: ink on the page is the truth — skip SVG arrow overlays.
-    if (!useSheetSlideshowMode()) renderArrows(step);
+    if (!useSheetSlideshowMode() && !(viewMode === 'view' && !playHasSheets() && stepHasDrawnMovements(step)) && !renderSheetInk(currentStep)) renderArrows(step);
   }
 
   if (useSheetSlideshowMode()) {
@@ -1063,6 +1182,7 @@ function renderStep() {
     renderStepImages();
     updateMovementList();
   }
+  requestAnimationFrame(fitCourtToViewport);
 }
 
 function syncPlayerTokens(positions, ballPid) {
@@ -1089,14 +1209,22 @@ function syncPlayerTokens(positions, ballPid) {
     }
     if (g) g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
   });
+  if (ballPid) lastSyncedBallPid = ballPid;
 
+  const incomingHasDefense = Object.keys(positions || {}).some((k) => String(k).startsWith('d'));
   playerLayer.querySelectorAll('.player-token').forEach((g) => {
-    if (!seen.has(g.dataset.player)) g.remove();
+    const pid = g.dataset.player;
+    if (seen.has(pid)) return;
+    // Sheet plays are offense-only in the position map. Keep defenders that are
+    // already on the court so a pause does not erase them before a drag.
+    if (!incomingHasDefense && pid && String(pid).startsWith('d')) return;
+    g.remove();
   });
 
   let ball = playerLayer.querySelector('.ball-indicator');
-  if (ballPid && positions[ballPid]) {
-    const bpos = positions[ballPid];
+  const bpos = ballOverride
+    || (ballPid && positions[ballPid] ? positions[ballPid] : null);
+  if (bpos) {
     if (!ball) {
       renderBallIndicator(playerLayer, bpos);
     } else {
@@ -1113,11 +1241,16 @@ function renderStepImages() {
   const currentImg = document.getElementById('stepSourceImage');
   const container = document.getElementById('stepImages');
   const list = document.getElementById('stepImagesList');
+  if (viewMode === 'view' || viewMode === 'share') {
+    if (currentWrap) currentWrap.style.display = 'none';
+    if (container) container.style.display = 'none';
+    return;
+  }
   const step = steps[currentStep];
 
   if (currentWrap && currentImg) {
     if (step && step.source_image) {
-      currentImg.src = step.source_image;
+      currentImg.src = sheetImageSrc(step.source_image);
       currentImg.alt = step.label || `Step ${currentStep + 1}`;
       currentWrap.style.display = 'block';
     } else {
@@ -1147,7 +1280,7 @@ function renderStepImages() {
       updateStepList();
     };
     const img = document.createElement('img');
-    img.src = s.source_image;
+    img.src = sheetImageSrc(s.source_image);
     img.style.cssText = 'width:100%;height:auto;display:block;';
     img.alt = s.label || `Step ${idx + 1}`;
     const caption = document.createElement('div');
@@ -1163,7 +1296,8 @@ function renderStepImages() {
       delBtn.style.cssText = 'font-size:0.7rem;padding:2px 6px;';
       delBtn.onclick = (e) => {
         e.stopPropagation();
-        removeStep(stepIndex);
+        currentStep = idx;
+        removeStep();
       };
       caption.appendChild(delBtn);
     }
@@ -1199,6 +1333,12 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
     g.classList.add('token-selected');
   }
 
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hit.setAttribute('class', 'token-hit');
+  hit.setAttribute('r', '22');
+  hit.setAttribute('fill', 'transparent');
+  g.appendChild(hit);
+
   const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
   circle.setAttribute('fill', color);
@@ -1225,9 +1365,10 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   const canEditChoreo = canEditSheetChoreography();
   // View mode blocks normal editor tools, but sheet choreography review must drag.
   if (!isReadOnly || canEditChoreo) {
-    g.addEventListener('mousedown', (e) => startDrag(e, pid));
+    g.style.cursor = 'grab';
+    g.addEventListener('pointerdown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
-    if (type === 'offense' && !isReadOnly) {
+    if (type === 'offense' && canFixAnimation()) {
       g.addEventListener('dblclick', (e) => {
         e.preventDefault();
         saveUndoState();
@@ -1287,7 +1428,142 @@ function renderBallIndicator(parent, pos) {
   const seam2 = makeLine(0, -6, 0, 6, '#9a3412', 1.2);
   g.appendChild(seam1);
   g.appendChild(seam2);
+  if (!isReadOnly || canEditSheetChoreography()) {
+    g.style.cursor = 'grab';
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    hit.setAttribute('r', '16');
+    hit.setAttribute('fill', 'transparent');
+    g.insertBefore(hit, g.firstChild);
+    g.addEventListener('pointerdown', (e) => startDrag(e, 'ball'));
+    g.addEventListener('touchstart', (e) => startDragTouch(e, 'ball'), { passive: false });
+  }
   parent.appendChild(g);
+}
+
+function pathHeading(from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { dx: dx / len, dy: dy / len, px: -dy / len, py: dx / len };
+}
+
+function dribblePathD(from, to, points) {
+  const src = (points && points.length >= 2) ? points : [from, to];
+  let d = '';
+  const amp = 7;
+  for (let i = 1; i < src.length; i += 1) {
+    const a = src[i - 1];
+    const b = src[i];
+    const head = pathHeading(a, b);
+    const steps = Math.max(2, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 18));
+    for (let s = 1; s <= steps; s += 1) {
+      const t = s / steps;
+      const side = (s % 2 === 0 ? 1 : -1) * amp;
+      const x = a.x + (b.x - a.x) * t + head.px * side;
+      const y = a.y + (b.y - a.y) * t + head.py * side;
+      if (!d) d = `M ${a.x} ${a.y}`;
+      d += ` L ${x} ${y}`;
+    }
+  }
+  return d || `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+}
+
+function appendScreenBar(layer, from, to) {
+  if (!from || !to) return;
+  const head = pathHeading(from, to);
+  const bar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  const half = 14;
+  bar.setAttribute('x1', to.x - head.px * half);
+  bar.setAttribute('y1', to.y - head.py * half);
+  bar.setAttribute('x2', to.x + head.px * half);
+  bar.setAttribute('y2', to.y + head.py * half);
+  bar.setAttribute('stroke', '#111827');
+  bar.setAttribute('stroke-width', '4');
+  bar.setAttribute('stroke-linecap', 'round');
+  bar.setAttribute('class', 'screen-marker');
+  bar.style.pointerEvents = 'none';
+  layer.appendChild(bar);
+}
+
+function appendDribbleBalls(layer, from, to) {
+  if (!from || !to) return;
+  for (let i = 1; i <= 3; i += 1) {
+    const t = i / 4;
+    const ball = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ball.setAttribute('cx', from.x + (to.x - from.x) * t);
+    ball.setAttribute('cy', from.y + (to.y - from.y) * t);
+    ball.setAttribute('r', '3.5');
+    ball.setAttribute('fill', '#f59e0b');
+    ball.setAttribute('stroke', '#111827');
+    ball.setAttribute('stroke-width', '1');
+    ball.style.pointerEvents = 'none';
+    layer.appendChild(ball);
+  }
+}
+
+function inkPathActions(ink) {
+  const paths = (ink && ink.paths) || {};
+  const marks = (ink && ink.marks) || {};
+  const actions = [];
+  Object.keys(paths).forEach((pid) => {
+    if (!/^o[1-5]$/.test(pid)) return;
+    const pts = paths[pid];
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    const mark = marks[pid] || 'cut';
+    const kind = (mark === 'pass' || mark === 'dribble' || mark === 'screen' || mark === 'cut') ? mark : 'cut';
+    actions.push({
+      kind,
+      pid: kind === 'pass' ? null : pid,
+      fromPid: pid,
+      toPid: null,
+      points: pts.map((p) => ({ x: p.x, y: p.y })),
+      seq: actions.length + 1,
+      pathKey: pid,
+    });
+  });
+  return actions;
+}
+
+function materializeInkActions(stepIndex) {
+  const editable = ensureEditableInk(stepIndex);
+  const ink = editable || sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
+  if (!ink) return [];
+  if (Array.isArray(ink.actions) && ink.actions.length) return ink.actions;
+  const built = inkPathActions(ink);
+  if (!built.length || !editable) return built;
+  editable.actions = built;
+  return editable.actions;
+}
+
+function renderSheetInk(stepIndex) {
+  const actions = materializeInkActions(stepIndex);
+  if (!actions.length) return false;
+  const moves = ((steps[stepIndex] && steps[stepIndex].movements) || []).filter((m) => m && !m._meta);
+  const paths = actions.map((act, i) => {
+    const move = moves[i];
+    const pts = (move && move.points && move.points.length >= 2) ? move.points : (act.points || []);
+    if (pts.length < 2) return null;
+    const kind = (move && move.type) || act.kind || 'cut';
+    const isPass = kind === 'pass';
+    const shape = act.shape || (move && move.shape) || null;
+    const anchors = act.anchors || (move && move.anchors) || null;
+    const bend = act.bend || (move && move.bend) || null;
+    return {
+      pid: isPass ? null : (act.pid || (move && move.from)),
+      ballOnly: isPass,
+      from: pts[0],
+      to: pts[pts.length - 1],
+      points: pts,
+      type: kind,
+      shape,
+      anchors,
+      bend,
+      actionIndex: i,
+    };
+  }).filter(Boolean);
+  if (!paths.length) return false;
+  drawTravelPaths(paths, null, { editable: true });
+  return true;
 }
 
 // ── Arrow Rendering ──────────────────────────────────────
@@ -1297,11 +1573,14 @@ function renderArrows(step) {
   if (!step.movements) return;
   const pos = positionsThrough(Math.max(0, steps.indexOf(step)));
 
+  let arrowIdx = 0;
   step.movements.forEach((m) => {
     if (m && m._meta) return;
-    const from = pos[m.from] || step.positions[m.from];
-    const to = pos[m.to] || step.positions[m.to];
+    const from = (m.points && m.points[0]) || pos[m.from] || step.positions[m.from];
+    const to = (m.points && m.points[m.points.length - 1]) || pos[m.to] || step.positions[m.to];
     if (!from || !to) return;
+    const idx = arrowIdx;
+    arrowIdx += 1;
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     let d = '';
@@ -1316,13 +1595,10 @@ function renderArrows(step) {
       path.setAttribute('stroke-dasharray', isOptional ? '6,4' : '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
     } else if (m.type === 'dribble') {
-      ctrl = movementQuadControl(from, to, 0.18);
-      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      d = dribblePathD(from, to, null);
       path.setAttribute('stroke', '#111827');
-      path.setAttribute('stroke-width', '3');
+      path.setAttribute('stroke-width', '2.5');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '0');
-      path.setAttribute('marker-end', 'url(#arrowhead-black)');
     } else if (m.type === 'cut' || m.type === 'run') {
       ctrl = movementQuadControl(from, to, 0.12);
       d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
@@ -1332,20 +1608,28 @@ function renderArrows(step) {
       path.setAttribute('stroke-dasharray', isOptional ? '5,5' : (m.type === 'cut' ? '6,4' : '0'));
       path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
     } else if (m.type === 'screen') {
-      ctrl = movementQuadControl(from, to, 0.15);
-      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
-      path.setAttribute('stroke', '#f59e0b');
-      path.setAttribute('stroke-width', '2.5');
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '4,4');
     }
 
     if (isOptional) path.setAttribute('opacity', '0.6');
     path.setAttribute('d', d);
+    path.style.pointerEvents = 'none';
     arrowLayer.appendChild(path);
+    if (!isPlaybackActive() && !isAnimating && canFixAnimation()) {
+      appendArrowHit(arrowLayer, idx, from, to);
+    }
 
-    if (m.type === 'dribble' && ctrl) {
-      appendBallAlongPath(arrowLayer, from, ctrl, to, 3);
+    if (m.type === 'dribble') {
+      appendDribbleBalls(arrowLayer, from, to);
+    }
+    if (m.type === 'screen') {
+      appendScreenBar(arrowLayer, from, to);
+    }
+    if (selectedArrowIndex === idx && selectedArrowStep === currentStep) {
+      appendArrowHandles(arrowLayer, idx, from, to);
     }
 
     if (isOptional && ctrl) {
@@ -1372,6 +1656,7 @@ function renderArrows(step) {
   });
 
   addArrowheadMarkers();
+  showArrowEditor();
 }
 
 function addArrowheadMarkers() {
@@ -1396,8 +1681,9 @@ function makeArrowhead(id, color) {
   marker.setAttribute('viewBox', '0 0 10 10');
   marker.setAttribute('refX', '9');
   marker.setAttribute('refY', '5');
-  marker.setAttribute('markerWidth', '8');
-  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  marker.setAttribute('markerWidth', '16');
+  marker.setAttribute('markerHeight', '14');
   marker.setAttribute('orient', 'auto');
   const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
   polygon.setAttribute('points', '0 0, 10 5, 0 10');
@@ -1407,66 +1693,91 @@ function makeArrowhead(id, color) {
 }
 
 // ── Dragging ─────────────────────────────────────────────
-function startDrag(e, pid) {
-  if (currentTool !== 'select') {
-    handleToolClick(e, pid);
+function readTranslate(el) {
+  if (!el) return null;
+  const m = /translate\(\s*([-.\d]+)\s*,\s*([-.\d]+)\s*\)/.exec(el.getAttribute('transform') || '');
+  if (!m) return null;
+  return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+}
+
+function visualTokenPos(pid) {
+  if (pid === 'ball') {
+    if (ballOverride) return { x: ballOverride.x, y: ballOverride.y };
+    const ball = document.querySelector('#playerLayer .ball-indicator');
+    const p = readTranslate(ball);
+    if (!p) return null;
+    return { x: p.x - 14, y: p.y + 14 };
+  }
+  return readTranslate(document.querySelector(`#playerLayer [data-player="${pid}"]`));
+}
+
+function rememberSpacing(pid, pos) {
+  if (!pid || pid === 'ball' || !pos) return;
+  if (!spacingEdits[currentStep]) spacingEdits[currentStep] = {};
+  spacingEdits[currentStep][pid] = { x: pos.x, y: pos.y };
+  if (pausedCourtPose) {
+    if (!pausedCourtPose.positions) pausedCourtPose.positions = {};
+    pausedCourtPose.positions[pid] = { x: pos.x, y: pos.y };
+    pausedCourtPose.sheetIndex = currentStep;
+    pausedCourtPose.beatIndex = resumeBeat;
+  }
+}
+
+function beginTokenDrag(pid, clientX, clientY, event) {
+  if (takeAddMovementClick(pid)) {
+    if (event) {
+      if (event.preventDefault) event.preventDefault();
+      if (event.stopPropagation) event.stopPropagation();
+    }
+    return;
+  }
+  const paused = isPlaybackActive() || isAnimating;
+  if (paused || suppressToolClick) {
+    suppressToolClick = false;
+    if (paused) pauseForEdit();
+  } else if (currentTool !== 'select') {
+    if (pid !== 'ball') handleToolClick(event, pid);
     return;
   }
   if (viewMode === 'share') return;
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !svg.getScreenCTM()) return;
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  if (!step) return;
+  const live = positionsThrough(currentStep) || {};
+  const pos = visualTokenPos(pid)
+    || (pid !== 'ball' && live && live[pid])
+    || (pid !== 'ball' && step.positions && step.positions[pid]);
+  if (!pos) return;
   saveUndoState();
   isDragging = true;
+  dragMoved = false;
+  dragOrigin = { x: pos.x, y: pos.y };
   selectedPlayer = pid;
   if (canEditSheetChoreography() && String(pid).startsWith('o')) {
     setChoreographySelectedPid(pid);
   }
-  const svg = document.getElementById('courtSvg');
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX; pt.y = e.clientY;
-  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const live = positionsThrough(currentStep) || {};
-  const step = steps[currentStep];
-  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
-  if (!pos) {
-    isDragging = false;
-    selectedPlayer = null;
-    return;
+  if (pid !== 'ball') {
+    if (!step.positions) step.positions = {};
+    if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   }
-  if (!step.positions) step.positions = {};
-  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
-  e.preventDefault();
+  if (event && event.pointerId != null) holdCourtPointer(event);
+  if (event && event.preventDefault) event.preventDefault();
+}
+
+function startDrag(e, pid) {
+  beginTokenDrag(pid, e.clientX, e.clientY, e);
 }
 
 function startDragTouch(e, pid) {
   if (e.touches.length !== 1) return;
-  if (currentTool !== 'select') {
-    handleToolClick(e, pid);
-    return;
-  }
-  if (viewMode === 'share') return;
-  saveUndoState();
-  isDragging = true;
-  selectedPlayer = pid;
-  if (canEditSheetChoreography() && String(pid).startsWith('o')) {
-    setChoreographySelectedPid(pid);
-  }
   const touch = e.touches[0];
-  const svg = document.getElementById('courtSvg');
-  const pt = svg.createSVGPoint();
-  pt.x = touch.clientX; pt.y = touch.clientY;
-  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const live = positionsThrough(currentStep) || {};
-  const step = steps[currentStep];
-  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
-  if (!pos) {
-    isDragging = false;
-    selectedPlayer = null;
-    return;
-  }
-  if (!step.positions) step.positions = {};
-  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
-  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
-  e.preventDefault();
+  beginTokenDrag(pid, touch.clientX, touch.clientY, e);
 }
 
 function applyTokenDrag(clientX, clientY) {
@@ -1483,29 +1794,131 @@ function applyTokenDrag(clientX, clientY) {
     x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
     y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
   };
+  if (dragOrigin && Math.hypot(next.x - dragOrigin.x, next.y - dragOrigin.y) > 2) {
+    dragMoved = true;
+  }
+  if (selectedPlayer === 'ball') {
+    ballOverride = next;
+    const ball = document.querySelector('#playerLayer .ball-indicator');
+    if (ball) ball.setAttribute('transform', `translate(${next.x + 14}, ${next.y - 14})`);
+    if (pausedCourtPose) {
+      pausedCourtPose.ballPos = { x: next.x, y: next.y };
+      pausedCourtPose.beatIndex = resumeBeat;
+    }
+    return;
+  }
   if (!steps[currentStep].positions) steps[currentStep].positions = {};
   steps[currentStep].positions[selectedPlayer] = next;
-  // Sheet Play All reads sheetAlignByStep — keep it in sync so drags stick.
+  rememberSpacing(selectedPlayer, next);
   if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
     ensureSheetAlignStep(currentStep);
     sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
-    markSheetChoreographyDirty(currentStep);
   }
-  renderStep();
+  const token = document.querySelector(`#playerLayer [data-player="${selectedPlayer}"]`);
+  if (token) token.setAttribute('transform', `translate(${next.x}, ${next.y})`);
+  const def = document.querySelector(`#playerLayer [data-player="d${String(selectedPlayer).replace(/^o/, '')}"]`);
+  if (def && String(selectedPlayer).startsWith('o') && !(spacingEdits[currentStep] && spacingEdits[currentStep][`d${String(selectedPlayer).replace(/^o/, '')}`])) {
+    const off = manDefenseOffset(next);
+    def.setAttribute('transform', `translate(${off.x}, ${off.y})`);
+  }
 }
 
+function nearestOffensePid(pt) {
+  let best = null;
+  let bestD = 36;
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid || !String(pid).startsWith('o')) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+    if (d <= bestD) {
+      bestD = d;
+      best = pid;
+    }
+  });
+  return best;
+}
+
+function finishTokenDrag() {
+  if (!isDragging) return;
+  const moved = dragMoved;
+  const pid = selectedPlayer;
+  isDragging = false;
+  selectedPlayer = null;
+  dragMoved = false;
+  dragOrigin = null;
+  if (!moved) return;
+  if (pid === 'ball' && ballOverride) {
+    const owner = nearestOffensePid(ballOverride);
+    if (owner && steps[currentStep]) {
+      steps[currentStep].ball = owner;
+      lastSyncedBallPid = owner;
+      ballOverride = null;
+      if (pausedCourtPose) {
+        pausedCourtPose.ballPid = owner;
+        pausedCourtPose.ballPos = null;
+      }
+      syncPlayerTokens(
+        pausedCourtPose && pausedCourtPose.positions
+          ? pausedCourtPose.positions
+          : (positionsThrough(currentStep) || {}),
+        owner
+      );
+    }
+  }
+  if (steps[currentStep]) steps[currentStep].coachOrder = true;
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  if (pausedCourtPose) {
+    setSheetAnimHint('Spacing updated. Press Play to continue, or Back to watch this action again.');
+    return;
+  }
+  renderStep();
+  setSheetAnimHint('Spacing updated. Save choreography, then Play step or Play All.');
+}
+
+function holdCourtPointer(e) {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !e || e.pointerId == null) return;
+  courtPointerId = e.pointerId;
+  try { svg.setPointerCapture(e.pointerId); } catch (err) { /* already captured */ }
+}
+
+document.addEventListener('pointermove', (e) => {
+  if (!isDragging && !arrowDrag) return;
+  applyArrowDrag(e.clientX, e.clientY);
+  applyTokenDrag(e.clientX, e.clientY);
+});
+
 document.addEventListener('mousemove', (e) => {
+  if (!e.buttons || (!isDragging && !arrowDrag)) return;
+  applyArrowDrag(e.clientX, e.clientY);
   applyTokenDrag(e.clientX, e.clientY);
 });
 
 document.addEventListener('touchmove', (e) => {
+  if (arrowDrag && e.touches.length === 1) {
+    applyArrowDrag(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+    return;
+  }
   if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
   applyTokenDrag(e.touches[0].clientX, e.touches[0].clientY);
   e.preventDefault();
 }, { passive: false });
 
-document.addEventListener('mouseup', () => { isDragging = false; selectedPlayer = null; });
-document.addEventListener('touchend', () => { isDragging = false; selectedPlayer = null; });
+function releaseCourtPointer() {
+  const svg = document.getElementById('courtSvg');
+  if (svg && courtPointerId != null && svg.releasePointerCapture) {
+    try { svg.releasePointerCapture(courtPointerId); } catch (err) { /* already released */ }
+  }
+  courtPointerId = null;
+  finishArrowDrag();
+  finishTokenDrag();
+}
+window.addEventListener('pointerup', releaseCourtPointer);
+window.addEventListener('mouseup', releaseCourtPointer);
+window.addEventListener('touchend', releaseCourtPointer);
 
 // ── Tools (arrows) ───────────────────────────────────────
 function handleToolClick(e, pid) {
@@ -1521,6 +1934,8 @@ function handleToolClick(e, pid) {
     if (['pass', 'screen', 'dribble', 'cut', 'run'].includes(type)) {
       const timing = document.getElementById('actionTimingSelect')?.value || 'sync';
       steps[currentStep].movements.push({ from: arrowStart, to: pid, type, timing });
+      steps[currentStep].coachOrder = true;
+      markAnimationOrderDirty();
     }
     highlightPlayer(arrowStart, false);
     arrowStart = null;
@@ -1559,31 +1974,45 @@ function setPlayerType(type) {
 }
 
 // ── Undo / Redo ──────────────────────────────────────────
+function captureEditState() {
+  return JSON.stringify({ steps, sessionInk: sheetSessionInkByStep });
+}
+
+function restoreEditState(raw) {
+  const data = JSON.parse(raw);
+  if (Array.isArray(data)) {
+    steps = data;
+    return;
+  }
+  steps = data.steps;
+  if (Array.isArray(data.sessionInk)) sheetSessionInkByStep = data.sessionInk;
+}
+
 function saveUndoState() {
-  undoStack.push(JSON.stringify(steps));
+  undoStack.push(captureEditState());
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   redoStack = [];
 }
 
 function undoStep() {
   if (undoStack.length === 0) return;
-  redoStack.push(JSON.stringify(steps));
-  steps = JSON.parse(undoStack.pop());
+  redoStack.push(captureEditState());
+  restoreEditState(undoStack.pop());
   renderStep();
   updateStepList();
 }
 
 function redoStep() {
   if (redoStack.length === 0) return;
-  undoStack.push(JSON.stringify(steps));
-  steps = JSON.parse(redoStack.pop());
+  undoStack.push(captureEditState());
+  restoreEditState(redoStack.pop());
   renderStep();
   updateStepList();
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
     undoStep();
@@ -1606,8 +2035,17 @@ function addStep() {
     source_image: '',
     ball: prevStep.ball || 'o1',
   });
+  if (Array.isArray(sheetAlignByStep)) {
+    sheetAlignByStep.push({
+      court_frac: (sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].court_frac) || null,
+      positions: JSON.parse(JSON.stringify((sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].positions) || prevStep.positions || {})),
+    });
+  }
+  if (Array.isArray(sheetStickyInkByStep)) sheetStickyInkByStep.push(null);
+  if (Array.isArray(sheetSessionInkByStep)) sheetSessionInkByStep.push(null);
   currentStep = steps.length - 1;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1617,14 +2055,26 @@ function duplicateStep() {
   const src = steps[currentStep];
   steps.splice(currentStep + 1, 0, {
     positions: JSON.parse(JSON.stringify(src.positions)),
-    movements: JSON.parse(JSON.stringify(src.movements)),
+    movements: JSON.parse(JSON.stringify(src.movements || [])),
     label: src.label ? src.label + ' (copy)' : '',
     notes: src.notes || '',
     source_image: src.source_image || '',
     ball: src.ball || 'o1',
+    coachOrder: !!src.coachOrder,
   });
+  if (Array.isArray(sheetAlignByStep)) {
+    const srcAlign = sheetAlignByStep[currentStep] || { court_frac: null, positions: {} };
+    sheetAlignByStep.splice(currentStep + 1, 0, JSON.parse(JSON.stringify(srcAlign)));
+  }
+  if (Array.isArray(sheetStickyInkByStep)) {
+    sheetStickyInkByStep.splice(currentStep + 1, 0, sheetStickyInkByStep[currentStep] || null);
+  }
+  if (Array.isArray(sheetSessionInkByStep)) {
+    sheetSessionInkByStep.splice(currentStep + 1, 0, sheetSessionInkByStep[currentStep] || null);
+  }
   currentStep++;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1633,8 +2083,18 @@ function removeStep() {
   if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
   saveUndoState();
   steps.splice(currentStep, 1);
+  if (Array.isArray(sheetAlignByStep) && currentStep < sheetAlignByStep.length) {
+    sheetAlignByStep.splice(currentStep, 1);
+  }
+  if (Array.isArray(sheetStickyInkByStep) && currentStep < sheetStickyInkByStep.length) {
+    sheetStickyInkByStep.splice(currentStep, 1);
+  }
+  if (Array.isArray(sheetSessionInkByStep) && currentStep < sheetSessionInkByStep.length) {
+    sheetSessionInkByStep.splice(currentStep, 1);
+  }
   if (currentStep >= steps.length) currentStep = steps.length - 1;
   markStepsDirty();
+  markAnimationOrderDirty();
   renderStep();
   updateStepList();
 }
@@ -1659,67 +2119,531 @@ function saveCurrentStepNotes() {
   }
 }
 
+function stepHasAuthoredOrder(step) {
+  return !!(step && (step.movements || []).some((m) => m && !m._meta));
+}
+
+function beatToMovement(beat) {
+  const p = (beat && beat.path) || {};
+  let type = p.type || beat.kind || 'cut';
+  if (type === 'relocate') type = 'run';
+  const from = p.fromPid || p.pid || null;
+  const to = p.toPid || p.pid || from;
+  if (!from) return null;
+  const points = (p.points && p.points.length >= 2)
+    ? p.points.map((pt) => ({ x: pt.x, y: pt.y }))
+    : null;
+  return { from, to, type, timing: 'sync', points };
+}
+
+function snapshotCourtPose() {
+  const positions = {};
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    positions[pid] = p;
+  });
+  const ballPos = ballOverride || readBallAnchor();
+  pausedCourtPose = {
+    sheetIndex: currentStep,
+    positions,
+    ballPid: lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1',
+    ballPos,
+    beatIndex: resumeBeat,
+  };
+}
+
+function readBallAnchor() {
+  const ball = document.querySelector('#playerLayer .ball-indicator');
+  const p = readTranslate(ball);
+  if (!p) return null;
+  return { x: p.x - 14, y: p.y + 14 };
+}
+
+function pauseForEdit() {
+  if (!(isPlaybackActive() || isAnimating)) return;
+  stopPlayback({ reset: false });
+  if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
+  if (!useSheetSlideshowMode() && !renderSheetInk(currentStep)) {
+    const step = steps[currentStep];
+    if (step) renderArrows(step);
+  }
+  setSheetAnimHint('Paused. Drag a player, the ball, or an arrow, then release. Play continues from here.');
+}
+
+function installCourtPause() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || svg.dataset.pauseBound === '1') return;
+  svg.dataset.pauseBound = '1';
+  svg.addEventListener('pointerdown', (e) => {
+    if (!(isPlaybackActive() || isAnimating)) return;
+    suppressToolClick = true;
+    pauseForEdit();
+    if (e.pointerId != null) {
+      courtPointerId = e.pointerId;
+      try { svg.setPointerCapture(e.pointerId); } catch (err) { /* svg may already own it */ }
+    }
+  }, true);
+  svg.addEventListener('pointerdown', (e) => {
+    if (arrowDrag) return;
+    const el = e.target && e.target.closest
+      ? e.target.closest('.arrow-hit, .arrow-handle, .player-token, .ball-indicator')
+      : null;
+    if (el || selectedArrowIndex == null) return;
+    selectedArrowIndex = null;
+    showArrowEditor();
+    renderStep();
+  });
+}
+
+function markAnimationOrderDirty() {
+  choreographyDirty = true;
+  invalidatePlaybarTimeline();
+  updateChoreographyChrome();
+  updateMovementList();
+}
+
+function reorderMovement(stepIndex, fromIdx, toIdx) {
+  const step = steps[stepIndex];
+  if (!step || !canFixAnimation() || stepIndex !== currentStep) return;
+  saveUndoState();
+  const ink = ensureEditableInk(stepIndex);
+  const list = alignMovementsToInk();
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= list.length || toIdx >= list.length) return;
+  const [item] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, item);
+  step.movements = list;
+  if (ink && Array.isArray(ink.actions) && fromIdx < ink.actions.length && toIdx < ink.actions.length) {
+    const [act] = ink.actions.splice(fromIdx, 1);
+    ink.actions.splice(toIdx, 0, act);
+  }
+  step.coachOrder = true;
+  markAnimationOrderDirty();
+  renderStep();
+}
+
+async function seedMovementsFromCurrentBeats(stepIndex) {
+  const step = steps[stepIndex];
+  if (!step || stepHasAuthoredOrder(step)) return;
+  const fromRaw = withManDefense(positionsForAnim(stepIndex));
+  const toRaw = stepIndex + 1 < steps.length
+    ? withManDefense(positionsForAnim(stepIndex + 1))
+    : fromRaw;
+  let ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex] || null;
+  if (typeof fetchSheetInkPaths === 'function') {
+    try {
+      ink = await fetchSheetInkPaths(stepIndex, fromRaw, toRaw);
+    } catch (err) {
+      console.warn('seed movements ink', err);
+    }
+  }
+  const ball = step.ball || lastSyncedBallPid || 'o1';
+  const paths = buildTravelPaths(fromRaw, toRaw, step, ink, ball);
+  const beats = forceGuaranteeBeats(fromRaw, toRaw, step, paths, ball, stepIndex);
+  const mapped = beats.map(beatToMovement).filter(Boolean);
+  if (mapped.length) {
+    step.movements = mapped;
+  }
+}
+
+function movementRows(stepIndex) {
+  const step = steps[stepIndex];
+  const ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
+  const actions = (ink && ink.actions) || [];
+  const moves = ((step && step.movements) || []).filter((m) => m && !m._meta);
+  const count = Math.max(actions.length, moves.length);
+  const rows = [];
+  for (let i = 0; i < count; i += 1) {
+    const move = moves[i] || {};
+    const act = actions[i] || {};
+    rows.push({
+      from: move.from || act.fromPid || act.pid || '',
+      to: move.to || act.toPid || '',
+      type: move.type || act.kind || 'cut',
+      timing: move.timing || 'sync',
+    });
+  }
+  return rows;
+}
+
+function alignMovementsToInk() {
+  const step = steps[currentStep];
+  if (!step) return [];
+  const ink = ensureEditableInk(currentStep);
+  const actions = (ink && ink.actions) || [];
+  const existing = (step.movements || []).filter((m) => m && !m._meta);
+  if (!actions.length) return existing;
+  const moves = actions.map((act, i) => {
+    const prev = existing[i] || {};
+    const pts = (act.points && act.points.length >= 2)
+      ? act.points.map((p) => ({ x: p.x, y: p.y }))
+      : (prev.points || null);
+    return {
+      from: prev.from || act.fromPid || act.pid || null,
+      to: prev.to || act.toPid || null,
+      type: prev.type || act.kind || 'cut',
+      timing: prev.timing || 'sync',
+      points: pts,
+      shape: act.shape || prev.shape || null,
+      anchors: act.anchors || prev.anchors || null,
+      bend: act.bend || prev.bend || null,
+    };
+  });
+  while (moves.length < existing.length) moves.push(existing[moves.length]);
+  step.movements = moves;
+  return moves;
+}
+
+let addMovementArmed = false;
+let addMovementFrom = null;
+
+function movementGoesToSpot(type) {
+  return type === 'cut' || type === 'screen' || type === 'run';
+}
+
+function syncMovementAddMode() {
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  const shape = document.getElementById('cutShapeSelect');
+  const hint = document.getElementById('movementAddHint');
+  const spot = movementGoesToSpot(type);
+  if (shape) shape.style.display = spot ? '' : 'none';
+  if (hint) {
+    hint.textContent = spot
+      ? 'An arrow appears. Drag the ends to the start and the spot. Pick straight, curve, adjustable curve, straight then curve, or curve then straight.'
+      : 'Pass or dribble: click Add movement, then the player who starts and the player it goes to.';
+  }
+}
+
+function setArmedCutShape(shape) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  setSelectedArrowShape(shape);
+}
+
+function bendFromAmt(a, b, amt) {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: mx + (-dy / len) * len * amt, y: my + (dx / len) * len * amt };
+}
+
+function sampleQuad(a, c, b, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i += 1) {
+    const t = i / n;
+    const u = 1 - t;
+    pts.push({
+      x: u * u * a.x + 2 * u * t * c.x + t * t * b.x,
+      y: u * u * a.y + 2 * u * t * c.y + t * t * b.y,
+    });
+  }
+  return pts;
+}
+
+function curvedSegment(shape, anchors) {
+  if (!anchors || anchors.length < 2) return null;
+  if (shape === 'straight-curve' && anchors.length >= 3) return [anchors[1], anchors[2]];
+  if (shape === 'curve-straight' && anchors.length >= 3) return [anchors[0], anchors[1]];
+  return [anchors[0], anchors[anchors.length - 1]];
+}
+
+function refreshShaped(act) {
+  if (!act || !act.shape || !act.anchors || act.anchors.length < 2) return;
+  const shape = act.shape;
+  const A = act.anchors;
+  if (shape === 'straight') {
+    act.bend = null;
+    act.points = A.map((p) => ({ x: p.x, y: p.y }));
+    return;
+  }
+  const seg = curvedSegment(shape, A);
+  if (!seg || !seg[0] || !seg[1]) return;
+  if (!act.bend) act.bend = bendFromAmt(seg[0], seg[1], shape === 'flex' ? 0.42 : 0.26);
+  if (shape === 'curve' || shape === 'flex') {
+    act.points = sampleQuad(A[0], act.bend, A[1], 14);
+  } else if (shape === 'straight-curve' && A[2]) {
+    const curve = sampleQuad(A[1], act.bend, A[2], 10);
+    act.points = [{ x: A[0].x, y: A[0].y }, ...curve.slice(1)];
+  } else if (shape === 'curve-straight' && A[2]) {
+    const curve = sampleQuad(A[0], act.bend, A[1], 10);
+    act.points = [...curve, { x: A[2].x, y: A[2].y }];
+  }
+}
+
+function shapedPathD(shape, anchors, bend) {
+  const A = anchors || [];
+  if (A.length < 2) return null;
+  if (shape === 'straight') return `M ${A[0].x} ${A[0].y} L ${A[A.length - 1].x} ${A[A.length - 1].y}`;
+  if ((shape === 'curve' || shape === 'flex') && bend && A[1]) {
+    return `M ${A[0].x} ${A[0].y} Q ${bend.x} ${bend.y} ${A[1].x} ${A[1].y}`;
+  }
+  if (shape === 'straight-curve' && bend && A[2]) {
+    return `M ${A[0].x} ${A[0].y} L ${A[1].x} ${A[1].y} Q ${bend.x} ${bend.y} ${A[2].x} ${A[2].y}`;
+  }
+  if (shape === 'curve-straight' && bend && A[2]) {
+    return `M ${A[0].x} ${A[0].y} Q ${bend.x} ${bend.y} ${A[1].x} ${A[1].y} L ${A[2].x} ${A[2].y}`;
+  }
+  return null;
+}
+
+function nearestOffense(pt, maxDist) {
+  let best = null;
+  let bestD = maxDist == null ? 42 : maxDist;
+  for (let i = 1; i <= 5; i += 1) {
+    const pid = 'o' + i;
+    const p = visualTokenPos(pid);
+    if (!p) continue;
+    const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+    if (d < bestD) {
+      bestD = d;
+      best = pid;
+    }
+  }
+  return best;
+}
+
+function armAddMovement() {
+  if (!canFixAnimation()) return;
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  if (movementGoesToSpot(type)) {
+    addMovementArmed = false;
+    addMovementFrom = null;
+    const shape = document.getElementById('cutShapeSelect')?.value || 'straight';
+    commitLocationArrow(type, shape);
+    return;
+  }
+  addMovementArmed = true;
+  addMovementFrom = null;
+  const btn = document.getElementById('addMovementBtn');
+  if (btn) btn.textContent = 'Click start player…';
+  setSheetAnimHint('Click the player who starts the pass or dribble, then the player it goes to.');
+}
+
+function takeAddMovementClick(pid) {
+  if (!addMovementArmed || !pid || pid === 'ball' || String(pid).startsWith('d')) return false;
+  if (!addMovementFrom) {
+    addMovementFrom = pid;
+    const btn = document.getElementById('addMovementBtn');
+    if (btn) btn.textContent = 'Click end player…';
+    setSheetAnimHint('Now click the player this movement goes to.');
+    return true;
+  }
+  if (addMovementFrom === pid) return true;
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  commitAddedMovement(addMovementFrom, pid, type);
+  addMovementArmed = false;
+  addMovementFrom = null;
+  const btn = document.getElementById('addMovementBtn');
+  if (btn) btn.textContent = 'Add movement';
+  return true;
+}
+
+function commitLocationArrow(type, shape) {
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  materializeInkActions(currentStep);
+  let ink = ensureEditableInk(currentStep);
+  if (!ink) {
+    ink = { actions: [], paths: {}, marks: {}, passes: [] };
+    sheetSessionInkByStep[currentStep] = ink;
+  }
+  if (!Array.isArray(ink.actions)) ink.actions = [];
+  const selected = choreographySelectedPid && String(choreographySelectedPid).startsWith('o')
+    ? visualTokenPos(choreographySelectedPid)
+    : null;
+  const n = ink.actions.length;
+  const start = selected
+    ? { x: selected.x, y: selected.y }
+    : { x: 170 + (n % 3) * 36, y: 310 };
+  const end = { x: start.x + 20, y: Math.max(70, start.y - 120) };
+  let anchors;
+  if (shape === 'straight-curve' || shape === 'curve-straight') {
+    anchors = [start, { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, end];
+  } else {
+    anchors = [start, end];
+  }
+  const act = {
+    kind: type === 'run' ? 'cut' : type,
+    fromPid: selected ? choreographySelectedPid : null,
+    toPid: null,
+    pid: type === 'pass' ? null : (selected ? choreographySelectedPid : null),
+    shape,
+    anchors,
+    bend: null,
+    points: [],
+    seq: ink.actions.length + 1,
+  };
+  refreshShaped(act);
+  ink.actions.push(act);
+  step.movements = alignMovementsToInk();
+  const added = step.movements[step.movements.length - 1];
+  if (added) {
+    added.type = type;
+    added.shape = act.shape;
+    added.anchors = act.anchors;
+    added.bend = act.bend;
+    added.points = act.points;
+  }
+  step.coachOrder = true;
+  selectedArrowIndex = ink.actions.length - 1;
+  selectedArrowStep = currentStep;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Drag the white dots for the start and the spot. Drag the curve dot to bend it. The square is the joint of a two-part cut.');
+}
+
+function commitAddedMovement(fromPid, toPid, type) {
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  const fromPos = visualTokenPos(fromPid);
+  const toPos = visualTokenPos(toPid);
+  const points = (fromPos && toPos)
+    ? [{ x: fromPos.x, y: fromPos.y }, { x: toPos.x, y: toPos.y }]
+    : null;
+  materializeInkActions(currentStep);
+  const ink = ensureEditableInk(currentStep);
+  if (ink) {
+    if (!Array.isArray(ink.actions)) ink.actions = [];
+    ink.actions.push({
+      kind: type === 'run' ? 'cut' : type,
+      fromPid,
+      toPid,
+      pid: type === 'pass' ? null : fromPid,
+      points: points ? points.map((p) => ({ x: p.x, y: p.y })) : [],
+      seq: ink.actions.length + 1,
+    });
+    step.movements = alignMovementsToInk();
+    const added = step.movements[step.movements.length - 1];
+    if (added) added.type = type;
+  } else {
+    const moves = (step.movements || []).filter((m) => m && !m._meta);
+    moves.push({
+      from: fromPid,
+      to: toPid,
+      type,
+      timing: 'sync',
+      points: points ? points.map((p) => ({ x: p.x, y: p.y })) : null,
+    });
+    step.movements = moves;
+  }
+  step.coachOrder = true;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Movement added. It plays after the others on this sheet.');
+}
+
+function deleteMovement(idx) {
+  if (!canFixAnimation()) return;
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const doomed = ink && ink.actions && ink.actions[idx];
+  if (doomed && doomed.pathKey && ink.paths) delete ink.paths[doomed.pathKey];
+  if (doomed && doomed.pathKey && ink.marks) delete ink.marks[doomed.pathKey];
+  if (ink && Array.isArray(ink.actions) && idx < ink.actions.length) ink.actions.splice(idx, 1);
+  const moves = (step.movements || []).filter((m) => m && !m._meta);
+  if (idx < moves.length) moves.splice(idx, 1);
+  step.movements = moves;
+  step.coachOrder = true;
+  if (selectedArrowIndex === idx) selectedArrowIndex = null;
+  else if (selectedArrowIndex != null && selectedArrowIndex > idx) selectedArrowIndex -= 1;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow removed.');
+}
+
+function deleteSelectedArrow() {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  deleteMovement(selectedArrowIndex);
+}
+
 function updateMovementList() {
   const list = document.getElementById('movementList');
   const wrap = document.getElementById('movementListWrap');
   if (!list || !wrap) return;
-  const step = steps[currentStep];
-  const movements = (step?.movements || []).filter((m) => !(m && m._meta));
-  if (!movements.length) {
-    wrap.style.display = isReadOnly ? 'none' : 'block';
-    list.innerHTML = '<div class="text-muted" style="font-size:0.75rem;">No actions yet — pick a tool and click two players.</div>';
+  if (viewMode === 'view' && !playHasSheets()) {
+    wrap.style.display = 'none';
     return;
   }
-  wrap.style.display = 'block';
+  const step = steps[currentStep];
+  const movements = movementRows(currentStep);
+  const editBar = document.getElementById('movementEditBar');
+  if (editBar) editBar.style.display = canFixAnimation() ? 'flex' : 'none';
+  syncMovementAddMode();
+  wrap.style.display = canFixAnimation() || movements.length ? 'block' : 'none';
+  if (!movements.length) {
+    list.innerHTML = canFixAnimation()
+      ? '<div class="text-muted" style="font-size:0.75rem;">No arrows on this sheet yet.</div>'
+      : '';
+    return;
+  }
   list.innerHTML = '';
   movements.forEach((m, idx) => {
     const row = document.createElement('div');
     row.className = 'movement-item';
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#f9fafb;';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#fff;border:1px solid #e5e7eb;';
+    if (selectedArrowIndex === idx && selectedArrowStep === currentStep) {
+      row.style.background = '#dbeafe';
+    }
 
     const label = document.createElement('span');
     label.style.flex = '1';
-    label.textContent = `${playerShortId(m.from)} → ${playerShortId(m.to)} · ${movementLabel(m)}`;
+    label.textContent = m.to
+      ? `${idx + 1}. ${playerShortId(m.from)} → ${playerShortId(m.to)}`
+      : `${idx + 1}. ${playerShortId(m.from)}`;
 
-    if (isReadOnly) {
+    if (!canFixAnimation()) {
       const badge = document.createElement('span');
-      badge.textContent = m.timing === 'optional' ? 'Optional' : 'Sync';
+      badge.textContent = movementLabel(m);
       badge.style.cssText = 'font-size:0.68rem;color:#6b7280;';
       row.appendChild(label);
       row.appendChild(badge);
-    } else {
-      const timingSelect = document.createElement('select');
-      timingSelect.className = 'form-control';
-      timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
-      ['sync', 'optional'].forEach((value) => {
-        const opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
-        if ((m.timing || 'sync') === value) opt.selected = true;
-        timingSelect.appendChild(opt);
-      });
-      timingSelect.onchange = () => {
-        saveUndoState();
-        m.timing = timingSelect.value;
-        renderStep();
-      };
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-danger btn-sm';
-      removeBtn.textContent = '×';
-      removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
-      removeBtn.onclick = () => {
-        saveUndoState();
-        step.movements.splice(idx, 1);
-        renderStep();
-        updateMovementList();
-      };
-
-      row.appendChild(label);
-      row.appendChild(timingSelect);
-      row.appendChild(removeBtn);
+      list.appendChild(row);
+      return;
     }
+
+    const typeSelect = document.createElement('select');
+    typeSelect.className = 'form-control';
+    typeSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
+    typeSelect.title = 'Change run / screen / dribble / pass';
+    ['dribble', 'pass', 'cut', 'run', 'screen'].forEach((value) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = movementLabel({ type: value });
+      if ((m.type || 'cut') === value) opt.selected = true;
+      typeSelect.appendChild(opt);
+    });
+    typeSelect.onchange = () => {
+      saveUndoState();
+      const moves = alignMovementsToInk();
+      if (moves[idx]) moves[idx].type = typeSelect.value;
+      step.movements = moves;
+      step.coachOrder = true;
+      const ink = ensureEditableInk(currentStep);
+      if (ink && ink.actions && ink.actions[idx]) {
+        ink.actions[idx].kind = typeSelect.value === 'run' ? 'cut' : typeSelect.value;
+      }
+      markAnimationOrderDirty();
+      renderStep();
+    };
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.textContent = 'Delete';
+    removeBtn.title = 'Delete this arrow';
+    removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
+    removeBtn.onclick = () => deleteMovement(idx);
+
+    row.appendChild(label);
+    row.appendChild(typeSelect);
+    row.appendChild(removeBtn);
     list.appendChild(row);
   });
 }
@@ -1728,7 +2652,7 @@ let stepsDirty = false;
 let stepDragFrom = null;
 
 function markStepsDirty() {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   stepsDirty = true;
   invalidatePlaybarTimeline();
   const banner = document.getElementById('stepsDirtyBanner');
@@ -1742,12 +2666,19 @@ function clearStepsDirty() {
 }
 
 function moveStep(fromIdx, toIdx) {
-  if (isReadOnly) return;
+  if (!canFixAnimation()) return;
   if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
   if (fromIdx >= steps.length || toIdx >= steps.length) return;
   saveCurrentStepNotes();
   const [item] = steps.splice(fromIdx, 1);
   steps.splice(toIdx, 0, item);
+  // Per-sheet alignment + ink travel with their sheet so Save choreography stays paired.
+  [sheetAlignByStep, sheetStickyInkByStep, sheetSessionInkByStep].forEach((arr) => {
+    if (!Array.isArray(arr) || !arr.length) return;
+    while (arr.length < steps.length) arr.push(null);
+    const [entry] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, entry);
+  });
   if (currentStep === fromIdx) currentStep = toIdx;
   else if (fromIdx < currentStep && toIdx >= currentStep) currentStep -= 1;
   else if (fromIdx > currentStep && toIdx <= currentStep) currentStep += 1;
@@ -1773,7 +2704,7 @@ function updateStepList() {
       updateMovementList();
     };
 
-    if (!isReadOnly) {
+    if (canFixAnimation()) {
       const handle = document.createElement('span');
       handle.className = 'step-drag-handle';
       handle.title = 'Drag to reorder';
@@ -1822,9 +2753,9 @@ function updateStepList() {
     labelInput.type = 'text';
     labelInput.className = 'step-label-input';
     labelInput.value = s.label || '';
-    labelInput.placeholder = isReadOnly ? 'Untitled sheet' : 'Sheet label (e.g. Pass to 2)…';
-    labelInput.readOnly = isReadOnly;
-    labelInput.title = isReadOnly ? '' : 'Edit sheet wording';
+    labelInput.placeholder = canFixAnimation() ? 'Sheet label (e.g. Pass to 2)…' : 'Untitled sheet';
+    labelInput.readOnly = !canFixAnimation();
+    labelInput.title = canFixAnimation() ? 'Edit sheet wording' : '';
     labelInput.onclick = (e) => e.stopPropagation();
     labelInput.onmousedown = (e) => e.stopPropagation();
     labelInput.onchange = (e) => {
@@ -1846,7 +2777,7 @@ function updateStepList() {
     div.appendChild(num);
     div.appendChild(labelInput);
 
-    if (!isReadOnly) {
+    if (canFixAnimation()) {
       const movers = document.createElement('div');
       movers.className = 'step-move-btns';
       movers.addEventListener('click', (e) => e.stopPropagation());
@@ -1934,6 +2865,24 @@ function buildAnimPositions(fromRaw, toRaw, t) {
   return pos;
 }
 
+function setPlayStepButton(running) {
+  const btn = document.getElementById('playStepBtn');
+  if (!btn) return;
+  if (running) {
+    btn.disabled = false;
+    btn.textContent = '⏹ Stop';
+    btn.classList.add('btn-danger');
+    btn.classList.remove('btn-secondary');
+    btn.title = 'Stop this sheet';
+  } else {
+    btn.textContent = '▶ Play step';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+    btn.disabled = false;
+    btn.title = 'Play this sheet only. Fix the actions, Save choreography, then Play All.';
+  }
+}
+
 function setPlayAllButton(running) {
   const btn = document.getElementById('playAllBtn')
     || document.querySelector('[onclick="playAnimation()"]');
@@ -1962,6 +2911,7 @@ function setPlayAllButton(running) {
     }
   }
   updatePlaybarPlayButton();
+  setPlayStepButton(!!running);
 }
 
 function updateChoreographyChrome() {
@@ -1976,9 +2926,9 @@ function updateChoreographyChrome() {
     hint.style.display = show ? 'block' : 'none';
     if (show) {
       if (choreographyDirty) {
-        hint.textContent = 'Roster/spots edited — Save choreography so the next load keeps them.';
+        hint.textContent = 'Spots or action order edited — Save choreography so Play All keeps your order.';
       } else if (sheetUsingStickyChoreography) {
-        hint.textContent = 'Using saved choreography (sticky). Drag, Add player, or × a token; Save to update. Reset extract to re-run.';
+        hint.textContent = 'Saved choreography. Pause Play All to change run/screen/dribble/pass and reorder actions, then Save.';
       } else if (sheetExtractSource === 'vector') {
         hint.textContent = 'Vector draft from FastDraw PDF. Drag / Add player / × to correct roster, then Save choreography.';
       } else {
@@ -2000,8 +2950,7 @@ function updateChoreographyChrome() {
 }
 
 function viewModeAllowsChoreoEdit() {
-  // View + editor can correct spots; public share links stay read-only.
-  return viewMode !== 'share';
+  return audienceCanEdit && viewMode !== 'share';
 }
 
 function canEditSheetChoreography() {
@@ -2069,6 +3018,7 @@ function stripOidFromInk(ink, oid) {
     paths: { ...(ink.paths || {}) },
     marks: { ...(ink.marks || {}) },
     passes: Array.isArray(ink.passes) ? ink.passes.slice() : [],
+    actions: Array.isArray(ink.actions) ? ink.actions.slice() : [],
   };
   delete next.paths[oid];
   delete next.marks[oid];
@@ -2077,6 +3027,10 @@ function stripOidFromInk(ink, oid) {
     const fromPid = p.fromPid || p.from;
     const toPid = p.toPid || p.to;
     return fromPid !== oid && toPid !== oid;
+  });
+  next.actions = next.actions.filter((p) => {
+    if (!p || typeof p !== 'object') return false;
+    return p.pid !== oid && p.fromPid !== oid && p.toPid !== oid;
   });
   if (!Object.keys(next.paths).length && !Object.keys(next.marks).length && !next.passes.length) {
     return null;
@@ -2212,6 +3166,7 @@ function setSheetAlignStatus(state, detail) {
     text.textContent = detail || 'Sheet align failed — Play All may be inaccurate.';
     sheetAlignReady = true; // allow attempt; tokens may be sparse
   }
+  banner.style.display = 'none';
   setPlayAllButton(playAllRunning);
   updatePlaybarUI();
   updateChoreographyChrome();
@@ -2223,7 +3178,22 @@ function setSheetAnimHint(text) {
 }
 
 function delayMs(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      delayCancels.delete(finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    delayCancels.add(finish);
+  });
+}
+
+function cancelDelays() {
+  Array.from(delayCancels).forEach((fn) => fn());
 }
 
 function updateStepChrome(index) {
@@ -2300,7 +3270,7 @@ function showSheetUnderlay(stepIndex) {
 async function loadStickyChoreographyDoc() {
   if (!playId) return null;
   try {
-    const resp = await fetch(`/api/playbook/choreography/${playId}`);
+    const resp = await fetch(shareAssetBase ? `${shareAssetBase}/choreography` : `/api/playbook/choreography/${playId}`);
     const data = await resp.json();
     if (!resp.ok || !data.ok || !data.sticky || !data.choreography) return null;
     return data.choreography;
@@ -2329,14 +3299,28 @@ function applyStickyChoreographyDoc(doc) {
       || null;
     return (match && match.ink) ? match.ink : null;
   });
+  steps.forEach((step, idx) => {
+    const match = stickySteps.find((s) => Number(s.step_index) === idx)
+      || stickySteps[idx]
+      || null;
+    if (!match) return;
+    if (match.coachOrder) {
+      step.coachOrder = true;
+      step.movements = Array.isArray(match.movements) ? match.movements.slice() : [];
+    } else if (Array.isArray(match.movements) && match.movements.length) {
+      step.movements = match.movements.slice();
+    }
+  });
   sheetSessionInkByStep = sheetStickyInkByStep.map((ink) => (ink ? {
     paths: ink.paths || {},
     marks: ink.marks || {},
     passes: ink.passes || [],
+    actions: ink.actions || [],
   } : null));
   sheetUsingStickyChoreography = true;
   choreographyDirty = false;
-  return sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
+  return sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length)
+    || steps.some((step) => step && step.coachOrder);
 }
 
 function buildChoreographyPayload(source) {
@@ -2349,16 +3333,72 @@ function buildChoreographyPayload(source) {
       court_frac: align.court_frac || null,
       positions: align.positions || {},
     };
-    if (ink && (ink.paths || ink.marks || ink.passes)) {
+    const moves = (step.movements || []).filter((m) => m && !m._meta);
+    if (step.coachOrder || (ink && (ink.paths || ink.marks || ink.passes || (ink.actions && ink.actions.length)))) {
+      const owned = ink || { paths: {}, marks: {}, passes: [], actions: [] };
       entry.ink = {
-        paths: ink.paths || {},
-        marks: ink.marks || {},
-        passes: ink.passes || [],
+        paths: owned.paths || {},
+        marks: owned.marks || {},
+        passes: owned.passes || [],
+        actions: owned.actions || [],
       };
+    }
+    if (moves.length) {
+      entry.movements = moves.map((m) => {
+        const row = {
+          from: m.from || null,
+          to: m.to || null,
+          type: m.type || 'cut',
+          timing: m.timing || 'sync',
+        };
+        if (m.points && m.points.length >= 2) row.points = m.points;
+        if (m.anchors && m.anchors.length >= 2) row.anchors = m.anchors;
+        if (m.bend) row.bend = m.bend;
+        if (m.shape) row.shape = m.shape;
+        return row;
+      });
+    }
+    if (step.coachOrder) {
+      entry.coachOrder = true;
+      entry.movements = entry.movements || [];
     }
     return entry;
   });
   return { source: source || 'user_save', steps: stepsOut };
+}
+
+async function autoStickExtractedChoreography() {
+  if (!playId || isPlaybackActive()) return;
+  try {
+    const payload = buildChoreographyPayload('auto_extract');
+    const resp = await fetch(`/api/playbook/choreography/${playId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) return;
+    sheetUsingStickyChoreography = true;
+    choreographyDirty = false;
+    if (data.choreography) applyStickyChoreographyDoc(data.choreography);
+    setSheetAlignStatus('ready', 'Ready — animation follows the printed sheet');
+  } catch (err) {
+    console.warn('auto-stick extract', err);
+  }
+}
+
+function captureVisibleOffense() {
+  if (!steps[currentStep]) return;
+  const align = ensureSheetAlignStep(currentStep);
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid || !String(pid).startsWith('o')) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    align.positions[pid] = { x: p.x, y: p.y };
+    if (!steps[currentStep].positions) steps[currentStep].positions = {};
+    steps[currentStep].positions[pid] = { x: p.x, y: p.y };
+  });
 }
 
 async function saveStickyChoreography() {
@@ -2371,6 +3411,7 @@ async function saveStickyChoreography() {
   if (btn) btn.disabled = true;
   setSheetAnimHint('Saving choreography…');
   try {
+    captureVisibleOffense();
     // Prefer session ink from a prior Play All; if missing, pull once now.
     if (playHasSheets() && !sheetSessionInkByStep.some(Boolean)) {
       await ensureSessionInkCaptured();
@@ -2390,8 +3431,10 @@ async function saveStickyChoreography() {
     sheetUsingStickyChoreography = true;
     choreographyDirty = false;
     if (data.choreography) applyStickyChoreographyDoc(data.choreography);
+    invalidatePlaybarTimeline();
+    if (!isPlaybackActive()) renderStep();
     setSheetAlignStatus('ready', 'Saved choreography — sticky for next load');
-    setSheetAnimHint('Choreography saved');
+    setSheetAnimHint('Saved. Play uses this version.');
   } catch (err) {
     console.warn('save choreography', err);
     setSheetAnimHint(`Save failed: ${err.message || err}`);
@@ -2467,10 +3510,13 @@ async function ensureSheetAlignment(options = {}) {
   setSheetAlignStatus('aligning');
   setSheetAnimHint('Extracting play data…');
   sheetAlignPromise = (async () => {
-    // Stage 2 sticky review wins over Stage 1 extract.
+    // Coach-saved sticky wins over Stage 1 extract. auto_extract is a cache of
+    // the last machine read — skip it so mapping fixes apply without Reset.
     if (!forceExtract) {
       const sticky = await loadStickyChoreographyDoc();
-      if (sticky && applyStickyChoreographyDoc(sticky)) {
+      const stickySource = sticky && sticky.source;
+      const coachSaved = stickySource && stickySource !== 'auto_extract';
+      if (coachSaved && applyStickyChoreographyDoc(sticky)) {
         sheetExtractSource = null;
         setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
         setSheetAnimHint('Using saved choreography');
@@ -2492,7 +3538,7 @@ async function ensureSheetAlignment(options = {}) {
         return { index: idx, court_frac: null, positions: {}, ink: null, source: null };
       }
       try {
-        const resp = await fetch('/api/playbook/sheet-extract', {
+        const resp = await fetch(sheetApiUrl('sheet-extract'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: step.source_image }),
@@ -2522,7 +3568,7 @@ async function ensureSheetAlignment(options = {}) {
       if (!nxt || !nxt.positions || !Object.keys(nxt.positions).length) continue;
       try {
         // eslint-disable-next-line no-await-in-loop
-        const resp = await fetch('/api/playbook/sheet-extract', {
+        const resp = await fetch(sheetApiUrl('sheet-extract'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2548,6 +3594,7 @@ async function ensureSheetAlignment(options = {}) {
         paths: r.ink.paths || {},
         marks: r.ink.marks || {},
         passes: r.ink.passes || [],
+        actions: r.ink.actions || [],
       };
     });
     const sources = results.map((r) => r.source).filter(Boolean);
@@ -2560,9 +3607,13 @@ async function ensureSheetAlignment(options = {}) {
     if (!anyPos && !anyFrac) {
       setSheetAlignStatus('error');
     } else if (sheetExtractSource === 'vector') {
-      setSheetAlignStatus('ready', 'Ready — vector extract draft (Save to stick)');
+      setSheetAlignStatus('ready', 'Ready — animation follows the printed sheet');
     } else {
-      setSheetAlignStatus('ready', 'Ready — OCR draft (Save to stick)');
+      setSheetAlignStatus('ready', 'Ready — animation follows extracted ink');
+    }
+    if (playId && typeof viewModeAllowsChoreoEdit === 'function' && viewModeAllowsChoreoEdit()
+        && !sheetUsingStickyChoreography) {
+      autoStickExtractedChoreography();
     }
     setSheetAnimHint('');
     // Refresh tokens/underlay now that digits map to the court.
@@ -2607,10 +3658,14 @@ function orientSheetPass(pass, ballPid, fromRaw) {
   }
   if (!a || !b) return null;
   let pts = null;
-  if (orphan && points && points.length >= 2) {
+  if (points && points.length >= 3) {
+    // Hug the printed dashed/solid stroke; only snap endpoints onto tokens.
+    pts = points.map((pt) => ({ x: pt.x, y: pt.y }));
+    pts[0] = { x: a.x, y: a.y };
+    pts[pts.length - 1] = { x: b.x, y: b.y };
+  } else if (orphan && points && points.length >= 2) {
     pts = points.map((pt) => ({ x: pt.x, y: pt.y }));
   } else {
-    // Digit→digit: straight passer→receiver. Ink midpoints overshoot the token.
     pts = [
       { x: a.x, y: a.y },
       { x: b.x, y: b.y },
@@ -2631,7 +3686,59 @@ function orientSheetPass(pass, ballPid, fromRaw) {
 }
 
 /** Build travel paths: stored movements first, else ink-traced marks (pass/screen/cut). */
+function pathsFromInkActions(inkBundle) {
+  const paths = [];
+  const actions = (inkBundle && inkBundle.actions) || [];
+  actions.slice().sort((a, b) => (a.seq || 0) - (b.seq || 0)).forEach((act) => {
+    const pts = (act && act.points) || [];
+    if (pts.length < 2) return;
+    const isPass = act.kind === 'pass';
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    paths.push({
+      pid: isPass ? null : act.pid,
+      ballOnly: isPass,
+      from: { x: start.x, y: start.y },
+      to: { x: end.x, y: end.y },
+      ctrl: null,
+      points: pts.map((p) => ({ x: p.x, y: p.y })),
+      type: act.kind || 'cut',
+      shape: act.shape || null,
+      anchors: act.anchors || null,
+      bend: act.bend || null,
+      fromPid: act.fromPid,
+      toPid: act.toPid,
+      seq: act.seq,
+    });
+  });
+  return paths;
+}
+
 function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
+  if (step && step.coachOrder) {
+    const owned = pathsFromInkActions(inkBundle);
+    if (owned.length) return owned;
+    const spotPaths = [];
+    ((step.movements) || []).forEach((m) => {
+      if (!m || m._meta || !m.points || m.points.length < 2) return;
+      const isPass = m.type === 'pass';
+      spotPaths.push({
+        pid: isPass ? null : (m.from || null),
+        ballOnly: isPass,
+        from: { x: m.points[0].x, y: m.points[0].y },
+        to: { x: m.points[m.points.length - 1].x, y: m.points[m.points.length - 1].y },
+        ctrl: null,
+        points: m.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        type: m.type || 'cut',
+        shape: m.shape || null,
+        anchors: m.anchors || null,
+        bend: m.bend || null,
+        fromPid: m.from,
+        toPid: m.to,
+      });
+    });
+    return spotPaths;
+  }
   const paths = [];
   const moves = (step && step.movements) || [];
   let usedStored = false;
@@ -2639,14 +3746,36 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
   const marks = (inkBundle && inkBundle.marks) || {};
   const sheetPasses = (inkBundle && inkBundle.passes) || [];
   const ball = ballPid || (step && step.ball) || 'o1';
+  const inkActions = (inkBundle && inkBundle.actions) || [];
+  const realMoves = moves.filter((m) => m && !m._meta);
+  // A short movement list used to hide the rest of the sheet's arrows during Play.
+  const movementsComplete = !inkActions.length || realMoves.length === inkActions.length;
 
   moves.forEach((m) => {
-    if (!m || m._meta) return;
+    if (!movementsComplete) return;
+    if (!m || m._meta || m.timing === 'optional') return;
+    const isPass = m.type === 'pass';
+    if (m.points && m.points.length >= 2) {
+      const start = m.points[0];
+      const end = m.points[m.points.length - 1];
+      usedStored = true;
+      paths.push({
+        pid: isPass ? null : (m.from || m.to),
+        ballOnly: isPass,
+        from: { x: start.x, y: start.y },
+        to: { x: end.x, y: end.y },
+        ctrl: null,
+        points: m.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        type: m.type || 'cut',
+        fromPid: m.from,
+        toPid: m.to,
+      });
+      return;
+    }
     const a = fromRaw[m.from] || toRaw[m.from];
     const b = toRaw[m.to] || fromRaw[m.to];
     if (!a || !b) return;
     usedStored = true;
-    const isPass = m.type === 'pass';
     // Cuts/screens move the FROM player; passes move the ball only.
     const pid = isPass ? null : (m.from || m.to);
     const dest = isPass ? b : (toRaw[pid] || b);
@@ -2668,6 +3797,11 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
   });
 
   if (usedStored) return paths;
+
+  // Draw-order rule: one PDF stroke is one beat, in the order FastDraw painted
+  // them. Coach-saved movements above still win.
+  const actionPaths = pathsFromInkActions(inkBundle);
+  if (actionPaths.length) return actionPaths;
 
   // Sheet-marked dashed passes — orient from ball-handler; keep one outbound pass.
   const orientedPasses = [];
@@ -2706,12 +3840,10 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
     const markedMover = marks[oid] === 'screen'
       || marks[oid] === 'dribble'
       || marks[oid] === 'cut';
-    // Prefer this sheet's ink tip when marked — next-sheet OCR is often the
-    // end pose after later actions (Triangle o2 must stop at 3's spot, not
-    // jump to page-130 nail).
-    if (markedMover && tipMove >= 8) b = tip;
+    // Prefer this sheet's ink tip — next-sheet OCR is often a later pose.
+    if (tipMove >= 8) b = tip;
+    else if (markedMover && tipMove >= 8) b = tip;
     else if (sheetMove >= 8) b = sheetB;
-    else if (tipMove >= 8) b = tip;
     else if (sheetMove >= 2) b = sheetB;
     else continue;
     if (sheetB && isDefaultOffensePos(oid, sheetB) && tipMove < 8) continue;
@@ -2719,7 +3851,8 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
     if (poly && poly.length >= 2 && tipMove >= 8) {
       points = poly.map((p) => ({ x: p.x, y: p.y }));
       points[0] = { x: a.x, y: a.y };
-      points[points.length - 1] = { x: b.x, y: b.y };
+      points[points.length - 1] = { x: tip.x, y: tip.y };
+      b = tip;
     }
     const ctrl = points ? null : movementQuadControl(a, b, 0.14);
     const markType = marks[oid] === 'screen'
@@ -2762,12 +3895,28 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     return { paths: {}, marks: {}, passes: [] };
   }
   const skipSticky = !!options.skipSticky;
-  if (!skipSticky && sheetStickyInkByStep[stepIndex]) {
+  const sessionInk = sheetSessionInkByStep[stepIndex];
+  if (step.coachOrder) {
+    const owned = sessionInk || (!skipSticky && sheetStickyInkByStep[stepIndex]) || {
+      paths: {}, marks: {}, passes: [], actions: [],
+    };
+    const ownedBundle = {
+      paths: owned.paths || {},
+      marks: owned.marks || {},
+      passes: owned.passes || [],
+      actions: owned.actions || [],
+    };
+    sheetSessionInkByStep[stepIndex] = ownedBundle;
+    return ownedBundle;
+  }
+  if (sessionInk && (sessionInk.actions || []).length) return sessionInk;
+  if (!skipSticky && sheetStickyInkByStep[stepIndex] && (sheetStickyInkByStep[stepIndex].actions || []).length) {
     const sticky = sheetStickyInkByStep[stepIndex];
     const bundle = {
       paths: sticky.paths || {},
       marks: sticky.marks || {},
       passes: sticky.passes || [],
+      actions: sticky.actions || [],
     };
     sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
@@ -2811,7 +3960,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
   }
 
   try {
-    const resp = await fetch('/api/playbook/sheet-paths', {
+    const resp = await fetch(sheetApiUrl('sheet-paths'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2826,6 +3975,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
       paths: data.paths || {},
       marks: data.marks || {},
       passes: data.passes || [],
+      actions: data.actions || [],
     };
     sheetInkPathCache.set(cacheKey, bundle);
     sheetSessionInkByStep[stepIndex] = bundle;
@@ -2836,15 +3986,363 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
   }
 }
 
-function drawTravelPaths(paths, activePath) {
+function appendArrowHit(layer, index, from, to) {
+  if (!from || !to) return;
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  hit.setAttribute('class', 'arrow-hit');
+  hit.setAttribute('data-arrow', String(index));
+  hit.setAttribute('x1', from.x);
+  hit.setAttribute('y1', from.y);
+  hit.setAttribute('x2', to.x);
+  hit.setAttribute('y2', to.y);
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '18');
+  hit.setAttribute('stroke-linecap', 'round');
+  hit.style.cursor = 'pointer';
+  hit.addEventListener('pointerdown', (e) => startArrowDrag(e, index, null));
+  layer.appendChild(hit);
+}
+
+function appendArrowHitPath(layer, index, d) {
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  hit.setAttribute('class', 'arrow-hit');
+  hit.setAttribute('data-arrow', String(index));
+  hit.setAttribute('d', d);
+  hit.setAttribute('fill', 'none');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '16');
+  hit.setAttribute('stroke-linecap', 'round');
+  hit.style.cursor = 'pointer';
+  hit.addEventListener('pointerdown', (e) => startArrowDrag(e, index, null));
+  layer.appendChild(hit);
+}
+
+function appendArrowHandles(layer, index, from, to) {
+  [['start', from], ['end', to]].forEach(([which, pt]) => {
+    if (!pt) return;
+    const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    handle.setAttribute('class', 'arrow-handle');
+    handle.setAttribute('cx', pt.x);
+    handle.setAttribute('cy', pt.y);
+    handle.setAttribute('r', '7');
+    handle.setAttribute('fill', '#fff');
+    handle.setAttribute('stroke', '#111827');
+    handle.setAttribute('stroke-width', '2');
+    handle.style.cursor = 'grab';
+    handle.addEventListener('pointerdown', (e) => startArrowDrag(e, index, which));
+    layer.appendChild(handle);
+  });
+}
+
+function appendShapedHandles(layer, index, path) {
+  const anchors = path.anchors || [];
+  const shape = path.shape;
+  const two = shape === 'straight-curve' || shape === 'curve-straight';
+  const start = anchors[0];
+  const end = anchors[anchors.length - 1];
+  const joint = two ? anchors[1] : null;
+  appendArrowHandles(layer, index, start, end);
+  if (joint) {
+    const handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    handle.setAttribute('class', 'arrow-handle');
+    handle.setAttribute('x', joint.x - 6);
+    handle.setAttribute('y', joint.y - 6);
+    handle.setAttribute('width', '12');
+    handle.setAttribute('height', '12');
+    handle.setAttribute('fill', '#fff');
+    handle.setAttribute('stroke', '#111827');
+    handle.setAttribute('stroke-width', '2');
+    handle.style.cursor = 'grab';
+    handle.addEventListener('pointerdown', (e) => startArrowDrag(e, index, 'joint'));
+    layer.appendChild(handle);
+  }
+  if (path.bend && shape !== 'straight') {
+    const seg = curvedSegment(shape, anchors);
+    if (seg && seg[0] && seg[1]) {
+      const guide = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      guide.setAttribute('x1', (seg[0].x + seg[1].x) / 2);
+      guide.setAttribute('y1', (seg[0].y + seg[1].y) / 2);
+      guide.setAttribute('x2', path.bend.x);
+      guide.setAttribute('y2', path.bend.y);
+      guide.setAttribute('stroke', '#9ca3af');
+      guide.setAttribute('stroke-width', '1');
+      guide.setAttribute('stroke-dasharray', '3,3');
+      guide.style.pointerEvents = 'none';
+      layer.appendChild(guide);
+    }
+    const bend = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    bend.setAttribute('class', 'arrow-handle');
+    bend.setAttribute('cx', path.bend.x);
+    bend.setAttribute('cy', path.bend.y);
+    bend.setAttribute('r', '6');
+    bend.setAttribute('fill', '#fde68a');
+    bend.setAttribute('stroke', '#111827');
+    bend.setAttribute('stroke-width', '2');
+    bend.style.cursor = 'grab';
+    bend.addEventListener('pointerdown', (e) => startArrowDrag(e, index, 'bend'));
+    layer.appendChild(bend);
+  }
+}
+
+function ensureEditableInk(stepIndex) {
+  if (sheetSessionInkByStep[stepIndex]) return sheetSessionInkByStep[stepIndex];
+  const sticky = sheetStickyInkByStep[stepIndex];
+  if (!sticky) return null;
+  const copy = JSON.parse(JSON.stringify(sticky));
+  sheetSessionInkByStep[stepIndex] = copy;
+  return copy;
+}
+
+function showArrowEditor() {
+  const bar = document.getElementById('arrowEditBar');
+  const select = document.getElementById('arrowKindSelect');
+  if (!bar || !select) return;
+  const on = selectedArrowIndex != null && selectedArrowStep === currentStep && !isPlaybackActive();
+  bar.style.display = on ? 'flex' : 'none';
+  if (!on) return;
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  const move = moves[selectedArrowIndex];
+  const kind = (move && move.type) || (act && act.kind) || 'cut';
+  select.value = ['pass', 'dribble', 'cut', 'run', 'screen'].includes(kind) ? kind : 'cut';
+  const shapeSel = document.getElementById('arrowShapeSelect');
+  const spot = movementGoesToSpot(kind);
+  if (shapeSel) {
+    shapeSel.style.display = spot ? '' : 'none';
+    const shape = (act && act.shape) || (move && move.shape) || 'straight';
+    if (['straight', 'curve', 'flex', 'straight-curve', 'curve-straight'].includes(shape)) shapeSel.value = shape;
+  }
+}
+
+function arrowPointsFor(index) {
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[index];
+  if (act && act.points && act.points.length >= 2) return act.points;
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  const m = moves[index];
+  if (m && m.points && m.points.length >= 2) return m.points;
+  return null;
+}
+
+function syncMovementFromArrow(index) {
+  const step = steps[currentStep];
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const actions = (ink && ink.actions) || [];
+  if (!step) return;
+  const existing = (step.movements || []).filter((m) => m && !m._meta);
+  if (!actions.length) {
+    const m = existing[index];
+    if (!m || !m.points) return;
+    step.movements = existing;
+    step.coachOrder = true;
+    return;
+  }
+  const moves = actions.map((act, i) => {
+    const prev = existing[i] || {};
+    const pts = (act.points || []).map((p) => ({ x: p.x, y: p.y }));
+    const kind = (i === index && prev.type) ? prev.type : (prev.type || act.kind || 'cut');
+    return {
+      from: prev.from || act.fromPid || act.pid,
+      to: prev.to || act.toPid || prev.from,
+      type: kind,
+      timing: prev.timing || 'sync',
+      points: pts.length >= 2 ? pts : (prev.points || null),
+      shape: act.shape || prev.shape || null,
+      anchors: act.anchors || prev.anchors || null,
+      bend: act.bend || prev.bend || null,
+    };
+  }).filter((m) => m);
+  step.movements = moves;
+  step.coachOrder = true;
+}
+
+function startArrowDrag(e, index, which) {
+  if (isPlaybackActive() || isAnimating || viewMode === 'share' || !canFixAnimation()) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const pt = svgPointFromClient(e.clientX, e.clientY);
+  if (!pt) return;
+  const pts = arrowPointsFor(index);
+  if (!pts) return;
+  let mode = which;
+  if (!mode) {
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    if (Math.hypot(pt.x - start.x, pt.y - start.y) < 16) mode = 'start';
+    else if (Math.hypot(pt.x - end.x, pt.y - end.y) < 16) mode = 'end';
+    else mode = 'body';
+  }
+  saveUndoState();
+  selectedArrowIndex = index;
+  selectedArrowStep = currentStep;
+  arrowDrag = { index, which: mode, last: pt, moved: false };
+  holdCourtPointer(e);
+  showArrowEditor();
+  renderStep();
+}
+
+function applyArrowDrag(clientX, clientY) {
+  if (!arrowDrag) return;
+  const pt = svgPointFromClient(clientX, clientY);
+  if (!pt) return;
+  const dx = pt.x - arrowDrag.last.x;
+  const dy = pt.y - arrowDrag.last.y;
+  if (Math.hypot(dx, dy) < 0.4) return;
+  arrowDrag.moved = true;
+  arrowDrag.last = pt;
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[arrowDrag.index];
+  if (act && act.shape && act.anchors && act.anchors.length >= 2) {
+    if (arrowDrag.which === 'bend') {
+      act.bend = { x: pt.x, y: pt.y };
+    } else if (arrowDrag.which === 'start') {
+      act.anchors[0].x += dx;
+      act.anchors[0].y += dy;
+    } else if (arrowDrag.which === 'end') {
+      const end = act.anchors[act.anchors.length - 1];
+      end.x += dx;
+      end.y += dy;
+    } else if (arrowDrag.which === 'joint' && act.anchors.length >= 3) {
+      act.anchors[1].x += dx;
+      act.anchors[1].y += dy;
+    } else {
+      act.anchors.forEach((p) => {
+        p.x += dx;
+        p.y += dy;
+      });
+      if (act.bend) {
+        act.bend.x += dx;
+        act.bend.y += dy;
+      }
+    }
+    refreshShaped(act);
+    syncMovementFromArrow(arrowDrag.index);
+    renderStep();
+    return;
+  }
+  const pts = arrowPointsFor(arrowDrag.index);
+  if (!pts) return;
+  if (arrowDrag.which === 'start') {
+    pts[0].x += dx;
+    pts[0].y += dy;
+  } else if (arrowDrag.which === 'end') {
+    const end = pts[pts.length - 1];
+    end.x += dx;
+    end.y += dy;
+  } else {
+    pts.forEach((p) => {
+      p.x += dx;
+      p.y += dy;
+    });
+  }
+  syncMovementFromArrow(arrowDrag.index);
+  renderStep();
+}
+
+function finishArrowDrag() {
+  if (!arrowDrag) return;
+  const moved = arrowDrag.moved;
+  const index = arrowDrag.index;
+  arrowDrag = null;
+  if (!moved) {
+    showArrowEditor();
+    renderStep();
+    return;
+  }
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const act = ink && ink.actions && ink.actions[index];
+  if (act && act.shape && act.anchors && act.anchors[0]) {
+    const pid = nearestOffense(act.anchors[0], 48);
+    if (pid) {
+      act.fromPid = pid;
+      act.pid = pid;
+    }
+  }
+  syncMovementFromArrow(selectedArrowIndex);
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow updated. Save to keep it, then Play to check it.');
+}
+
+function setSelectedArrowShape(shape) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  const allowed = ['straight', 'curve', 'flex', 'straight-curve', 'curve-straight'];
+  if (!allowed.includes(shape)) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  if (!act) return;
+  const src = (act.anchors && act.anchors.length >= 2)
+    ? act.anchors
+    : (act.points && act.points.length >= 2 ? act.points : null);
+  if (!src) return;
+  const start = { x: src[0].x, y: src[0].y };
+  const end = { x: src[src.length - 1].x, y: src[src.length - 1].y };
+  const two = shape === 'straight-curve' || shape === 'curve-straight';
+  const joint = (act.anchors && act.anchors.length >= 3)
+    ? { x: act.anchors[1].x, y: act.anchors[1].y }
+    : { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  act.shape = shape;
+  act.anchors = two ? [start, joint, end] : [start, end];
+  act.bend = null;
+  refreshShaped(act);
+  syncMovementFromArrow(selectedArrowIndex);
+  if (steps[currentStep]) steps[currentStep].coachOrder = true;
+  const menu = document.getElementById('cutShapeSelect');
+  if (menu) menu.value = shape;
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Path shape updated. Drag the dots to place the start, the spot, and the curve.');
+}
+
+function setSelectedArrowKind(kind) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  if (act) act.kind = kind === 'run' ? 'cut' : kind;
+  syncMovementFromArrow(selectedArrowIndex);
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  if (moves[selectedArrowIndex]) moves[selectedArrowIndex].type = kind;
+  if (steps[currentStep]) {
+    steps[currentStep].movements = moves;
+    steps[currentStep].coachOrder = true;
+  }
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow updated. Save choreography, then Play to check it.');
+}
+
+function svgPointFromClient(clientX, clientY) {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !svg.getScreenCTM()) return null;
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  return { x: svgP.x, y: svgP.y };
+}
+
+function drawTravelPaths(paths, activePath, opts) {
+  opts = opts || {};
   addArrowheadMarkers();
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer) return;
+  const editable = !!opts.editable && canFixAnimation() && !isPlaybackActive() && !isAnimating;
+  arrowLayer.style.pointerEvents = editable ? 'auto' : 'none';
   arrowLayer.innerHTML = '';
+  const handles = [];
   paths.forEach((p) => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const shaped = p.shape ? shapedPathD(p.shape, p.anchors, p.bend) : null;
     let d;
-    if (p.points && p.points.length >= 2) {
+    if (shaped) {
+      d = shaped;
+    } else if (p.points && p.points.length >= 2) {
       d = p.points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
     } else if (p.ctrl) {
       d = `M ${p.from.x} ${p.from.y} Q ${p.ctrl.mx} ${p.ctrl.my} ${p.to.x} ${p.to.y}`;
@@ -2853,23 +4351,39 @@ function drawTravelPaths(paths, activePath) {
     }
     path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
+    const actionIndex = typeof p.actionIndex === 'number' ? p.actionIndex : null;
+    const isSelected = editable && actionIndex != null && actionIndex === selectedArrowIndex && selectedArrowStep === currentStep;
     const isActive = !activePath || p === activePath;
-    const baseW = p.ballOnly || p.type === 'pass' ? 2.5 : 3;
-    path.setAttribute('stroke-width', String(isActive ? baseW + 0.5 : baseW));
+    const baseW = p.ballOnly || p.type === 'pass' ? 3.2 : 3.6;
+    path.setAttribute('stroke-width', String(isSelected ? baseW + 1.2 : baseW));
     path.setAttribute('opacity', isActive ? '1' : '0.35');
+    path.style.pointerEvents = 'none';
     if (p.type === 'pass' || p.ballOnly) {
       path.setAttribute('stroke', '#3b82f6');
       path.setAttribute('stroke-dasharray', '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
     } else if (p.type === 'dribble') {
+      path.setAttribute('d', dribblePathD(p.from, p.to, p.points));
       path.setAttribute('stroke', '#111827');
-      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else if (p.type === 'screen') {
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', isSelected ? '5.5' : '3.5');
     } else {
-      path.setAttribute('stroke', '#ef4444');
-      path.setAttribute('marker-end', 'url(#arrowhead-red)');
+      path.setAttribute('stroke', p.type === 'run' ? '#16a34a' : '#ef4444');
+      path.setAttribute('marker-end', p.type === 'run' ? 'url(#arrowhead-green)' : 'url(#arrowhead-red)');
     }
     arrowLayer.appendChild(path);
+    if (editable && actionIndex != null && p.from && p.to) {
+      if (shaped) appendArrowHitPath(arrowLayer, actionIndex, shaped);
+      else appendArrowHit(arrowLayer, actionIndex, p.from, p.to);
+      if (isSelected && p.shape && p.anchors) appendShapedHandles(arrowLayer, actionIndex, p);
+      else if (isSelected) handles.push({ index: actionIndex, from: p.from, to: p.to });
+    }
+    if (p.type === 'dribble' && p.from && p.to) appendDribbleBalls(arrowLayer, p.from, p.to);
+    if (p.type === 'screen' && p.from && p.to) appendScreenBar(arrowLayer, p.from, p.to);
   });
+  handles.forEach((h) => appendArrowHandles(arrowLayer, h.index, h.from, h.to));
+  if (editable) showArrowEditor();
 }
 
 function pointAlongPolyline(points, t) {
@@ -3321,6 +4835,25 @@ function orderTriangleBeats(beats, sheetIndex) {
  * - type=dribble (squiggle) — ball-handler slides with ball
  * - type=cut / solid ink — cut or relocate
  */
+function beatFromPath(p, ballPid) {
+  if (!p) return null;
+  const isPass = !!(p.ballOnly || p.type === 'pass');
+  const type = isPass ? 'pass' : (p.type || 'cut');
+  const pid = isPass ? null : p.pid;
+  return {
+    kind: type === 'run' ? 'cut' : type,
+    label: isPass
+      ? `Pass ${(p.fromPid || ballPid || '').replace(/^o/, '#')} → ${(p.toPid || '').replace(/^o/, '#')}`.trim()
+      : `${type.charAt(0).toUpperCase() + type.slice(1)} ${String(pid || '').replace(/^o/, '#')}`,
+    path: { ...p, type },
+    holdAfterMs: type === 'pass'
+      ? ANIM.HOLD_PASS_MS
+      : (type === 'screen' ? ANIM.HOLD_SCREEN_MS : (type === 'dribble' ? ANIM.HOLD_DRIBBLE_MS : ANIM.HOLD_CUT_MS)),
+    ballTo: isPass ? (p.toPid || null) : null,
+    carryBall: type === 'dribble',
+  };
+}
+
 function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
   const beats = [];
   const remaining = (paths || []).slice();
@@ -3497,7 +5030,26 @@ function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
  * animate the ball-handler (or largest residual delta) along a straight/quad path
  * so Play All never completes with 0 rAF frames.
  */
+function pathsFollowDrawOrder(paths) {
+  return (paths || []).length > 0 && (paths || []).every((p) => p && typeof p.seq === 'number');
+}
+
 function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
+  // A coach save owns this sheet. Do not put the original 1-Game script back.
+  if (step && step.coachOrder) {
+    return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+  }
+  if (stepHasAuthoredOrder(step) && (paths || []).length) {
+    return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+  }
+  // PDF paint order. Do not re-sort with the 1-Game / Triangle / Pitt 5 lists.
+  if (pathsFollowDrawOrder(paths)) {
+    return paths
+      .slice()
+      .sort((a, b) => a.seq - b.seq)
+      .map((p) => beatFromPath(p, ballPid))
+      .filter(Boolean);
+  }
   let beats = buildActionBeats(fromRaw, toRaw, paths || [], ballPid);
   const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
   beats = ensurePitt5Beats(beats, fromRaw, toRaw, paths || [], ballPid, idx);
@@ -3610,9 +5162,6 @@ function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
 }
 
 function drawScreenMarker(at) {
-  // Clean-court animation: no black T-bar stroke on the SVG court (Pitt 5 /
-  // 1-Game / Scott — screen hold is the token pause only). Rip/others keep the cue.
-  if (isPitt5Play() || isGamePlay()) return;
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer || !at) return;
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -3710,7 +5259,7 @@ function normalizeAnimPath(path, live, toRaw) {
       // Explicit choreography (Pitt 5 drop / multi-point around paths / screens):
       // never yank path.to onto OCR. path.from may be a mid-action tip (screen hold),
       // so sheetMove vs path.from is a false "OCR moved" signal.
-      if (path.pitt5Drop || path.type === 'screen' || (path.points && path.points.length >= 3)) {
+      if (path.pitt5Drop || path.type === 'screen' || path.type === 'cut' || (path.points && path.points.length >= 3)) {
         b = path.to;
       } else {
         const sheetMove = Math.hypot(a.x - sheetPt.x, a.y - sheetPt.y);
@@ -3731,9 +5280,9 @@ function normalizeAnimPath(path, live, toRaw) {
     return null;
   }
 
-  // Non-orphan passes: never keep ink midpoints — dashed arrow tips often
-  // continue past the receiver; midpoints made the ball overshoot then snap.
-  if (p.ballOnly && !p.orphan) {
+  // Keep printed pass polylines (≥3 pts). Only fall back to a straight chord
+  // when extract did not give a dashed stroke.
+  if (p.ballOnly && !p.orphan && !(path.points && path.points.length >= 3)) {
     p.points = [
       { x: p.from.x, y: p.from.y },
       { x: p.to.x, y: p.to.y },
@@ -3772,10 +5321,14 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   isAnimating = true;
   const start = performance.now();
   const dur = Math.max(ANIM.MOVE_MS * 0.75, durationMs || ANIM.MOVE_MS);
-  const gatePlayback = isPlaybackActive();
   let frames = 0;
   playbookAnimStats = {
     frames: 0,
@@ -3786,7 +5339,11 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
   if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
 
   return new Promise((resolve) => {
+    let settled = false;
     function finish(completed) {
+      if (settled) return;
+      settled = true;
+      if (animFinish === finish) animFinish = null;
       isAnimating = false;
       animFrame = null;
       playbookAnimStats.frames = frames;
@@ -3809,14 +5366,15 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
       }
       resolve();
     }
+    animFinish = finish;
 
     function frame(now) {
-      // Newer move always wins. Playback gate only if we started under Play/playbar.
+      // Stop wins even if this beat started before the coach clicked a token.
       if (moveGen !== sheetMoveGen) {
         finish(false);
         return;
       }
-      if (gatePlayback && !isPlaybackActive()) {
+      if (!isPlaybackActive()) {
         finish(false);
         return;
       }
@@ -3870,10 +5428,14 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   isAnimating = true;
   const start = performance.now();
   const dur = Math.max(ANIM.MOVE_MS * 0.75, durationMs || ANIM.MOVE_MS);
-  const gatePlayback = isPlaybackActive();
   let frames = 0;
   playbookAnimStats = {
     frames: 0,
@@ -3884,7 +5446,11 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
   if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
 
   return new Promise((resolve) => {
+    let settled = false;
     function finish(completed) {
+      if (settled) return;
+      settled = true;
+      if (animFinish === finish) animFinish = null;
       isAnimating = false;
       animFrame = null;
       playbookAnimStats.frames = frames;
@@ -3898,13 +5464,14 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
       }
       resolve();
     }
+    animFinish = finish;
 
     function frame(now) {
       if (moveGen !== sheetMoveGen) {
         finish(false);
         return;
       }
-      if (gatePlayback && !isPlaybackActive()) {
+      if (!isPlaybackActive()) {
         finish(false);
         return;
       }
@@ -3937,8 +5504,159 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
  * ``parallelGroup`` (1-Game 4+5 pop) which animate together.
  * Mutates ballRef.pid when a pass completes.
  * Returns the live end poses so callers can freeze screen/cut landings across sheets.
+ * beatOpts: { startBeat, beatLimit, continueFromLive }
  */
-async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
+let lastPlayedBeatCount = 0;
+
+function recordBeatSnapshot(sheet, beat, live, ballPid) {
+  const positions = clonePosMap(live);
+  const snap = {
+    sheet,
+    beat,
+    positions,
+    ballPid: ballPid || 'o1',
+    ballPos: ballOverride ? { x: ballOverride.x, y: ballOverride.y } : null,
+  };
+  while (
+    beatSnapshots.length
+    && (beatSnapshots[beatSnapshots.length - 1].sheet > sheet
+      || (beatSnapshots[beatSnapshots.length - 1].sheet === sheet
+        && beatSnapshots[beatSnapshots.length - 1].beat >= beat))
+  ) {
+    beatSnapshots.pop();
+  }
+  beatSnapshots.push(snap);
+  resumeBeat = beat;
+}
+
+function applySpacingEdits(stepIndex, positions) {
+  const edits = spacingEdits[stepIndex];
+  if (!edits || !positions) return positions;
+  Object.keys(edits).forEach((pid) => {
+    if (edits[pid]) positions[pid] = { x: edits[pid].x, y: edits[pid].y };
+  });
+  return positions;
+}
+
+function showPose(pose) {
+  if (!pose) return;
+  const positions = clonePosMap(pose.positions || {});
+  applySpacingEdits(pose.sheet, positions);
+  ballOverride = pose.ballPos ? { x: pose.ballPos.x, y: pose.ballPos.y } : null;
+  resumeBeat = pose.beat || 0;
+  currentStep = pose.sheet;
+  pausedCourtPose = {
+    sheetIndex: pose.sheet,
+    positions,
+    ballPid: pose.ballPid || 'o1',
+    ballPos: ballOverride,
+    beatIndex: resumeBeat,
+  };
+  updateStepChrome(pose.sheet);
+  if (playHasSheets()) showSheetUnderlay(pose.sheet);
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (arrowLayer) arrowLayer.innerHTML = '';
+  clearScreenMarker();
+  syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+  updatePlaybarUI();
+}
+
+function rewindPlay() {
+  if (isPlaybackActive() || isAnimating) stopPlayback({ reset: false });
+  const cur = beatSnapshots[beatSnapshots.length - 1];
+  if (!pausedCourtPose && cur) {
+    showPose(cur);
+    setSheetAnimHint('Back to the start of this action. Press Play to watch it.');
+    return;
+  }
+  const midBeat = !!(
+    pausedCourtPose
+    && cur
+    && cur.sheet === pausedCourtPose.sheetIndex
+    && cur.beat === (pausedCourtPose.beatIndex || 0)
+    && !positionsAlmostEqual(cur.positions, pausedCourtPose.positions, 8)
+  );
+  if (midBeat) {
+    showPose(cur);
+    setSheetAnimHint('Back to the start of this action. Press Play to watch it.');
+    return;
+  }
+  if (beatSnapshots.length > 1) {
+    beatSnapshots.pop();
+    showPose(beatSnapshots[beatSnapshots.length - 1]);
+    setSheetAnimHint('Back one action. Press Play to watch it.');
+    return;
+  }
+  if (beatSnapshots.length === 1) beatSnapshots.pop();
+  if (currentStep > 0) {
+    currentStep -= 1;
+    resumeBeat = 0;
+    ballOverride = null;
+    const positions = applySpacingEdits(currentStep, withManDefense(positionsForAnim(currentStep)));
+    pausedCourtPose = {
+      sheetIndex: currentStep,
+      positions,
+      ballPid: (steps[currentStep] && steps[currentStep].ball) || 'o1',
+      ballPos: null,
+      beatIndex: 0,
+    };
+    renderStep();
+    syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+    setSheetAnimHint(`Sheet ${currentStep + 1}. Press Play to watch it.`);
+    updatePlaybarUI();
+    return;
+  }
+  resumeBeat = 0;
+  pausedCourtPose = null;
+  ballOverride = null;
+  beatSnapshots = [];
+  renderStep();
+  setSheetAnimHint('At the start. Press Play.');
+  updatePlaybarUI();
+}
+
+async function stepForwardPlay() {
+  if (isPlaybackActive() || isAnimating) stopPlayback({ reset: false });
+  const sheet = (pausedCourtPose && typeof pausedCourtPose.sheetIndex === 'number')
+    ? pausedCourtPose.sheetIndex
+    : currentStep;
+  const beat = (pausedCourtPose && typeof pausedCourtPose.beatIndex === 'number')
+    ? pausedCourtPose.beatIndex
+    : resumeBeat;
+  lastPlayedBeatCount = 0;
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    fromSheet: sheet,
+    throughSheet: sheet,
+    startBeat: beat,
+    beatLimit: 1,
+    continueFromLive: !!pausedCourtPose,
+    keepPose: true,
+  });
+  if (!lastPlayedBeatCount && sheet < steps.length - 1) {
+    currentStep = sheet + 1;
+    resumeBeat = 0;
+    ballOverride = null;
+    const positions = applySpacingEdits(currentStep, withManDefense(positionsForAnim(currentStep)));
+    pausedCourtPose = {
+      sheetIndex: currentStep,
+      positions,
+      ballPid: (steps[currentStep] && steps[currentStep].ball) || 'o1',
+      ballPos: null,
+      beatIndex: 0,
+    };
+    renderStep();
+    syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+    setSheetAnimHint(`Sheet ${currentStep + 1}. Next beat plays the first action.`);
+    updatePlaybarUI();
+  }
+}
+
+async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs, beatOpts) {
+  beatOpts = beatOpts || {};
+  const runId = playbackRunId;
+  const alive = () => runId === playbackRunId && isPlaybackActive();
+  lastPlayedBeatCount = 0;
   if (!beats.length) {
     syncPlayerTokens(toRaw, ballRef.pid);
     return clonePosMap(toRaw);
@@ -3958,10 +5676,16 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
   const perPathMs = durationMs || ANIM.MOVE_MS;
   syncLiveWithDefense(live, ballRef.pid);
 
-  let i = 0;
-  let beatOrdinal = 0;
+  const startBeat = Math.max(0, beatOpts.startBeat || 0);
+  let i = startBeat;
+  let beatOrdinal = startBeat;
+  if (i >= beats.length) {
+    resumeBeat = i;
+    syncPlayerTokens(live, ballRef.pid);
+    return clonePosMap(live);
+  }
   while (i < beats.length) {
-    if (!isPlaybackActive()) break;
+    if (!alive()) break;
     const beat = beats[i];
     const groupId = beat && beat.parallelGroup;
     const group = [beat];
@@ -3975,8 +5699,19 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
       }
     }
 
+    recordBeatSnapshot(currentStep, i, live, ballRef.pid);
+    if (group.some((b) => b && b.kind === 'pass')) ballOverride = null;
     clearScreenMarker();
-    const animPaths = group.map((b) => normalizeAnimPath(b.path, live, toRaw) || b.path);
+    const resumeThisBeat = !!(beatOpts.continueFromLive && i === startBeat);
+    const groupPaths = group.map((b) => {
+      const path = b && b.path;
+      if (!resumeThisBeat || !path) return path;
+      const pid = path.pid || path.fromPid;
+      const at = pid && live[pid];
+      if (!at) return path;
+      return Object.assign({}, path, { from: { x: at.x, y: at.y } });
+    });
+    const animPaths = groupPaths.map((p) => normalizeAnimPath(p, live, toRaw) || p);
     drawTravelPaths(animPaths, animPaths[0]);
     const labels = group.map((b) => b.label).filter(Boolean).join(' + ');
     beatOrdinal += 1;
@@ -3990,7 +5725,7 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
       // eslint-disable-next-line no-await-in-loop
       await animateOnePath(live, animPaths[0], toRaw, ballRef.pid, perPathMs, gen);
     }
-    if (!isPlaybackActive()) break;
+    if (!alive()) break;
 
     for (let gi = 0; gi < group.length; gi += 1) {
       const b = group[gi];
@@ -4016,22 +5751,32 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
         // eslint-disable-next-line no-await-in-loop
         await delayMs(b.holdAfterMs);
       }
+      if (!alive()) break;
     }
+    if (!alive()) break;
 
     const arrowLayer = document.getElementById('arrowLayer');
     if (arrowLayer) {
       arrowLayer.querySelectorAll('path').forEach((el) => el.remove());
     }
     i += group.length;
+    resumeBeat = i;
+    lastPlayedBeatCount += 1;
+    if (beatOpts.beatLimit && lastPlayedBeatCount >= beatOpts.beatLimit) break;
     if (i < beats.length) {
       // eslint-disable-next-line no-await-in-loop
       await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+      if (!alive()) break;
     }
   }
   clearScreenMarker();
   // Keep animated end poses (live). Snapping to toRaw undoes forced cuts when OCR
   // digits did not move between sheets.
   syncPlayerTokens(live, ballRef.pid);
+  if (pausedCourtPose || beatOpts.beatLimit) {
+    snapshotCourtPose();
+    if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
+  }
   return clonePosMap(live);
 }
 
@@ -4173,8 +5918,8 @@ function updatePlaybarUI() {
       scrub.disabled = false;
     }
   }
-  if (prevBtn) prevBtn.disabled = idx <= 0 || isPlaybackActive();
-  if (nextBtn) nextBtn.disabled = idx >= n - 1 || isPlaybackActive();
+  if (prevBtn) prevBtn.disabled = false;
+  if (nextBtn) nextBtn.disabled = false;
   if (label) {
     if (isPlaybackActive()) {
       label.textContent = playbarReady && playbarKeyframes[idx]
@@ -4446,16 +6191,15 @@ function playbarScrubTo(value) {
 }
 
 function playbarStep(delta) {
-  if (playbarReady && playbarKeyframes.length) {
-    playbarApplyKeyframe(playbarIndex + delta);
-    return;
-  }
-  const next = Math.max(0, Math.min(steps.length - 1, currentStep + (delta || 0)));
-  playbarScrubTo(next);
+  if ((delta || 0) < 0) rewindPlay();
+  else stepForwardPlay();
 }
 
 function stopPlayback(opts) {
   const reset = !!(opts && opts.reset);
+  const wasRunning = isPlaybackActive() || isAnimating;
+  if (!reset && wasRunning) snapshotCourtPose();
+  playbackRunId += 1;
   playAllRunning = false;
   playbarPlaying = false;
   isAnimating = false;
@@ -4464,10 +6208,20 @@ function stopPlayback(opts) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  cancelDelays();
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   setPlayAllButton(false);
   updatePlaybarPlayButton();
+  if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
   if (reset) {
     setSheetAnimHint('');
+    beatSnapshots = [];
+    resumeBeat = 0;
+    ballOverride = null;
     resetPlayToOpening();
   }
 }
@@ -4673,27 +6427,45 @@ async function playbarPlayThrough(opts) {
 async function playSheetsDirectly(opts) {
   opts = opts || {};
   const resetAtEnd = opts.resetAtEnd !== false;
+  const runId = ++playbackRunId;
+  const alive = () => runId === playbackRunId && isPlaybackActive();
+  const fromSheet = Math.max(0, Math.min(
+    typeof opts.fromSheet === 'number' ? opts.fromSheet : 0,
+    Math.max(0, steps.length - 1),
+  ));
+  const lastSheet = Math.max(fromSheet, Math.min(
+    typeof opts.throughSheet === 'number' ? opts.throughSheet : steps.length - 1,
+    Math.max(0, steps.length - 1),
+  ));
   playAllRunning = true;
   playbarPlaying = true;
   setPlayAllButton(true);
   updatePlaybarPlayButton();
   addArrowheadMarkers();
 
-  updateStepChrome(0);
-  if (playHasSheets()) showSheetUnderlay(0);
-  const startPos = withManDefense(positionsForAnim(0));
+  const startIdx = fromSheet;
+  updateStepChrome(startIdx);
+  if (playHasSheets()) showSheetUnderlay(startIdx);
+  let startPos = withManDefense(positionsForAnim(startIdx));
+  if (pausedCourtPose && pausedCourtPose.positions && Object.keys(pausedCourtPose.positions).length
+      && pausedCourtPose.sheetIndex === startIdx) {
+    Object.keys(pausedCourtPose.positions).forEach((pid) => {
+      if (pausedCourtPose.positions[pid]) startPos[pid] = pausedCourtPose.positions[pid];
+    });
+    startPos = withManDefense(startPos);
+  }
   if (useSheetSlideshowMode()) {
     const playerLayer = document.getElementById('playerLayer');
     if (playerLayer) playerLayer.innerHTML = '';
   } else {
-    syncPlayerTokens(startPos, steps[0]?.ball || 'o1');
+    syncPlayerTokens(startPos, (pausedCourtPose && pausedCourtPose.ballPid) || steps[startIdx]?.ball || 'o1');
   }
-  setSheetAnimHint(steps.length > 1 ? `Sheet 1 / ${steps.length}` : 'Sheet 1');
-  playbarIndex = 0;
+  setSheetAnimHint(steps.length > 1 ? `Sheet ${startIdx + 1} / ${steps.length}` : 'Sheet 1');
+  playbarIndex = startIdx;
   updatePlaybarUI();
 
   if (useSheetSlideshowMode()) {
-    for (let i = 0; i < steps.length; i += 1) {
+    for (let i = startIdx; i <= lastSheet; i += 1) {
       if (!isPlaybackActive()) break;
       updateStepChrome(i);
       showSheetUnderlay(i);
@@ -4708,20 +6480,26 @@ async function playSheetsDirectly(opts) {
     const toRaw = fromRaw;
     const startBall = steps[0].ball || 'o1';
     const inkPaths = await fetchSheetInkPaths(0, fromRaw, toRaw);
-    if (!isPlaybackActive()) {
+    if (!alive()) {
       /* stopped during ink fetch */
     } else {
       const paths = buildTravelPaths(fromRaw, toRaw, steps[0], inkPaths, startBall);
       const beats = forceGuaranteeBeats(fromRaw, toRaw, steps[0], paths, startBall, 0);
-      if (beats.length) {
-        drawTravelPaths(beats.map((b) => b.path).filter(Boolean), null);
-        await delayMs(ANIM.LINE_PREVIEW_MS);
-        if (isPlaybackActive()) {
-          const ballRef = { pid: startBall };
-          await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS);
-          syncPlayerTokens(toRaw, ballRef.pid);
+      const beatStart = typeof opts.startBeat === 'number' ? opts.startBeat : 0;
+      if (beats.length && beatStart < beats.length) {
+        if (!(opts.continueFromLive || beatStart > 0)) {
+          drawTravelPaths(beats.map((b) => b.path).filter(Boolean), null);
+          await delayMs(ANIM.LINE_PREVIEW_MS);
         }
-      } else if (steps[0]) {
+        if (alive()) {
+          const ballRef = { pid: (pausedCourtPose && pausedCourtPose.ballPid) || startBall };
+          await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS, {
+            startBeat: beatStart,
+            beatLimit: opts.beatLimit || 0,
+            continueFromLive: !!opts.continueFromLive,
+          });
+        }
+      } else if (steps[0] && alive()) {
         renderArrows(steps[0]);
         await delayMs(ANIM.LINE_PREVIEW_MS);
       }
@@ -4729,19 +6507,27 @@ async function playSheetsDirectly(opts) {
   } else {
     // Sheet N underlay + ink actions, then advance to sheet N+1 formation.
     // Track ball across sheets — imported steps often lack movements_json ball meta.
-    let liveBall = steps[0].ball || 'o1';
+    let liveBall = (pausedCourtPose && pausedCourtPose.ballPid) || steps[startIdx].ball || steps[0].ball || 'o1';
     // Players who completed a screen/cut/dribble keep that landing across later
     // sheets (Rip 4/5 set and stay — do not snap back to stale OCR seeds).
     const heldLandings = {};
-    for (let i = 0; i < steps.length; i += 1) {
-      if (!isPlaybackActive()) break;
-      const isLast = i >= steps.length - 1;
+    if (pausedCourtPose && pausedCourtPose.positions) {
+      Object.keys(pausedCourtPose.positions).forEach((pid) => {
+        if (pausedCourtPose.positions[pid]) heldLandings[pid] = pausedCourtPose.positions[pid];
+      });
+    }
+    pausedCourtPose = null;
+    for (let i = startIdx; i <= lastSheet; i += 1) {
+      if (!alive()) break;
+      const isLast = i >= lastSheet;
+      const sheetLast = i >= steps.length - 1;
       let fromRaw = withManDefense(positionsForAnim(i));
       Object.keys(heldLandings).forEach((pid) => {
         if (heldLandings[pid]) fromRaw[pid] = { x: heldLandings[pid].x, y: heldLandings[pid].y };
       });
       fromRaw = withManDefense(fromRaw);
-      let toRaw = isLast
+      applySpacingEdits(i, fromRaw);
+      let toRaw = sheetLast
         ? fromRaw
         : withManDefense(positionsForAnim(i + 1));
       Object.keys(heldLandings).forEach((pid) => {
@@ -4758,21 +6544,30 @@ async function playSheetsDirectly(opts) {
       setSheetAnimHint(`Sheet ${i + 1} / ${steps.length} — tracing…`);
       // eslint-disable-next-line no-await-in-loop
       const inkPaths = await fetchSheetInkPaths(i, fromRaw, toRaw);
-      if (!isPlaybackActive()) break;
+      if (!alive()) break;
 
       const paths = buildTravelPaths(fromRaw, toRaw, steps[i], inkPaths, liveBall);
       const beats = forceGuaranteeBeats(fromRaw, toRaw, steps[i], paths, liveBall, i);
+      const beatStart = (i === startIdx && typeof opts.startBeat === 'number') ? opts.startBeat : 0;
+      const beatLimit = (i === startIdx && opts.beatLimit) ? opts.beatLimit : 0;
+      const continueFromLive = !!(i === startIdx && opts.continueFromLive);
       let liveEnd = fromRaw;
-      if (beats.length) {
+      if (beats.length && beatStart < beats.length) {
         const previewPaths = beats.map((b) => b.path).filter(Boolean);
         drawTravelPaths(previewPaths, null);
         setSheetAnimHint(`Sheet ${i + 1} — ${beats.length} beat(s): one at a time`);
-        // eslint-disable-next-line no-await-in-loop
-        await delayMs(ANIM.LINE_PREVIEW_MS);
-        if (!isPlaybackActive()) break;
+        if (!continueFromLive && beatStart === 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await delayMs(ANIM.LINE_PREVIEW_MS);
+        }
+        if (!alive()) break;
         const ballRef = { pid: liveBall };
         // eslint-disable-next-line no-await-in-loop
-        liveEnd = await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS) || fromRaw;
+        liveEnd = await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS, {
+          startBeat: beatStart,
+          beatLimit,
+          continueFromLive,
+        }) || fromRaw;
         liveBall = ballRef.pid || liveBall;
         beats.forEach((b) => {
           if (!b || !b.path || !b.path.pid) return;
@@ -4781,12 +6576,13 @@ async function playSheetsDirectly(opts) {
             if (pt) heldLandings[b.path.pid] = { x: pt.x, y: pt.y };
           }
         });
-      } else if (!isLast) {
+      } else if (!isLast && beatStart === 0) {
         setSheetAnimHint(`Sheet ${i + 1} — settle`);
         // eslint-disable-next-line no-await-in-loop
         await delayMs(ANIM.SHEET_END_HOLD_MS);
       }
-      if (!isPlaybackActive()) break;
+      if (!alive()) break;
+      if (opts.beatLimit && lastPlayedBeatCount >= opts.beatLimit) break;
       if (isLast) break;
 
       // Advance underlay; keep held screen/cut landings (do not yank to OCR seeds).
@@ -4808,6 +6604,7 @@ async function playSheetsDirectly(opts) {
     }
   }
 
+  if (runId !== playbackRunId) return;
   playAllRunning = false;
   playbarPlaying = false;
   setPlayAllButton(false);
@@ -4815,6 +6612,10 @@ async function playSheetsDirectly(opts) {
   if (resetAtEnd) {
     setSheetAnimHint('');
     resetPlayToOpening();
+  } else if (!opts.keepPose) {
+    pausedCourtPose = null;
+    resumeBeat = 0;
+    updatePlaybarUI();
   } else {
     updatePlaybarUI();
   }
@@ -4823,6 +6624,12 @@ async function playSheetsDirectly(opts) {
 async function playbarTogglePlay() {
   if (playAllRunning || playbarPlaying) {
     stopPlayback({ reset: false });
+    setSheetAnimHint('Paused — change action type/order, then Play continues from here');
+    if (canFixAnimation()) {
+      await seedMovementsFromCurrentBeats(currentStep);
+      updateMovementList();
+      updateChoreographyChrome();
+    }
     updatePlaybarUI();
     return;
   }
@@ -4857,9 +6664,56 @@ async function playbarTogglePlay() {
  * Play before the first rAF (button flicked Stop→Play, tokens never moved).
  * Playbar ▶ still uses playbarPlayThrough when the timeline is ready.
  */
+let stepPlaybackIntent = false;
+
+async function finishStepReview() {
+  if (!stepPlaybackIntent) return;
+  stepPlaybackIntent = false;
+  if (!canFixAnimation()) {
+    setSheetAnimHint(`Sheet ${currentStep + 1} played`);
+    return;
+  }
+  await seedMovementsFromCurrentBeats(currentStep);
+  updateMovementList();
+  updateChoreographyChrome();
+  setSheetAnimHint(`Sheet ${currentStep + 1} — fix the actions below, Save choreography, then Play All.`);
+}
+
+async function playCurrentStep() {
+  if (playAllRunning || playbarPlaying) {
+    stepPlaybackIntent = true;
+    stopPlayback({ reset: false });
+    await finishStepReview();
+    return;
+  }
+  if (!steps.length) return;
+  const idx = currentStep;
+  const posed = pausedCourtPose && pausedCourtPose.sheetIndex === idx;
+  stepPlaybackIntent = true;
+  setSheetAnimHint(`Playing sheet ${idx + 1}…`);
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    fromSheet: idx,
+    throughSheet: idx,
+    startBeat: posed ? (pausedCourtPose.beatIndex || 0) : 0,
+    continueFromLive: !!posed,
+  });
+  if (pausedCourtPose) {
+    stepPlaybackIntent = false;
+    return;
+  }
+  await finishStepReview();
+}
+
 async function playAnimation() {
   if (playAllRunning || playbarPlaying) {
-    stopPlayback({ reset: true });
+    stopPlayback({ reset: false });
+    setSheetAnimHint('Paused — change action type/order, then Play All continues from here');
+    if (canFixAnimation()) {
+      await seedMovementsFromCurrentBeats(currentStep);
+      updateMovementList();
+      updateChoreographyChrome();
+    }
     return;
   }
   if (!steps.length) return;
@@ -4877,7 +6731,6 @@ async function playAnimation() {
     if (!isPlaybackActive()) return;
   }
 
-  // Warm timeline in background for scrubber — never gate Play on it.
   try {
     ensurePlaybarTimeline();
   } catch (err) {
@@ -4885,7 +6738,17 @@ async function playAnimation() {
   }
 
   if (!isPlaybackActive()) return;
-  await playSheetsDirectly({ resetAtEnd: true, alreadyRunning: true });
+  const resumeAt = (pausedCourtPose && typeof pausedCourtPose.sheetIndex === 'number')
+    ? pausedCourtPose.sheetIndex
+    : 0;
+  const posed = !!(pausedCourtPose && pausedCourtPose.sheetIndex === resumeAt);
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    alreadyRunning: true,
+    fromSheet: resumeAt,
+    startBeat: posed ? (pausedCourtPose.beatIndex || 0) : 0,
+    continueFromLive: !!pausedCourtPose,
+  });
 }
 
 /** After Play All Stop: return to opening sheet/formation. */
@@ -4982,9 +6845,27 @@ async function copyPlayShareLink() {
   if (!playId || !window.PlaybookExport) return;
   try {
     shareUrl = await window.PlaybookExport.copyShareLink(playId, shareUrl);
+    const revokeBtn = document.getElementById('revokeShareBtn');
+    if (revokeBtn) revokeBtn.style.display = '';
     alert('Share link copied to clipboard.');
   } catch (err) {
     alert(err.message || 'Could not copy share link.');
+  }
+}
+
+async function revokePlayShareLink() {
+  if (!playId) return;
+  if (!confirm('Revoke the share link? Anyone with the old link will no longer be able to open this play.')) return;
+  try {
+    const resp = await fetch(`/api/playbook/play/${playId}/share`, { method: 'DELETE' });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Could not revoke share link');
+    shareUrl = null;
+    const revokeBtn = document.getElementById('revokeShareBtn');
+    if (revokeBtn) revokeBtn.style.display = 'none';
+    alert('Share link revoked.');
+  } catch (err) {
+    alert(err.message || 'Could not revoke share link.');
   }
 }
 
@@ -5009,7 +6890,8 @@ document.getElementById('playForm')?.addEventListener('submit', function() {
 });
 
 window.addEventListener('beforeunload', (e) => {
-  if (!stepsDirty || isReadOnly) return;
+  // View mode can edit sheets for Play All but cannot save them; warn there too.
+  if (!stepsDirty || viewMode === 'share') return;
   e.preventDefault();
   e.returnValue = '';
 });
@@ -5423,6 +7305,7 @@ function initSteps() {
   updateCourtPanelLabel();
   renderCourt();
   renderStep();
+  installCourtPause();
   renderStepImages();
   updateStepList();
   if (useSheetSlideshowMode()) {

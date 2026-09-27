@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "source": "teach_from_film_tags",
+  "analysis_key": "jrhigh_adrian,_or_TEACH",
+  "match_tolerance_ms": 10000,
+  "clock_offset_ms": 0,
+  "window_end_ms": 960700,
+  "shot_label_anchors": [
+    {
+      "family": "shot",
+      "center_ms": 40700,
+      "radius_ms": 4000,
+      "shot_type": "2pt",
+      "shot_result": "make",
+      "manual_ts_ms": 40700
+    }
+  ],
+  "positive_windows": [
+    {
+      "center_ms": 40700,
+      "radius_ms": 10000,
+      "family": "shot",
+      "manual_key": "2PT|Make"
+    }
+  ],
+  "shot_type_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "classes": {
+      "2pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          0.0,
+          0.0,
+          0.0,
+          0.01685,
+          0.018722
+        ],
+        "bias": 3.943522
+      },
+      "3pt": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          0.0,
+          0.0,
+          0.0,
+          -0.01685,
+          -0.018722
+        ],
+        "bias": -3.943522
+      },
+      "ft": {
+        "features": [
+          "lat",
+          "rise",
+          "secondary",
+          "conf",
+          "ai_make"
+        ],
+        "weights": [
+          0.0,
+          0.0,
+          0.0,
+          -0.01685,
+          -0.018722
+        ],
+        "bias": -3.943522
+      }
+    },
+    "min_margin": 0.2
+  },
+  "make_miss_clf": {
+    "features": [
+      "lat",
+      "rise",
+      "secondary",
+      "conf",
+      "ai_make"
+    ],
+    "weights": [
+      0.0,
+      0.0,
+      0.0,
+      0.01685,
+      0.018722
+    ],
+    "bias": 3.943522,
+    "threshold": 0.35,
+    "train_accuracy": 1.0
+  },
+  "keep_clf": {
+    "features": [
+      "conf",
+      "is_shot",
+      "is_rebound",
+      "is_steal",
+      "is_turnover",
+      "is_assist",
+      "lat_norm",
+      "rise_norm",
+      "secondary",
+      "local_density"
+    ],
+    "weights": [
+      0.049314,
+      0.054793,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.054793
+    ],
+    "bias": 4.170836,
+    "threshold": 0.1,
+    "train_f1": 1.0
+  },
+  "fp_suppress": {
+    "orphan_steal_to": true,
+    "orphan_steal_to_max_shot_gap_ms": 6000,
+    "require_shot_positive_window": true,
+    "drop_unanchored_shot_misses": true,
+    "require_steal_to_positive_window": true,
+    "cap_shots_to_manual_windows": true
+  },
+  "supervised_templates": [
+    {
+      "timestamp_ms": 40700,
+      "radius_ms": 10000,
+      "match_key": "2PT|Make",
+      "player": "0 Sullivan",
+      "team": "Liberty",
+      "confidence": 0.58,
+      "event_type": "shot",
+      "shot_type": "2pt",
+      "shot_result": "make"
+    }
+  ],
+  "learned_event_min_confidence": {
+    "shot": 0.48,
+    "make": 0.4,
+    "miss": 0.4,
+    "rebound": 0.52,
+    "block": 0.95,
+    "assist": 0.4,
+    "steal": 0.48,
+    "turnover": 0.48,
+    "foul": 0.55
+  },
+  "train_snapshot": {
+    "manual_tags": 1,
+    "ai_window": 2,
+    "shot_anchors": 1,
+    "shot_train_rows": 1,
+    "keep_train_rows": 2,
+    "keep_train_f1": 1.0,
+    "make_train_accuracy": 1.0,
+    "manual_type_counts": {
+      "2PT": 1
+    }
+  }
+}

@@ -20,6 +20,22 @@ env/
 # Uploaded files
 uploads/
 
+# Browser / LevelDB dumps (never commit — cookies & site data)
+tag-exports/_chrome_ls_q2/
+tag-exports/*chrome*
+*_chrome_ls*/
+**/IndexedDB/**
+**/Local Storage/**
+**/Session Storage/**
+
+# Flask / temp / transfer noise
+_tmp_flask*
+data/flask_*.log
+data/flask_*.err.log
+data/flask_*.out.log
+scripts/backup.log
+transfer-bundles/
+
 # IDE
 .vscode/
 .idea/
@@ -132,9 +148,24 @@ data/hoopsalytics/full_film_panel_history.jsonl
 # Backup files
 *.bak
 
+# Copies of a Chrome profile's Local Storage (personal browser data; never commit)
+tag-exports/_chrome*/
+
 # Experiments (non-essential, can be regenerated)
 experiments/
 ball_dataset_v2/
+
+# Coach-picked starting fives (per game)
+data/lineups/*.json
+
+# Film Tool tags (per film; Funnel reads these from home disk)
+data/film_tags/*.json
+
+# Hoop/net track (per film; CV sidecar, no schema)
+data/hoop_tracks/*.json
+
+# Parent/player account → one roster player (local, not a schema column)
+data/audience_player_links.json
 
 # Local probe / review artifacts (do not commit)
 _tmp*/

@@ -6,18 +6,291 @@
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/film-tool.css') }}">
 <style>
-  /* ── Tagger View Redesign ────────────────────────────────── */
-  .ft-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
-    gap: .75rem;
-    align-items: start;
-    max-width: 100%;
-    overflow-x: hidden;
+  /* Film Tool uses a wider canvas so the player can dominate */
+  main:has(#film-tool-root) {
+    max-width: min(1680px, calc(100vw - 1.5rem));
   }
-  .ft-layout > * {
+
+  /* ── Tagger / Review layout ──────────────────────────────── */
+  .ft-review-stage {
+    display: block;
+    max-width: 100%;
+    margin-bottom: .75rem;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--color-bg, #f8fafc);
+    padding: .35rem 0 .65rem;
+    border-bottom: 1px solid var(--color-border, #cbd5e1);
+    /* Sticky film must not steal clicks meant for the play list underneath. */
+    pointer-events: none;
+  }
+  .ft-review-stage > * {
+    pointer-events: auto;
+  }
+  .ft-review-video {
     min-width: 0;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #film-tool-root dialog:not([open]) {
+    display: none !important;
+  }
+  /* Hide black frame flash while clip loop seeks back to start */
+  .ft-video-wrap video.ft-clip-seeking {
+    visibility: hidden;
+  }
+  .ft-clip-review-dock {
+    width: min(100%, 1280px);
+    margin: .55rem auto 0;
+    padding: .65rem .75rem;
+    border: 2px solid #0f172a;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #fff;
+    box-sizing: border-box;
+  }
+  .ft-clip-review-dock[hidden] { display: none !important; }
+  .ft-clip-review-label {
+    font-size: .9rem;
+    font-weight: 800;
+    margin: 0 0 .5rem;
+    color: #fff;
+  }
+  .ft-clip-review-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .4rem;
+  }
+  .ft-clip-review-actions .btn {
+    width: 100%;
+    min-height: 2.6rem;
+    font-weight: 800;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .ft-clip-review-actions .ft-toolbar-btn {
+    background: #fff;
+    color: #0f172a;
+    border: 2px solid #fff;
+  }
+  @media (max-width: 900px) {
+    .ft-clip-review-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .ft-program-section {
+    margin: 0 0 .5rem;
+  }
+  .ft-program-section #aiEventsPanel {
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+  .ft-program-section #aiEventsPanel .panel-head {
+    display: none;
+  }
+  .ft-program-section #aiEventsPanel .panel-body {
+    padding: 0;
+  }
+  .ft-program-section #aiEventsPanel .panel-head h2 {
+    font-size: 1.05rem;
+  }
+  .ft-program-section #aiEventsPanel .panel-head p {
+    font-size: .78rem;
+    margin: .2rem 0 0;
+  }
+  .ft-program-section .ai-add-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin: .75rem 0 .5rem;
+  }
+  .ft-program-section .ai-add-bar .btn-primary {
+    flex: 1 1 auto;
+    min-height: 2.4rem;
+    font-weight: 600;
+  }
+  .ft-program-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin-bottom: .55rem;
+  }
+  .ft-program-score {
+    font-size: .85rem;
+    margin-bottom: .45rem;
+    color: var(--color-text-muted);
+  }
+  .ft-program-exceptions {
+    max-height: 200px;
+    overflow: auto;
+    margin-bottom: .65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .45rem .55rem;
+    background: var(--color-surface-offset, rgba(0,0,0,.03));
+  }
+  .ft-program-ex {
+    font-size: .78rem;
+    padding: .3rem 0;
+    border-bottom: 1px solid var(--color-divider, #ddd);
+  }
+  .ft-program-ex:last-child { border-bottom: none; }
+  .ft-program-ex.high { color: #b45309; font-weight: 600; }
+  .ft-program-ex.medium { color: var(--color-text); }
+  .ft-program-subhead {
+    font-size: .8rem;
+    margin: 0 0 .35rem;
+    font-weight: 600;
+  }
+  .ft-program-box {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .78rem;
+  }
+  .ft-program-box th,
+  .ft-program-box td {
+    padding: .25rem .35rem;
+    text-align: right;
+    border-bottom: 1px solid var(--color-divider, #ddd);
+  }
+  .ft-program-box th:first-child,
+  .ft-program-box td:first-child { text-align: left; }
+  .ft-program-box-wrap {
+    margin-bottom: .5rem;
+    max-height: min(40vh, 360px);
+    overflow: auto;
+  }
+  .ft-program-section .ai-events-scroll {
+    max-height: min(42vh, 420px);
+    overflow-y: auto;
+  }
+  .ft-control-group {
+    border: 2px solid var(--color-border, #9ca3af);
+    border-radius: var(--radius-lg, 10px);
+    padding: .75rem .9rem .9rem;
+    margin: 0 0 1rem;
+    background: var(--color-surface, #fff);
+  }
+  .ft-control-group-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    margin: 0 0 .25rem;
+    color: var(--color-text, #111827);
+  }
+  .ft-control-group-help {
+    font-size: .82rem;
+    margin: 0 0 .65rem;
+    color: var(--color-text, #1f2937);
+    line-height: 1.35;
+  }
+  .ft-control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin: 0 0 .55rem;
+  }
+  .ft-play-toolbar {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .5rem;
+    margin: 0 0 .75rem;
+  }
+  .ft-play-toolbar .ft-toolbar-btn {
+    width: 100%;
+    min-height: 3rem;
+    margin: 0;
+    padding: .55rem .4rem;
+    box-sizing: border-box;
+    font-size: .82rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+    border: 2px solid #0f172a;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: none;
+  }
+  .ft-play-toolbar .ft-toolbar-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #0f172a;
+  }
+  .ft-play-toolbar .ft-toolbar-btn.active,
+  .ft-play-toolbar .ft-toolbar-primary {
+    background: #0f172a !important;
+    border-color: #0f172a !important;
+    color: #ffffff !important;
+  }
+  .ft-play-toolbar .ft-toolbar-btn.active:hover,
+  .ft-play-toolbar .ft-toolbar-primary:hover {
+    background: #1e293b !important;
+    color: #ffffff !important;
+  }
+  @media (max-width: 1100px) {
+    .ft-play-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .ft-play-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .ft-event-list-label {
+    font-size: .85rem;
+    font-weight: 700;
+    margin: .35rem 0 .4rem;
+    color: var(--color-text, #111827);
+  }
+  .ft-program-section .ai-filter-btn,
+  .ft-program-section .ai-scope-btn,
+  .ft-program-section .ft-control-row .btn {
+    min-height: 2.4rem;
+    font-size: .9rem;
+    font-weight: 700;
+    padding: .45rem .75rem;
+  }
+  .ft-secondary {
+    margin: 0 0 .75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: .35rem .85rem .65rem;
+  }
+  .ft-secondary > summary {
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 600;
+    padding: .45rem 0;
+    list-style: none;
+    color: var(--color-text);
+  }
+  .ft-secondary > summary::-webkit-details-marker { display: none; }
+  .ft-secondary > summary::before {
+    content: "▶";
+    display: inline-block;
+    margin-right: .45rem;
+    font-size: .7rem;
+    color: var(--color-text-muted);
+    transition: transform .15s ease;
+  }
+  .ft-secondary[open] > summary::before { transform: rotate(90deg); }
+  .ft-program-fold {
+    margin: 0 0 .65rem;
+    padding: .25rem .65rem .45rem;
+    background: var(--color-surface-offset, rgba(0,0,0,.03));
+  }
+  .ft-program-fold:last-child { margin-bottom: 0; }
+  .ft-film-sync-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    align-items: center;
+    margin: .35rem 0 .55rem;
   }
 
   /* Scoreboard */
@@ -25,48 +298,72 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
+    gap: .75rem;
+    padding: .28rem .75rem;
+    margin: 0 auto .35rem;
+    width: fit-content;
+    min-width: min(100%, 16rem);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
   }
   .ft-score-team {
     text-align: center;
-    min-width: 120px;
+    min-width: 72px;
   }
   .ft-score-team .ft-team-name {
-    font-size: .85rem;
+    font-size: .68rem;
     font-weight: 600;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: .04em;
   }
   .ft-score-team .ft-team-score {
-    font-size: 2.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.1;
-    margin-top: .25rem;
+    margin-top: .05rem;
   }
   .ft-score-vs {
-    font-size: .75rem;
+    font-size: .7rem;
     color: var(--color-text-muted);
     font-weight: 500;
-    padding: .5rem;
+    padding: .25rem;
+  }
+  .ft-score-hint {
+    text-align: center;
+    margin: 0 auto .35rem;
+    color: var(--color-text-muted);
   }
 
-  /* Video Area */
+  /* Video Area — size to the film (no pillarbox black sides) */
   .ft-video-wrap {
-    background: #000;
+    background: transparent;
     border-radius: var(--radius-md);
     overflow: hidden;
-    margin-bottom: .75rem;
+    margin: 0 auto .5rem;
+    width: fit-content;
+    max-width: 100%;
+    position: relative;
   }
-  .ft-video-wrap video {
-    width: 100%;
-    max-height: 65vh;
+  .ft-video-stage {
+    position: relative;
     display: block;
+    width: fit-content;
+    max-width: 100%;
+    line-height: 0;
+  }
+  .ft-video-wrap video,
+  #film-tool-root .ft-video-wrap video {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    /* Prefer taller so 16:9 can use nearly full page width */
+    max-height: min(92vh, 1200px);
+    display: block;
+    object-fit: contain;
+    background: #000;
+    border-radius: var(--radius-md);
   }
   .ft-video-bar {
     display: flex;
@@ -76,6 +373,9 @@
     background: #111;
     color: #e2e8f0;
     font-size: .8rem;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
   .ft-video-bar .ft-time {
     font-family: monospace;
@@ -89,26 +389,65 @@
     font-size: .75rem;
   }
 
-  /* Video Controls */
+  /* Video Controls — centered under the film */
   .ft-vid-controls {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: .35rem;
     padding: .5rem 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
   }
   .ft-vid-controls::-webkit-scrollbar { display: none; }
   .ft-vid-controls .btn {
     padding: .3rem .5rem;
     min-height: 30px;
     font-size: .75rem;
-    flex-shrink: 1;
+    flex-shrink: 0;
     white-space: nowrap;
   }
   .ft-vid-controls .btn.btn-primary {
     padding: .3rem .65rem;
+  }
+  .ft-clip-review-dock {
+    width: min(100%, 1280px);
+    margin: .55rem auto 0;
+    padding: .65rem .75rem;
+    border: 2px solid #0f172a;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #fff;
+    box-sizing: border-box;
+  }
+  .ft-clip-review-dock[hidden] { display: none !important; }
+  .ft-clip-review-label {
+    font-size: .9rem;
+    font-weight: 800;
+    margin: 0 0 .5rem;
+    color: #fff;
+  }
+  .ft-clip-review-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .4rem;
+  }
+  .ft-clip-review-actions .btn {
+    width: 100%;
+    min-height: 2.6rem;
+    font-weight: 800;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .ft-clip-review-actions .ft-toolbar-btn {
+    background: #fff;
+    color: #0f172a;
+    border: 2px solid #fff;
+  }
+  @media (max-width: 900px) {
+    .ft-clip-review-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   /* Game Info Collapsible */
@@ -132,106 +471,161 @@
   }
   .ft-game-info-body.open { display: block; }
 
-  /* Tagging Panel */
-  .ft-tag-panel {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .ft-tag-panel-header {
-    padding: .75rem 1rem;
-    border-bottom: 1px solid var(--color-divider);
+  /* Tagging — slim column on the far right of the film */
+  .ft-tag-overlay {
+    position: absolute;
+    top: 8px;
+    right: 6px;
+    z-index: 6;
+    width: 4rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    pointer-events: none;
   }
-  .ft-tag-panel-header h3 {
-    font-size: .95rem;
-    font-weight: 600;
+  .ft-tag-overlay > * { pointer-events: auto; }
+  #ftManualTagToggle {
+    min-height: 1.7rem;
+    padding: 0;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    background: rgba(15, 23, 42, .84);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.35);
   }
-  .ft-tag-panel-header .ft-event-count {
-    font-size: .75rem;
-    color: var(--color-text-muted);
+  #ftManualTagToggle[aria-pressed="true"] {
+    background: #f8fafc;
+    color: #0f172a;
   }
-  .ft-tag-groups {
-    padding: .75rem;
-  }
-  .ft-tag-group {
-    margin-bottom: .75rem;
-  }
-  .ft-tag-group:last-child { margin-bottom: 0; }
-  .ft-tag-group-label {
-    font-size: .7rem;
+  .ft-tag-overlay-count {
+    display: block;
+    text-align: center;
+    font-size: .62rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--color-text-muted);
-    margin-bottom: .35rem;
-    padding-left: .25rem;
+    color: #fff;
+    text-shadow: 0 1px 2px #000;
+    pointer-events: none;
   }
-  .ft-tag-group-label.flow { color: #6366f1; }
-  .ft-tag-group-label.offense { color: #10b981; }
-  .ft-tag-group-label.defense { color: #f59e0b; }
-
-  .ft-tag-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .3rem;
-  }
-  .ft-tag-grid .btn {
-    padding: .5rem .4rem;
-    min-height: 2.4rem;
-    font-size: .8rem;
-    border-radius: var(--radius-sm);
-    justify-content: flex-start;
-  }
-  .ft-tag-grid .btn .ft-hotkey {
-    margin-left: auto;
-    font-size: .65rem;
-    opacity: .6;
-    font-weight: 600;
-  }
-
-  /* Tag action bar */
-  .ft-tag-actions {
+  .ft-tag-overlay-body {
     display: flex;
-    gap: .35rem;
-    padding: .5rem .75rem;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-surface-offset);
+    flex-direction: column;
+    gap: 2px;
+    max-height: calc(100% - .2rem);
+    overflow-y: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
   }
-  .ft-tag-actions .btn {
-    padding: .35rem .6rem;
-    min-height: 30px;
-    font-size: .75rem;
+  .ft-tag-overlay-body::-webkit-scrollbar { display: none; }
+  .ft-tag-overlay-body[hidden] { display: none !important; }
+  .ft-tag-overlay-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-tab {
+    min-height: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    color: #fff;
+    cursor: pointer;
+    opacity: .5;
+    background: rgba(15, 23, 42, .78);
+    box-shadow: 0 1px 3px rgba(0,0,0,.28);
+  }
+  .ft-tag-overlay-tab[aria-selected="true"] { opacity: 1; }
+  .ft-tag-overlay-tab.offense[aria-selected="true"] { background: rgba(4, 120, 87, .95); }
+  .ft-tag-overlay-tab.defense[aria-selected="true"] { background: rgba(180, 83, 9, .95); }
+  .ft-tag-overlay-tab.flow[aria-selected="true"] { background: rgba(67, 56, 202, .95); }
+  .ft-tag-overlay-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-pane[hidden] { display: none !important; }
+  #ftTagPaneFlow {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ft-tag-overlay-btn {
+    width: 100%;
+    min-height: 1.72rem;
+    margin: 0;
+    padding: 0 .1rem;
+    border: 0;
+    border-radius: 4px;
+    font-size: .62rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    cursor: pointer;
+    background: rgba(15, 23, 42, .78);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,.28);
+  }
+  .ft-tag-overlay-btn:hover { filter: brightness(1.12); }
+  .ft-tag-overlay-btn.offense { background: rgba(4, 120, 87, .86); }
+  .ft-tag-overlay-btn.defense { background: rgba(180, 83, 9, .88); }
+  .ft-tag-overlay-btn.flow { background: rgba(67, 56, 202, .86); }
+  .ft-tag-overlay-btn.action { background: rgba(15, 23, 42, .9); }
+  .ft-tag-overlay-rule {
+    height: 3px;
+    margin: 2px 4px;
+    border-radius: 2px;
+    opacity: .9;
+  }
+  .ft-tag-overlay-rule.offense { background: #34d399; }
+  .ft-tag-overlay-rule.defense { background: #fbbf24; }
+  .ft-tag-overlay-rule.flow { background: #818cf8; }
+  #film-tool-root.ft-manual-tagging-on .ft-tag-overlay {
+    bottom: 48px; /* leave native video controls */
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-tag-overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-video-wrap video {
+    max-height: min(94vh, 1400px);
+    border-radius: var(--radius-md);
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-program-section,
+  #film-tool-root.ft-manual-tagging-on #ftIngestDetails,
+  #film-tool-root.ft-manual-tagging-on #ftPlayMatchesDetails,
+  #film-tool-root.ft-manual-tagging-on #ftGameInfoDetails,
+  #film-tool-root.ft-manual-tagging-on #statusText,
+  #film-tool-root.ft-manual-tagging-on #ftClipReviewDock,
+  #film-tool-root.ft-manual-tagging-on #runAnalysisBar {
+    display: none !important;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-scoreboard,
+  #film-tool-root.ft-manual-tagging-on .ft-vid-controls {
+    display: flex !important;
+  }
+  #film-tool-root.ft-manual-tagging-on .ft-score-hint {
+    display: block !important;
   }
 
-  /* Bookmarks compact */
-  .ft-bookmarks {
-    margin-top: 1rem;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .ft-bookmarks-header {
-    padding: .6rem 1rem;
-    border-bottom: 1px solid var(--color-divider);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .ft-bookmarks-header h3 { font-size: .85rem; font-weight: 600; }
-  .ft-bookmarks-body { padding: .75rem; }
+  /* Bookmarks kept in DOM for JS, hidden from main review UX */
+  .ft-bookmarks[hidden] { display: none !important; }
 
   /* Top bar redesign */
   .ft-topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
+    margin-bottom: .55rem;
+    gap: .75rem;
   }
   .ft-tabs {
     display: flex;
@@ -296,20 +690,24 @@
 
   /* Responsive */
   @media (max-width: 1100px) {
-    .ft-layout { grid-template-columns: 1fr; }
-    .ft-tag-panel { order: -1; }
-    .ft-tag-grid { grid-template-columns: repeat(3, 1fr); }
+    .ft-video-wrap video,
+    #film-tool-root .ft-video-wrap video { max-height: min(78vh, 900px); }
   }
   @media (max-width: 760px) {
-    .ft-scoreboard { padding: .75rem; gap: .75rem; }
-    .ft-score-team .ft-team-score { font-size: 1.75rem; }
-    .ft-tag-grid { grid-template-columns: 1fr 1fr; }
+    .ft-scoreboard { padding: .5rem .75rem; gap: .75rem; }
+    .ft-score-team .ft-team-score { font-size: 1.4rem; }
+    .ft-topbar { flex-wrap: wrap; }
+    .ft-video-wrap video,
+    #film-tool-root .ft-video-wrap video { max-height: min(62vh, 560px); }
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
+{% if family_viewer %}
+<p class="text-muted" style="margin:0 0 8px;">Watch only. Tagging and other changes stay with the coaches.</p>
+{% endif %}
 
   <!-- ═══════════════════════════════════════════════════════
        TOP BAR
@@ -321,8 +719,11 @@
       <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
     <div class="ft-topbar-actions">
-      <button class="btn" id="resumeLastBtn" type="button">↩ Resume</button>
+      <button class="btn" id="resumeLastBtn" type="button" title="Reload tags saved in this browser">↩ Resume</button>
+      <button class="btn" id="loadTagsBtn" type="button" title="Load a Film Tool tag export from another computer">Load tags</button>
+      <input id="loadTagsFile" type="file" accept="application/json,.json" hidden>
       <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
+      <button class="btn" id="teachAiBtn" type="button" title="Send this film's tags to the AI ledger so the next pass keeps them">Teach AI</button>
       <button class="btn" id="manageRostersBtn" type="button">Rosters</button>
       <a class="btn" href="{{ url_for('core.settings_page') }}#film-tool">⚙ Setup</a>
     </div>
@@ -333,33 +734,17 @@
        ═══════════════════════════════════════════════════════ -->
   <section id="taggerView" class="view active" data-frame="5.2">
 
-    <!-- Scoreboard -->
-    <div class="ft-scoreboard">
-      <div class="ft-score-team">
-        <div class="ft-team-name" id="leftScoreName">Our Team</div>
-        <div class="ft-team-score" id="leftScoreValue">0</div>
-      </div>
-      <div class="ft-score-vs">VS</div>
-      <div class="ft-score-team">
-        <div class="ft-team-name" id="rightScoreName">Opponent</div>
-        <div class="ft-team-score" id="rightScoreValue">0</div>
-      </div>
-    </div>
-
-    <div class="ft-layout">
-
-      <!-- ── Left: Video + Controls + Bookmarks ────────────── -->
-      <div>
-
-        <!-- AI Upload (collapsible) -->
-        {% if features.ENABLE_AUTO_STATS_M1 %}
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <details class="ft-secondary" id="ftIngestDetails"{% if not filename %} open{% endif %}>
+      <summary>Load / analyze video</summary>
+      <div class="ft-secondary-body">
         <div class="ft-ai-upload-toggle" id="ftAiUploadToggle">
           <span class="ft-chevron">▶</span>
-          <span>🤖 Upload Video — Tag manually or run AI analysis</span>
+          <span>Upload video — tag manually or run AI</span>
         </div>
         <div class="ft-ai-upload-body" id="ftAiUploadBody">
           <form enctype="multipart/form-data" method="post" id="aiUploadForm">
-            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background. Original quality is preserved — large files upload in chunks automatically.</p>
+            <p class="tiny" style="margin-bottom:.75rem;color:var(--color-text-muted);">Upload a video to tag events manually, or run AI auto-detection in the background.</p>
             <div class="split ai-upload-fields">
               <div class="field">
                 <label for="aiVideoFile">Video File</label>
@@ -372,17 +757,16 @@
               </div>
             </div>
             <div class="split" style="margin-top:.75rem;gap:.5rem;">
-              <button type="button" class="btn btn-secondary" id="uploadTagBtn">📝 Upload for Tagging</button>
-              <button type="button" class="btn btn-primary" id="uploadAiBtn">🤖 Upload & AI Analyze</button>
+              <button type="button" class="btn btn-secondary" id="uploadTagBtn">Upload for Tagging</button>
+              <button type="button" class="btn btn-primary" id="uploadAiBtn">Upload & AI Analyze</button>
             </div>
             <div class="upload-progress-shell" id="uploadProgressShell">
               <div class="upload-progress-bar"><span id="uploadProgressBar"></span></div>
               <div class="tiny" id="uploadProgressText" style="margin-top:.4rem;">Waiting…</div>
             </div>
-            <!-- Analysis Progress (shown after upload during AI analysis) -->
             <div class="upload-progress-shell" id="analysisProgressShell" style="display:none;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <span style="font-size:.85rem;font-weight:600;">🤖 AI Analysis</span>
+                <span style="font-size:.85rem;font-weight:600;">AI Analysis</span>
                 <span class="tiny" id="analysisProgressPct">0%</span>
               </div>
               <div class="upload-progress-bar"><span id="analysisProgressBar" style="width:0%"></span></div>
@@ -393,74 +777,138 @@
 
         <div class="ft-ai-upload-toggle" id="ftNfhsToggle">
           <span class="ft-chevron">▶</span>
-          <span>📥 Download from NFHS — your games or opponents</span>
+          <span>Download from NFHS</span>
         </div>
         <div class="ft-ai-upload-body" id="ftNfhsBody">
           {% set nfhs_prefix = 'ft-nfhs-' %}
           {% include 'partials/nfhs_download_panel.html' %}
         </div>
-        {% endif %}
+      </div>
+    </details>
+    {% endif %}
 
-        <!-- Video Player -->
-        <div class="ft-video-wrap" id="filmReviewGrid">
-          <video id="video" controls></video>
-        </div>
-        <div class="ft-video-bar">
-          <span class="ft-time" id="timeDisplay">0:00.0</span>
-          <span style="flex:1"></span>
-          <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
-        </div>
-        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
-        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
-          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
-            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
-            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn">🤖 Run AI Analysis</button>
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <section class="ft-program-section" aria-label="Program mode">
+      <div class="panel" id="aiEventsPanel">
+        <div class="panel-head">
+          <div>
+            <h2 title="AI drafts counting stats. Check the box against the scorebook. Film clips are optional.">Team stats</h2>
+            <p>The box score is the main job. Watch film only if an exception looks wrong.</p>
           </div>
-          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
-            <div class="ft-run-analysis-progress-head">
-              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
-              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
+        </div>
+        <div class="panel-body">
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep1">
+            <summary>AI box score vs scorebook</summary>
+            <div class="ft-secondary-body">
+              <p class="ft-control-group-help">Builds counting stats from this game’s AI pass and checks them against the confirmed scorebook. You do not need to accept plays one by one.</p>
+              <div class="ft-program-bar" id="ftProgramBar">
+                <button class="btn btn-primary" type="button" id="programBuildLedgerBtn" title="Build the AI box and compare it to the scorebook. Adrian also drops high-pass fakes and caps team totals to the book.">Build AI box vs scorebook</button>
+                <button class="btn btn-ghost" type="button" id="programRefreshBtn" title="Reload the score line, exceptions, and box without rebuilding.">Refresh box</button>
+              </div>
+              <div class="ft-film-sync-bar" id="ftFilmSyncBar" title="If analysis and review videos differ, set an offset so clip seeks land on the right moment.">
+                <span class="tiny" id="ftFilmSyncStatus">Film sync: loading…</span>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncZeroBtn" title="Clear offset (review time = analysis timestamp)">Sync 0</button>
+                <button class="btn btn-ghost btn-sm" type="button" id="ftFilmSyncHereBtn" title="Treat current playhead as analysis t=0 (tip) on this review film">Playhead = analysis tip</button>
+              </div>
+              <div class="tiny" id="programStatusText" title="Status of the last build/refresh">Load summary for this game.</div>
+              <div class="ft-program-score" id="programScoreLine" title="Compares scorebook team points to AI ledger team points"></div>
+              <div class="ft-program-exceptions" id="programExceptions" title="Mismatches vs scorebook — mostly wrong player IDs until jerseys are linked">
+                <div class="empty-state tiny">Exceptions appear after Build / Refresh.</div>
+              </div>
+              <div class="ft-program-box-wrap" title="Official box: quarters, team, then individuals.">
+                <div id="officialBoxMount">
+                  <p class="final-score" id="officialFinalScore"></p>
+                  <p class="tiny" id="officialBoxNote"></p>
+                  <h3 class="ft-program-subhead">1. Line score</h3>
+                  <div class="table-responsive" id="officialLineScoreWrap"></div>
+                  <h3 class="ft-program-subhead">2. Team stats</h3>
+                  <div class="table-responsive" id="officialTeamStatsWrap"></div>
+                  <div class="ft-starters-bar">
+                    <button class="btn btn-ghost" type="button" id="officialStartersBtn">Set starting five</button>
+                    <span class="tiny" id="officialStartersSummary">Starting five not set — bench points need this list.</span>
+                  </div>
+                  <h3 class="ft-program-subhead">3. Liberty</h3>
+                  <div class="table-responsive" id="officialLibertyWrap"></div>
+                  <h3 class="ft-program-subhead">3. Opponent</h3>
+                  <p class="tiny" id="officialOppName"></p>
+                  <div class="table-responsive" id="officialOppWrap"></div>
+                  <div id="officialUnassignedWrap"></div>
+                </div>
+                <table class="ft-program-box" id="programBoxTable" style="display:none">
+                  <thead><tr><th>#</th></tr></thead>
+                  <tbody id="programBoxBody"></tbody>
+                </table>
+              </div>
+              {% if analysis_results_url %}
+              <p class="tiny" style="margin:.75rem 0 0;">
+                Shot charts, possessions, and minutes live on
+                <a href="{{ analysis_results_url }}">Analysis Results</a>
+                — not duplicated here.
+              </p>
+              {% endif %}
             </div>
-            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
-            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
+          </details>
+
+          <details class="ft-secondary ft-program-fold" id="ftProgramStep2">
+            <summary>Watch plays on film (optional)</summary>
+            <div class="ft-secondary-body">
+              <p class="ft-control-group-help">Click a row to loop a short clip. Use the dock (or row buttons) to Accept / Correct / Reject, then Next.</p>
+              <div class="ft-play-toolbar" role="group" aria-label="Play list controls">
+                <button class="btn ft-toolbar-btn ai-filter-btn" type="button" data-ai-filter="pending" id="aiFilterPending" title="Show AI drafts near the current video time.">Show AI drafts</button>
+                <button class="btn ft-toolbar-btn ai-filter-btn active" type="button" data-ai-filter="ledger" id="aiFilterLedger" title="Show accepted ledger plays. Click a row to loop the film clip.">Show ledger plays</button>
+                <button class="btn ft-toolbar-btn ai-scope-btn active" type="button" data-ai-scope="useful" id="aiScopeUseful" title="Only scoring / box-score types.">Scoring / box only</button>
+                <button class="btn ft-toolbar-btn ai-scope-btn" type="button" data-ai-scope="all" id="aiScopeAll" title="All AI event types (noisier).">All AI types</button>
+                <button class="btn ft-toolbar-btn" type="button" id="aiRefreshNearPlayheadBtn" title="Reload the play list for the current video time.">Reload play list</button>
+                <button class="btn ft-toolbar-btn ft-toolbar-primary" type="button" id="aiAddAtPlayheadBtn" title="Manually add an event at the current video time.">+ Add at playhead</button>
+              </div>
+              <div class="ai-events-summary" title="Counts for the list below">
+                <span class="badge" id="aiEventsCount">0 plays listed</span>
+                <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
+                <span class="tiny" id="aiCurrentEventLabel">No active event</span>
+              </div>
+              <div class="ft-event-list-label">Play list — click a row to loop the clip</div>
+              <div class="ai-events-scroll" id="aiEventsScroller" title="Click a row to loop a short clip around that play">
+                <div class="list-stack" id="aiEventsList">
+                  <div class="empty-state">Build the box score first. Film clips are optional after that.</div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if features.ENABLE_AUTO_STATS_M1 %}
+    <details class="ft-secondary" id="ftPlayMatchesDetails">
+      <summary>Play / set suggestions</summary>
+      <div class="ft-secondary-body">
+        <div class="panel" id="playMatchesPanel" style="margin:0;border:none;box-shadow:none;background:transparent;">
+          <div class="panel-body" style="padding:0;">
+            <p class="tiny" style="margin:0 0 .5rem;color:var(--color-text-muted);">Ranked FastDraw matches — suggestions only, not auto-accepted.</p>
+            <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
+              <span class="badge" id="playMatchesCount">0 possessions</span>
+              <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
+              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn" title="Re-rank FastDraw play/set matches for this game (suggestions only)">Refresh matches</button>
+            </div>
+            <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
+            <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:280px;">
+              <div class="list-stack" id="playMatchesList">
+                <div class="empty-state">Open a game with detections, then Refresh matches.</div>
+              </div>
+            </div>
           </div>
         </div>
-        {% endif %}
-        <div class="tiny" style="padding:.25rem 0 .5rem;">
-          {% if uploaded_video_url %}
-          Server video <code>{{ filename }}</code> will auto-load below.
-          {% if features.ENABLE_AUTO_STATS_M1 %}
-          Use <strong>Run AI Analysis</strong> above to detect events automatically, or tag manually.
-          {% endif %}
-          {% else %}
-          Load a video from your computer, or open a saved video from the Video Library.
-          {% endif %}
-        </div>
+      </div>
+    </details>
+    {% endif %}
 
-        <!-- Video Controls -->
-        <div class="ft-vid-controls no-print">
-          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Go to start">⏮</button>
-          <button class="btn btn-ghost" type="button" data-skip="-30">-30s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-10">-10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="-3">-3s</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow5x">0.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidSlow25x">0.25x</button>
-          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn">▶ / ⏸</button>
-          <button class="btn btn-ghost" type="button" id="vidNormalBtn">1x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast25x">2.5x</button>
-          <button class="btn btn-ghost" type="button" id="vidFast5x">5x</button>
-          <button class="btn btn-ghost" type="button" data-skip="3">+3s</button>
-          <button class="btn btn-ghost" type="button" data-skip="10">+10s</button>
-          <button class="btn btn-ghost" type="button" data-skip="30">+30s</button>
-          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Go to end">⏭</button>
-        </div>
-
-        <!-- Game Info (collapsible) -->
-        <div class="ft-game-info-toggle" id="ftGameInfoToggle">
-          <span class="ft-chevron">▶</span>
-          <span>📝 Game Info</span>
-        </div>
-        <div class="ft-game-info-body" id="ftGameInfoBody">
+    <details class="ft-secondary" id="ftGameInfoDetails">
+      <summary>Game info</summary>
+      <div class="ft-secondary-body">
+        <div class="ft-game-info-toggle" id="ftGameInfoToggle" hidden></div>
+        <div class="ft-game-info-body open" id="ftGameInfoBody">
           <div class="info-grid">
             <div class="field">
               <label for="gameType">Game Type</label>
@@ -518,301 +966,132 @@
             </div>
           </div>
         </div>
-
-        <!-- Bookmarks -->
-        <div class="ft-bookmarks">
-          <div class="ft-bookmarks-header">
-            <h3>🔖 Bookmarks</h3>
-            <div class="inline-actions">
-              <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button" style="padding:.25rem .5rem;min-height:26px;font-size:.75rem;">Refresh</button>
-            </div>
-          </div>
-          <div class="ft-bookmarks-body">
-            <div class="field">
-              <label for="bookmarkGameId">Game ID</label>
-              <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
-            </div>
-            <div class="split">
-              <div class="field">
-                <label for="bookmarkLabel">Label</label>
-                <input id="bookmarkLabel" placeholder="e.g. Press break">
-              </div>
-              <div class="field">
-                <label for="bookmarkNote">Note</label>
-                <input id="bookmarkNote" placeholder="Optional">
-              </div>
-            </div>
-            <button class="btn btn-primary" id="saveBookmarkBtn" type="button" style="margin-top:.5rem;">Save Current Time</button>
-            <span class="tiny" id="bookmarkStatus" style="margin-left:.5rem;">No bookmarks loaded.</span>
-            <div class="list-stack" id="manualBookmarksList" style="margin-top:.75rem;">
-              <div class="empty-state">Choose a game ID to load bookmarks.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status -->
-        <div class="status" id="statusText" style="margin-top:.75rem;">Ready.</div>
       </div>
+    </details>
 
-      <!-- ── Right: Tagging Buttons ─────────────────────────── -->
-      <div>
-        <div class="ft-tag-panel">
-          <div class="ft-tag-panel-header">
-            <h3>Tag Events</h3>
-            <span class="ft-event-count" id="eventCountText">0 tagged</span>
+    <div class="ft-review-stage">
+      <div class="ft-review-video">
+        <div class="ft-scoreboard" title="Running score from your tags — compare to the gym scoreboard and the book">
+          <div class="ft-score-team">
+            <div class="ft-team-name" id="leftScoreName">Our Team</div>
+            <div class="ft-team-score" id="leftScoreValue">0</div>
           </div>
-          <div class="ft-tag-groups">
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label flow">⚡ Possession / Flow</div>
-              <div class="ft-tag-grid" id="groupFlow"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label offense">🏀 Scoring / Offense</div>
-              <div class="ft-tag-grid" id="groupOffense"></div>
-            </div>
-            <div class="ft-tag-group">
-              <div class="ft-tag-group-label defense">🛡 Defense / Misc</div>
-              <div class="ft-tag-grid" id="groupDefense"></div>
-            </div>
-          </div>
-          <div class="ft-tag-actions">
-            <button class="btn btn-ghost" id="undoBtn" type="button">↩ Undo</button>
-            <button class="btn btn-ghost" id="clearAllBtn" type="button">Clear All</button>
-            <button class="btn btn-ghost" id="subBtn" type="button">SUB</button>
-            <button class="btn btn-ghost" id="startersBtn" type="button">Starters</button>
+          <div class="ft-score-vs">VS</div>
+          <div class="ft-score-team">
+            <div class="ft-team-name" id="rightScoreName">Opponent</div>
+            <div class="ft-team-score" id="rightScoreValue">0</div>
           </div>
         </div>
-
-        <!-- AI Events / Review Workspace -->
-        {% if features.ENABLE_AUTO_STATS_M1 %}
-        <div class="panel" id="aiEventsPanel" style="margin-top:1rem;">
-          <div class="panel-head">
-            <div>
-              <h2>Review workspace</h2>
-              <p>Pending AI drafts stay off the official ledger until you Accept, Correct, or Reject.</p>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="ai-events-summary">
-              <span class="badge" id="aiEventsCount">0 events</span>
-              <span class="tiny" id="aiLedgerCount">Ledger: 0</span>
-              <span class="tiny" id="aiCurrentEventLabel">No active event</span>
-            </div>
-            <div class="ai-review-filters" role="tablist" aria-label="Event review filters">
-              <button class="btn btn-ghost btn-sm ai-filter-btn active" type="button" data-ai-filter="pending" id="aiFilterPending">Pending</button>
-              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="ledger" id="aiFilterLedger">Ledger</button>
-              <button class="btn btn-ghost btn-sm ai-filter-btn" type="button" data-ai-filter="all" id="aiFilterAll">All</button>
-            </div>
-            <div class="ai-events-scroll" id="aiEventsScroller">
-              <div class="list-stack" id="aiEventsList">
-                <div class="empty-state">No AI events yet. Run analysis to see results.</div>
+        <p class="tiny ft-score-hint" id="ftScoreHint">Score updates from tagged makes (2 / 3 / FT). And-1 is 2 until you tag the free throw.</p>
+        <div class="ft-video-wrap" id="filmReviewGrid">
+          <div class="ft-video-stage">
+            <video id="video" controls></video>
+            <aside class="ft-tag-overlay" id="ftTagOverlay" aria-label="Manual tagging">
+              <button type="button" id="ftManualTagToggle" aria-pressed="false" title="Show tagging buttons on the film">Tag</button>
+              <span class="ft-tag-overlay-count" id="eventCountText">0</span>
+              <div class="ft-tag-overlay-body" id="ftManualTagPanel" hidden>
+                <button class="ft-tag-overlay-btn action" id="undoBtn" type="button" title="Undo the last manual tag">Undo</button>
+                <button class="ft-tag-overlay-btn action" id="ftTagGameBtn" type="button" title="Set opponent and starting lineups">Vs</button>
+                <button class="ft-tag-overlay-btn action" id="startersBtn" type="button" title="Set starting lineup">5s</button>
+                <div class="ft-tag-overlay-tabs" role="tablist" aria-label="Tag group">
+                  <button type="button" class="ft-tag-overlay-tab offense" role="tab" data-tag-tab="offense" aria-selected="true" title="Offense / scoring">Off</button>
+                  <button type="button" class="ft-tag-overlay-tab defense" role="tab" data-tag-tab="defense" aria-selected="false" title="Defense">Def</button>
+                  <button type="button" class="ft-tag-overlay-tab flow" role="tab" data-tag-tab="flow" aria-selected="false" title="More: quarters, timeout, inbound, substitution">More</button>
+                </div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="offense" id="ftTagPaneOffense"></div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="defense" id="ftTagPaneDefense" hidden></div>
+                <div class="ft-tag-overlay-pane" data-tag-pane="flow" hidden>
+                  <div id="ftTagPaneFlow"></div>
+                  <button class="ft-tag-overlay-btn action" id="ftQ1EndBtn" type="button" title="Jump to 15:58, end of Q1 on this film" hidden>15:58</button>
+                  <button class="ft-tag-overlay-btn action" id="subBtn" type="button" title="Record a substitution at the current time">SUB</button>
+                  <button class="ft-tag-overlay-btn action" id="clearAllBtn" type="button" title="Clear all manual tags for this session (careful)">Clr</button>
+                </div>
               </div>
-            </div>
+            </aside>
+          </div>
+          <div class="ft-video-bar">
+            <span class="ft-time" id="timeDisplay">0:00.0</span>
+            <span style="flex:1"></span>
+            <span class="ft-last-tag">Last tag: <span id="lastTaggedTime">—</span></span>
           </div>
         </div>
-
-        <div class="panel" id="playMatchesPanel" style="margin-top:1rem;">
-          <div class="panel-head">
-            <div>
-              <h2>Play / set suggestions</h2>
-              <p>Ranked matches of possession movement vs sticky FastDraw playbook vectors. Suggestions only — not auto-accepted.</p>
-            </div>
+        {% if features.ENABLE_AUTO_STATS_M1 and filename %}
+        <div id="runAnalysisBar" class="ft-run-analysis-bar" style="display:none;margin:.5rem 0;padding:.6rem .75rem;background:var(--color-surface,#1a1a2e);border:1px solid var(--color-border,#333);border-radius:8px;flex-direction:column;align-items:stretch;gap:.5rem;">
+          <div id="runAnalysisIdleRow" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;width:100%;">
+            <span id="runAnalysisStatus" class="tiny" style="color:var(--color-text-muted);flex:1;min-width:180px;"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="runAnalysisBtn" title="Run AI analysis on this video (YOLO pipeline). Not needed for Check C if a ledger already exists.">Run AI Analysis</button>
           </div>
-          <div class="panel-body">
-            <div class="ai-events-summary" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
-              <span class="badge" id="playMatchesCount">0 possessions</span>
-              <span class="tiny" id="playMatchesLibraryLabel">Library: —</span>
-              <button class="btn btn-ghost btn-sm" type="button" id="playMatchesRefreshBtn">Refresh matches</button>
+          <div id="runAnalysisProgressBlock" style="display:none;width:100%;">
+            <div class="ft-run-analysis-progress-head">
+              <span id="runAnalysisPct" class="ft-run-analysis-pct">—</span>
+              <span id="runAnalysisPhase" class="tiny" style="color:var(--color-text-muted);">Analyzing…</span>
             </div>
-            <p class="tiny text-muted" id="playMatchesLimits" style="margin:.5rem 0;"></p>
-            <div class="ai-events-scroll" id="playMatchesScroller" style="max-height:320px;">
-              <div class="list-stack" id="playMatchesList">
-                <div class="empty-state">Open a game with detections, then Refresh matches.</div>
-              </div>
-            </div>
+            <div class="upload-progress-bar"><span id="runAnalysisProgressBar" style="width:0%"></span></div>
+            <div id="runAnalysisDetail" class="tiny" style="margin-top:.35rem;color:var(--color-text-muted);"></div>
           </div>
         </div>
         {% endif %}
-      </div>
-
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════
-         ANALYSIS RESULTS
-         ═══════════════════════════════════════════════════════ -->
-    {% if features.ENABLE_AUTO_STATS_M1 and (shot_summary or player_effect_data or player_minutes_data or possession_summary) %}
-    <section class="ft-analysis-results" style="margin-top:1.5rem;">
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>📊 Analysis Results</h2>
-            <p>Shot classifications, possessions, player effect, and minutes from AI analysis.</p>
+        <div class="ft-vid-controls no-print" aria-label="Video transport controls">
+          <button class="btn btn-ghost" type="button" id="vidToStartBtn" title="Jump to start of video (0:00)">⏮ Start</button>
+          <button class="btn btn-ghost" type="button" data-skip="-30" title="Jump back 30 seconds">-30s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-10" title="Jump back 10 seconds">-10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="-3" title="Jump back 3 seconds">-3s</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow5x" title="Play at half speed (0.5x)">0.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidSlow25x" title="Play at quarter speed (0.25x)">0.25x</button>
+          <button class="btn btn-primary" type="button" id="vidPlayPauseBtn" title="Play or pause the video">▶ / ⏸</button>
+          <button class="btn btn-ghost" type="button" id="vidNormalBtn" title="Play at normal speed (1x)">1x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast25x" title="Play at 2.5x speed">2.5x</button>
+          <button class="btn btn-ghost" type="button" id="vidFast5x" title="Play at 5x speed">5x</button>
+          <button class="btn btn-ghost" type="button" data-skip="3" title="Jump forward 3 seconds">+3s</button>
+          <button class="btn btn-ghost" type="button" data-skip="10" title="Jump forward 10 seconds">+10s</button>
+          <button class="btn btn-ghost" type="button" data-skip="30" title="Jump forward 30 seconds">+30s</button>
+          <button class="btn btn-ghost" type="button" id="vidToEndBtn" title="Jump to end of video">⏭ End</button>
+        </div>
+        <div class="status" id="statusText" style="margin-top:.5rem;">Ready.</div>
+        <div id="ftClipReviewDock" class="ft-clip-review-dock" hidden>
+          <div class="ft-clip-review-label" id="ftClipReviewLabel">Clip review</div>
+          <div class="ft-clip-review-actions">
+            <button type="button" class="btn ai-review-btn accept" id="ftClipAcceptBtn" title="Keep this play on the ledger, then go to the next play">✓ Accept</button>
+            <button type="button" class="btn ai-review-btn correct" id="ftClipCorrectBtn" title="Fix player or type for this play">✎ Correct</button>
+            <button type="button" class="btn ai-review-btn reject" id="ftClipRejectBtn" title="Remove this wrong play, then go to the next">✗ Reject</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipNextBtn" title="Leave this play unchanged and loop the next one">Next play →</button>
+            <button type="button" class="btn ft-toolbar-btn" id="ftClipStopBtn" title="Stop the looping clip and return to normal playback">Stop loop</button>
           </div>
         </div>
-        <div class="panel-body">
+      </div>
+    </div>
 
-          <div class="split" style="gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+    <!-- Bookmarks kept for JS compatibility; hidden from review UX -->
+    <div class="ft-bookmarks" hidden>
+      <div class="ft-bookmarks-header">
+        <h3>Bookmarks</h3>
+        <div class="inline-actions">
+          <button class="btn btn-ghost" id="refreshBookmarksBtn" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="ft-bookmarks-body">
+        <div class="field">
+          <label for="bookmarkGameId">Game ID</label>
+          <input id="bookmarkGameId" value="{{ game_id or '' }}" placeholder="Enter a game_id for DB-backed bookmarks">
+        </div>
+        <div class="split">
+          <div class="field">
+            <label for="bookmarkLabel">Label</label>
+            <input id="bookmarkLabel" placeholder="e.g. Press break">
+          </div>
+          <div class="field">
+            <label for="bookmarkNote">Note</label>
+            <input id="bookmarkNote" placeholder="Optional">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveBookmarkBtn" type="button">Save Current Time</button>
+        <span class="tiny" id="bookmarkStatus">No bookmarks loaded.</span>
+        <div class="list-stack" id="manualBookmarksList">
+          <div class="empty-state">Choose a game ID to load bookmarks.</div>
+        </div>
+      </div>
+    </div>
 
-            <!-- Possession Summary -->
-            {% if possession_summary and possession_summary.events_total > 0 %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">🏀 Possessions</div>
-              <div class="checklist-summary" style="display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;">
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.total_possessions }}</strong>
-                  <span class="text-muted">total possessions</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.scoring_possessions }}</strong>
-                  <span class="text-muted">scoring</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.points_per_possession }}</strong>
-                  <span class="text-muted">pts / poss</span>
-                </div>
-                <div class="checklist-pill">
-                  <strong>{{ possession_summary.turnover_rate }}</strong>
-                  <span class="text-muted">TO rate</span>
-                </div>
-              </div>
-              <div class="text-muted" style="font-size:.82rem;margin-bottom:.5rem;">
-                {{ possession_summary.events_linked }} of {{ possession_summary.events_total }} events linked to possessions
-                {% if possession_summary.events_unlinked > 0 %}
-                  ({{ possession_summary.events_unlinked }} unlinked)
-                {% endif %}
-              </div>
-              {% if possession_summary.top_outcomes %}
-              <div class="text-muted" style="font-size:.82rem;">
-                Top outcomes:
-                {% for row in possession_summary.top_outcomes %}
-                  <span style="margin-right:.5rem;">{{ row.outcome }} ({{ row.count }})</span>
-                {% endfor %}
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Shot Summary -->
-            {% if shot_summary %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">🎯 Shot Summary</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th style="text-align:right;">Makes</th>
-                      <th style="text-align:right;">Misses</th>
-                      <th style="text-align:right;">Total</th>
-                      <th style="text-align:right;">FG%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in shot_summary %}
-                    <tr>
-                      <td>
-                        {% if row.shot_type == '2pt' %}
-                          <span class="ft-badge ft-badge-2pt">2PT</span>
-                        {% elif row.shot_type == '3pt' %}
-                          <span class="ft-badge ft-badge-3pt">3PT</span>
-                        {% elif row.shot_type == 'ft' %}
-                          <span class="ft-badge ft-badge-ft">FT</span>
-                        {% else %}
-                          <span class="ft-badge">{{ row.shot_type }}</span>
-                        {% endif %}
-                      </td>
-                      <td style="text-align:right;font-weight:600;color:#22c55e;">{{ row.makes }}</td>
-                      <td style="text-align:right;color:#ef4444;">{{ row.misses }}</td>
-                      <td style="text-align:right;">{{ row.total }}</td>
-                      <td style="text-align:right;font-weight:600;">{{ row.pct }}%</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                  {% set total_makes = shot_summary|sum(attribute='makes') %}
-                  {% set total_misses = shot_summary|sum(attribute='misses') %}
-                  {% set total_shots = shot_summary|sum(attribute='total') %}
-                  {% set total_pct = (total_makes / total_shots * 100) if total_shots > 0 else 0 %}
-                  <tfoot>
-                    <tr style="background:var(--color-surface-offset);font-weight:700;border-top:2px solid var(--color-divider);">
-                      <td>Total</td>
-                      <td style="text-align:right;color:#22c55e;">{{ total_makes }}</td>
-                      <td style="text-align:right;color:#ef4444;">{{ total_misses }}</td>
-                      <td style="text-align:right;">{{ total_shots }}</td>
-                      <td style="text-align:right;">{{ "%.1f"|format(total_pct) }}%</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-            <!-- Player Effect -->
-            {% if player_effect_data %}
-            <div class="ft-report-card" style="flex:1;min-width:260px;">
-              <div class="ft-report-card-title">⚡ Player Effect</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Pos</th>
-                      <th style="text-align:right;">Poss</th>
-                      <th style="text-align:right;">Pts</th>
-                      <th style="text-align:right;">ORTG</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in player_effect_data %}
-                    <tr>
-                      <td><strong>{{ row.tracker_id }}</strong></td>
-                      <td style="text-align:right;">{{ row.possessions_on }}</td>
-                      <td style="text-align:right;">{{ row.points_for }}</td>
-                      <td style="text-align:right;">
-                        {% if row.ortg is not none %}
-                          <span style="font-weight:600;color:{% if row.ortg > 100 %}#22c55e{% elif row.ortg < 80 %}#ef4444{% else %}var(--color-text){% endif %};">
-                            {{ "%.1f"|format(row.ortg) }}
-                          </span>
-                        {% else %}
-                          <span style="color:var(--color-text-muted);">N/A</span>
-                        {% endif %}
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-            <!-- Player Minutes -->
-            {% if player_minutes_data %}
-            <div class="ft-report-card" style="flex:1;min-width:180px;">
-              <div class="ft-report-card-title">⏱ Player Minutes</div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Player</th>
-                      <th style="text-align:right;">Min</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in player_minutes_data %}
-                    <tr>
-                      <td><strong>{% if row.player_name %}{{ row.player_name }}{% else %}Pos {{ row.tracker_id }}{% endif %}</strong></td>
-                      <td style="text-align:right;font-weight:600;">{{ "%.1f"|format(row.minutes_played) }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {% endif %}
-
-          </div><!-- /split -->
-        </div><!-- /panel-body -->
-      </div><!-- /panel -->
-    </section>
-    {% endif %}
   </section>
 
   <!-- ═══════════════════════════════════════════════════════
@@ -928,15 +1207,25 @@
           <span class="tiny">Rosters are saved per season so you can keep last year’s players.</span>
         </div>
         <div class="split">
-          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="level" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="level" value="jv"> JV</label><label class="tiny"><input type="radio" name="level" value="varsity"> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="gender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="gender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="gender" value="coed"> Coed</label></div></div>
         </div>
-        <div class="pill-buttons" style="margin:.5rem 0 1rem">
-          <button class="btn roster-side-btn active" type="button" data-side="our">Our</button>
-          <button class="btn roster-side-btn" type="button" data-side="opp">Opp</button>
-          <button class="btn roster-side-btn" type="button" data-side="home">Home</button>
-          <button class="btn roster-side-btn" type="button" data-side="away">Away</button>
+        <div class="split" style="align-items:end;gap:1rem;">
+          <div class="field">
+            <label>Team</label>
+            <div class="pill-buttons">
+              <button class="btn roster-side-btn active" type="button" data-side="our">Liberty</button>
+              <button class="btn roster-side-btn" type="button" data-side="opp">Opponent</button>
+            </div>
+          </div>
+          <div class="field" id="rosterOpponentField" hidden>
+            <label for="rosterOpponentSelect">Opponent</label>
+            <select id="rosterOpponentSelect">
+              <option value="">Select opponent…</option>
+            </select>
+          </div>
         </div>
+        <div id="rosterOpponentStats" class="tiny" style="display:none;margin:.15rem 0 .5rem;color:var(--color-muted);"></div>
         <div class="field">
           <label for="rosterFileTypeSelect">Roster file type</label>
           <select id="rosterFileTypeSelect">
@@ -973,14 +1262,23 @@
           <select id="rosterImportSeasonSelect" required></select>
         </div>
         <div class="split">
-          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity" checked> Varsity</label></div></div>
+          <div class="field"><label>Level</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importLevel" value="jrhigh"> Jr High</label><label class="tiny"><input type="radio" name="importLevel" value="jv"> JV</label><label class="tiny"><input type="radio" name="importLevel" value="varsity"> Varsity</label></div></div>
           <div class="field"><label>Gender</label><div class="pill-buttons"><label class="tiny"><input type="radio" name="importGender" value="boys" checked> Boys</label><label class="tiny"><input type="radio" name="importGender" value="girls"> Girls</label><label class="tiny"><input type="radio" name="importGender" value="coed"> Coed</label></div></div>
         </div>
-        <div class="pill-buttons" style="margin:.35rem 0 .75rem">
-          <button class="btn roster-import-side-btn active" type="button" data-side="our">Our</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="opp">Opp</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="home">Home</button>
-          <button class="btn roster-import-side-btn" type="button" data-side="away">Away</button>
+        <div class="split" style="align-items:end;gap:1rem;">
+          <div class="field">
+            <label>Team</label>
+            <div class="pill-buttons">
+              <button class="btn roster-import-side-btn active" type="button" data-side="our">Liberty</button>
+              <button class="btn roster-import-side-btn" type="button" data-side="opp">Opponent</button>
+            </div>
+          </div>
+          <div class="field" id="rosterImportOpponentField" hidden>
+            <label for="rosterImportOpponentSelect">Opponent</label>
+            <select id="rosterImportOpponentSelect">
+              <option value="">Select opponent…</option>
+            </select>
+          </div>
         </div>
         <p class="tiny" id="rosterImportTargetLabel" style="margin-bottom:.5rem;color:var(--color-muted);"></p>
         <div class="field">
@@ -1017,22 +1315,26 @@
         <div class="field">
           <label for="aiCorrectPlayer">Player</label>
           <select id="aiCorrectPlayer"></select>
+          <p class="tiny" id="aiCorrectPlayerHint">Pick from the scorebook roster when available.</p>
         </div>
-        <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
-          <div style="flex:1;min-width:140px;">
-            <label for="aiCorrectNewPlayerName">Add player for tagging</label>
-            <input id="aiCorrectNewPlayerName" placeholder="Full name" autocomplete="off">
+        <div id="aiCorrectTaggingBlock" hidden>
+          <div class="field" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:140px;">
+              <label for="aiCorrectNewPlayerName">Add player for tagging</label>
+              <input id="aiCorrectNewPlayerName" placeholder="Full name" autocomplete="off">
+            </div>
+            <div style="width:72px;">
+              <label for="aiCorrectNewPlayerNum">#</label>
+              <input id="aiCorrectNewPlayerNum" type="number" min="0" max="99" placeholder="#">
+            </div>
+            <button class="btn btn-primary" type="button" id="aiCorrectAddPlayerBtn">Add</button>
           </div>
-          <div style="width:72px;">
-            <label for="aiCorrectNewPlayerNum">#</label>
-            <input id="aiCorrectNewPlayerNum" type="number" min="0" max="99" placeholder="#">
-          </div>
-          <button class="btn btn-primary" type="button" id="aiCorrectAddPlayerBtn">Add</button>
+          <div class="term-list" id="aiCorrectPlayerManageList" style="max-height:120px;overflow:auto;margin-bottom:.75rem;"></div>
         </div>
-        <div class="term-list" id="aiCorrectPlayerManageList" style="max-height:120px;overflow:auto;margin-bottom:.75rem;"></div>
         <div class="field">
           <label for="aiCorrectEventType">Event type</label>
           <select id="aiCorrectEventType">
+            <option value="tip_off">tip_off (opening tip)</option>
             <option value="made_two">made_two</option>
             <option value="missed_two">missed_two</option>
             <option value="made_three">made_three</option>
@@ -1045,7 +1347,10 @@
             <option value="steal">steal</option>
             <option value="block">block</option>
             <option value="foul">foul</option>
+            <option value="jump_ball">jump_ball (held ball / mid-game)</option>
             <option value="shot">shot</option>
+            <option value="miss">miss</option>
+            <option value="make">make</option>
           </select>
         </div>
         <div class="field">
@@ -1068,49 +1373,40 @@
     </form>
   </dialog>
 
-  <dialog id="quickTagDialog">
+  <dialog id="quickTagDialog" class="ft-quick-tag">
     <div class="modal-head"><h2 id="quickDialogTitle">Tag event</h2><p class="tiny" id="quickTagLabel"></p></div>
     <div class="modal-body" id="quickTagBody"></div>
-    <div class="modal-foot"><span class="tiny">Select what applies, then tag.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+    <div class="modal-foot"><span class="tiny">Liberty vs this opponent’s roster.</span><button class="btn" id="quickTagCancelBtn" type="button">Cancel</button></div>
+  </dialog>
+
+  <dialog id="ftGameTeamsDialog" class="ft-quick-tag">
+    <div class="modal-head"><h2>This game</h2></div>
+    <div class="modal-body">
+      <p class="tiny">Tags and lineups use these names. The opponent roster is the team you are playing, not a generic list.</p>
+      <div class="field"><label for="ftTagLibertyName">Liberty</label><input id="ftTagLibertyName" value="Liberty"></div>
+      <div class="field"><label for="ftTagOppName">Opponent</label><input id="ftTagOppName" placeholder="Who are we playing?"></div>
+      <button type="button" class="btn" id="ftTagOpenStartersBtn">Set starting fives</button>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="ftGameTeamsCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="ftGameTeamsSave">Save</button>
+    </div>
   </dialog>
 
   <dialog id="startersDialog">
     <form method="dialog">
       <div class="modal-head"><h2>Select Liberty starters</h2></div>
       <div class="modal-body">
-        <p class="tiny" id="startersHelp">Choose the five Liberty starters before the opening tip. Opponent is optional.</p>
+        <p class="tiny" id="startersHelp">Choose five Liberty starters and five opponent starters. Bench points use this list.</p>
         <div class="split" style="margin-top:.75rem">
           <div class="field"><label>Liberty starters</label><div class="term-list" id="libertyStartersList"></div></div>
-          <div class="field"><label>Opponent starters (optional)</label><div class="term-list" id="opponentStartersList"></div></div>
+          <div class="field"><label>Opponent starters</label><div class="term-list" id="opponentStartersList"></div></div>
         </div>
-        <p class="tiny" style="margin-top:.75rem">This records who starts; minutes still come from SUB tags.</p>
+        <p class="tiny" style="margin-top:.75rem">Opening-tip detection comes later, after jersey numbers at the jump are stable. +/− is parked until the counting stats work.</p>
       </div>
       <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button class="btn btn-primary" id="startersSaveBtn" type="button">Save starters</button></div>
     </form>
-  </div>
-
-  <!-- Report Drawer -->
-  <div class="report-drawer-backdrop" id="report-drawer-backdrop"></div>
-  <div class="report-drawer" id="report-drawer" aria-hidden="true">
-    <div class="report-drawer-header">
-      <h2>Report Bug / Idea</h2>
-      <button class="report-drawer-close" id="report-drawer-close" type="button">&times;</button>
-    </div>
-    <div class="report-drawer-body" style="flex:1;overflow-y:auto;padding:18px 20px;">
-      <form id="report-drawer-form" action="{{ url_for('core.debug_page', compose='1') }}" method="post" enctype="multipart/form-data">
-        <div class="field"><label for="report-entry-type">Type</label><select id="report-entry-type" name="entry_type"><option value="issue">Bug / Issue</option><option value="idea">Idea / Feature</option></select></div>
-        <div class="field"><label for="report-details">Details</label><textarea id="report-details" name="details" placeholder="Describe the issue or idea..."></textarea></div>
-        <div class="field"><label for="report-source-path">Page</label><input id="report-source-path" name="source_path" readonly></div>
-        <input type="hidden" id="report-return-to" name="return_to">
-        <div class="field"><label for="report-browser-console">Browser Console</label><textarea id="report-browser-console" name="browser_console" readonly style="height:120px;font-family:monospace;font-size:.7rem;"></textarea></div>
-        <div id="report-drawer-message" class="report-status-copy" style="display:none;"></div>
-    </div>
-    <div class="report-drawer-footer">
-      <button class="btn" type="button" id="report-drawer-cancel">Cancel</button>
-      <button class="btn btn-primary" type="submit" id="report-drawer-submit">Save Report</button>
-    </div>
-    </form>
-  </div>
+  </dialog>
 
 </div><!-- /#film-tool-root -->
 {% endblock %}
@@ -1127,7 +1423,11 @@
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
   window.FILM_TOOL_REVIEW_MODE = {{ "true" if review_mode|default(false) else "false" }};
   window.FILM_TOOL_PLAYS_MODE = {{ "true" if plays_mode|default(false) else "false" }};
+  window.FILM_TOOL_ROSTER_SEASON_ID = {{ roster_season_id|tojson|safe }};
+  window.FILM_TOOL_ROSTER_LEVEL = {{ roster_level|tojson|safe }};
+  window.FILM_TOOL_ROSTER_GENDER = {{ roster_gender|tojson|safe }};
+  window.FILM_TOOL_ROSTER_OPPONENT = {{ roster_opponent|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=to-team-only"></script>
 {% endblock %}

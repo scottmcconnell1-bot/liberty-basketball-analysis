@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-08-10 23:00:15 Mountain Daylight Time**
+Generated (local): **2026-09-26 23:00:05 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -8,9 +8,9 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 - **Process map:** ok
 - **Active (live worker-backed):** 1
-  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334` **(primary)**: 7.0%, step=Failed, PID=14760, kind=analysis_launcher, db_status=failed
+  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260927_042234` **(primary)**: 2.0%, step=Detecting objects: frame 2000/97475, PID=25968, kind=analysis_launcher, db_status=running
 - **Stale/zombie candidates (DB running, no worker):** 0
-- **analysis_runs counts (raw DB):** completed=46, failed=11 (running includes stale/zombie candidates until reclaimed)
+- **analysis_runs counts (raw DB):** completed=1, failed=6, running=1 (running includes stale/zombie candidates until reclaimed)
 
 ## Queue summary
 
@@ -19,7 +19,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 - **HUDL videos (total):** 43 (Proven (videos.game_id LIKE hudl_%))
 - **Remaining (vs videos, inferred):** 19
 - **Remaining (vs film_tool, inferred):** 20
-- **Failed HUDL analysis_runs:** 7 (Proven (analysis_runs))
+- **Failed HUDL analysis_runs:** 0 (Proven (analysis_runs))
 - **All taught keys (Hoops+HUDL):** 35
 - Note: remaining_vs_film_tool = film_tool HUDL games − taught hudl_* keys (keys/film ids are related but not guaranteed 1:1)
 - Note: remaining_vs_videos = videos hudl_* − taught hudl_* keys (closer to teach-loop queue, still not guaranteed 1:1 with reruns)
@@ -30,34 +30,38 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | --- | --- | --- | --- |
 | final_score_exact | 100% | 0.0% | FAIL |
 | player_points_exact | 100% | 0.0% | FAIL |
-| event_precision_min | ≥90% | 70.6% | FAIL |
-| event_recall_min | ≥90% | 52.6% | FAIL |
+| event_precision_min | ≥90% | 4.3% | FAIL |
+| event_recall_min | ≥90% | 9.5% | FAIL |
 
-**Overall:** FAIL (mean P=70.6%, mean R=52.6%)
-- Panel snapshot: `2026-08-11T05:00:13.675153+00:00`
+**Overall:** FAIL (mean P=4.3%, mean R=9.5%)
+- Panel snapshot: `2026-09-27T05:00:03.812656+00:00`
 
 ## Per-game panel
 
 | Game | Precision | Recall | Liberty score truth→AI | Player point matches | Result |
 | --- | --- | --- | --- | --- | --- |
-| Idaho City | 61.5% | 31.6% | 65-40 → 40-— | 0/10 | FAIL (final✗, pts✗, P/R✗) |
-| Harper | 80.5% | 79.0% | 71-0 → 71-— | 0/9 | FAIL (final✗, pts✗, P/R✗) |
-| Burns | 76.8% | 75.6% | 35-0 → 35-— | 0/7 | FAIL (final✗, pts✗, P/R✗) |
-| Nyssa | 70.6% | 55.8% | 49-70 → 40-— | 1/10 | FAIL (final✗, pts✗, P/R✗) |
-| Melba | 69.6% | 37.7% | 48-61 → 43-— | 0/8 | FAIL (final✗, pts✗, P/R✗) |
-| Camas | 64.8% | 36.1% | 56-21 → 48-— | 0/10 | FAIL (final✗, pts✗, P/R✗) |
+| Idaho City | Unknown | Unknown | Unknown | Unknown | FAIL (error, final✗, pts✗, P/R✗) |
+| Harper | 5.8% | 10.8% | 71-0 → 0-— | 0/9 | FAIL (final✗, pts✗, P/R✗) |
+| Burns | Unknown | Unknown | Unknown | Unknown | FAIL (error, final✗, pts✗, P/R✗) |
+| Nyssa | 2.9% | 8.1% | 49-70 → 0-— | 0/10 | FAIL (final✗, pts✗, P/R✗) |
+| Melba | Unknown | Unknown | Unknown | Unknown | FAIL (error, final✗, pts✗, P/R✗) |
+| Camas | Unknown | Unknown | Unknown | Unknown | FAIL (error, final✗, pts✗, P/R✗) |
 
 ## Trend vs prior panel snapshot
 
-- **Comparison:** baseline / no distinct prior snapshot yet
-- baseline / no trend yet
+- **Comparison:** compared to previous distinct snapshot
+- **Prior generated_at:** `2026-09-26T00:15:41.955390+00:00`
+- **Δ mean precision:** 0.0093 (4.3% now)
+- **Δ mean recall:** 0.0212 (9.5% now)
+- Δ is over games scored in both snapshots.
+- **Gate changes:** none (same PASS/FAIL pattern)
 
 ## Verdict / largest gaps
 
 - Overall panel gates FAIL — learning has not yet cleared Scott targets.
-- Largest gate gaps: final score exactness not at 100% (gate FAIL); player points exactness not at 100% (gate FAIL); event recall at 52.6% (need ≥90.0%; short 37.4%); event precision at 70.6% (need ≥90.0%; short 19.4%).
-- Largest per-game holes: Idaho City player-point matches 0/10; Harper player-point matches 0/9; Burns player-point matches 0/7; Melba player-point matches 0/8.
-- Trend: baseline / no trend yet.
+- Largest gate gaps: final score exactness not at 100% (gate FAIL); player points exactness not at 100% (gate FAIL); event precision at 4.3% (need ≥90.0%; short 85.7%); event recall at 9.5% (need ≥90.0%; short 80.5%).
+- Largest per-game holes: Harper player-point matches 0/9; Nyssa player-point matches 0/10; Nyssa recall 8.1%; Harper recall 10.8%.
+- Trend vs prior: ΔP=0.0093, ΔR=0.0212.
 
 ## Proven / Inferred / Unknown
 
@@ -74,10 +78,10 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 ### Inferred
 
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
+- Trend deltas from comparing two panel snapshots
 
 ### Unknown
 
-- Chronological trend (need ≥2 distinct panel snapshots)
 - Opponent final score from AI often unavailable (final_score_status=partial on panel games)
 
 ---

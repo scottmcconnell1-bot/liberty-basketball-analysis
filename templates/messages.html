@@ -3,17 +3,9 @@
 {% block content %}
 {# namespace avoids Jinja if-block set scoping (otherwise mi looks unsigned while nav is signed in). #}
 {% set ns = namespace(mi=none) %}
-{% if messaging_identity is defined and messaging_identity and messaging_identity.signed_in %}
-  {% set ns.mi = messaging_identity %}
-{% elif session.get('user_id') %}
-  {% set ns.mi = {
-    "sender_id": session.get('user_id')|string,
-    "display_name": session.get('user_name') or 'Account',
-    "email": none,
-    "role": session.get('user_role') or 'staff',
-    "signed_in": true
-  } %}
-{% elif messaging_identity is defined and messaging_identity %}
+{# Identity comes only from the server's session check (messaging_identity); the raw
+   cookie can outlive a logout, so it is never trusted here. #}
+{% if messaging_identity is defined and messaging_identity %}
   {% set ns.mi = messaging_identity %}
 {% else %}
   {% set ns.mi = {"sender_id": "coach", "display_name": "Guest", "signed_in": false, "role": none, "email": none} %}
@@ -288,7 +280,6 @@
 <script>
 const MSG_SENDER_ID = {{ (
   (messaging_identity.sender_id if messaging_identity and messaging_identity.signed_in else none)
-  or (session.get('user_id')|string if session.get('user_id') else none)
   or 'coach'
 )|tojson }};
 const COACH_READONLY = {{ 'true' if coach_readonly else 'false' }};
