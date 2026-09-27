@@ -3,6 +3,7 @@
 import cv2
 from ultralytics import YOLO
 from event_generator import main as generate_events
+import os
 import sqlite3
 import sys
 import math
@@ -10,6 +11,7 @@ import numpy as np
 
 from config import AnalysisConfig
 from settings_store import AI_DEFAULTS, load_all_settings
+from helpers import ensure_detection_indexes
 
 try:
     from src import tracker_wrapper as jason_tracker_wrapper
@@ -116,6 +118,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
             db_path=db_path,
         )
         ai_settings = runtime_settings["ai"]
+        # Fail fast on a missing video before validating/loading ~170 MB of weights.
+        if not os.path.isfile(video_path):
+            raise RuntimeError(f"Could not open video file: {video_path}")
         person_model_path = resolve_detector_model(ai_settings)
         ball_model_path, ball_class_id, ball_confidence = ball_detector_settings(ai_settings)
         person_confidence = person_detector_settings(ai_settings)
@@ -158,6 +163,9 @@ def run_ai_analysis(db_path, video_path, game_id, relational_game_id=None):
 
         frame_number = 0
         db = get_db()
+        # The live DB may predate the index; without it the per-frame lookup below
+        # scans every detection row, which slowed runs to ~1 fps.
+        ensure_detection_indexes(db)
         detections_per_frame = []
 
         if relational_game_id is None:

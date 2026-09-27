@@ -229,6 +229,16 @@ def init_db_command():
     click.echo("Database initialized.")
 
 
+@app.route("/sw.js")
+def service_worker():
+    """Serve service worker with correct MIME type.
+
+    Must be registered before the `__main__` block: `python app.py` (how the home PC
+    runs) never gets past app.run(), so routes defined below it did not exist.
+    """
+    return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}
+
+
 if __name__ == "__main__":
     with app.app_context():
         from helpers import ensure_db
@@ -237,9 +247,3 @@ if __name__ == "__main__":
     # launch_liberty.py / teach loop expect PORT (default 8080); do not hardcode 5000
     _port = int(os.environ.get("PORT", "8080"))
     app.run(host="0.0.0.0", port=_port, debug=_debug, use_reloader=False)
-
-
-@app.route("/sw.js")
-def service_worker():
-    """Serve service worker with correct MIME type."""
-    return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}
