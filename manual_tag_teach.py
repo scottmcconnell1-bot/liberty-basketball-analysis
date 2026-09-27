@@ -40,7 +40,42 @@ AI_SHOT_TYPES = {
     "missed_free_throw",
     "free_throw",
 }
-AI_REBOUND_TYPES = {"rebound", "offensive_rebound", "defensive_rebound"}
+AI_REBOUND_TYPES = {
+    "rebound",
+    "offensive_rebound",
+    "defensive_rebound",
+    "rebound_offensive",
+    "rebound_defensive",
+}
+
+
+def _stat_code(item: dict) -> str:
+    """Box-score code for a tag. The stored event_type for shots stays ``shot``."""
+    shot_type = item.get("shot_type")
+    make = item.get("shot_result") == "make"
+    if shot_type == "2pt":
+        return "made_two" if make else "missed_two"
+    if shot_type == "3pt":
+        return "made_three" if make else "missed_three"
+    if shot_type == "ft":
+        return "made_free_throw" if make else "missed_free_throw"
+    return item["event_type"]
+
+
+def _lookup_event_type_id(db, code: str):
+    try:
+        row = db.execute(
+            "SELECT id FROM event_types WHERE lower(code) = lower(?)",
+            (code,),
+        ).fetchone()
+    except Exception:
+        return None
+    if not row:
+        return None
+    try:
+        return row["id"]
+    except (KeyError, TypeError, IndexError):
+        return row[0]
 
 
 def time_to_ms(value) -> int:
@@ -83,8 +118,8 @@ def map_manual_row(row: dict) -> dict | None:
         "Turnover": ("turnover", "turnover"),
         "Foul": ("foul", "foul"),
         "Block": ("block", "block"),
-        "OffRebound": ("rebound", "rebound"),
-        "DefRebound": ("rebound", "rebound"),
+        "OffRebound": ("rebound_offensive", "rebound"),
+        "DefRebound": ("rebound_defensive", "rebound"),
     }[eventtype]
     return {
         "event_type": mapped[0],
@@ -186,16 +221,18 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
             "team": item["team"],
             "shot_type": item["shot_type"],
         }
+        event_type_id = _lookup_event_type_id(db, _stat_code(item))
         if event_id is None:
             cur = db.execute(
                 """INSERT INTO events
-                      (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+                      (game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json,
                        human_verified, confidence, review_status, source_type, review_notes, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
                 (
                     game_id,
                     item["player"] or None,
                     item["event_type"],
+                    event_type_id,
                     item["shot_result"],
                     item["timestamp_ms"],
                     json.dumps(details),
@@ -206,13 +243,14 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
         else:
             db.execute(
                 """UPDATE events
-                      SET player=?, event_type=?, event_type_id=NULL, shot_result=?, timestamp_ms=?,
+                      SET player=?, event_type=?, event_type_id=?, shot_result=?, timestamp_ms=?,
                           details_json=?, human_verified=1, confidence=1.0, review_status='accepted',
                           review_notes=?, updated_at=CURRENT_TIMESTAMP
                     WHERE id=?""",
                 (
                     item["player"] or None,
                     item["event_type"],
+                    event_type_id,
                     item["shot_result"],
                     item["timestamp_ms"],
                     json.dumps(details),

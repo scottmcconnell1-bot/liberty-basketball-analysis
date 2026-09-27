@@ -1187,10 +1187,29 @@ def _delete_machine_events(conn, game_id, relational_game_id=None):
     if "reviewed_by_user_id" in cols:
         where.append("reviewed_by_user_id IS NULL")
     if {"review_status", "review_notes"} <= cols:
+        blank_machine = ""
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "human_corrections" in tables:
+            # Corrected/rejected with no note and no correction row is machine
+            # output (Adrian had 526 of these). A coach decision writes
+            # human_corrections even when review_notes is empty.
+            blank_machine = """
+                OR (review_status IN ('corrected', 'rejected')
+                    AND COALESCE(review_notes, '') = ''
+                    AND id NOT IN (
+                        SELECT event_id FROM human_corrections
+                         WHERE event_id IS NOT NULL
+                    ))"""
         where.append(
-            """((review_status = 'pending' AND human_verified = 0)
+            f"""((review_status = 'pending' AND human_verified = 0)
                 OR (review_status = 'accepted' AND review_notes = ?)
-                OR (review_status IN ('corrected', 'rejected') AND review_notes LIKE ?))"""
+                OR (review_status IN ('corrected', 'rejected') AND review_notes LIKE ?)
+                {blank_machine})"""
         )
         params += [AUTO_ACCEPT_NOTE, teach_note + "%"]
     else:

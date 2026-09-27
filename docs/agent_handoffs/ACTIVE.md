@@ -1,9 +1,15 @@
 # Active Task
 
-Updated: 2026-09-26 (Jason/Claude security + correctness pass)
+Updated: 2026-09-26 (review fixes are on this branch)
 
 Branch: `cursor/playbook-jason-clean-slate-ac1f`  
 Base: `cursor/dashboard-maxpreps-results-ac1f`
+
+## How review results land
+
+Review output is code on **this** branch. A side branch such as `claude/review-fixes` is only the review workspace. It is not done until those commits are fast-forwarded here and pushed. Docs under `docs/validation/` record the proof. They do not replace the code.
+
+**Proven:** `origin/claude/review-fixes` (`3d9aee9`, PR #148) is contained in this branch. Jason’s stats, film, access, schedule, playbook, and ops fixes are the files on this branch, not a parked copy.
 
 ## Security / correctness (Scott 2026-09-26)
 

@@ -23,5 +23,6 @@ Read `docs/ORCHESTRATION.md` and `docs/agent_handoffs/ACTIVE.md` at session star
 ## Workflow
 
 - Branch: `cursor/<descriptive-name>-ac1f` off `jason-5-may-updates`
+- Review results (including another agent's PR branch) are implemented by merging them into the working branch and pushing. A side branch or a validation write-up is not the fix.
 - Update `docs/agent_handoffs/ACTIVE.md` when task completes; archive to `ARCHIVE/`
 - PR for code changes; no GitHub label coordination
