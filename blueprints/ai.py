@@ -29,7 +29,6 @@ Routes:
 
 import json
 import os
-import json
 from datetime import datetime
 from flask import (
     Blueprint, current_app, jsonify, redirect, render_template,
