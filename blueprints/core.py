@@ -2688,22 +2688,26 @@ def admin_reset():
             except OSError:
                 pass
 
-    # Clear all analysis/video data (preserve seasons, games, players). Children
-    # first so a foreign key does not block the delete.
+    # Clear all analysis/video data (preserve seasons, games, players).
+    # Foreign keys are off for the wipe, then turned back on. Children are
+    # listed first so a later check with keys on still sees an empty set.
     existing = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     order = [
         "practice_playlist_clips", "clip_tags", "player_development_clips", "clips",
         "event_participants", "human_corrections", "shot_classifications", "review_items",
-        "play_recognitions", "player_effect", "player_minutes",
+        "play_recognitions", "player_effect", "player_minutes", "scouting_clips",
+        "provenance_records", "track_identity_labels",
         "events", "possessions", "detections", "video_assets", "analysis_runs", "stats", "videos",
     ]
-    for table in order:
-        if table in existing:
-            db.execute(f"DELETE FROM {table}")
-    db.commit()
+    seen = set()
+    tables = []
+    for table in list(order) + list(_ADMIN_RESET_TABLES):
+        if table not in seen:
+            seen.add(table)
+            tables.append(table)
     db.execute("PRAGMA foreign_keys = OFF")
     try:
-        for table in _ADMIN_RESET_TABLES:
+        for table in tables:
             if table in existing:
                 db.execute(f"DELETE FROM {table}")
         db.commit()
