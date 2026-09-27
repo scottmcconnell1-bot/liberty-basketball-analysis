@@ -330,7 +330,7 @@ def apply_ai_event(line: dict[str, Any], event_type: str, shot_result: str | Non
     if et == "turnover":
         line["tov"] += 1
         return 0
-    if et == "foul":
+    if et in ("foul", "foul_personal", "foul_shooting", "foul_technical"):
         line["pf"] += 1
         return 0
     return 0

@@ -1310,10 +1310,12 @@ def persist_events(conn, game_id, events, relational_game_id=None):
 
     from review_actions import auto_accept_high_confidence_events
 
+    # Grade Film Tool tags while drafts are still pending. Auto-accept after
+    # that only promotes shots the tags did not already count.
+    _reapply_film_tool_teach(conn, game_id)
     # Scoped to this analysis key: a relational lookup would also promote the
     # primary run's drafts when a rerun is generated.
     auto_accept_high_confidence_events(conn, game_id)
-    _reapply_film_tool_teach(conn, game_id)
 
 
 def main(

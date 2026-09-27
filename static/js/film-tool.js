@@ -61,8 +61,8 @@ const vocabulary = {
     quarter: ['Q1', 'Q2', 'Q3', 'Q4', 'OT'],
     team: ['Our Team', 'Opponent', 'Home', 'Away'],
     side: ['Offense', 'Defense', 'Neutral'],
-    category: ['ATO', 'Defense', 'Offense', 'Substitution', 'Transition', 'BLOB', 'SLOB', 'Quarter'],
-    eventtype: ['2PT', '3PT', 'Assist', 'BLOB', 'Block', 'DefRebound', 'EndQTR', 'FT', 'Foul', 'JumpBall', 'OB', 'OffRebound', 'SLOB', 'StartQTR', 'Steal', 'SubOut', 'SubIn', 'TimeOut', 'Tip', 'Turnover', 'Violation'],
+    category: ['ATO', 'Defense', 'Foul', 'Offense', 'Substitution', 'Transition', 'BLOB', 'SLOB', 'Quarter'],
+    eventtype: ['2PT', '3PT', 'Assist', 'BLOB', 'Block', 'DefRebound', 'EndQTR', 'FT', 'Foul', 'Shooting', 'Personal', 'Technical', 'JumpBall', 'OB', 'OffRebound', 'SLOB', 'StartQTR', 'Steal', 'SubOut', 'SubIn', 'TimeOut', 'Tip', 'Turnover', 'Violation'],
     result: ['Make', 'Miss', 'NA'],
     player: []
 };
@@ -76,7 +76,9 @@ const eventDefs = [
     { id: 'block', label: 'Block', hotkey: 'K', group: 'defense', teamMode: 'team-player', eventtype: 'Block', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'defreb', label: 'Def Reb', hotkey: 'D', group: 'defense', teamMode: 'team-player', eventtype: 'DefRebound', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'endqtr', label: 'End QTR', hotkey: 'E', group: 'flow', teamMode: 'event-only', eventtype: 'EndQTR', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'foul', label: 'Foul', hotkey: 'F', group: 'defense', teamMode: 'team-player', eventtype: 'Foul', result: 'NA', side: 'Defense', category: 'Defense' },
+    { id: 'foulshooting', label: 'Shooting foul', hotkey: '', group: 'defense', teamMode: 'team-player', eventtype: 'Shooting', result: 'NA', side: 'Defense', category: 'Foul' },
+    { id: 'foulpersonal', label: 'Personal foul', hotkey: 'F', group: 'defense', teamMode: 'team-player', eventtype: 'Personal', result: 'NA', side: 'Defense', category: 'Foul' },
+    { id: 'foultechnical', label: 'Technical foul', hotkey: '', group: 'defense', teamMode: 'team-player', eventtype: 'Technical', result: 'NA', side: 'Defense', category: 'Foul' },
     { id: 'ftmake', label: 'FT Make', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'FT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'ftmiss', label: 'FT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'FT', result: 'Miss', side: 'Offense', category: 'Offense' },
     { id: 'jumpball', label: 'Jump Ball', hotkey: 'J', group: 'flow', teamMode: 'team-player', eventtype: 'JumpBall', result: 'NA', side: 'Neutral', category: 'Quarter' },
@@ -99,7 +101,7 @@ const MANUAL_TAGGING_KEY = 'filmToolManualTaggingV1';
 const TAG_TAB_KEY = 'filmToolTagTabV1';
 const TAG_BUTTON_ORDER = {
     offense: ['twoptmake', 'twoptmiss', 'threeptmake', 'threeptmiss', 'ftmake', 'ftmiss', 'and1', 'assist', 'offreb', 'turnover'],
-    defense: ['defreb', 'steal', 'block', 'foul', 'ob', 'violation'],
+    defense: ['defreb', 'steal', 'block', 'foulshooting', 'foulpersonal', 'foultechnical', 'ob', 'violation'],
     flow: ['startqtr', 'endqtr', 'tip', 'jumpball', 'timeout', 'blob', 'slob']
 };
 const TAG_SHORT_LABEL = {
@@ -116,7 +118,9 @@ const TAG_SHORT_LABEL = {
     defreb: 'DR',
     steal: 'STL',
     block: 'BLK',
-    foul: 'PF',
+    foulshooting: 'SH',
+    foulpersonal: 'PF',
+    foultechnical: 'TF',
     ob: 'OB',
     violation: 'Vio',
     startqtr: 'Q+',
@@ -1792,6 +1796,13 @@ function gatherGamesForScope(scope) {
     return savedGames.slice();
 }
 
+function isFoulTag(row) {
+    const et = String((row && row.eventtype) || '');
+    const cat = String((row && row.category) || '');
+    if (et === 'Foul') return true;
+    return cat === 'Foul' && (et === 'Shooting' || et === 'Personal' || et === 'Technical');
+}
+
 function statAccumulator(rows) {
     const byTeam = {}, byPlayer = {};
     rows.forEach(r => {
@@ -1811,7 +1822,7 @@ function statAccumulator(rows) {
             t.Turnovers++;
             if (player && player !== 'Unknown') p.Turnovers++;
         }
-        if (r.eventtype === 'Foul') { t.Fouls++; p.Fouls++; }
+        if (isFoulTag(r)) { t.Fouls++; p.Fouls++; }
     });
     return { byTeam, byPlayer };
 }

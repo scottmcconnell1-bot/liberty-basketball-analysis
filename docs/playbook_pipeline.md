@@ -29,6 +29,25 @@ native text digits + draw paths). Proven via PyMuPDF.
 - API: GET/PUT/DELETE `/api/playbook/choreography/<id>`
 - **Reset extract** deletes sticky and re-runs Stage 1
 
+## Movement order
+
+An imported FastDraw PDF does not store a timeline. It stores strokes in the
+order they were drawn. Play All uses that paint order:
+
+1. One stroke is one beat, in PDF draw order (`ink.actions[].seq`).
+2. A dashed stroke is a pass (the ball follows the line).
+3. A solid stroke is a cut or screen (the player follows the line).
+4. A squiggle is a dribble (the player and the ball follow the line).
+5. A second stroke by the same player is a later beat, not a replacement.
+6. A coach-saved movement list still wins over draw order.
+7. The handwritten 1-Game, Triangle, and Pitt 5 sequences apply only when a
+   sheet has no draw-order strokes (older OCR extracts).
+
+Online diagram players do the same thing: they walk each vector from its
+start point to its end in content-stream order. Liberty was keeping one line
+per player and then guessing the sequence, which is why Play All did not
+follow the sheet unless a play had a handwritten list.
+
 ## Stage 3 — Render
 
 Play All prefers sticky positions + outbound ink. It does **not** re-OCR when

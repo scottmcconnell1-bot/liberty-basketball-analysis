@@ -575,6 +575,24 @@ def _extract_ink(
     paths: dict[str, list[dict[str, float]]] = {}
     marks: dict[str, Any] = {}
     passes: list[dict[str, Any]] = []
+    # Movement-order rule: FastDraw writes strokes in draw order. Play All
+    # plays ``actions`` in that order (one stroke = one beat). Dashed = pass,
+    # solid = cut, squiggle = dribble. A later stroke by the same player is a
+    # later beat. The paths dict still keeps one polyline per player for the
+    # older one-mover UI.
+    actions: list[dict[str, Any]] = []
+
+    def _push_action(kind: str, oid: str, svg: list, to_oid: str | None) -> None:
+        actions.append(
+            {
+                "seq": len(actions) + 1,
+                "kind": kind,
+                "pid": oid,
+                "fromPid": oid,
+                "toPid": to_oid,
+                "points": svg,
+            }
+        )
 
     for d in page.get_drawings() or []:
         fill = d.get("fill")
@@ -601,6 +619,7 @@ def _extract_ink(
             svg[0] = {"x": float(positions[oid]["x"]), "y": float(positions[oid]["y"])}
             paths[oid] = svg
             marks[oid] = "dribble"
+            _push_action("dribble", oid, svg, None)
             continue
 
         # Play strokes: thicker black lines — dash pattern = pass, solid = cut.
@@ -657,18 +676,64 @@ def _extract_ink(
             if start_oid not in paths:
                 paths[start_oid] = svg
                 marks[start_oid] = "pass"
+            _push_action("pass", start_oid, svg, tip_oid if tip_oid != start_oid else None)
             continue
 
-        # Solid → cut (never invent passes from tip proximity).
-        kind = "cut"
+        # Solid → cut, unless the stroke is a screen foot or a dribble squiggle.
+        kind = _stroke_kind(pts_s)
         prev = paths.get(start_oid)
         if prev is None or _path_len([(p["x"], p["y"]) for p in svg]) > _path_len(
             [(p["x"], p["y"]) for p in prev]
         ):
             paths[start_oid] = svg
             marks[start_oid] = kind
+        _push_action(kind, start_oid, svg, None)
 
-    return {"paths": paths, "marks": marks, "passes": passes}
+    return {"paths": paths, "marks": marks, "passes": passes, "actions": actions}
+
+
+def _stroke_kind(pts: list[tuple[float, float]]) -> str:
+    """Solid FastDraw stroke: screen (perpendicular foot), dribble (squiggle), or cut."""
+    if _has_screen_foot(pts):
+        return "screen"
+    if _is_dribble_squiggle(pts):
+        return "dribble"
+    return "cut"
+
+
+def _has_screen_foot(pts: list[tuple[float, float]]) -> bool:
+    """A screen ends in a short bar across the path, not an arrow."""
+    if len(pts) < 3:
+        return False
+    ax, ay = pts[-3]
+    bx, by = pts[-2]
+    cx, cy = pts[-1]
+    v1 = (bx - ax, by - ay)
+    v2 = (cx - bx, cy - by)
+    l1 = (v1[0] ** 2 + v1[1] ** 2) ** 0.5
+    l2 = (v2[0] ** 2 + v2[1] ** 2) ** 0.5
+    if l1 < 10 or l2 < 4 or l2 > 36:
+        return False
+    dot = abs(v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2)
+    return dot < 0.35
+
+
+def _is_dribble_squiggle(pts: list[tuple[float, float]]) -> bool:
+    """A dribble weaves back and forth. A cut does not."""
+    if len(pts) < 8:
+        return False
+    flips = 0
+    prev = None
+    for i in range(1, len(pts)):
+        dx = pts[i][0] - pts[i - 1][0]
+        dy = pts[i][1] - pts[i - 1][1]
+        if abs(dx) + abs(dy) < 3:
+            continue
+        sign = (1 if dx >= 0 else -1, 1 if dy >= 0 else -1)
+        if prev is not None and sign != prev:
+            flips += 1
+        prev = sign
+    return flips >= 6
 
 
 def _nearest_next(

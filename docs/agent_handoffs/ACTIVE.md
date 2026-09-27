@@ -1,6 +1,14 @@
 # Active Task
 
-Updated: 2026-09-26 (review fixes are on this branch)
+Updated: 2026-09-26 (playbook pause, continue, and rewind)
+
+## This session
+
+**Proven:** On 1-Game (`/playbook/play/98`), clicking a player during Play All stops the play and it stays stopped. Play All then continues on the same sheet (step 5, next beat) instead of restarting at sheet 1. Back stops playback and returns to the start of the current action. Players, defenders, and the ball can be dragged while paused. Save choreography still stores offense spacing.
+
+**Proven:** Liberty vs Adrian (`jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`) events were rebuilt from the existing 866,471 detections. Film Tool tags are 146 manual rows. Foul is the category (`foul`); subcategories are Shooting (`foul_shooting`), Personal (`foul_personal`), and Technical (`foul_technical`). The 18 existing Foul tags count as the category. Teach runs before auto-accept. Q1 shot tags match 45/60 within 8s, Q2 23/38. Q3/Q4 are still untagged. Teach Watchdog stays disabled.
+
+**Proven:** Play All order for a FastDraw sheet is PDF paint order (`ink.actions`, one stroke one beat). Dashed = pass, solid = cut, squiggle = dribble. Coach-saved movement lists still win. The handwritten 1-Game / Triangle / Pitt 5 lists apply only when a sheet has no draw-order strokes. See `docs/playbook_pipeline.md`.
 
 Branch: `cursor/playbook-jason-clean-slate-ac1f`  
 Base: `cursor/dashboard-maxpreps-results-ac1f`

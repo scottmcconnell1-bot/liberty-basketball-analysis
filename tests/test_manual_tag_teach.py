@@ -30,6 +30,21 @@ def test_map_manual_row_skips_flow_tags():
     assert shot["player"] == "0 Sullivan"
 
 
+def test_map_foul_category_and_subtypes():
+    plain = map_manual_row({"eventtype": "Foul", "category": "Defense", "start": "1:00"})
+    assert plain["event_type"] == "foul"
+    assert plain["family"] == "foul"
+    assert plain["foul_type"] is None
+    personal = map_manual_row({
+        "eventtype": "Personal", "category": "Foul", "start": "2:00", "player": "12",
+    })
+    assert personal["event_type"] == "foul_personal"
+    assert personal["foul_type"] == "personal"
+    assert map_manual_row({"eventtype": "Shooting", "category": "Foul", "start": "3:00"})["event_type"] == "foul_shooting"
+    assert map_manual_row({"eventtype": "Technical", "category": "Foul", "start": "4:00"})["event_type"] == "foul_technical"
+    assert map_manual_row({"eventtype": "Shooting", "category": "Offense", "start": "5:00"}) is None
+
+
 def test_empty_rows_do_not_wipe_prior_teach(app):
     game_id = "jrhigh_teach_empty"
     with app.app_context():

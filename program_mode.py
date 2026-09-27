@@ -37,6 +37,9 @@ PROGRAM_LEDGER_TYPES = (
     "steal",
     "block",
     "foul",
+    "foul_personal",
+    "foul_shooting",
+    "foul_technical",
     "jump_ball",
     "tip_off",
 )
@@ -428,7 +431,7 @@ def ledger_box_from_events(db, game_id: str) -> dict[str, Any]:
         if et == "turnover":
             b["to"] += n
             totals["to"] += n
-        if et == "foul":
+        if et in ("foul", "foul_personal", "foul_shooting", "foul_technical"):
             b["foul"] += n
             totals["foul"] += n
 

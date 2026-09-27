@@ -257,7 +257,7 @@
           <option value="offense">Offense (O)</option>
           <option value="defense">Defense (x)</option>
         </select>
-        <span class="text-muted" style="font-size:0.7rem;">Pause Play All, fix type/order, then Play All continues</span>
+        <span class="text-muted" style="font-size:0.7rem;">Click a player to pause. Drag anyone, then Play to continue.</span>
         {% endif %}
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -271,7 +271,10 @@
         <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Prev</button>
         <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
         <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
-        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play or pause animation">▶ Play All</button>
+        <button id="playBackBtn" class="btn btn-secondary btn-sm" onclick="rewindPlay()" title="Back up one action and stop, so you can play it again">⏮ Back</button>
+        <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next beat</button>
+        <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only. Fix the actions, Save choreography, then Play All.">▶ Play step</button>
+        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet, using saved fixes. After a pause, continues from here.">▶ Play All</button>
       </div>
     </div>
 
@@ -295,7 +298,7 @@
         </span>
       </div>
       <div id="choreographyHint" style="display:none;margin-top:6px;font-size:0.72rem;font-weight:500;opacity:0.9;">
-        Drag tokens to fix spacing; ＋ Add player or × on a token to fix roster — then Save choreography.
+        Click a player or the ball to pause. Drag anyone to fix spacing. Play continues from here. Back rewinds one action.
       </div>
     </div>
 
@@ -671,6 +674,23 @@ function canFixAnimation() {
 }
 let lastSyncedBallPid = 'o1';
 let pausedCourtPose = null;
+/** Bumped on every stop so an in-flight play loop cannot start the next beat. */
+let playbackRunId = 0;
+/** Resolves the current rAF promise when Stop cancels the frame. */
+let animFinish = null;
+const delayCancels = new Set();
+/** Start-of-beat poses so Back can replay the action just watched. */
+let beatSnapshots = [];
+/** Next beat index to play on the paused sheet. */
+let resumeBeat = 0;
+/** Absolute spots the coach dragged, keyed by sheet then player id. */
+let spacingEdits = [];
+/** Ball anchor (same space as a player center) when it is not sitting on a handler. */
+let ballOverride = null;
+/** Set when a token click pauses, so the arrow tool does not also fire. */
+let suppressToolClick = false;
+let dragMoved = false;
+let dragOrigin = null;
 const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
 let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
 /** Share links read sheets/choreography via token-scoped routes (public even when sign-in is required). */
@@ -1062,7 +1082,7 @@ function renderStep() {
   if (!isAnimating) {
     arrowLayer.innerHTML = '';
     // Opt-in slideshow: ink on the page is the truth — skip SVG arrow overlays.
-    if (!useSheetSlideshowMode()) renderArrows(step);
+    if (!useSheetSlideshowMode() && !renderSheetInk(currentStep)) renderArrows(step);
   }
 
   if (useSheetSlideshowMode()) {
@@ -1117,13 +1137,20 @@ function syncPlayerTokens(positions, ballPid) {
   });
   if (ballPid) lastSyncedBallPid = ballPid;
 
+  const incomingHasDefense = Object.keys(positions || {}).some((k) => String(k).startsWith('d'));
   playerLayer.querySelectorAll('.player-token').forEach((g) => {
-    if (!seen.has(g.dataset.player)) g.remove();
+    const pid = g.dataset.player;
+    if (seen.has(pid)) return;
+    // Sheet plays are offense-only in the position map. Keep defenders that are
+    // already on the court so a pause does not erase them before a drag.
+    if (!incomingHasDefense && pid && String(pid).startsWith('d')) return;
+    g.remove();
   });
 
   let ball = playerLayer.querySelector('.ball-indicator');
-  if (ballPid && positions[ballPid]) {
-    const bpos = positions[ballPid];
+  const bpos = ballOverride
+    || (ballPid && positions[ballPid] ? positions[ballPid] : null);
+  if (bpos) {
     if (!ball) {
       renderBallIndicator(playerLayer, bpos);
     } else {
@@ -1226,6 +1253,12 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
     g.classList.add('token-selected');
   }
 
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hit.setAttribute('class', 'token-hit');
+  hit.setAttribute('r', '22');
+  hit.setAttribute('fill', 'transparent');
+  g.appendChild(hit);
+
   const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
   circle.setAttribute('fill', color);
@@ -1252,6 +1285,7 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   const canEditChoreo = canEditSheetChoreography();
   // View mode blocks normal editor tools, but sheet choreography review must drag.
   if (!isReadOnly || canEditChoreo) {
+    g.style.cursor = 'grab';
     g.addEventListener('mousedown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
     if (type === 'offense' && canFixAnimation()) {
@@ -1314,7 +1348,97 @@ function renderBallIndicator(parent, pos) {
   const seam2 = makeLine(0, -6, 0, 6, '#9a3412', 1.2);
   g.appendChild(seam1);
   g.appendChild(seam2);
+  if (!isReadOnly || canEditSheetChoreography()) {
+    g.style.cursor = 'grab';
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    hit.setAttribute('r', '16');
+    hit.setAttribute('fill', 'transparent');
+    g.insertBefore(hit, g.firstChild);
+    g.addEventListener('mousedown', (e) => startDrag(e, 'ball'));
+    g.addEventListener('touchstart', (e) => startDragTouch(e, 'ball'), { passive: false });
+  }
   parent.appendChild(g);
+}
+
+function pathHeading(from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { dx: dx / len, dy: dy / len, px: -dy / len, py: dx / len };
+}
+
+function dribblePathD(from, to, points) {
+  const src = (points && points.length >= 2) ? points : [from, to];
+  let d = '';
+  const amp = 7;
+  for (let i = 1; i < src.length; i += 1) {
+    const a = src[i - 1];
+    const b = src[i];
+    const head = pathHeading(a, b);
+    const steps = Math.max(2, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 18));
+    for (let s = 1; s <= steps; s += 1) {
+      const t = s / steps;
+      const side = (s % 2 === 0 ? 1 : -1) * amp;
+      const x = a.x + (b.x - a.x) * t + head.px * side;
+      const y = a.y + (b.y - a.y) * t + head.py * side;
+      if (!d) d = `M ${a.x} ${a.y}`;
+      d += ` L ${x} ${y}`;
+    }
+  }
+  return d || `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+}
+
+function appendScreenBar(layer, from, to) {
+  if (!from || !to) return;
+  const head = pathHeading(from, to);
+  const bar = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  const half = 14;
+  bar.setAttribute('x1', to.x - head.px * half);
+  bar.setAttribute('y1', to.y - head.py * half);
+  bar.setAttribute('x2', to.x + head.px * half);
+  bar.setAttribute('y2', to.y + head.py * half);
+  bar.setAttribute('stroke', '#111827');
+  bar.setAttribute('stroke-width', '4');
+  bar.setAttribute('stroke-linecap', 'round');
+  bar.setAttribute('class', 'screen-marker');
+  layer.appendChild(bar);
+}
+
+function appendDribbleBalls(layer, from, to) {
+  if (!from || !to) return;
+  for (let i = 1; i <= 3; i += 1) {
+    const t = i / 4;
+    const ball = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ball.setAttribute('cx', from.x + (to.x - from.x) * t);
+    ball.setAttribute('cy', from.y + (to.y - from.y) * t);
+    ball.setAttribute('r', '3.5');
+    ball.setAttribute('fill', '#f59e0b');
+    ball.setAttribute('stroke', '#111827');
+    ball.setAttribute('stroke-width', '1');
+    layer.appendChild(ball);
+  }
+}
+
+function renderSheetInk(stepIndex) {
+  const ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
+  const actions = (ink && ink.actions) || [];
+  if (!actions.length) return false;
+  const paths = actions.map((act) => {
+    const pts = act.points || [];
+    if (pts.length < 2) return null;
+    const isPass = act.kind === 'pass';
+    return {
+      pid: isPass ? null : act.pid,
+      ballOnly: isPass,
+      from: pts[0],
+      to: pts[pts.length - 1],
+      points: pts,
+      type: act.kind || 'cut',
+    };
+  }).filter(Boolean);
+  if (!paths.length) return false;
+  drawTravelPaths(paths, null);
+  return true;
 }
 
 // ── Arrow Rendering ──────────────────────────────────────
@@ -1343,13 +1467,10 @@ function renderArrows(step) {
       path.setAttribute('stroke-dasharray', isOptional ? '6,4' : '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
     } else if (m.type === 'dribble') {
-      ctrl = movementQuadControl(from, to, 0.18);
-      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
+      d = dribblePathD(from, to, null);
       path.setAttribute('stroke', '#111827');
-      path.setAttribute('stroke-width', '3');
+      path.setAttribute('stroke-width', '2.5');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '0');
-      path.setAttribute('marker-end', 'url(#arrowhead-black)');
     } else if (m.type === 'cut' || m.type === 'run') {
       ctrl = movementQuadControl(from, to, 0.12);
       d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
@@ -1359,20 +1480,21 @@ function renderArrows(step) {
       path.setAttribute('stroke-dasharray', isOptional ? '5,5' : (m.type === 'cut' ? '6,4' : '0'));
       path.setAttribute('marker-end', m.type === 'cut' ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)');
     } else if (m.type === 'screen') {
-      ctrl = movementQuadControl(from, to, 0.15);
-      d = `M ${from.x} ${from.y} Q ${ctrl.mx} ${ctrl.my} ${to.x} ${to.y}`;
-      path.setAttribute('stroke', '#f59e0b');
-      path.setAttribute('stroke-width', '2.5');
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', isOptional ? '5,5' : '4,4');
     }
 
     if (isOptional) path.setAttribute('opacity', '0.6');
     path.setAttribute('d', d);
     arrowLayer.appendChild(path);
 
-    if (m.type === 'dribble' && ctrl) {
-      appendBallAlongPath(arrowLayer, from, ctrl, to, 3);
+    if (m.type === 'dribble') {
+      appendDribbleBalls(arrowLayer, from, to);
+    }
+    if (m.type === 'screen') {
+      appendScreenBar(arrowLayer, from, to);
     }
 
     if (isOptional && ctrl) {
@@ -1434,66 +1556,83 @@ function makeArrowhead(id, color) {
 }
 
 // ── Dragging ─────────────────────────────────────────────
-function startDrag(e, pid) {
-  if (currentTool !== 'select') {
-    handleToolClick(e, pid);
+function readTranslate(el) {
+  if (!el) return null;
+  const m = /translate\(\s*([-.\d]+)\s*,\s*([-.\d]+)\s*\)/.exec(el.getAttribute('transform') || '');
+  if (!m) return null;
+  return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+}
+
+function visualTokenPos(pid) {
+  if (pid === 'ball') {
+    if (ballOverride) return { x: ballOverride.x, y: ballOverride.y };
+    const ball = document.querySelector('#playerLayer .ball-indicator');
+    const p = readTranslate(ball);
+    if (!p) return null;
+    return { x: p.x - 14, y: p.y + 14 };
+  }
+  return readTranslate(document.querySelector(`#playerLayer [data-player="${pid}"]`));
+}
+
+function rememberSpacing(pid, pos) {
+  if (!pid || pid === 'ball' || !pos) return;
+  if (!spacingEdits[currentStep]) spacingEdits[currentStep] = {};
+  spacingEdits[currentStep][pid] = { x: pos.x, y: pos.y };
+  if (pausedCourtPose) {
+    if (!pausedCourtPose.positions) pausedCourtPose.positions = {};
+    pausedCourtPose.positions[pid] = { x: pos.x, y: pos.y };
+    pausedCourtPose.sheetIndex = currentStep;
+    pausedCourtPose.beatIndex = resumeBeat;
+  }
+}
+
+function beginTokenDrag(pid, clientX, clientY, event) {
+  const paused = isPlaybackActive() || isAnimating;
+  if (paused || suppressToolClick) {
+    suppressToolClick = false;
+    if (paused) pauseForEdit();
+  } else if (currentTool !== 'select') {
+    if (pid !== 'ball') handleToolClick(event, pid);
     return;
   }
   if (viewMode === 'share') return;
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !svg.getScreenCTM()) return;
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const step = steps[currentStep];
+  if (!step) return;
+  const live = positionsThrough(currentStep) || {};
+  const pos = visualTokenPos(pid)
+    || (pid !== 'ball' && live && live[pid])
+    || (pid !== 'ball' && step.positions && step.positions[pid]);
+  if (!pos) return;
   saveUndoState();
   isDragging = true;
+  dragMoved = false;
+  dragOrigin = { x: pos.x, y: pos.y };
   selectedPlayer = pid;
   if (canEditSheetChoreography() && String(pid).startsWith('o')) {
     setChoreographySelectedPid(pid);
   }
-  const svg = document.getElementById('courtSvg');
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX; pt.y = e.clientY;
-  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const live = positionsThrough(currentStep) || {};
-  const step = steps[currentStep];
-  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
-  if (!pos) {
-    isDragging = false;
-    selectedPlayer = null;
-    return;
+  if (pid !== 'ball') {
+    if (!step.positions) step.positions = {};
+    if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   }
-  if (!step.positions) step.positions = {};
-  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
-  e.preventDefault();
+  if (event && event.preventDefault) event.preventDefault();
+}
+
+function startDrag(e, pid) {
+  beginTokenDrag(pid, e.clientX, e.clientY, e);
 }
 
 function startDragTouch(e, pid) {
   if (e.touches.length !== 1) return;
-  if (currentTool !== 'select') {
-    handleToolClick(e, pid);
-    return;
-  }
-  if (viewMode === 'share') return;
-  saveUndoState();
-  isDragging = true;
-  selectedPlayer = pid;
-  if (canEditSheetChoreography() && String(pid).startsWith('o')) {
-    setChoreographySelectedPid(pid);
-  }
   const touch = e.touches[0];
-  const svg = document.getElementById('courtSvg');
-  const pt = svg.createSVGPoint();
-  pt.x = touch.clientX; pt.y = touch.clientY;
-  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const live = positionsThrough(currentStep) || {};
-  const step = steps[currentStep];
-  const pos = (live && live[pid]) || (step.positions && step.positions[pid]);
-  if (!pos) {
-    isDragging = false;
-    selectedPlayer = null;
-    return;
-  }
-  if (!step.positions) step.positions = {};
-  if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
-  dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
-  e.preventDefault();
+  beginTokenDrag(pid, touch.clientX, touch.clientY, e);
 }
 
 function applyTokenDrag(clientX, clientY) {
@@ -1510,15 +1649,86 @@ function applyTokenDrag(clientX, clientY) {
     x: Math.max(PLAYER_RADIUS, Math.min(maxX, svgP.x - dragOffset.x)),
     y: Math.max(PLAYER_RADIUS, Math.min(maxY, svgP.y - dragOffset.y)),
   };
+  if (dragOrigin && Math.hypot(next.x - dragOrigin.x, next.y - dragOrigin.y) > 2) {
+    dragMoved = true;
+  }
+  if (selectedPlayer === 'ball') {
+    ballOverride = next;
+    const ball = document.querySelector('#playerLayer .ball-indicator');
+    if (ball) ball.setAttribute('transform', `translate(${next.x + 14}, ${next.y - 14})`);
+    if (pausedCourtPose) {
+      pausedCourtPose.ballPos = { x: next.x, y: next.y };
+      pausedCourtPose.beatIndex = resumeBeat;
+    }
+    return;
+  }
   if (!steps[currentStep].positions) steps[currentStep].positions = {};
   steps[currentStep].positions[selectedPlayer] = next;
-  // Sheet Play All reads sheetAlignByStep — keep it in sync so drags stick.
+  rememberSpacing(selectedPlayer, next);
   if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
     ensureSheetAlignStep(currentStep);
     sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
-    markSheetChoreographyDirty(currentStep);
+  }
+  const token = document.querySelector(`#playerLayer [data-player="${selectedPlayer}"]`);
+  if (token) token.setAttribute('transform', `translate(${next.x}, ${next.y})`);
+  const def = document.querySelector(`#playerLayer [data-player="d${String(selectedPlayer).replace(/^o/, '')}"]`);
+  if (def && String(selectedPlayer).startsWith('o') && !(spacingEdits[currentStep] && spacingEdits[currentStep][`d${String(selectedPlayer).replace(/^o/, '')}`])) {
+    const off = manDefenseOffset(next);
+    def.setAttribute('transform', `translate(${off.x}, ${off.y})`);
+  }
+}
+
+function nearestOffensePid(pt) {
+  let best = null;
+  let bestD = 36;
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid || !String(pid).startsWith('o')) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+    if (d <= bestD) {
+      bestD = d;
+      best = pid;
+    }
+  });
+  return best;
+}
+
+function finishTokenDrag() {
+  if (!isDragging) return;
+  const moved = dragMoved;
+  const pid = selectedPlayer;
+  isDragging = false;
+  selectedPlayer = null;
+  dragMoved = false;
+  dragOrigin = null;
+  if (!moved) return;
+  if (pid === 'ball' && ballOverride) {
+    const owner = nearestOffensePid(ballOverride);
+    if (owner && steps[currentStep]) {
+      steps[currentStep].ball = owner;
+      lastSyncedBallPid = owner;
+      ballOverride = null;
+      if (pausedCourtPose) {
+        pausedCourtPose.ballPid = owner;
+        pausedCourtPose.ballPos = null;
+      }
+      syncPlayerTokens(
+        pausedCourtPose && pausedCourtPose.positions
+          ? pausedCourtPose.positions
+          : (positionsThrough(currentStep) || {}),
+        owner
+      );
+    }
+  }
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  if (pausedCourtPose) {
+    setSheetAnimHint('Spacing updated. Press Play to continue, or Back to watch this action again.');
+    return;
   }
   renderStep();
+  setSheetAnimHint('Spacing updated. Save choreography, then Play step or Play All.');
 }
 
 document.addEventListener('mousemove', (e) => {
@@ -1531,8 +1741,8 @@ document.addEventListener('touchmove', (e) => {
   e.preventDefault();
 }, { passive: false });
 
-document.addEventListener('mouseup', () => { isDragging = false; selectedPlayer = null; });
-document.addEventListener('touchend', () => { isDragging = false; selectedPlayer = null; });
+document.addEventListener('mouseup', () => { finishTokenDrag(); });
+document.addEventListener('touchend', () => { finishTokenDrag(); });
 
 // ── Tools (arrows) ───────────────────────────────────────
 function handleToolClick(e, pid) {
@@ -1737,17 +1947,48 @@ function snapshotCourtPose() {
   const positions = {};
   document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
     const pid = g.dataset.player;
-    if (!pid || String(pid).startsWith('d')) return;
-    const tr = g.getAttribute('transform') || '';
-    const m = /translate\(\s*([-.\d]+)\s*,\s*([-.\d]+)\s*\)/.exec(tr);
-    if (!m) return;
-    positions[pid] = { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+    if (!pid) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    positions[pid] = p;
   });
+  const ballPos = ballOverride || readBallAnchor();
   pausedCourtPose = {
     sheetIndex: currentStep,
     positions,
     ballPid: lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1',
+    ballPos,
+    beatIndex: resumeBeat,
   };
+}
+
+function readBallAnchor() {
+  const ball = document.querySelector('#playerLayer .ball-indicator');
+  const p = readTranslate(ball);
+  if (!p) return null;
+  return { x: p.x - 14, y: p.y + 14 };
+}
+
+function pauseForEdit() {
+  if (!(isPlaybackActive() || isAnimating)) return;
+  stopPlayback({ reset: false });
+  if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
+  setSheetAnimHint('Paused. Move any player or the ball. Play continues from here. Back rewinds one action.');
+}
+
+function installCourtPause() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || svg.dataset.pauseBound === '1') return;
+  svg.dataset.pauseBound = '1';
+  svg.addEventListener('pointerdown', (e) => {
+    const el = e.target && e.target.closest
+      ? e.target.closest('.player-token, .ball-indicator')
+      : null;
+    if (!el) return;
+    if (!(isPlaybackActive() || isAnimating)) return;
+    suppressToolClick = true;
+    pauseForEdit();
+  }, true);
 }
 
 function markAnimationOrderDirty() {
@@ -1804,7 +2045,7 @@ function updateMovementList() {
   wrap.style.display = canFixAnimation() || movements.length ? 'block' : 'none';
   if (!movements.length) {
     list.innerHTML = canFixAnimation()
-      ? '<div class="text-muted" style="font-size:0.75rem;">No actions yet — Pause Play All (or pick a tool and click two players), then change type and order here.</div>'
+      ? '<div class="text-muted" style="font-size:0.75rem;">No actions yet — Play step, then change type and order here. Save choreography before Play All.</div>'
       : '';
     return;
   }
@@ -1843,6 +2084,10 @@ function updateMovementList() {
       saveUndoState();
       m.type = typeSelect.value;
       step.coachOrder = true;
+      const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+      if (ink && ink.actions && ink.actions[idx]) {
+        ink.actions[idx].kind = typeSelect.value === 'run' ? 'cut' : typeSelect.value;
+      }
       markAnimationOrderDirty();
       renderStep();
     };
@@ -2124,6 +2369,24 @@ function buildAnimPositions(fromRaw, toRaw, t) {
   return pos;
 }
 
+function setPlayStepButton(running) {
+  const btn = document.getElementById('playStepBtn');
+  if (!btn) return;
+  if (running) {
+    btn.disabled = false;
+    btn.textContent = '⏹ Stop';
+    btn.classList.add('btn-danger');
+    btn.classList.remove('btn-secondary');
+    btn.title = 'Stop this sheet';
+  } else {
+    btn.textContent = '▶ Play step';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-secondary');
+    btn.disabled = false;
+    btn.title = 'Play this sheet only. Fix the actions, Save choreography, then Play All.';
+  }
+}
+
 function setPlayAllButton(running) {
   const btn = document.getElementById('playAllBtn')
     || document.querySelector('[onclick="playAnimation()"]');
@@ -2152,6 +2415,7 @@ function setPlayAllButton(running) {
     }
   }
   updatePlaybarPlayButton();
+  setPlayStepButton(!!running);
 }
 
 function updateChoreographyChrome() {
@@ -2259,6 +2523,7 @@ function stripOidFromInk(ink, oid) {
     paths: { ...(ink.paths || {}) },
     marks: { ...(ink.marks || {}) },
     passes: Array.isArray(ink.passes) ? ink.passes.slice() : [],
+    actions: Array.isArray(ink.actions) ? ink.actions.slice() : [],
   };
   delete next.paths[oid];
   delete next.marks[oid];
@@ -2267,6 +2532,10 @@ function stripOidFromInk(ink, oid) {
     const fromPid = p.fromPid || p.from;
     const toPid = p.toPid || p.to;
     return fromPid !== oid && toPid !== oid;
+  });
+  next.actions = next.actions.filter((p) => {
+    if (!p || typeof p !== 'object') return false;
+    return p.pid !== oid && p.fromPid !== oid && p.toPid !== oid;
   });
   if (!Object.keys(next.paths).length && !Object.keys(next.marks).length && !next.passes.length) {
     return null;
@@ -2413,7 +2682,22 @@ function setSheetAnimHint(text) {
 }
 
 function delayMs(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      delayCancels.delete(finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    delayCancels.add(finish);
+  });
+}
+
+function cancelDelays() {
+  Array.from(delayCancels).forEach((fn) => fn());
 }
 
 function updateStepChrome(index) {
@@ -2533,6 +2817,7 @@ function applyStickyChoreographyDoc(doc) {
     paths: ink.paths || {},
     marks: ink.marks || {},
     passes: ink.passes || [],
+    actions: ink.actions || [],
   } : null));
   sheetUsingStickyChoreography = true;
   choreographyDirty = false;
@@ -2554,6 +2839,7 @@ function buildChoreographyPayload(source) {
         paths: ink.paths || {},
         marks: ink.marks || {},
         passes: ink.passes || [],
+        actions: ink.actions || [],
       };
     }
     const moves = (step.movements || []).filter((m) => m && !m._meta);
@@ -2781,6 +3067,7 @@ async function ensureSheetAlignment(options = {}) {
         paths: r.ink.paths || {},
         marks: r.ink.marks || {},
         passes: r.ink.passes || [],
+        actions: r.ink.actions || [],
       };
     });
     const sources = results.map((r) => r.source).filter(Boolean);
@@ -2910,6 +3197,32 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
 
   if (usedStored) return paths;
 
+  // Draw-order rule: one PDF stroke is one beat, in the order FastDraw painted
+  // them. Coach-saved movements above still win.
+  const actions = (inkBundle && inkBundle.actions) || [];
+  if (actions.length) {
+    actions.slice().sort((a, b) => (a.seq || 0) - (b.seq || 0)).forEach((act) => {
+      const pts = (act && act.points) || [];
+      if (pts.length < 2) return;
+      const isPass = act.kind === 'pass';
+      const start = pts[0];
+      const end = pts[pts.length - 1];
+      paths.push({
+        pid: isPass ? null : act.pid,
+        ballOnly: isPass,
+        from: { x: start.x, y: start.y },
+        to: { x: end.x, y: end.y },
+        ctrl: null,
+        points: pts.map((p) => ({ x: p.x, y: p.y })),
+        type: act.kind || 'cut',
+        fromPid: act.fromPid,
+        toPid: act.toPid,
+        seq: act.seq,
+      });
+    });
+    return paths;
+  }
+
   // Sheet-marked dashed passes — orient from ball-handler; keep one outbound pass.
   const orientedPasses = [];
   sheetPasses.forEach((p) => {
@@ -3002,21 +3315,19 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     return { paths: {}, marks: {}, passes: [] };
   }
   const skipSticky = !!options.skipSticky;
-  if (!skipSticky && sheetStickyInkByStep[stepIndex]) {
+  if (!skipSticky && sheetStickyInkByStep[stepIndex] && (sheetStickyInkByStep[stepIndex].actions || []).length) {
     const sticky = sheetStickyInkByStep[stepIndex];
     const bundle = {
       paths: sticky.paths || {},
       marks: sticky.marks || {},
       passes: sticky.passes || [],
+      actions: sticky.actions || [],
     };
     sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
   }
   const sessionInk = sheetSessionInkByStep[stepIndex];
-  if (sessionInk && (
-    Object.keys(sessionInk.paths || {}).length
-    || (sessionInk.passes || []).length
-  )) {
+  if (sessionInk && (sessionInk.actions || []).length) {
     return sessionInk;
   }
   // Ink tracing anchors: prefer THIS sheet's OCR only (not carry-forward from
@@ -3073,6 +3384,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
       paths: data.paths || {},
       marks: data.marks || {},
       passes: data.passes || [],
+      actions: data.actions || [],
     };
     sheetInkPathCache.set(cacheKey, bundle);
     sheetSessionInkByStep[stepIndex] = bundle;
@@ -3087,6 +3399,7 @@ function drawTravelPaths(paths, activePath) {
   addArrowheadMarkers();
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer) return;
+  arrowLayer.style.pointerEvents = 'none';
   arrowLayer.innerHTML = '';
   paths.forEach((p) => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -3109,13 +3422,18 @@ function drawTravelPaths(paths, activePath) {
       path.setAttribute('stroke-dasharray', '8,4');
       path.setAttribute('marker-end', 'url(#arrowhead-blue)');
     } else if (p.type === 'dribble') {
+      path.setAttribute('d', dribblePathD(p.from, p.to, p.points));
       path.setAttribute('stroke', '#111827');
-      path.setAttribute('marker-end', 'url(#arrowhead-black)');
+    } else if (p.type === 'screen') {
+      path.setAttribute('stroke', '#111827');
+      path.setAttribute('stroke-width', '3.5');
     } else {
       path.setAttribute('stroke', '#ef4444');
       path.setAttribute('marker-end', 'url(#arrowhead-red)');
     }
     arrowLayer.appendChild(path);
+    if (p.type === 'dribble' && p.from && p.to) appendDribbleBalls(arrowLayer, p.from, p.to);
+    if (p.type === 'screen' && p.from && p.to) appendScreenBar(arrowLayer, p.from, p.to);
   });
 }
 
@@ -3763,9 +4081,21 @@ function buildActionBeats(fromRaw, toRaw, paths, ballPid) {
  * animate the ball-handler (or largest residual delta) along a straight/quad path
  * so Play All never completes with 0 rAF frames.
  */
+function pathsFollowDrawOrder(paths) {
+  return (paths || []).length > 0 && (paths || []).every((p) => p && typeof p.seq === 'number');
+}
+
 function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
   if (stepHasAuthoredOrder(step) && (paths || []).length) {
     return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+  }
+  // PDF paint order. Do not re-sort with the 1-Game / Triangle / Pitt 5 lists.
+  if (pathsFollowDrawOrder(paths)) {
+    return paths
+      .slice()
+      .sort((a, b) => a.seq - b.seq)
+      .map((p) => beatFromPath(p, ballPid))
+      .filter(Boolean);
   }
   let beats = buildActionBeats(fromRaw, toRaw, paths || [], ballPid);
   const idx = typeof sheetIndex === 'number' ? sheetIndex : 0;
@@ -3879,9 +4209,6 @@ function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
 }
 
 function drawScreenMarker(at) {
-  // Clean-court animation: no black T-bar stroke on the SVG court (Pitt 5 /
-  // 1-Game / Scott — screen hold is the token pause only). Rip/others keep the cue.
-  if (isPitt5Play() || isGamePlay()) return;
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer || !at) return;
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -4041,10 +4368,14 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   isAnimating = true;
   const start = performance.now();
   const dur = Math.max(ANIM.MOVE_MS * 0.75, durationMs || ANIM.MOVE_MS);
-  const gatePlayback = isPlaybackActive();
   let frames = 0;
   playbookAnimStats = {
     frames: 0,
@@ -4055,7 +4386,11 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
   if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
 
   return new Promise((resolve) => {
+    let settled = false;
     function finish(completed) {
+      if (settled) return;
+      settled = true;
+      if (animFinish === finish) animFinish = null;
       isAnimating = false;
       animFrame = null;
       playbookAnimStats.frames = frames;
@@ -4078,14 +4413,15 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
       }
       resolve();
     }
+    animFinish = finish;
 
     function frame(now) {
-      // Newer move always wins. Playback gate only if we started under Play/playbar.
+      // Stop wins even if this beat started before the coach clicked a token.
       if (moveGen !== sheetMoveGen) {
         finish(false);
         return;
       }
-      if (gatePlayback && !isPlaybackActive()) {
+      if (!isPlaybackActive()) {
         finish(false);
         return;
       }
@@ -4139,10 +4475,14 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   isAnimating = true;
   const start = performance.now();
   const dur = Math.max(ANIM.MOVE_MS * 0.75, durationMs || ANIM.MOVE_MS);
-  const gatePlayback = isPlaybackActive();
   let frames = 0;
   playbookAnimStats = {
     frames: 0,
@@ -4153,7 +4493,11 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
   if (typeof window !== 'undefined') window.__playbookAnimStats = playbookAnimStats;
 
   return new Promise((resolve) => {
+    let settled = false;
     function finish(completed) {
+      if (settled) return;
+      settled = true;
+      if (animFinish === finish) animFinish = null;
       isAnimating = false;
       animFrame = null;
       playbookAnimStats.frames = frames;
@@ -4167,13 +4511,14 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
       }
       resolve();
     }
+    animFinish = finish;
 
     function frame(now) {
       if (moveGen !== sheetMoveGen) {
         finish(false);
         return;
       }
-      if (gatePlayback && !isPlaybackActive()) {
+      if (!isPlaybackActive()) {
         finish(false);
         return;
       }
@@ -4206,8 +4551,159 @@ function animateParallelPaths(live, paths, toRaw, ballPid, durationMs, moveGen) 
  * ``parallelGroup`` (1-Game 4+5 pop) which animate together.
  * Mutates ballRef.pid when a pass completes.
  * Returns the live end poses so callers can freeze screen/cut landings across sheets.
+ * beatOpts: { startBeat, beatLimit, continueFromLive }
  */
-async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
+let lastPlayedBeatCount = 0;
+
+function recordBeatSnapshot(sheet, beat, live, ballPid) {
+  const positions = clonePosMap(live);
+  const snap = {
+    sheet,
+    beat,
+    positions,
+    ballPid: ballPid || 'o1',
+    ballPos: ballOverride ? { x: ballOverride.x, y: ballOverride.y } : null,
+  };
+  while (
+    beatSnapshots.length
+    && (beatSnapshots[beatSnapshots.length - 1].sheet > sheet
+      || (beatSnapshots[beatSnapshots.length - 1].sheet === sheet
+        && beatSnapshots[beatSnapshots.length - 1].beat >= beat))
+  ) {
+    beatSnapshots.pop();
+  }
+  beatSnapshots.push(snap);
+  resumeBeat = beat;
+}
+
+function applySpacingEdits(stepIndex, positions) {
+  const edits = spacingEdits[stepIndex];
+  if (!edits || !positions) return positions;
+  Object.keys(edits).forEach((pid) => {
+    if (edits[pid]) positions[pid] = { x: edits[pid].x, y: edits[pid].y };
+  });
+  return positions;
+}
+
+function showPose(pose) {
+  if (!pose) return;
+  const positions = clonePosMap(pose.positions || {});
+  applySpacingEdits(pose.sheet, positions);
+  ballOverride = pose.ballPos ? { x: pose.ballPos.x, y: pose.ballPos.y } : null;
+  resumeBeat = pose.beat || 0;
+  currentStep = pose.sheet;
+  pausedCourtPose = {
+    sheetIndex: pose.sheet,
+    positions,
+    ballPid: pose.ballPid || 'o1',
+    ballPos: ballOverride,
+    beatIndex: resumeBeat,
+  };
+  updateStepChrome(pose.sheet);
+  if (playHasSheets()) showSheetUnderlay(pose.sheet);
+  const arrowLayer = document.getElementById('arrowLayer');
+  if (arrowLayer) arrowLayer.innerHTML = '';
+  clearScreenMarker();
+  syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+  updatePlaybarUI();
+}
+
+function rewindPlay() {
+  if (isPlaybackActive() || isAnimating) stopPlayback({ reset: false });
+  const cur = beatSnapshots[beatSnapshots.length - 1];
+  if (!pausedCourtPose && cur) {
+    showPose(cur);
+    setSheetAnimHint('Back to the start of this action. Press Play to watch it.');
+    return;
+  }
+  const midBeat = !!(
+    pausedCourtPose
+    && cur
+    && cur.sheet === pausedCourtPose.sheetIndex
+    && cur.beat === (pausedCourtPose.beatIndex || 0)
+    && !positionsAlmostEqual(cur.positions, pausedCourtPose.positions, 8)
+  );
+  if (midBeat) {
+    showPose(cur);
+    setSheetAnimHint('Back to the start of this action. Press Play to watch it.');
+    return;
+  }
+  if (beatSnapshots.length > 1) {
+    beatSnapshots.pop();
+    showPose(beatSnapshots[beatSnapshots.length - 1]);
+    setSheetAnimHint('Back one action. Press Play to watch it.');
+    return;
+  }
+  if (beatSnapshots.length === 1) beatSnapshots.pop();
+  if (currentStep > 0) {
+    currentStep -= 1;
+    resumeBeat = 0;
+    ballOverride = null;
+    const positions = applySpacingEdits(currentStep, withManDefense(positionsForAnim(currentStep)));
+    pausedCourtPose = {
+      sheetIndex: currentStep,
+      positions,
+      ballPid: (steps[currentStep] && steps[currentStep].ball) || 'o1',
+      ballPos: null,
+      beatIndex: 0,
+    };
+    renderStep();
+    syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+    setSheetAnimHint(`Sheet ${currentStep + 1}. Press Play to watch it.`);
+    updatePlaybarUI();
+    return;
+  }
+  resumeBeat = 0;
+  pausedCourtPose = null;
+  ballOverride = null;
+  beatSnapshots = [];
+  renderStep();
+  setSheetAnimHint('At the start. Press Play.');
+  updatePlaybarUI();
+}
+
+async function stepForwardPlay() {
+  if (isPlaybackActive() || isAnimating) stopPlayback({ reset: false });
+  const sheet = (pausedCourtPose && typeof pausedCourtPose.sheetIndex === 'number')
+    ? pausedCourtPose.sheetIndex
+    : currentStep;
+  const beat = (pausedCourtPose && typeof pausedCourtPose.beatIndex === 'number')
+    ? pausedCourtPose.beatIndex
+    : resumeBeat;
+  lastPlayedBeatCount = 0;
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    fromSheet: sheet,
+    throughSheet: sheet,
+    startBeat: beat,
+    beatLimit: 1,
+    continueFromLive: !!pausedCourtPose,
+    keepPose: true,
+  });
+  if (!lastPlayedBeatCount && sheet < steps.length - 1) {
+    currentStep = sheet + 1;
+    resumeBeat = 0;
+    ballOverride = null;
+    const positions = applySpacingEdits(currentStep, withManDefense(positionsForAnim(currentStep)));
+    pausedCourtPose = {
+      sheetIndex: currentStep,
+      positions,
+      ballPid: (steps[currentStep] && steps[currentStep].ball) || 'o1',
+      ballPos: null,
+      beatIndex: 0,
+    };
+    renderStep();
+    syncPlayerTokens(withManDefense(positions), pausedCourtPose.ballPid);
+    setSheetAnimHint(`Sheet ${currentStep + 1}. Next beat plays the first action.`);
+    updatePlaybarUI();
+  }
+}
+
+async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs, beatOpts) {
+  beatOpts = beatOpts || {};
+  const runId = playbackRunId;
+  const alive = () => runId === playbackRunId && isPlaybackActive();
+  lastPlayedBeatCount = 0;
   if (!beats.length) {
     syncPlayerTokens(toRaw, ballRef.pid);
     return clonePosMap(toRaw);
@@ -4227,10 +4723,16 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
   const perPathMs = durationMs || ANIM.MOVE_MS;
   syncLiveWithDefense(live, ballRef.pid);
 
-  let i = 0;
-  let beatOrdinal = 0;
+  const startBeat = Math.max(0, beatOpts.startBeat || 0);
+  let i = startBeat;
+  let beatOrdinal = startBeat;
+  if (i >= beats.length) {
+    resumeBeat = i;
+    syncPlayerTokens(live, ballRef.pid);
+    return clonePosMap(live);
+  }
   while (i < beats.length) {
-    if (!isPlaybackActive()) break;
+    if (!alive()) break;
     const beat = beats[i];
     const groupId = beat && beat.parallelGroup;
     const group = [beat];
@@ -4244,8 +4746,19 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
       }
     }
 
+    recordBeatSnapshot(currentStep, i, live, ballRef.pid);
+    if (group.some((b) => b && b.kind === 'pass')) ballOverride = null;
     clearScreenMarker();
-    const animPaths = group.map((b) => normalizeAnimPath(b.path, live, toRaw) || b.path);
+    const resumeThisBeat = !!(beatOpts.continueFromLive && i === startBeat);
+    const groupPaths = group.map((b) => {
+      const path = b && b.path;
+      if (!resumeThisBeat || !path) return path;
+      const pid = path.pid || path.fromPid;
+      const at = pid && live[pid];
+      if (!at) return path;
+      return Object.assign({}, path, { from: { x: at.x, y: at.y } });
+    });
+    const animPaths = groupPaths.map((p) => normalizeAnimPath(p, live, toRaw) || p);
     drawTravelPaths(animPaths, animPaths[0]);
     const labels = group.map((b) => b.label).filter(Boolean).join(' + ');
     beatOrdinal += 1;
@@ -4259,7 +4772,7 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
       // eslint-disable-next-line no-await-in-loop
       await animateOnePath(live, animPaths[0], toRaw, ballRef.pid, perPathMs, gen);
     }
-    if (!isPlaybackActive()) break;
+    if (!alive()) break;
 
     for (let gi = 0; gi < group.length; gi += 1) {
       const b = group[gi];
@@ -4285,22 +4798,32 @@ async function playActionBeats(fromRaw, toRaw, beats, ballRef, durationMs) {
         // eslint-disable-next-line no-await-in-loop
         await delayMs(b.holdAfterMs);
       }
+      if (!alive()) break;
     }
+    if (!alive()) break;
 
     const arrowLayer = document.getElementById('arrowLayer');
     if (arrowLayer) {
       arrowLayer.querySelectorAll('path').forEach((el) => el.remove());
     }
     i += group.length;
+    resumeBeat = i;
+    lastPlayedBeatCount += 1;
+    if (beatOpts.beatLimit && lastPlayedBeatCount >= beatOpts.beatLimit) break;
     if (i < beats.length) {
       // eslint-disable-next-line no-await-in-loop
       await delayMs(ANIM.GAP_BETWEEN_BEATS_MS);
+      if (!alive()) break;
     }
   }
   clearScreenMarker();
   // Keep animated end poses (live). Snapping to toRaw undoes forced cuts when OCR
   // digits did not move between sheets.
   syncPlayerTokens(live, ballRef.pid);
+  if (pausedCourtPose || beatOpts.beatLimit) {
+    snapshotCourtPose();
+    if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
+  }
   return clonePosMap(live);
 }
 
@@ -4442,8 +4965,8 @@ function updatePlaybarUI() {
       scrub.disabled = false;
     }
   }
-  if (prevBtn) prevBtn.disabled = idx <= 0 || isPlaybackActive();
-  if (nextBtn) nextBtn.disabled = idx >= n - 1 || isPlaybackActive();
+  if (prevBtn) prevBtn.disabled = false;
+  if (nextBtn) nextBtn.disabled = false;
   if (label) {
     if (isPlaybackActive()) {
       label.textContent = playbarReady && playbarKeyframes[idx]
@@ -4715,19 +5238,15 @@ function playbarScrubTo(value) {
 }
 
 function playbarStep(delta) {
-  if (playbarReady && playbarKeyframes.length) {
-    playbarApplyKeyframe(playbarIndex + delta);
-    return;
-  }
-  const next = Math.max(0, Math.min(steps.length - 1, currentStep + (delta || 0)));
-  playbarScrubTo(next);
+  if ((delta || 0) < 0) rewindPlay();
+  else stepForwardPlay();
 }
 
 function stopPlayback(opts) {
   const reset = !!(opts && opts.reset);
-  if (!reset && isPlaybackActive()) {
-    snapshotCourtPose();
-  }
+  const wasRunning = isPlaybackActive() || isAnimating;
+  if (!reset && wasRunning) snapshotCourtPose();
+  playbackRunId += 1;
   playAllRunning = false;
   playbarPlaying = false;
   isAnimating = false;
@@ -4736,10 +5255,20 @@ function stopPlayback(opts) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  cancelDelays();
+  if (animFinish) {
+    const prevFinish = animFinish;
+    animFinish = null;
+    prevFinish(false);
+  }
   setPlayAllButton(false);
   updatePlaybarPlayButton();
+  if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
   if (reset) {
     setSheetAnimHint('');
+    beatSnapshots = [];
+    resumeBeat = 0;
+    ballOverride = null;
     resetPlayToOpening();
   }
 }
@@ -4945,8 +5474,14 @@ async function playbarPlayThrough(opts) {
 async function playSheetsDirectly(opts) {
   opts = opts || {};
   const resetAtEnd = opts.resetAtEnd !== false;
+  const runId = ++playbackRunId;
+  const alive = () => runId === playbackRunId && isPlaybackActive();
   const fromSheet = Math.max(0, Math.min(
     typeof opts.fromSheet === 'number' ? opts.fromSheet : 0,
+    Math.max(0, steps.length - 1),
+  ));
+  const lastSheet = Math.max(fromSheet, Math.min(
+    typeof opts.throughSheet === 'number' ? opts.throughSheet : steps.length - 1,
     Math.max(0, steps.length - 1),
   ));
   playAllRunning = true;
@@ -4977,7 +5512,7 @@ async function playSheetsDirectly(opts) {
   updatePlaybarUI();
 
   if (useSheetSlideshowMode()) {
-    for (let i = startIdx; i < steps.length; i += 1) {
+    for (let i = startIdx; i <= lastSheet; i += 1) {
       if (!isPlaybackActive()) break;
       updateStepChrome(i);
       showSheetUnderlay(i);
@@ -4992,20 +5527,26 @@ async function playSheetsDirectly(opts) {
     const toRaw = fromRaw;
     const startBall = steps[0].ball || 'o1';
     const inkPaths = await fetchSheetInkPaths(0, fromRaw, toRaw);
-    if (!isPlaybackActive()) {
+    if (!alive()) {
       /* stopped during ink fetch */
     } else {
       const paths = buildTravelPaths(fromRaw, toRaw, steps[0], inkPaths, startBall);
       const beats = forceGuaranteeBeats(fromRaw, toRaw, steps[0], paths, startBall, 0);
-      if (beats.length) {
-        drawTravelPaths(beats.map((b) => b.path).filter(Boolean), null);
-        await delayMs(ANIM.LINE_PREVIEW_MS);
-        if (isPlaybackActive()) {
-          const ballRef = { pid: startBall };
-          await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS);
-          syncPlayerTokens(toRaw, ballRef.pid);
+      const beatStart = typeof opts.startBeat === 'number' ? opts.startBeat : 0;
+      if (beats.length && beatStart < beats.length) {
+        if (!(opts.continueFromLive || beatStart > 0)) {
+          drawTravelPaths(beats.map((b) => b.path).filter(Boolean), null);
+          await delayMs(ANIM.LINE_PREVIEW_MS);
         }
-      } else if (steps[0]) {
+        if (alive()) {
+          const ballRef = { pid: (pausedCourtPose && pausedCourtPose.ballPid) || startBall };
+          await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS, {
+            startBeat: beatStart,
+            beatLimit: opts.beatLimit || 0,
+            continueFromLive: !!opts.continueFromLive,
+          });
+        }
+      } else if (steps[0] && alive()) {
         renderArrows(steps[0]);
         await delayMs(ANIM.LINE_PREVIEW_MS);
       }
@@ -5023,15 +5564,17 @@ async function playSheetsDirectly(opts) {
       });
     }
     pausedCourtPose = null;
-    for (let i = startIdx; i < steps.length; i += 1) {
-      if (!isPlaybackActive()) break;
-      const isLast = i >= steps.length - 1;
+    for (let i = startIdx; i <= lastSheet; i += 1) {
+      if (!alive()) break;
+      const isLast = i >= lastSheet;
+      const sheetLast = i >= steps.length - 1;
       let fromRaw = withManDefense(positionsForAnim(i));
       Object.keys(heldLandings).forEach((pid) => {
         if (heldLandings[pid]) fromRaw[pid] = { x: heldLandings[pid].x, y: heldLandings[pid].y };
       });
       fromRaw = withManDefense(fromRaw);
-      let toRaw = isLast
+      applySpacingEdits(i, fromRaw);
+      let toRaw = sheetLast
         ? fromRaw
         : withManDefense(positionsForAnim(i + 1));
       Object.keys(heldLandings).forEach((pid) => {
@@ -5048,21 +5591,30 @@ async function playSheetsDirectly(opts) {
       setSheetAnimHint(`Sheet ${i + 1} / ${steps.length} — tracing…`);
       // eslint-disable-next-line no-await-in-loop
       const inkPaths = await fetchSheetInkPaths(i, fromRaw, toRaw);
-      if (!isPlaybackActive()) break;
+      if (!alive()) break;
 
       const paths = buildTravelPaths(fromRaw, toRaw, steps[i], inkPaths, liveBall);
       const beats = forceGuaranteeBeats(fromRaw, toRaw, steps[i], paths, liveBall, i);
+      const beatStart = (i === startIdx && typeof opts.startBeat === 'number') ? opts.startBeat : 0;
+      const beatLimit = (i === startIdx && opts.beatLimit) ? opts.beatLimit : 0;
+      const continueFromLive = !!(i === startIdx && opts.continueFromLive);
       let liveEnd = fromRaw;
-      if (beats.length) {
+      if (beats.length && beatStart < beats.length) {
         const previewPaths = beats.map((b) => b.path).filter(Boolean);
         drawTravelPaths(previewPaths, null);
         setSheetAnimHint(`Sheet ${i + 1} — ${beats.length} beat(s): one at a time`);
-        // eslint-disable-next-line no-await-in-loop
-        await delayMs(ANIM.LINE_PREVIEW_MS);
-        if (!isPlaybackActive()) break;
+        if (!continueFromLive && beatStart === 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await delayMs(ANIM.LINE_PREVIEW_MS);
+        }
+        if (!alive()) break;
         const ballRef = { pid: liveBall };
         // eslint-disable-next-line no-await-in-loop
-        liveEnd = await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS) || fromRaw;
+        liveEnd = await playActionBeats(fromRaw, toRaw, beats, ballRef, ANIM.MOVE_MS, {
+          startBeat: beatStart,
+          beatLimit,
+          continueFromLive,
+        }) || fromRaw;
         liveBall = ballRef.pid || liveBall;
         beats.forEach((b) => {
           if (!b || !b.path || !b.path.pid) return;
@@ -5071,12 +5623,13 @@ async function playSheetsDirectly(opts) {
             if (pt) heldLandings[b.path.pid] = { x: pt.x, y: pt.y };
           }
         });
-      } else if (!isLast) {
+      } else if (!isLast && beatStart === 0) {
         setSheetAnimHint(`Sheet ${i + 1} — settle`);
         // eslint-disable-next-line no-await-in-loop
         await delayMs(ANIM.SHEET_END_HOLD_MS);
       }
-      if (!isPlaybackActive()) break;
+      if (!alive()) break;
+      if (opts.beatLimit && lastPlayedBeatCount >= opts.beatLimit) break;
       if (isLast) break;
 
       // Advance underlay; keep held screen/cut landings (do not yank to OCR seeds).
@@ -5098,6 +5651,7 @@ async function playSheetsDirectly(opts) {
     }
   }
 
+  if (runId !== playbackRunId) return;
   playAllRunning = false;
   playbarPlaying = false;
   setPlayAllButton(false);
@@ -5105,6 +5659,10 @@ async function playSheetsDirectly(opts) {
   if (resetAtEnd) {
     setSheetAnimHint('');
     resetPlayToOpening();
+  } else if (!opts.keepPose) {
+    pausedCourtPose = null;
+    resumeBeat = 0;
+    updatePlaybarUI();
   } else {
     updatePlaybarUI();
   }
@@ -5153,6 +5711,47 @@ async function playbarTogglePlay() {
  * Play before the first rAF (button flicked Stop→Play, tokens never moved).
  * Playbar ▶ still uses playbarPlayThrough when the timeline is ready.
  */
+let stepPlaybackIntent = false;
+
+async function finishStepReview() {
+  if (!stepPlaybackIntent) return;
+  stepPlaybackIntent = false;
+  if (!canFixAnimation()) {
+    setSheetAnimHint(`Sheet ${currentStep + 1} played`);
+    return;
+  }
+  await seedMovementsFromCurrentBeats(currentStep);
+  updateMovementList();
+  updateChoreographyChrome();
+  setSheetAnimHint(`Sheet ${currentStep + 1} — fix the actions below, Save choreography, then Play All.`);
+}
+
+async function playCurrentStep() {
+  if (playAllRunning || playbarPlaying) {
+    stepPlaybackIntent = true;
+    stopPlayback({ reset: false });
+    await finishStepReview();
+    return;
+  }
+  if (!steps.length) return;
+  const idx = currentStep;
+  const posed = pausedCourtPose && pausedCourtPose.sheetIndex === idx;
+  stepPlaybackIntent = true;
+  setSheetAnimHint(`Playing sheet ${idx + 1}…`);
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    fromSheet: idx,
+    throughSheet: idx,
+    startBeat: posed ? (pausedCourtPose.beatIndex || 0) : 0,
+    continueFromLive: !!posed,
+  });
+  if (pausedCourtPose) {
+    stepPlaybackIntent = false;
+    return;
+  }
+  await finishStepReview();
+}
+
 async function playAnimation() {
   if (playAllRunning || playbarPlaying) {
     stopPlayback({ reset: false });
@@ -5189,7 +5788,14 @@ async function playAnimation() {
   const resumeAt = (pausedCourtPose && typeof pausedCourtPose.sheetIndex === 'number')
     ? pausedCourtPose.sheetIndex
     : 0;
-  await playSheetsDirectly({ resetAtEnd: false, alreadyRunning: true, fromSheet: resumeAt });
+  const posed = !!(pausedCourtPose && pausedCourtPose.sheetIndex === resumeAt);
+  await playSheetsDirectly({
+    resetAtEnd: false,
+    alreadyRunning: true,
+    fromSheet: resumeAt,
+    startBeat: posed ? (pausedCourtPose.beatIndex || 0) : 0,
+    continueFromLive: !!pausedCourtPose,
+  });
 }
 
 /** After Play All Stop: return to opening sheet/formation. */
@@ -5746,6 +6352,7 @@ function initSteps() {
   updateCourtPanelLabel();
   renderCourt();
   renderStep();
+  installCourtPause();
   renderStepImages();
   updateStepList();
   if (useSheetSlideshowMode()) {

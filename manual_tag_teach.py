@@ -11,7 +11,7 @@ import json
 import sqlite3
 from typing import Any
 
-from helpers import normalize_analysis_game_id
+from helpers import is_foul_event, normalize_analysis_game_id
 from review_actions import reject_event
 
 TEACH_NOTE = "Film Tool teach"
@@ -47,6 +47,26 @@ AI_REBOUND_TYPES = {
     "rebound_offensive",
     "rebound_defensive",
 }
+
+
+# Film Tool: category Foul, event type is the subcategory.
+# A plain "Foul" tag is the category itself (older tags, before the split).
+_FILM_FOUL_CODES = {
+    "Foul": "foul",
+    "Shooting": "foul_shooting",
+    "Personal": "foul_personal",
+    "Technical": "foul_technical",
+}
+
+
+def _film_foul_code(row: dict) -> str | None:
+    eventtype = str(row.get("eventtype") or "").strip()
+    category = str(row.get("category") or "").strip()
+    if eventtype == "Foul":
+        return "foul"
+    if category == "Foul" and eventtype in _FILM_FOUL_CODES:
+        return _FILM_FOUL_CODES[eventtype]
+    return None
 
 
 def _stat_code(item: dict) -> str:
@@ -93,7 +113,8 @@ def time_to_ms(value) -> int:
 
 def map_manual_row(row: dict) -> dict | None:
     eventtype = str(row.get("eventtype") or "").strip()
-    if eventtype not in STAT_EVENTTYPES:
+    foul_code = _film_foul_code(row)
+    if eventtype not in STAT_EVENTTYPES and not foul_code:
         return None
     result = str(row.get("result") or "NA").strip()
     player = str(row.get("player") or "").strip()
@@ -117,6 +138,9 @@ def map_manual_row(row: dict) -> dict | None:
         "Steal": ("steal", "steal"),
         "Turnover": ("turnover", "turnover"),
         "Foul": ("foul", "foul"),
+        "Shooting": ("foul_shooting", "foul"),
+        "Personal": ("foul_personal", "foul"),
+        "Technical": ("foul_technical", "foul"),
         "Block": ("block", "block"),
         "OffRebound": ("rebound_offensive", "rebound"),
         "DefRebound": ("rebound_defensive", "rebound"),
@@ -129,6 +153,11 @@ def map_manual_row(row: dict) -> dict | None:
         "timestamp_ms": ms,
         "label": row.get("label") or eventtype,
         "shot_type": "offensive" if eventtype == "OffRebound" else ("defensive" if eventtype == "DefRebound" else None),
+        "foul_type": {
+            "foul_shooting": "shooting",
+            "foul_personal": "personal",
+            "foul_technical": "technical",
+        }.get(mapped[0]),
         "family": mapped[1],
     }
 
@@ -139,7 +168,9 @@ def _ai_family(event_type: str, details: dict | None = None) -> str | None:
         return "shot"
     if et in AI_REBOUND_TYPES:
         return "rebound"
-    if et in {"assist", "steal", "turnover", "foul", "block"}:
+    if is_foul_event(et):
+        return "foul"
+    if et in {"assist", "steal", "turnover", "block"}:
         return et
     return None
 
@@ -220,6 +251,7 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
             "label": item["label"],
             "team": item["team"],
             "shot_type": item["shot_type"],
+            "foul_type": item.get("foul_type"),
         }
         event_type_id = _lookup_event_type_id(db, _stat_code(item))
         if event_id is None:

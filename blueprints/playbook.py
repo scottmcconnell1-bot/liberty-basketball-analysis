@@ -1494,6 +1494,7 @@ def playbook_sheet_extract_api():
                         "paths": ink.get("paths") or {},
                         "marks": ink.get("marks") or {},
                         "passes": ink.get("passes") or [],
+                        "actions": ink.get("actions") or [],
                     },
                     "title": vec.get("title"),
                     "page": vec.get("page"),
@@ -1553,7 +1554,7 @@ def playbook_sheet_paths_api():
             )
             if vec:
                 ink = vec.get("ink") or {}
-                if ink.get("paths") or ink.get("passes"):
+                if ink.get("paths") or ink.get("passes") or ink.get("actions"):
                     return jsonify({
                         "ok": True,
                         "image_url": image_url,
@@ -1561,6 +1562,7 @@ def playbook_sheet_paths_api():
                         "paths": ink.get("paths") or {},
                         "marks": ink.get("marks") or {},
                         "passes": ink.get("passes") or [],
+                        "actions": ink.get("actions") or [],
                     })
 
         from playbook_sheet_align import resolve_upload_path, trace_marked_paths_for_transition

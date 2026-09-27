@@ -54,8 +54,10 @@ EVENT_TYPE_SEEDS = [
     ("steal", "Steal", "defense", 1, 0, 1),
     ("block", "Block", "defense", 1, 0, 0),
     ("turnover", "Turnover", "turnover", 1, 0, 1),
+    ("foul", "Foul", "foul", 1, 0, 0),
     ("foul_personal", "Personal foul", "foul", 1, 0, 0),
     ("foul_shooting", "Shooting foul", "foul", 1, 0, 0),
+    ("foul_technical", "Technical foul", "foul", 1, 0, 0),
     ("substitution", "Substitution", "rotation", 0, 0, 0),
     ("timeout", "Timeout", "game_management", 0, 0, 0),
     ("jump_ball", "Jump ball", "game_management", 0, 0, 1),
@@ -74,6 +76,14 @@ EVENT_TYPE_SEEDS = [
     ("miss", "Missed field goal (AI)", "shot", 1, 0, 0),
     ("possession_change", "Possession change (AI)", "possession", 0, 0, 1),
 ]
+
+FOUL_EVENT_CODES = ("foul", "foul_personal", "foul_shooting", "foul_technical")
+
+
+def is_foul_event(code: str | None) -> bool:
+    """True for the Foul category and its Shooting, Personal, and Technical types."""
+    return str(code or "").strip().lower() in FOUL_EVENT_CODES
+
 
 BASE_MODULE_ENTITLEMENT = {
     "module_key": BASE_PLATFORM,

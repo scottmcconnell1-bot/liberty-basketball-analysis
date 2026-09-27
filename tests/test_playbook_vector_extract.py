@@ -74,6 +74,11 @@ def test_extract_1game_page32_digits():
     assert pos["o4"]["y"] < pos["o1"]["y"] - 40
     # Elbows sit inside the 3pt (peak y=235), not on it.
     assert pos["o4"]["y"] < 220
+    actions = step["ink"]["actions"]
+    assert actions
+    assert [a["seq"] for a in actions] == list(range(1, len(actions) + 1))
+    kinds = [(a["kind"], a["fromPid"], a["toPid"]) for a in actions]
+    assert ("pass", "o1", "o5") in kinds
 
 
 @pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")

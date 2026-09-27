@@ -420,6 +420,9 @@ USEFUL_REVIEW_EVENT_TYPES = (
     "steal",
     "block",
     "foul",
+    "foul_personal",
+    "foul_shooting",
+    "foul_technical",
 )
 
 
