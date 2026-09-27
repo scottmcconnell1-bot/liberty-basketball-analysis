@@ -225,7 +225,10 @@ def _clean_ink(raw: Any) -> dict[str, Any] | None:
                 actions.append(cleaned)
     if not paths and not marks and not passes and not actions:
         return None
-    return {"paths": paths, "marks": marks, "passes": passes, "actions": actions}
+    cleaned = {"paths": paths, "marks": marks, "passes": passes}
+    if actions:
+        cleaned["actions"] = actions
+    return cleaned
 
 
 def _clean_movements(raw: Any) -> list[dict[str, Any]]:

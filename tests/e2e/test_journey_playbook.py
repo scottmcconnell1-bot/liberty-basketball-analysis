@@ -842,7 +842,7 @@ def test_choreography_round_trip(client, db, choreo_base):
 
 
 def test_reordered_sheet_keeps_its_choreography_when_saved():
-    src = (ROOT / "templates/playbook.html").read_text()
+    src = (ROOT / "templates/playbook.html").read_text(encoding="utf-8")
     script = "\n".join([
         _js_function(src, "moveStep"),
         _js_function(src, "buildChoreographyPayload"),

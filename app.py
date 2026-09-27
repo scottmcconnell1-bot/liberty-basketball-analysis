@@ -166,10 +166,21 @@ def family_viewer_gate():
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         if path in FAMILY_POST_ALLOW or path.startswith("/play/share/"):
             return None
+        # Their own messages, notification prefs, and sign-in. Coach settings
+        # still hit the route, which refuses anyone who is not an admin.
+        if path.startswith("/api/messages/") or path.startswith("/api/notifications") or path in (
+            "/settings/notifications",
+            "/settings",
+            "/settings/ollama/pull",
+            "/register",
+        ):
+            return None
         if path.startswith("/api/"):
             return jsonify({"error": "Parents and players can view only."}), 403
         flash("Parents and players can view only.", "error")
         return redirect(url_for("core.my_stats"))
+    if path == "/settings/notifications":
+        return None
     if path == "/" or path.startswith(FAMILY_REDIRECT_PREFIXES):
         if path.startswith("/api/"):
             return jsonify({"error": "Parents and players can view only their own stats."}), 403

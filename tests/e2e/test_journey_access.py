@@ -386,9 +386,11 @@ def test_gate_on_non_admin_cannot_change_settings(app, db):
         assert r.status_code == 403 and r.get_json() == {"error": "Only an admin can change settings."}
         r = role_client.post("/settings/ollama/pull", data={"model_name": "llama3"}, follow_redirects=False)
         assert r.status_code == 403
-        # Non-admins cannot open Settings either (8853d38); they are sent home.
+        # Non-admins cannot open Settings either (8853d38). A player account
+        # lands on their own stats. A coach or manager is sent home.
         view = role_client.get("/settings", follow_redirects=False)
-        assert view.status_code == 302 and urlsplit(view.headers["Location"]).path == "/"
+        home = "/my-stats" if role_client is c else "/"
+        assert view.status_code == 302 and urlsplit(view.headers["Location"]).path == home
     assert _flag(db, "ENABLE_AUTH_MIDDLEWARE") == "1"
     assert {k: v for k, v in _counts(db).items() if k != "users"} == \
         {k: v for k, v in before.items() if k != "users"}

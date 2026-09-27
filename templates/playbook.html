@@ -233,7 +233,8 @@
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <!-- Left: Court Canvas -->
-  <div class="card" style="padding:12px;" data-frame="6.3">
+    <div class="card" style="padding:12px;" data-frame="6.3">
+    {% if view_mode != "share" %}
     <div style="display:none;" aria-hidden="true">
       <button type="button" onclick="addStep()">+ Add Step</button>
       <button type="button" onclick="duplicateStep()">Duplicate step</button>
@@ -263,6 +264,7 @@
       <button type="button" onclick="exportPng()">PNG</button>
       <button type="button" onclick="exportVideo()">Video</button>
     </div>
+    {% endif %}
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
       <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Previous</button>
       <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
