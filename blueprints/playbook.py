@@ -1092,7 +1092,7 @@ def playbook_share(token):
         "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number", (play["id"],)
     ).fetchall()
     category_tree = _load_playbook_taxonomy(db)
-    team_key = normalize_playbook_team(play.get("team_key"))
+    team_key = normalize_playbook_team(play["team_key"] if "team_key" in play.keys() else None)
     return render_template(
         "playbook.html",
         plays=[],

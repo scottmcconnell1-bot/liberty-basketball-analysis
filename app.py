@@ -184,8 +184,6 @@ def nav_active(*names):
     Pass blueprint-qualified endpoints (e.g. ``core.film``). A trailing ``.*``
     matches any function in that blueprint (e.g. ``playbook.*``).
     """
-    from flask import request
-
     endpoint = request.endpoint or ""
     for name in names:
         if name.endswith(".*"):
@@ -252,11 +250,9 @@ def require_auth_for_api():
         return jsonify({"error": "Sign-in required."}), 401
     next_path = request.full_path if request.query_string else path
     return redirect(url_for("users.login", next=next_path))
-
-
 # ── Re-exports (for test conftest and external imports) ──────
-import subprocess
-from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess
+import subprocess  # noqa: F401
+from helpers import get_db, init_db, ai_runtime_available, start_analysis_subprocess  # noqa: F401
 
 # ── CLI Commands ─────────────────────────────────────────────
 import click

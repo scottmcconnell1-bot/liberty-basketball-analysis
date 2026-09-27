@@ -1,24 +1,27 @@
 ---
-description: Liberty Basketball orchestration — Cursor-only workflow on $20 Pro budget
+description: Liberty Basketball — Cursor-only on main
 globs:
 alwaysApply: true
 ---
 
 # Liberty orchestration
 
-Read `docs/ORCHESTRATION.md` and `docs/agent_handoffs/ACTIVE.md` at session start.
+Read `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and `docs/agent_handoffs/ACTIVE.md` at session start.
+Also follow `docs/BRANCH_POLICY.md`.
 
 ## Budget and scope
 
-- Cursor Pro only. No Devin. No pay-as-you-go. Prefer Composer/Auto; avoid parallel `/orchestrate` cloud workers.
-- One bounded slice per session. Use in-session subagents, not extra Cloud Agent VMs.
-- Repository truth beats chat. Report Proven / Inferred / Unknown.
+- Cursor Pro only. No Hermes/Devin as executor. Prefer Composer/Auto.
+- One bounded slice per session. Repository truth beats chat.
+- Report Proven / Inferred / Unknown.
 
 ## Gates (ask Scott first)
 
 - `schema.sql` changes
 - Feature flags False → True
 - Production ball detector settings (`models/ball_detector.pt`, `ball_confidence`)
+- Unpause teach / raise auto-accept
+- Mass-delete remote branches
 
 ## Workflow
 
@@ -26,3 +29,4 @@ Read `docs/ORCHESTRATION.md` and `docs/agent_handoffs/ACTIVE.md` at session star
 - Review results (including another agent's PR branch) are implemented by merging them into the working branch and pushing. A side branch or a validation write-up is not the fix.
 - Update `docs/agent_handoffs/ACTIVE.md` when task completes; archive to `ARCHIVE/`
 - PR for code changes; no GitHub label coordination
+- GitHub's default branch is `main`

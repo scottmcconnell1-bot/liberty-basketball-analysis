@@ -729,6 +729,11 @@ def build_settings_catalog():
                 "label": "Precision generator (recommended)",
                 "note": "Jason baseline: fewer, better-supported events for Review (~9% precision vs ~1% expanded on Wilder Q1). Requires rebuild/reanalyze to take effect on a game.",
             },
+            {
+                "value": "precision",
+                "label": "Precision generator (opt-in)",
+                "note": "Fewer, better-supported events for the Review queue; measured with scripts/score_manual_q1_regression.py.",
+            },
         ],
         "llm_provider_options": llm_provider_options,
         "llm_model_options": llm_model_options,

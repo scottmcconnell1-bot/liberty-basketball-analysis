@@ -1,6 +1,10 @@
 # Active Task
 
-Updated: 2026-09-27 (draw play tool)
+Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
+
+**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. Commit `cf87e28` is on `cursor/playbook-jason-clean-slate-ac1f`. Live choreography `data/playbook/choreography/98.json` and the Adrian jersey-shade / film-panel JSON stay uncommitted.
+
+**Proven:** This branch now includes `origin/main` (`59577bd`, public signup closed). GitHub's default branch is `main`.
 
 **Proven:** Build a picture at `/playbook/draw`. Click the player (that spot is the start), then Cut, Pass, Dribble, or Screen, then where he goes. A pass ends on the catcher. Next picture starts where this one finished. Save and watch opens the full play with the players moving and no arrows.
 
