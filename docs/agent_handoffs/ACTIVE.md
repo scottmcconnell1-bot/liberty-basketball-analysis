@@ -2,7 +2,7 @@
 
 Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
 
-**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. Commit `cf87e28` is on `cursor/playbook-jason-clean-slate-ac1f`. Live choreography `data/playbook/choreography/98.json` and the Adrian jersey-shade / film-panel JSON stay uncommitted.
+**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. Commit `cf87e28` is on `cursor/playbook-jason-clean-slate-ac1f`. Pull request: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/150 . Live choreography `data/playbook/choreography/98.json` and the Adrian jersey-shade / film-panel JSON stay uncommitted.
 
 **Proven:** This branch now includes `origin/main` (`59577bd`, public signup closed). GitHub's default branch is `main`.
 
