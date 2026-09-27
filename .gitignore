@@ -158,3 +158,6 @@ data/film_tags/*.json
 
 # Hoop/net track (per film; CV sidecar, no schema)
 data/hoop_tracks/*.json
+
+# Parent/player account → one roster player (local, not a schema column)
+data/audience_player_links.json

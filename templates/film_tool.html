@@ -705,6 +705,9 @@
 
 {% block content %}
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
+{% if family_viewer %}
+<p class="text-muted" style="margin:0 0 8px;">Watch only. Tagging and other changes stay with the coaches.</p>
+{% endif %}
 
   <!-- ═══════════════════════════════════════════════════════
        TOP BAR

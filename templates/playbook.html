@@ -23,8 +23,9 @@
         {% endfor %}
       </select>
     </label>
-    {% if not coach_readonly %}
-    <a class="btn btn-primary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create', team=selected_team) }}">+ New Play</a>
+    {% if not coach_readonly and audience_can_edit %}
+    <a class="btn btn-primary btn-sm" id="drawPlayBtn" href="{{ url_for('playbook.playbook_draw', team=selected_team) }}">Draw play</a>
+    <a class="btn btn-secondary btn-sm" id="newPlayBtn" href="{{ url_for('playbook.playbook_create', team=selected_team) }}">+ New Play</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
     {% endif %}
@@ -233,49 +234,66 @@
 
   <!-- Left: Court Canvas -->
   <div class="card" style="padding:12px;" data-frame="6.3">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        {% if view_mode != 'share' %}
-        <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Add Step</button>
-        <button class="btn btn-secondary btn-sm" onclick="duplicateStep()">Duplicate step</button>
-        <button class="btn btn-danger btn-sm" onclick="removeStep()">Delete this step</button>
-        <button class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo (Ctrl+Z)">↩ Undo</button>
-        <button class="btn btn-secondary btn-sm" onclick="redoStep()" title="Redo (Ctrl+Y)">↪ Redo</button>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="toolSelect" onchange="setTool(this.value)">
-          <option value="select">Select / Move</option>
-          <option value="dribble">Dribble</option>
+    <div style="display:none;" aria-hidden="true">
+      <button type="button" onclick="addStep()">+ Add Step</button>
+      <button type="button" onclick="duplicateStep()">Duplicate step</button>
+      <button type="button" onclick="removeStep()">Delete this step</button>
+      <button type="button" onclick="undoStep()">Undo</button>
+      <button type="button" onclick="redoStep()">Redo</button>
+      <select id="toolSelect" onchange="setTool(this.value)">
+        <option value="select" selected>Select / Move</option>
+        <option value="dribble">Dribble</option>
+        <option value="pass">Pass</option>
+        <option value="cut">Cut</option>
+        <option value="run">Run</option>
+        <option value="screen">Screen</option>
+      </select>
+      <select id="actionTimingSelect">
+        <option value="sync" selected>Sync</option>
+        <option value="optional">Optional</option>
+      </select>
+      <select id="playerTypeSelect" onchange="setPlayerType(this.value)">
+        <option value="offense" selected>Offense (O)</option>
+        <option value="defense">Defense (x)</option>
+      </select>
+      <select id="courtModeSelect" onchange="setCourtMode(this.value)">
+        <option value="half" selected>Half Court</option>
+        <option value="full">Full Court</option>
+      </select>
+      <button type="button" onclick="exportPng()">PNG</button>
+      <button type="button" onclick="exportVideo()">Video</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Previous</button>
+      <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
+      <span id="stepLabel" style="font-size:0.8rem;font-weight:600;margin:0 4px;">Step 1 / 1</span>
+      <button id="playBackBtn" class="btn btn-secondary btn-sm" onclick="rewindPlay()" title="Back up one action and stop">⏮ Back</button>
+      <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next step</button>
+      <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only">▶ Play step</button>
+      <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet. After a pause, continues from here.">▶ Play All</button>
+    </div>
+    <div id="movementListWrap" style="margin:0 0 8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;">
+      <div id="movementEditBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:0.75rem;font-weight:600;color:#374151;">Movements</span>
+        <select id="addMovementType" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Kind of movement to add" onchange="syncMovementAddMode()">
           <option value="pass">Pass</option>
-          <option value="cut">Cut</option>
+          <option value="dribble">Dribble</option>
+          <option value="cut" selected>Cut</option>
           <option value="run">Run</option>
           <option value="screen">Screen</option>
         </select>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="actionTimingSelect" title="Timing for next action drawn">
-          <option value="sync">Sync</option>
-          <option value="optional">Optional</option>
+        <select id="cutShapeSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Shape of a cut or screen" onchange="setArmedCutShape(this.value)">
+          <option value="straight" selected>Straight</option>
+          <option value="curve">Curve</option>
+          <option value="flex">Adjustable curve</option>
+          <option value="straight-curve">Straight then curve</option>
+          <option value="curve-straight">Curve then straight</option>
         </select>
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="playerTypeSelect" onchange="setPlayerType(this.value)">
-          <option value="offense">Offense (O)</option>
-          <option value="defense">Defense (x)</option>
-        </select>
-        <span class="text-muted" style="font-size:0.7rem;">Click a player to pause. Drag anyone, then Play to continue.</span>
-        {% endif %}
+        <button type="button" id="addMovementBtn" class="btn btn-secondary btn-sm" onclick="armAddMovement()">Add movement</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="saveStickyChoreography()" title="Keep these movements for the next time you open the play">Save</button>
+        <span id="movementAddHint" class="text-muted" style="font-size:0.68rem;">Cut or screen: an arrow appears. Drag its ends to the start and the spot.</span>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <select class="form-control" style="width:auto;font-size:0.75rem;" id="courtModeSelect"
-                onchange="setCourtMode(this.value)" title="Court size">
-          <option value="half" selected>Half Court</option>
-          <option value="full">Full Court</option>
-        </select>
-        <button class="btn btn-secondary btn-sm" onclick="exportPng()" title="Export as PNG">📷 PNG</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportVideo()" title="Record animation as video">🎬 Video</button>
-        <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Prev</button>
-        <span id="stepLabel" style="font-size:0.8rem;font-weight:600;">Step 1 / 1</span>
-        <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
-        <button id="playBackBtn" class="btn btn-secondary btn-sm" onclick="rewindPlay()" title="Back up one action and stop, so you can play it again">⏮ Back</button>
-        <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next beat</button>
-        <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only. Fix the actions, Save choreography, then Play All.">▶ Play step</button>
-        <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet, using saved fixes. After a pause, continues from here.">▶ Play All</button>
-      </div>
+      <div id="movementList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
     </div>
 
     <div id="sheetAlignBanner" role="status" aria-live="polite"
@@ -298,7 +316,7 @@
         </span>
       </div>
       <div id="choreographyHint" style="display:none;margin-top:6px;font-size:0.72rem;font-weight:500;opacity:0.9;">
-        Click a player or the ball to pause. Drag anyone to fix spacing. Play continues from here. Back rewinds one action.
+        Click anywhere on the court to pause. Drag a player, the ball, or an arrow, then release. Change pass, dribble, cut, or screen from the Arrow menu. Play continues from here. Back rewinds one action.
       </div>
     </div>
 
@@ -306,7 +324,27 @@
     <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
         <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;">Animated court</div>
-        <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label id="arrowEditBar" style="display:none;align-items:center;gap:4px;font-size:0.72rem;font-weight:600;color:#374151;">
+            Arrow
+            <select id="arrowKindSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Change this arrow" onchange="setSelectedArrowKind(this.value)">
+              <option value="pass">Pass</option>
+              <option value="dribble">Dribble</option>
+              <option value="cut">Cut</option>
+              <option value="run">Run</option>
+              <option value="screen">Screen</option>
+            </select>
+            <select id="arrowShapeSelect" class="form-control" style="width:auto;font-size:0.72rem;padding:2px 6px;" title="Path shape" onchange="setSelectedArrowShape(this.value)">
+              <option value="straight">Straight</option>
+              <option value="curve">Curve</option>
+              <option value="flex">Adjustable curve</option>
+              <option value="straight-curve">Straight then curve</option>
+              <option value="curve-straight">Curve then straight</option>
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedArrow()">Delete arrow</button>
+          </label>
+          <div id="sheetAnimHint" style="font-size:0.68rem;color:#9ca3af;"></div>
+        </div>
       </div>
       <svg id="courtSvg" width="100%" viewBox="0 0 500 470" style="display:block;cursor:crosshair;"
            xmlns="http://www.w3.org/2000/svg">
@@ -318,7 +356,7 @@
         <g id="playerLayer"></g>
       </svg>
       <!-- Discussion playbar: scrub sheets + beats under the animated court -->
-      <div id="playbar" class="playbook-playbar" role="group" aria-label="Play timeline">
+      <div id="playbar" class="playbook-playbar" role="group" aria-label="Play timeline" style="display:none;">
         <button type="button" id="playbarPrevBtn" class="playbook-playbar-btn" title="Previous beat / sheet"
                 onclick="playbarStep(-1)">⏮</button>
         <button type="button" id="playbarPlayBtn" class="playbook-playbar-btn playbook-playbar-play" title="Play from here"
@@ -420,7 +458,8 @@
       </div>
       {% endif %}
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        {% if editing_play and editing_play.id and view_mode != "share" %}
+        {% if editing_play and editing_play.id and view_mode != "share" and audience_can_edit %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('playbook.playbook_draw', play_id=editing_play.id) }}">Edit play</a>
         <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_edit', play_id=editing_play.id) }}">Edit</a>
         {% endif %}
         {% if view_mode != "share" %}
@@ -454,11 +493,6 @@
         {% else %}
         Sheet order/labels changed — click <strong>Save Play</strong> to keep them.
         {% endif %}
-      </div>
-      <div id="movementListWrap" style="margin-top:12px;">
-        <h5 style="font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Actions this step</h5>
-        <div id="movementList" style="display:flex;flex-direction:column;gap:4px;"></div>
-        <p class="text-muted" style="font-size:0.68rem;margin-top:6px;">Sync = runs with other actions · Optional = reads/decisions</p>
       </div>
     </div>
   </div>
@@ -592,6 +626,10 @@ let selectedPlayer = null;
 let choreographySelectedPid = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
+let courtPointerId = null;
+let selectedArrowIndex = null;
+let selectedArrowStep = 0;
+let arrowDrag = null;
 let currentTool = 'select';
 let currentPathStyle = 'straight';
 let currentPlayerType = 'offense';
@@ -669,8 +707,9 @@ const editingPlay = {{ editing_play|tojson if editing_play else 'null' }};
 const editingSteps = {{ editing_steps|tojson if editing_steps else '[]' }};
 const isReadOnly = {{ 'true' if view_mode in ('view', 'share') else 'false' }};
 const viewMode = {{ view_mode|tojson if view_mode is defined else '"editor"' }};
+const audienceCanEdit = {{ audience_can_edit|tojson if audience_can_edit is defined else 'true' }};
 function canFixAnimation() {
-  return viewMode !== 'share';
+  return audienceCanEdit && viewMode !== 'share';
 }
 let lastSyncedBallPid = 'o1';
 let pausedCourtPose = null;
@@ -754,6 +793,8 @@ function renderCourt() {
   } else {
     layer.setAttribute('viewBox', '0 0 500 940');
   }
+  ensureCourtHitPad();
+  fitCourtToViewport();
 
   // Sheet slideshow: white plate only — play-sheet image provides court + lines.
   // Animation view keeps full SVG court (underlay not composited).
@@ -859,6 +900,36 @@ function setCourtMode(mode) {
   renderCourt();
   renderStep();
 }
+
+/** Full-court catcher so a click on empty floor hits the play window. */
+function ensureCourtHitPad() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg) return;
+  let pad = document.getElementById('courtHitPad');
+  if (!pad) {
+    pad = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    pad.setAttribute('id', 'courtHitPad');
+    pad.setAttribute('x', '0');
+    pad.setAttribute('y', '0');
+    pad.setAttribute('fill', '#fff');
+    pad.setAttribute('stroke', 'none');
+    svg.insertBefore(pad, svg.firstChild);
+  }
+  pad.setAttribute('width', '500');
+  pad.setAttribute('height', String(isFullCourt ? 940 : 470));
+}
+
+/** The court uses the full editor column. A short window scrolls; it does not shrink the play. */
+function fitCourtToViewport() {
+  const svg = document.getElementById('courtSvg');
+  if (!svg) return;
+  svg.style.width = '100%';
+  svg.style.maxWidth = '100%';
+  svg.style.height = 'auto';
+  svg.style.display = 'block';
+  svg.style.margin = '0';
+}
+window.addEventListener('resize', fitCourtToViewport);
 
 function toggleCourt() {
   setCourtMode(isFullCourt ? 'half' : 'full');
@@ -1082,7 +1153,7 @@ function renderStep() {
   if (!isAnimating) {
     arrowLayer.innerHTML = '';
     // Opt-in slideshow: ink on the page is the truth — skip SVG arrow overlays.
-    if (!useSheetSlideshowMode() && !renderSheetInk(currentStep)) renderArrows(step);
+    if (!useSheetSlideshowMode() && !(viewMode === 'view' && !playHasSheets() && stepHasDrawnMovements(step)) && !renderSheetInk(currentStep)) renderArrows(step);
   }
 
   if (useSheetSlideshowMode()) {
@@ -1109,6 +1180,7 @@ function renderStep() {
     renderStepImages();
     updateMovementList();
   }
+  requestAnimationFrame(fitCourtToViewport);
 }
 
 function syncPlayerTokens(positions, ballPid) {
@@ -1167,6 +1239,11 @@ function renderStepImages() {
   const currentImg = document.getElementById('stepSourceImage');
   const container = document.getElementById('stepImages');
   const list = document.getElementById('stepImagesList');
+  if (viewMode === 'view' || viewMode === 'share') {
+    if (currentWrap) currentWrap.style.display = 'none';
+    if (container) container.style.display = 'none';
+    return;
+  }
   const step = steps[currentStep];
 
   if (currentWrap && currentImg) {
@@ -1217,7 +1294,8 @@ function renderStepImages() {
       delBtn.style.cssText = 'font-size:0.7rem;padding:2px 6px;';
       delBtn.onclick = (e) => {
         e.stopPropagation();
-        removeStep(stepIndex);
+        currentStep = idx;
+        removeStep();
       };
       caption.appendChild(delBtn);
     }
@@ -1286,7 +1364,7 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   // View mode blocks normal editor tools, but sheet choreography review must drag.
   if (!isReadOnly || canEditChoreo) {
     g.style.cursor = 'grab';
-    g.addEventListener('mousedown', (e) => startDrag(e, pid));
+    g.addEventListener('pointerdown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
     if (type === 'offense' && canFixAnimation()) {
       g.addEventListener('dblclick', (e) => {
@@ -1354,7 +1432,7 @@ function renderBallIndicator(parent, pos) {
     hit.setAttribute('r', '16');
     hit.setAttribute('fill', 'transparent');
     g.insertBefore(hit, g.firstChild);
-    g.addEventListener('mousedown', (e) => startDrag(e, 'ball'));
+    g.addEventListener('pointerdown', (e) => startDrag(e, 'ball'));
     g.addEventListener('touchstart', (e) => startDragTouch(e, 'ball'), { passive: false });
   }
   parent.appendChild(g);
@@ -1401,6 +1479,7 @@ function appendScreenBar(layer, from, to) {
   bar.setAttribute('stroke-width', '4');
   bar.setAttribute('stroke-linecap', 'round');
   bar.setAttribute('class', 'screen-marker');
+  bar.style.pointerEvents = 'none';
   layer.appendChild(bar);
 }
 
@@ -1415,29 +1494,73 @@ function appendDribbleBalls(layer, from, to) {
     ball.setAttribute('fill', '#f59e0b');
     ball.setAttribute('stroke', '#111827');
     ball.setAttribute('stroke-width', '1');
+    ball.style.pointerEvents = 'none';
     layer.appendChild(ball);
   }
 }
 
+function inkPathActions(ink) {
+  const paths = (ink && ink.paths) || {};
+  const marks = (ink && ink.marks) || {};
+  const actions = [];
+  Object.keys(paths).forEach((pid) => {
+    if (!/^o[1-5]$/.test(pid)) return;
+    const pts = paths[pid];
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    const mark = marks[pid] || 'cut';
+    const kind = (mark === 'pass' || mark === 'dribble' || mark === 'screen' || mark === 'cut') ? mark : 'cut';
+    actions.push({
+      kind,
+      pid: kind === 'pass' ? null : pid,
+      fromPid: pid,
+      toPid: null,
+      points: pts.map((p) => ({ x: p.x, y: p.y })),
+      seq: actions.length + 1,
+      pathKey: pid,
+    });
+  });
+  return actions;
+}
+
+function materializeInkActions(stepIndex) {
+  const editable = ensureEditableInk(stepIndex);
+  const ink = editable || sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
+  if (!ink) return [];
+  if (Array.isArray(ink.actions) && ink.actions.length) return ink.actions;
+  const built = inkPathActions(ink);
+  if (!built.length || !editable) return built;
+  editable.actions = built;
+  return editable.actions;
+}
+
 function renderSheetInk(stepIndex) {
-  const ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
-  const actions = (ink && ink.actions) || [];
+  const actions = materializeInkActions(stepIndex);
   if (!actions.length) return false;
-  const paths = actions.map((act) => {
-    const pts = act.points || [];
+  const moves = ((steps[stepIndex] && steps[stepIndex].movements) || []).filter((m) => m && !m._meta);
+  const paths = actions.map((act, i) => {
+    const move = moves[i];
+    const pts = (move && move.points && move.points.length >= 2) ? move.points : (act.points || []);
     if (pts.length < 2) return null;
-    const isPass = act.kind === 'pass';
+    const kind = (move && move.type) || act.kind || 'cut';
+    const isPass = kind === 'pass';
+    const shape = act.shape || (move && move.shape) || null;
+    const anchors = act.anchors || (move && move.anchors) || null;
+    const bend = act.bend || (move && move.bend) || null;
     return {
-      pid: isPass ? null : act.pid,
+      pid: isPass ? null : (act.pid || (move && move.from)),
       ballOnly: isPass,
       from: pts[0],
       to: pts[pts.length - 1],
       points: pts,
-      type: act.kind || 'cut',
+      type: kind,
+      shape,
+      anchors,
+      bend,
+      actionIndex: i,
     };
   }).filter(Boolean);
   if (!paths.length) return false;
-  drawTravelPaths(paths, null);
+  drawTravelPaths(paths, null, { editable: true });
   return true;
 }
 
@@ -1448,11 +1571,14 @@ function renderArrows(step) {
   if (!step.movements) return;
   const pos = positionsThrough(Math.max(0, steps.indexOf(step)));
 
+  let arrowIdx = 0;
   step.movements.forEach((m) => {
     if (m && m._meta) return;
-    const from = pos[m.from] || step.positions[m.from];
-    const to = pos[m.to] || step.positions[m.to];
+    const from = (m.points && m.points[0]) || pos[m.from] || step.positions[m.from];
+    const to = (m.points && m.points[m.points.length - 1]) || pos[m.to] || step.positions[m.to];
     if (!from || !to) return;
+    const idx = arrowIdx;
+    arrowIdx += 1;
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     let d = '';
@@ -1488,13 +1614,20 @@ function renderArrows(step) {
 
     if (isOptional) path.setAttribute('opacity', '0.6');
     path.setAttribute('d', d);
+    path.style.pointerEvents = 'none';
     arrowLayer.appendChild(path);
+    if (!isPlaybackActive() && !isAnimating && canFixAnimation()) {
+      appendArrowHit(arrowLayer, idx, from, to);
+    }
 
     if (m.type === 'dribble') {
       appendDribbleBalls(arrowLayer, from, to);
     }
     if (m.type === 'screen') {
       appendScreenBar(arrowLayer, from, to);
+    }
+    if (selectedArrowIndex === idx && selectedArrowStep === currentStep) {
+      appendArrowHandles(arrowLayer, idx, from, to);
     }
 
     if (isOptional && ctrl) {
@@ -1521,6 +1654,7 @@ function renderArrows(step) {
   });
 
   addArrowheadMarkers();
+  showArrowEditor();
 }
 
 function addArrowheadMarkers() {
@@ -1545,8 +1679,9 @@ function makeArrowhead(id, color) {
   marker.setAttribute('viewBox', '0 0 10 10');
   marker.setAttribute('refX', '9');
   marker.setAttribute('refY', '5');
-  marker.setAttribute('markerWidth', '8');
-  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  marker.setAttribute('markerWidth', '16');
+  marker.setAttribute('markerHeight', '14');
   marker.setAttribute('orient', 'auto');
   const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
   polygon.setAttribute('points', '0 0, 10 5, 0 10');
@@ -1587,6 +1722,13 @@ function rememberSpacing(pid, pos) {
 }
 
 function beginTokenDrag(pid, clientX, clientY, event) {
+  if (takeAddMovementClick(pid)) {
+    if (event) {
+      if (event.preventDefault) event.preventDefault();
+      if (event.stopPropagation) event.stopPropagation();
+    }
+    return;
+  }
   const paused = isPlaybackActive() || isAnimating;
   if (paused || suppressToolClick) {
     suppressToolClick = false;
@@ -1622,6 +1764,7 @@ function beginTokenDrag(pid, clientX, clientY, event) {
     if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   }
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  if (event && event.pointerId != null) holdCourtPointer(event);
   if (event && event.preventDefault) event.preventDefault();
 }
 
@@ -1722,6 +1865,7 @@ function finishTokenDrag() {
       );
     }
   }
+  if (steps[currentStep]) steps[currentStep].coachOrder = true;
   if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
   if (pausedCourtPose) {
     setSheetAnimHint('Spacing updated. Press Play to continue, or Back to watch this action again.');
@@ -1731,18 +1875,48 @@ function finishTokenDrag() {
   setSheetAnimHint('Spacing updated. Save choreography, then Play step or Play All.');
 }
 
+function holdCourtPointer(e) {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !e || e.pointerId == null) return;
+  courtPointerId = e.pointerId;
+  try { svg.setPointerCapture(e.pointerId); } catch (err) { /* already captured */ }
+}
+
+document.addEventListener('pointermove', (e) => {
+  if (!isDragging && !arrowDrag) return;
+  applyArrowDrag(e.clientX, e.clientY);
+  applyTokenDrag(e.clientX, e.clientY);
+});
+
 document.addEventListener('mousemove', (e) => {
+  if (!e.buttons || (!isDragging && !arrowDrag)) return;
+  applyArrowDrag(e.clientX, e.clientY);
   applyTokenDrag(e.clientX, e.clientY);
 });
 
 document.addEventListener('touchmove', (e) => {
+  if (arrowDrag && e.touches.length === 1) {
+    applyArrowDrag(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+    return;
+  }
   if (!isDragging || !selectedPlayer || e.touches.length !== 1) return;
   applyTokenDrag(e.touches[0].clientX, e.touches[0].clientY);
   e.preventDefault();
 }, { passive: false });
 
-document.addEventListener('mouseup', () => { finishTokenDrag(); });
-document.addEventListener('touchend', () => { finishTokenDrag(); });
+function releaseCourtPointer() {
+  const svg = document.getElementById('courtSvg');
+  if (svg && courtPointerId != null && svg.releasePointerCapture) {
+    try { svg.releasePointerCapture(courtPointerId); } catch (err) { /* already released */ }
+  }
+  courtPointerId = null;
+  finishArrowDrag();
+  finishTokenDrag();
+}
+window.addEventListener('pointerup', releaseCourtPointer);
+window.addEventListener('mouseup', releaseCourtPointer);
+window.addEventListener('touchend', releaseCourtPointer);
 
 // ── Tools (arrows) ───────────────────────────────────────
 function handleToolClick(e, pid) {
@@ -1798,24 +1972,38 @@ function setPlayerType(type) {
 }
 
 // ── Undo / Redo ──────────────────────────────────────────
+function captureEditState() {
+  return JSON.stringify({ steps, sessionInk: sheetSessionInkByStep });
+}
+
+function restoreEditState(raw) {
+  const data = JSON.parse(raw);
+  if (Array.isArray(data)) {
+    steps = data;
+    return;
+  }
+  steps = data.steps;
+  if (Array.isArray(data.sessionInk)) sheetSessionInkByStep = data.sessionInk;
+}
+
 function saveUndoState() {
-  undoStack.push(JSON.stringify(steps));
+  undoStack.push(captureEditState());
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   redoStack = [];
 }
 
 function undoStep() {
   if (undoStack.length === 0) return;
-  redoStack.push(JSON.stringify(steps));
-  steps = JSON.parse(undoStack.pop());
+  redoStack.push(captureEditState());
+  restoreEditState(undoStack.pop());
   renderStep();
   updateStepList();
 }
 
 function redoStep() {
   if (redoStack.length === 0) return;
-  undoStack.push(JSON.stringify(steps));
-  steps = JSON.parse(redoStack.pop());
+  undoStack.push(captureEditState());
+  restoreEditState(redoStack.pop());
   renderStep();
   updateStepList();
 }
@@ -1940,7 +2128,10 @@ function beatToMovement(beat) {
   const from = p.fromPid || p.pid || null;
   const to = p.toPid || p.pid || from;
   if (!from) return null;
-  return { from, to, type, timing: 'sync' };
+  const points = (p.points && p.points.length >= 2)
+    ? p.points.map((pt) => ({ x: pt.x, y: pt.y }))
+    : null;
+  return { from, to, type, timing: 'sync', points };
 }
 
 function snapshotCourtPose() {
@@ -1973,7 +2164,11 @@ function pauseForEdit() {
   if (!(isPlaybackActive() || isAnimating)) return;
   stopPlayback({ reset: false });
   if (pausedCourtPose) pausedCourtPose.beatIndex = resumeBeat;
-  setSheetAnimHint('Paused. Move any player or the ball. Play continues from here. Back rewinds one action.');
+  if (!useSheetSlideshowMode() && !renderSheetInk(currentStep)) {
+    const step = steps[currentStep];
+    if (step) renderArrows(step);
+  }
+  setSheetAnimHint('Paused. Drag a player, the ball, or an arrow, then release. Play continues from here.');
 }
 
 function installCourtPause() {
@@ -1981,14 +2176,24 @@ function installCourtPause() {
   if (!svg || svg.dataset.pauseBound === '1') return;
   svg.dataset.pauseBound = '1';
   svg.addEventListener('pointerdown', (e) => {
-    const el = e.target && e.target.closest
-      ? e.target.closest('.player-token, .ball-indicator')
-      : null;
-    if (!el) return;
     if (!(isPlaybackActive() || isAnimating)) return;
     suppressToolClick = true;
     pauseForEdit();
+    if (e.pointerId != null) {
+      courtPointerId = e.pointerId;
+      try { svg.setPointerCapture(e.pointerId); } catch (err) { /* svg may already own it */ }
+    }
   }, true);
+  svg.addEventListener('pointerdown', (e) => {
+    if (arrowDrag) return;
+    const el = e.target && e.target.closest
+      ? e.target.closest('.arrow-hit, .arrow-handle, .player-token, .ball-indicator')
+      : null;
+    if (el || selectedArrowIndex == null) return;
+    selectedArrowIndex = null;
+    showArrowEditor();
+    renderStep();
+  });
 }
 
 function markAnimationOrderDirty() {
@@ -2000,13 +2205,18 @@ function markAnimationOrderDirty() {
 
 function reorderMovement(stepIndex, fromIdx, toIdx) {
   const step = steps[stepIndex];
-  if (!step || !canFixAnimation()) return;
-  const list = (step.movements || []).filter((m) => !(m && m._meta));
-  if (fromIdx < 0 || toIdx < 0 || fromIdx >= list.length || toIdx >= list.length) return;
+  if (!step || !canFixAnimation() || stepIndex !== currentStep) return;
   saveUndoState();
+  const ink = ensureEditableInk(stepIndex);
+  const list = alignMovementsToInk();
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= list.length || toIdx >= list.length) return;
   const [item] = list.splice(fromIdx, 1);
   list.splice(toIdx, 0, item);
   step.movements = list;
+  if (ink && Array.isArray(ink.actions) && fromIdx < ink.actions.length && toIdx < ink.actions.length) {
+    const [act] = ink.actions.splice(fromIdx, 1);
+    ink.actions.splice(toIdx, 0, act);
+  }
   step.coachOrder = true;
   markAnimationOrderDirty();
   renderStep();
@@ -2036,16 +2246,338 @@ async function seedMovementsFromCurrentBeats(stepIndex) {
   }
 }
 
+function movementRows(stepIndex) {
+  const step = steps[stepIndex];
+  const ink = sheetSessionInkByStep[stepIndex] || sheetStickyInkByStep[stepIndex];
+  const actions = (ink && ink.actions) || [];
+  const moves = ((step && step.movements) || []).filter((m) => m && !m._meta);
+  const count = Math.max(actions.length, moves.length);
+  const rows = [];
+  for (let i = 0; i < count; i += 1) {
+    const move = moves[i] || {};
+    const act = actions[i] || {};
+    rows.push({
+      from: move.from || act.fromPid || act.pid || '',
+      to: move.to || act.toPid || '',
+      type: move.type || act.kind || 'cut',
+      timing: move.timing || 'sync',
+    });
+  }
+  return rows;
+}
+
+function alignMovementsToInk() {
+  const step = steps[currentStep];
+  if (!step) return [];
+  const ink = ensureEditableInk(currentStep);
+  const actions = (ink && ink.actions) || [];
+  const existing = (step.movements || []).filter((m) => m && !m._meta);
+  if (!actions.length) return existing;
+  const moves = actions.map((act, i) => {
+    const prev = existing[i] || {};
+    const pts = (act.points && act.points.length >= 2)
+      ? act.points.map((p) => ({ x: p.x, y: p.y }))
+      : (prev.points || null);
+    return {
+      from: prev.from || act.fromPid || act.pid || null,
+      to: prev.to || act.toPid || null,
+      type: prev.type || act.kind || 'cut',
+      timing: prev.timing || 'sync',
+      points: pts,
+      shape: act.shape || prev.shape || null,
+      anchors: act.anchors || prev.anchors || null,
+      bend: act.bend || prev.bend || null,
+    };
+  });
+  while (moves.length < existing.length) moves.push(existing[moves.length]);
+  step.movements = moves;
+  return moves;
+}
+
+let addMovementArmed = false;
+let addMovementFrom = null;
+
+function movementGoesToSpot(type) {
+  return type === 'cut' || type === 'screen' || type === 'run';
+}
+
+function syncMovementAddMode() {
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  const shape = document.getElementById('cutShapeSelect');
+  const hint = document.getElementById('movementAddHint');
+  const spot = movementGoesToSpot(type);
+  if (shape) shape.style.display = spot ? '' : 'none';
+  if (hint) {
+    hint.textContent = spot
+      ? 'An arrow appears. Drag the ends to the start and the spot. Pick straight, curve, adjustable curve, straight then curve, or curve then straight.'
+      : 'Pass or dribble: click Add movement, then the player who starts and the player it goes to.';
+  }
+}
+
+function setArmedCutShape(shape) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  setSelectedArrowShape(shape);
+}
+
+function bendFromAmt(a, b, amt) {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: mx + (-dy / len) * len * amt, y: my + (dx / len) * len * amt };
+}
+
+function sampleQuad(a, c, b, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i += 1) {
+    const t = i / n;
+    const u = 1 - t;
+    pts.push({
+      x: u * u * a.x + 2 * u * t * c.x + t * t * b.x,
+      y: u * u * a.y + 2 * u * t * c.y + t * t * b.y,
+    });
+  }
+  return pts;
+}
+
+function curvedSegment(shape, anchors) {
+  if (!anchors || anchors.length < 2) return null;
+  if (shape === 'straight-curve' && anchors.length >= 3) return [anchors[1], anchors[2]];
+  if (shape === 'curve-straight' && anchors.length >= 3) return [anchors[0], anchors[1]];
+  return [anchors[0], anchors[anchors.length - 1]];
+}
+
+function refreshShaped(act) {
+  if (!act || !act.shape || !act.anchors || act.anchors.length < 2) return;
+  const shape = act.shape;
+  const A = act.anchors;
+  if (shape === 'straight') {
+    act.bend = null;
+    act.points = A.map((p) => ({ x: p.x, y: p.y }));
+    return;
+  }
+  const seg = curvedSegment(shape, A);
+  if (!seg || !seg[0] || !seg[1]) return;
+  if (!act.bend) act.bend = bendFromAmt(seg[0], seg[1], shape === 'flex' ? 0.42 : 0.26);
+  if (shape === 'curve' || shape === 'flex') {
+    act.points = sampleQuad(A[0], act.bend, A[1], 14);
+  } else if (shape === 'straight-curve' && A[2]) {
+    const curve = sampleQuad(A[1], act.bend, A[2], 10);
+    act.points = [{ x: A[0].x, y: A[0].y }, ...curve.slice(1)];
+  } else if (shape === 'curve-straight' && A[2]) {
+    const curve = sampleQuad(A[0], act.bend, A[1], 10);
+    act.points = [...curve, { x: A[2].x, y: A[2].y }];
+  }
+}
+
+function shapedPathD(shape, anchors, bend) {
+  const A = anchors || [];
+  if (A.length < 2) return null;
+  if (shape === 'straight') return `M ${A[0].x} ${A[0].y} L ${A[A.length - 1].x} ${A[A.length - 1].y}`;
+  if ((shape === 'curve' || shape === 'flex') && bend && A[1]) {
+    return `M ${A[0].x} ${A[0].y} Q ${bend.x} ${bend.y} ${A[1].x} ${A[1].y}`;
+  }
+  if (shape === 'straight-curve' && bend && A[2]) {
+    return `M ${A[0].x} ${A[0].y} L ${A[1].x} ${A[1].y} Q ${bend.x} ${bend.y} ${A[2].x} ${A[2].y}`;
+  }
+  if (shape === 'curve-straight' && bend && A[2]) {
+    return `M ${A[0].x} ${A[0].y} Q ${bend.x} ${bend.y} ${A[1].x} ${A[1].y} L ${A[2].x} ${A[2].y}`;
+  }
+  return null;
+}
+
+function nearestOffense(pt, maxDist) {
+  let best = null;
+  let bestD = maxDist == null ? 42 : maxDist;
+  for (let i = 1; i <= 5; i += 1) {
+    const pid = 'o' + i;
+    const p = visualTokenPos(pid);
+    if (!p) continue;
+    const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+    if (d < bestD) {
+      bestD = d;
+      best = pid;
+    }
+  }
+  return best;
+}
+
+function armAddMovement() {
+  if (!canFixAnimation()) return;
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  if (movementGoesToSpot(type)) {
+    addMovementArmed = false;
+    addMovementFrom = null;
+    const shape = document.getElementById('cutShapeSelect')?.value || 'straight';
+    commitLocationArrow(type, shape);
+    return;
+  }
+  addMovementArmed = true;
+  addMovementFrom = null;
+  const btn = document.getElementById('addMovementBtn');
+  if (btn) btn.textContent = 'Click start player…';
+  setSheetAnimHint('Click the player who starts the pass or dribble, then the player it goes to.');
+}
+
+function takeAddMovementClick(pid) {
+  if (!addMovementArmed || !pid || pid === 'ball' || String(pid).startsWith('d')) return false;
+  if (!addMovementFrom) {
+    addMovementFrom = pid;
+    const btn = document.getElementById('addMovementBtn');
+    if (btn) btn.textContent = 'Click end player…';
+    setSheetAnimHint('Now click the player this movement goes to.');
+    return true;
+  }
+  if (addMovementFrom === pid) return true;
+  const type = document.getElementById('addMovementType')?.value || 'cut';
+  commitAddedMovement(addMovementFrom, pid, type);
+  addMovementArmed = false;
+  addMovementFrom = null;
+  const btn = document.getElementById('addMovementBtn');
+  if (btn) btn.textContent = 'Add movement';
+  return true;
+}
+
+function commitLocationArrow(type, shape) {
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  materializeInkActions(currentStep);
+  let ink = ensureEditableInk(currentStep);
+  if (!ink) {
+    ink = { actions: [], paths: {}, marks: {}, passes: [] };
+    sheetSessionInkByStep[currentStep] = ink;
+  }
+  if (!Array.isArray(ink.actions)) ink.actions = [];
+  const selected = choreographySelectedPid && String(choreographySelectedPid).startsWith('o')
+    ? visualTokenPos(choreographySelectedPid)
+    : null;
+  const n = ink.actions.length;
+  const start = selected
+    ? { x: selected.x, y: selected.y }
+    : { x: 170 + (n % 3) * 36, y: 310 };
+  const end = { x: start.x + 20, y: Math.max(70, start.y - 120) };
+  let anchors;
+  if (shape === 'straight-curve' || shape === 'curve-straight') {
+    anchors = [start, { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, end];
+  } else {
+    anchors = [start, end];
+  }
+  const act = {
+    kind: type === 'run' ? 'cut' : type,
+    fromPid: selected ? choreographySelectedPid : null,
+    toPid: null,
+    pid: type === 'pass' ? null : (selected ? choreographySelectedPid : null),
+    shape,
+    anchors,
+    bend: null,
+    points: [],
+    seq: ink.actions.length + 1,
+  };
+  refreshShaped(act);
+  ink.actions.push(act);
+  step.movements = alignMovementsToInk();
+  const added = step.movements[step.movements.length - 1];
+  if (added) {
+    added.type = type;
+    added.shape = act.shape;
+    added.anchors = act.anchors;
+    added.bend = act.bend;
+    added.points = act.points;
+  }
+  step.coachOrder = true;
+  selectedArrowIndex = ink.actions.length - 1;
+  selectedArrowStep = currentStep;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Drag the white dots for the start and the spot. Drag the curve dot to bend it. The square is the joint of a two-part cut.');
+}
+
+function commitAddedMovement(fromPid, toPid, type) {
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  const fromPos = visualTokenPos(fromPid);
+  const toPos = visualTokenPos(toPid);
+  const points = (fromPos && toPos)
+    ? [{ x: fromPos.x, y: fromPos.y }, { x: toPos.x, y: toPos.y }]
+    : null;
+  materializeInkActions(currentStep);
+  const ink = ensureEditableInk(currentStep);
+  if (ink) {
+    if (!Array.isArray(ink.actions)) ink.actions = [];
+    ink.actions.push({
+      kind: type === 'run' ? 'cut' : type,
+      fromPid,
+      toPid,
+      pid: type === 'pass' ? null : fromPid,
+      points: points ? points.map((p) => ({ x: p.x, y: p.y })) : [],
+      seq: ink.actions.length + 1,
+    });
+    step.movements = alignMovementsToInk();
+    const added = step.movements[step.movements.length - 1];
+    if (added) added.type = type;
+  } else {
+    const moves = (step.movements || []).filter((m) => m && !m._meta);
+    moves.push({
+      from: fromPid,
+      to: toPid,
+      type,
+      timing: 'sync',
+      points: points ? points.map((p) => ({ x: p.x, y: p.y })) : null,
+    });
+    step.movements = moves;
+  }
+  step.coachOrder = true;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Movement added. It plays after the others on this sheet.');
+}
+
+function deleteMovement(idx) {
+  if (!canFixAnimation()) return;
+  const step = steps[currentStep];
+  if (!step) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const doomed = ink && ink.actions && ink.actions[idx];
+  if (doomed && doomed.pathKey && ink.paths) delete ink.paths[doomed.pathKey];
+  if (doomed && doomed.pathKey && ink.marks) delete ink.marks[doomed.pathKey];
+  if (ink && Array.isArray(ink.actions) && idx < ink.actions.length) ink.actions.splice(idx, 1);
+  const moves = (step.movements || []).filter((m) => m && !m._meta);
+  if (idx < moves.length) moves.splice(idx, 1);
+  step.movements = moves;
+  step.coachOrder = true;
+  if (selectedArrowIndex === idx) selectedArrowIndex = null;
+  else if (selectedArrowIndex != null && selectedArrowIndex > idx) selectedArrowIndex -= 1;
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow removed.');
+}
+
+function deleteSelectedArrow() {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  deleteMovement(selectedArrowIndex);
+}
+
 function updateMovementList() {
   const list = document.getElementById('movementList');
   const wrap = document.getElementById('movementListWrap');
   if (!list || !wrap) return;
+  if (viewMode === 'view' && !playHasSheets()) {
+    wrap.style.display = 'none';
+    return;
+  }
   const step = steps[currentStep];
-  const movements = (step?.movements || []).filter((m) => !(m && m._meta));
+  const movements = movementRows(currentStep);
+  const editBar = document.getElementById('movementEditBar');
+  if (editBar) editBar.style.display = canFixAnimation() ? 'flex' : 'none';
+  syncMovementAddMode();
   wrap.style.display = canFixAnimation() || movements.length ? 'block' : 'none';
   if (!movements.length) {
     list.innerHTML = canFixAnimation()
-      ? '<div class="text-muted" style="font-size:0.75rem;">No actions yet — Play step, then change type and order here. Save choreography before Play All.</div>'
+      ? '<div class="text-muted" style="font-size:0.75rem;">No arrows on this sheet yet.</div>'
       : '';
     return;
   }
@@ -2053,11 +2585,16 @@ function updateMovementList() {
   movements.forEach((m, idx) => {
     const row = document.createElement('div');
     row.className = 'movement-item';
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#f9fafb;';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 6px;border-radius:6px;background:#fff;border:1px solid #e5e7eb;';
+    if (selectedArrowIndex === idx && selectedArrowStep === currentStep) {
+      row.style.background = '#dbeafe';
+    }
 
     const label = document.createElement('span');
     label.style.flex = '1';
-    label.textContent = `${idx + 1}. ${playerShortId(m.from)} → ${playerShortId(m.to)}`;
+    label.textContent = m.to
+      ? `${idx + 1}. ${playerShortId(m.from)} → ${playerShortId(m.to)}`
+      : `${idx + 1}. ${playerShortId(m.from)}`;
 
     if (!canFixAnimation()) {
       const badge = document.createElement('span');
@@ -2082,9 +2619,11 @@ function updateMovementList() {
     });
     typeSelect.onchange = () => {
       saveUndoState();
-      m.type = typeSelect.value;
+      const moves = alignMovementsToInk();
+      if (moves[idx]) moves[idx].type = typeSelect.value;
+      step.movements = moves;
       step.coachOrder = true;
-      const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+      const ink = ensureEditableInk(currentStep);
       if (ink && ink.actions && ink.actions[idx]) {
         ink.actions[idx].kind = typeSelect.value === 'run' ? 'cut' : typeSelect.value;
       }
@@ -2092,61 +2631,16 @@ function updateMovementList() {
       renderStep();
     };
 
-    const up = document.createElement('button');
-    up.type = 'button';
-    up.className = 'btn btn-secondary btn-sm';
-    up.textContent = '▲';
-    up.title = 'Play this earlier';
-    up.disabled = idx === 0;
-    up.style.cssText = 'padding:0 6px;line-height:1.2;';
-    up.onclick = () => reorderMovement(currentStep, idx, idx - 1);
-
-    const down = document.createElement('button');
-    down.type = 'button';
-    down.className = 'btn btn-secondary btn-sm';
-    down.textContent = '▼';
-    down.title = 'Play this later';
-    down.disabled = idx === movements.length - 1;
-    down.style.cssText = 'padding:0 6px;line-height:1.2;';
-    down.onclick = () => reorderMovement(currentStep, idx, idx + 1);
-
-    const timingSelect = document.createElement('select');
-    timingSelect.className = 'form-control';
-    timingSelect.style.cssText = 'width:auto;font-size:0.72rem;padding:2px 6px;';
-    ['sync', 'optional'].forEach((value) => {
-      const opt = document.createElement('option');
-      opt.value = value;
-      opt.textContent = value === 'sync' ? 'Sync' : 'Optional';
-      if ((m.timing || 'sync') === value) opt.selected = true;
-      timingSelect.appendChild(opt);
-    });
-    timingSelect.onchange = () => {
-      saveUndoState();
-      m.timing = timingSelect.value;
-      step.coachOrder = true;
-      markAnimationOrderDirty();
-      renderStep();
-    };
-
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn btn-danger btn-sm';
-    removeBtn.textContent = '×';
-    removeBtn.title = 'Remove this action';
+    removeBtn.textContent = 'Delete';
+    removeBtn.title = 'Delete this arrow';
     removeBtn.style.cssText = 'padding:0 6px;line-height:1.2;';
-    removeBtn.onclick = () => {
-      saveUndoState();
-      step.movements = movements.filter((_, i) => i !== idx);
-      step.coachOrder = true;
-      markAnimationOrderDirty();
-      renderStep();
-    };
+    removeBtn.onclick = () => deleteMovement(idx);
 
     row.appendChild(label);
     row.appendChild(typeSelect);
-    row.appendChild(up);
-    row.appendChild(down);
-    row.appendChild(timingSelect);
     row.appendChild(removeBtn);
     list.appendChild(row);
   });
@@ -2454,8 +2948,7 @@ function updateChoreographyChrome() {
 }
 
 function viewModeAllowsChoreoEdit() {
-  // View + editor can correct spots; public share links stay read-only.
-  return viewMode !== 'share';
+  return audienceCanEdit && viewMode !== 'share';
 }
 
 function canEditSheetChoreography() {
@@ -2671,6 +3164,7 @@ function setSheetAlignStatus(state, detail) {
     text.textContent = detail || 'Sheet align failed — Play All may be inaccurate.';
     sheetAlignReady = true; // allow attempt; tokens may be sparse
   }
+  banner.style.display = 'none';
   setPlayAllButton(playAllRunning);
   updatePlaybarUI();
   updateChoreographyChrome();
@@ -2808,10 +3302,12 @@ function applyStickyChoreographyDoc(doc) {
       || stickySteps[idx]
       || null;
     if (!match) return;
-    if (Array.isArray(match.movements) && match.movements.length) {
+    if (match.coachOrder) {
+      step.coachOrder = true;
+      step.movements = Array.isArray(match.movements) ? match.movements.slice() : [];
+    } else if (Array.isArray(match.movements) && match.movements.length) {
       step.movements = match.movements.slice();
     }
-    if (match.coachOrder) step.coachOrder = true;
   });
   sheetSessionInkByStep = sheetStickyInkByStep.map((ink) => (ink ? {
     paths: ink.paths || {},
@@ -2821,7 +3317,8 @@ function applyStickyChoreographyDoc(doc) {
   } : null));
   sheetUsingStickyChoreography = true;
   choreographyDirty = false;
-  return sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length);
+  return sheetAlignByStep.some((a) => a.positions && Object.keys(a.positions).length)
+    || steps.some((step) => step && step.coachOrder);
 }
 
 function buildChoreographyPayload(source) {
@@ -2834,24 +3331,35 @@ function buildChoreographyPayload(source) {
       court_frac: align.court_frac || null,
       positions: align.positions || {},
     };
-    if (ink && (ink.paths || ink.marks || ink.passes)) {
+    const moves = (step.movements || []).filter((m) => m && !m._meta);
+    if (step.coachOrder || (ink && (ink.paths || ink.marks || ink.passes || (ink.actions && ink.actions.length)))) {
+      const owned = ink || { paths: {}, marks: {}, passes: [], actions: [] };
       entry.ink = {
-        paths: ink.paths || {},
-        marks: ink.marks || {},
-        passes: ink.passes || [],
-        actions: ink.actions || [],
+        paths: owned.paths || {},
+        marks: owned.marks || {},
+        passes: owned.passes || [],
+        actions: owned.actions || [],
       };
     }
-    const moves = (step.movements || []).filter((m) => m && !m._meta);
     if (moves.length) {
-      entry.movements = moves.map((m) => ({
-        from: m.from,
-        to: m.to,
-        type: m.type || 'cut',
-        timing: m.timing || 'sync',
-      }));
+      entry.movements = moves.map((m) => {
+        const row = {
+          from: m.from || null,
+          to: m.to || null,
+          type: m.type || 'cut',
+          timing: m.timing || 'sync',
+        };
+        if (m.points && m.points.length >= 2) row.points = m.points;
+        if (m.anchors && m.anchors.length >= 2) row.anchors = m.anchors;
+        if (m.bend) row.bend = m.bend;
+        if (m.shape) row.shape = m.shape;
+        return row;
+      });
     }
-    if (step.coachOrder) entry.coachOrder = true;
+    if (step.coachOrder) {
+      entry.coachOrder = true;
+      entry.movements = entry.movements || [];
+    }
     return entry;
   });
   return { source: source || 'user_save', steps: stepsOut };
@@ -2877,6 +3385,20 @@ async function autoStickExtractedChoreography() {
   }
 }
 
+function captureVisibleOffense() {
+  if (!steps[currentStep]) return;
+  const align = ensureSheetAlignStep(currentStep);
+  document.querySelectorAll('#playerLayer .player-token').forEach((g) => {
+    const pid = g.dataset.player;
+    if (!pid || !String(pid).startsWith('o')) return;
+    const p = readTranslate(g);
+    if (!p) return;
+    align.positions[pid] = { x: p.x, y: p.y };
+    if (!steps[currentStep].positions) steps[currentStep].positions = {};
+    steps[currentStep].positions[pid] = { x: p.x, y: p.y };
+  });
+}
+
 async function saveStickyChoreography() {
   if (!playId || !viewModeAllowsChoreoEdit()) return;
   if (isPlaybackActive()) {
@@ -2887,6 +3409,7 @@ async function saveStickyChoreography() {
   if (btn) btn.disabled = true;
   setSheetAnimHint('Saving choreography…');
   try {
+    captureVisibleOffense();
     // Prefer session ink from a prior Play All; if missing, pull once now.
     if (playHasSheets() && !sheetSessionInkByStep.some(Boolean)) {
       await ensureSessionInkCaptured();
@@ -2906,8 +3429,10 @@ async function saveStickyChoreography() {
     sheetUsingStickyChoreography = true;
     choreographyDirty = false;
     if (data.choreography) applyStickyChoreographyDoc(data.choreography);
+    invalidatePlaybarTimeline();
+    if (!isPlaybackActive()) renderStep();
     setSheetAlignStatus('ready', 'Saved choreography — sticky for next load');
-    setSheetAnimHint('Choreography saved');
+    setSheetAnimHint('Saved. Play uses this version.');
   } catch (err) {
     console.warn('save choreography', err);
     setSheetAnimHint(`Save failed: ${err.message || err}`);
@@ -3159,7 +3684,59 @@ function orientSheetPass(pass, ballPid, fromRaw) {
 }
 
 /** Build travel paths: stored movements first, else ink-traced marks (pass/screen/cut). */
+function pathsFromInkActions(inkBundle) {
+  const paths = [];
+  const actions = (inkBundle && inkBundle.actions) || [];
+  actions.slice().sort((a, b) => (a.seq || 0) - (b.seq || 0)).forEach((act) => {
+    const pts = (act && act.points) || [];
+    if (pts.length < 2) return;
+    const isPass = act.kind === 'pass';
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    paths.push({
+      pid: isPass ? null : act.pid,
+      ballOnly: isPass,
+      from: { x: start.x, y: start.y },
+      to: { x: end.x, y: end.y },
+      ctrl: null,
+      points: pts.map((p) => ({ x: p.x, y: p.y })),
+      type: act.kind || 'cut',
+      shape: act.shape || null,
+      anchors: act.anchors || null,
+      bend: act.bend || null,
+      fromPid: act.fromPid,
+      toPid: act.toPid,
+      seq: act.seq,
+    });
+  });
+  return paths;
+}
+
 function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
+  if (step && step.coachOrder) {
+    const owned = pathsFromInkActions(inkBundle);
+    if (owned.length) return owned;
+    const spotPaths = [];
+    ((step.movements) || []).forEach((m) => {
+      if (!m || m._meta || !m.points || m.points.length < 2) return;
+      const isPass = m.type === 'pass';
+      spotPaths.push({
+        pid: isPass ? null : (m.from || null),
+        ballOnly: isPass,
+        from: { x: m.points[0].x, y: m.points[0].y },
+        to: { x: m.points[m.points.length - 1].x, y: m.points[m.points.length - 1].y },
+        ctrl: null,
+        points: m.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        type: m.type || 'cut',
+        shape: m.shape || null,
+        anchors: m.anchors || null,
+        bend: m.bend || null,
+        fromPid: m.from,
+        toPid: m.to,
+      });
+    });
+    return spotPaths;
+  }
   const paths = [];
   const moves = (step && step.movements) || [];
   let usedStored = false;
@@ -3167,14 +3744,36 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
   const marks = (inkBundle && inkBundle.marks) || {};
   const sheetPasses = (inkBundle && inkBundle.passes) || [];
   const ball = ballPid || (step && step.ball) || 'o1';
+  const inkActions = (inkBundle && inkBundle.actions) || [];
+  const realMoves = moves.filter((m) => m && !m._meta);
+  // A short movement list used to hide the rest of the sheet's arrows during Play.
+  const movementsComplete = !inkActions.length || realMoves.length === inkActions.length;
 
   moves.forEach((m) => {
-    if (!m || m._meta) return;
+    if (!movementsComplete) return;
+    if (!m || m._meta || m.timing === 'optional') return;
+    const isPass = m.type === 'pass';
+    if (m.points && m.points.length >= 2) {
+      const start = m.points[0];
+      const end = m.points[m.points.length - 1];
+      usedStored = true;
+      paths.push({
+        pid: isPass ? null : (m.from || m.to),
+        ballOnly: isPass,
+        from: { x: start.x, y: start.y },
+        to: { x: end.x, y: end.y },
+        ctrl: null,
+        points: m.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        type: m.type || 'cut',
+        fromPid: m.from,
+        toPid: m.to,
+      });
+      return;
+    }
     const a = fromRaw[m.from] || toRaw[m.from];
     const b = toRaw[m.to] || fromRaw[m.to];
     if (!a || !b) return;
     usedStored = true;
-    const isPass = m.type === 'pass';
     // Cuts/screens move the FROM player; passes move the ball only.
     const pid = isPass ? null : (m.from || m.to);
     const dest = isPass ? b : (toRaw[pid] || b);
@@ -3199,29 +3798,8 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
 
   // Draw-order rule: one PDF stroke is one beat, in the order FastDraw painted
   // them. Coach-saved movements above still win.
-  const actions = (inkBundle && inkBundle.actions) || [];
-  if (actions.length) {
-    actions.slice().sort((a, b) => (a.seq || 0) - (b.seq || 0)).forEach((act) => {
-      const pts = (act && act.points) || [];
-      if (pts.length < 2) return;
-      const isPass = act.kind === 'pass';
-      const start = pts[0];
-      const end = pts[pts.length - 1];
-      paths.push({
-        pid: isPass ? null : act.pid,
-        ballOnly: isPass,
-        from: { x: start.x, y: start.y },
-        to: { x: end.x, y: end.y },
-        ctrl: null,
-        points: pts.map((p) => ({ x: p.x, y: p.y })),
-        type: act.kind || 'cut',
-        fromPid: act.fromPid,
-        toPid: act.toPid,
-        seq: act.seq,
-      });
-    });
-    return paths;
-  }
+  const actionPaths = pathsFromInkActions(inkBundle);
+  if (actionPaths.length) return actionPaths;
 
   // Sheet-marked dashed passes — orient from ball-handler; keep one outbound pass.
   const orientedPasses = [];
@@ -3315,6 +3893,21 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     return { paths: {}, marks: {}, passes: [] };
   }
   const skipSticky = !!options.skipSticky;
+  const sessionInk = sheetSessionInkByStep[stepIndex];
+  if (step.coachOrder) {
+    const owned = sessionInk || (!skipSticky && sheetStickyInkByStep[stepIndex]) || {
+      paths: {}, marks: {}, passes: [], actions: [],
+    };
+    const ownedBundle = {
+      paths: owned.paths || {},
+      marks: owned.marks || {},
+      passes: owned.passes || [],
+      actions: owned.actions || [],
+    };
+    sheetSessionInkByStep[stepIndex] = ownedBundle;
+    return ownedBundle;
+  }
+  if (sessionInk && (sessionInk.actions || []).length) return sessionInk;
   if (!skipSticky && sheetStickyInkByStep[stepIndex] && (sheetStickyInkByStep[stepIndex].actions || []).length) {
     const sticky = sheetStickyInkByStep[stepIndex];
     const bundle = {
@@ -3325,10 +3918,6 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     };
     sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
-  }
-  const sessionInk = sheetSessionInkByStep[stepIndex];
-  if (sessionInk && (sessionInk.actions || []).length) {
-    return sessionInk;
   }
   // Ink tracing anchors: prefer THIS sheet's OCR only (not carry-forward from
   // earlier pages — that invented false passes toward stale digit spots).
@@ -3395,16 +3984,363 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
   }
 }
 
-function drawTravelPaths(paths, activePath) {
+function appendArrowHit(layer, index, from, to) {
+  if (!from || !to) return;
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  hit.setAttribute('class', 'arrow-hit');
+  hit.setAttribute('data-arrow', String(index));
+  hit.setAttribute('x1', from.x);
+  hit.setAttribute('y1', from.y);
+  hit.setAttribute('x2', to.x);
+  hit.setAttribute('y2', to.y);
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '18');
+  hit.setAttribute('stroke-linecap', 'round');
+  hit.style.cursor = 'pointer';
+  hit.addEventListener('pointerdown', (e) => startArrowDrag(e, index, null));
+  layer.appendChild(hit);
+}
+
+function appendArrowHitPath(layer, index, d) {
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  hit.setAttribute('class', 'arrow-hit');
+  hit.setAttribute('data-arrow', String(index));
+  hit.setAttribute('d', d);
+  hit.setAttribute('fill', 'none');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '16');
+  hit.setAttribute('stroke-linecap', 'round');
+  hit.style.cursor = 'pointer';
+  hit.addEventListener('pointerdown', (e) => startArrowDrag(e, index, null));
+  layer.appendChild(hit);
+}
+
+function appendArrowHandles(layer, index, from, to) {
+  [['start', from], ['end', to]].forEach(([which, pt]) => {
+    if (!pt) return;
+    const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    handle.setAttribute('class', 'arrow-handle');
+    handle.setAttribute('cx', pt.x);
+    handle.setAttribute('cy', pt.y);
+    handle.setAttribute('r', '7');
+    handle.setAttribute('fill', '#fff');
+    handle.setAttribute('stroke', '#111827');
+    handle.setAttribute('stroke-width', '2');
+    handle.style.cursor = 'grab';
+    handle.addEventListener('pointerdown', (e) => startArrowDrag(e, index, which));
+    layer.appendChild(handle);
+  });
+}
+
+function appendShapedHandles(layer, index, path) {
+  const anchors = path.anchors || [];
+  const shape = path.shape;
+  const two = shape === 'straight-curve' || shape === 'curve-straight';
+  const start = anchors[0];
+  const end = anchors[anchors.length - 1];
+  const joint = two ? anchors[1] : null;
+  appendArrowHandles(layer, index, start, end);
+  if (joint) {
+    const handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    handle.setAttribute('class', 'arrow-handle');
+    handle.setAttribute('x', joint.x - 6);
+    handle.setAttribute('y', joint.y - 6);
+    handle.setAttribute('width', '12');
+    handle.setAttribute('height', '12');
+    handle.setAttribute('fill', '#fff');
+    handle.setAttribute('stroke', '#111827');
+    handle.setAttribute('stroke-width', '2');
+    handle.style.cursor = 'grab';
+    handle.addEventListener('pointerdown', (e) => startArrowDrag(e, index, 'joint'));
+    layer.appendChild(handle);
+  }
+  if (path.bend && shape !== 'straight') {
+    const seg = curvedSegment(shape, anchors);
+    if (seg && seg[0] && seg[1]) {
+      const guide = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      guide.setAttribute('x1', (seg[0].x + seg[1].x) / 2);
+      guide.setAttribute('y1', (seg[0].y + seg[1].y) / 2);
+      guide.setAttribute('x2', path.bend.x);
+      guide.setAttribute('y2', path.bend.y);
+      guide.setAttribute('stroke', '#9ca3af');
+      guide.setAttribute('stroke-width', '1');
+      guide.setAttribute('stroke-dasharray', '3,3');
+      guide.style.pointerEvents = 'none';
+      layer.appendChild(guide);
+    }
+    const bend = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    bend.setAttribute('class', 'arrow-handle');
+    bend.setAttribute('cx', path.bend.x);
+    bend.setAttribute('cy', path.bend.y);
+    bend.setAttribute('r', '6');
+    bend.setAttribute('fill', '#fde68a');
+    bend.setAttribute('stroke', '#111827');
+    bend.setAttribute('stroke-width', '2');
+    bend.style.cursor = 'grab';
+    bend.addEventListener('pointerdown', (e) => startArrowDrag(e, index, 'bend'));
+    layer.appendChild(bend);
+  }
+}
+
+function ensureEditableInk(stepIndex) {
+  if (sheetSessionInkByStep[stepIndex]) return sheetSessionInkByStep[stepIndex];
+  const sticky = sheetStickyInkByStep[stepIndex];
+  if (!sticky) return null;
+  const copy = JSON.parse(JSON.stringify(sticky));
+  sheetSessionInkByStep[stepIndex] = copy;
+  return copy;
+}
+
+function showArrowEditor() {
+  const bar = document.getElementById('arrowEditBar');
+  const select = document.getElementById('arrowKindSelect');
+  if (!bar || !select) return;
+  const on = selectedArrowIndex != null && selectedArrowStep === currentStep && !isPlaybackActive();
+  bar.style.display = on ? 'flex' : 'none';
+  if (!on) return;
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  const move = moves[selectedArrowIndex];
+  const kind = (move && move.type) || (act && act.kind) || 'cut';
+  select.value = ['pass', 'dribble', 'cut', 'run', 'screen'].includes(kind) ? kind : 'cut';
+  const shapeSel = document.getElementById('arrowShapeSelect');
+  const spot = movementGoesToSpot(kind);
+  if (shapeSel) {
+    shapeSel.style.display = spot ? '' : 'none';
+    const shape = (act && act.shape) || (move && move.shape) || 'straight';
+    if (['straight', 'curve', 'flex', 'straight-curve', 'curve-straight'].includes(shape)) shapeSel.value = shape;
+  }
+}
+
+function arrowPointsFor(index) {
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[index];
+  if (act && act.points && act.points.length >= 2) return act.points;
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  const m = moves[index];
+  if (m && m.points && m.points.length >= 2) return m.points;
+  return null;
+}
+
+function syncMovementFromArrow(index) {
+  const step = steps[currentStep];
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const actions = (ink && ink.actions) || [];
+  if (!step) return;
+  const existing = (step.movements || []).filter((m) => m && !m._meta);
+  if (!actions.length) {
+    const m = existing[index];
+    if (!m || !m.points) return;
+    step.movements = existing;
+    step.coachOrder = true;
+    return;
+  }
+  const moves = actions.map((act, i) => {
+    const prev = existing[i] || {};
+    const pts = (act.points || []).map((p) => ({ x: p.x, y: p.y }));
+    const kind = (i === index && prev.type) ? prev.type : (prev.type || act.kind || 'cut');
+    return {
+      from: prev.from || act.fromPid || act.pid,
+      to: prev.to || act.toPid || prev.from,
+      type: kind,
+      timing: prev.timing || 'sync',
+      points: pts.length >= 2 ? pts : (prev.points || null),
+      shape: act.shape || prev.shape || null,
+      anchors: act.anchors || prev.anchors || null,
+      bend: act.bend || prev.bend || null,
+    };
+  }).filter((m) => m);
+  step.movements = moves;
+  step.coachOrder = true;
+}
+
+function startArrowDrag(e, index, which) {
+  if (isPlaybackActive() || isAnimating || viewMode === 'share' || !canFixAnimation()) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const pt = svgPointFromClient(e.clientX, e.clientY);
+  if (!pt) return;
+  const pts = arrowPointsFor(index);
+  if (!pts) return;
+  let mode = which;
+  if (!mode) {
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    if (Math.hypot(pt.x - start.x, pt.y - start.y) < 16) mode = 'start';
+    else if (Math.hypot(pt.x - end.x, pt.y - end.y) < 16) mode = 'end';
+    else mode = 'body';
+  }
+  saveUndoState();
+  selectedArrowIndex = index;
+  selectedArrowStep = currentStep;
+  arrowDrag = { index, which: mode, last: pt, moved: false };
+  holdCourtPointer(e);
+  showArrowEditor();
+  renderStep();
+}
+
+function applyArrowDrag(clientX, clientY) {
+  if (!arrowDrag) return;
+  const pt = svgPointFromClient(clientX, clientY);
+  if (!pt) return;
+  const dx = pt.x - arrowDrag.last.x;
+  const dy = pt.y - arrowDrag.last.y;
+  if (Math.hypot(dx, dy) < 0.4) return;
+  arrowDrag.moved = true;
+  arrowDrag.last = pt;
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[arrowDrag.index];
+  if (act && act.shape && act.anchors && act.anchors.length >= 2) {
+    if (arrowDrag.which === 'bend') {
+      act.bend = { x: pt.x, y: pt.y };
+    } else if (arrowDrag.which === 'start') {
+      act.anchors[0].x += dx;
+      act.anchors[0].y += dy;
+    } else if (arrowDrag.which === 'end') {
+      const end = act.anchors[act.anchors.length - 1];
+      end.x += dx;
+      end.y += dy;
+    } else if (arrowDrag.which === 'joint' && act.anchors.length >= 3) {
+      act.anchors[1].x += dx;
+      act.anchors[1].y += dy;
+    } else {
+      act.anchors.forEach((p) => {
+        p.x += dx;
+        p.y += dy;
+      });
+      if (act.bend) {
+        act.bend.x += dx;
+        act.bend.y += dy;
+      }
+    }
+    refreshShaped(act);
+    syncMovementFromArrow(arrowDrag.index);
+    renderStep();
+    return;
+  }
+  const pts = arrowPointsFor(arrowDrag.index);
+  if (!pts) return;
+  if (arrowDrag.which === 'start') {
+    pts[0].x += dx;
+    pts[0].y += dy;
+  } else if (arrowDrag.which === 'end') {
+    const end = pts[pts.length - 1];
+    end.x += dx;
+    end.y += dy;
+  } else {
+    pts.forEach((p) => {
+      p.x += dx;
+      p.y += dy;
+    });
+  }
+  syncMovementFromArrow(arrowDrag.index);
+  renderStep();
+}
+
+function finishArrowDrag() {
+  if (!arrowDrag) return;
+  const moved = arrowDrag.moved;
+  const index = arrowDrag.index;
+  arrowDrag = null;
+  if (!moved) {
+    showArrowEditor();
+    renderStep();
+    return;
+  }
+  const ink = sheetSessionInkByStep[currentStep] || sheetStickyInkByStep[currentStep];
+  const act = ink && ink.actions && ink.actions[index];
+  if (act && act.shape && act.anchors && act.anchors[0]) {
+    const pid = nearestOffense(act.anchors[0], 48);
+    if (pid) {
+      act.fromPid = pid;
+      act.pid = pid;
+    }
+  }
+  syncMovementFromArrow(selectedArrowIndex);
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow updated. Save to keep it, then Play to check it.');
+}
+
+function setSelectedArrowShape(shape) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  const allowed = ['straight', 'curve', 'flex', 'straight-curve', 'curve-straight'];
+  if (!allowed.includes(shape)) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  if (!act) return;
+  const src = (act.anchors && act.anchors.length >= 2)
+    ? act.anchors
+    : (act.points && act.points.length >= 2 ? act.points : null);
+  if (!src) return;
+  const start = { x: src[0].x, y: src[0].y };
+  const end = { x: src[src.length - 1].x, y: src[src.length - 1].y };
+  const two = shape === 'straight-curve' || shape === 'curve-straight';
+  const joint = (act.anchors && act.anchors.length >= 3)
+    ? { x: act.anchors[1].x, y: act.anchors[1].y }
+    : { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  act.shape = shape;
+  act.anchors = two ? [start, joint, end] : [start, end];
+  act.bend = null;
+  refreshShaped(act);
+  syncMovementFromArrow(selectedArrowIndex);
+  if (steps[currentStep]) steps[currentStep].coachOrder = true;
+  const menu = document.getElementById('cutShapeSelect');
+  if (menu) menu.value = shape;
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Path shape updated. Drag the dots to place the start, the spot, and the curve.');
+}
+
+function setSelectedArrowKind(kind) {
+  if (selectedArrowIndex == null || selectedArrowStep !== currentStep) return;
+  saveUndoState();
+  const ink = ensureEditableInk(currentStep);
+  const act = ink && ink.actions && ink.actions[selectedArrowIndex];
+  if (act) act.kind = kind === 'run' ? 'cut' : kind;
+  syncMovementFromArrow(selectedArrowIndex);
+  const moves = ((steps[currentStep] && steps[currentStep].movements) || []).filter((m) => m && !m._meta);
+  if (moves[selectedArrowIndex]) moves[selectedArrowIndex].type = kind;
+  if (steps[currentStep]) {
+    steps[currentStep].movements = moves;
+    steps[currentStep].coachOrder = true;
+  }
+  if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
+  markAnimationOrderDirty();
+  renderStep();
+  setSheetAnimHint('Arrow updated. Save choreography, then Play to check it.');
+}
+
+function svgPointFromClient(clientX, clientY) {
+  const svg = document.getElementById('courtSvg');
+  if (!svg || !svg.getScreenCTM()) return null;
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  return { x: svgP.x, y: svgP.y };
+}
+
+function drawTravelPaths(paths, activePath, opts) {
+  opts = opts || {};
   addArrowheadMarkers();
   const arrowLayer = document.getElementById('arrowLayer');
   if (!arrowLayer) return;
-  arrowLayer.style.pointerEvents = 'none';
+  const editable = !!opts.editable && canFixAnimation() && !isPlaybackActive() && !isAnimating;
+  arrowLayer.style.pointerEvents = editable ? 'auto' : 'none';
   arrowLayer.innerHTML = '';
+  const handles = [];
   paths.forEach((p) => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const shaped = p.shape ? shapedPathD(p.shape, p.anchors, p.bend) : null;
     let d;
-    if (p.points && p.points.length >= 2) {
+    if (shaped) {
+      d = shaped;
+    } else if (p.points && p.points.length >= 2) {
       d = p.points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
     } else if (p.ctrl) {
       d = `M ${p.from.x} ${p.from.y} Q ${p.ctrl.mx} ${p.ctrl.my} ${p.to.x} ${p.to.y}`;
@@ -3413,10 +4349,13 @@ function drawTravelPaths(paths, activePath) {
     }
     path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
+    const actionIndex = typeof p.actionIndex === 'number' ? p.actionIndex : null;
+    const isSelected = editable && actionIndex != null && actionIndex === selectedArrowIndex && selectedArrowStep === currentStep;
     const isActive = !activePath || p === activePath;
-    const baseW = p.ballOnly || p.type === 'pass' ? 2.5 : 3;
-    path.setAttribute('stroke-width', String(isActive ? baseW + 0.5 : baseW));
+    const baseW = p.ballOnly || p.type === 'pass' ? 3.2 : 3.6;
+    path.setAttribute('stroke-width', String(isSelected ? baseW + 1.2 : baseW));
     path.setAttribute('opacity', isActive ? '1' : '0.35');
+    path.style.pointerEvents = 'none';
     if (p.type === 'pass' || p.ballOnly) {
       path.setAttribute('stroke', '#3b82f6');
       path.setAttribute('stroke-dasharray', '8,4');
@@ -3426,15 +4365,23 @@ function drawTravelPaths(paths, activePath) {
       path.setAttribute('stroke', '#111827');
     } else if (p.type === 'screen') {
       path.setAttribute('stroke', '#111827');
-      path.setAttribute('stroke-width', '3.5');
+      path.setAttribute('stroke-width', isSelected ? '5.5' : '3.5');
     } else {
-      path.setAttribute('stroke', '#ef4444');
-      path.setAttribute('marker-end', 'url(#arrowhead-red)');
+      path.setAttribute('stroke', p.type === 'run' ? '#16a34a' : '#ef4444');
+      path.setAttribute('marker-end', p.type === 'run' ? 'url(#arrowhead-green)' : 'url(#arrowhead-red)');
     }
     arrowLayer.appendChild(path);
+    if (editable && actionIndex != null && p.from && p.to) {
+      if (shaped) appendArrowHitPath(arrowLayer, actionIndex, shaped);
+      else appendArrowHit(arrowLayer, actionIndex, p.from, p.to);
+      if (isSelected && p.shape && p.anchors) appendShapedHandles(arrowLayer, actionIndex, p);
+      else if (isSelected) handles.push({ index: actionIndex, from: p.from, to: p.to });
+    }
     if (p.type === 'dribble' && p.from && p.to) appendDribbleBalls(arrowLayer, p.from, p.to);
     if (p.type === 'screen' && p.from && p.to) appendScreenBar(arrowLayer, p.from, p.to);
   });
+  handles.forEach((h) => appendArrowHandles(arrowLayer, h.index, h.from, h.to));
+  if (editable) showArrowEditor();
 }
 
 function pointAlongPolyline(points, t) {
@@ -4086,6 +5033,10 @@ function pathsFollowDrawOrder(paths) {
 }
 
 function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
+  // A coach save owns this sheet. Do not put the original 1-Game script back.
+  if (step && step.coachOrder) {
+    return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+  }
   if (stepHasAuthoredOrder(step) && (paths || []).length) {
     return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
   }

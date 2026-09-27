@@ -122,6 +122,8 @@ def inject_feature_flags():
         signed_in_user = _current_user()
     except Exception:
         signed_in_user = None
+    from audience_access import is_family_role
+    family_viewer = bool(signed_in_user) and is_family_role(signed_in_user["role"])
     return {
         "signed_in_user": dict(signed_in_user) if signed_in_user else None,
         "features": settings["features"],
@@ -129,6 +131,9 @@ def inject_feature_flags():
         "coach_portal": coach_portal,
         # Alias for templates that hide Save/Delete/Create in coach mode
         "coach_readonly": coach_portal,
+        # Parents and players watch. Coaches edit. Unsigned home use stays editable.
+        "family_viewer": family_viewer,
+        "audience_can_edit": (not family_viewer) and (not coach_portal),
     }
 
 
@@ -136,6 +141,40 @@ def inject_feature_flags():
 def coach_portal_ops_gate():
     """Soft denylist for coach portal sessions (does not enable global auth)."""
     return enforce_coach_ops_denylist()
+
+
+@app.before_request
+def family_viewer_gate():
+    """Parents and players may watch. They may not change coach tools or see the team board.
+
+    Unsigned requests are left alone so the home machine stays usable while
+    sign-in is not required.
+    """
+    from flask import flash, redirect, url_for
+    from audience_access import FAMILY_POST_ALLOW, FAMILY_REDIRECT_PREFIXES, is_family_role
+
+    user = None
+    try:
+        user = _current_user()
+    except Exception:
+        user = None
+    if not user or not is_family_role(user["role"]):
+        return None
+    path = request.path or "/"
+    if path.startswith("/static/") or path in ("/sw.js", "/favicon.ico"):
+        return None
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if path in FAMILY_POST_ALLOW or path.startswith("/play/share/"):
+            return None
+        if path.startswith("/api/"):
+            return jsonify({"error": "Parents and players can view only."}), 403
+        flash("Parents and players can view only.", "error")
+        return redirect(url_for("core.my_stats"))
+    if path == "/" or path.startswith(FAMILY_REDIRECT_PREFIXES):
+        if path.startswith("/api/"):
+            return jsonify({"error": "Parents and players can view only their own stats."}), 403
+        return redirect(url_for("core.my_stats"))
+    return None
 
 
 @app.template_global()

@@ -2429,6 +2429,9 @@ def ensure_detection_indexes(db):
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='detections'"
     ).fetchone():
         return
+    # A playbook reload must not build this index while an analysis run is writing.
+    if os.environ.get("LIBERTY_SKIP_DETECTION_INDEX") == "1":
+        return
     db.execute(
         "CREATE INDEX IF NOT EXISTS idx_detections_game_frame ON detections(game_id, frame_number)"
     )

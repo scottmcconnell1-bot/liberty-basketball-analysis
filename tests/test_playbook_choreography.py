@@ -54,6 +54,86 @@ class TestChoreographyStore:
         assert delete_choreography(98, base=tmp_path) is True
         assert load_choreography(98, base=tmp_path) is None
 
+    def test_keeps_edited_arrows_and_spots(self, tmp_path):
+        doc = save_choreography(
+            98,
+            {
+                "steps": [
+                    {
+                        "step_index": 0,
+                        "positions": {"o1": {"x": 40, "y": 80}},
+                        "coachOrder": True,
+                        "ink": {
+                            "paths": {},
+                            "marks": {},
+                            "passes": [],
+                            "actions": [
+                                {
+                                    "kind": "cut",
+                                    "shape": "curve",
+                                    "fromPid": "o3",
+                                    "seq": 1,
+                                    "anchors": [{"x": 40, "y": 80}, {"x": 90, "y": 40}],
+                                    "bend": {"x": 30, "y": 50},
+                                    "points": [
+                                        {"x": 40, "y": 80},
+                                        {"x": 30, "y": 50},
+                                        {"x": 90, "y": 40},
+                                    ],
+                                }
+                            ],
+                        },
+                        "movements": [
+                            {
+                                "type": "cut",
+                                "shape": "curve",
+                                "points": [
+                                    {"x": 40, "y": 80},
+                                    {"x": 90, "y": 40},
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+            base=tmp_path,
+            source="user_save",
+        )
+        action = doc["steps"][0]["ink"]["actions"][0]
+        assert action["shape"] == "curve"
+        assert action["fromPid"] == "o3"
+        assert action["bend"]["x"] == 30
+        assert action["points"][2]["y"] == 40
+        move = doc["steps"][0]["movements"][0]
+        assert move["type"] == "cut"
+        assert "from" not in move
+        assert move["points"][1]["x"] == 90
+        assert doc["steps"][0]["positions"]["o1"]["x"] == 40
+
+    def test_cleared_sheet_stays_empty(self, tmp_path):
+        doc = save_choreography(
+            98,
+            {
+                "steps": [
+                    {
+                        "step_index": 0,
+                        "positions": {"o2": {"x": 12, "y": 20}},
+                        "coachOrder": True,
+                        "movements": [],
+                        "ink": {"paths": {}, "marks": {}, "passes": [], "actions": []},
+                    }
+                ]
+            },
+            base=tmp_path,
+            source="user_save",
+        )
+        step = doc["steps"][0]
+        assert step["coachOrder"] is True
+        assert step["movements"] == []
+        assert step["ink"]["actions"] == []
+        assert step["ink"]["paths"] == {}
+        assert step["positions"]["o2"]["y"] == 20
+
     def test_rejects_empty_steps(self, tmp_path):
         with pytest.raises(ValueError):
             save_choreography(1, {"steps": []}, base=tmp_path)

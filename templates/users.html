@@ -18,10 +18,11 @@
                         <th>Role</th>
                         <th>Created</th>
                         <th>Actions</th>
+                        <th>Roster player</th>
                     </tr>
                 </thead>
                 <tbody id="usersBody">
-                    <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -34,7 +35,7 @@
 async function loadUsers() {
     const response = await fetch('/api/admin/users');
     if (!response.ok) {
-        document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="text-danger">Access denied</td></tr>';
+        document.getElementById('usersBody').innerHTML = '<tr><td colspan="6" class="text-danger">Access denied</td></tr>';
         return;
     }
     const users = await response.json();
@@ -43,6 +44,10 @@ async function loadUsers() {
         const badge = isAdmin
             ? '<span class="badge bg-danger">Admin</span>'
             : `<span class="badge bg-secondary">${escapeHtml(u.role || 'user')}</span>`;
+        const family = u.role === 'parent' || u.role === 'player';
+        const link = family
+            ? `<input type="number" min="1" style="width:90px;" value="${u.linked_player_id || ''}" aria-label="Roster player id for ${escapeHtml(u.display_name)}" onchange="linkPlayer(${Number(u.id)}, this.value)">`
+            : '';
         return `
         <tr>
             <td>${escapeHtml(u.display_name)}</td>
@@ -50,6 +55,7 @@ async function loadUsers() {
             <td>${badge}</td>
             <td>${escapeHtml(u.created_at)}</td>
             <td>${!isAdmin ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${Number(u.id)})">Delete</button>` : ''}</td>
+            <td>${link}</td>
         </tr>`;
     }).join('');
 }
@@ -61,6 +67,19 @@ async function deleteUser(id) {
     else {
         const body = await response.json().catch(() => ({}));
         alert(body.error || 'Failed to delete user');
+    }
+}
+
+async function linkPlayer(id, playerId) {
+    const response = await fetch(`/api/admin/users/${id}/player-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: playerId || null }),
+    });
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        alert(body.error || 'Could not link that player');
+        loadUsers();
     }
 }
 

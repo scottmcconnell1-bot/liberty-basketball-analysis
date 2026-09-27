@@ -1,8 +1,18 @@
 # Active Task
 
-Updated: 2026-09-26 (playbook pause, continue, and rewind)
+Updated: 2026-09-27 (draw play tool)
+
+**Proven:** Build a picture at `/playbook/draw`. Click the player (that spot is the start), then Cut, Pass, Dribble, or Screen, then where he goes. A pass ends on the catcher. Next picture starts where this one finished. Save and watch opens the full play with the players moving and no arrows.
+
+**Inferred:** A coach save of arrows and spots is stored with the path, and Play on that sheet uses the saved list instead of the original 1-Game script. The save round-trip is unit-tested. It was not replayed on 1-Game in the browser in this pass.
+
+**Proven:** A cut, screen, or run is a spot on the floor. Add movement drops an arrow. Drag the white ends to the start and the spot. The path menu is Straight, Curve, Adjustable curve (gold dot), Straight then curve, or Curve then straight (white square is the joint). Pass and dribble still click two players.
+
+**Proven:** [PR #149](https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/149) (`claude/speed-up-analysis`, merge `cf58c9d`) is on `cursor/playbook-jason-clean-slate-ac1f`. It adds `idx_detections_game_frame` on `detections(game_id, frame_number)`, turns jersey OCR onto the GPU when CUDA is available, and fixes the Docker build plus `/sw.js`. The index is created at app startup. Flask was restarted with `LIBERTY_SKIP_DETECTION_INDEX=1` so the index is not built yet. The Adrian rerun process was not running at the last check. Build the index only when the database is idle.
 
 ## This session
+
+**Proven:** Signed-in parents and players can open Game Film (`/videos`, `/film`, `/highlights`, and the uploaded video file) for every game. Tag saves stay refused. Their stat board is still only their own player.
 
 **Proven:** On 1-Game (`/playbook/play/98`), clicking a player during Play All stops the play and it stays stopped. Play All then continues on the same sheet (step 5, next beat) instead of restarting at sheet 1. Back stops playback and returns to the start of the current action. Players, defenders, and the ball can be dragged while paused. Save choreography still stores offense spacing.
 

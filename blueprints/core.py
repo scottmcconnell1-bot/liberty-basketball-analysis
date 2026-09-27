@@ -358,6 +358,72 @@ def index():
     return render_template("index.html")
 
 
+@core.route("/my-stats")
+def my_stats():
+    """A parent or player sees one roster player's lines for a chosen season or game."""
+    from audience_access import is_family_role, resolve_player_id
+    from blueprints.users import _current_user
+
+    user = _current_user()
+    if not user or not is_family_role(user["role"]):
+        flash("My Stats is for parent and player accounts.", "error")
+        return redirect(url_for("core.index"))
+    db = get_db()
+    player_id = resolve_player_id(db, user)
+    player = None
+    if player_id:
+        player = db.execute("SELECT id, name, jersey_number FROM players WHERE id = ?", (player_id,)).fetchone()
+    seasons = db.execute("SELECT id, name FROM seasons ORDER BY start_date DESC, id DESC").fetchall()
+    season_id = request.args.get("season_id", type=int)
+    game_id = request.args.get("game_id", type=int)
+    games = []
+    rows = []
+    if player:
+        game_sql = """
+            SELECT g.id, sg.game_date, sg.opponent_name, sg.season_id
+              FROM games g
+              JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+             WHERE EXISTS (
+                    SELECT 1 FROM stats s
+                     WHERE s.relational_game_id = g.id AND s.player_id = ?
+             )
+        """
+        params = [player["id"]]
+        if season_id:
+            game_sql += " AND sg.season_id = ?"
+            params.append(season_id)
+        game_sql += " ORDER BY sg.game_date DESC, g.id DESC"
+        games = db.execute(game_sql, params).fetchall()
+        stat_sql = """
+            SELECT s.pts, s.fgm, s.fga, s.threes_made, s.threes_att,
+                   s.ast, s.reb, s.tov, s.stl, s.blk,
+                   sg.game_date, sg.opponent_name, se.name AS season_name, g.id AS game_id
+              FROM stats s
+              JOIN games g ON g.id = s.relational_game_id
+              LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
+              LEFT JOIN seasons se ON se.id = sg.season_id
+             WHERE s.player_id = ?
+        """
+        stat_params = [player["id"]]
+        if game_id:
+            stat_sql += " AND g.id = ?"
+            stat_params.append(game_id)
+        elif season_id:
+            stat_sql += " AND sg.season_id = ?"
+            stat_params.append(season_id)
+        stat_sql += " ORDER BY sg.game_date DESC, g.id DESC"
+        rows = db.execute(stat_sql, stat_params).fetchall()
+    return render_template(
+        "my_stats.html",
+        player=dict(player) if player else None,
+        seasons=[dict(s) for s in seasons],
+        games=[dict(g) for g in games],
+        rows=[dict(r) for r in rows],
+        season_id=season_id,
+        game_id=game_id,
+    )
+
+
 @core.route("/preview")
 def product_preview_page():
     db = get_db()
@@ -2666,7 +2732,36 @@ def api_users_list():
         """SELECT id, display_name, email, role, is_active, created_at, last_login_at
              FROM users ORDER BY created_at DESC, id DESC"""
     ).fetchall()
-    return jsonify([dict(u) for u in users])
+    from audience_access import load_links
+    links = load_links()
+    out = []
+    for user in users:
+        row = dict(user)
+        row["linked_player_id"] = links.get(str(row["id"]))
+        out.append(row)
+    return jsonify(out)
+
+
+@core.route("/api/admin/users/<int:user_id>/player-link", methods=["POST"])
+def api_user_player_link(user_id):
+    """Attach one roster player to a parent or player account. Admin only."""
+    from audience_access import save_link
+    from blueprints.users import _current_user, _is_admin_user
+
+    if not _is_admin_user(_current_user()):
+        return jsonify({"error": "Admin sign-in required."}), 403
+    payload = request.get_json(silent=True) or {}
+    raw = payload.get("player_id", request.form.get("player_id"))
+    player_id = None
+    if raw not in (None, "", "0", 0):
+        try:
+            player_id = int(raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "player_id must be a number."}), 400
+        if not get_db().execute("SELECT id FROM players WHERE id = ?", (player_id,)).fetchone():
+            return jsonify({"error": "Player not found."}), 404
+    save_link(user_id, player_id)
+    return jsonify({"ok": True, "user_id": user_id, "player_id": player_id})
 
 
 def _detach_user_references(db, user_id):

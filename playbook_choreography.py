@@ -70,13 +70,22 @@ def save_choreography(
             "court_frac": raw.get("court_frac"),
             "positions": positions,
         }
-        if ink is not None:
-            entry["ink"] = ink
+        ink = _clean_ink(raw.get("ink"))
         movements = _clean_movements(raw.get("movements"))
-        if movements:
-            entry["movements"] = movements
         if raw.get("coachOrder"):
             entry["coachOrder"] = True
+            entry["movements"] = movements
+            entry["ink"] = ink if ink is not None else {
+                "paths": {},
+                "marks": {},
+                "passes": [],
+                "actions": [],
+            }
+        else:
+            if ink is not None:
+                entry["ink"] = ink
+            if movements:
+                entry["movements"] = movements
         steps_out.append(entry)
 
     if not steps_out:
@@ -136,6 +145,46 @@ def _clean_polyline(pts: Any) -> list[dict[str, float]] | None:
     return cleaned if len(cleaned) >= 2 else None
 
 
+def _clean_point(raw: Any) -> dict[str, float] | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return {"x": round(float(raw["x"]), 2), "y": round(float(raw["y"]), 2)}
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _clean_action(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    points = _clean_polyline(raw.get("points"))
+    anchors = _clean_polyline(raw.get("anchors"))
+    if not points and not anchors:
+        return None
+    action: dict[str, Any] = {
+        "kind": str(raw.get("kind") or "cut"),
+        "points": points or anchors or [],
+    }
+    if anchors:
+        action["anchors"] = anchors
+    bend = _clean_point(raw.get("bend"))
+    if bend:
+        action["bend"] = bend
+    shape = str(raw.get("shape") or "").strip()
+    if shape:
+        action["shape"] = shape
+    for key in ("fromPid", "toPid", "pid", "pathKey"):
+        val = raw.get(key)
+        if isinstance(val, str) and val.strip():
+            action[key] = val.strip()
+    if raw.get("seq") is not None:
+        try:
+            action["seq"] = int(raw.get("seq"))
+        except (TypeError, ValueError):
+            pass
+    return action
+
+
 def _clean_ink(raw: Any) -> dict[str, Any] | None:
     if raw is None:
         return None
@@ -167,9 +216,16 @@ def _clean_ink(raw: Any) -> dict[str, Any] | None:
                     if pts:
                         item["points"] = pts
                 passes.append(item)
-    if not paths and not marks and not passes:
+    actions: list[dict[str, Any]] = []
+    actions_in = raw.get("actions") or []
+    if isinstance(actions_in, list):
+        for item in actions_in:
+            cleaned = _clean_action(item)
+            if cleaned:
+                actions.append(cleaned)
+    if not paths and not marks and not passes and not actions:
         return None
-    return {"paths": paths, "marks": marks, "passes": passes}
+    return {"paths": paths, "marks": marks, "passes": passes, "actions": actions}
 
 
 def _clean_movements(raw: Any) -> list[dict[str, Any]]:
@@ -181,12 +237,31 @@ def _clean_movements(raw: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         from_pid = str(item.get("from") or "").strip()
-        to_pid = str(item.get("to") or from_pid).strip()
+        to_pid = str(item.get("to") or "").strip()
         kind = str(item.get("type") or "cut").strip().lower()
-        if kind not in allowed or not from_pid:
+        if kind not in allowed:
+            continue
+        points = _clean_polyline(item.get("points"))
+        anchors = _clean_polyline(item.get("anchors"))
+        if not from_pid and not points and not anchors:
             continue
         timing = str(item.get("timing") or "sync").strip().lower()
         if timing not in {"sync", "optional"}:
             timing = "sync"
-        out.append({"from": from_pid, "to": to_pid, "type": kind, "timing": timing})
+        entry: dict[str, Any] = {"type": kind, "timing": timing}
+        if from_pid:
+            entry["from"] = from_pid
+        if to_pid:
+            entry["to"] = to_pid
+        if points:
+            entry["points"] = points
+        if anchors:
+            entry["anchors"] = anchors
+        bend = _clean_point(item.get("bend"))
+        if bend:
+            entry["bend"] = bend
+        shape = str(item.get("shape") or "").strip()
+        if shape:
+            entry["shape"] = shape
+        out.append(entry)
     return out

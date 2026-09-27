@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}My Stats – Liberty Basketball{% endblock %}
+{% block content %}
+<div class="container" style="max-width:860px;">
+  <h2 style="margin-bottom:6px;">My Stats</h2>
+  {% if player %}
+  <p class="text-muted" style="margin-top:0;">{{ player.name }}{% if player.jersey_number %} · #{{ player.jersey_number }}{% endif %}. Pick a season or one game.</p>
+  <form method="get" action="{{ url_for('core.my_stats') }}" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <select class="form-control" name="season_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">All seasons</option>
+      {% for season in seasons %}
+      <option value="{{ season.id }}" {% if season_id == season.id %}selected{% endif %}>{{ season.name }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-control" name="game_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">All games in this season</option>
+      {% for game in games %}
+      <option value="{{ game.id }}" {% if game_id == game.id %}selected{% endif %}>
+        {{ game.game_date or 'Game' }} vs {{ game.opponent_name or 'opponent' }}
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+  {% if rows %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Game</th><th>PTS</th><th>FG</th><th>3P</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.game_date or '' }} vs {{ row.opponent_name or 'opponent' }}</td>
+        <td>{{ row.pts }}</td>
+        <td>{{ row.fgm }}-{{ row.fga }}</td>
+        <td>{{ row.threes_made }}-{{ row.threes_att }}</td>
+        <td>{{ row.reb }}</td>
+        <td>{{ row.ast }}</td>
+        <td>{{ row.tov }}</td>
+        <td>{{ row.stl }}</td>
+        <td>{{ row.blk }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No stats are stored for this player in that selection yet.</p>
+  {% endif %}
+  {% else %}
+  <p>This account is not connected to a roster player yet, so there is nothing to show. A coach links a parent or player account to one player from Users.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ Interactive basketball play creator and playbook manager.
 
 Routes included:
 - playbook (/playbook)                          — Playbook list / plays library
+- playbook_draw (/playbook/draw)                — Clipboard play creator
 - playbook_create (/playbook/create)            — Create new play (canvas editor)
 - playbook_edit (/playbook/play/<id>/edit)      — Edit existing play
 - playbook_view (/playbook/play/<id>)           — View play with animation
@@ -806,6 +807,135 @@ def playbook_opponent_detail(playbook_id):
     )
 
 
+def _draw_editor_blocked():
+    """Parents, players, and the coach portal watch plays. They do not draw them."""
+    if session.get("coach_portal"):
+        flash("This sign-in can watch plays, not draw them.", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    from audience_access import is_family_role
+    from blueprints.users import _current_user
+
+    user = _current_user()
+    if user and is_family_role(user["role"]):
+        flash("Parents and players can watch plays, not draw them.", "error")
+        return redirect(url_for("playbook.playbook_list", team=resolve_playbook_team(persist=True)))
+    return None
+
+
+def _flatten_categories(nodes, prefix=""):
+    out = []
+    for node in nodes or []:
+        label = f"{prefix}{node.get('name') or 'Category'}"
+        out.append({"id": node["id"], "label": label})
+        out.extend(_flatten_categories(node.get("children"), label + " / "))
+    return out
+
+
+def _phases_from_steps(steps, choreography=None):
+    """One picture per saved step. Coach choreography wins over the original sheet."""
+    sticky_by_index = {}
+    for item in (choreography or {}).get("steps") or []:
+        if isinstance(item, dict):
+            sticky_by_index[int(item.get("step_index", len(sticky_by_index)))] = item
+    phases = []
+    for index, step in enumerate(steps or []):
+        row = dict(step)
+        sticky_step = sticky_by_index.get(index)
+        try:
+            positions = json.loads(row.get("positions_json") or "{}")
+        except json.JSONDecodeError:
+            positions = {}
+        try:
+            movements = json.loads(row.get("movements_json") or "[]")
+        except json.JSONDecodeError:
+            movements = []
+        if not isinstance(positions, dict):
+            positions = {}
+        if not isinstance(movements, list):
+            movements = []
+        if sticky_step and isinstance(sticky_step.get("positions"), dict) and sticky_step["positions"]:
+            positions = sticky_step["positions"]
+        if sticky_step and (sticky_step.get("coachOrder") or sticky_step.get("movements")):
+            movements = sticky_step.get("movements") or []
+        ball = "o1"
+        actions = []
+        for movement in movements:
+            if not isinstance(movement, dict):
+                continue
+            if movement.get("_meta"):
+                if movement.get("_ball"):
+                    ball = movement["_ball"]
+                continue
+            anchors = movement.get("anchors") or movement.get("points") or []
+            dest = movement.get("dest")
+            if not dest and isinstance(anchors, list) and len(anchors) >= 2:
+                dest = anchors[-1]
+            actions.append({
+                "type": movement.get("type") or "cut",
+                "from": movement.get("from"),
+                "to": movement.get("to"),
+                "timing": movement.get("timing") or "after",
+                "anchors": anchors,
+                "dest": dest,
+            })
+        if sticky_step and sticky_step.get("ball"):
+            ball = sticky_step["ball"]
+        phases.append({
+            "label": row.get("label") or f"Picture {len(phases) + 1}",
+            "notes": row.get("notes") or "",
+            "ball": ball,
+            "positions": positions,
+            "actions": actions,
+            "source_image": row.get("source_image") or "",
+        })
+    return phases
+
+
+@playbook_bp.route("/playbook/draw")
+@playbook_bp.route("/playbook/draw/<int:play_id>")
+@require_feature("ENABLE_PRACTICES")
+def playbook_draw(play_id=None):
+    """Clipboard editor: drag players, draw actions, play the phase."""
+    blocked = _draw_editor_blocked()
+    if blocked:
+        return blocked
+    db = get_db()
+    team_key = resolve_playbook_team(persist=True)
+    category_tree = _load_playbook_taxonomy(db)
+    play = None
+    phases = []
+    if play_id:
+        play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+        if not play:
+            flash("Play not found.", "error")
+            return redirect(url_for("playbook.playbook_list", team=team_key))
+        steps = db.execute(
+            "SELECT * FROM play_steps WHERE play_id = ? ORDER BY step_number",
+            (play_id,),
+        ).fetchall()
+        team_key = normalize_playbook_team(play["team_key"] if "team_key" in play.keys() else team_key)
+        session[_SESSION_TEAM_KEY] = team_key
+        from playbook_choreography import load_choreography
+
+        phases = _phases_from_steps(
+            steps,
+            load_choreography(play_id, base=_choreography_base()),
+        )
+        play = dict(play)
+    playbooks = db.execute(
+        "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
+    ).fetchall()
+    return render_template(
+        "play_draw.html",
+        play=play,
+        phases=phases,
+        categories=_flatten_categories(category_tree),
+        playbooks=[dict(row) for row in playbooks],
+        category_id=(play or {}).get("category_id") or _default_category_id(db),
+        **_team_template_kwargs(team_key),
+    )
+
+
 @playbook_bp.route("/playbook/create")
 @require_feature("ENABLE_PRACTICES")
 def playbook_create():
@@ -1345,6 +1475,8 @@ def playbook_save():
         pass
 
     db.commit()
+    if (form.get("stay") or "") == "1":
+        return jsonify({"ok": True, "play_id": play_db_id})
     flash("Play saved.", "success")
     return redirect(url_for("playbook.playbook_view", play_id=play_db_id))
 
