@@ -17,7 +17,14 @@ def _get_ocr_engine():
     try:
         import easyocr  # noqa: WPS433
 
-        _OCR_ENGINE = easyocr.Reader(["en"], gpu=False, verbose=False)
+        # Hard-coded gpu=False kept OCR on the CPU next to an idle GPU.
+        try:
+            import torch  # noqa: WPS433
+
+            use_gpu = bool(torch.cuda.is_available())
+        except Exception:
+            use_gpu = False
+        _OCR_ENGINE = easyocr.Reader(["en"], gpu=use_gpu, verbose=False)
         return _OCR_ENGINE
     except Exception:
         _OCR_UNAVAILABLE = True

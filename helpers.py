@@ -2417,9 +2417,28 @@ def _backfill_event_participants_stage4a(db):
     )
 
 
+def ensure_detection_indexes(db):
+    """Index the per-frame detection lookup (game_id, frame_number).
+
+    The analyzer reads each frame's detections back by game and frame. Without this
+    index SQLite scans the whole detections table for every frame, so analysis gets
+    slower as the table grows (~1 fps on the live table). Idempotent; a database
+    without the table yet is left alone. Creating it on a large table takes a while once.
+    """
+    if not db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='detections'"
+    ).fetchone():
+        return
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_detections_game_frame ON detections(game_id, frame_number)"
+    )
+    db.commit()
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
+    ensure_detection_indexes(db)
 
     # ── New tables (idempotent) ──────────────────────────────
     db.executescript("""

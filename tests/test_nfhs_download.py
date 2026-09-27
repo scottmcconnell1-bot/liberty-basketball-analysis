@@ -279,7 +279,11 @@ def test_start_video_analysis_rejects_duplicate_running_job(client, db, monkeypa
     assert "already in progress" in resp.get_json()["error"]
 
 
-def test_start_video_analysis_requires_ai_packages(client, db, tmp_path):
+def test_start_video_analysis_requires_ai_packages(client, db, tmp_path, monkeypatch):
+    # Force "packages missing" so the test also holds where OpenCV/YOLO are installed.
+    import blueprints.ai as ai_module
+
+    monkeypatch.setattr(ai_module, "ai_runtime_available", lambda: False)
     video_path = tmp_path / "nfhs_gam777.mp4"
     video_path.write_bytes(b"fake video")
     db.execute(
