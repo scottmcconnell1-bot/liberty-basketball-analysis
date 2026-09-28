@@ -89,6 +89,7 @@
   .draw-action.is-on { border-color:#1e3a8a; background:#eff6ff; }
   @media (max-width: 980px) { .draw-tool { grid-template-columns: 1fr; } }
 </style>
+<script src="{{ url_for('static', filename='js/man_defense.js') }}"></script>
 <script>
 (function () {
   const boot = JSON.parse(document.getElementById('drawBoot').textContent || '{}');
@@ -116,6 +117,12 @@
     phase.positions = phase.positions || JSON.parse(JSON.stringify(START));
     phase.actions = phase.actions || [];
     phase.ball = phase.ball || 'o1';
+    phase.pinnedDefense = phase.pinnedDefense || {};
+    Object.keys(phase.positions).forEach((pid) => {
+      if (!String(pid).startsWith('d')) return;
+      const spot = phase.positions[pid];
+      if (spot && (spot.x || spot.y)) phase.pinnedDefense[pid] = { x: spot.x, y: spot.y };
+    });
     phase.actions.forEach((action) => {
       if (!action.anchors || action.anchors.length < 2) {
         const from = phase.positions[action.from] || { x: 250, y: 300 };
@@ -181,11 +188,26 @@
       return Object.assign({}, action, { anchors: anchors });
     });
   }
+  function hitDefender(p) {
+    let best = null;
+    let bestD = 18;
+    const positions = shownPositions();
+    Object.keys(positions).forEach((pid) => {
+      if (!String(pid).startsWith('d')) return;
+      const at = positions[pid];
+      if (!at) return;
+      const d = dist(p, at);
+      if (d < bestD) { best = pid; bestD = d; }
+    });
+    return best;
+  }
   function hitPlayer(p) {
     let best = null;
     let bestD = 26;
-    Object.keys(phase().positions).forEach((pid) => {
-      const at = posOf(pid);
+    const positions = shownPositions();
+    Object.keys(positions).forEach((pid) => {
+      if (String(pid).startsWith('d')) return;
+      const at = positions[pid];
       if (!at) return;
       const d = dist(p, at);
       if (d < bestD) { best = pid; bestD = d; }
@@ -217,28 +239,60 @@
     line({ d: 'M 60 40 A 190 190 0 0 0 440 40' });
   }
 
+  function defenseOptions() {
+    return {
+      rim: { x: 250, y: 40 },
+      bounds: { minX: 40, minY: 48, maxX: 460, maxY: 430 },
+      ballPoint: live.ball || null,
+    };
+  }
+  function shownPositions() {
+    const positions = {};
+    const offense = {};
+    Object.keys(phase().positions).forEach((pid) => {
+      if (String(pid).startsWith('d')) return;
+      const at = posOf(pid);
+      if (!at) return;
+      positions[pid] = at;
+      if (String(pid).startsWith('o')) offense[pid] = at;
+    });
+    const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
+    if (hasD) {
+      const placed = LibertyManDefense.placeManDefense(
+        offense, playBall || phase().ball, defenseOptions()
+      );
+      Object.keys(placed).forEach((pid) => {
+        const pin = phase().pinnedDefense && phase().pinnedDefense[pid];
+        positions[pid] = pin || placed[pid];
+      });
+    }
+    return positions;
+  }
   function render() {
     const arrows = document.getElementById('arrowLayer');
     const players = document.getElementById('playerLayer');
     arrows.innerHTML = '';
     players.innerHTML = '';
-    Object.keys(phase().positions).forEach((pid) => {
-      const at = posOf(pid);
+    const positions = shownPositions();
+    Object.keys(positions).forEach((pid) => {
+      const at = positions[pid];
       if (!at) return;
       const g = el('g', {});
       if (String(pid).startsWith('d')) {
-        g.appendChild(el('line', { x1: at.x - 10, y1: at.y - 10, x2: at.x + 10, y2: at.y + 10, stroke: '#b91c1c', 'stroke-width': '3' }));
-        g.appendChild(el('line', { x1: at.x - 10, y1: at.y + 10, x2: at.x + 10, y2: at.y - 10, stroke: '#b91c1c', 'stroke-width': '3' }));
+        const color = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'][(parseInt(String(pid).slice(1), 10) - 1) % 5] || '#111827';
+        g.appendChild(el('line', { x1: at.x - 8, y1: at.y - 8, x2: at.x + 8, y2: at.y + 8, stroke: color, 'stroke-width': '3', 'stroke-linecap': 'round' }));
+        g.appendChild(el('line', { x1: at.x - 8, y1: at.y + 8, x2: at.x + 8, y2: at.y - 8, stroke: color, 'stroke-width': '3', 'stroke-linecap': 'round' }));
       } else {
         if ((playBall || phase().ball) === pid && !live.ball) {
-          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '16', fill: 'none', stroke: '#d97706', 'stroke-width': '3' }));
+          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '14', fill: 'none', stroke: '#d97706', 'stroke-width': '2' }));
         }
         if (actor === pid) {
-          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '18', fill: 'none', stroke: '#16a34a', 'stroke-width': '2', 'stroke-dasharray': '3 2' }));
+          g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '16', fill: 'none', stroke: '#16a34a', 'stroke-width': '2', 'stroke-dasharray': '3 2' }));
         }
-        g.appendChild(el('circle', { cx: at.x, cy: at.y, r: '13', fill: '#1e3a8a' }));
+        const color = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'][(parseInt(String(pid).replace(/^o/, ''), 10) - 1) % 5] || '#1e3a8a';
         const label = el('text', {
-          x: at.x, y: at.y + 4, 'text-anchor': 'middle', fill: '#fff', 'font-size': '12', 'font-weight': '700',
+          x: at.x, y: at.y + 5, 'text-anchor': 'middle', fill: color, stroke: '#fff', 'stroke-width': '3',
+          'paint-order': 'stroke fill', 'font-size': '16', 'font-weight': '800',
         });
         label.textContent = String(pid).replace(/^o/, '');
         g.appendChild(label);
@@ -350,6 +404,7 @@
         notes: '',
         ball: landed.ball,
         positions: landed.positions,
+        pinnedDefense: JSON.parse(JSON.stringify(phase().pinnedDefense || {})),
         actions: [],
         source_image: '',
       });
@@ -517,7 +572,7 @@
       document.querySelectorAll('[data-action]').forEach((other) => other.classList.toggle('is-on', other === btn));
       setHint(armed === 'pass'
         ? 'Click the player who catches the pass.'
-        : 'Click where he goes.');
+        : (armed === 'dribble' ? 'Click the spot he dribbles to.' : 'Click where he goes.'));
     });
   });
   document.getElementById('ballBtn').addEventListener('click', () => {
@@ -536,7 +591,7 @@
         if (String(pid).startsWith('d')) delete phase().positions[pid];
       });
     } else {
-      Object.keys(DEFENSE).forEach((pid) => { phase().positions[pid] = Object.assign({}, DEFENSE[pid]); });
+      Object.keys(DEFENSE).forEach((pid) => { phase().positions[pid] = { x: 0, y: 0 }; });
     }
     render();
   });
@@ -554,6 +609,21 @@
   }
 
   function onCourtRelease(p, moved) {
+    if (armed === 'dribble' && actor && !moved) {
+      const start = phase().positions[actor];
+      if (!start || dist(start, p) < 12) {
+        setHint('Click a spot away from where he is standing.');
+        return;
+      }
+      commitAction({
+        type: 'dribble',
+        from: actor,
+        to: actor,
+        dest: { x: p.x, y: p.y },
+        anchors: [{ x: start.x, y: start.y }, { x: p.x, y: p.y }],
+      });
+      return;
+    }
     const pid = hitPlayer(p);
     if (pid && !moved) {
       if (armed === 'pass') {
@@ -620,7 +690,8 @@
   svg.addEventListener('pointerdown', (e) => {
     if (playing) { playRun += 1; playing = false; return; }
     const p = svgPoint(e);
-    const pid = hitPlayer(p);
+    const defender = !armed ? hitDefender(p) : null;
+    const pid = defender || hitPlayer(p);
     if (!pid) { drag = { kind: 'court', start: p, moved: false }; return; }
     drag = { kind: 'player', pid, start: p, moved: false };
     svg.setPointerCapture(e.pointerId);
@@ -629,7 +700,13 @@
     if (!drag || drag.kind !== 'player') return;
     const p = svgPoint(e);
     drag.moved = drag.moved || dist(drag.start, p) > 4;
-    if (drag.moved) phase().positions[drag.pid] = { x: p.x, y: p.y };
+    if (drag.moved) {
+      phase().positions[drag.pid] = { x: p.x, y: p.y };
+      if (String(drag.pid).startsWith('d')) {
+        if (!phase().pinnedDefense) phase().pinnedDefense = {};
+        phase().pinnedDefense[drag.pid] = { x: p.x, y: p.y };
+      }
+    }
     render();
   });
   svg.addEventListener('pointerup', (e) => {

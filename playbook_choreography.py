@@ -118,7 +118,7 @@ def _clean_positions(raw: Any) -> dict[str, dict[str, float]]:
         return out
     for key, val in raw.items():
         oid = str(key)
-        if not oid.startswith("o"):
+        if not (oid.startswith("o") or oid.startswith("d")):
             continue
         if not isinstance(val, dict):
             continue

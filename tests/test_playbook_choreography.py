@@ -138,7 +138,7 @@ class TestChoreographyStore:
         with pytest.raises(ValueError):
             save_choreography(1, {"steps": []}, base=tmp_path)
 
-    def test_strips_defense_tokens(self, tmp_path):
+    def test_keeps_a_hand_placed_defender(self, tmp_path):
         doc = save_choreography(
             7,
             {
@@ -154,7 +154,7 @@ class TestChoreographyStore:
             base=tmp_path,
         )
         assert "o1" in doc["steps"][0]["positions"]
-        assert "d1" not in doc["steps"][0]["positions"]
+        assert doc["steps"][0]["positions"]["d1"] == {"x": 9.0, "y": 9.0}
 
 
 class TestChoreographyApi:

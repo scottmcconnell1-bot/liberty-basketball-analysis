@@ -513,11 +513,12 @@
   .player-token:active {
     cursor: grabbing;
   }
-  .player-token circle {
-    transition: stroke-width 0.15s;
+  .player-token text {
+    paint-order: stroke fill;
   }
-  .player-token:hover circle {
-    stroke-width: 3;
+  .player-token.token-selected text {
+    stroke: #fbbf24;
+    stroke-width: 4px;
   }
   .player-token .token-delete-btn {
     cursor: pointer;
@@ -530,7 +531,7 @@
   .player-token .token-delete-btn:hover {
     opacity: 1;
   }
-  .player-token.token-selected circle {
+  .player-token.token-selected .token-delete-btn circle {
     stroke: #fbbf24;
     stroke-width: 3.5;
   }
@@ -605,6 +606,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/man_defense.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-dnd.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
@@ -1004,11 +1006,10 @@ function shouldFlipLegacyBottomBasket(allStepPositions, stepList) {
 }
 
 function manDefenseOffset(offensePos) {
-  // Small color-matched x parked just beside the offense token (not a second big chip).
-  return {
-    x: Math.max(16, Math.min(484, offensePos.x + 18)),
-    y: Math.max(16, Math.min(454, offensePos.y - 14)),
-  };
+  const placed = LibertyManDefense.placeManDefense(
+    { o1: offensePos }, 'o1', { rim: { x: 250, y: 15 } }
+  );
+  return placed.d1;
 }
 
 function positionsThrough(stepIndex, options = {}) {
@@ -1111,23 +1112,39 @@ function showStepSourceImage(index) {
   }
 }
 
-function withManDefense(positions) {
+function pinDefense(pid, pos) {
+  const step = steps[currentStep];
+  if (!step || !pos || !String(pid).startsWith('d')) return;
+  if (!step.pinnedDefense) step.pinnedDefense = {};
+  step.pinnedDefense[pid] = { x: pos.x, y: pos.y };
+  if (!step.positions) step.positions = {};
+  step.positions[pid] = { x: pos.x, y: pos.y };
+}
+
+function overlayPinnedDefense(positions, stepIndex) {
+  const step = steps[stepIndex == null ? currentStep : stepIndex];
+  const pins = step && step.pinnedDefense;
+  if (!pins || !positions) return positions;
+  Object.keys(pins).forEach((pid) => {
+    const p = pins[pid];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      positions[pid] = { x: p.x, y: p.y };
+    }
+  });
+  return positions;
+}
+
+function withManDefense(positions, ballPid) {
   const src = positions || {};
   const out = {};
   Object.keys(src).forEach((k) => {
+    if (String(k).startsWith('d')) return;
     const p = src[k];
     if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
   });
-  // Imported FastDraw/PDF sheets are offense-only. Auto x-defenders sit on the
-  // ball offset and look like every player has a basketball.
-  if (playHasSheets()) return out;
-  const hasDefense = Object.keys(out).some((k) => String(k).startsWith('d'));
-  if (!hasDefense) {
-    for (let i = 1; i <= 5; i += 1) {
-      const o = out['o' + i];
-      if (o) out['d' + i] = manDefenseOffset(o);
-    }
-  }
+  const ball = ballPid || lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1';
+  const placed = LibertyManDefense.placeManDefense(out, ball, { rim: { x: 250, y: 15 } });
+  Object.keys(placed).forEach((k) => { out[k] = placed[k]; });
   return out;
 }
 
@@ -1163,7 +1180,7 @@ function renderStep() {
     playerLayer.innerHTML = '';
   } else {
     // Carry forward players across sparse steps so slide N keeps the full set.
-    syncPlayerTokens(withManDefense(positionsThrough(currentStep)), step.ball);
+    syncPlayerTokens(overlayPinnedDefense(withManDefense(positionsThrough(currentStep), step.ball), currentStep), step.ball);
   }
   if (playHasSheets() && !playAllRunning && !isAnimating) {
     showSheetUnderlay(currentStep);
@@ -1335,29 +1352,24 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
 
   const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   hit.setAttribute('class', 'token-hit');
-  hit.setAttribute('r', '22');
+  hit.setAttribute('r', '16');
   hit.setAttribute('fill', 'transparent');
   g.appendChild(hit);
 
-  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  circle.setAttribute('r', type === 'defense' ? DEFENSE_RADIUS : PLAYER_RADIUS);
-  circle.setAttribute('fill', color);
-  circle.setAttribute('stroke', '#fff');
-  circle.setAttribute('stroke-width', '2');
-  g.appendChild(circle);
-
   const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('fill', '#fff');
-  text.setAttribute('font-weight', '700');
+  text.setAttribute('fill', color);
+  text.setAttribute('stroke', '#fff');
+  text.setAttribute('stroke-width', '3');
+  text.setAttribute('paint-order', 'stroke fill');
+  text.setAttribute('font-weight', '800');
   if (type === 'defense') {
-    // Color-matched man defender — tiny x mark only (no jersey number).
-    text.setAttribute('dy', '3');
-    text.setAttribute('font-size', '9');
+    text.setAttribute('dy', '5');
+    text.setAttribute('font-size', '16');
     text.textContent = '×';
   } else {
     text.setAttribute('dy', '5');
-    text.setAttribute('font-size', '11');
+    text.setAttribute('font-size', '16');
     text.textContent = label;
   }
   g.appendChild(text);
@@ -1810,16 +1822,23 @@ function applyTokenDrag(clientX, clientY) {
   if (!steps[currentStep].positions) steps[currentStep].positions = {};
   steps[currentStep].positions[selectedPlayer] = next;
   rememberSpacing(selectedPlayer, next);
+  if (String(selectedPlayer).startsWith('d')) pinDefense(selectedPlayer, next);
   if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
     ensureSheetAlignStep(currentStep);
     sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
   }
   const token = document.querySelector(`#playerLayer [data-player="${selectedPlayer}"]`);
   if (token) token.setAttribute('transform', `translate(${next.x}, ${next.y})`);
-  const def = document.querySelector(`#playerLayer [data-player="d${String(selectedPlayer).replace(/^o/, '')}"]`);
-  if (def && String(selectedPlayer).startsWith('o') && !(spacingEdits[currentStep] && spacingEdits[currentStep][`d${String(selectedPlayer).replace(/^o/, '')}`])) {
-    const off = manDefenseOffset(next);
-    def.setAttribute('transform', `translate(${off.x}, ${off.y})`);
+  if (String(selectedPlayer).startsWith('o') && steps[currentStep]) {
+    const placed = LibertyManDefense.placeManDefense(
+      steps[currentStep].positions, steps[currentStep].ball, { rim: { x: 250, y: 15 } }
+    );
+    Object.keys(placed).forEach((did) => {
+      const pins = steps[currentStep].pinnedDefense;
+      if (pins && pins[did]) return;
+      const def = document.querySelector(`#playerLayer [data-player="${did}"]`);
+      if (def) def.setAttribute('transform', `translate(${placed[did].x}, ${placed[did].y})`);
+    });
   }
 }
 
@@ -2300,7 +2319,7 @@ let addMovementArmed = false;
 let addMovementFrom = null;
 
 function movementGoesToSpot(type) {
-  return type === 'cut' || type === 'screen' || type === 'run';
+  return type === 'cut' || type === 'screen' || type === 'run' || type === 'dribble';
 }
 
 function syncMovementAddMode() {
@@ -2310,9 +2329,11 @@ function syncMovementAddMode() {
   const spot = movementGoesToSpot(type);
   if (shape) shape.style.display = spot ? '' : 'none';
   if (hint) {
-    hint.textContent = spot
-      ? 'An arrow appears. Drag the ends to the start and the spot. Pick straight, curve, adjustable curve, straight then curve, or curve then straight.'
-      : 'Pass or dribble: click Add movement, then the player who starts and the player it goes to.';
+    hint.textContent = type === 'dribble'
+      ? 'A dribble goes to a spot on the floor. Drag the ends to where he starts and where he dribbles.'
+      : (spot
+        ? 'An arrow appears. Drag the ends to the start and the spot. Pick straight, curve, adjustable curve, straight then curve, or curve then straight.'
+        : 'Pass: click Add movement, then the player who passes and the player who catches it.');
   }
 }
 
@@ -2419,7 +2440,7 @@ function armAddMovement() {
   addMovementFrom = null;
   const btn = document.getElementById('addMovementBtn');
   if (btn) btn.textContent = 'Click start player…';
-  setSheetAnimHint('Click the player who starts the pass or dribble, then the player it goes to.');
+  setSheetAnimHint('Click the player who passes, then the player who catches it.');
 }
 
 function takeAddMovementClick(pid) {
@@ -2850,18 +2871,8 @@ function buildAnimPositions(fromRaw, toRaw, t) {
     pos[oid] = lerpPosition(a, b, e);
   });
 
-  for (let i = 1; i <= 5; i += 1) {
-    const oid = 'o' + i;
-    const did = 'd' + i;
-    if (!pos[oid]) continue;
-    if (fromRaw[did] && toRaw[did]
-        && !isDefaultOffensePos(oid, fromRaw[oid] || {})
-        && !isDefaultOffensePos(oid, toRaw[oid] || {})) {
-      pos[did] = lerpPosition(fromRaw[did], toRaw[did], e);
-    } else {
-      pos[did] = manDefenseOffset(pos[oid]);
-    }
-  }
+  const placed = LibertyManDefense.placeManDefense(pos, null, { rim: { x: 250, y: 15 } });
+  Object.keys(placed).forEach((did) => { pos[did] = placed[did]; });
   return pos;
 }
 
@@ -3304,6 +3315,14 @@ function applyStickyChoreographyDoc(doc) {
       || stickySteps[idx]
       || null;
     if (!match) return;
+    if (match.positions) {
+      const pins = {};
+      Object.keys(match.positions).forEach((k) => {
+        const p = match.positions[k];
+        if (String(k).startsWith('d') && p && typeof p.x === 'number') pins[k] = { x: p.x, y: p.y };
+      });
+      if (Object.keys(pins).length) step.pinnedDefense = pins;
+    }
     if (match.coachOrder) {
       step.coachOrder = true;
       step.movements = Array.isArray(match.movements) ? match.movements.slice() : [];
@@ -3327,11 +3346,16 @@ function buildChoreographyPayload(source) {
   const stepsOut = steps.map((step, idx) => {
     const align = sheetAlignByStep[idx] || {};
     const ink = sheetSessionInkByStep[idx] || sheetStickyInkByStep[idx] || null;
+    const positions = Object.assign({}, align.positions || {});
+    const pins = step.pinnedDefense || {};
+    Object.keys(pins).forEach((k) => {
+      if (pins[k]) positions[k] = { x: pins[k].x, y: pins[k].y };
+    });
     const entry = {
       step_index: idx,
       source_image: step.source_image || '',
       court_frac: align.court_frac || null,
-      positions: align.positions || {},
+      positions,
     };
     const moves = (step.movements || []).filter((m) => m && !m._meta);
     if (step.coachOrder || (ink && (ink.paths || ink.marks || ink.passes || (ink.actions && ink.actions.length)))) {
@@ -5194,15 +5218,18 @@ function clearScreenMarker() {
   arrowLayer.querySelectorAll('.screen-marker').forEach((el) => el.remove());
 }
 
-function syncLiveWithDefense(live, ballPid) {
+function syncLiveWithDefense(live, ballPid, ballPoint) {
   const pos = {};
   Object.keys(live || {}).forEach((k) => {
-    if (live[k] && !String(k).startsWith('_')) pos[k] = { x: live[k].x, y: live[k].y };
+    if (!live[k] || String(k).startsWith('_') || String(k).startsWith('d')) return;
+    pos[k] = { x: live[k].x, y: live[k].y };
   });
-  for (let i = 1; i <= 5; i += 1) {
-    const oid = 'o' + i;
-    if (pos[oid]) pos['d' + i] = manDefenseOffset(pos[oid]);
-  }
+  const placed = LibertyManDefense.placeManDefense(pos, ballPid, {
+    rim: { x: 250, y: 15 },
+    ballPoint: ballPoint || null,
+  });
+  Object.keys(placed).forEach((k) => { pos[k] = placed[k]; });
+  overlayPinnedDefense(pos, currentStep);
   syncPlayerTokens(pos, ballPid);
 }
 
@@ -5386,7 +5413,7 @@ function animateOnePath(live, path, toRaw, ballPid, durationMs, moveGen) {
       });
       if (animPath.ballOnly || animPath.type === 'pass') {
         const bpos = t >= 1 ? animPath.to : pointAlongTravel(animPath, t);
-        syncLiveWithDefense(pos, ballPid);
+        syncLiveWithDefense(pos, ballPid, bpos);
         const playerLayer = document.getElementById('playerLayer');
         let ball = playerLayer && playerLayer.querySelector('.ball-indicator');
         if (!ball && playerLayer) {

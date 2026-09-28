@@ -10,9 +10,9 @@ Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
 
 **Inferred:** A coach save of arrows and spots is stored with the path, and Play on that sheet uses the saved list instead of the original 1-Game script. The save round-trip is unit-tested. It was not replayed on 1-Game in the browser in this pass.
 
-**Proven:** A cut, screen, or run is a spot on the floor. Add movement drops an arrow. Drag the white ends to the start and the spot. The path menu is Straight, Curve, Adjustable curve (gold dot), Straight then curve, or Curve then straight (white square is the joint). Pass and dribble still click two players.
+**Proven:** A cut, screen, run, or dribble is a spot on the floor. Add movement drops an arrow. Drag the white ends to the start and the spot. Pass still clicks the passer and the catcher. A defender x you drag stays where you put it. The other x's keep standard man-defense spots.
 
-**Proven:** [PR #149](https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/149) (`claude/speed-up-analysis`, merge `cf58c9d`) is on `cursor/playbook-jason-clean-slate-ac1f`. It adds `idx_detections_game_frame` on `detections(game_id, frame_number)`, turns jersey OCR onto the GPU when CUDA is available, and fixes the Docker build plus `/sw.js`. The index is created at app startup. Flask was restarted with `LIBERTY_SKIP_DETECTION_INDEX=1` so the index is not built yet. The Adrian rerun process was not running at the last check. Build the index only when the database is idle.
+**Proven:** [PR #149](https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/149) (`claude/speed-up-analysis`, merge `cf58c9d`) is on this branch. The Adrian rerun `...__rerun_20260927_042234` started 2026-09-26 22:22, before that merge, and is still the process on the machine. Flask starts with `LIBERTY_SKIP_DETECTION_INDEX=1` so the new detection index is not built while that run is writing. The live rate is still about 1 frame a second.
 
 ## This session
 
