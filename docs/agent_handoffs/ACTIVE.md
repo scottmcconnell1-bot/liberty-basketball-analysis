@@ -2,7 +2,7 @@
 
 Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
 
-**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. Commit `cf87e28` is on `cursor/playbook-jason-clean-slate-ac1f`. Pull request: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/150 . Live choreography `data/playbook/choreography/98.json` and the Adrian jersey-shade / film-panel JSON stay uncommitted.
+**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. The editor code and Scott's saved plays (1-Game `98`, `99`, `101`, and copies `146`–`148`) are on `cursor/playbook-jason-clean-slate-ac1f` for Jason/Claude to review in https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/151 . Adrian jersey-shade and film-panel JSON stay uncommitted.
 
 **Proven:** This branch now includes `origin/main` (`59577bd`, public signup closed). GitHub's default branch is `main`.
 
@@ -12,7 +12,7 @@ Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
 
 **Proven:** A cut, screen, run, or dribble is a spot on the floor. Add movement drops an arrow. Drag the white ends to the start and the spot. Pass still clicks the passer and the catcher. A defender x you drag stays where you put it. The other x's keep standard man-defense spots.
 
-**Proven:** [PR #149](https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/149) (`claude/speed-up-analysis`, merge `cf58c9d`) is on this branch. The Adrian rerun `...__rerun_20260927_042234` started 2026-09-26 22:22, before that merge, and is still the process on the machine. Flask starts with `LIBERTY_SKIP_DETECTION_INDEX=1` so the new detection index is not built while that run is writing. The live rate is still about 1 frame a second.
+**Proven:** [PR #149](https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/149) (`claude/speed-up-analysis`, merge `cf58c9d`) is on this branch. Scott said not to protect the Adrian pass. The rerun `...__rerun_20260927_042234` (started 2026-09-26 22:22, before that merge) was stopped on 2026-09-27. `idx_detections_game_frame` was built in 11 seconds on about 7.8M detection rows. Liberty vs Adrian video 73 (`uploads/nfhs_gam0a66d85e12.mp4`) restarted as `...__rerun_20260928_031027` (PID started 2026-09-27 21:10 local, label "Indexed rerun"). Video 64 is the screen capture and stays unused. Flask may still have `LIBERTY_SKIP_DETECTION_INDEX=1`; this worker was started without it.
 
 ## This session
 
