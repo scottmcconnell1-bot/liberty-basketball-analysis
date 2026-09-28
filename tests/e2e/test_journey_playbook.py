@@ -819,7 +819,7 @@ def test_choreography_round_trip(client, db, choreo_base):
     assert (saved["play_id"], saved["source"], saved["sticky"], saved["version"]) == (pid, "user_save", True, 1)
     assert saved["steps"] == [
         {"step_index": 0, "source_image": "/uploads/a.png", "court_frac": {"x": 0.1},
-         "positions": {"o1": {"x": 10.12, "y": 20.0}},
+         "positions": {"o1": {"x": 10.12, "y": 20.0}, "d1": {"x": 1.0, "y": 1.0}},
          "ink": {"paths": {"o1": [{"x": 1.0, "y": 1.0}, {"x": 2.0, "y": 2.0}]}, "marks": {"o1": "cut"}, "passes": []},
          "movements": [{"from": "o2", "to": "o3", "type": "screen", "timing": "optional"},
                        {"from": "o1", "to": "o2", "type": "pass", "timing": "sync"}],
