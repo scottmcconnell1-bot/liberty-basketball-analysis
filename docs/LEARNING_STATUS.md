@@ -1,16 +1,21 @@
 # Learning Status
 
-Generated (local): **2026-09-26 23:00:05 Mountain Daylight Time**
+Generated (local): **2026-09-27 23:00:06 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
 ## Current learning activity
 
 - **Process map:** ok
-- **Active (live worker-backed):** 1
-  - `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260927_042234` **(primary)**: 2.0%, step=Detecting objects: frame 2000/97475, PID=25968, kind=analysis_launcher, db_status=running
+- **Active (live worker-backed):** 0
+- **Hint / key:** `hudl_carey_home_regular_vs_carey`
+- **Status:** inferred_from_teach_state (no live analysis worker)
+- **Progress:** Unknown
+- **Step:** last scored: HUDL Carey
+- **Source:** teach_loop_state (Inferred)
 - **Stale/zombie candidates (DB running, no worker):** 0
-- **analysis_runs counts (raw DB):** completed=1, failed=6, running=1 (running includes stale/zombie candidates until reclaimed)
+- **analysis_runs counts (raw DB):** completed=2, failed=7 (running includes stale/zombie candidates until reclaimed)
+- Note: no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only
 
 ## Queue summary
 
@@ -34,7 +39,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 9.5% | FAIL |
 
 **Overall:** FAIL (mean P=4.3%, mean R=9.5%)
-- Panel snapshot: `2026-09-27T05:00:03.812656+00:00`
+- Panel snapshot: `2026-09-28T05:00:03.867941+00:00`
 
 ## Per-game panel
 
@@ -68,7 +73,6 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 ### Proven
 
 - Panel metrics from `full_film_panel_latest.json`
-- `analysis_runs` status/progress from `film_analysis.db`
 - Live analysis_launcher / ai_analyzer / teach_loop PIDs from process list
 - HUDL taught key count from `teach_loop_state.json`
 - HUDL film_tool game count from DB
@@ -77,6 +81,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 
 ### Inferred
 
+- Current activity inferred from last teach score (no live worker)
 - Queue remaining = total − taught keys (not guaranteed 1:1 with reruns)
 - Trend deltas from comparing two panel snapshots
 
