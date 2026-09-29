@@ -495,6 +495,18 @@ def get_analysis_results(game_id):
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
         game_id = row["analysis_key"]
+        base_key = str(game_id).split("__rerun_", 1)[0]
+        newer = db.execute(
+            """SELECT * FROM analysis_runs
+                WHERE status='completed'
+                  AND id > ?
+                  AND (analysis_key=? OR base_analysis_key=? OR analysis_key LIKE ?)
+                ORDER BY id DESC
+                LIMIT 1""",
+            (row["id"], base_key, base_key, base_key + "__rerun_%"),
+        ).fetchone()
+        if newer and newer["analysis_key"]:
+            game_id = newer["analysis_key"]
 
     relational_game_id = _resolve_analysis_relational_game_id(db, game_id)
     identity_status = None
@@ -619,6 +631,7 @@ def get_analysis_results(game_id):
         "player_labels": _analysis_player_labels(db, game_id),
         "analysis_version": "2026-07-07-analysis-v2",
         "official_box": _analysis_official_box(db, game_id),
+        "ai_box": _analysis_ai_box(db, game_id),
         **_analysis_film_payload(db, game_id),
     })
 
@@ -629,6 +642,15 @@ def _analysis_official_box(db, game_id):
         return build_official_box(db, game_id)
     except Exception:
         current_app.logger.exception("official box failed for %s", game_id)
+        return None
+
+
+def _analysis_ai_box(db, game_id):
+    try:
+        from game_boxscore import build_official_box
+        return build_official_box(db, game_id, event_counts=True)
+    except Exception:
+        current_app.logger.exception("ai box failed for %s", game_id)
         return None
 
 

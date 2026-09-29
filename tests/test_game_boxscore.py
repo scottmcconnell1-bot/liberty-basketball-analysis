@@ -126,6 +126,41 @@ def test_official_box_does_not_inflate_scorebook_player(db, monkeypatch):
     assert box["line_score_source"] == "scorebook_even_split"
 
 
+def test_ai_box_uses_events_not_the_scorebook_points(db, monkeypatch):
+    from game_boxscore import build_official_box
+
+    analysis_key = "box_ai_events"
+    book = {
+        "home_team": "Adrian",
+        "away_team": "Liberty",
+        "final_score_home": 26,
+        "final_score_away": 51,
+        "quarters": [{"period": 1, "home_pts": 10, "away_pts": 16}],
+        "players": [
+            {"team": "away", "jersey": "40", "name": "Dayley", "pts": 26, "extras": {"fg2": 10, "fg3": 1}},
+        ],
+    }
+    monkeypatch.setattr("game_boxscore.load_scorebook", lambda gid: book)
+    db.execute(
+        """INSERT INTO analysis_runs (game_id, analysis_key, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (None, analysis_key, "uploads/demo.mp4"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, event_type, player, shot_result, timestamp_ms, human_verified, review_status)
+           VALUES (?, 'made_two', '#40 Dayley', 'made', 1000, 0, 'accepted')""",
+        (analysis_key,),
+    )
+    db.commit()
+
+    box = build_official_box(db, analysis_key, event_counts=True)
+    dayley = next(p for p in box["players"]["liberty"] if p["name"] == "Dayley")
+    assert dayley["pts"] == 2
+    assert box["final"]["liberty"] != 51
+    assert box["line_score_source"] == "ai_events"
+
+
 def test_duplicate_jersey_uses_home_light_away_dark(db, monkeypatch):
     import json
     from game_boxscore import build_official_box

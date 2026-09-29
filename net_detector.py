@@ -390,6 +390,8 @@ def detect_hoop_from_court_pose(frame_bgr: np.ndarray, model_path: Path | None =
 
 def load_hoop_track(game_id: str) -> list[dict[str, Any]]:
     path = track_path(game_id)
+    if not path.is_file() and "__rerun_" in str(game_id or ""):
+        path = track_path(str(game_id).split("__rerun_", 1)[0])
     if not path.is_file():
         return []
     try:
@@ -413,6 +415,73 @@ def save_hoop_track(game_id: str, samples: list[dict[str, Any]], video: str = ""
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
+
+
+def _net_box(shape, hoop, rim_r: float | None) -> tuple[int, int, int, int] | None:
+    """Hanging nylon under the rim: a column, not the whole frame."""
+    h, w = int(shape[0]), int(shape[1])
+    x, y = float(hoop[0]), float(hoop[1])
+    r = float(rim_r or 28.0)
+    x0 = int(max(0, min(w - 2, x - r * 1.1)))
+    x1 = int(max(x0 + 2, min(w, x + r * 1.1)))
+    y0 = int(max(0, min(h - 2, y + r * 0.25)))
+    y1 = int(max(y0 + 2, min(h, y + r * 2.8)))
+    if x1 - x0 < 4 or y1 - y0 < 6:
+        return None
+    return x0, y0, x1, y1
+
+
+def _motion_amount(before, after) -> float:
+    if before is None or after is None or before.shape != after.shape or before.size == 0:
+        return 0.0
+    import cv2
+
+    def gray(img):
+        if img.ndim == 2:
+            return img
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    diff = cv2.absdiff(gray(before), gray(after))
+    return float(np.mean(diff)) / 255.0
+
+
+def net_kicked(before, after, hoop, rim_r: float | None = None, *, min_motion: float = 0.045, margin: float = 0.02) -> bool:
+    """True when the nylon under this rim moves more than the picture beside it.
+
+    A swish often has no ball box in the net. The mesh still swings. A camera
+    pan moves the net and the wall together, so that is not a make.
+    """
+    if before is None or after is None or hoop is None or before.shape != after.shape:
+        return False
+    box = _net_box(before.shape, hoop, rim_r)
+    if box is None:
+        return False
+    x0, y0, x1, y1 = box
+    width = x1 - x0
+    shift = width + 4
+    side = None
+    if x1 + shift <= before.shape[1]:
+        side = (x0 + shift, y0, x1 + shift, y1)
+    elif x0 - shift >= 0:
+        side = (x0 - shift, y0, x1 - shift, y1)
+    net = _motion_amount(before[y0:y1, x0:x1], after[y0:y1, x0:x1])
+    if side is None:
+        return net >= min_motion
+    sx0, sy0, sx1, sy1 = side
+    beside = _motion_amount(before[sy0:sy1, sx0:sx1], after[sy0:sy1, sx0:sx1])
+    return net >= min_motion and net >= beside + margin
+
+
+def net_moved_after_shot(frame_reader, peak_frame, hoop, rim_r: float | None = None) -> bool:
+    """Sample the net just before the ball arrives and a few frames later."""
+    if frame_reader is None or peak_frame is None or hoop is None:
+        return False
+    before = frame_reader(int(peak_frame) - 3)
+    for delta in (6, 10, 16):
+        after = frame_reader(int(peak_frame) + delta)
+        if net_kicked(before, after, hoop, rim_r):
+            return True
+    return False
 
 
 def hoop_at(samples: list[dict[str, Any]], timestamp_ms: int, max_dt_ms: int = 4000) -> dict[str, Any] | None:

@@ -621,7 +621,9 @@ def _ball_deflected_away(ball_track, peak_frame, window=6):
     return dy > 12 or dx > 25
 
 
-def generate_precision_events_from_segments(game_id, segments, ball_track, params=None, detections_df=None):
+def generate_precision_events_from_segments(
+    game_id, segments, ball_track, params=None, detections_df=None, frame_reader=None,
+):
     from court_memory import FrameCourtMemory, ball_from_detections, people_from_detections
     from court_memory import ball_through_rim
     from stat_rules import (
@@ -801,9 +803,21 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
         last_kept_shot_ms = ts
         last_shot_ms_by_player[segment["player"]] = ts
 
-        # Make = through the rim/net. High ball and dead-ball gap are not a make.
+        # Make = through the rim, or the net moves when the ball box vanishes there.
+        # A high arc and a dead-ball gap are not a make.
         through = ball_through_rim(ball_track, peak_frame, memory.hoop_xy())
-        shot_result = "make" if through else "miss"
+        net_moved = False
+        # Only a locked rim. A guessed hoop is not the nylon on this camera.
+        if not through and hoop_hit is not None:
+            from net_detector import net_moved_after_shot
+
+            net_moved = net_moved_after_shot(
+                frame_reader,
+                peak_frame,
+                (float(hoop_hit["x"]), float(hoop_hit["y"])),
+                memory.detected_rim_r,
+            )
+        shot_result = "make" if (through or net_moved) else "miss"
         made = shot_result == "make"
 
         shot_conf = _clamp(0.35 + shot_info["ball_rise"] / 200.0, 0.35, 0.9)
@@ -818,6 +832,7 @@ def generate_precision_events_from_segments(game_id, segments, ball_track, param
             "in_paint": in_paint,
             "ft_formation": ft_formation,
             "through_rim": through,
+            "net_moved": net_moved,
         }
         append_unique_event(events, seen_keys, make_event(
             game_id, "shot", shot_info["timestamp_ms"], player=segment["player"], shot_result=shot_result,
@@ -1390,9 +1405,15 @@ def main(
             segments = build_possession_segments(detections_with_possession_df)
             ball_track = build_ball_track(detections_df)
             print(f"INFO: Built {len(segments)} possession segments for precision generation.")
-            events_to_persist = generate_precision_events_from_segments(
-                game_id, segments, ball_track, params=precision_params, detections_df=detections_df
-            )
+            frame_reader = _open_frame_reader(conn, game_id)
+            try:
+                events_to_persist = generate_precision_events_from_segments(
+                    game_id, segments, ball_track, params=precision_params,
+                    detections_df=detections_df, frame_reader=frame_reader,
+                )
+            finally:
+                if frame_reader is not None:
+                    frame_reader.close()
             print(f"INFO: Precision generator produced {len(events_to_persist)} events.")
             persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)
         elif generator_mode == "expanded":
@@ -1417,6 +1438,46 @@ def main(
         if conn:
             conn.close()
             print("INFO: Database connection closed.")
+
+
+class _VideoFrameReader:
+    """Seek one analysis frame. Used only to watch the net after a shot."""
+
+    def __init__(self, path: str):
+        self.path = path
+        self.cap = None
+
+    def __call__(self, frame_number: int):
+        import cv2
+
+        if self.cap is None:
+            self.cap = cv2.VideoCapture(self.path, cv2.CAP_FFMPEG)
+        if self.cap is None or not self.cap.isOpened():
+            return None
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_number))
+        ok, frame = self.cap.read()
+        return frame if ok else None
+
+    def close(self):
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+
+
+def _open_frame_reader(conn, game_id):
+    import os
+
+    try:
+        row = conn.execute(
+            "SELECT video_path FROM analysis_runs WHERE analysis_key = ? ORDER BY id DESC LIMIT 1",
+            (game_id,),
+        ).fetchone()
+    except Exception:
+        return None
+    path = row["video_path"] if row is not None else None
+    if not path or not os.path.isfile(path):
+        return None
+    return _VideoFrameReader(path)
 
 
 def _interpolate_ball(detections_df):

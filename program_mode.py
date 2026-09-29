@@ -264,17 +264,57 @@ def related_game_keys(db, game_id: str) -> list[str]:
     return sorted(keys)
 
 
+def _row_value(row, name: str, index: int):
+    if row is None:
+        return None
+    if hasattr(row, "keys"):
+        return row[name]
+    return row[index]
+
+
+def _trusted_event_count(db, key: str) -> int:
+    row = db.execute(
+        """SELECT COUNT(*) AS c FROM events
+            WHERE game_id=? AND review_status IN ('pending','accepted','corrected')""",
+        (key,),
+    ).fetchone()
+    return int(_row_value(row, "c", 0) or 0)
+
+
 def canonical_event_key(db, game_id: str) -> str:
-    """One key only — primary+rerun copies must not double-count."""
+    """One key only — primary+rerun copies must not double-count.
+
+    The newest finished run that still has events is the stat source. An older
+    copy with more leftover events must not hide it. If nothing has finished,
+    use the copy with the most reviewable events.
+    """
     base = base_analysis_key(game_id)
+    keys = list(related_game_keys(db, game_id))
+    if not keys:
+        return game_id or base
+
+    completed: list[tuple[int, str]] = []
+    for key in keys:
+        run = db.execute(
+            """SELECT id, status FROM analysis_runs
+                WHERE analysis_key=?
+                ORDER BY id DESC
+                LIMIT 1""",
+            (key,),
+        ).fetchone()
+        if _row_value(run, "status", 1) != "completed":
+            continue
+        if _trusted_event_count(db, key) <= 0:
+            continue
+        completed.append((int(_row_value(run, "id", 0)), key))
+    if completed:
+        completed.sort()
+        return completed[-1][1]
+
     best_key = game_id or base
     best_n = -1
-    for key in related_game_keys(db, game_id):
-        n = db.execute(
-            """SELECT COUNT(*) AS c FROM events
-                WHERE game_id=? AND review_status IN ('pending','accepted','corrected')""",
-            (key,),
-        ).fetchone()["c"]
+    for key in keys:
+        n = _trusted_event_count(db, key)
         if n > best_n or (n == best_n and key == base):
             best_n = n
             best_key = key

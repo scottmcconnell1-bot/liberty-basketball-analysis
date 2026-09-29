@@ -404,7 +404,13 @@ def _line_score_from_scorebook(scorebook: dict[str, Any], liberty_is_home: bool 
     return running_line_score(pairs)
 
 
-def build_official_box(db, game_id: str) -> dict[str, Any]:
+def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[str, Any]:
+    """Box for this game.
+
+    event_counts=False keeps the scorebook points and line score, and fills
+    only the cells the book left blank. event_counts=True is the AI analysis:
+    every counting stat comes from the latest finished run's events.
+    """
     key = canonical_event_key(db, game_id)
     scorebook = load_scorebook(game_id)
     liberty_is_home = _liberty_home_flag(scorebook)
@@ -422,9 +428,9 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
             "jersey": str(person.get("jersey") or jersey),
             "name": person.get("name") or "Unknown",
             "side": side,
-            "line": line_from_scorebook_player(person),
-            "source": "scorebook",
-            "book_filled": scorebook_filled_keys(person),
+            "line": empty_line() if event_counts else line_from_scorebook_player(person),
+            "source": "ai" if event_counts else "scorebook",
+            "book_filled": set() if event_counts else scorebook_filled_keys(person),
         }
 
     shades: dict[int, dict[str, Any]] = {}
@@ -555,11 +561,11 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     if lib_q[4] or opp_q[4]:
         period_pairs.append((lib_q[4], opp_q[4]))
 
-    book_line = _line_score_from_scorebook(scorebook or {}, liberty_is_home)
+    book_line = None if event_counts else _line_score_from_scorebook(scorebook or {}, liberty_is_home)
     if book_line:
         line_score = book_line
         line_source = "scorebook"
-    elif scorebook and (
+    elif (not event_counts) and scorebook and (
         scorebook.get("final_score_home") is not None
         or scorebook.get("final_score_away") is not None
     ):
@@ -573,7 +579,7 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
         line_source = "scorebook_even_split"
     else:
         line_score = running_line_score(period_pairs or [(0, 0), (0, 0), (0, 0), (0, 0)])
-        line_source = "ai_video_split"
+        line_source = "ai_events" if event_counts else "ai_video_split"
 
     liberty_players = []
     opponent_players = []
@@ -615,7 +621,7 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     if line_score:
         liberty_team["pts"] = line_score[-1]["liberty_running"] if line_source == "scorebook" else liberty_team["pts"]
         opponent_team["pts"] = line_score[-1]["opponent_running"] if line_source == "scorebook" else opponent_team["pts"]
-    if scorebook:
+    if scorebook and not event_counts:
         if liberty_is_home is False:
             liberty_team["pts"] = int(scorebook.get("final_score_away") or liberty_team["pts"])
             opponent_team["pts"] = int(scorebook.get("final_score_home") or opponent_team["pts"])
@@ -632,7 +638,13 @@ def build_official_box(db, game_id: str) -> dict[str, Any]:
     liberty_team["starter_pts"] = starter_points(liberty_players)
     opponent_team["starter_pts"] = starter_points(opponent_players)
 
-    if line_source == "scorebook":
+    if event_counts:
+        line_note = (
+            "AI analysis from the latest finished film run. Points, makes, misses, "
+            "rebounds, and the other columns are those events. Q1–Q4 are four equal "
+            "slices of the video, not the scorebook periods."
+        )
+    elif line_source == "scorebook":
         line_note = (
             "Quarter scores from the confirmed scorebook. PTS/makes in the book stay; "
             "REB/AST/STL/BLK/TO/PF and missed shots come from film. Same jersey on both "

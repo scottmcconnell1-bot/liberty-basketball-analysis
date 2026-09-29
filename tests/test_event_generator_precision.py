@@ -1,7 +1,9 @@
 """Precision event generator: fewer, better-supported events than the expanded heuristics."""
 
+import json
 import sqlite3
 
+import numpy as np
 import pandas as pd
 
 import event_generator as eg
@@ -153,6 +155,48 @@ def test_precision_does_not_count_a_pass_as_a_turnover():
     ]
     events = eg.generate_precision_events_from_segments("g", segs, _flat_ball_track())
     assert not any(e["event_type"] == "turnover" for e in events)
+
+
+def test_net_motion_makes_a_shot_when_the_ball_box_vanishes(monkeypatch):
+    hoop = {"timestamp_ms": 0, "x": 430.0, "y": 250.0, "r": 28.0}
+    monkeypatch.setattr("net_detector.load_hoop_track", lambda _gid: [hoop])
+    monkeypatch.setattr("net_detector.hoop_at", lambda *_a, **_k: hoop)
+    frames = list(range(0, 36))
+    ys, xs = [], []
+    for i in frames:
+        if i <= 20:
+            ys.append(500.0 - i * 12.0)
+            xs.append(430.0)
+        else:
+            # Leaves the column before it can be seen in the net.
+            ys.append(260.0 + (i - 20) * 6.0)
+            xs.append(430.0 + (i - 20) * 50.0)
+    ball = pd.DataFrame({
+        "frame_number": frames,
+        "timestamp_ms": [f * 33 for f in frames],
+        "x_center": xs,
+        "y_center": ys,
+    })
+
+    def reader(frame_no):
+        img = np.zeros((500, 700, 3), dtype=np.uint8)
+        img[:] = (30, 30, 30)
+        # Nylon column under the locked rim at (430, 250).
+        if frame_no < 26:
+            img[257:328, 399:461] = (170, 170, 170)
+        else:
+            img[300:410, 390:470] = (220, 220, 220)
+        return img
+
+    segs = [_seg("1", 0, 30)]
+    events = eg.generate_precision_events_from_segments("g", segs, ball, frame_reader=reader)
+    shots = [e for e in events if e["event_type"] == "shot"]
+    assert shots
+    details = json.loads(shots[0]["details_json"])
+    assert shots[0]["shot_result"] == "make"
+    assert details["net_moved"] is True
+    assert details["through_rim"] is False
+    assert any(e["event_type"] in {"made_two", "made_three"} for e in events)
 
 
 def test_precision_defaults_live_shot_to_miss_without_a_stoppage():

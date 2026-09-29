@@ -142,8 +142,24 @@
   <div id="error" class="error" style="display:none"></div>
 
   <div id="results" style="display:none">
+    <div class="card official-box" id="aiBoxCard" style="display:none;margin-bottom:24px;">
+      <h2>AI analysis</h2>
+      <p class="final-score" id="aiFinalScore"></p>
+      <p class="box-note" id="aiBoxNote"></p>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:16px 0 8px;">1. Line score</h3>
+      <div style="overflow-x:auto" id="aiLineScoreWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">2. Team stats</h3>
+      <div style="overflow-x:auto" id="aiTeamStatsWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">3. Liberty</h3>
+      <div style="overflow-x:auto" id="aiLibertyWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;" id="aiOppTitle">3. Opponent</h3>
+      <div style="overflow-x:auto" id="aiOppWrap"></div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:20px 0 8px;">Not matched to a roster name</h3>
+      <div style="overflow-x:auto" id="aiUnassignedWrap"></div>
+    </div>
+
     <div class="card official-box" id="officialBoxCard" style="margin-bottom:24px;">
-      <h2>Box score</h2>
+      <h2>Scorebook</h2>
       <p class="final-score" id="officialFinalScore"></p>
       <p class="box-note" id="officialBoxNote"></p>
       <div class="starters-picker" id="officialStartersWrap">
@@ -501,7 +517,7 @@ async function loadResults() {
       explainer.style.display = 'block';
       const explainerText = document.getElementById('identityExplainerText');
       if (explainerText && data.official_box) {
-        explainerText.innerHTML = 'Film counting is the box. The spiral is the check for PTS/makes, not a reprint. '
+        explainerText.innerHTML = 'The first table is the AI analysis. The scorebook under it is the check, and it only has the quarters that were written down. '
           + 'Home = light jersey (usually white), Away = dark — that splits duplicate numbers like #11. '
           + 'REB/AST/STL/BLK/TO and misses come from accepted AI events assigned by jersey + color.';
       }
@@ -560,6 +576,7 @@ async function loadResults() {
 
     await sleep(100);
     BASIC_STATS_ROWS = data.basic_stats || [];
+    renderAiBox(data.ai_box);
     renderOfficialBox(data.official_box);
     renderOfficialShooting(data.official_box);
     if (!data.official_box) {
@@ -826,6 +843,72 @@ function renderStartersPicker(box) {
     + (oppOk ? 'Opponent starters saved.' : 'Opponent starters not set.');
 }
 let LAST_OFFICIAL_BOX = null;
+function countedPlayers(rows) {
+  return (rows || []).filter(function(r) {
+    return (r.pts || 0) || (r.fga || 0) || (r.fga2 || 0) || (r.fga3 || 0) || (r.reb || 0)
+      || (r.ast || 0) || (r.stl || 0) || (r.blk || 0) || (r.tov || 0) || (r.pf || 0);
+  });
+}
+function renderAiBox(box) {
+  const card = document.getElementById('aiBoxCard');
+  if (!card) return;
+  if (!box) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  const liberty = box.liberty_name || 'Liberty';
+  const opp = box.opponent_name || 'Opponent';
+  const finalEl = document.getElementById('aiFinalScore');
+  if (finalEl) {
+    finalEl.textContent = liberty + ' ' + ((box.final || {}).liberty || 0) + '  —  ' + opp + ' ' + ((box.final || {}).opponent || 0);
+  }
+  const noteEl = document.getElementById('aiBoxNote');
+  if (noteEl) noteEl.textContent = box.line_score_note || '';
+  const oppTitle = document.getElementById('aiOppTitle');
+  if (oppTitle) oppTitle.textContent = '3. ' + opp;
+  const line = box.line_score || [];
+  let lineHtml = '<table><thead><tr><th>Team</th>';
+  line.forEach(function(p) { lineHtml += '<th class="num">' + escapeHtml(p.period) + '</th>'; });
+  lineHtml += '<th class="num">Total</th></tr></thead><tbody>';
+  lineHtml += '<tr><td class="team-name">' + escapeHtml(liberty) + '</td>';
+  line.forEach(function(p) { lineHtml += '<td class="num">' + p.liberty + '</td>'; });
+  lineHtml += '<td class="num"><strong>' + (line.length ? line[line.length - 1].liberty_running : 0) + '</strong></td></tr>';
+  lineHtml += '<tr><td class="team-name">' + escapeHtml(opp) + '</td>';
+  line.forEach(function(p) { lineHtml += '<td class="num">' + p.opponent + '</td>'; });
+  lineHtml += '<td class="num"><strong>' + (line.length ? line[line.length - 1].opponent_running : 0) + '</strong></td></tr>';
+  lineHtml += '</tbody></table>';
+  const lineWrap = document.getElementById('aiLineScoreWrap');
+  if (lineWrap) lineWrap.innerHTML = lineHtml;
+  const teamWrap = document.getElementById('aiTeamStatsWrap');
+  if (teamWrap) {
+    teamWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialStatRow(liberty, box.team && box.team.liberty || {}, true)
+      + officialStatRow(opp, box.team && box.team.opponent || {}, true)
+      + '</tbody></table>';
+  }
+  const libWrap = document.getElementById('aiLibertyWrap');
+  if (libWrap) {
+    libWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialPlayerBody(countedPlayers((box.players && box.players.liberty) || []), box.team && box.team.liberty || {}, 'No Liberty events matched a roster name')
+      + '</tbody></table>';
+  }
+  const oppWrap = document.getElementById('aiOppWrap');
+  if (oppWrap) {
+    oppWrap.innerHTML = '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+      + officialPlayerBody(countedPlayers((box.players && box.players.opponent) || []), box.team && box.team.opponent || {}, 'No opponent events matched a roster name')
+      + '</tbody></table>';
+  }
+  const unWrap = document.getElementById('aiUnassignedWrap');
+  if (unWrap) {
+    const rows = countedPlayers(box.unassigned || []);
+    unWrap.innerHTML = rows.length
+      ? '<table><thead>' + officialStatHeaders() + '</thead><tbody>'
+        + rows.map(function(r) { return officialStatRow(playerLabel(r), r); }).join('')
+        + '</tbody></table>'
+      : '<p class="box-note">Every AI event matched a roster name.</p>';
+  }
+}
 function renderOfficialBox(box) {
   const card = document.getElementById('officialBoxCard');
   if (!card) return;

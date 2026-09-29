@@ -160,7 +160,7 @@ Re-analyze film from Videos when ready.
 
 **Done:** Q1 extra-shot floor; Q2 make/TO/hoop-aim rewrite; hoop/net track rebuild; FT must be at this hoop + 4s gap.
 
-**Not done:** Q2 extras still ~25 extra FGA (passes/tips near the rim). Makes still short (4 vs 9) because the ball box often vanishes at the nylon — next make rule is net motion, not a higher arc. Player names still Unknown. REB follows extra misses.
+**Not done:** Q2 extras still ~25 extra FGA (passes/tips near the rim). Player names still Unknown. REB follows extra misses. Net motion is in the precision generator (`net_kicked` / `net_moved_after_shot`): a make is the ball through the rim, or the locked net moving when the ball box vanishes. A camera pan is not a make. The arc threshold was not raised. Stored Adrian events still use the old make flag until events are rebuilt. A rerun key loads the base hoop track.
 
 **Proven (2026-09-16 afternoon):** The tag card is a compact centered dialog (not full-bleed). Every tag except Start/End QTR uses the same flow: Liberty vs this game’s opponent, then that team’s roster. Jump Ball asks who won. Steal still adds the matching turnover from the other roster. Add-player is an inline field (no nested `prompt()`), so Cancel / Esc / backdrop still close the card. Opponent roster keys off the team you are playing (Adrian on this game), not a generic Opponent list.
 

@@ -65,3 +65,32 @@ def test_detected_hoop_beats_key_estimate():
     mem.detected_hoop = (410.0, 90.0)
     assert mem.hoop_xy() == (410.0, 90.0)
     assert mem.close_to_rim(400, 100)
+
+
+def test_net_kick_is_a_make_a_pan_is_not():
+    from net_detector import net_kicked
+
+    before = np.zeros((200, 400, 3), dtype=np.uint8)
+    before[:] = (40, 40, 40)
+    hoop = (80.0, 40.0)
+    # Still nylon in the column under the rim.
+    before[55:110, 55:110] = (180, 180, 180)
+    still = before.copy()
+    assert not net_kicked(before, still, hoop, rim_r=28)
+
+    kicked = before.copy()
+    kicked[55:110, 55:110] = (40, 40, 40)
+    kicked[90:150, 50:115] = (210, 210, 210)
+    assert net_kicked(before, kicked, hoop, rim_r=28)
+
+    pan = np.clip(before.astype(np.int16) + 50, 0, 255).astype(np.uint8)
+    assert not net_kicked(before, pan, hoop, rim_r=28)
+
+
+def test_rerun_uses_the_base_hoop_track(tmp_path, monkeypatch):
+    from net_detector import load_hoop_track, save_hoop_track
+
+    monkeypatch.setattr("net_detector.TRACK_DIR", tmp_path)
+    save_hoop_track("adrian_base", [{"timestamp_ms": 0, "x": 1, "y": 2, "r": 20}])
+    assert load_hoop_track("adrian_base__rerun_20260928_031027")[0]["x"] == 1
+    assert load_hoop_track("no_such_game") == []
