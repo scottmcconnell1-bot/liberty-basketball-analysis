@@ -184,14 +184,17 @@ def save_court_slot_mappings(db, game_id, mappings, apply_to_events=False):
     return applied
 
 
-def apply_court_slot_mappings(db, game_id):
+def apply_court_slot_mappings(db, game_id, tracker_ids=None):
     """Rewrite AI events and derived tables to use mapped jersey labels."""
     relational_game_id, analysis_key = _game_scope(db, game_id)
     slots = get_court_slots(db, game_id)
+    allowed = None if tracker_ids is None else {int(t) for t in tracker_ids}
     events_updated = 0
 
     for slot in slots:
         if not slot.get("is_mapped"):
+            continue
+        if allowed is not None and int(slot["tracker_id"]) not in allowed:
             continue
 
         resolved = _resolve_roster_player(

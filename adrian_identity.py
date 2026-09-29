@@ -309,8 +309,9 @@ def apply_lookaround_to_accepted(
     game_id: str = ADRIAN_BASE,
     *,
     commit: bool = True,
+    statuses: tuple[str, ...] = ("accepted", "corrected"),
 ) -> dict[str, Any]:
-    """Rewrite accepted Adrian events with lookaround jersey/name/team when unique."""
+    """Rewrite Adrian events with lookaround jersey/name/team when unique."""
     if not is_adrian_game(game_id):
         raise ValueError(f"Refusing non-Adrian game_id: {game_id}")
 
@@ -320,16 +321,17 @@ def apply_lookaround_to_accepted(
     from jersey_shade import ensure_tracker_shades
 
     shades = ensure_tracker_shades(conn, game_id)
+    status_sql = ",".join("?" for _ in statuses)
 
     rows = conn.execute(
-        """
+        f"""
         SELECT id, player, event_type, timestamp_ms, details_json, review_notes
           FROM events
          WHERE game_id = ?
-           AND review_status IN ('accepted', 'corrected')
+           AND review_status IN ({status_sql})
          ORDER BY timestamp_ms ASC, id ASC
         """,
-        (ADRIAN_BASE,),
+        (game_id, *statuses),
     ).fetchall()
 
     matched = 0
@@ -351,7 +353,7 @@ def apply_lookaround_to_accepted(
             continue
 
         result = resolve_event_identity(
-            conn, ADRIAN_BASE, event, roster_index, shades=shades
+            conn, game_id, event, roster_index, shades=shades
         )
         if result is None:
             unresolved += 1
@@ -432,7 +434,7 @@ def apply_lookaround_to_accepted(
 
     return {
         "ok": True,
-        "game_id": ADRIAN_BASE,
+        "game_id": game_id,
         "accepted_rows": len(rows),
         "matched": matched,
         "ambiguous": ambiguous,

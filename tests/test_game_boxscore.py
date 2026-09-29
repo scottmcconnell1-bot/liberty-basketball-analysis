@@ -12,6 +12,25 @@ from game_boxscore import (
 )
 
 
+def test_scoreboard_lookup_does_not_invent_a_quarter():
+    from scoreboard_clock import legal_clock, quarter_from_scoreboard, scoreboard_at
+
+    assert scoreboard_at([], 90_000) is None
+    assert scoreboard_at([{"timestamp_ms": 90_000, "period": 1, "clock": "7:46"}], 90_400)["clock"] == "7:46"
+    assert scoreboard_at([{"timestamp_ms": 90_000, "period": 1}], 90_400)["period"] == 1
+    assert scoreboard_at([{"timestamp_ms": 90_000, "period": 1}], 20_000) is None
+    assert legal_clock("7:46")
+    assert legal_clock("12:00")
+    assert not legal_clock("7:62")
+    assert not legal_clock("7:66")
+    assert not legal_clock("3:6")
+    assert not legal_clock(None)
+    assert quarter_from_scoreboard({"period": 1, "clock": "7:46"}) == 1
+    assert quarter_from_scoreboard({"period": 1}) is None
+    assert quarter_from_scoreboard({"period": 1, "clock": "7:62"}) is None
+    assert quarter_from_scoreboard({"clock": "7:46"}) is None
+
+
 def test_shooting_pct_and_running_totals():
     assert shooting_pct(0, 0) is None
     assert shooting_pct(1, 2) == 50.0

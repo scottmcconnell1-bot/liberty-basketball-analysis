@@ -168,6 +168,102 @@ def test_persist_events_keeps_manual_and_regrades_ai(app):
         assert "Colman" in (ai["player"] or "")
 
 
+def test_teach_keeps_the_make_and_does_not_reject_its_shot_twin(app):
+    game_id = "teach-shot-twin"
+    with app.app_context():
+        db = get_db()
+        for event_type in ("shot", "made_two"):
+            db.execute(
+                """INSERT INTO events
+                      (game_id, player, event_type, shot_result, timestamp_ms,
+                       human_verified, source_type, review_status, confidence)
+                   VALUES (?, '5', ?, 'make', 10000, 0, 'ai', 'pending', 0.4)""",
+                (game_id, event_type),
+            )
+        db.commit()
+        teach_from_film_tool_rows(db, game_id, [{
+            "eventtype": "2PT",
+            "result": "Make",
+            "player": "40 - Dayley",
+            "team": "Liberty",
+            "start": "0:10.0",
+        }])
+        rows = db.execute(
+            """SELECT event_type, player, review_status FROM events
+                WHERE game_id=? AND source_type='ai' ORDER BY event_type""",
+            (game_id,),
+        ).fetchall()
+        by_type = {row["event_type"]: row for row in rows}
+        assert by_type["made_two"]["review_status"] == "corrected"
+        assert "Dayley" in by_type["made_two"]["player"]
+        assert by_type["shot"]["review_status"] == "pending"
+
+
+def test_rerun_uses_the_base_films_manual_tags(app):
+    from manual_tag_teach import apply_saved_manual_teach
+
+    base = "jrhigh_adrian,_or_TEACH_BASE"
+    rerun = base + "__rerun_20260929_010000"
+    with app.app_context():
+        db = get_db()
+        teach_from_film_tool_rows(db, base, [{
+            "eventtype": "2PT",
+            "result": "Make",
+            "player": "21 - Colman",
+            "team": "Liberty",
+            "start": "1:00.0",
+        }])
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '8', 'made_two', 'make', 60000, 0, 'ai', 'pending', 0.4)""",
+            (rerun,),
+        )
+        db.commit()
+        report = apply_saved_manual_teach(db, rerun)
+        assert report["corrected"] == 1
+        row = db.execute(
+            "SELECT player, event_type, review_status FROM events WHERE game_id=? AND source_type='ai'",
+            (rerun,),
+        ).fetchone()
+        assert row["event_type"] == "made_two"
+        assert row["review_status"] == "corrected"
+        assert "Colman" in row["player"]
+
+
+def test_unmatched_tag_is_not_inserted_as_a_make(app):
+    game_id = "teach-orphan-tag"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '5', 'made_two', 'make', 40000, 0, 'ai', 'pending', 0.4)""",
+            (game_id,),
+        )
+        db.commit()
+        report = teach_from_film_tool_rows(db, game_id, [{
+            "eventtype": "2PT",
+            "result": "Make",
+            "player": "40 - Dayley",
+            "team": "Liberty",
+            "start": "0:10.0",
+        }])
+        assert report["unmatched_manual"] == 1
+        assert report["corrected"] == 0
+        rows = db.execute(
+            "SELECT event_type, player, review_status, source_type FROM events WHERE game_id=?",
+            (game_id,),
+        ).fetchall()
+        assert len(rows) == 2
+        ai = [row for row in rows if row["source_type"] == "ai"][0]
+        assert ai["event_type"] == "made_two"
+        assert ai["review_status"] == "pending"
+        assert ai["player"] == "5"
+
+
 def test_manual_tags_sidecar_roundtrip(client, tmp_path, monkeypatch):
     import film_tool_tags
 

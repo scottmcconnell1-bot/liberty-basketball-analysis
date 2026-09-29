@@ -548,10 +548,51 @@ def resolve_video_duration_ms(db, game_id, relational_game_id=None, analysis_key
     return max(duration_ms, 1)
 
 
-def infer_period_labels(timestamp_ms, duration_ms):
-    """Infer quarter (1-4, 5=OT) and half (1-2) from timestamp and video duration."""
+_QUARTER_END = re.compile(r"ends\s+(\d{1,2}):(\d{2})")
+
+
+def quarter_end_ms_from_scorebook(scorebook) -> list[int]:
+    """Film clock marks from scorebook notes, in order: Q1 ends 15:58, then Q2."""
+    ends: list[int] = []
+    if not scorebook:
+        return ends
+    for quarter in scorebook.get("quarters") or []:
+        match = _QUARTER_END.search(str(quarter.get("notes") or ""))
+        if not match:
+            break
+        ends.append((int(match.group(1)) * 60 + int(match.group(2))) * 1000)
+    return ends
+
+
+def infer_period_labels(timestamp_ms, duration_ms, quarter_ends_ms=None):
+    """Infer quarter (1-4, 5=OT) and half (1-2) from timestamp and video duration.
+
+    quarter_ends_ms, when the scorebook recorded them, is the film clock
+    (Q1 ends at 15:58) instead of cutting the file into four equal pieces.
+    """
     ts = max(0, int(timestamp_ms or 0))
     duration = max(1, int(duration_ms or 1))
+    ends = [int(ms) for ms in (quarter_ends_ms or []) if int(ms) > 0]
+    if ends:
+        quarter = None
+        for index, end_ms in enumerate(ends):
+            if ts <= end_ms:
+                quarter = index + 1
+                break
+        if quarter is None:
+            start = ends[-1]
+            remaining = max(1, 4 - len(ends))
+            span = max(1, duration - start)
+            step = span / remaining
+            offset = min(remaining - 1, int(max(0, ts - start) / step))
+            quarter = min(4, len(ends) + offset + 1)
+        half = 1 if quarter <= 2 else 2
+        return {
+            "quarter": quarter,
+            "half": half,
+            "quarter_label": f"Q{quarter}" if quarter <= 4 else "OT",
+            "half_label": "1st half" if half == 1 else "2nd half",
+        }
     quarter_len = duration / 4.0
     quarter_index = int(ts / quarter_len)
     if quarter_index >= 4:

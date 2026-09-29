@@ -37,6 +37,34 @@
       "samples": 8,
       "shade": "dark",
       "side": "away"
+    },
+    "2": {
+      "mean_s": 101.5,
+      "mean_v": 134.5,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "3": {
+      "mean_s": 69.0,
+      "mean_v": 138.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "4": {
+      "mean_s": 82.2,
+      "mean_v": 124.2,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "9": {
+      "mean_s": 61.9,
+      "mean_v": 150.7,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
     }
   }
 }

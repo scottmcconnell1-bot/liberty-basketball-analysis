@@ -305,6 +305,25 @@ def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, A
     return applied
 
 
+def _scoring_code(details: dict, shot_result) -> str | None:
+    """made_two / missed_three / … for a Film Tool shot tag. A plain shot scores 0."""
+    from stat_rules import scoring_event_type
+
+    kind = {"2pt": "2", "3pt": "3", "ft": "ft"}.get(str((details or {}).get("shot_type") or ""))
+    if not kind:
+        return None
+    return scoring_event_type(kind, str(shot_result or "") == "make")
+
+
+def _match_rank(ai_type: str, want_code: str | None) -> int:
+    et = str(ai_type or "").lower()
+    if want_code and et == want_code:
+        return 0
+    if et == "shot":
+        return 2
+    return 1
+
+
 def apply_saved_manual_teach(
     db, game_id: str, *, commit: bool = True, pending_only: bool = False
 ) -> dict[str, Any]:
@@ -314,14 +333,11 @@ def apply_saved_manual_teach(
     already accepted, corrected or rejected are left alone.
     """
     game_id = normalize_analysis_game_id(game_id)
-    manuals = db.execute(
-        """SELECT id, event_type, shot_result, player, timestamp_ms, details_json
-             FROM events
-            WHERE game_id=? AND source_type='manual'
-              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
-            ORDER BY timestamp_ms""",
-        (game_id,),
-    ).fetchall()
+    manual_game_id = game_id
+    manuals = _manual_teach_rows(db, game_id)
+    if not manuals and "__rerun_" in str(game_id):
+        manual_game_id = str(game_id).split("__rerun_", 1)[0]
+        manuals = _manual_teach_rows(db, manual_game_id)
     if not manuals:
         return {"corrected": 0, "rejected": 0, "unmatched_manual": 0, "window_ms": None}
 
@@ -350,8 +366,9 @@ def apply_saved_manual_teach(
         if not family:
             continue
         want_ms = int(_row_get(manual, "timestamp_ms") or 0)
+        want_code = _scoring_code(details, _row_get(manual, "shot_result")) if family == "shot" else None
         best = None
-        best_dt = None
+        best_key = None
         for ai in ai_rows:
             ai_id = int(_row_get(ai, "id"))
             if ai_id in used_ai:
@@ -361,8 +378,9 @@ def apply_saved_manual_teach(
             dt = abs(int(_row_get(ai, "timestamp_ms") or 0) - want_ms)
             if dt > MATCH_TOLERANCE_MS:
                 continue
-            if best_dt is None or dt < best_dt:
-                best, best_dt = ai, dt
+            key = (_match_rank(_row_get(ai, "event_type"), want_code), dt, ai_id)
+            if best_key is None or key < best_key:
+                best, best_key = ai, key
         if best is None:
             unmatched_manual += 1
             continue
@@ -370,6 +388,12 @@ def apply_saved_manual_teach(
         _correct_ai_from_manual(db, game_id, best, manual, details)
         corrected += 1
 
+    matched_shot_times = {
+        int(_row_get(ai, "timestamp_ms") or 0)
+        for ai in ai_rows
+        if int(_row_get(ai, "id")) in used_ai
+        and _ai_family(_row_get(ai, "event_type")) == "shot"
+    }
     rejected = 0
     for ai in ai_rows:
         ai_id = int(_row_get(ai, "id"))
@@ -377,6 +401,10 @@ def apply_saved_manual_teach(
             continue
         family = _ai_family(_row_get(ai, "event_type"))
         if family not in {"shot", "rebound", "assist", "steal", "turnover", "foul", "block"}:
+            continue
+        # The generator stores a shot and a made/missed row at the same time.
+        # The tag counts once. The other row is the same play, not an extra.
+        if family == "shot" and int(_row_get(ai, "timestamp_ms") or 0) in matched_shot_times:
             continue
         result = reject_event(
             db,
@@ -397,10 +425,21 @@ def apply_saved_manual_teach(
     }
 
 
+def _manual_teach_rows(db, game_id: str):
+    return db.execute(
+        """SELECT id, event_type, shot_result, player, timestamp_ms, details_json
+             FROM events
+            WHERE game_id=? AND source_type='manual'
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
+            ORDER BY timestamp_ms""",
+        (game_id,),
+    ).fetchall()
+
+
 def _correct_ai_from_manual(db, game_id, ai_row, manual_row, manual_details: dict) -> None:
     ai_id = int(_row_get(ai_row, "id"))
     new_player = str(_row_get(manual_row, "player") or "").strip()
-    new_type = _row_get(manual_row, "event_type")
+    new_type = _scoring_code(manual_details, _row_get(manual_row, "shot_result")) or _row_get(manual_row, "event_type")
     new_result = _row_get(manual_row, "shot_result")
     details = _details(_row_get(ai_row, "details_json"))
     if manual_details.get("shot_type"):
@@ -409,10 +448,12 @@ def _correct_ai_from_manual(db, game_id, ai_row, manual_row, manual_details: dic
         details["team"] = manual_details["team"]
     details["film_tool_teach"] = True
     old_player = _row_get(ai_row, "player")
+    type_id = _lookup_event_type_id(db, str(new_type))
     db.execute(
         """UPDATE events
               SET player=?,
                   event_type=?,
+                  event_type_id=COALESCE(?, event_type_id),
                   shot_result=?,
                   details_json=?,
                   review_status='corrected',
@@ -423,6 +464,7 @@ def _correct_ai_from_manual(db, game_id, ai_row, manual_row, manual_details: dic
         (
             new_player or old_player,
             new_type,
+            type_id,
             new_result,
             json.dumps(details),
             TEACH_NOTE,

@@ -22,6 +22,7 @@ import re
 from typing import Any
 
 from analysis_helpers import infer_period_labels, resolve_video_duration_ms
+from scoreboard_clock import load_scoreboard_track, quarter_from_scoreboard, scoreboard_at
 from program_mode import (
     canonical_event_key,
     film_slots_from_scorebook,
@@ -447,23 +448,26 @@ def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[
         roster_index = {}
 
     duration_ms = resolve_video_duration_ms(db, game_id, analysis_key=key)
+    scoreboard_samples = load_scoreboard_track(key) if event_counts else []
+    trusted = ("accepted", "corrected", "pending") if event_counts else ("accepted", "corrected")
+    status_sql = ",".join("?" for _ in trusted)
     try:
         events = db.execute(
-            """SELECT player, event_type, shot_result, timestamp_ms, review_status, details_json
+            f"""SELECT player, event_type, shot_result, timestamp_ms, review_status, details_json
                  FROM events
                 WHERE game_id=?
-                  AND review_status IN ('accepted', 'corrected')
+                  AND review_status IN ({status_sql})
                 ORDER BY timestamp_ms ASC""",
-            (key,),
+            (key, *trusted),
         ).fetchall()
     except Exception:
         events = db.execute(
-            """SELECT player, event_type, shot_result, timestamp_ms, review_status
+            f"""SELECT player, event_type, shot_result, timestamp_ms, review_status
                  FROM events
                 WHERE game_id=?
-                  AND review_status IN ('accepted', 'corrected')
+                  AND review_status IN ({status_sql})
                 ORDER BY timestamp_ms ASC""",
-            (key,),
+            (key, *trusted),
         ).fetchall()
 
     lib_q = [0, 0, 0, 0, 0]
@@ -480,8 +484,15 @@ def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[
         shot_result = row["shot_result"] if hasattr(row, "keys") else row[2]
         timestamp_ms = row["timestamp_ms"] if hasattr(row, "keys") else row[3]
         extra = _event_details(row)
-        period = infer_period_labels(timestamp_ms, duration_ms)
-        q_index = min(max(int(period["quarter"]) - 1, 0), 4)
+        board = scoreboard_at(scoreboard_samples, int(timestamp_ms or 0)) if scoreboard_samples else None
+        period_num = quarter_from_scoreboard(board)
+        if period_num is not None:
+            q_index = min(max(period_num - 1, 0), 4)
+        elif event_counts:
+            q_index = None
+        else:
+            period = infer_period_labels(timestamp_ms, duration_ms)
+            q_index = min(max(int(period["quarter"]) - 1, 0), 4)
         delta = empty_line()
         pts = apply_ai_event(delta, event_type, shot_result, extra)
         jersey, tracker = _event_jersey_and_tracker(raw_player, extra)
@@ -552,9 +563,9 @@ def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[
             last_to_side = None
             if last_reb_kind == "oreb" and last_reb_side == side:
                 last_reb_kind = None
-        if pts and side == "liberty":
+        if pts and q_index is not None and side == "liberty":
             lib_q[q_index] += pts
-        elif pts and side == "opponent":
+        elif pts and q_index is not None and side == "opponent":
             opp_q[q_index] += pts
 
     period_pairs = list(zip(lib_q[:4], opp_q[:4]))
@@ -639,11 +650,18 @@ def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[
     opponent_team["starter_pts"] = starter_points(opponent_players)
 
     if event_counts:
-        line_note = (
-            "AI analysis from the latest finished film run. Points, makes, misses, "
-            "rebounds, and the other columns are those events. Q1–Q4 are four equal "
-            "slices of the video, not the scorebook periods."
-        )
+        if scoreboard_samples:
+            line_note = (
+                "A quarter is set only when the scoreboard sample at that video time "
+                "has a full clock (M:SS or MM:SS, seconds 0–59, minutes 0–12) and a period. "
+                "A period digit alone does not set the quarter. The file is not cut into four equal parts."
+            )
+        else:
+            line_note = (
+                "AI analysis from the latest finished film run. Points, makes, misses, "
+                "rebounds, and the other columns are those events. Q1–Q4 are four equal "
+                "slices of the video, not the scorebook periods."
+            )
     elif line_source == "scorebook":
         line_note = (
             "Quarter scores from the confirmed scorebook. PTS/makes in the book stay; "

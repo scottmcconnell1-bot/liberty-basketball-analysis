@@ -344,6 +344,29 @@ def run_identity_postprocess(db, game_id, ai_settings=None):
     }
 
 
+def _ocr_backed_trackers(db, game_id) -> set[tuple[int, int]]:
+    """Cluster/tracker ids whose jersey was read on this analysis key."""
+    try:
+        rows = db.execute(
+            """SELECT tracker_id, jersey_number
+                 FROM track_identity_labels
+                WHERE game_id = ?
+                  AND jersey_number IS NOT NULL
+                  AND sample_count >= 2
+                  AND confidence >= 0.55
+                  AND source LIKE 'ocr%'""",
+            (game_id,),
+        ).fetchall()
+    except Exception:
+        return set()
+    backed = set()
+    for row in rows:
+        tracker = row["tracker_id"] if hasattr(row, "keys") else row[0]
+        jersey = row["jersey_number"] if hasattr(row, "keys") else row[1]
+        backed.add((int(tracker), int(jersey)))
+    return backed
+
+
 def ensure_identity_applied(db, game_id, ai_settings=None):
     """Auto-apply jersey mappings when AI events still use raw cluster ids."""
     ai_settings = ai_settings or {}
@@ -357,8 +380,17 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
     from court_slot_mapping import apply_court_slot_mappings, get_court_slots
 
     slots = get_court_slots(db, game_id)
-    if any(slot.get("is_mapped") for slot in slots):
-        result = apply_court_slot_mappings(db, game_id)
+    ocr_backed = _ocr_backed_trackers(db, game_id)
+    mapped = [
+        slot for slot in slots
+        if slot.get("is_mapped")
+        and slot.get("jersey_number") is not None
+        and (int(slot["tracker_id"]), int(slot["jersey_number"])) in ocr_backed
+    ]
+    if mapped:
+        result = apply_court_slot_mappings(
+            db, game_id, tracker_ids=[slot["tracker_id"] for slot in mapped]
+        )
         if _events_use_raw_cluster_ids(db, game_id) == 0:
             return {
                 "skipped": False,
