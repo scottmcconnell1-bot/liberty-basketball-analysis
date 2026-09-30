@@ -601,10 +601,24 @@ def test_rerun_labels_second_run_keeps_primary_and_compare_lists_both(env, monke
     assert listed[rerun_key]["detection_count"] == rerun_det
     assert listed[rerun_key]["detection_delta"] == rerun_det - n_det
 
-    # primary results untouched by the rerun
+    # primary data is untouched by the rerun (per-run counts above). Since PR #151 the
+    # game key shows its newest finished run; a specific rerun key shows that run.
+    rerun_events = env.one("SELECT COUNT(*) AS c FROM events WHERE game_id=?", (rerun_key,))["c"]
     res = env.json(f"/api/analysis/{key}")
-    assert (res["detection_count"], res["event_count"]) == (n_det, primary_events)
+    assert (res["detection_count"], res["event_count"]) == (rerun_det, rerun_events)
     assert env.json(f"/api/analysis_progress/{rerun_key}")["detection_count"] == rerun_det
+
+    # a second, newer rerun must not hide the first when the first is asked for by key
+    r = env.client.post(f"/videos/{video['id']}/rerun", data={"run_label": "second"}, follow_redirects=False)
+    assert r.status_code == 302
+    rerun2_key = env.q("SELECT analysis_key FROM analysis_runs ORDER BY id DESC LIMIT 1")[0]["analysis_key"]
+    assert rerun2_key not in (key, rerun_key)
+    env.worker_start(rerun2_key)
+    rerun2_det = env.worker_finish(rerun2_key, frames=90, seed=23)
+    assert rerun2_det != rerun_det
+    first = env.json(f"/api/analysis/{rerun_key}")
+    assert (first["detection_count"], first["event_count"]) == (rerun_det, rerun_events)
+    assert env.json(f"/api/analysis/{key}")["detection_count"] == rerun2_det
 
 
 def test_new_request_supersedes_pending_rerun(env, monkeypatch):

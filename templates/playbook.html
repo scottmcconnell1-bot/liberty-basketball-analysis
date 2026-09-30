@@ -1138,10 +1138,13 @@ function withManDefense(positions, ballPid) {
   const src = positions || {};
   const out = {};
   Object.keys(src).forEach((k) => {
-    if (String(k).startsWith('d')) return;
     const p = src[k];
     if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
   });
+  // Imported FastDraw/PDF sheets are offense-only. Auto x-defenders sit on the
+  // ball offset and look like every player has a basketball.
+  if (playHasSheets()) return out;
+  Object.keys(out).forEach((k) => { if (String(k).startsWith('d')) delete out[k]; });
   const ball = ballPid || lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1';
   const placed = LibertyManDefense.placeManDefense(out, ball, { rim: { x: 250, y: 15 } });
   Object.keys(placed).forEach((k) => { out[k] = placed[k]; });

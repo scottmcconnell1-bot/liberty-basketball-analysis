@@ -272,6 +272,16 @@ def _row_value(row, name: str, index: int):
     return row[index]
 
 
+def _reviewed_event_count(db, key: str) -> int:
+    """Events a coach decided on (accepted or corrected) for one analysis key."""
+    row = db.execute(
+        """SELECT COUNT(*) AS c FROM events
+            WHERE game_id=? AND review_status IN ('accepted','corrected')""",
+        (key,),
+    ).fetchone()
+    return int(_row_value(row, "c", 0) or 0)
+
+
 def _trusted_event_count(db, key: str) -> int:
     row = db.execute(
         """SELECT COUNT(*) AS c FROM events
@@ -309,7 +319,14 @@ def canonical_event_key(db, game_id: str) -> str:
         completed.append((int(_row_value(run, "id", 0)), key))
     if completed:
         completed.sort()
-        return completed[-1][1]
+        newest = completed[-1][1]
+        # A newer run that nobody has reviewed yet must not hide the copy where the
+        # coach accepted/corrected events: that would drop their work from the box.
+        if _reviewed_event_count(db, newest) == 0:
+            for _run_id, key in reversed(completed[:-1]):
+                if _reviewed_event_count(db, key) > 0:
+                    return key
+        return newest
 
     best_key = game_id or base
     best_n = -1

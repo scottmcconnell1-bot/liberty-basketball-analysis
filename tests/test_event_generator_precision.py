@@ -5,6 +5,7 @@ import sqlite3
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import event_generator as eg
 
@@ -158,6 +159,7 @@ def test_precision_does_not_count_a_pass_as_a_turnover():
 
 
 def test_net_motion_makes_a_shot_when_the_ball_box_vanishes(monkeypatch):
+    pytest.importorskip("cv2")  # net motion is read with OpenCV; CI has no cv2
     hoop = {"timestamp_ms": 0, "x": 430.0, "y": 250.0, "r": 28.0}
     monkeypatch.setattr("net_detector.load_hoop_track", lambda _gid: [hoop])
     monkeypatch.setattr("net_detector.hoop_at", lambda *_a, **_k: hoop)

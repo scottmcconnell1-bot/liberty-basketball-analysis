@@ -68,6 +68,7 @@ def test_detected_hoop_beats_key_estimate():
 
 
 def test_net_kick_is_a_make_a_pan_is_not():
+    pytest.importorskip("cv2")  # net_kicked compares frames with OpenCV; CI has no cv2
     from net_detector import net_kicked
 
     before = np.zeros((200, 400, 3), dtype=np.uint8)

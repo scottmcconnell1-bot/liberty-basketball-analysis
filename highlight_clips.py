@@ -152,8 +152,12 @@ def list_highlight_moments(
         filters.append("e.relational_game_id = ?")
         params.append(relational_game_id)
     else:
+        # Same copy the review queue serves (newest run / coach-reviewed run),
+        # so events the coach just accepted show up as moments.
+        from program_mode import canonical_event_key
+
         filters.append("e.game_id = ?")
-        params.append(str(game_id))
+        params.append(canonical_event_key(db, str(game_id)))
 
     jersey_clause, jersey_params = _jersey_match_clause(jersey or "")
     if jersey_clause:
@@ -430,8 +434,11 @@ def _fetch_trusted_moments_by_ids(
         filters.append("e.relational_game_id = ?")
         params.append(relational_game_id)
     else:
+        # Same copy as list_highlight_moments / the review queue.
+        from program_mode import canonical_event_key
+
         filters.append("e.game_id = ?")
-        params.append(str(game_id))
+        params.append(canonical_event_key(db, str(game_id)))
 
     rows = db.execute(
         f"""SELECT e.id, e.game_id, e.relational_game_id, e.player, e.event_type,
