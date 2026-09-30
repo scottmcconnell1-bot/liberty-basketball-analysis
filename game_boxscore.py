@@ -488,9 +488,13 @@ def build_official_box(db, game_id: str, *, event_counts: bool = False) -> dict[
         period_num = quarter_from_scoreboard(board)
         if period_num is not None:
             q_index = min(max(period_num - 1, 0), 4)
-        elif event_counts:
+        elif event_counts and scoreboard_samples:
+            # This game has a scoreboard track but no trusted read at this moment:
+            # a guessed quarter would be wrong, so leave it out of the line score.
             q_index = None
         else:
+            # No scoreboard track (every game except Adrian so far): four equal
+            # slices of the video, as the line-score note says.
             period = infer_period_labels(timestamp_ms, duration_ms)
             q_index = min(max(int(period["quarter"]) - 1, 0), 4)
         delta = empty_line()

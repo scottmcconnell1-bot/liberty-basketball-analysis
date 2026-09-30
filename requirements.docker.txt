@@ -5,6 +5,9 @@
 -r requirements-dev.txt
 
 opencv-python-headless>=4.8,<5
+# ultralytics pulls in opencv-python unpinned (5.x), which shadows the headless 4.x
+# build above and drops APIs such as HOGDescriptor. Keep both on 4.x.
+opencv-python>=4.8,<5
 ultralytics>=8.0,<9
 scikit-learn>=1.4,<2
 gunicorn>=21.0,<24

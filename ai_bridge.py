@@ -10,12 +10,13 @@ import cv2
 import numpy as np
 
 # Import core functions for make/miss determination (we are allowed to use them as long as we don't change them)
+# (hoop_xy is a FrameCourtMemory method, not a module function; importing it made
+# this whole block fail and left the core make functions as None.)
 try:
-    from court_memory import hoop_xy, ball_through_rim
+    from court_memory import ball_through_rim
     from net_detector import net_moved_after_shot
 except ImportError:
     # Fallback in case we are in an environment where core modules are not available (e.g., testing)
-    hoop_xy = None
     ball_through_rim = None
     net_moved_after_shot = None
 
@@ -87,9 +88,12 @@ class BasketballStatsAdapter:
         self.person_model = None
         self.ball_model = None
         
-        # Appearance feature extractor (for tracker association)
-        self.hog = cv2.HOGDescriptor()
-        self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        # Appearance feature extractor (for tracker association). OpenCV 5 dropped
+        # HOGDescriptor from the main module; features are placeholders for now.
+        self.hog = None
+        if hasattr(cv2, "HOGDescriptor"):
+            self.hog = cv2.HOGDescriptor()
+            self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         
     def process_video_frame(self, frame: np.ndarray, frame_number: int, 
                           timestamp_ms: float) -> List[DetectionData]:
@@ -188,7 +192,7 @@ class BasketballStatsAdapter:
             features = self._extract_appearance_features(det)
             
             # Find best match in current tracker state
-            best_match_id = self._find_best_tracker_match(centroid, features)
+            best_match_id = self._find_best_tracker_match(centroid, features, det.frame_number)
             
             if best_match_id is None:
                 # Assign new ID
@@ -289,8 +293,8 @@ class BasketballStatsAdapter:
         # This is a placeholder - in practice, we'd need to pass the frame or extract ROI
         return np.zeros(3780,)  # Default HOG descriptor size for 64x128 window
     
-    def _find_best_tracker_match(self, centroid: Tuple[float, float], 
-                                features: np.ndarray) -> Optional[int]:
+    def _find_best_tracker_match(self, centroid: Tuple[float, float],
+                                features: np.ndarray, frame_number: int) -> Optional[int]:
         """Find best existing tracker for this detection"""
         best_id = None
         best_score = float('inf')
@@ -299,7 +303,7 @@ class BasketballStatsAdapter:
         
         for tracker_id, state in self.tracker_state.items():
             # Skip if tracker is too old (no detection in last 30 frames)
-            if det.frame_number - state['last_seen'] > 30:
+            if frame_number - state['last_seen'] > 30:
                 continue
                 
             # Distance cost
@@ -405,7 +409,7 @@ class BasketballStatsAdapter:
                               frame_width: int, frame_height: int) -> Optional[MakeMissData]:
         """Classify whether shot resulted in make or miss using core functions"""
         # Use core functions if available
-        if hoop_xy is not None and ball_through_rim is not None and net_moved_after_shot is not None:
+        if ball_through_rim is not None and net_moved_after_shot is not None:
             # We would need to construct the ball_track and frame_reader for the core functions
             # This is a simplified version - in practice, we'd need to pass the actual data structures
             # For now, we'll use a placeholder

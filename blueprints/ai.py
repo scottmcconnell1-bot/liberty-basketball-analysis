@@ -492,11 +492,14 @@ def get_analysis_results(game_id):
     from stats import refresh_stats, get_enhanced_stats, aggregate_stats_preview, get_shot_breakdown_preview
     game_id = normalize_analysis_game_id(game_id)
     db = get_db()
+    requested_rerun = "__rerun_" in str(game_id)
     row = resolve_analysis_run_for_progress(db, game_id)
     if row and row["analysis_key"]:
         game_id = row["analysis_key"]
         base_key = str(game_id).split("__rerun_", 1)[0]
-        newer = db.execute(
+        # Asking for the game shows its newest finished run; asking for one
+        # specific rerun (compare page, Videos → that run) must show that run.
+        newer = None if requested_rerun else db.execute(
             """SELECT * FROM analysis_runs
                 WHERE status='completed'
                   AND id > ?

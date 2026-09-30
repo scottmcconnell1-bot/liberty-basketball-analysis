@@ -136,8 +136,9 @@ def _digit_groups(mask: np.ndarray) -> list[str]:
             groups.append(current)
             current = ""
         digit = _segment_digit(piece)
-        if digit:
-            current += digit
+        # Keep a placeholder for a glyph we cannot read: dropping it silently turned
+        # 10:59 into "105" -> a legal-looking 1:05 that then set the quarter.
+        current += digit if digit else "?"
         previous_end = run_end
     if current:
         groups.append(current)
@@ -164,6 +165,8 @@ def _joined_digits(groups: list[str]) -> str:
 
 def _clock_text(groups: list[str]) -> str | None:
     """M:SS or MM:SS. A partial read is not a clock."""
+    if any("?" in part for part in groups):
+        return None
     digits = _joined_digits(groups)
     if len(digits) == 3:
         return f"{digits[0]}:{digits[1:]}"
