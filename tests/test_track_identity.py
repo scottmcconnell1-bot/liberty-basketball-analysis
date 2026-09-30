@@ -317,3 +317,56 @@ def test_auto_apply_leaves_an_unread_slot_and_does_not_mark_reviewed(db):
     ).fetchone()
     assert untouched is not None
     assert untouched["review_status"] == "pending"
+
+
+def test_both_teams_with_the_same_number_are_named_by_shade():
+    """#161 review: the second #11 was dropped because duplicates were keyed by number alone."""
+    from track_identity import _build_auto_apply_mappings
+
+    roster = {11: [{"name": "Liberty Eleven", "side": "liberty"}, {"name": "Opp Eleven", "side": "opponent"}]}
+    suggestions = [
+        {"tracker_id": 3, "jersey_number": 11, "confidence": 0.9, "sample_count": 6},
+        {"tracker_id": 8, "jersey_number": 11, "confidence": 0.8, "sample_count": 5},
+    ]
+    shades = {3: {"side": "home"}, 8: {"side": "away"}}
+    out = _build_auto_apply_mappings(
+        suggestions, roster_by_jersey=roster, use_roster_whitelist=True, min_conf=0.5,
+        min_samples=2, shade_by_tracker=shades, liberty_is_home=True,
+    )
+    assert sorted((m["tracker_id"], m["player_name"]) for m in out) == [
+        (3, "Liberty Eleven"), (8, "Opp Eleven")]
+
+
+def test_same_side_shared_number_is_still_named_once():
+    """Two trackers with the same shared number and the same side: only the first is named."""
+    from track_identity import _build_auto_apply_mappings
+
+    roster = {11: [{"name": "Liberty Eleven", "side": "liberty"}, {"name": "Opp Eleven", "side": "opponent"}]}
+    suggestions = [
+        {"tracker_id": 3, "jersey_number": 11, "confidence": 0.9, "sample_count": 6},
+        {"tracker_id": 9, "jersey_number": 11, "confidence": 0.7, "sample_count": 4},
+    ]
+    shades = {3: {"side": "home"}, 9: {"side": "home"}}
+    out = _build_auto_apply_mappings(
+        suggestions, roster_by_jersey=roster, use_roster_whitelist=True, min_conf=0.5,
+        min_samples=2, shade_by_tracker=shades, liberty_is_home=True,
+    )
+    assert [(m["tracker_id"], m["player_name"]) for m in out] == [(3, "Liberty Eleven")]
+
+
+def test_unique_number_is_still_named_once_whatever_the_shade():
+    """A number only one team wears keeps the one-tracker rule, so an opponent track that
+    OCR reads as that number is not named after the Liberty player."""
+    from track_identity import _build_auto_apply_mappings
+
+    roster = {23: [{"name": "Avery", "side": "liberty"}]}
+    suggestions = [
+        {"tracker_id": 4, "jersey_number": 23, "confidence": 0.9, "sample_count": 6},
+        {"tracker_id": 17, "jersey_number": 23, "confidence": 0.85, "sample_count": 6},
+    ]
+    shades = {4: {"side": "home"}, 17: {"side": "away"}}
+    out = _build_auto_apply_mappings(
+        suggestions, roster_by_jersey=roster, use_roster_whitelist=True, min_conf=0.5,
+        min_samples=2, shade_by_tracker=shades, liberty_is_home=True,
+    )
+    assert [(m["tracker_id"], m["player_name"]) for m in out] == [(4, "Avery")]
