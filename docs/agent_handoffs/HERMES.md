@@ -2,6 +2,14 @@
 
 Updated: 2026-09-29 evening. Paste this into a new Hermes window. Chat memory is not the record.
 
+## How Cursor and Hermes work
+
+Scott decides. Cursor changes the film pipeline and is the only one who commits and pushes. Hermes writes experiments in `ai_bridge.py` and stops there.
+
+Hermes does not run git, does not change git config, and does not delete `.git/hooks`. Hermes does not claim a commit it did not make. A report lists what was run and what the output was.
+
+The job is the Adrian count, not a new detector. Do not load `yolov8n.pt`. Do not call `validated_stats` on the game film. A proposal comes back as JSON with `applied_to_core` false. Cursor checks it against the database before Scott is asked to accept it.
+
 ## Architecture
 
 This project has a strict, sequential pipeline. Do not structurally alter it.

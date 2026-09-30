@@ -1,0 +1,111 @@
+BASKETBALL ANALYSIS PIPELINE STATE MACHINE ANALYSIS
+
+VIDEO FRAME → DETECTION → TRACKING → STAT COUNTERS PIPELINE
+
+1. VIDEO FRAME PROCESSING (ai_analyzer.py):
+   - YOLO person detection runs on every Nth frame (detection_stride)
+   - YOLO ball detection runs every 5th frame with special filtering
+   - Detections stored in database: game_id, frame_number, timestamp_ms, 
+     object_class, confidence, x_center, y_center, width, height
+   - Optional: Jersey OCR reads performed on stride interval
+
+2. TRACKER ID ASSIGNMENT (ai_analyzer.py lines 63-87 & 305-355):
+   - Primary: Jason's tracker wrapper (if TRACKER_ENABLED=true)
+   - Secondary: YOLO's built-in ByteTrack (when tracker_backend="bytetrack")  
+   - Fallback: Custom greedy nearest-neighbor matching
+     * Matches detections to active tracks within MAX_MATCH_DIST (200px)
+     * Retires tracks not seen for MAX_TRACK_GAP frames
+     * Creates new tracker_id for unmatched detections
+   - If Jason tracker enabled: Updates detections via _apply_jason_tracker_ids()
+
+3. SPATIAL CLUSTERING FOR STABLE IDENTITY (event_generator.py lines 249-307):
+   - Recognizes YOLO tracker_ids are unstable (median 2-frame lifespan)
+   - Uses KMeans clustering on person detections (x_center, y_center)
+   - Samples up to 50k detections for efficiency
+   - Assigns ALL person detections to nearest cluster center (cluster_id)
+   - Writes cluster assignments to detections.player_cluster column
+   - cluster_id used as stable owner_key for possession analysis
+
+4. BALL POSSESSION DETERMINATION (event_generator.py lines 93-154):
+   - Calculates possession_threshold (auto: 10% of frame diagonal)
+   - Builds per-frame ball positions (first ball detection per frame)
+   - Computes distances from each player to ball per frame
+   - Player with min distance ≤ threshold gets has_ball=True for that frame
+   - Returns detections_df with has_ball and ball_distance columns
+
+5. POSSESSION SEGMENT BUILDING (event_generator.py lines 310-403):
+   - Filters to person detections where has_ball=True
+   - Uses cluster_id as owner_key (falls back to 60x60 spatial grid)
+   - Groups consecutive frames where same player has ball
+   - Applies max_gap_frames and min_segment_frames filters
+   - Outputs segments with player, start/end frames, duration, etc.
+
+6. SHOT DETECTION (event_generator.py lines 406-501):
+   - Analyzes possession segment for ball trajectory arc
+   - Primary pass: Looks for ball rise (min_ball_rise=10px default) then fall
+   - Secondary pass: Relaxed criteria for sparse detections
+   - Returns shot detection with peak_frame, timestamp_ms, ball_rise, etc.
+
+7. MAKE/MISs DETERMINATION (court_memory.py & net_detector.py):
+   - ball_through_rim(): 
+     * Checks if ball hits iron (dist ≤ rim_r) then drops through net column
+     * Requires at_iron=True followed by in_column=True with proper y-range
+   - net_moved_after_shot():
+     * Samples net region before/after shot peak
+     * Returns True if net motion exceeds background motion + margin
+   - Final decision combines both signals
+
+IDENTIFIED STATE-MANAGEMENT / MATHEMATICAL MISMATCHES:
+
+A. TRACKER ID INSTABILITY PROPAGATION:
+   - While spatial clustering solves tracker_id instability, the initial 
+   - tracking in ai_analyzer.py still uses greedy matching that can
+   - produce inconsistent tracklets during player crossings or occlusions
+   - This noisy input affects clustering quality, especially in dense traffic
+
+B. SPATIAL CLUSTERING ASSUMPTION VIOLATION:
+   - cluster_id assumes players maintain fixed spatial relationships
+   - Basketball involves significant player movement (cuts, screens, rolls)
+   - A player moving from perimeter to post may get assigned to different
+   - cluster over time, fragmenting their possession segments
+   - Conversely, stationary players in similar positions may merge clusters
+
+C. POSSESSION THRESHOLD SENSITIVITY:
+   - Auto-calculated threshold (10% diagonal) doesn't account for:
+     * Camera perspective (players appear larger/smaller at different court positions)
+     * Team strategies (spacing vs. packing the paint)
+     * Ball handler speed vs. big man movement
+   - Can cause false possessions (threshold too large) or missed possessions (too small)
+
+D. FIXED WINDOWS IN SHOT DETECTION:
+   - Hard-coded frame windows (+40, +30) don't adapt to:
+     * Variable frame rates (if detection_stride changes)
+     * Different shot types (floaters vs. jump shots vs. layups)
+     * Action speed (fast breaks vs. half-court sets)
+   - May truncate valid shot arcs or include irrelevant motion
+
+E. MAKE/MISs LOGIC GAPS:
+   - ball_through_rim() requires specific iron→net column sequence
+   - May miss shots that hit backboard first or have unusual trajectories
+   - net_moved_after_shot() depends on net detector reliability
+   - No fallback for when both detectors fail but shot is valid
+   - No temporal consistency checking across sequential frames
+
+F. STATE RESET BETWEEN ANALYSIS RUNS:
+   - Each analysis run starts with empty tracks={}, next_tracker_id=1
+   - No carryover of player identities or shot history between runs
+   - Makes cross-run analysis (teach loops, comparisons) difficult
+   - Rerun processing doesn't benefit from base run's learned patterns
+
+THESE ISSUES COULD EXPLAIN CIRCULAR DEBUGGING WHERE:
+- Fixing tracking improves possession but breaks shot detection timing
+- Adjusting possession thresholds helps some players but hurts others
+- Tuning shot detection windows affects make/miss ratios unpredictably
+- Each change perturbs the delicate balance between modules
+
+RECOMMENDED NEXT STEPS:
+1. Validate which specific mismatch is causing the current symptom
+2. Consider adding state persistence between analysis runs
+3. Evaluate adaptive thresholds based on court position and movement speed
+4. Add temporal smoothing to shot detection decisions
+5. Implement confidence scoring for each pipeline stage

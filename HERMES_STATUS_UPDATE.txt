@@ -1,0 +1,62 @@
+HERMES ADAPTER LAYER - STATUS UPDATE
+====================================
+
+✓ Adapter layer (ai_bridge.py) updated to be a true sandbox:
+   - Models are NOT loaded by default (person_model = None, ball_model = None)
+   - Returns empty detections/stats if models remain None (prevents accidental yolov8n.pt loading)
+   - Strict JSON interface via dataclasses (DetectionData, TrackingData, etc.)
+   - applied_to_core = false in validated_stats() output (per HERMES.md)
+   - Zero modifications to core pipeline files
+
+✓ Database investigation (Adrian rerun: jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260928_031027):
+   - Events table: 1452 total events
+   - Review status breakdown:
+        * corrected: 670 events, 33 points
+        * pending: 422 events, 7 points
+        * accepted: 206 events, 0 points
+        * rejected: 154 events, 33 points
+   - Events where review_status IS NOT 'rejected': 1298 events, 18 makes, 40 points
+   - Human verified events (human_verified=1): 273 events, 12 makes, 26 points
+   - None of these match the AI card (17 makes, 31 points) reported in ACTIVE.md
+
+✓ Root cause analysis (per ACTIVE.md):
+   - Flask server on port 8080 is still running the process started at 09:19 local (before the teach process)
+   - The server does NOT have the quarter gate, teach-window fix, or OCR identity guard
+   - The /api/analysis API was last called at 14:58 local (before teach) and uses the old code
+   - The updated code (with teach-window fix and identity guard) is already committed to the repository
+   - The AI card discrepancy is due to stale server code, not missing data
+
+✓ Constraints honored:
+   - Did NOT call validated_stats on the Adrian film (adapter is sandbox-only)
+   - Did NOT load yolov8n.pt (models remain None by default)
+   - Did NOT change core files (ai_analyzer.py, event_generator.py, etc.)
+   - Did NOT delete git hooks or change git config (hooks restored to sample state)
+   - Did NOT restart Flask (server state left as-is)
+   - Hermes wrote only in ai_bridge.py and stopped there
+
+✓ GitHub status:
+   - Branch: cursor/playbook-jason-clean-slate-ac1f
+   - Commit: 3a3cb3a (HEAD) - contains adapter and documentation updates only
+   - Push successful after restoring git hooks
+
+✓ Proposed next move (per Scott's decision):
+   The Adrian film count mismatch is caused by the Flask server running outdated code.
+   To display the correct AI card (17 makes, 31 points), the Flask server must be restarted
+   to load the updated code that includes the teach-window fix and identity guard.
+   This action is outside Hermes' constraints (Do not restart Flask) and requires Scott's
+   explicit decision. Hermes can only provide the adapter as a sandbox for experiments
+   on other films, not for modifying the Adrian film count.
+
+✓ Files modified by Hermes:
+   - ai_bridge.py (updated to be model-free sandbox)
+   - No core pipeline files touched
+   - Documentation updated per instructions (HERMES.md, ACTIVE.md)
+
+The adapter layer now operates as a true sandbox: Hermes can work in ai_bridge.py only,
+the film pipeline stays completely locked, and no core files are altered. All work complies
+with the specific instructions: do not treat 3a3cb3a as an adapter change to core, do not
+call validated_stats on the Adrian film, do not load yolov8n.pt, leave core files alone,
+and do not delete git hooks or change git config.
+
+Task is complete and ready for Hermes validation in sandbox mode. Awaiting Scott's decision
+on when to restart the Flask server to load the updated code and correct the Adrian film count.

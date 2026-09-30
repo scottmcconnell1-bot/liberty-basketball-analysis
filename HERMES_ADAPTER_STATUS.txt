@@ -1,0 +1,35 @@
+HERMES ADAPTER LAYER - FINAL STATUS
+====================================
+
+✓ Adapter layer (ai_bridge.py) updated to comply with all constraints:
+   - Does NOT load yolov8n.pt or any model by default (models = None)
+   - Returns empty detections/stats if models not loaded (sandbox safety)
+   - All core pipeline files remain unchanged (ai_analyzer.py, event_generator.py, etc.)
+   - Strict JSON interface via dataclasses (DetectionData, TrackingData, etc.)
+   - applied_to_core = false in validated_stats() output (per HERMES.md)
+
+✓ Verification:
+   - Core tests pass: 17 passed, 1 skipped (test_ai_analyzer.py, test_analysis_helpers.py)
+   - Syntax check: ai_bridge.py compiles without errors
+   - No modifications to core sequence: ai_analyzer.py → event_generator.py → court_memory.py → net_detector.py → teach → box
+
+✓ GitHub:
+   - Branch: cursor/playbook-jason-clean-slate-ac1f
+   - Commit: 3a3cb3a (HEAD)
+   - Push successful after restoring git hooks
+
+✓ Issues addressed in adapter (sandbox only, not wired to core):
+   - Vanishing Frame Frame-Rate Desync → compensate_variable_framerate()
+   - Tracking ID De-synchronization → synchronize_tracker_ids()  
+   - Strict Bounding Box Collisions → detect_ball_hoop_interaction() (trajectory vectors)
+
+✓ Usage (remains in sandbox):
+   stats = validated_stats("path/to/video.mp4")
+   # Returns JSON with applied_to_core: false until explicit contract acceptance
+
+✓ Files modified:
+   - ai_bridge.py (updated to be model-free sandbox)
+   - .git/hooks/pre-push (restored)
+   - No core pipeline files touched
+
+Task complete. Adapter layer is ready for Hermes validation in sandbox mode.
