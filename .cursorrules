@@ -1,0 +1,9 @@
+# SYSTEM ARCHITECTURE CONSTRAINTS
+- This project follows a strict, sequential closed-source pipeline that cannot be structurally altered.
+- Do NOT rewrite, refactor, or reorganize the core sequence of operations in ai_analyzer.py, event_generator.py, court_memory.py, net_detector.py, manual_tag_teach.py, game_boxscore.py, scoreboard_clock.py.
+- All custom computer vision tracking, stat-counting logic, and open-source experimental code MUST be isolated within the adapter layer (`ai_bridge.py`).
+- Data must enter and exit via strict JSON schemas. Do not pass raw model objects across the boundary.
+- If a bug occurs, look for logic mismatches in the adapter layer. Do NOT attempt to "fix" the core pipeline initialization steps.
+- Do NOT call `ai_bridge.py` from the core sequence. Scott connects it only after he accepts the JSON contract.
+- A make in the core is `ball_through_rim` or `net_moved_after_shot`. An experiment inside `ai_bridge.py` is not a make.
+- Do NOT change `models/ball_detector.pt` or `ball_confidence`. Do NOT restart Flask to load an adapter.

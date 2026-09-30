@@ -11,7 +11,7 @@ Also follow `docs/BRANCH_POLICY.md`.
 
 ## Budget and scope
 
-- Cursor Pro only. No Hermes/Devin as executor. Prefer Composer/Auto.
+- Cursor implements the core pipeline. Hermes may edit `ai_bridge.py` only. Hermes does not change the core sequence. Prefer Composer/Auto for core work.
 - One bounded slice per session. Repository truth beats chat.
 - Report Proven / Inferred / Unknown.
 
