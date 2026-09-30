@@ -1,0 +1,7 @@
+{
+  "wilder_q1": {
+    "precision_exact": 0.0884,
+    "recall_exact": 0.2453,
+    "f1_exact": 0.13
+  }
+}

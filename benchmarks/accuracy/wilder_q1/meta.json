@@ -1,0 +1,19 @@
+{
+  "video": "videos/Q1.mp4 (Wilder varsity Q1, LFS)",
+  "video_sha256": "7b2bdd0d736a229004870463634124ff1f3ff03d5ec7abdf6843c81e45464692",
+  "detections": 226631,
+  "frames": 27185,
+  "analyzer_commit": "194e38b",
+  "analyzer_seconds": null,
+  "analyzer_note": "CPU Docker image liberty-analysis:cpu (OpenCV 4.14, torch CPU), ~50 min; EasyOCR not installed so jersey OCR off",
+  "settings": {
+    "detector_model": "yolo11n.pt",
+    "ball_detector_model": "models/ball_detector.pt",
+    "ball_class_id": 0,
+    "ball_confidence": 0.25,
+    "person_confidence": 0.5,
+    "detection_stride": 1,
+    "tracker_enabled": true,
+    "jersey_ocr_enabled": false
+  }
+}
