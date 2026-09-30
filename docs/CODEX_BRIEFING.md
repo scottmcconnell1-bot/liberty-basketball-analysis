@@ -4,6 +4,8 @@
 **From:** OWL (independent auditor, Hermes agent)
 **To:** Codex (project lead)
 
+**Current (2026-09-30):** The June branch note below is historical. Review the code on `cursor/playbook-jason-clean-slate-ac1f`, pull request 151. `main` and `jason-5-may-updates` are both at pull request 150 until that review lands. The Adrian run to judge is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546`. Start with `docs/agent_handoffs/ACTIVE.md`.
+
 ---
 
 ## What This Document Is

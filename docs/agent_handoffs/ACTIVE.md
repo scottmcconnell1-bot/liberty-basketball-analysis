@@ -1,8 +1,16 @@
 # Active Task
 
-Updated: 2026-09-27 (picture editor committed; branch includes origin/main)
+Updated: 2026-09-30 afternoon. If an older paragraph below disagrees with this section, this section wins.
 
-**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. The editor code and Scott's saved plays (1-Game `98`, `99`, `101`, and copies `146`–`148`) are on `cursor/playbook-jason-clean-slate-ac1f` for Jason/Claude to review in https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/151 . Adrian jersey-shade and film-panel JSON stay uncommitted.
+Review branch: `cursor/playbook-jason-clean-slate-ac1f`. Pull request: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/151 . `main` and `jason-5-may-updates` are both at `194e38b` (pull request 150) until 151 is reviewed. Do not review those two as the current code.
+
+**Proven (2026-09-30 afternoon):** The Adrian count to review is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546`. It finished at 11:21 AM local, 1,452 events, no error, on `uploads\nfhs_gam0a66d85e12.mp4`. Book: Liberty 51, Adrian 26. Makes: 40 rows, 80 points. Corrected 29 / 59 points, pending 9 / 17 points, rejected 2 made twos / 4 points (Dayley at 12:16, cluster 8 at 26:05). Tags stop at 32:15. Teach rejects a play only when a tag of that same kind is within 8 seconds. A make in an open stretch stays pending. The database and the film stay on this machine. The new run's jersey shades are `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546.json`.
+
+**Proven (2026-09-30 afternoon):** Jason and Claude's review (`632b0ad`) is merged here. An older rerun opens by its own key. A newer run with no accepted or corrected events does not hide a coach-reviewed copy. This Adrian run has corrected events, so the game key opens it. Games with no scoreboard track use four equal slices of the video for the line score. Adrian has a track, so a moment without a legal clock and a period stays out of the line score. An unreadable clock digit does not become a shorter clock. Imported FastDraw sheets do not get automatic defenders. Flask on port 8080 was restarted after that merge.
+
+**Not decided:** Only the ball handler can pass, undo, screen coverage, matchups, zones, curved cuts, lead passes, formations, and keyboard shortcuts. A defender x dragged in the draw tool is still not saved. Whether the original run should also open from the game key is still open. Their unread checks (net movement counting a miss, defenders jumping on release, jersey mapping, results speed) are not fixes yet.
+
+**Proven:** Coaches edit a saved play at `/playbook/draw/<id>` (Edit play). Existing pictures load with the players where they stand. Next picture saves the picture just finished. Save and watch opens `/playbook/play/<id>`. The editor code and Scott's saved plays (1-Game `98`, `99`, `101`, and copies `146`–`148`) are on this same branch.
 
 **Proven:** This branch now includes `origin/main` (`59577bd`, public signup closed). GitHub's default branch is `main`.
 

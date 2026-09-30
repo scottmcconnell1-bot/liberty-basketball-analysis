@@ -1,6 +1,6 @@
 # Hermes handoff
 
-Updated: 2026-09-30 evening. Paste this into a new Hermes window. Chat memory is not the record.
+Updated: 2026-09-30 afternoon. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins.
 
 ## How Cursor and Hermes work
 
@@ -46,6 +46,16 @@ Makes on this run: 40 rows, 80 points (26 twos, 7 threes, 7 free throws).
 
 The results box counts accepted, corrected, and pending. The scorebook total stays Liberty 51, Adrian 26. A later shot-chart step logged 0% makes on 206 shots. The event list is the count.
 
-Flask was restarted on 2026-09-30 with the scoreboard quarter rule and the OCR identity guard. The worker applied 7 jersey mappings at the end of this run.
+Flask was restarted on 2026-09-30 after Jason and Claude's review was merged, so port 8080 is running that code. The worker applied 7 jersey mappings at the end of this run.
+
+Review branch: `cursor/playbook-jason-clean-slate-ac1f`, pull request 151. `main` and `jason-5-may-updates` are the last merged line (pull request 150). They do not have this run's teach rule or the review fixes.
+
+Jason and Claude's fixes are already on the review branch: a named rerun stays that rerun, a new run with no coach decisions does not replace a reviewed copy, highlights use that same copy, games without a scoreboard track use equal video slices, an unreadable clock digit is not a clock, and imported FastDraw sheets do not get automatic defenders. Adrian has a scoreboard track, so a moment without a legal clock and a period stays out of the line score.
+
+Not decided, and not a reason to edit the core: pass only from the ball handler, undo, screen coverage, zones, saving a dragged defender x, and the unread checks on net movement, defender jump, jersey mapping, and results speed.
+
+`TEACH_ISSUE_ANALYSIS.txt` on the home machine describes the September 28 rerun. The span-reject bug it names is already fixed in `manual_tag_teach.py` and was used on the September 30 run. Do not apply that note to this run.
+
+The database is `film_analysis.db` in the repo root on the home machine. The film is `uploads\nfhs_gam0a66d85e12.mp4`. Neither is in Git. Jersey shades for this run are `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546.json`.
 
 Fuller notes: `docs/agent_handoffs/ACTIVE.md`. Rules Cursor already loads: `.cursorrules`.

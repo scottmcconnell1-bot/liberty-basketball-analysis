@@ -1,7 +1,10 @@
 # Project Status
 
-Updated: 2026-07-06
-Branch: jason-5-may-updates
+Updated: 2026-07-06. The list below is that date's snapshot.
+
+**Current (2026-09-30):** Review branch `cursor/playbook-jason-clean-slate-ac1f`, pull request 151. `main` and `jason-5-may-updates` are pull request 150 until 151 is reviewed. The live Adrian analysis is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546`. See `docs/agent_handoffs/ACTIVE.md`.
+
+Branch at the July snapshot: jason-5-may-updates
 
 ## Proven
 

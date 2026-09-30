@@ -1,7 +1,9 @@
 ﻿# Liberty Orchestration â€” Cursor-Only Workflow
 
 Updated: 2026-07-05
-Branch: `jason-5-may-updates`
+Branch at that date: `jason-5-may-updates`
+
+**Current (2026-09-30):** Do not check out `jason-5-may-updates` for this work. The review branch is `cursor/playbook-jason-clean-slate-ac1f` (pull request 151). `main` and `jason-5-may-updates` are pull request 150 until 151 is reviewed. Read `docs/agent_handoffs/ACTIVE.md`.
 Audience: Scott + Cursor Cloud Agent (orchestrator + executor)
 
 ## Purpose

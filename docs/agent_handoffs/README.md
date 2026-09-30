@@ -11,7 +11,7 @@ Current coordination uses **one active task file** — not GitHub labels.
 ## Workflow
 
 1. Orchestrator writes or updates `ACTIVE.md` with objective + checklist.
-2. Cloud Agent session executes the checklist on `jason-5-may-updates`.
+2. Current review work is `cursor/playbook-jason-clean-slate-ac1f` (pull request 151). `main` and `jason-5-may-updates` stay at pull request 150 until 151 is reviewed.
 3. Agent updates the Report section (Proven / Inferred / Unknown) and sets status to `done`.
 4. Completed tasks move to `ARCHIVE/`.
 5. Code changes go through a PR on `cursor/<task>-ac1f`.
