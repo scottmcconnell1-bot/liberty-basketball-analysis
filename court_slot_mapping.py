@@ -141,15 +141,20 @@ def save_court_slot_mappings(db, game_id, mappings, apply_to_events=False):
         if tracker_id is None:
             continue
 
-        resolved = _resolve_roster_player(
-            db,
-            jersey_number=entry.get("jersey_number"),
-            player_name=entry.get("player_name"),
-            player_id=entry.get("player_id"),
-            game_id=game_id,
-        )
-        jersey_number = resolved.get("jersey_number") if resolved.get("jersey_number") is not None else entry.get("jersey_number")
-        player_name = resolved.get("name") or entry.get("player_name")
+        if entry.get("lock_name"):
+            resolved = {}
+            jersey_number = entry.get("jersey_number")
+            player_name = entry.get("player_name")
+        else:
+            resolved = _resolve_roster_player(
+                db,
+                jersey_number=entry.get("jersey_number"),
+                player_name=entry.get("player_name"),
+                player_id=entry.get("player_id"),
+                game_id=game_id,
+            )
+            jersey_number = resolved.get("jersey_number") if resolved.get("jersey_number") is not None else entry.get("jersey_number")
+            player_name = resolved.get("name") or entry.get("player_name")
         label = _player_label(jersey_number, player_name)
 
         if relational_game_id is not None:
@@ -184,8 +189,12 @@ def save_court_slot_mappings(db, game_id, mappings, apply_to_events=False):
     return applied
 
 
-def apply_court_slot_mappings(db, game_id, tracker_ids=None):
-    """Rewrite AI events and derived tables to use mapped jersey labels."""
+def apply_court_slot_mappings(db, game_id, tracker_ids=None, mark_reviewed=True):
+    """Rewrite AI events and derived tables to use mapped jersey labels.
+
+    mark_reviewed stays on for a coach save. An OCR auto-apply passes False so
+    naming a jersey is not stored as a coach correction.
+    """
     relational_game_id, analysis_key = _game_scope(db, game_id)
     slots = get_court_slots(db, game_id)
     allowed = None if tracker_ids is None else {int(t) for t in tracker_ids}
@@ -205,22 +214,26 @@ def apply_court_slot_mappings(db, game_id, tracker_ids=None):
         )
         label = slot["mapped_label"]
         tracker_id = str(slot["tracker_id"])
-        player_id = resolved.get("player_id")
-        roster_membership_id = resolved.get("roster_membership_id")
-        team_id = resolved.get("team_id")
+        saved_name = (slot.get("player_name") or "").strip()
+        resolved_name = (resolved.get("name") or "").strip()
+        names_match = bool(saved_name) and resolved_name.lower() == saved_name.lower()
+        player_id = resolved.get("player_id") if names_match else None
+        roster_membership_id = resolved.get("roster_membership_id") if names_match else None
+        team_id = resolved.get("team_id") if names_match else None
         jersey_number = slot.get("jersey_number")
-
-        if relational_game_id is not None:
-            cur = db.execute(
-                """UPDATE events
-                      SET player = ?,
-                          primary_player_id = COALESCE(?, primary_player_id),
-                          primary_roster_membership_id = COALESCE(?, primary_roster_membership_id),
-                          team_id = COALESCE(?, team_id),
+        status_sql = """
                           review_status = CASE
                               WHEN review_status = 'pending' THEN 'corrected'
                               ELSE review_status
-                          END,
+                          END,""" if mark_reviewed else ""
+
+        if relational_game_id is not None:
+            cur = db.execute(
+                f"""UPDATE events
+                      SET player = ?,
+                          primary_player_id = COALESCE(?, primary_player_id),
+                          primary_roster_membership_id = COALESCE(?, primary_roster_membership_id),
+                          team_id = COALESCE(?, team_id),{status_sql}
                           updated_at = CURRENT_TIMESTAMP
                     WHERE player = ?
                       AND source_type = 'ai'
@@ -237,15 +250,11 @@ def apply_court_slot_mappings(db, game_id, tracker_ids=None):
             )
         else:
             cur = db.execute(
-                """UPDATE events
+                f"""UPDATE events
                       SET player = ?,
                           primary_player_id = COALESCE(?, primary_player_id),
                           primary_roster_membership_id = COALESCE(?, primary_roster_membership_id),
-                          team_id = COALESCE(?, team_id),
-                          review_status = CASE
-                              WHEN review_status = 'pending' THEN 'corrected'
-                              ELSE review_status
-                          END,
+                          team_id = COALESCE(?, team_id),{status_sql}
                           updated_at = CURRENT_TIMESTAMP
                     WHERE player = ?
                       AND source_type = 'ai'

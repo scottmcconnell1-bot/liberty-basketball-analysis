@@ -1,6 +1,19 @@
 """Tests for jersey OCR parsing and track identity aggregation."""
 
 
+def test_shared_jersey_uses_shade_and_a_unique_number_does_not_need_it():
+    from track_identity import _pick_roster_player
+
+    shared = [
+        {"name": "Dayley", "jersey_number": 11, "side": "liberty"},
+        {"name": "Other", "jersey_number": 11, "side": "opponent"},
+    ]
+    assert _pick_roster_player(shared, "away", False)["name"] == "Dayley"
+    assert _pick_roster_player(shared, "home", False)["name"] == "Other"
+    assert _pick_roster_player(shared, None, False) is None
+    assert _pick_roster_player([{"name": "Colman", "side": "liberty"}], None, False)["name"] == "Colman"
+
+
 def test_parse_jersey_text_single_digit():
     from jersey_ocr import _parse_jersey_text
 
@@ -232,3 +245,75 @@ def test_auto_apply_cluster_jerseys_updates_events(db):
     assert result["applied"] >= 1
     row = db.execute("SELECT player FROM events WHERE player LIKE '#12%'").fetchone()
     assert row is not None
+
+
+def test_auto_apply_leaves_an_unread_slot_and_does_not_mark_reviewed(db):
+    from track_identity import auto_apply_cluster_jerseys
+
+    db.execute("INSERT INTO games (source_type, source_key) VALUES ('manual', 'ocr-only-apply')")
+    game_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    analysis_key = "nfhs_ocr_only_apply"
+    db.execute(
+        """INSERT INTO analysis_runs (analysis_key, game_id, video_path, status)
+           VALUES (?, ?, ?, 'completed')""",
+        (analysis_key, game_id, "/tmp/ocr-only.mp4"),
+    )
+    db.execute(
+        """INSERT INTO player_minutes
+              (game_id, relational_game_id, tracker_id, first_frame, last_frame,
+               total_frames, minutes_played)
+           VALUES (?, ?, 3, 0, 100, 50, 10.0)""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO player_minutes
+              (game_id, relational_game_id, tracker_id, first_frame, last_frame,
+               total_frames, minutes_played, jersey_number, player_name)
+           VALUES (?, ?, 9, 0, 100, 50, 8.0, 4, 'Wrong Person')""",
+        (analysis_key, game_id),
+    )
+    for i in range(6):
+        db.execute(
+            """INSERT INTO detections
+                  (game_id, relational_game_id, frame_number, timestamp_ms, object_class,
+                   confidence, x_center, y_center, width, height, tracker_id,
+                   player_cluster, jersey_read, jersey_confidence)
+               VALUES (?, ?, ?, ?, 'person', 0.9, 100, 200, 40, 80, 1, 3, 12, 0.85)""",
+            (analysis_key, game_id, i, i * 100),
+        )
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, player, event_type, timestamp_ms,
+               review_status, source_type)
+           VALUES (?, ?, '3', 'rebound', 500, 'pending', 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.execute(
+        """INSERT INTO events
+              (game_id, relational_game_id, player, event_type, timestamp_ms,
+               review_status, source_type)
+           VALUES (?, ?, '9', 'rebound', 800, 'pending', 'ai')""",
+        (analysis_key, game_id),
+    )
+    db.commit()
+
+    result = auto_apply_cluster_jerseys(
+        db,
+        analysis_key,
+        {
+            "jersey_ocr_min_confidence": 0.5,
+            "identity_auto_apply_min_confidence": 0.6,
+            "identity_auto_apply_min_samples": 4,
+        },
+    )
+    assert result["applied"] == 1
+    named = db.execute(
+        "SELECT player, review_status FROM events WHERE player LIKE '#12%'"
+    ).fetchone()
+    assert named is not None
+    assert named["review_status"] == "pending"
+    untouched = db.execute(
+        "SELECT player, review_status FROM events WHERE player = '9'"
+    ).fetchone()
+    assert untouched is not None
+    assert untouched["review_status"] == "pending"

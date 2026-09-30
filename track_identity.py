@@ -223,7 +223,7 @@ def _roster_jersey_index(db, game_id):
     from analysis_helpers import get_analysis_roster_players
 
     payload = get_analysis_roster_players(db, game_id)
-    by_jersey = {}
+    by_jersey: dict[int, list] = {}
     for player in payload["players"]:
         jersey = player.get("jersey_number")
         if jersey in (None, ""):
@@ -232,8 +232,33 @@ def _roster_jersey_index(db, game_id):
             jersey_int = int(jersey)
         except (TypeError, ValueError):
             continue
-        by_jersey[jersey_int] = player
+        by_jersey.setdefault(jersey_int, []).append(player)
     return by_jersey, payload["source"]
+
+
+def _shade_roster_side(shade_side: str | None, liberty_is_home: bool | None) -> str | None:
+    """Map a home/away jersey shade onto the scorebook's liberty/opponent side."""
+    if shade_side not in ("home", "away") or liberty_is_home is None:
+        return None
+    if shade_side == "home":
+        return "liberty" if liberty_is_home else "opponent"
+    return "opponent" if liberty_is_home else "liberty"
+
+
+def _pick_roster_player(candidates, shade_side, liberty_is_home):
+    """One roster person for this jersey. A shared number needs the jersey shade."""
+    people = [player for player in (candidates or []) if player]
+    if not people:
+        return None
+    if len(people) == 1:
+        return people[0]
+    wanted = _shade_roster_side(shade_side, liberty_is_home)
+    if not wanted:
+        return None
+    matched = [player for player in people if player.get("side") == wanted]
+    if len(matched) == 1:
+        return matched[0]
+    return None
 
 
 def _events_use_raw_cluster_ids(db, game_id):
@@ -263,23 +288,39 @@ def _events_use_raw_cluster_ids(db, game_id):
     return int(row["c"] or 0)
 
 
-def _build_auto_apply_mappings(suggestions, *, roster_by_jersey, use_roster_whitelist, min_conf, min_samples):
+def _build_auto_apply_mappings(
+    suggestions,
+    *,
+    roster_by_jersey,
+    use_roster_whitelist,
+    min_conf,
+    min_samples,
+    shade_by_tracker=None,
+    liberty_is_home=None,
+):
     mappings = []
     used_jerseys = set()
+    shades = shade_by_tracker or {}
     for item in suggestions:
         if item["confidence"] < min_conf or item["sample_count"] < min_samples:
             continue
         jersey = int(item["jersey_number"])
-        if use_roster_whitelist and jersey not in roster_by_jersey:
+        candidates = (roster_by_jersey or {}).get(jersey) or []
+        if use_roster_whitelist and not candidates:
             continue
         if jersey in used_jerseys:
             continue
         used_jerseys.add(jersey)
-        roster_player = roster_by_jersey.get(jersey) if roster_by_jersey else None
+        shade_side = (shades.get(int(item["tracker_id"])) or {}).get("side")
+        roster_player = _pick_roster_player(candidates, shade_side, liberty_is_home)
+        name = None
+        if roster_player:
+            name = roster_player.get("name") or roster_player.get("label")
         mappings.append({
             "tracker_id": item["tracker_id"],
             "jersey_number": jersey,
-            "player_name": (roster_player or {}).get("name") or (roster_player or {}).get("label"),
+            "player_name": name,
+            "lock_name": True,
         })
     return mappings
 
@@ -300,28 +341,46 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     )
     roster_by_jersey, roster_source = _roster_jersey_index(db, game_id)
     use_roster_whitelist = roster_source == "film_roster" and bool(roster_by_jersey)
+    try:
+        from jersey_shade import load_cached_shades
+        shades = load_cached_shades(str(game_id))
+    except Exception:
+        shades = {}
+    try:
+        from program_mode import _liberty_is_home, load_scorebook
+        liberty_is_home = _liberty_is_home(load_scorebook(str(game_id)))
+    except Exception:
+        liberty_is_home = None
 
+    mapping_kwargs = {
+        "roster_by_jersey": roster_by_jersey,
+        "min_conf": min_conf,
+        "min_samples": min_samples,
+        "shade_by_tracker": shades,
+        "liberty_is_home": liberty_is_home,
+    }
     mappings = _build_auto_apply_mappings(
         suggestions,
-        roster_by_jersey=roster_by_jersey,
         use_roster_whitelist=use_roster_whitelist,
-        min_conf=min_conf,
-        min_samples=min_samples,
+        **mapping_kwargs,
     )
     if not mappings and use_roster_whitelist and suggestions:
         mappings = _build_auto_apply_mappings(
             suggestions,
-            roster_by_jersey=roster_by_jersey,
             use_roster_whitelist=False,
-            min_conf=min_conf,
-            min_samples=min_samples,
+            **mapping_kwargs,
         )
 
     if not mappings:
         return {"applied": 0, "mappings": [], "events_updated": 0}
 
     save_court_slot_mappings(db, game_id, mappings, apply_to_events=False)
-    result = apply_court_slot_mappings(db, game_id)
+    result = apply_court_slot_mappings(
+        db,
+        game_id,
+        tracker_ids=[item["tracker_id"] for item in mappings],
+        mark_reviewed=False,
+    )
     return {
         "applied": len(mappings),
         "mappings": mappings,
@@ -389,7 +448,10 @@ def ensure_identity_applied(db, game_id, ai_settings=None):
     ]
     if mapped:
         result = apply_court_slot_mappings(
-            db, game_id, tracker_ids=[slot["tracker_id"] for slot in mapped]
+            db,
+            game_id,
+            tracker_ids=[slot["tracker_id"] for slot in mapped],
+            mark_reviewed=False,
         )
         if _events_use_raw_cluster_ids(db, game_id) == 0:
             return {
