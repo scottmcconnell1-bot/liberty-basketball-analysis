@@ -232,6 +232,31 @@ def test_rerun_uses_the_base_films_manual_tags(app):
         assert "Colman" in row["player"]
 
 
+def test_make_between_tags_is_not_rejected(app):
+    game_id = "teach-open-stretch"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '5', 'made_two', 'make', 60000, 0, 'ai', 'pending', 0.4)""",
+            (game_id,),
+        )
+        db.commit()
+        report = teach_from_film_tool_rows(db, game_id, [
+            {"eventtype": "2PT", "result": "Make", "player": "40 - Dayley", "team": "Liberty", "start": "0:10.0"},
+            {"eventtype": "2PT", "result": "Miss", "player": "21 - Colman", "team": "Liberty", "start": "2:00.0"},
+        ])
+        assert report["rejected"] == 0
+        row = db.execute(
+            "SELECT review_status, player FROM events WHERE game_id=? AND source_type='ai'",
+            (game_id,),
+        ).fetchone()
+        assert row["review_status"] == "pending"
+        assert row["player"] == "5"
+
+
 def test_unmatched_tag_is_not_inserted_as_a_make(app):
     game_id = "teach-orphan-tag"
     with app.app_context():

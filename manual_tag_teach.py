@@ -394,6 +394,12 @@ def apply_saved_manual_teach(
         if int(_row_get(ai, "id")) in used_ai
         and _ai_family(_row_get(ai, "event_type")) == "shot"
     }
+    tag_times: dict[str, list[int]] = {}
+    for manual in manuals:
+        family = _ai_family(_row_get(manual, "event_type"), _details(_row_get(manual, "details_json")))
+        if not family:
+            continue
+        tag_times.setdefault(family, []).append(int(_row_get(manual, "timestamp_ms") or 0))
     rejected = 0
     for ai in ai_rows:
         ai_id = int(_row_get(ai, "id"))
@@ -402,9 +408,14 @@ def apply_saved_manual_teach(
         family = _ai_family(_row_get(ai, "event_type"))
         if family not in {"shot", "rebound", "assist", "steal", "turnover", "foul", "block"}:
             continue
+        ai_ts = int(_row_get(ai, "timestamp_ms") or 0)
+        # A tag covers the plays next to it. An open stretch between the first
+        # tag and the last tag is not a reason to throw the play out.
+        if not any(abs(ai_ts - tag_ts) <= MATCH_TOLERANCE_MS for tag_ts in tag_times.get(family, [])):
+            continue
         # The generator stores a shot and a made/missed row at the same time.
         # The tag counts once. The other row is the same play, not an extra.
-        if family == "shot" and int(_row_get(ai, "timestamp_ms") or 0) in matched_shot_times:
+        if family == "shot" and ai_ts in matched_shot_times:
             continue
         result = reject_event(
             db,
