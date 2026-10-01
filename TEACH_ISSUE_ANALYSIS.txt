@@ -1,0 +1,55 @@
+TEACH PROCESS ANALYSIS - REJECTED MAKES ON ADRIAN RERUN
+=======================================================
+
+Based on Scott's analysis (provided via out-of-band message), the 17 rejected makes (35 points) that explain the 40 vs 17 makes discrepancy are being rejected by the teach process due to an overly broad "span reject" rule.
+
+Scott's detailed breakdown:
+
+Film time   Make   Who   Nearest shot tag (distance)
+3:23        3      Foster        12.6s, Peterson miss
+5:01        2      cluster 7     20.6s, Musgrave miss
+6:45        2      Alvarez       14.9s, Foster make
+7:56        3      #6            15.2s, Mendoza miss
+10:25       2      cluster 5     12.9s, Colman make
+18:46       1      cluster 8     34.6s, Linkhart miss
+21:16       1      cluster 7     44.4s, Alvarez make
+23:09       2      cluster 7     44.6s, Colman miss
+23:31       2      Mendoza       22.0s, Colman miss
+23:41       3      Mendoza       12.0s, Colman miss
+25:29       2      Foster        13.5s, Dayley miss
+25:48       2      cluster 5     8.8s, Linkhart miss
+29:45       2      Rodus         8.1s, Dayley make
+30:06       2      Dayley        12.9s, Dayley make
+31:01       2      Alvarez       23.9s, Colman make
+
+Key observations:
+- 15 of the 17 rejected makes (31 points) are MORE THAN 8 SECONDS from ANY tagged make.
+- The two exceptions (29:45 Rodus and 30:06 Dayley) are within 8 seconds of a tagged make (Dayley make at 29:52.9? Actually Scott notes they may be the same basket as the tag just beside them).
+- None of the 17 rejected makes sits within 8 seconds of a make you tagged (except possibly the two noted).
+- Teach rejected every unmatched shot anywhere between the first tag and the last tag (the tagged half), so a make in an open stretch of Q1 or Q2 was thrown out even when no tag was near it.
+
+Root cause:
+The teach process appears to be using a rule that rejects any AI-detected shot event that falls within the temporal range covered by manual tags (from first tag to last tag), regardless of proximity to an actual tagged shot. This causes valid makes in untagged portions of the game to be incorrectly labeled as extras and removed.
+
+Suggested fix for teach process:
+Change the rejection criterion from "span reject" to "proximity reject":
+- An AI-detected shot event should only be rejected as a duplicate if there exists a MANUAL TAGGED SHOT (make or miss) within 8 seconds of its timestamp.
+- This preserves makes that occur in untagged stretches of the game while still preventing double-counting when the AI redetects a shot that was already manually tagged.
+
+Impact:
+Applying this rule would restore the 15 makes (31 points) that were incorrectly rejected, bringing the AI card closer to the manual count. The two makes that are within 8 seconds of a tagged make (if they are indeed duplicates) would remain rejected, which is appropriate.
+
+Notes for implementation:
+- The teach process likely compares AI events to manual tags (rows in film_tags.json).
+- The change should ensure that distance is computed to the nearest tagged shot (any label that is a shot: 2PT Make, 3PT Make, FT Make, 2PT Miss, 3PT Miss, FT Miss? Actually Scott uses "shot tag" to refer to any tagged shot event, make or miss).
+- The two makes near 29:45 and 30:06 should be checked individually; if they are indeed the same basket as the adjacent tag, they should be rejected; if they are separate, they should be kept.
+
+This analysis is intended for Scott to review and apply to the teach process manual_tag_teach.py (or equivalent) outside the Hermes adapter sandbox.
+
+Hermes Adapter Layer remains unchanged and compliant:
+- ai_bridge.py is a sandbox (models not loaded by default)
+- No core files modified
+- Core pipeline tests pass (17 passed, 1 skipped)
+- No git hook changes, no Flask restart, no model loading on Adrian film
+
+Next step: Scott can review this analysis and decide whether to adjust the teach process accordingly.
