@@ -1,0 +1,575 @@
+{
+ "source": "Film Tool manual tags by the coach, Wilder varsity Q1 (videos/Q1.mp4), client game game-1784304093435",
+ "window_sec": 871,
+ "note": "Player names and notes removed; matching uses event type, result and time only.",
+ "rows": [
+  {
+   "quarter": "Q1",
+   "start": "0:00.0",
+   "category": "Quarter",
+   "eventtype": "StartQTR",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:34.3",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:37.6",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:40.7",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:40.7",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "1:34.8",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:06.7",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:06.7",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:10.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:38.9",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:42.7",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:59.7",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:11.2",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:22.0",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:22.0",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:27.5",
+   "category": "Quarter",
+   "eventtype": "TimeOut",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:51.1",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:06.4",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:22.4",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:36.3",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:46.0",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:50.8",
+   "category": "Defense",
+   "eventtype": "Violation",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:02.2",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:07.4",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:09.9",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:19.3",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:33.8",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:36.8",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:37.9",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:12.8",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:12.8",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:32.3",
+   "category": "Defense",
+   "eventtype": "Violation",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:01.8",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:17.2",
+   "category": "Quarter",
+   "eventtype": "TimeOut",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:05.9",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:20.1",
+   "category": "Quarter",
+   "eventtype": "JumpBall",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:44.0",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:46.8",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:49.6",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:12.1",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:25.8",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:47.0",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:49.1",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:01.1",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:22.4",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:25.3",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:28.6",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:31.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:31.8",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:51.9",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:51.9",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:55.6",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:57.3",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:08.8",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:20.8",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:22.9",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:26.1",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:37.1",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:37.1",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:53.4",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:08.2",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:35.4",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:41.5",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:41.5",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:50.9",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:50.9",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:53.0",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:11.1",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "opponent"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:13.3",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:19.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "liberty"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:31.2",
+   "category": "Quarter",
+   "eventtype": "EndQTR",
+   "result": "NA",
+   "side": "liberty"
+  }
+ ]
+}
