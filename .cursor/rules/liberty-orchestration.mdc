@@ -29,5 +29,5 @@ Also follow `docs/BRANCH_POLICY.md`.
 - Review results (including another agent's PR branch) are implemented by merging them into `main` and pushing.
 - Update `docs/agent_handoffs/ACTIVE.md` when task completes; archive to `ARCHIVE/`
 - PR for code changes; no GitHub label coordination
-- When a PR is opened for Jason/Claude, push the same commits to `Brad/Claude` and open a matching PR for Brad. `Brad/Claude` stays even with `main`. His briefing is `docs/agent_handoffs/BRAD.md`.
+- When a PR is opened for Jason/Claude, push the same commits to `Brad/Claude` and open a matching PR for Brad. `Brad/Claude` stays even with `main`. His note is `BRAD.md` at the repo root.
 - GitHub's default branch is `main`
