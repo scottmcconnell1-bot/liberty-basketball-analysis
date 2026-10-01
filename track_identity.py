@@ -308,10 +308,15 @@ def _build_auto_apply_mappings(
         candidates = (roster_by_jersey or {}).get(jersey) or []
         if use_roster_whitelist and not candidates:
             continue
-        if jersey in used_jerseys:
-            continue
-        used_jerseys.add(jersey)
         shade_side = (shades.get(int(item["tracker_id"])) or {}).get("side")
+        # A number both teams wear is one name per side: Liberty's #11 and the
+        # opponent's #11 are different people when the shade tells them apart.
+        # A number only one team wears keeps one tracker per number.
+        roster_side = _shade_roster_side(shade_side, liberty_is_home) if len(candidates) > 1 else None
+        dedupe_key = (jersey, roster_side)
+        if dedupe_key in used_jerseys:
+            continue
+        used_jerseys.add(dedupe_key)
         roster_player = _pick_roster_player(candidates, shade_side, liberty_is_home)
         name = None
         if roster_player:
