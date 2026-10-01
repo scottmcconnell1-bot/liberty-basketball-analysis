@@ -25,8 +25,8 @@ Also follow `docs/BRANCH_POLICY.md`.
 
 ## Workflow
 
-- Branch: `cursor/<descriptive-name>-ac1f` off `jason-5-may-updates`
-- Review results (including another agent's PR branch) are implemented by merging them into the working branch and pushing. A side branch or a validation write-up is not the fix.
+- Working branch is `main`. Merge finished work onto `main` and push it. A side branch or a write-up is not the current code.
+- Review results (including another agent's PR branch) are implemented by merging them into `main` and pushing.
 - Update `docs/agent_handoffs/ACTIVE.md` when task completes; archive to `ARCHIVE/`
 - PR for code changes; no GitHub label coordination
 - GitHub's default branch is `main`

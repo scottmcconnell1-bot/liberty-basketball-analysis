@@ -1,8 +1,8 @@
 # Active Task
 
-Updated: 2026-09-30 afternoon. If an older paragraph below disagrees with this section, this section wins.
+Updated: 2026-10-01. If an older paragraph below disagrees with this section, this section wins.
 
-Review branch: `cursor/playbook-jason-clean-slate-ac1f`. Pull request: https://github.com/scottmcconnell1-bot/liberty-basketball-analysis/pull/151 . `main` and `jason-5-may-updates` are both at `194e38b` (pull request 150) until 151 is reviewed. Do not review those two as the current code.
+Working branch: `main`. Finished work is merged onto `main` and pushed. Do not leave the current code only on a side branch. `jason-5-may-updates` stays even with `main` so an old checkout is not a second copy. Auto-accept pull request 147 is not on `main`.
 
 **Proven (2026-09-30 afternoon):** The Adrian count to review is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546`. It finished at 11:21 AM local, 1,452 events, no error, on `uploads\nfhs_gam0a66d85e12.mp4`. Book: Liberty 51, Adrian 26. Makes: 40 rows, 80 points. Corrected 29 / 59 points, pending 9 / 17 points, rejected 2 made twos / 4 points (Dayley at 12:16, cluster 8 at 26:05). Tags stop at 32:15. Teach rejects a play only when a tag of that same kind is within 8 seconds. A make in an open stretch stays pending. The database and the film stay on this machine. The new run's jersey shades are `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_160546.json`.
 
