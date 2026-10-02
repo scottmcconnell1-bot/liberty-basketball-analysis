@@ -12,6 +12,8 @@ def test_shared_jersey_uses_shade_and_a_unique_number_does_not_need_it():
     assert _pick_roster_player(shared, "home", False)["name"] == "Other"
     assert _pick_roster_player(shared, None, False) is None
     assert _pick_roster_player([{"name": "Colman", "side": "liberty"}], None, False)["name"] == "Colman"
+    assert _pick_roster_player([{"name": "Colman", "side": "liberty"}], "away", False)["name"] == "Colman"
+    assert _pick_roster_player([{"name": "Colman", "side": "liberty"}], "home", False) is None
 
 
 def test_parse_jersey_text_single_digit():
@@ -337,8 +339,8 @@ def test_both_teams_with_the_same_number_are_named_by_shade():
         (3, "Liberty Eleven"), (8, "Opp Eleven")]
 
 
-def test_same_side_shared_number_is_still_named_once():
-    """Two trackers with the same shared number and the same side: only the first is named."""
+def test_same_side_shared_number_names_every_agreeing_tracker():
+    """Two trackers on the same side with the same number are the same player."""
     from track_identity import _build_auto_apply_mappings
 
     roster = {11: [{"name": "Liberty Eleven", "side": "liberty"}, {"name": "Opp Eleven", "side": "opponent"}]}
@@ -351,12 +353,12 @@ def test_same_side_shared_number_is_still_named_once():
         suggestions, roster_by_jersey=roster, use_roster_whitelist=True, min_conf=0.5,
         min_samples=2, shade_by_tracker=shades, liberty_is_home=True,
     )
-    assert [(m["tracker_id"], m["player_name"]) for m in out] == [(3, "Liberty Eleven")]
+    assert [(m["tracker_id"], m["player_name"]) for m in out] == [
+        (3, "Liberty Eleven"), (9, "Liberty Eleven")]
 
 
 def test_unique_number_is_still_named_once_whatever_the_shade():
-    """A number only one team wears keeps the one-tracker rule, so an opponent track that
-    OCR reads as that number is not named after the Liberty player."""
+    """A shirt from the other team is not named with the only person who wears that number."""
     from track_identity import _build_auto_apply_mappings
 
     roster = {23: [{"name": "Avery", "side": "liberty"}]}
@@ -370,3 +372,19 @@ def test_unique_number_is_still_named_once_whatever_the_shade():
         min_samples=2, shade_by_tracker=shades, liberty_is_home=True,
     )
     assert [(m["tracker_id"], m["player_name"]) for m in out] == [(4, "Avery")]
+
+
+def test_unique_number_names_every_tracker_whose_shade_agrees():
+    from track_identity import _build_auto_apply_mappings
+
+    roster = {40: [{"name": "Dayley", "side": "liberty"}]}
+    suggestions = [
+        {"tracker_id": 6, "jersey_number": 40, "confidence": 0.9, "sample_count": 6},
+        {"tracker_id": 8, "jersey_number": 40, "confidence": 0.8, "sample_count": 5},
+    ]
+    shades = {6: {"side": "away"}, 8: {"side": "away"}}
+    out = _build_auto_apply_mappings(
+        suggestions, roster_by_jersey=roster, use_roster_whitelist=True, min_conf=0.5,
+        min_samples=2, shade_by_tracker=shades, liberty_is_home=False,
+    )
+    assert [(m["tracker_id"], m["player_name"]) for m in out] == [(6, "Dayley"), (8, "Dayley")]

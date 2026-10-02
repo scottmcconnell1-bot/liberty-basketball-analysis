@@ -251,7 +251,12 @@ def _pick_roster_player(candidates, shade_side, liberty_is_home):
     if not people:
         return None
     if len(people) == 1:
-        return people[0]
+        person = people[0]
+        wanted = _shade_roster_side(shade_side, liberty_is_home)
+        person_side = person.get("side")
+        if wanted and person_side and person_side != wanted:
+            return None
+        return person
     wanted = _shade_roster_side(shade_side, liberty_is_home)
     if not wanted:
         return None
@@ -299,8 +304,8 @@ def _build_auto_apply_mappings(
     liberty_is_home=None,
 ):
     mappings = []
-    used_jerseys = set()
     shades = shade_by_tracker or {}
+    roster_loaded = bool(roster_by_jersey)
     for item in suggestions:
         if item["confidence"] < min_conf or item["sample_count"] < min_samples:
             continue
@@ -309,15 +314,9 @@ def _build_auto_apply_mappings(
         if use_roster_whitelist and not candidates:
             continue
         shade_side = (shades.get(int(item["tracker_id"])) or {}).get("side")
-        # A number both teams wear is one name per side: Liberty's #11 and the
-        # opponent's #11 are different people when the shade tells them apart.
-        # A number only one team wears keeps one tracker per number.
-        roster_side = _shade_roster_side(shade_side, liberty_is_home) if len(candidates) > 1 else None
-        dedupe_key = (jersey, roster_side)
-        if dedupe_key in used_jerseys:
-            continue
-        used_jerseys.add(dedupe_key)
         roster_player = _pick_roster_player(candidates, shade_side, liberty_is_home)
+        if roster_loaded and not roster_player:
+            continue
         name = None
         if roster_player:
             name = roster_player.get("name") or roster_player.get("label")
@@ -332,7 +331,11 @@ def _build_auto_apply_mappings(
 
 def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
     """Auto-map court clusters to jerseys when OCR confidence is high enough."""
-    from court_slot_mapping import save_court_slot_mappings, apply_court_slot_mappings
+    from court_slot_mapping import (
+        apply_court_slot_mappings,
+        save_court_slot_mappings,
+        stamp_scorebook_links,
+    )
 
     ai_settings = ai_settings or {}
     min_conf = float(ai_settings.get("identity_auto_apply_min_confidence", 0.60))
@@ -377,7 +380,9 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
         )
 
     if not mappings:
-        return {"applied": 0, "mappings": [], "events_updated": 0}
+        linked = stamp_scorebook_links(db, game_id)
+        db.commit()
+        return {"applied": 0, "mappings": [], "events_updated": linked}
 
     save_court_slot_mappings(db, game_id, mappings, apply_to_events=False)
     result = apply_court_slot_mappings(
@@ -386,10 +391,12 @@ def auto_apply_cluster_jerseys(db, game_id, ai_settings=None):
         tracker_ids=[item["tracker_id"] for item in mappings],
         mark_reviewed=False,
     )
+    linked = stamp_scorebook_links(db, game_id)
+    db.commit()
     return {
         "applied": len(mappings),
         "mappings": mappings,
-        "events_updated": result.get("events_updated", 0),
+        "events_updated": result.get("events_updated", 0) + linked,
     }
 
 

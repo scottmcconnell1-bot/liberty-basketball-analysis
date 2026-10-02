@@ -42,6 +42,27 @@ def _seed_game_with_slots(db):
     return game_id, analysis_key, player_id
 
 
+def test_matching_player_uses_the_last_name_and_skips_a_different_spelling(db):
+    from court_slot_mapping import _matching_player_row
+
+    db.execute(
+        """INSERT INTO players (name, jersey_number, program_name, gender, level)
+           VALUES ('Hunter Colman', 21, 'Liberty', 'boys', 'jr_high')"""
+    )
+    db.execute(
+        """INSERT INTO players (name, jersey_number, program_name, gender, level)
+           VALUES ('unkn', 13, 'Liberty', 'boys', 'jr_high')"""
+    )
+    db.execute(
+        """INSERT INTO players (name, jersey_number, program_name, gender, level)
+           VALUES ('Daly', 40, 'Liberty', 'boys', 'jr_high')"""
+    )
+    db.commit()
+    assert _matching_player_row(db, 21, "Colman")["name"] == "Hunter Colman"
+    assert _matching_player_row(db, 13, "Mendoza") is None
+    assert _matching_player_row(db, 40, "Dayley") is None
+
+
 def test_get_court_slots_lists_player_minutes(db):
     from court_slot_mapping import get_court_slots
 
