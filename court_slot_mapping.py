@@ -204,15 +204,29 @@ def _player_match_keys(tracker_id, jersey_number, player_name):
     return keys
 
 
+# Dayley, Daley, and Daly are one Liberty player, #40.
+_SAME_LAST_NAME = {
+    "dayley": "dayley",
+    "daley": "dayley",
+    "daly": "dayley",
+}
+
+
+def _last_name_key(name: str) -> str:
+    last = (name or "").strip().lower().split()[-1] if (name or "").strip() else ""
+    return _SAME_LAST_NAME.get(last, last)
+
+
 def _matching_player_row(db, jersey_number, player_name):
     """One players-table row when the scorebook name and jersey are the same person.
 
-    A last name matches 'Hunter Colman' to Colman. A different spelling, such as
-    Daly for Dayley, does not match.
+    A last name matches 'Hunter Colman' to Colman. Dayley, Daley, and Daly match
+    each other. A different person on that jersey does not.
     """
     name = (player_name or "").strip().lower()
     if jersey_number is None or not name:
         return None
+    want = _last_name_key(name)
     rows = db.execute(
         """SELECT p.id AS player_id, p.name,
                   rm.id AS roster_membership_id, rm.team_id, t.team_name
@@ -226,7 +240,7 @@ def _matching_player_row(db, jersey_number, player_name):
     hits = []
     for row in rows:
         stored = (row["name"] or "").strip().lower()
-        if stored == name or stored.endswith(" " + name):
+        if stored == name or stored.endswith(" " + name) or _last_name_key(stored) == want:
             hits.append(row)
     if len(hits) == 1:
         return hits[0]

@@ -42,7 +42,7 @@ def _seed_game_with_slots(db):
     return game_id, analysis_key, player_id
 
 
-def test_matching_player_uses_the_last_name_and_skips_a_different_spelling(db):
+def test_matching_player_uses_the_last_name_and_dayley_is_daly(db):
     from court_slot_mapping import _matching_player_row
 
     db.execute(
@@ -60,7 +60,8 @@ def test_matching_player_uses_the_last_name_and_skips_a_different_spelling(db):
     db.commit()
     assert _matching_player_row(db, 21, "Colman")["name"] == "Hunter Colman"
     assert _matching_player_row(db, 13, "Mendoza") is None
-    assert _matching_player_row(db, 40, "Dayley") is None
+    assert _matching_player_row(db, 40, "Dayley")["name"] == "Daly"
+    assert _matching_player_row(db, 40, "Daley")["name"] == "Daly"
 
 
 def test_get_court_slots_lists_player_minutes(db):
