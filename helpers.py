@@ -33,6 +33,13 @@ except ImportError:  # pragma: no cover - optional at runtime
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 POWER_SAMPLE_CACHE = {}
 
+
+def _no_console_kwargs():
+    """Windows flashes a black console for every nvidia-smi/ollama call unless this is set."""
+    if os.name == "nt" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
+
 DEFAULT_TEAM_SEED = {
     "organization_name": "Liberty",
     "team_name": "Liberty",
@@ -394,6 +401,7 @@ def build_resource_status():
             text=True,
             timeout=2,
             check=False,
+            **_no_console_kwargs(),
         )
         if result.returncode == 0 and result.stdout.strip():
             name, utilization, memory_used, memory_total, power_draw, power_limit = [
@@ -422,6 +430,7 @@ def build_resource_status():
             text=True,
             timeout=2,
             check=False,
+            **_no_console_kwargs(),
         )
         if process_result.returncode == 0 and process_result.stdout.strip():
             gpu_processes = []
@@ -488,6 +497,7 @@ def list_ollama_models():
             text=True,
             timeout=3,
             check=False,
+            **_no_console_kwargs(),
         )
     except (FileNotFoundError, subprocess.SubprocessError):
         return []
@@ -520,6 +530,7 @@ def call_ollama(prompt, model=None, timeout=60):
             text=True,
             timeout=timeout,
             check=False,
+            **_no_console_kwargs(),
         )
     except FileNotFoundError:
         return False, "Ollama is not installed."

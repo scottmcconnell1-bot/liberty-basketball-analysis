@@ -2170,11 +2170,17 @@ def pull_ollama_model():
     log_path = os.path.join(tempfile.gettempdir(), f"liberty-basketball-ollama-pull-{log_slug}.log")
     try:
         with open(log_path, "ab") as log_file:
+            popen_kwargs = {
+                "stdout": log_file,
+                "stderr": subprocess.STDOUT,
+            }
+            if os.name == "nt" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+                popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+            else:
+                popen_kwargs["start_new_session"] = True
             subprocess.Popen(
                 ["ollama", "pull", model_name],
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
+                **popen_kwargs,
             )
     except FileNotFoundError:
         return redirect(url_for("core.settings_page", message="Ollama is not installed in the current environment."))
