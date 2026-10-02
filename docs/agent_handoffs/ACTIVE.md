@@ -4,6 +4,8 @@ Updated: 2026-10-01. If an older paragraph below disagrees with this section, th
 
 Working branch: `main`. Finished work is merged onto `main` and pushed. Do not leave the current code only on a side branch. `jason-5-may-updates` stays even with `main` so an old checkout is not a second copy. Auto-accept pull request 147 is not on `main`.
 
+When a roster name and a scorebook name are close but not the same spelling, ask Scott. Dayley, Daley, and Daly are already confirmed as one player. Do not invent the next alias.
+
 **Proven (2026-10-01 evening):** On run `...191418`, a make is named only when the jersey read and the shirt shade agree with one scorebook person. Liberty makes for Dayley, Colman, and Peterson now have team id 1. Colman has player id 1. Dayley, Daley, and Daly are the same player, so his makes use the Daly roster row. Adrian makes for Mendoza, Foster, Alvarez, and Rodus have side `home` on the event. There is no Adrian team row, so their team id is empty. Clusters 5, 7, and 8 and `#6` stay unnamed: 5 and 8 disagree with the shirt, 7 read #2, and #6 is not in the book. Pending plus corrected makes are still 76 points. Corrected is still 31. Review status was not flipped.
 
 Brad's copy is branch `Brad/Claude`. It stays even with `main`. His note is `BRAD.md` at the repo root. Whenever a pull request is opened for Jason/Claude, push those same commits to `Brad/Claude` and open the same pull request there.

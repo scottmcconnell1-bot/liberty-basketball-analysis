@@ -22,6 +22,7 @@ Also follow `docs/BRANCH_POLICY.md`.
 - Production ball detector settings (`models/ball_detector.pt`, `ball_confidence`)
 - Unpause teach / raise auto-accept
 - Mass-delete remote branches
+- A name that might be a misspelling of a roster or scorebook name. Ask Scott. Do not guess, and do not leave it unmatched without asking.
 
 ## Workflow
 
