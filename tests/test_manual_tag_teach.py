@@ -103,8 +103,8 @@ def test_teach_manual_corrects_and_rejects_nearby_ai(client, app):
     data = response.get_json()
     assert data["ok"] is True
     assert data["manual_saved"] == 1
-    assert data["corrected"] == 1
-    assert data["rejected"] == 1
+    assert data["corrected"] == 0
+    assert data["rejected"] == 0
 
     with app.app_context():
         db = get_db()
@@ -114,23 +114,13 @@ def test_teach_manual_corrects_and_rejects_nearby_ai(client, app):
         ).fetchone()
         assert manual["player"] == "0 Sullivan"
         assert manual["human_verified"] == 1
-        corrected = db.execute(
+        players = db.execute(
             """SELECT player, review_status FROM events
-                WHERE game_id=? AND source_type='ai' AND review_status='corrected'""",
+                WHERE game_id=? AND source_type='ai' ORDER BY timestamp_ms""",
             (game_id,),
-        ).fetchone()
-        assert "Sullivan" in (corrected["player"] or "")
-        rejected = db.execute(
-            """SELECT player FROM events
-                WHERE game_id=? AND source_type='ai' AND review_status='rejected'""",
-            (game_id,),
-        ).fetchone()
-        assert rejected["player"] == "Foster"
-        notes = db.execute(
-            "SELECT COUNT(*) AS n FROM human_corrections WHERE game_id=? AND notes LIKE '%Film Tool teach%'",
-            (game_id,),
-        ).fetchone()
-        assert notes["n"] >= 2
+        ).fetchall()
+        assert [row["player"] for row in players] == ["Mendoza", "Foster"]
+        assert {row["review_status"] for row in players} == {"pending"}
 
 
 def test_persist_events_keeps_manual_and_regrades_ai(app):
@@ -313,3 +303,64 @@ def test_manual_tags_sidecar_roundtrip(client, tmp_path, monkeypatch):
     got = client.get(f"/api/film/{game_id}/manual-tags")
     assert got.status_code == 200
     assert got.get_json()["rows"][0]["player"] == "0 Sullivan"
+
+
+def test_tag_does_not_take_another_players_shot(app):
+    from manual_tag_teach import reconcile_makes_with_shots
+
+    game_id = "teach-do-not-steal"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   details_json, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'made_two', 'make', 93000,
+                       '{"film_tool_teach": true}', 'ai', 'corrected', 1)""",
+            (game_id,),
+        )
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   details_json, source_type, review_status, confidence)
+               VALUES (?, '#22 Foster', 'shot', 'make', 93000,
+                       '{"through_rim": false, "net_moved": true, "generator": "precision"}',
+                       'ai', 'pending', 0.5)""",
+            (game_id,),
+        )
+        db.commit()
+        report = reconcile_makes_with_shots(db, game_id)
+        db.commit()
+        assert report["reassigned"] == 0
+        assert report["rejected"] == 0
+        row = db.execute(
+            "SELECT player, review_status FROM events WHERE game_id=? AND event_type='made_two'",
+            (game_id,),
+        ).fetchone()
+        assert row["player"] == "#40 Dayley"
+        assert row["review_status"] == "corrected"
+
+
+def test_make_is_rejected_when_its_shot_did_not_go_in(app):
+    from manual_tag_teach import reconcile_makes_with_shots
+
+    game_id = "teach-not-a-make"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   details_json, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'made_two', 'make', 48200,
+                       '{"through_rim": false, "net_moved": false}', 'ai', 'corrected', 1)""",
+            (game_id,),
+        )
+        db.commit()
+        report = reconcile_makes_with_shots(db, game_id)
+        db.commit()
+        assert report["rejected"] == 1
+        row = db.execute(
+            "SELECT review_status FROM events WHERE game_id=? AND event_type='made_two'",
+            (game_id,),
+        ).fetchone()
+        assert row["review_status"] == "rejected"

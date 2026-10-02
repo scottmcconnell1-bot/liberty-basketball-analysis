@@ -315,6 +315,76 @@ def _scoring_code(details: dict, shot_result) -> str | None:
     return scoring_event_type(kind, str(shot_result or "") == "make")
 
 
+def _person_key(player: str | None) -> str | None:
+    """Last name on a jersey label. A bare tracker id is not a person."""
+    import re
+
+    text = str(player or "").strip()
+    if not text or text.isdigit():
+        return None
+    match = re.match(r"^(?:#)?(\d+)\s*[- ]\s*(.+)$", text) or re.match(r"^#(\d+)\s+(.+)$", text)
+    name = match.group(2).strip() if match else text
+    last = name.split()[-1] if name else ""
+    if not last or last.isdigit() or last.lower() in {"unkn", "unknown"}:
+        return None
+    from court_slot_mapping import _last_name_key
+
+    return _last_name_key(last)
+
+
+def _different_people(left: str | None, right: str | None) -> bool:
+    a, b = _person_key(left), _person_key(right)
+    return bool(a and b and a != b)
+
+
+def _shot_disproves_make(details: dict) -> bool:
+    return details.get("through_rim") is False and details.get("net_moved") is False
+
+
+def reconcile_makes_with_shots(db, game_id: str) -> dict[str, int]:
+    """The scorer is the player on the shot. A shot that missed is not a make.
+
+    A tag may name an unnamed tracker. It may not take a shot that already
+    belongs to someone else. A make whose own shot says the ball did not go
+    in is rejected.
+    """
+    game_id = normalize_analysis_game_id(game_id)
+    makes = db.execute(
+        """SELECT id, player, event_type, timestamp_ms, review_status, details_json
+             FROM events
+            WHERE game_id=?
+              AND COALESCE(source_type,'ai')='ai'
+              AND event_type IN ('made_two','made_three','made_free_throw')
+              AND review_status != 'rejected'""",
+        (game_id,),
+    ).fetchall()
+    rejected = 0
+    reassigned = 0
+    for make in makes:
+        details = _details(_row_get(make, "details_json"))
+        make_id = int(_row_get(make, "id"))
+        if _shot_disproves_make(details):
+            if reject_event(db, make_id, notes="Shot did not go in", commit=False):
+                rejected += 1
+            continue
+        shots = db.execute(
+            """SELECT player, details_json FROM events
+                WHERE game_id=? AND event_type='shot' AND timestamp_ms=?
+                  AND COALESCE(source_type,'ai')='ai'""",
+            (game_id, int(_row_get(make, "timestamp_ms") or 0)),
+        ).fetchall()
+        own = [
+            shot for shot in shots
+            if not _different_people(_row_get(make, "player"), _row_get(shot, "player"))
+        ]
+        if len(own) != 1:
+            continue
+        if _shot_disproves_make(_details(_row_get(own[0], "details_json"))):
+            if reject_event(db, make_id, notes="Shot did not go in", commit=False):
+                rejected += 1
+    return {"rejected": rejected, "reassigned": reassigned}
+
+
 def _match_rank(ai_type: str, want_code: str | None) -> int:
     et = str(ai_type or "").lower()
     if want_code and et == want_code:
@@ -378,6 +448,8 @@ def apply_saved_manual_teach(
             dt = abs(int(_row_get(ai, "timestamp_ms") or 0) - want_ms)
             if dt > MATCH_TOLERANCE_MS:
                 continue
+            if _different_people(_row_get(ai, "player"), _row_get(manual, "player")):
+                continue
             key = (_match_rank(_row_get(ai, "event_type"), want_code), dt, ai_id)
             if best_key is None or key < best_key:
                 best, best_key = ai, key
@@ -411,6 +483,21 @@ def apply_saved_manual_teach(
         ai_ts = int(_row_get(ai, "timestamp_ms") or 0)
         # A tag covers the plays next to it. An open stretch between the first
         # tag and the last tag is not a reason to throw the play out.
+        # A named player is not an extra just because someone else was tagged nearby.
+        nearby_same_player = False
+        ai_person = _person_key(_row_get(ai, "player"))
+        for manual in manuals:
+            if _ai_family(_row_get(manual, "event_type"), _details(_row_get(manual, "details_json"))) != family:
+                continue
+            if abs(ai_ts - int(_row_get(manual, "timestamp_ms") or 0)) > MATCH_TOLERANCE_MS:
+                continue
+            tag_person = _person_key(_row_get(manual, "player"))
+            if ai_person and tag_person and ai_person != tag_person:
+                continue
+            nearby_same_player = True
+            break
+        if ai_person and not nearby_same_player:
+            continue
         if not any(abs(ai_ts - tag_ts) <= MATCH_TOLERANCE_MS for tag_ts in tag_times.get(family, [])):
             continue
         # The generator stores a shot and a made/missed row at the same time.
@@ -425,6 +512,8 @@ def apply_saved_manual_teach(
         )
         if result:
             rejected += 1
+
+    reconcile_makes_with_shots(db, game_id)
 
     if commit:
         db.commit()
