@@ -2019,7 +2019,9 @@ function legacyRosterKey(side = currentRosterSide) {
     return `${getSelectedLevel()}|${getSelectedGender()}|${side}`;
 }
 
-async function migrateLegacyRosterIfNeeded() {
+let legacyRosterPrompted = false;
+
+async function migrateLegacyRosterIfNeeded(ask = false) {
     const seasonId = getSelectedSeasonId();
     if (!seasonId) return false;
     const key = getRosterKey();
@@ -2027,6 +2029,8 @@ async function migrateLegacyRosterIfNeeded() {
 
     const legacyPlayers = loadJson(ROSTER_STORAGE_KEY, {})[legacyRosterKey()];
     if (!legacyPlayers?.length) return false;
+    if (!ask || legacyRosterPrompted) return false;
+    legacyRosterPrompted = true;
 
     const ok = confirm(
         `Found ${legacyPlayers.length} players from your old browser-only roster. Import them into this season?`
@@ -2058,7 +2062,7 @@ async function loadRosterFromServer() {
         rosters[key] = sortRosterPlayers(data.players || []);
         saveJson(ROSTER_STORAGE_KEY, rosters);
         renderOpponentStats(data.stats);
-        if (!data.players?.length) await migrateLegacyRosterIfNeeded();
+        if (!data.players?.length) await migrateLegacyRosterIfNeeded(false);
         if (!data.players?.length && !(rosters[key] || []).length) {
             const gameLevel = gameRosterLevel();
             if (gameLevel && getSelectedLevel() === gameLevel) {
@@ -2180,6 +2184,7 @@ async function openRosterDialog() {
     await loadOpponentOptions();
     syncOpponentFields();
     await loadRosterFromServer();
+    await migrateLegacyRosterIfNeeded(true);
     rosterDialog.showModal();
 }
 
@@ -4684,9 +4689,7 @@ function attachEventHandlers() {
 async function initFromAutosave() {
     const autosave = readAutosaveForOpenFilm();
     if (autosave) {
-        if (!confirm('Restore autosaved tags for this film from last session?')) return;
-        loadGameIntoUI(autosave, { requireSameFilm: true });
-        pushServerTags();
+        setStatus('Saved tags stay put. Press Resume to load them.');
         return;
     }
     const server = await pullServerTagsForOpenFilm();
@@ -4794,10 +4797,6 @@ function init() {
     renderScore();
     initFromAutosave();
     syncGameTeamsFromContext({ forceGameOpponent: true });
-    loadGameTeamRosters().then(() => loadGameStarters()).then(() => {
-        repairEmptyTeams();
-        renderScore();
-    });
     updateScoreLabels();
     renderScore();
     syncQ1EndButton();
