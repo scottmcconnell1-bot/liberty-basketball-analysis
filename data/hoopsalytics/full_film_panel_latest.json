@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T00:15:41.955390+00:00",
+  "generated_at": "2026-10-04T05:00:02.525386+00:00",
   "targets": {
     "final_score_exact": 1.0,
     "player_points_exact": 1.0,
@@ -73,12 +73,12 @@
       ],
       "truth_stat_events": 157,
       "ok": true,
-      "precision": 0.0479,
-      "recall": 0.0892,
-      "exact": 14,
-      "disagree": 59,
-      "miss": 84,
-      "extra": 219,
+      "precision": 0.0582,
+      "recall": 0.1083,
+      "exact": 17,
+      "disagree": 24,
+      "miss": 116,
+      "extra": 251,
       "truth_events": 157,
       "ai_stat_events": 292,
       "truth_meta": {
@@ -235,12 +235,12 @@
       ],
       "truth_stat_events": 172,
       "ok": true,
-      "precision": 0.0203,
-      "recall": 0.0581,
-      "exact": 10,
-      "disagree": 58,
-      "miss": 104,
-      "extra": 424,
+      "precision": 0.0285,
+      "recall": 0.0814,
+      "exact": 14,
+      "disagree": 23,
+      "miss": 135,
+      "extra": 455,
       "truth_events": 172,
       "ai_stat_events": 492,
       "truth_meta": {
@@ -426,20 +426,26 @@
       },
       "event_precision_min": {
         "required": 0.9,
-        "actual": 0.0341,
+        "actual": 0.0433,
         "pass": false,
-        "note": "Mean event precision across panel games"
+        "games_scored": 2,
+        "games_total": 6,
+        "note": "Mean event precision across panel games (every game must have a score)"
       },
       "event_recall_min": {
         "required": 0.9,
-        "actual": 0.0736,
+        "actual": 0.0948,
         "pass": false,
-        "note": "Mean event recall across panel games"
+        "games_scored": 2,
+        "games_total": 6,
+        "note": "Mean event recall across panel games (every game must have a score)"
       }
     },
     "overall_pass": false,
-    "mean_precision": 0.0341,
-    "mean_recall": 0.0736
+    "mean_precision": 0.0433,
+    "mean_recall": 0.0948,
+    "games_scored": 2,
+    "games_total": 6
   },
   "criteria": {
     "final_score_exact": "1.0 (100%)",

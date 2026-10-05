@@ -1,0 +1,5775 @@
+{
+  "version": 1,
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+  "updated_at": "2026-09-28T14:28:50Z",
+  "method": "formation_path_rank",
+  "limits": [
+    "Film points are cloud-normalized (no court homography).",
+    "Scores are ranks within the loaded playbook library, not probabilities.",
+    "Sticky choreography preferred; missing sticky/steps weakens matches.",
+    "Suggestions only \u2014 never auto-accepted into the ledger."
+  ],
+  "library_size": 33,
+  "possessions": [
+    {
+      "possession_id": null,
+      "start_ms": 1720,
+      "end_ms": 8900,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3534,
+          "components": {
+            "formation": 0.3534,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2981,
+          "components": {
+            "formation": 0.2981,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2808,
+          "components": {
+            "formation": 0.2808,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.2481,
+          "components": {
+            "formation": 0.2481,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.2387,
+          "components": {
+            "formation": 0.2387,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.3534
+    },
+    {
+      "possession_id": null,
+      "start_ms": 8900,
+      "end_ms": 14720,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4347,
+          "components": {
+            "formation": 0.4347,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4101,
+          "components": {
+            "formation": 0.4101,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3335,
+          "components": {
+            "formation": 0.3335,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3232,
+          "components": {
+            "formation": 0.3232,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2794,
+          "components": {
+            "formation": 0.2632,
+            "path": 0.4222,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4347
+    },
+    {
+      "possession_id": null,
+      "start_ms": 14720,
+      "end_ms": 19760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5604,
+          "components": {
+            "formation": 0.5604,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4576,
+          "components": {
+            "formation": 0.4576,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4472,
+          "components": {
+            "formation": 0.4472,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4385,
+          "components": {
+            "formation": 0.5264,
+            "path": 0.501,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 121,
+          "play_name": "Split",
+          "library_source": "play_steps",
+          "score": 0.4345,
+          "components": {
+            "formation": 0.4345,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.5604
+    },
+    {
+      "possession_id": null,
+      "start_ms": 19760,
+      "end_ms": 21640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4847,
+          "components": {
+            "formation": 0.4847,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4803,
+          "components": {
+            "formation": 0.4803,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4756,
+          "components": {
+            "formation": 0.4756,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4737,
+          "components": {
+            "formation": 0.4737,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.3953,
+          "components": {
+            "formation": 0.3953,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.4847
+    },
+    {
+      "possession_id": null,
+      "start_ms": 21640,
+      "end_ms": 35200,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4762,
+          "components": {
+            "formation": 0.4762,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4099,
+          "components": {
+            "formation": 0.4099,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3486,
+          "components": {
+            "formation": 0.3486,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3068,
+          "components": {
+            "formation": 0.3068,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2814,
+          "components": {
+            "formation": 0.2666,
+            "path": 0.4233,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4762
+    },
+    {
+      "possession_id": null,
+      "start_ms": 36440,
+      "end_ms": 39000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4708,
+          "components": {
+            "formation": 0.4708,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4371,
+          "components": {
+            "formation": 0.4371,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4132,
+          "components": {
+            "formation": 0.4132,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3053,
+          "components": {
+            "formation": 0.3053,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.282,
+          "components": {
+            "formation": 0.282,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4708
+    },
+    {
+      "possession_id": null,
+      "start_ms": 39000,
+      "end_ms": 44760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4765,
+          "components": {
+            "formation": 0.4765,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4347,
+          "components": {
+            "formation": 0.4347,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4165,
+          "components": {
+            "formation": 0.4165,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3238,
+          "components": {
+            "formation": 0.3238,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2894,
+          "components": {
+            "formation": 0.2894,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4765
+    },
+    {
+      "possession_id": null,
+      "start_ms": 48200,
+      "end_ms": 56700,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4701,
+          "components": {
+            "formation": 0.4701,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4515,
+          "components": {
+            "formation": 0.4515,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4065,
+          "components": {
+            "formation": 0.4065,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3697,
+          "components": {
+            "formation": 0.3697,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3643,
+          "components": {
+            "formation": 0.3643,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4701
+    },
+    {
+      "possession_id": null,
+      "start_ms": 56700,
+      "end_ms": 59120,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.408,
+          "components": {
+            "formation": 0.408,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3567,
+          "components": {
+            "formation": 0.3567,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3022,
+          "components": {
+            "formation": 0.3022,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2771,
+          "components": {
+            "formation": 0.2771,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2609,
+          "components": {
+            "formation": 0.2609,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.408
+    },
+    {
+      "possession_id": null,
+      "start_ms": 59120,
+      "end_ms": 62680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4177,
+          "components": {
+            "formation": 0.4177,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3185,
+          "components": {
+            "formation": 0.3185,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3106,
+          "components": {
+            "formation": 0.3106,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2786,
+          "components": {
+            "formation": 0.2786,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2564,
+          "components": {
+            "formation": 0.2607,
+            "path": 0.3601,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4177
+    },
+    {
+      "possession_id": null,
+      "start_ms": 62680,
+      "end_ms": 68160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5319,
+          "components": {
+            "formation": 0.5319,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4701,
+          "components": {
+            "formation": 0.553,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4701,
+          "components": {
+            "formation": 0.553,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4586,
+          "components": {
+            "formation": 0.5395,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4586,
+          "components": {
+            "formation": 0.5395,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5319
+    },
+    {
+      "possession_id": null,
+      "start_ms": 68160,
+      "end_ms": 73280,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.484,
+          "components": {
+            "formation": 0.484,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4063,
+          "components": {
+            "formation": 0.4063,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3484,
+          "components": {
+            "formation": 0.3484,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3477,
+          "components": {
+            "formation": 0.3477,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3269,
+          "components": {
+            "formation": 0.3269,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.484
+    },
+    {
+      "possession_id": null,
+      "start_ms": 73280,
+      "end_ms": 80320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4488,
+          "components": {
+            "formation": 0.4488,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.3724,
+          "components": {
+            "formation": 0.3724,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3631,
+          "components": {
+            "formation": 0.3631,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.3273,
+          "components": {
+            "formation": 0.385,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.3273,
+          "components": {
+            "formation": 0.385,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.4488
+    },
+    {
+      "possession_id": null,
+      "start_ms": 80320,
+      "end_ms": 88600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.5646,
+          "components": {
+            "formation": 0.5646,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5032,
+          "components": {
+            "formation": 0.5032,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4116,
+          "components": {
+            "formation": 0.4116,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3503,
+          "components": {
+            "formation": 0.3721,
+            "path": 0.4693,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.3381,
+          "components": {
+            "formation": 0.3977,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.5646
+    },
+    {
+      "possession_id": null,
+      "start_ms": 88600,
+      "end_ms": 91520,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4004,
+          "components": {
+            "formation": 0.4004,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3369,
+          "components": {
+            "formation": 0.3369,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.3208,
+          "components": {
+            "formation": 0.3208,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.3044,
+          "components": {
+            "formation": 0.3581,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.3044,
+          "components": {
+            "formation": 0.3581,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.4004
+    },
+    {
+      "possession_id": null,
+      "start_ms": 93600,
+      "end_ms": 108880,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.557,
+          "components": {
+            "formation": 0.557,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5012,
+          "components": {
+            "formation": 0.5012,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.4992,
+          "components": {
+            "formation": 0.5873,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.4992,
+          "components": {
+            "formation": 0.5873,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4881,
+          "components": {
+            "formation": 0.5743,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.557
+    },
+    {
+      "possession_id": null,
+      "start_ms": 108880,
+      "end_ms": 116760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6115,
+          "components": {
+            "formation": 0.7194,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6115,
+          "components": {
+            "formation": 0.7194,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.5896,
+          "components": {
+            "formation": 0.5896,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5837,
+          "components": {
+            "formation": 0.6867,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5837,
+          "components": {
+            "formation": 0.6867,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6115
+    },
+    {
+      "possession_id": null,
+      "start_ms": 117600,
+      "end_ms": 121800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5264,
+          "components": {
+            "formation": 0.5264,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4743,
+          "components": {
+            "formation": 0.5579,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4743,
+          "components": {
+            "formation": 0.5579,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4613,
+          "components": {
+            "formation": 0.5427,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4613,
+          "components": {
+            "formation": 0.5427,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5264
+    },
+    {
+      "possession_id": null,
+      "start_ms": 121800,
+      "end_ms": 123600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4356,
+          "components": {
+            "formation": 0.4356,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4138,
+          "components": {
+            "formation": 0.4138,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.396,
+          "components": {
+            "formation": 0.396,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3755,
+          "components": {
+            "formation": 0.3755,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.269,
+          "components": {
+            "formation": 0.2934,
+            "path": 0.3493,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Triangle",
+      "top_rank_score": 0.4356
+    },
+    {
+      "possession_id": null,
+      "start_ms": 123600,
+      "end_ms": 134840,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4956,
+          "components": {
+            "formation": 0.4956,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.3619,
+          "components": {
+            "formation": 0.3619,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3619,
+          "components": {
+            "formation": 0.3619,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.354,
+          "components": {
+            "formation": 0.354,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3463,
+          "components": {
+            "formation": 0.3463,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4956
+    },
+    {
+      "possession_id": null,
+      "start_ms": 134840,
+      "end_ms": 136960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 106,
+          "play_name": "Double",
+          "library_source": "play_steps",
+          "score": 0.5832,
+          "components": {
+            "formation": 0.5832,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "play_steps",
+          "score": 0.4914,
+          "components": {
+            "formation": 0.4914,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4494,
+          "components": {
+            "formation": 0.4494,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.424,
+          "components": {
+            "formation": 0.424,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.4191,
+          "components": {
+            "formation": 0.4191,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Double",
+      "top_rank_score": 0.5832
+    },
+    {
+      "possession_id": null,
+      "start_ms": 136960,
+      "end_ms": 139160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5173,
+          "components": {
+            "formation": 0.5173,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4517,
+          "components": {
+            "formation": 0.5314,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4517,
+          "components": {
+            "formation": 0.5314,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4396,
+          "components": {
+            "formation": 0.5172,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4396,
+          "components": {
+            "formation": 0.5172,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5173
+    },
+    {
+      "possession_id": null,
+      "start_ms": 139160,
+      "end_ms": 144280,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4705,
+          "components": {
+            "formation": 0.4705,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3903,
+          "components": {
+            "formation": 0.3903,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3425,
+          "components": {
+            "formation": 0.3425,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3006,
+          "components": {
+            "formation": 0.3006,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2674,
+          "components": {
+            "formation": 0.2674,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4705
+    },
+    {
+      "possession_id": null,
+      "start_ms": 144280,
+      "end_ms": 148600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "play_steps",
+          "score": 0.5941,
+          "components": {
+            "formation": 0.5941,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.588,
+          "components": {
+            "formation": 0.6917,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.588,
+          "components": {
+            "formation": 0.6917,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5707,
+          "components": {
+            "formation": 0.6714,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5707,
+          "components": {
+            "formation": 0.6714,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Crush",
+      "top_rank_score": 0.5941
+    },
+    {
+      "possession_id": null,
+      "start_ms": 149400,
+      "end_ms": 152440,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6035,
+          "components": {
+            "formation": 0.71,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6035,
+          "components": {
+            "formation": 0.71,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "play_steps",
+          "score": 0.5929,
+          "components": {
+            "formation": 0.5929,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5854,
+          "components": {
+            "formation": 0.6887,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5854,
+          "components": {
+            "formation": 0.6887,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6035
+    },
+    {
+      "possession_id": null,
+      "start_ms": 152440,
+      "end_ms": 153960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5082,
+          "components": {
+            "formation": 0.5082,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4982,
+          "components": {
+            "formation": 0.4982,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4794,
+          "components": {
+            "formation": 0.564,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4794,
+          "components": {
+            "formation": 0.564,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4674,
+          "components": {
+            "formation": 0.5498,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5082
+    },
+    {
+      "possession_id": null,
+      "start_ms": 155160,
+      "end_ms": 158360,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4224,
+          "components": {
+            "formation": 0.4224,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3914,
+          "components": {
+            "formation": 0.3914,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3532,
+          "components": {
+            "formation": 0.3532,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2972,
+          "components": {
+            "formation": 0.2972,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2553,
+          "components": {
+            "formation": 0.2681,
+            "path": 0.3464,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4224
+    },
+    {
+      "possession_id": null,
+      "start_ms": 159760,
+      "end_ms": 174920,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4118,
+          "components": {
+            "formation": 0.4118,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3598,
+          "components": {
+            "formation": 0.2845,
+            "path": 0.6214,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.33,
+          "components": {
+            "formation": 0.33,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3288,
+          "components": {
+            "formation": 0.3288,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3041,
+          "components": {
+            "formation": 0.3041,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4118
+    },
+    {
+      "possession_id": null,
+      "start_ms": 175800,
+      "end_ms": 189040,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4744,
+          "components": {
+            "formation": 0.4744,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3761,
+          "components": {
+            "formation": 0.3761,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3556,
+          "components": {
+            "formation": 0.347,
+            "path": 0.5203,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3382,
+          "components": {
+            "formation": 0.3382,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.2753,
+          "components": {
+            "formation": 0.2753,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4744
+    },
+    {
+      "possession_id": null,
+      "start_ms": 189040,
+      "end_ms": 197240,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4598,
+          "components": {
+            "formation": 0.4598,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3758,
+          "components": {
+            "formation": 0.3758,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.371,
+          "components": {
+            "formation": 0.371,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2863,
+          "components": {
+            "formation": 0.2863,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2689,
+          "components": {
+            "formation": 0.2691,
+            "path": 0.3837,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4598
+    },
+    {
+      "possession_id": null,
+      "start_ms": 199600,
+      "end_ms": 202840,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5488,
+          "components": {
+            "formation": 0.5488,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5293,
+          "components": {
+            "formation": 0.6227,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5293,
+          "components": {
+            "formation": 0.6227,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5183,
+          "components": {
+            "formation": 0.5183,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5062,
+          "components": {
+            "formation": 0.5956,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5488
+    },
+    {
+      "possession_id": null,
+      "start_ms": 202840,
+      "end_ms": 205400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5136,
+          "components": {
+            "formation": 0.5136,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4677,
+          "components": {
+            "formation": 0.5503,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4677,
+          "components": {
+            "formation": 0.5503,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4555,
+          "components": {
+            "formation": 0.5358,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4555,
+          "components": {
+            "formation": 0.5358,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5136
+    },
+    {
+      "possession_id": null,
+      "start_ms": 206600,
+      "end_ms": 214600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4858,
+          "components": {
+            "formation": 0.4858,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.399,
+          "components": {
+            "formation": 0.399,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3571,
+          "components": {
+            "formation": 0.3571,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.29,
+          "components": {
+            "formation": 0.29,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2828,
+          "components": {
+            "formation": 0.2828,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4858
+    },
+    {
+      "possession_id": null,
+      "start_ms": 214600,
+      "end_ms": 216400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4372,
+          "components": {
+            "formation": 0.4372,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3089,
+          "components": {
+            "formation": 0.3089,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2796,
+          "components": {
+            "formation": 0.2796,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2795,
+          "components": {
+            "formation": 0.2795,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.2582,
+          "components": {
+            "formation": 0.2582,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4372
+    },
+    {
+      "possession_id": null,
+      "start_ms": 218120,
+      "end_ms": 224400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5541,
+          "components": {
+            "formation": 0.5541,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4523,
+          "components": {
+            "formation": 0.5222,
+            "path": 0.5462,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4415,
+          "components": {
+            "formation": 0.4415,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4219,
+          "components": {
+            "formation": 0.4219,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4148,
+          "components": {
+            "formation": 0.4881,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5541
+    },
+    {
+      "possession_id": null,
+      "start_ms": 224400,
+      "end_ms": 233560,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3924,
+          "components": {
+            "formation": 0.3924,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2961,
+          "components": {
+            "formation": 0.2276,
+            "path": 0.5208,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2901,
+          "components": {
+            "formation": 0.2901,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2832,
+          "components": {
+            "formation": 0.2832,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.2495,
+          "components": {
+            "formation": 0.2495,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.3924
+    },
+    {
+      "possession_id": null,
+      "start_ms": 235160,
+      "end_ms": 238000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4812,
+          "components": {
+            "formation": 0.4812,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4014,
+          "components": {
+            "formation": 0.4014,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3708,
+          "components": {
+            "formation": 0.3708,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3612,
+          "components": {
+            "formation": 0.3612,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3521,
+          "components": {
+            "formation": 0.4288,
+            "path": 0.3934,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4812
+    },
+    {
+      "possession_id": null,
+      "start_ms": 239400,
+      "end_ms": 244320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.562,
+          "components": {
+            "formation": 0.6612,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.562,
+          "components": {
+            "formation": 0.6612,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5377,
+          "components": {
+            "formation": 0.6326,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5377,
+          "components": {
+            "formation": 0.6326,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5303,
+          "components": {
+            "formation": 0.5303,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.562
+    },
+    {
+      "possession_id": null,
+      "start_ms": 244320,
+      "end_ms": 248600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4882,
+          "components": {
+            "formation": 0.4882,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4821,
+          "components": {
+            "formation": 0.4821,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4689,
+          "components": {
+            "formation": 0.4689,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.4638,
+          "components": {
+            "formation": 0.5456,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.4638,
+          "components": {
+            "formation": 0.5456,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4882
+    },
+    {
+      "possession_id": null,
+      "start_ms": 248600,
+      "end_ms": 251600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4492,
+          "components": {
+            "formation": 0.4492,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3262,
+          "components": {
+            "formation": 0.3262,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3057,
+          "components": {
+            "formation": 0.3057,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2809,
+          "components": {
+            "formation": 0.2809,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2712,
+          "components": {
+            "formation": 0.2542,
+            "path": 0.4119,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4492
+    },
+    {
+      "possession_id": null,
+      "start_ms": 251600,
+      "end_ms": 255000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.384,
+          "components": {
+            "formation": 0.384,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3828,
+          "components": {
+            "formation": 0.3828,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3706,
+          "components": {
+            "formation": 0.3706,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3687,
+          "components": {
+            "formation": 0.3687,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2984,
+          "components": {
+            "formation": 0.3308,
+            "path": 0.3799,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.384
+    },
+    {
+      "possession_id": null,
+      "start_ms": 255000,
+      "end_ms": 257400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3935,
+          "components": {
+            "formation": 0.3935,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3515,
+          "components": {
+            "formation": 0.3515,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3306,
+          "components": {
+            "formation": 0.3306,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3125,
+          "components": {
+            "formation": 0.3125,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2797,
+          "components": {
+            "formation": 0.2619,
+            "path": 0.425,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.3935
+    },
+    {
+      "possession_id": null,
+      "start_ms": 257400,
+      "end_ms": 260160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5539,
+          "components": {
+            "formation": 0.5539,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5433,
+          "components": {
+            "formation": 0.5433,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4548,
+          "components": {
+            "formation": 0.5351,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4548,
+          "components": {
+            "formation": 0.5351,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4454,
+          "components": {
+            "formation": 0.5679,
+            "path": 0.4612,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5539
+    },
+    {
+      "possession_id": null,
+      "start_ms": 261000,
+      "end_ms": 277600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4511,
+          "components": {
+            "formation": 0.4511,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4138,
+          "components": {
+            "formation": 0.4138,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3846,
+          "components": {
+            "formation": 0.3846,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3498,
+          "components": {
+            "formation": 0.3498,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3475,
+          "components": {
+            "formation": 0.3475,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4511
+    },
+    {
+      "possession_id": null,
+      "start_ms": 277600,
+      "end_ms": 280800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4426,
+          "components": {
+            "formation": 0.4426,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4164,
+          "components": {
+            "formation": 0.4164,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.3149,
+          "components": {
+            "formation": 0.3149,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.2808,
+          "components": {
+            "formation": 0.3303,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.2808,
+          "components": {
+            "formation": 0.3303,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4426
+    },
+    {
+      "possession_id": null,
+      "start_ms": 280800,
+      "end_ms": 286200,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.339,
+          "components": {
+            "formation": 0.339,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2975,
+          "components": {
+            "formation": 0.2208,
+            "path": 0.5346,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.2904,
+          "components": {
+            "formation": 0.2904,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2891,
+          "components": {
+            "formation": 0.2891,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2653,
+          "components": {
+            "formation": 0.2653,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.339
+    },
+    {
+      "possession_id": null,
+      "start_ms": 286200,
+      "end_ms": 290480,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5253,
+          "components": {
+            "formation": 0.5253,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4624,
+          "components": {
+            "formation": 0.544,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4624,
+          "components": {
+            "formation": 0.544,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4503,
+          "components": {
+            "formation": 0.5298,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4503,
+          "components": {
+            "formation": 0.5298,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5253
+    },
+    {
+      "possession_id": null,
+      "start_ms": 290480,
+      "end_ms": 297600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4837,
+          "components": {
+            "formation": 0.4837,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4646,
+          "components": {
+            "formation": 0.5466,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4646,
+          "components": {
+            "formation": 0.5466,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4516,
+          "components": {
+            "formation": 0.4516,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4438,
+          "components": {
+            "formation": 0.5221,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.4837
+    },
+    {
+      "possession_id": null,
+      "start_ms": 298700,
+      "end_ms": 300760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5525,
+          "components": {
+            "formation": 0.5525,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5365,
+          "components": {
+            "formation": 0.5365,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4851,
+          "components": {
+            "formation": 0.5707,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4851,
+          "components": {
+            "formation": 0.5707,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4725,
+          "components": {
+            "formation": 0.5558,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5525
+    },
+    {
+      "possession_id": null,
+      "start_ms": 300760,
+      "end_ms": 304320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5384,
+          "components": {
+            "formation": 0.5384,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4824,
+          "components": {
+            "formation": 0.5676,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4824,
+          "components": {
+            "formation": 0.5676,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4703,
+          "components": {
+            "formation": 0.5534,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4703,
+          "components": {
+            "formation": 0.5534,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5384
+    },
+    {
+      "possession_id": null,
+      "start_ms": 304320,
+      "end_ms": 306120,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5117,
+          "components": {
+            "formation": 0.5117,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.503,
+          "components": {
+            "formation": 0.503,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4612,
+          "components": {
+            "formation": 0.5426,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4612,
+          "components": {
+            "formation": 0.5426,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4504,
+          "components": {
+            "formation": 0.5299,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5117
+    },
+    {
+      "possession_id": null,
+      "start_ms": 306120,
+      "end_ms": 308000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5139,
+          "components": {
+            "formation": 0.5139,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5027,
+          "components": {
+            "formation": 0.5027,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4554,
+          "components": {
+            "formation": 0.5358,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4554,
+          "components": {
+            "formation": 0.5358,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "play_steps",
+          "score": 0.4467,
+          "components": {
+            "formation": 0.4467,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5139
+    },
+    {
+      "possession_id": null,
+      "start_ms": 308000,
+      "end_ms": 309800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5459,
+          "components": {
+            "formation": 0.5459,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "play_steps",
+          "score": 0.5413,
+          "components": {
+            "formation": 0.5413,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5169,
+          "components": {
+            "formation": 0.5169,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5165,
+          "components": {
+            "formation": 0.6076,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5165,
+          "components": {
+            "formation": 0.6076,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5459
+    },
+    {
+      "possession_id": null,
+      "start_ms": 309800,
+      "end_ms": 322440,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4092,
+          "components": {
+            "formation": 0.4092,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3716,
+          "components": {
+            "formation": 0.3716,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3054,
+          "components": {
+            "formation": 0.3054,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2907,
+          "components": {
+            "formation": 0.2907,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2859,
+          "components": {
+            "formation": 0.2597,
+            "path": 0.4458,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4092
+    },
+    {
+      "possession_id": null,
+      "start_ms": 322440,
+      "end_ms": 324880,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.459,
+          "components": {
+            "formation": 0.459,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4386,
+          "components": {
+            "formation": 0.4386,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3933,
+          "components": {
+            "formation": 0.3933,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3235,
+          "components": {
+            "formation": 0.3235,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 82,
+          "play_name": "Flob",
+          "library_source": "play_steps",
+          "score": 0.2879,
+          "components": {
+            "formation": 0.2879,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.459
+    },
+    {
+      "possession_id": null,
+      "start_ms": 326360,
+      "end_ms": 345440,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3492,
+          "components": {
+            "formation": 0.3492,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3257,
+          "components": {
+            "formation": 0.3257,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3192,
+          "components": {
+            "formation": 0.3192,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2648,
+          "components": {
+            "formation": 0.23,
+            "path": 0.428,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.2472,
+          "components": {
+            "formation": 0.2472,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.3492
+    },
+    {
+      "possession_id": null,
+      "start_ms": 347240,
+      "end_ms": 351240,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4287,
+          "components": {
+            "formation": 0.4287,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4123,
+          "components": {
+            "formation": 0.4123,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.38,
+          "components": {
+            "formation": 0.38,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3491,
+          "components": {
+            "formation": 0.3491,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2528,
+          "components": {
+            "formation": 0.2628,
+            "path": 0.3469,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4287
+    },
+    {
+      "possession_id": null,
+      "start_ms": 351240,
+      "end_ms": 353440,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5766,
+          "components": {
+            "formation": 0.5766,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5189,
+          "components": {
+            "formation": 0.6105,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5189,
+          "components": {
+            "formation": 0.6105,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5184,
+          "components": {
+            "formation": 0.6099,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5184,
+          "components": {
+            "formation": 0.6099,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5766
+    },
+    {
+      "possession_id": null,
+      "start_ms": 353440,
+      "end_ms": 362040,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.5248,
+          "components": {
+            "formation": 0.5248,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5212,
+          "components": {
+            "formation": 0.5212,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4228,
+          "components": {
+            "formation": 0.4228,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4082,
+          "components": {
+            "formation": 0.4082,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3923,
+          "components": {
+            "formation": 0.4188,
+            "path": 0.5224,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.5248
+    },
+    {
+      "possession_id": null,
+      "start_ms": 363200,
+      "end_ms": 371400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5684,
+          "components": {
+            "formation": 0.5684,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4743,
+          "components": {
+            "formation": 0.4743,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4479,
+          "components": {
+            "formation": 0.5269,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4479,
+          "components": {
+            "formation": 0.5269,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4269,
+          "components": {
+            "formation": 0.5023,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5684
+    },
+    {
+      "possession_id": null,
+      "start_ms": 371400,
+      "end_ms": 387200,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4636,
+          "components": {
+            "formation": 0.4636,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4143,
+          "components": {
+            "formation": 0.4143,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3242,
+          "components": {
+            "formation": 0.3242,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2876,
+          "components": {
+            "formation": 0.2998,
+            "path": 0.3936,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.287,
+          "components": {
+            "formation": 0.287,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.4636
+    },
+    {
+      "possession_id": null,
+      "start_ms": 387200,
+      "end_ms": 391680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.5004,
+          "components": {
+            "formation": 0.5004,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4358,
+          "components": {
+            "formation": 0.4358,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4123,
+          "components": {
+            "formation": 0.4123,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3126,
+          "components": {
+            "formation": 0.3126,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3052,
+          "components": {
+            "formation": 0.3052,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.5004
+    },
+    {
+      "possession_id": null,
+      "start_ms": 392200,
+      "end_ms": 403000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3946,
+          "components": {
+            "formation": 0.3946,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3411,
+          "components": {
+            "formation": 0.3411,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3118,
+          "components": {
+            "formation": 0.3118,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3073,
+          "components": {
+            "formation": 0.3073,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2702,
+          "components": {
+            "formation": 0.2575,
+            "path": 0.4042,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.3946
+    },
+    {
+      "possession_id": null,
+      "start_ms": 403000,
+      "end_ms": 404800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3862,
+          "components": {
+            "formation": 0.3862,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3324,
+          "components": {
+            "formation": 0.3324,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.2955,
+          "components": {
+            "formation": 0.2955,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.2843,
+          "components": {
+            "formation": 0.2843,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.2445,
+          "components": {
+            "formation": 0.2445,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.3862
+    },
+    {
+      "possession_id": null,
+      "start_ms": 405240,
+      "end_ms": 414700,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.5041,
+          "components": {
+            "formation": 0.5041,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4374,
+          "components": {
+            "formation": 0.4374,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3709,
+          "components": {
+            "formation": 0.3709,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3164,
+          "components": {
+            "formation": 0.3164,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.3007,
+          "components": {
+            "formation": 0.3007,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.5041
+    },
+    {
+      "possession_id": null,
+      "start_ms": 414700,
+      "end_ms": 421600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3728,
+          "components": {
+            "formation": 0.3728,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3659,
+          "components": {
+            "formation": 0.3659,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3473,
+          "components": {
+            "formation": 0.3473,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3145,
+          "components": {
+            "formation": 0.3145,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2718,
+          "components": {
+            "formation": 0.2689,
+            "path": 0.3923,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.3728
+    },
+    {
+      "possession_id": null,
+      "start_ms": 421600,
+      "end_ms": 423680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3923,
+          "components": {
+            "formation": 0.3923,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.2656,
+          "components": {
+            "formation": 0.2656,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.256,
+          "components": {
+            "formation": 0.256,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2544,
+          "components": {
+            "formation": 0.2544,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2485,
+          "components": {
+            "formation": 0.2485,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.3923
+    },
+    {
+      "possession_id": null,
+      "start_ms": 423680,
+      "end_ms": 428200,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3393,
+          "components": {
+            "formation": 0.3393,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3198,
+          "components": {
+            "formation": 0.3198,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.281,
+          "components": {
+            "formation": 0.281,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2432,
+          "components": {
+            "formation": 0.2274,
+            "path": 0.37,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.232,
+          "components": {
+            "formation": 0.232,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.3393
+    },
+    {
+      "possession_id": null,
+      "start_ms": 428200,
+      "end_ms": 430680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4615,
+          "components": {
+            "formation": 0.4615,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4596,
+          "components": {
+            "formation": 0.4596,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4322,
+          "components": {
+            "formation": 0.4322,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3415,
+          "components": {
+            "formation": 0.3415,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2996,
+          "components": {
+            "formation": 0.2944,
+            "path": 0.4354,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4615
+    },
+    {
+      "possession_id": null,
+      "start_ms": 431440,
+      "end_ms": 436320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4955,
+          "components": {
+            "formation": 0.4955,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4171,
+          "components": {
+            "formation": 0.4171,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3893,
+          "components": {
+            "formation": 0.3893,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3625,
+          "components": {
+            "formation": 0.3625,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.3207,
+          "components": {
+            "formation": 0.3207,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4955
+    },
+    {
+      "possession_id": null,
+      "start_ms": 436320,
+      "end_ms": 443360,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6287,
+          "components": {
+            "formation": 0.6287,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4802,
+          "components": {
+            "formation": 0.4802,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4528,
+          "components": {
+            "formation": 0.4528,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4367,
+          "components": {
+            "formation": 0.5955,
+            "path": 0.3969,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 106,
+          "play_name": "Double",
+          "library_source": "play_steps",
+          "score": 0.431,
+          "components": {
+            "formation": 0.431,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.6287
+    },
+    {
+      "possession_id": null,
+      "start_ms": 444080,
+      "end_ms": 446600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4651,
+          "components": {
+            "formation": 0.4651,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3963,
+          "components": {
+            "formation": 0.3963,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3618,
+          "components": {
+            "formation": 0.3618,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3533,
+          "components": {
+            "formation": 0.3533,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3481,
+          "components": {
+            "formation": 0.3138,
+            "path": 0.5462,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.4651
+    },
+    {
+      "possession_id": null,
+      "start_ms": 447600,
+      "end_ms": 450400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.5783,
+          "components": {
+            "formation": 0.5783,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5603,
+          "components": {
+            "formation": 0.6592,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5603,
+          "components": {
+            "formation": 0.6592,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5297,
+          "components": {
+            "formation": 0.6231,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5297,
+          "components": {
+            "formation": 0.6231,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.5783
+    },
+    {
+      "possession_id": null,
+      "start_ms": 450400,
+      "end_ms": 452000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5898,
+          "components": {
+            "formation": 0.6939,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5898,
+          "components": {
+            "formation": 0.6939,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5629,
+          "components": {
+            "formation": 0.6623,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5629,
+          "components": {
+            "formation": 0.6623,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5452,
+          "components": {
+            "formation": 0.6415,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.5898
+    },
+    {
+      "possession_id": null,
+      "start_ms": 454040,
+      "end_ms": 455920,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5674,
+          "components": {
+            "formation": 0.5674,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4915,
+          "components": {
+            "formation": 0.5782,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4915,
+          "components": {
+            "formation": 0.5782,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4771,
+          "components": {
+            "formation": 0.5613,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 148,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4771,
+          "components": {
+            "formation": 0.5613,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5674
+    },
+    {
+      "possession_id": null,
+      "start_ms": 455920,
+      "end_ms": 459680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4501,
+          "components": {
+            "formation": 0.4501,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3873,
+          "components": {
+            "formation": 0.3873,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3107,
+          "components": {
+            "formation": 0.3107,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2548,
+          "components": {
+            "formation": 0.2677,
+            "path": 0.3456,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.2453,
+          "components": {
+            "formation": 0.2453,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.4501
+    },
+    {
+      "possession_id": null,
+      "start_ms": 460640,
+      "end_ms": 466080,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4176,
+          "components": {
+            "formation": 0.4176,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3635,
+          "components": {
+            "formation": 0.3635,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.3038,
+          "components": {
+            "formation": 0.3038,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.2761,
+          "components": {
+            "formation": 0.3248,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 146,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.2761,
+          "components": {
+            "formation": 0.3248,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.4176
+    },
+    {
+      "possession_id": null,
+      "start_ms": 466080,
+      "end_ms": 469000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5061,
+          "components": {
+            "formation": 0.5061,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4837,
+          "components": {
+            "formation": 0.4837,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4499,
+          "components": {
+            "formation": 0.5293,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4499,
+          "components": {
+            "formation": 0.5293,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.4414,
+          "components": {
+            "formation": 0.5193,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5061
+    },
+    {
+      "possession_id": null,
+      "start_ms": 469000,
+      "end_ms": 475000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3999,
+          "components": {
+            "formation": 0.3999,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.386,
+          "components": {
+            "formation": 0.386,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3805,
+          "components": {
+            "formation": 0.3805,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3473,
+          "components": {
+            "formation": 0.3473,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2528,
+          "components": {
+            "formation": 0.2666,
+            "path": 0.3415,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Triangle",
+      "top_rank_score": 0.3999
+    },
+    {
+      "possession_id": null,
+      "start_ms": 476760,
+      "end_ms": 480720,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3994,
+          "components": {
+            "formation": 0.3994,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3855,
+          "components": {
+            "formation": 0.3855,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.335,
+          "components": {
+            "formation": 0.335,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3248,
+          "components": {
+            "formation": 0.3248,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2663,
+          "components": {
+            "formation": 0.2565,
+            "path": 0.3943,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Cross",
+      "top_rank_score": 0.3994
+    }
+  ]
+}

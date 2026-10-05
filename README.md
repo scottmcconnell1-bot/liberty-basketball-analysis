@@ -19,6 +19,7 @@ Flask-based basketball operations app for Liberty that combines scheduling, game
 | `config.py` | Feature flags and runtime environment configuration |
 | `schema.sql` | SQLite schema source of truth |
 | `BRAD.md` | Note for Brad on branch `Brad/Claude` |
+| `JASON.md` | Note for Jason on branch `jason-5-may-updates` |
 | `templates/` | Server-rendered UI templates |
 | `ai_analyzer.py` | Background analysis runner |
 | `event_generator.py` | Event heuristics and generation |

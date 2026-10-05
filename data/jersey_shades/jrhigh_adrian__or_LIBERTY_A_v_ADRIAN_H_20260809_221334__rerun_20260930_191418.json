@@ -1,5 +1,5 @@
 {
-  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260928_031027",
+  "game_id": "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20260930_191418",
   "home_is_light": true,
   "split": 120.0,
   "tracks": {
@@ -62,55 +62,6 @@
     "9": {
       "mean_s": 59.6,
       "mean_v": 148.4,
-      "samples": 8,
-      "shade": "dark",
-      "side": "away"
-    },
-    "13": {
-      "mean_s": 56.2,
-      "mean_v": 161.1,
-      "samples": 8,
-      "shade": "light",
-      "side": "home"
-    },
-    "21": {
-      "mean_s": 62.4,
-      "mean_v": 142.9,
-      "samples": 8,
-      "shade": "dark",
-      "side": "away"
-    },
-    "22": {
-      "mean_s": 69.2,
-      "mean_v": 141.8,
-      "samples": 8,
-      "shade": "dark",
-      "side": "away"
-    },
-    "23": {
-      "mean_s": 61.6,
-      "mean_v": 179.2,
-      "samples": 8,
-      "shade": "light",
-      "side": "home"
-    },
-    "25": {
-      "mean_s": 54.6,
-      "mean_v": 135.9,
-      "samples": 8,
-      "shade": "dark",
-      "side": "away"
-    },
-    "40": {
-      "mean_s": 61.6,
-      "mean_v": 157.5,
-      "samples": 8,
-      "shade": "light",
-      "side": "home"
-    },
-    "51": {
-      "mean_s": 64.8,
-      "mean_v": 122.1,
       "samples": 8,
       "shade": "dark",
       "side": "away"
