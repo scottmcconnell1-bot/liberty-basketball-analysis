@@ -1,6 +1,8 @@
 # Active Task
 
-Updated: 2026-10-04. If an older paragraph below disagrees with this section, this section wins.
+Updated: 2026-10-06. If an older paragraph below disagrees with this section, this section wins.
+
+**Proven (2026-10-06):** Run 12 `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941` finished 04:59 UTC, 1,452 events, no error. Results open it. It is not a better count than run 11. The two runs share the same 206 shots. Live points are 64 (run 11 was 70; the book is 77). First-half tags through 32:15 are 42 points. The second-half book remainder is 35, and the run scored 14 because 117 shots after 32:15 have both rim and net false. Against those tags, field-goal attempts partly match (31 of 48, with 46 extra). Free throws, rebounds, turnovers, and assists fail. Steals and fouls are not written (8 and 18 tags, zero events). Blocks are 4 pending second-half rows, with no tag and no book number. Book fields `fga`, `tpa`, `reb`, `ast`, `stl`, `blk`, `to`, and `fouls` are null. The full note is `JASON.md` and `BRAD.md`. Do not copy the book onto the rows. Do not start another detection pass of this film expecting new baskets, fouls, or steals.
 
 Working branch: `main`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. GitHub's default branch is `main`. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Whenever a pull request is opened for Jason/Claude, push those same commits to `Brad/Claude` and open the same pull request there. Auto-accept pull request 147 is still open and is not on `main`.
 

@@ -115,6 +115,39 @@ Pending plus corrected:
 
 Dayley, Daley, and Daly are the same Liberty player. Foster #22 is Adrian. Do not move him to Liberty. Scott said Liberty has no 2 and no 6. Cluster `7` stays unnamed. Do not assign those points to a Liberty player.
 
+## The rest of the box score
+
+Made baskets were only part of the check. Each other stat was matched to Scott's first-half tags. A match is one live row of the same stat within 8 seconds. Live is pending, corrected, or accepted. The book columns for attempts, rebounds, assists, steals, blocks, turnovers, and fouls are empty on all 28 players, so the second half can be checked only for points and free throws.
+
+| Stat | Verdict | Tags matched | Tags missed | Extra live rows |
+| --- | --- | --- | --- | --- |
+| Field-goal attempts | Partly | 31 of 48 | 17 | 46 |
+| Free throws | Fails | 11 of 21 | 10 | 4 |
+| Rebounds | Fails | 13 of 29 | 16 | 39 |
+| Turnovers | Fails | 3 of 16 | 13 | 17 |
+| Assists | Fails | 0 of 6 | 6 | 8 |
+| Steals | Not written | 0 of 8 | 8 | 0 |
+| Fouls | Not written | 0 of 18 | 18 | 0 |
+| Blocks | Unchecked | No tags | — | 4, all after 32:15 |
+
+Field-goal attempts are the only count that lands on the tags without a prior correction. The tags are 31 twos and 17 threes. 29 of the 31 time matches are the same two or three as the tag. The first half still has 46 other live attempts, so the player totals do not match. The second half has 119 live attempts, 58 twos and 61 threes, and the book has no attempt total.
+
+Free throws fail on the makes. The tags are 9 makes and 12 misses. Only 2 of the 9 makes are on the live card: Rodus, and one Alvarez. Three more tagged makes are on the run and rejected: Mendoza at 9:26, Alvarez at 15:36, and Alvarez at 20:17. After 32:15 the run has 4 Dayley misses and no Adrian free throws. The book remainder is Liberty 1 make and 3 misses (Dayley 1-for-2, Flores 0-for-2) and Adrian 5 makes and 7 misses (Mendoza 4 makes and 2 misses, Alvarez 1 and 1, Foster 0-for-2, number 32 0-for-2). Rodus is the exception: the first-half tags already list 6 attempts, and the full book lists 4.
+
+Rebounds fail except where Scott already corrected them. The tags are 14 offensive and 15 defensive. All 13 matches are corrected rows that already carry a film-tool teach mark. No pending rebound is within 8 seconds of a tag. One matched pair names Peterson's offensive rebound at 5:41 as Dayley. On 9 of the 13 taught rows, the detail flag says the opposite of the event type. After 32:15 the run has 116 pending rebounds, 64 offensive and 52 defensive, and no book total.
+
+Turnovers fail the same way. 16 tags. The 3 matches are the only corrected turnovers, and the player agrees on each: Kariuki at 7:23 and 18:07, Foster at 13:17. The other 37 turnovers are pending. 17 first-half live rows match no tag. After 32:15 there are 20 more pending turnovers and no book total.
+
+Assists fail. The 6 tags are Peterson 1, Sullivan 2, Colman 2, and Foster 1. The run has 10 pending assists. None is within 8 seconds of a tag. The closest gap is 34 seconds.
+
+Steals are not written. 8 tags, zero steal events. Liberty: Colman 2, Sullivan 1, Dayley 1. Adrian: Foster 2, Linkhart 12 has 1, Mendoza 1.
+
+Fouls are not written. 18 tags, zero foul events. Liberty: Price 3, Musgrave 2, Colman 2, Peterson 2, Flores 1, Sullivan 1, Leach 1, Dayley 1. Adrian: Linkhart 12 has 3, Linkhart 11 has 1, Alvarez 1. Foster has none in the tags.
+
+Blocks cannot be scored. The tag file has no block. The book block column is empty. The run stored 4 pending blocks, all after 32:15: Dayley at 39:16, an unnamed tracker at 50:08, Foster at 50:55, and Alvarez at 61:51.
+
+The rows that agree with the tags, other than field-goal attempts, are rows already corrected from the film tool. Another detection pass of this film will reprint the same shots. It will not create fouls or steals.
+
 ## Where to work
 
 1. Second-half rim and net read. 117 shots are misses because both `through_rim` and `net_moved` are false. The September run read those same frames the same way.
@@ -122,6 +155,9 @@ Dayley, Daley, and Daly are the same Liberty player. Foster #22 is Adrian. Do no
 3. Shots the detector never saw. 11 tag points have no scoring row. Six of those seven makes have no shot within 12 seconds. Four of the six are free throws.
 4. Pending points with no tag. 31 first-half points are on the live card and are not in the tags.
 5. Names on the six second-half baskets. Foster's second-half two and Alvarez's two do not match the book. Naming did not create the missing Colman, Sullivan, Peterson, Flores, Rodus, or Allison points.
+6. Fouls and steals are never written. The tags have 18 fouls and 8 steals. This run has zero events of either type. The pipeline already knows those event types.
+7. Rebounds, turnovers, and assists at the wrong time. The only tag matches are rows already taught: 13 rebounds and 3 turnovers. Pending rebounds and all 10 assists miss every tag.
+8. Extra field-goal attempts. 31 of 48 tagged attempts are near a live row, and 46 other live attempts in the half match no tag.
 
 ## Do not
 

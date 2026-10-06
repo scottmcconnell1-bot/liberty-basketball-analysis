@@ -106,6 +106,55 @@ Dayley, Daley, and Daly are the same Liberty player (player id 4, roster name `D
 
 Book individuals: Liberty Dayley 26, Colman 15, Sullivan 4, Peterson 4, Flores 2. Adrian Mendoza 13, Alvarez 5, Rodus 4, Foster 2, Allison 2.
 
+## The rest of the box score
+
+Match rule: one live row (`pending`, `corrected`, or `accepted`) of the same stat within 8,000 ms of a first-half tag. Tags are truth through 32:15.0. Book fields `fga`, `tpa`, `reb`, `ast`, `stl`, `blk`, `to`, and `fouls` are null on all 28 players. Second half can be checked only on points and on `ftm` / `fta`.
+
+Event types present on this run include `shot`, `made_two`, `missed_two`, `made_three`, `missed_three`, `made_free_throw`, `missed_free_throw`, `rebound_offensive`, `rebound_defensive`, `turnover`, `assist`, and `block`. There is no `steal` row and no `foul`, `foul_personal`, `foul_shooting`, or `foul_technical` row.
+
+| Stat | Verdict | Tags matched | Tags missed | Extra live |
+| --- | --- | --- | --- | --- |
+| Field-goal attempts | Partly | 31 of 48 | 17 | 46 |
+| Free throws | Fails | 11 of 21 | 10 | 4 |
+| Rebounds | Fails | 13 of 29 | 16 | 39 |
+| Turnovers | Fails | 3 of 16 | 13 | 17 |
+| Assists | Fails | 0 of 6 | 6 | 8 |
+| Steals | Not written | 0 of 8 | 8 | 0 |
+| Fouls | Not written | 0 of 18 | 18 | 0 |
+| Blocks | Unchecked | No `Block` tag | — | 4, all `timestamp_ms` > 1,935,000 |
+
+Field goals: tag `2PT` 31 and `3PT` 17, all at or before 32:15. Count one live attempt per timestamp. A second row with `derived_from` `shot` is the same attempt. A `shot` with `shot_kind` `ft` is a free throw and is not in the 48. Live first half is 77 attempts. 29 of the 31 time matches have the same two or three on the classified event (`made_two`, `missed_two`, `made_three`, `missed_three`). Second half is 119 live attempts: 58 twos and 61 threes. `fga` and `tpa` are null, so there is no remainder.
+
+Free throws: tag `FT` is 9 Make and 12 Miss. The 11 live matches are all `corrected`. Live makes that match are Rodus and one Alvarez. Rejected `made_free_throw` rows sit on three tags the live set missed: Mendoza near 9:26.9, Alvarez near 15:36.2, Alvarez near 20:17.3. After 1,935,000 ms the live free throws are 4 pending Dayley `missed_free_throw` rows and no makes.
+
+Book `ftm`/`fta` minus first-half tags:
+
+| Player | Book | Tags | Remainder | Run 12 after 32:15 |
+| --- | --- | --- | --- | --- |
+| Dayley | 1/2 | 0 | 1 make, 1 miss | 0 makes, 4 misses |
+| Flores | 0/2 | 0 | 2 misses | 0 |
+| Colman | 1/3 | 1/3 | 0 | 0 |
+| Mendoza | 6/10 | 2/4 | 4 makes, 2 misses | 0 |
+| Alvarez | 5/8 | 4/6 | 1 make, 1 miss | 0 |
+| Foster | 0/2 | 0 | 2 misses | 0 |
+| Adrian 32 | 0/2 | 0 | 2 misses | 0 |
+| Linkhart 12 | 0/2 | 0/2 | 0 | 0 |
+| Rodus | 2/4 | 2/6 | Tags already exceed the book | 0 |
+
+Liberty remainder is 1 make and 3 misses. Adrian remainder is 5 makes and 7 misses.
+
+Rebounds: tag `OffRebound` 14, `DefRebound` 15. AI is `rebound_offensive` 89 (79 pending, 9 corrected, 1 rejected) and `rebound_defensive` 81 (76 pending, 4 corrected, 1 rejected). Same-type matches within 8 seconds: 9 offensive and 4 defensive. All 13 are `corrected` and have `film_tool_teach`. Pending matches: 0. The closer pair at about 5:41 names the tag Peterson and the row Dayley. On 9 of the 13 corrected rows, `details_json.rebound_kind` is the opposite of `event_type` (7 offensive rows still say `dreb`; 2 defensive rows still say `oreb`). After 1,935,000 ms: 116 pending rows, 64 offensive and 52 defensive.
+
+Turnovers: tag `Turnover` 16. AI `turnover` is 40 rows: 37 pending, 3 corrected, 0 rejected. The 3 corrected rows are the only matches, and the player agrees: Kariuki at 7:23.5 and 18:07.8, Foster at 13:17.4. First-half live is 20 rows, so 17 are extra. After 1,935,000 ms: 20 pending. Book `to` is null.
+
+Assists: tag `Assist` 6 (Peterson 1, Sullivan 2, Colman 2, Foster 1). AI `assist` is 10 rows, all pending, 8 at or before 1,935,000 ms and 2 after. Matched: 0. Nearest gap is 34.5 seconds. Book `ast` is null.
+
+Steals: tag `Steal` 8. Liberty Colman 2, Sullivan 1, Dayley 1. Adrian Foster 2, Linkhart 12 one, Mendoza 1. No event type and no `details_json` text contains steal. Book `stl` is null.
+
+Fouls: tag `Foul` 18, all `category` Defense, all at or before 31:47.2. Liberty Price 3, Musgrave 2, Colman 2, Peterson 2, Flores 1, Sullivan 1, Leach 1, Dayley 1. Adrian Linkhart 12 three, Linkhart 11 one, Alvarez 1. AI foul count is 0. Book `fouls` is null. Do not count a free throw or a `possession_change` as a foul.
+
+Blocks: no tag `eventtype` Block. Book `blk` is null. AI `block` is 4 rows, all pending, all after 1,935,000 ms: event 31266 Dayley #40 at 2,356,480 ms, event 31509 player `3` at 3,008,400 ms (no jersey, no team; do not assign to Liberty), event 31536 Foster #22 at 3,055,320 ms, event 31816 Alvarez #25 at 3,711,400 ms.
+
 ## Where to look
 
 1. Second-half `shot` rows after 1,935,000 ms. All 117 misses have `through_rim` false and `net_moved` false. The September run has the same flags on the same frames. Do not expect a new YOLO pass of this film to add baskets until that read changes.
@@ -113,6 +162,9 @@ Book individuals: Liberty Dayley 26, Colman 15, Sullivan 4, Peterson 4, Flores 2
 3. The six tag times with no `shot` within 12 seconds. Four are free throws.
 4. The 15 pending first-half scoring rows with no tag make within 8 seconds. They are the 31 extra points.
 5. The six second-half scoring rows. Foster's two and Alvarez's two do not match the book remainder. Naming did not create Colman, Sullivan, Peterson, Flores, Rodus, or Allison.
+6. Fouls and steals. Tag counts are 18 and 8. This run has zero rows. The event types exist in `helpers.py` (`FOUL_EVENT_CODES`) and in `game_boxscore.py`. A new detection pass will not fill them until something writes the rows.
+7. `rebound_offensive`, `rebound_defensive`, `turnover`, and `assist`. The tag matches are the `corrected` rows that already have `film_tool_teach`. Pending rebounds and every `assist` miss the tags. Nine corrected rebounds have `rebound_kind` opposite `event_type`.
+8. Extra field-goal attempts. 31 of 48 tagged attempts are within 8 seconds of a live timestamp, and 46 other first-half timestamps match no tag.
 
 ## How a point is stored
 
