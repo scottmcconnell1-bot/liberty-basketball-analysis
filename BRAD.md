@@ -177,3 +177,13 @@ Confirmed book: `data/stat_books/confirmed/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_
 Do not change `schema.sql` without Scott. Do not turn auto-accept on (pull request 147). Do not change `models/ball_detector.pt` or `ball_confidence`. Do not start the teach loop. Opening `GET /api/analysis` for this game rewrites identity rows. Read `events`, or the HTML results page. Do not copy the book onto the rows to force 77.
 
 Code that writes these rows: `event_generator.py`, `manual_tag_teach.py`, `track_identity.py`, `court_slot_mapping.py`, `game_boxscore.py`. `ai_bridge.py` does not count a make.
+
+## Left off commit 664a129
+
+The film-library commit is on `main`. These files were on the home machine and were not included. Open them there if you want the contents. Do not add the credential file.
+
+- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot. They were already changed before the film-library work. They are not the tagger or the video library.
+- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar. It is per-film data, not the app change.
+- `data/playbook/choreography/102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. They were already untracked and are not part of this film work.
+- `adrian_quality.py`, `pytest.ini`, and `tests/test_ui_comprehensive.py` showed as modified, and the diff was only line endings. There is no code change to review.
+- A GitHub credential file was untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.

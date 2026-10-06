@@ -172,3 +172,13 @@ The rows that agree with the tags, other than field-goal attempts, are rows alre
 Code that writes these rows: `event_generator.py`, `manual_tag_teach.py`, `track_identity.py`, `court_slot_mapping.py`, `game_boxscore.py`. The database `film_analysis.db` is on Scott's home machine only. It is not in git.
 
 Tags: `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`. Confirmed book: `data/stat_books/confirmed/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`.
+
+## Left off commit 664a129
+
+The film-library commit is on `main`. These files were on the home machine and were not included. Open them there if you want the contents. Do not add the credential file.
+
+- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot. They were already changed before the film-library work. They are not the tagger or the video library.
+- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar. It is per-film data, not the app change.
+- `data/playbook/choreography/102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. They were already untracked and are not part of this film work.
+- `adrian_quality.py`, `pytest.ini`, and `tests/test_ui_comprehensive.py` showed as modified, and the diff was only line endings. There is no code change to review.
+- A GitHub credential file was untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.
