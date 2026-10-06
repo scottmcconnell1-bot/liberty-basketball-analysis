@@ -36,6 +36,7 @@
         <button type="button" class="btn btn-secondary btn-sm" id="playPhaseBtn">Play this picture</button>
         <button type="button" class="btn btn-primary btn-sm" id="playAllBtn">Play all</button>
         <button type="button" class="btn btn-secondary btn-sm" id="stopBtn">Stop</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="undoBtn" title="Undo the last change">Undo</button>
         <span id="playStatus" class="text-muted" style="font-size:0.75rem;"></span>
       </div>
       <svg id="drawCourt" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg">
@@ -113,6 +114,25 @@
   }
 
   let phases = (boot.phases && boot.phases.length) ? boot.phases : [freshPhase('Picture 1')];
+  const undoStack = [];
+  function drawSnapshot() {
+    return JSON.stringify({ phases, phaseIndex, selected, actor });
+  }
+  function pushUndo() {
+    undoStack.push(drawSnapshot());
+    if (undoStack.length > 40) undoStack.shift();
+  }
+  function undoDraw() {
+    if (!undoStack.length) return;
+    const raw = JSON.parse(undoStack.pop());
+    phases = raw.phases;
+    phaseIndex = raw.phaseIndex;
+    selected = raw.selected;
+    actor = raw.actor;
+    armed = null;
+    render();
+    setHint('Undid the last change.');
+  }
   phases.forEach((phase) => {
     phase.positions = phase.positions || JSON.parse(JSON.stringify(START));
     phase.actions = phase.actions || [];
@@ -349,6 +369,7 @@
       del.textContent = 'Delete';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
+        pushUndo();
         phase().actions.splice(index, 1);
         selected = null;
         render();
@@ -387,6 +408,7 @@
     add.className = 'btn btn-secondary btn-sm';
     add.textContent = 'Next picture';
     add.addEventListener('click', async () => {
+      pushUndo();
       const ok = await savePictures();
       if (!ok) return;
       if (phaseIndex < phases.length - 1) {
@@ -420,6 +442,7 @@
     dup.className = 'btn btn-secondary btn-sm';
     dup.textContent = 'Duplicate';
     dup.addEventListener('click', () => {
+      pushUndo();
       const copy = JSON.parse(JSON.stringify(phase()));
       copy.label = `Picture ${phases.length + 1}`;
       phases.splice(phaseIndex + 1, 0, copy);
@@ -433,6 +456,7 @@
     remove.disabled = phases.length < 2;
     remove.addEventListener('click', () => {
       if (phases.length < 2) return;
+      pushUndo();
       phases.splice(phaseIndex, 1);
       phaseIndex = Math.max(0, phaseIndex - 1);
       selected = null;
@@ -575,16 +599,19 @@
         : (armed === 'dribble' ? 'Click the spot he dribbles to.' : 'Click where he goes.'));
     });
   });
+  document.getElementById('undoBtn').addEventListener('click', undoDraw);
   document.getElementById('ballBtn').addEventListener('click', () => {
     if (!actor || !String(actor).startsWith('o')) {
       setHint('Click an offensive player, then give him the ball.');
       return;
     }
+    pushUndo();
     phase().ball = actor;
     setHint('He has the ball.');
     render();
   });
   document.getElementById('defenseBtn').addEventListener('click', () => {
+    pushUndo();
     const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
     if (hasD) {
       Object.keys(phase().positions).forEach((pid) => {
@@ -598,6 +625,7 @@
   document.getElementById('phaseNotes').addEventListener('input', (e) => { phase().notes = e.target.value; });
 
   function commitAction(action) {
+    pushUndo();
     action.timing = 'after';
     if (action.type === 'dribble' && action.from) phase().ball = action.from;
     phase().actions.push(action);
@@ -687,8 +715,10 @@
     else if (!actor) setHint('Click the player who moves. That spot is the start.');
   }
 
+  let dragUndo = null;
   svg.addEventListener('pointerdown', (e) => {
     if (playing) { playRun += 1; playing = false; return; }
+    dragUndo = drawSnapshot();
     const p = svgPoint(e);
     const defender = !armed ? hitDefender(p) : null;
     const pid = defender || hitPlayer(p);
@@ -714,6 +744,11 @@
     const moved = !!drag.moved;
     const p = svgPoint(e);
     drag = null;
+    if (moved && dragUndo) {
+      undoStack.push(dragUndo);
+      if (undoStack.length > 40) undoStack.shift();
+    }
+    dragUndo = null;
     if (moved) { render(); return; }
     onCourtRelease(p, false);
   });

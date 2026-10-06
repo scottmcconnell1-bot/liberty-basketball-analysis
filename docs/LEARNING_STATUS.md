@@ -1,6 +1,6 @@
 # Learning Status
 
-Generated (local): **2026-10-05 20:58:21 Mountain Daylight Time**
+Generated (local): **2026-10-05 23:00:05 Mountain Daylight Time**
 
 Nightly snapshot of how Liberty full-film learning is going (fixed panel gates + queue/activity). Runtime JSON/DB are not committed.
 
@@ -14,7 +14,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 - **Step:** last scored: HUDL Carey
 - **Source:** teach_loop_state (Inferred)
 - **Stale/zombie candidates (DB running, no worker):** 0
-- **analysis_runs counts (raw DB):** completed=4, failed=7 (running includes stale/zombie candidates until reclaimed)
+- **analysis_runs counts (raw DB):** completed=5, failed=7 (running includes stale/zombie candidates until reclaimed)
 - Note: no live analysis_launcher/ai_analyzer — used last teach_loop score as hint only
 
 ## Queue summary
@@ -39,7 +39,7 @@ Nightly snapshot of how Liberty full-film learning is going (fixed panel gates +
 | event_recall_min | ≥90% | 9.5% | FAIL |
 
 **Overall:** FAIL (mean P=4.3%, mean R=9.5%)
-- Panel snapshot: `2026-10-06T02:58:20.743195+00:00`
+- Panel snapshot: `2026-10-06T05:00:04.112355+00:00`
 
 ## Per-game panel
 

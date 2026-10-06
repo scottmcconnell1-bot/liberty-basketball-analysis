@@ -273,6 +273,12 @@
       <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next step</button>
       <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only">▶ Play step</button>
       <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet. After a pause, continues from here.">▶ Play All</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo the last change">Undo</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="redoStep()" title="Put back what Undo removed">Redo</button>
+      {% if view_mode != 'share' %}
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addStep()" title="Add a picture after this one">Add picture</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="removeStep()" title="Delete the picture you are on">Delete picture</button>
+      {% endif %}
     </div>
     <div id="movementListWrap" style="margin:0 0 8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;">
       <div id="movementEditBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
@@ -325,7 +331,7 @@
     <!-- Animated court (sheet underlay + tokens); source image also listed below -->
     <div style="position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
-        <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;">Animated court</div>
+        <div id="courtPanelLabel" style="font-size:0.72rem;font-weight:600;color:#6b7280;">Watch</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <label id="arrowEditBar" style="display:none;align-items:center;gap:4px;font-size:0.72rem;font-weight:600;color:#374151;">
             Arrow
@@ -375,8 +381,9 @@
         <span id="playbarLabel" class="playbook-playbar-label">Sheet 1 / 1</span>
       </div>
       <div id="stepSourceImageWrap" style="display:none;padding:8px;border-top:1px solid #e5e7eb;background:#f9fafb;">
-        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:6px;">Play sheet (source)</div>
-        <img id="stepSourceImage" alt="Play sheet" style="width:100%;height:auto;display:block;border-radius:6px;border:1px solid #e5e7eb;">
+        <div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:6px;">PDF</div>
+        <img id="stepSourceImage" alt="PDF of this picture" style="width:100%;height:auto;display:block;border-radius:6px;border:1px solid #e5e7eb;">
+        <p id="stepSourceEmpty" class="text-muted" style="display:none;margin:0;font-size:0.75rem;">This picture has no PDF.</p>
       </div>
     </div>
 
@@ -980,7 +987,7 @@ function useSheetSlideshowMode(list) {
 function updateCourtPanelLabel() {
   const el = document.getElementById('courtPanelLabel');
   if (!el) return;
-  el.textContent = useSheetSlideshowMode() ? 'Play sheet' : 'Animated court';
+  el.textContent = useSheetSlideshowMode() ? 'PDF' : 'Watch';
 }
 
 // Legacy imports were drawn on a bottom-basket court (small y = midcourt).
@@ -1099,16 +1106,20 @@ function positionsAlmostEqual(a, b, eps = 2) {
 function showStepSourceImage(index) {
   const currentWrap = document.getElementById('stepSourceImageWrap');
   const currentImg = document.getElementById('stepSourceImage');
+  const emptyNote = document.getElementById('stepSourceEmpty');
   if (!currentWrap || !currentImg) return;
   const step = steps[index];
+  currentWrap.style.display = 'block';
   if (step && step.source_image) {
-    if (currentImg.getAttribute('src') !== sheetImageSrc(step.source_image)) {
-      currentImg.src = sheetImageSrc(step.source_image);
-    }
-    currentImg.alt = step.label || `Step ${index + 1}`;
-    currentWrap.style.display = 'block';
+    const src = sheetImageSrc(step.source_image);
+    if (currentImg.getAttribute('src') !== src) currentImg.src = src;
+    currentImg.alt = step.label || `Picture ${index + 1}`;
+    currentImg.style.display = 'block';
+    if (emptyNote) emptyNote.style.display = 'none';
   } else {
-    currentWrap.style.display = 'none';
+    currentImg.removeAttribute('src');
+    currentImg.style.display = 'none';
+    if (emptyNote) emptyNote.style.display = 'block';
   }
 }
 
@@ -1257,74 +1268,9 @@ function syncPlayerTokens(positions, ballPid) {
 
 // ── Step Image Rendering (for imported plays) ─────────────
 function renderStepImages() {
-  const currentWrap = document.getElementById('stepSourceImageWrap');
-  const currentImg = document.getElementById('stepSourceImage');
   const container = document.getElementById('stepImages');
-  const list = document.getElementById('stepImagesList');
-  if (viewMode === 'view' || viewMode === 'share') {
-    if (currentWrap) currentWrap.style.display = 'none';
-    if (container) container.style.display = 'none';
-    return;
-  }
-  const step = steps[currentStep];
-
-  if (currentWrap && currentImg) {
-    if (step && step.source_image) {
-      currentImg.src = sheetImageSrc(step.source_image);
-      currentImg.alt = step.label || `Step ${currentStep + 1}`;
-      currentWrap.style.display = 'block';
-    } else {
-      currentWrap.style.display = 'none';
-      currentImg.removeAttribute('src');
-    }
-  }
-
-  if (!container || !list) return;
-  const stepsWithImages = steps.filter((s) => s.source_image);
-  if (stepsWithImages.length <= 1) {
-    container.style.display = 'none';
-    return;
-  }
-
-  container.style.display = 'block';
-  list.innerHTML = '';
-  stepsWithImages.forEach((s) => {
-    const idx = steps.indexOf(s);
-    const div = document.createElement('div');
-    div.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer;'
-      + (idx === currentStep ? 'outline:2px solid #0f766e;' : '');
-    div.onclick = () => {
-      saveCurrentStepNotes();
-      currentStep = idx;
-      renderStep();
-      updateStepList();
-    };
-    const img = document.createElement('img');
-    img.src = sheetImageSrc(s.source_image);
-    img.style.cssText = 'width:100%;height:auto;display:block;';
-    img.alt = s.label || `Step ${idx + 1}`;
-    const caption = document.createElement('div');
-    caption.style.cssText = 'padding:6px 10px;font-size:0.75rem;color:#6b7280;background:#f9fafb;display:flex;justify-content:space-between;align-items:center;gap:8px;';
-    const captionText = document.createElement('span');
-    captionText.textContent = s.label || `Step ${idx + 1}`;
-    caption.appendChild(captionText);
-    if (steps.length > 1) {
-      const delBtn = document.createElement('button');
-      delBtn.type = 'button';
-      delBtn.className = 'btn btn-danger btn-sm';
-      delBtn.textContent = 'Delete';
-      delBtn.style.cssText = 'font-size:0.7rem;padding:2px 6px;';
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        currentStep = idx;
-        removeStep();
-      };
-      caption.appendChild(delBtn);
-    }
-    div.appendChild(img);
-    div.appendChild(caption);
-    list.appendChild(div);
-  });
+  if (container) container.style.display = 'none';
+  showStepSourceImage(currentStep);
 }
 
 function defaultOffensePos(i) {
@@ -2048,28 +1994,30 @@ document.addEventListener('keydown', (e) => {
 // ── Step Management ──────────────────────────────────────
 function addStep() {
   saveUndoState();
-  const prevStep = steps[currentStep];
-  steps.push({
-    positions: JSON.parse(JSON.stringify(prevStep.positions)),
+  const prevStep = steps[currentStep] || steps[0] || { positions: {}, ball: 'o1' };
+  const insertAt = Math.min(currentStep + 1, steps.length);
+  steps.splice(insertAt, 0, {
+    positions: JSON.parse(JSON.stringify(prevStep.positions || {})),
     movements: [],
-    label: '',
+    label: `Picture ${insertAt + 1}`,
     notes: '',
     source_image: '',
     ball: prevStep.ball || 'o1',
   });
   if (Array.isArray(sheetAlignByStep)) {
-    sheetAlignByStep.push({
+    sheetAlignByStep.splice(insertAt, 0, {
       court_frac: (sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].court_frac) || null,
       positions: JSON.parse(JSON.stringify((sheetAlignByStep[currentStep] && sheetAlignByStep[currentStep].positions) || prevStep.positions || {})),
     });
   }
-  if (Array.isArray(sheetStickyInkByStep)) sheetStickyInkByStep.push(null);
-  if (Array.isArray(sheetSessionInkByStep)) sheetSessionInkByStep.push(null);
-  currentStep = steps.length - 1;
+  if (Array.isArray(sheetStickyInkByStep)) sheetStickyInkByStep.splice(insertAt, 0, null);
+  if (Array.isArray(sheetSessionInkByStep)) sheetSessionInkByStep.splice(insertAt, 0, null);
+  currentStep = insertAt;
   markStepsDirty();
   markAnimationOrderDirty();
   renderStep();
   updateStepList();
+  persistPlayPictures();
 }
 
 function duplicateStep() {
@@ -2102,7 +2050,10 @@ function duplicateStep() {
 }
 
 function removeStep() {
-  if (steps.length <= 1) { alert('A play must have at least one step.'); return; }
+  if (steps.length <= 1) {
+    setSheetAnimHint('A play keeps at least one picture.');
+    return;
+  }
   saveUndoState();
   steps.splice(currentStep, 1);
   if (Array.isArray(sheetAlignByStep) && currentStep < sheetAlignByStep.length) {
@@ -2119,6 +2070,42 @@ function removeStep() {
   markAnimationOrderDirty();
   renderStep();
   updateStepList();
+  persistPlayPictures();
+}
+
+async function persistPlayPictures() {
+  if (!playId || viewMode === 'share' || !editingPlay) return;
+  const body = new URLSearchParams();
+  body.set('play_id', String(playId));
+  body.set('name', editingPlay.name || 'Play');
+  body.set('team_key', editingPlay.team_key || '');
+  body.set('category', editingPlay.category || 'offense');
+  if (editingPlay.category_id) body.set('category_id', String(editingPlay.category_id));
+  body.set('description', editingPlay.description || '');
+  body.set('tags', editingPlay.tags || '');
+  body.set('diagram_json', editingPlay.diagram_json || '{}');
+  body.set('stay', '1');
+  body.set('steps_json', JSON.stringify(steps.map((step) => ({
+    positions: step.positions || {},
+    movements: (step.movements || []).filter((m) => m && !m._meta),
+    label: step.label || '',
+    notes: step.notes || '',
+    source_image: step.source_image || '',
+    ball: step.ball || 'o1',
+  }))));
+  try {
+    const resp = await fetch('/playbook/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'save failed');
+    await saveStickyChoreography();
+    setSheetAnimHint('Picture list saved.');
+  } catch (err) {
+    setSheetAnimHint('The picture change is on screen. Save choreography to keep it.');
+  }
 }
 
 function prevStep() {
@@ -2667,6 +2654,26 @@ function updateMovementList() {
 
     row.appendChild(label);
     row.appendChild(typeSelect);
+    if (idx > 0) {
+      const withLabel = document.createElement('label');
+      withLabel.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:0.68rem;white-space:nowrap;';
+      const withBox = document.createElement('input');
+      withBox.type = 'checkbox';
+      withBox.title = 'This action happens at the same time as the one before it';
+      withBox.checked = m.timing === 'with';
+      withBox.addEventListener('click', (event) => event.stopPropagation());
+      withBox.onchange = () => {
+        saveUndoState();
+        const moves = alignMovementsToInk();
+        if (moves[idx]) moves[idx].timing = withBox.checked ? 'with' : 'after';
+        step.movements = moves;
+        step.coachOrder = true;
+        markAnimationOrderDirty();
+      };
+      withLabel.appendChild(withBox);
+      withLabel.appendChild(document.createTextNode('With previous'));
+      row.appendChild(withLabel);
+    }
     row.appendChild(removeBtn);
     list.appendChild(row);
   });
@@ -3744,7 +3751,7 @@ function pathsFromInkActions(inkBundle) {
 function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
   if (step && step.coachOrder) {
     const owned = pathsFromInkActions(inkBundle);
-    if (owned.length) return owned;
+    if (owned.length) return stampCoachTiming(owned, step);
     const spotPaths = [];
     ((step.movements) || []).forEach((m) => {
       if (!m || m._meta || !m.points || m.points.length < 2) return;
@@ -3762,9 +3769,10 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
         bend: m.bend || null,
         fromPid: m.from,
         toPid: m.to,
+        timing: m.timing || 'after',
       });
     });
-    return spotPaths;
+    return stampCoachTiming(spotPaths, step);
   }
   const paths = [];
   const moves = (step && step.movements) || [];
@@ -4862,6 +4870,30 @@ function orderTriangleBeats(beats, sheetIndex) {
  * - type=dribble (squiggle) — ball-handler slides with ball
  * - type=cut / solid ink — cut or relocate
  */
+function stampCoachTiming(paths, step) {
+  const moves = ((step && step.movements) || []).filter((m) => m && !m._meta);
+  (paths || []).forEach((p, i) => {
+    if (moves[i] && moves[i].timing) p.timing = moves[i].timing;
+  });
+  return paths || [];
+}
+
+function groupCoachBeats(beats, paths) {
+  let groupSeq = 1;
+  (beats || []).forEach((beat, i) => {
+    const timing = paths[i] && paths[i].timing;
+    if (timing !== 'with' || i === 0) return;
+    const prev = beats[i - 1];
+    if (!prev) return;
+    if (prev.parallelGroup == null) {
+      prev.parallelGroup = groupSeq;
+      groupSeq += 1;
+    }
+    beat.parallelGroup = prev.parallelGroup;
+  });
+  return beats;
+}
+
 function beatFromPath(p, ballPid) {
   if (!p) return null;
   const isPass = !!(p.ballOnly || p.type === 'pass');
@@ -5064,7 +5096,8 @@ function pathsFollowDrawOrder(paths) {
 function forceGuaranteeBeats(fromRaw, toRaw, step, paths, ballPid, sheetIndex) {
   // A coach save owns this sheet. Do not put the original 1-Game script back.
   if (step && step.coachOrder) {
-    return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+    const beats = (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
+    return groupCoachBeats(beats, paths || []);
   }
   if (stepHasAuthoredOrder(step) && (paths || []).length) {
     return (paths || []).map((p) => beatFromPath(p, ballPid)).filter(Boolean);
