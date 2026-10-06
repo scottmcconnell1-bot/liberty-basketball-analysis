@@ -29,6 +29,7 @@ Routes:
 
 import json
 import os
+import re
 from datetime import datetime
 from flask import (
     Blueprint, current_app, jsonify, redirect, render_template,
@@ -73,10 +74,14 @@ def _format_team_level_label(level, gender):
 
 
 def _lookup_video_schedule_context(db, *, relational_game_id=None, game_id=None):
+    columns = (
+        "sg.opponent_name, sg.game_date, sg.game_time, sg.jv_game_time, "
+        "sg.location_type, sg.level, sg.gender"
+    )
     if relational_game_id:
         row = db.execute(
-            """
-            SELECT sg.opponent_name, sg.game_date, sg.level, sg.gender
+            f"""
+            SELECT {columns}
               FROM games g
               LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
              WHERE g.id = ?
@@ -88,8 +93,8 @@ def _lookup_video_schedule_context(db, *, relational_game_id=None, game_id=None)
 
     if game_id:
         row = db.execute(
-            """
-            SELECT sg.opponent_name, sg.game_date, sg.level, sg.gender
+            f"""
+            SELECT {columns}
               FROM games g
               LEFT JOIN scheduled_games sg ON sg.id = g.scheduled_game_id
              WHERE g.nfhs_game_id = ?
@@ -104,28 +109,206 @@ def _lookup_video_schedule_context(db, *, relational_game_id=None, game_id=None)
     return None
 
 
+_FILM_SIDE_RE = re.compile(
+    r"LIBERTY_(?P<liberty_side>[AH])_v_(?P<opponent>.+?)_(?P<opp_side>[AH])(?P<copy>\d*)",
+    re.IGNORECASE,
+)
+
+
+def _pretty_opponent(name):
+    text = re.sub(r"\s*\([^)]*\)", "", name or "")
+    text = re.split(r"\s+-\s+", text, maxsplit=1)[0]
+    text = text.replace("_", " ").strip()
+    if not text:
+        return ""
+    words = []
+    for word in text.split():
+        if word.isupper() or word.islower():
+            words.append(word[:1].upper() + word[1:].lower())
+        else:
+            words.append(word)
+    return " ".join(words)
+
+
+def _name_key(name):
+    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
+
+
+def _liberty_home_from_text(*parts):
+    blob = " ".join(str(part or "") for part in parts)
+    match = _FILM_SIDE_RE.search(blob)
+    if not match:
+        return None
+    return match.group("liberty_side").upper() == "H"
+
+
+def _extra_film_index(*parts):
+    """1 when the filename is the extra film of that night (HSB_H1, NOTUS_A1)."""
+    blob = " ".join(str(part or "") for part in parts)
+    match = _FILM_SIDE_RE.search(blob)
+    if not match:
+        return 0
+    digits = match.group("copy") or ""
+    return int(digits) if digits.isdigit() else 0
+
+
+def _schedule_dict(schedule):
+    if schedule is None:
+        return None
+    if isinstance(schedule, dict):
+        return dict(schedule)
+    return {key: schedule[key] for key in schedule.keys()}
+
+
+def _schedule_for_opponent(db, opponent, liberty_home, level_hint):
+    needle = _name_key(opponent)
+    if not needle:
+        return None
+    try:
+        rows = db.execute(
+            """SELECT opponent_name, game_date, game_time, jv_game_time, location_type, level, gender
+                 FROM scheduled_games"""
+        ).fetchall()
+    except Exception:
+        return None
+    matches = []
+    for row in rows:
+        key = _name_key(row["opponent_name"])
+        if not key:
+            continue
+        if key == needle or key.startswith(needle + " ") or needle.startswith(key + " "):
+            matches.append(row)
+    if liberty_home is True:
+        home_rows = [row for row in matches if (row["location_type"] or "") == "home"]
+        if home_rows:
+            matches = home_rows
+    elif liberty_home is False:
+        away_rows = [row for row in matches if (row["location_type"] or "") == "away"]
+        if away_rows:
+            matches = away_rows
+    if level_hint:
+        leveled = [row for row in matches if (row["level"] or "") == level_hint]
+        if leveled:
+            matches = leveled
+    if not matches:
+        return None
+    matches.sort(key=lambda row: (0 if row["game_time"] else 1, str(row["game_date"] or "")))
+    return matches[0]
+
+
+def _manual_tag_progress(game_id):
+    """How far the saved Film Tool tags go. A game is finished at End QTR of Q4."""
+    from film_tool_tags import load_manual_tags
+
+    empty = {"manual_tag_count": 0, "manual_last_time": "", "manual_complete": False}
+    if not game_id:
+        return empty
+    try:
+        data = load_manual_tags(game_id)
+    except ValueError:
+        return empty
+    rows = [row for row in ((data or {}).get("rows") or []) if isinstance(row, dict)]
+    if not rows:
+        return empty
+    last = rows[-1]
+    finished = any(
+        str(row.get("eventtype") or "") == "EndQTR"
+        and str(row.get("quarter") or "").upper() == "Q4"
+        for row in rows
+    )
+    return {
+        "manual_tag_count": len(rows),
+        "manual_last_time": (data or {}).get("lastTaggedTime") or last.get("start") or "",
+        "manual_complete": finished,
+    }
+
+
+def film_display_name(db, *, opponent, stored_filename=None, game_id=None, schedule=None):
+    """Liberty first, vs at home, at on the road. Date, time, and level are separate columns."""
+    liberty_home = _liberty_home_from_text(stored_filename, game_id)
+    name = _pretty_opponent(opponent)
+    if not name:
+        return "Liberty"
+    level_hint = None
+    key = str(game_id or "")
+    if key.startswith("jrhigh"):
+        level_hint = "jr_high"
+    elif key.startswith("hs_") or key.startswith("varsity"):
+        level_hint = "varsity"
+    schedule = _schedule_dict(schedule)
+    if schedule is None or not schedule.get("game_date"):
+        found = _schedule_for_opponent(db, name, liberty_home, level_hint)
+        if found is not None:
+            schedule = _schedule_dict(found)
+    if (
+        schedule
+        and schedule.get("jv_game_time")
+        and schedule.get("jv_game_time") != schedule.get("game_time")
+        and _extra_film_index(stored_filename, game_id) >= 1
+    ):
+        schedule["game_time"] = schedule["jv_game_time"]
+    if liberty_home is None and schedule is not None:
+        location = schedule.get("location_type") or ""
+        if location == "home":
+            liberty_home = True
+        elif location == "away":
+            liberty_home = False
+    place = "at" if liberty_home is False else "vs"
+    return f"Liberty {place} {name}"
+
+
 def _enrich_video_list_row(db, row, *, light=False):
     payload = dict(row)
     opponent = (payload.get("opponent") or "").strip()
     if not opponent or opponent.lower() == "unknown":
         opponent = ""
 
-    schedule = _lookup_video_schedule_context(
+    schedule = _schedule_dict(_lookup_video_schedule_context(
         db,
         relational_game_id=payload.get("relational_game_id"),
         game_id=payload.get("game_id"),
-    )
+    ))
     if schedule:
-        if not opponent and schedule["opponent_name"]:
+        if not opponent and schedule.get("opponent_name"):
             opponent = schedule["opponent_name"]
-        payload["game_date"] = schedule["game_date"]
-        payload["team_label"] = _format_team_level_label(schedule["level"], schedule["gender"])
+        payload["game_date"] = schedule.get("game_date")
+        payload["team_label"] = _format_team_level_label(schedule.get("level"), schedule.get("gender"))
     else:
         payload["game_date"] = None
         payload["team_label"] = None
 
-    payload["display_game"] = f"Liberty vs {opponent}" if opponent else "Liberty"
+    if schedule is None or not schedule.get("game_date"):
+        level_hint = "jr_high" if str(payload.get("game_id") or "").startswith("jrhigh") else None
+        found = _schedule_for_opponent(
+            db,
+            _pretty_opponent(opponent),
+            _liberty_home_from_text(payload.get("stored_filename"), payload.get("game_id")),
+            level_hint,
+        )
+        if found is not None:
+            schedule = _schedule_dict(found)
+
+    if (
+        schedule
+        and schedule.get("jv_game_time")
+        and schedule.get("jv_game_time") != schedule.get("game_time")
+        and _extra_film_index(payload.get("stored_filename"), payload.get("game_id")) >= 1
+    ):
+        schedule["game_time"] = schedule["jv_game_time"]
+
+    payload["display_game"] = film_display_name(
+        db,
+        opponent=opponent,
+        stored_filename=payload.get("stored_filename"),
+        game_id=payload.get("game_id"),
+        schedule=schedule,
+    )
+    if schedule is not None and schedule.get("game_date"):
+        payload["game_date"] = schedule["game_date"]
+        payload["game_time"] = schedule.get("game_time")
+    payload["program_gender"] = _program_gender(schedule)
     payload["archived"] = 1 if int(payload.get("archived") or 0) else 0
+    payload.update(_manual_tag_progress(payload.get("game_id")))
 
     # Light list: keep joined analysis_status / analysis_key from the list query.
     # Skip per-row COUNT(*) on detections/events (tens of millions of rows, no index).
@@ -180,6 +363,137 @@ def _enrich_video_list_row(db, row, *, light=False):
         )
 
     return payload
+
+
+def _sort_videos_by_date(payloads):
+    """Sort by schedule date, then tip time. Films with no date follow."""
+    return sorted(
+        payloads,
+        key=lambda v: (
+            0 if v.get("game_date") else 1,
+            str(v.get("game_date") or ""),
+            str(v.get("game_time") or ""),
+            (v.get("display_game") or v.get("opponent") or "").lower(),
+            v.get("id") or 0,
+        ),
+    )
+
+
+def _squad_names_path():
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "video_squad_names.json")
+
+
+def _load_squad_overrides():
+    path = _squad_names_path()
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        str(key): str(value).strip()
+        for key, value in data.items()
+        if str(value).strip()
+    }
+
+
+def _save_squad_overrides(data):
+    path = _squad_names_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+
+
+def _squad_group_key(payload):
+    game_date = str(payload.get("game_date") or "")[:10]
+    if not game_date:
+        return ("solo", payload.get("id"))
+    return (game_date, _name_key(_pretty_opponent(payload.get("opponent") or "")))
+
+
+def _squad_kind(payload):
+    key = str(payload.get("game_id") or "")
+    if key.startswith("jrhigh"):
+        return "jr_high"
+    if key.startswith("hs_") or key.startswith("varsity"):
+        return "hs"
+    label = (payload.get("team_label") or "").lower()
+    if "jr high" in label:
+        return "jr_high"
+    if "varsity" in label or re.search(r"\bjv\b", label):
+        return "hs"
+    return ""
+
+
+def _program_gender(schedule):
+    if not schedule:
+        return ""
+    gender = str(schedule.get("gender") or "").strip().lower()
+    if gender == "boys":
+        return "Boys"
+    if gender == "girls":
+        return "Girls"
+    return ""
+
+
+def _default_squad_names(ordered):
+    """Earlier tip is the lower team. Two Jr High films: JrHigh B, then JrHigh A."""
+    count = len(ordered)
+    if count < 2:
+        return [""] * count
+    kinds = {_squad_kind(row) for row in ordered}
+    if kinds == {"jr_high"} and count in (2, 3):
+        ladder = {
+            2: ["JrHigh B", "JrHigh A"],
+            3: ["JrHigh C", "JrHigh B", "JrHigh A"],
+        }
+        return ladder[count]
+    if kinds == {"hs"} and count == 2:
+        return ["Jr Varsity", "Varsity"]
+    return [""] * count
+
+
+def _write_squad_fields(payloads):
+    overrides = _load_squad_overrides()
+    groups = {}
+    for payload in payloads:
+        groups.setdefault(_squad_group_key(payload), []).append(payload)
+    for group in groups.values():
+        ordered = sorted(
+            group,
+            key=lambda row: (str(row.get("game_time") or "99:99"), row.get("id") or 0),
+        )
+        defaults = _default_squad_names(ordered)
+        for payload, default in zip(ordered, defaults):
+            custom = overrides.get(str(payload.get("id")))
+            name = custom or default
+            payload["squad_default"] = default
+            payload["squad_name"] = name
+
+
+def _light_video_payloads(db):
+    _ensure_videos_archived_column(db)
+    rows = db.execute(_videos_with_latest_run_sql("")).fetchall()
+    return [_enrich_video_list_row(db, row, light=True) for row in rows]
+
+
+def _apply_squad_names(db, payloads):
+    """Name same-day films from the full library so archiving one does not rename the other."""
+    catalog = _light_video_payloads(db)
+    _write_squad_fields(catalog)
+    by_id = {row["id"]: row for row in catalog}
+    for payload in payloads:
+        src = by_id.get(payload["id"])
+        if src is None:
+            continue
+        payload["squad_name"] = src.get("squad_name") or ""
+        payload["squad_default"] = src.get("squad_default") or ""
+        payload["display_game"] = src.get("display_game") or payload.get("display_game")
 
 
 def _sort_videos_by_title(payloads):
@@ -461,7 +775,15 @@ def api_analysis_jobs():
         step = row["progress_step"] or ""
         video = _video_for_analysis_run(db, row)
         opponent = ((video["opponent"] if video else "") or "").strip()
-        display_game = f"Liberty vs {opponent}" if opponent else (row["run_label"] or "AI analysis")
+        if opponent:
+            display_game = film_display_name(
+                db,
+                opponent=opponent,
+                stored_filename=video["stored_filename"] if video else None,
+                game_id=(video["game_id"] if video else None) or row["analysis_key"],
+            )
+        else:
+            display_game = row["run_label"] or "AI analysis"
         stored_filename = video["stored_filename"] if video else None
         video_id = video["id"] if video else row["source_video_id"]
         jobs.append({
@@ -949,12 +1271,24 @@ def teach_film_tool_manual(game_id):
     rows = data.get("rows")
     if not isinstance(rows, list):
         return jsonify({"ok": False, "error": "rows must be a list"}), 400
+    from film_tool_tags import TagClearRefused, load_manual_tags, save_manual_tags
+
+    existing = load_manual_tags(game_id)
+    kept = existing.get("rows") if isinstance(existing, dict) else None
+    if not rows and kept:
+        return jsonify({
+            "ok": False,
+            "error": "Saved tags were kept. An empty list cannot replace them.",
+        }), 409
     db = get_db()
     result = teach_from_film_tool_rows(db, game_id, rows)
     try:
-        from film_tool_tags import save_manual_tags
-
-        result["tag_file"] = save_manual_tags(game_id, data if isinstance(data, dict) else {"rows": rows}).get("analysisGameId")
+        result["tag_file"] = save_manual_tags(
+            game_id,
+            data if isinstance(data, dict) else {"rows": rows},
+        ).get("analysisGameId")
+    except TagClearRefused as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
     except ValueError:
         result["tag_file"] = None
     if result.get("ok"):
@@ -989,9 +1323,17 @@ def film_manual_tags(game_id):
         if data is None:
             return jsonify({"analysisGameId": game_id, "rows": []}), 200
         return jsonify(data)
+    from film_tool_tags import TagClearRefused
+
     payload = request.get_json(silent=True) or {}
     try:
-        return jsonify(save_manual_tags(game_id, payload))
+        return jsonify(save_manual_tags(
+            game_id,
+            payload,
+            allow_clear=bool(payload.get("confirmClear")),
+        ))
+    except TagClearRefused as exc:
+        return jsonify({"error": str(exc)}), 409
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -1321,7 +1663,8 @@ def api_videos():
                   Counts are null; use Film Tool, GET /api/videos/<id>, or ?full=1.
       light=1   – same as default (explicit).
       light=0 / full=1 – include detection/event counts (can be very slow).
-      sort=title (default for light) | id – list order.
+      sort=title (default for light) | date | id – list order.
+      sort=date orders by schedule date, then tip time.
       archived=0 (default) – active games only.
       archived=1 – archived games only.
       archived=all – both (still no detection COUNT(*) in light mode).
@@ -1346,8 +1689,11 @@ def api_videos():
         rows = db.execute(list_sql).fetchall()
 
     payloads = [_enrich_video_list_row(db, r, light=light) for r in rows]
+    _apply_squad_names(db, payloads)
     if sort == "title":
         payloads = _sort_videos_by_title(payloads)
+    elif sort == "date":
+        payloads = _sort_videos_by_date(payloads)
     return jsonify(payloads)
 
 
@@ -1374,7 +1720,30 @@ def api_video_detail(vid_id):
         reconcile_stuck_analysis_run(db, analysis_key)
         row = db.execute(detail_sql, (vid_id,)).fetchone()
 
-    return jsonify(_enrich_video_list_row(db, row, light=False))
+    payload = _enrich_video_list_row(db, row, light=False)
+    _apply_squad_names(db, [payload])
+    return jsonify(payload)
+
+
+@ai_bp.route("/api/videos/<int:vid_id>/squad-name", methods=["POST"])
+@require_feature("ENABLE_AUTO_STATS_M1")
+def api_video_squad_name(vid_id):
+    """Save a team name for one film. Blank restores the usual same-day name."""
+    db = get_db()
+    row = db.execute("SELECT id FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Video not found"}), 404
+    body = request.get_json(silent=True) or {}
+    name = str(body.get("name") or "").strip()
+    if len(name) > 40:
+        return jsonify({"error": "Team name is too long"}), 400
+    overrides = _load_squad_overrides()
+    if name:
+        overrides[str(vid_id)] = name
+    else:
+        overrides.pop(str(vid_id), None)
+    _save_squad_overrides(overrides)
+    return jsonify({"status": "ok", "squad_name": name})
 
 
 @ai_bp.route("/api/videos/<int:vid_id>/archive", methods=["POST"])
@@ -1815,13 +2184,32 @@ def delete_video(vid_id):
 
     game_id = row["game_id"]
     file_path = row["file_path"]
-    run_keys = [
-        (run["analysis_key"], run["game_id"])
-        for run in db.execute(
-            "SELECT analysis_key, game_id FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?",
-            (vid_id, game_id, game_id, file_path),
-        ).fetchall()
-    ] or [(game_id, None)]
+    # Two uploads can share one game id. The NFHS Adrian film and the archived
+    # screen capture do. Deleting the archive copy must not wipe the live film's runs.
+    shared = False
+    if game_id:
+        shared = db.execute(
+            "SELECT 1 FROM videos WHERE id != ? AND game_id = ? LIMIT 1",
+            (vid_id, game_id),
+        ).fetchone() is not None
+    if shared:
+        run_keys = [
+            (run["analysis_key"], run["game_id"])
+            for run in db.execute(
+                """SELECT analysis_key, game_id FROM analysis_runs
+                   WHERE source_video_id = ?
+                      OR (video_path = ? AND ? IS NOT NULL AND video_path != '')""",
+                (vid_id, file_path, file_path),
+            ).fetchall()
+        ]
+    else:
+        run_keys = [
+            (run["analysis_key"], run["game_id"])
+            for run in db.execute(
+                "SELECT analysis_key, game_id FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?",
+                (vid_id, game_id, game_id, file_path),
+            ).fetchall()
+        ] or [(game_id, None)]
 
     # Delete file from disk
     if file_path and os.path.exists(file_path):
@@ -1833,9 +2221,9 @@ def delete_video(vid_id):
     # Null out duplicate_of_id references to this video (FK constraint)
     db.execute("UPDATE videos SET duplicate_of_id=NULL WHERE duplicate_of_id=?", (vid_id,))
 
-    # Delete all related analysis data
-    # Delete all related analysis data
     for run_game_id, relational_game_id in run_keys:
+        if not run_game_id:
+            continue
         db.execute("DELETE FROM events WHERE game_id=? AND human_verified = 0", (run_game_id,))
         db.execute(
             """DELETE FROM detections
@@ -1844,8 +2232,18 @@ def delete_video(vid_id):
             (relational_game_id, run_game_id),
         )
         db.execute("DELETE FROM stats WHERE game_id=?", (run_game_id,))
-        db.execute("DELETE FROM stats WHERE game_id=?", (run_game_id,))
-    db.execute("DELETE FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?", (vid_id, game_id, game_id, file_path))
+    if shared:
+        db.execute(
+            """DELETE FROM analysis_runs
+               WHERE source_video_id = ?
+                  OR (video_path = ? AND ? IS NOT NULL AND video_path != '')""",
+            (vid_id, file_path, file_path),
+        )
+    else:
+        db.execute(
+            "DELETE FROM analysis_runs WHERE source_video_id=? OR base_analysis_key=? OR analysis_key=? OR video_path=?",
+            (vid_id, game_id, game_id, file_path),
+        )
     db.execute("DELETE FROM videos WHERE id=?", (vid_id,))
     db.commit()
 

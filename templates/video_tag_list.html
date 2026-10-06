@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{% if kind == 'ai' %}AI tags{% else %}Manual tags{% endif %} – Liberty Basketball{% endblock %}
+
+{% block content %}
+<div class="page-header" data-frame="4.5">
+  <div>
+    <h2>{% if kind == 'ai' %}AI tags{% else %}Manual tags{% endif %}</h2>
+    <span class="text-muted">{{ heading }} · {{ rows|length }} {% if kind == 'ai' %}AI tags{% else %}manual tags{% endif %}{% if last_time %} · last {{ last_time }}{% endif %}</span>
+  </div>
+  <a href="{{ url_for('core.videos_page') }}" class="btn btn-secondary btn-sm">Back to Videos</a>
+</div>
+
+<div class="card" style="margin-bottom:16px;padding:14px 20px;background:#f0fdfb;border-color:#99d4d6;">
+  {% if kind == 'ai' %}
+  These are the marks the analysis stored for this film. This page only reads them.
+  {% else %}
+  These are the tags saved for this film. This page only reads them. An empty Film Tool list cannot erase this file.
+  {% endif %}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <table class="table" style="width:100%;">
+    <thead>
+      <tr>
+        <th>Time</th>
+        {% if kind != 'ai' %}<th>Quarter</th><th>Team</th>{% endif %}
+        <th>Player</th>
+        <th>Event</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="font-variant-numeric:tabular-nums;">{{ row.time }}</td>
+        {% if kind != 'ai' %}<td>{{ row.quarter }}</td><td>{{ row.team }}</td>{% endif %}
+        <td>{{ row.player }}</td>
+        <td>{{ row.event }}</td>
+        <td>{{ row.result }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted" style="padding:16px;">No {% if kind == 'ai' %}AI tags{% else %}manual tags{% endif %} saved for this film.</p>
+  {% endif %}
+</div>
+{% endblock %}

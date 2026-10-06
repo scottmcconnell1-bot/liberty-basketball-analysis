@@ -353,6 +353,65 @@
     max-width: 100%;
     line-height: 0;
   }
+  #film-tool-root.ft-manual-tagging-on .ft-video-stage {
+    display: flex;
+    align-items: stretch;
+    line-height: normal;
+  }
+  .ft-tag-log {
+    width: 15rem;
+    flex: 0 0 15rem;
+    max-height: min(94vh, 1400px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, .94);
+    color: #fff;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    z-index: 5;
+  }
+  .ft-tag-log[hidden] { display: none !important; }
+  .ft-tag-log-head {
+    padding: .45rem .55rem .2rem;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+  .ft-tag-log-hint {
+    padding: 0 .55rem .35rem;
+    font-size: .62rem;
+    color: #fbbf24;
+  }
+  #ftTagLogList {
+    list-style: none;
+    margin: 0;
+    padding: 0 .3rem .45rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+  }
+  .ft-tag-log-empty {
+    padding: .35rem .25rem;
+    font-size: .68rem;
+    color: #cbd5e1;
+  }
+  .ft-tag-log button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: #fff;
+    border: 0;
+    font-size: .68rem;
+    line-height: 1.25;
+    padding: .28rem .3rem;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .ft-tag-log button:hover { background: rgba(255,255,255,.08); }
+  .ft-tag-log-undo button { background: rgba(251, 191, 36, .22); }
+  .ft-tag-log-mark {
+    display: block;
+    color: #fbbf24;
+    font-size: .58rem;
+    font-weight: 700;
+  }
   .ft-video-wrap video,
   #film-tool-root .ft-video-wrap video {
     width: auto;
@@ -706,7 +765,23 @@
 {% block content %}
 <div id="film-tool-root" style="overflow-x: hidden; max-width: 100%;">
 {% if family_viewer %}
-<p class="text-muted" style="margin:0 0 8px;">Watch only. Tagging and other changes stay with the coaches.</p>
+<p class="text-muted" style="margin:0 0 8px;">Watch only. A coach or admin can accept, reject, and tag.</p>
+<style>
+  #film-tool-root.audience-view-only .ft-topbar-actions #saveGameBtn,
+  #film-tool-root.audience-view-only .ft-topbar-actions #teachAiBtn,
+  #film-tool-root.audience-view-only .ft-topbar-actions #loadTagsBtn,
+  #film-tool-root.audience-view-only .ft-topbar-actions #manageRostersBtn,
+  #film-tool-root.audience-view-only .ft-tag-overlay-btn,
+  #film-tool-root.audience-view-only .ai-review-btn,
+  #film-tool-root.audience-view-only #rowsBody input,
+  #film-tool-root.audience-view-only #rowsBody select,
+  #film-tool-root.audience-view-only #rowsBody textarea,
+  #film-tool-root.audience-view-only #rowsBody button,
+  #film-tool-root.audience-view-only .ft-event-grid button {
+    pointer-events: none;
+    opacity: 0.45;
+  }
+</style>
 {% endif %}
 
   <!-- ═══════════════════════════════════════════════════════
@@ -719,7 +794,7 @@
       <button class="btn tab-btn" data-tab="reportsView" type="button">📊 Reports</button>
     </div>
     <div class="ft-topbar-actions">
-      <button class="btn" id="resumeLastBtn" type="button" title="Reload tags saved in this browser">↩ Resume</button>
+      <button class="btn" id="continueTaggingBtn" type="button" hidden title="Jump to the last manual tag on an unfinished film">Continue where I left off</button>
       <button class="btn" id="loadTagsBtn" type="button" title="Load a Film Tool tag export from another computer">Load tags</button>
       <input id="loadTagsFile" type="file" accept="application/json,.json" hidden>
       <button class="btn" id="saveGameBtn" type="button">💾 Save</button>
@@ -985,6 +1060,11 @@
         <p class="tiny ft-score-hint" id="ftScoreHint">Score updates from tagged makes (2 / 3 / FT). And-1 is 2 until you tag the free throw.</p>
         <div class="ft-video-wrap" id="filmReviewGrid">
           <div class="ft-video-stage">
+            <aside class="ft-tag-log" id="ftTagLog" hidden aria-label="Tag log">
+              <div class="ft-tag-log-head">Tag log</div>
+              <div class="ft-tag-log-hint" id="ftTagLogHint">Newest tag is what Undo removes.</div>
+              <ol id="ftTagLogList"></ol>
+            </aside>
             <video id="video" controls></video>
             <aside class="ft-tag-overlay" id="ftTagOverlay" aria-label="Manual tagging">
               <button type="button" id="ftManualTagToggle" aria-pressed="false" title="Show tagging buttons on the film">Tag</button>
@@ -1422,6 +1502,8 @@
   window.FILM_TOOL_DETECTION_COUNT = {{ detection_count|tojson|safe }};
   window.FILM_TOOL_AI_AVAILABLE = {{ "true" if ai_runtime_available else "false" }};
   window.FILM_TOOL_REVIEW_MODE = {{ "true" if review_mode|default(false) else "false" }};
+  window.FILM_TOOL_CONTINUE = {{ "true" if continue_mode|default(false) else "false" }};
+  window.AUDIENCE_CAN_EDIT = {{ "true" if audience_can_edit|default(true) else "false" }};
   window.FILM_TOOL_PLAYS_MODE = {{ "true" if plays_mode|default(false) else "false" }};
   window.FILM_TOOL_ROSTER_SEASON_ID = {{ roster_season_id|tojson|safe }};
   window.FILM_TOOL_ROSTER_LEVEL = {{ roster_level|tojson|safe }};
@@ -1429,5 +1511,5 @@
   window.FILM_TOOL_ROSTER_OPPONENT = {{ roster_opponent|tojson|safe }};
 </script>
 <script src="{{ url_for('static', filename='js/nfhs-download.js') }}"></script>
-<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=watch-no-prompts"></script>
+<script src="{{ url_for('static', filename='js/film-tool.js') }}?v=tag-log"></script>
 {% endblock %}

@@ -89,7 +89,7 @@ const eventDefs = [
     { id: 'steal', label: 'Steal', hotkey: 'S', group: 'defense', teamMode: 'special-steal', eventtype: 'Steal', result: 'NA', side: 'Defense', category: 'Defense' },
     { id: 'timeout', label: 'Time Out', hotkey: 'T', group: 'flow', teamMode: 'team-only', eventtype: 'TimeOut', result: 'NA', side: 'Neutral', category: 'Quarter' },
     { id: 'tip', label: 'Tip', hotkey: 'P', group: 'flow', teamMode: 'team-player', eventtype: 'Tip', result: 'NA', side: 'Neutral', category: 'Quarter' },
-    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-only', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
+    { id: 'turnover', label: 'Turnover', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: 'Turnover', result: 'NA', side: 'Offense', category: 'Offense' },
     { id: 'twoptmake', label: '2PT Make', hotkey: '2', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Make', side: 'Offense', category: 'Offense' },
     { id: 'twoptmiss', label: '2PT Miss', hotkey: '', group: 'offense', teamMode: 'team-player', eventtype: '2PT', result: 'Miss', side: 'Offense', category: 'Offense' },
     { id: 'threeptmake', label: '3PT Make', hotkey: '3', group: 'offense', teamMode: 'team-player', eventtype: '3PT', result: 'Make', side: 'Offense', category: 'Offense' },
@@ -862,6 +862,75 @@ function updateEventCount() {
     const n = rowsBody.querySelectorAll('tr').length;
     el.textContent = String(n);
     el.title = `${n} tagged`;
+    renderTagLog();
+}
+
+function undoTargetRows() {
+    if (!rowsBody) return [];
+    const rows = [...rowsBody.querySelectorAll('tr')];
+    if (!rows.length) return [];
+    const last = getRowData(rows[rows.length - 1]);
+    if (rows.length >= 2 && last.eventtype === 'Turnover' && String(last.notes || '').startsWith('Linked to steal')) {
+        const prev = getRowData(rows[rows.length - 2]);
+        if (prev.eventtype === 'Steal' && prev.start === last.start) return [rows[rows.length - 2], rows[rows.length - 1]];
+    }
+    return [rows[rows.length - 1]];
+}
+
+function tagLogLine(data) {
+    const who = data.player || data.team || '';
+    return [data.start || '—', data.label || data.eventtype || 'Tag', who].filter(Boolean).join('  ');
+}
+
+function renderTagLog() {
+    const list = document.getElementById('ftTagLogList');
+    const hint = document.getElementById('ftTagLogHint');
+    const undoBtn = document.getElementById('undoBtn');
+    if (!list || !rowsBody) return;
+    const rows = [...rowsBody.querySelectorAll('tr')];
+    const targets = undoTargetRows();
+    const targetSet = new Set(targets);
+    list.innerHTML = '';
+    if (!rows.length) {
+        const empty = document.createElement('li');
+        empty.className = 'ft-tag-log-empty';
+        empty.textContent = 'No tags yet.';
+        list.appendChild(empty);
+        if (hint) hint.textContent = 'Tags you add show up here.';
+        if (undoBtn) undoBtn.title = 'Nothing to undo';
+        return;
+    }
+    const newest = getRowData(rows[rows.length - 1]);
+    const pair = targets.length > 1;
+    if (hint) {
+        hint.textContent = pair
+            ? 'Undo removes the highlighted steal and its turnover.'
+            : `Undo removes ${tagLogLine(newest)}.`;
+    }
+    if (undoBtn) undoBtn.title = hint ? hint.textContent : 'Undo the last manual tag';
+    for (let i = rows.length - 1; i >= 0; i -= 1) {
+        const data = getRowData(rows[i]);
+        const item = document.createElement('li');
+        if (targetSet.has(rows[i])) item.classList.add('ft-tag-log-undo');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = tagLogLine(data);
+        if (targetSet.has(rows[i])) {
+            const mark = document.createElement('span');
+            mark.className = 'ft-tag-log-mark';
+            mark.textContent = pair ? 'Undo removes this pair' : 'Undo removes this';
+            btn.prepend(mark);
+        }
+        btn.addEventListener('click', () => {
+            const sec = timeToSeconds(data.start);
+            if (!video || !isFinite(sec) || sec < 0) return;
+            if (!video.paused) video.pause();
+            const duration = Number(video.duration);
+            video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, Math.max(0, duration - 0.05)) : sec;
+        });
+        item.appendChild(btn);
+        list.appendChild(item);
+    }
 }
 
 function addRow(data = {}) {
@@ -989,6 +1058,8 @@ function applyManualTaggingMode(on, opts = {}) {
     const toggle = document.getElementById('ftManualTagToggle');
     if (root) root.classList.toggle('ft-manual-tagging-on', !!on);
     if (panel) panel.hidden = !on;
+    const tagLog = document.getElementById('ftTagLog');
+    if (tagLog) tagLog.hidden = !on;
     if (toggle) {
         toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
         toggle.textContent = on ? 'Hide' : 'Tag';
@@ -1069,6 +1140,7 @@ function closeQuickTag() {
 }
 
 function showQuickTag() {
+    if (!audienceCanEdit()) return;
     if (quickTagDialog && !quickTagDialog.open) quickTagDialog.showModal();
 }
 
@@ -1149,7 +1221,7 @@ function askAssistAfterMake(shotDef, team, shooter) {
 function commitStealPair(def, p) {
     commitTag(def, { team: p.stealTeam, player: p.stealer, close: false });
     addRow({
-        label: 'Turnover', player: '', quarter: currentQuarter(),
+        label: 'Turnover', player: p.turnoverPlayer || '', quarter: currentQuarter(),
         team: p.turnoverTeam, side: 'Offense', category: 'Offense', eventtype: 'Turnover', result: 'NA',
         start: formatTime(video.currentTime || 0), duration: '0:05.0',
         notes: `Linked to steal by ${p.stealer || p.stealTeam}`
@@ -1157,13 +1229,16 @@ function commitStealPair(def, p) {
     closeQuickTag();
     lastTaggedTime.textContent = formatTime(video.currentTime || 0);
     handleRowsChanged();
-    setStatus('Tagged steal and team turnover.');
+    const stealer = p.stealer || p.stealTeam;
+    const turned = p.turnoverPlayer || p.turnoverTeam;
+    setStatus(`Tagged steal by ${stealer} and turnover by ${turned}.`);
 }
 
 function quickTagTeamPrompt(def) {
     if (def.id === 'jumpball') return 'Who won the jump?';
     if (def.id === 'tip') return 'Who got the tip?';
     if (def.id === 'steal') return 'Which team stole it?';
+    if (def.id === 'turnover') return 'Which team turned it over?';
     return 'Which team?';
 }
 
@@ -1171,6 +1246,7 @@ function quickTagPlayerPrompt(def, team) {
     if (def.id === 'jumpball') return `Who controlled it for ${team}?`;
     if (def.id === 'tip') return `Who tipped it for ${team}?`;
     if (def.id === 'steal') return `Who stole it for ${team}?`;
+    if (def.id === 'turnover') return `Who turned it over for ${team}?`;
     return `Who for ${team}?`;
 }
 
@@ -1258,6 +1334,7 @@ function renderPlayerStep({ def, team, step, title, unknownLabel, onPick, exclud
 }
 
 function openQuickTag(def) {
+    if (!audienceCanEdit()) return;
     if (!video.paused) video.pause();
     syncGameTeamsFromContext();
     quickDialogTitle.textContent = def.label;
@@ -1292,14 +1369,7 @@ function openQuickTag(def) {
                 step: 'players',
                 title: quickTagPlayerPrompt(def, team),
                 unknownLabel: 'Unknown / team only',
-                onPick: player => {
-                    const oppTeams = getTeamChoices().filter(t => t !== team);
-                    commitStealPair(def, {
-                        stealTeam: team,
-                        stealer: player,
-                        turnoverTeam: oppTeams[0] || team,
-                    });
-                },
+                onPick: player => showTurnoverChooser(def, team, player),
             });
             return;
         }
@@ -1501,8 +1571,11 @@ function loadGameIntoUI(game, opts = {}) {
     autosavePaused = false;
     handleRowsChanged();
     renderGames();
-    seekToLastTag();
-    setStatus(`Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Video is at the last tag.`);
+    if (opts.seek !== false) seekToLastTag();
+    const count = (game.rows || []).length;
+    setStatus(opts.seek === false
+        ? `Loaded ${count} tags.`
+        : `Loaded ${game.date || 'saved game'} vs ${game.opponent || game.awayTeam || ''}. Video is at the last tag.`);
 }
 
 function autosaveCurrentGame() {
@@ -1523,7 +1596,20 @@ function queueAutosave() {
     }, 800);
 }
 
-function saveCurrentGameToLibrary() {
+async function saveCurrentGameToLibrary() {
+    if (!audienceCanEdit()) {
+        setStatus('A coach or admin can save tags. This login can watch.');
+        return;
+    }
+    if (!getAllRows().length) {
+        const erase = window.confirm('The tag list on screen is empty. Erase the tags saved for this film?');
+        if (!erase) {
+            setStatus('Saved tags were kept.');
+            return;
+        }
+        await pushServerTags({ confirmClear: true });
+        return;
+    }
     const game = serializeCurrentGame();
     selectedGameId = game.id;
     const idx = savedGames.findIndex(g => g.id === game.id);
@@ -1537,12 +1623,20 @@ function saveCurrentGameToLibrary() {
 }
 
 async function teachManualTagsToAi() {
+    if (!audienceCanEdit()) {
+        setStatus('A coach or admin tags and teaches. This login can watch.');
+        return null;
+    }
     const gameId = openAnalysisGameId();
     if (!gameId) {
         setStatus('Open this film from Videos so tags can train AI.');
         return null;
     }
     const rows = getAllRows();
+    if (!rows.length) {
+        setStatus('Saved tags were kept. An empty list cannot replace them.');
+        return null;
+    }
     try {
         const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/teach-manual`, {
             method: 'POST',
@@ -1574,41 +1668,90 @@ async function pullServerTagsForOpenFilm() {
     }
 }
 
-async function pushServerTags() {
+function audienceCanEdit() {
+    return window.AUDIENCE_CAN_EDIT !== false && window.AUDIENCE_CAN_EDIT !== 'false';
+}
+
+function manualTagsAreComplete(rows) {
+    return (rows || []).some((row) =>
+        String(row.eventtype || '') === 'EndQTR' && String(row.quarter || '').toUpperCase() === 'Q4'
+    );
+}
+
+function showContinueIfNeeded(rows) {
+    const btn = document.getElementById('continueTaggingBtn');
+    if (!btn) return;
+    if (!rows || !rows.length || manualTagsAreComplete(rows)) {
+        btn.hidden = true;
+        return;
+    }
+    const when = String(rows[rows.length - 1].start || '').trim();
+    btn.hidden = false;
+    btn.textContent = when ? `Continue at ${when}` : 'Continue where I left off';
+}
+
+function lastTagClock() {
+    const rows = getAllRows();
+    if (!rows.length) return '';
+    return String(rows[rows.length - 1].start || '').trim();
+}
+
+async function savedManualTagSource() {
+    const server = await pullServerTagsForOpenFilm();
+    if (server && Array.isArray(server.rows) && server.rows.length) return server;
+    const autosave = readAutosaveForOpenFilm();
+    if (autosaveHasRows(autosave)) return autosave;
+    return null;
+}
+
+async function continueWhereLeftOff() {
+    if (!getAllRows().length) {
+        const source = await savedManualTagSource();
+        if (!source) {
+            setStatus('No saved tags for this film yet.');
+            return;
+        }
+        loadGameIntoUI(source, { requireSameFilm: true, seek: false });
+        showContinueIfNeeded(source.rows);
+    }
+    seekToLastTag();
+    const when = lastTagClock();
+    setStatus(when
+        ? `Continued at ${when}. This film is not finished.`
+        : 'Continued at the last tag. This film is not finished.');
+}
+
+function continueRequested() {
+    return window.FILM_TOOL_CONTINUE === true || window.FILM_TOOL_CONTINUE === 'true';
+}
+
+async function pushServerTags(opts = {}) {
+    if (!audienceCanEdit()) return;
     const gameId = openAnalysisGameId();
     if (!gameId) return;
     const game = serializeCurrentGame();
     if (!autosaveMatchesOpenFilm(game)) return;
+    const rows = Array.isArray(game.rows) ? game.rows : [];
+    if (!rows.length && !opts.confirmClear) return;
+    if (opts.confirmClear) game.confirmClear = true;
     try {
-        await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`, {
+        const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(game),
         });
+        if (response.status === 409) {
+            setStatus('Saved tags were kept. An empty list cannot replace them.');
+            const server = await pullServerTagsForOpenFilm();
+            if (server) loadGameIntoUI(server, { requireSameFilm: true });
+            return;
+        }
+        if (opts.confirmClear && response.ok) setStatus('Saved tags were erased.');
     } catch (_err) {}
 }
 
-async function resumeLastGame() {
-    const autosave = readAutosaveForOpenFilm();
-    if (autosave) {
-        loadGameIntoUI(autosave, { requireSameFilm: true });
-        pushServerTags();
-        return;
-    }
-    const server = await pullServerTagsForOpenFilm();
-    if (server) {
-        loadGameIntoUI(server, { requireSameFilm: true });
-        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
-        return;
-    }
-    if (openAnalysisGameId()) {
-        setStatus('No tags saved for this film yet. The last Restore was from another game and will not load here.');
-        return;
-    }
-    const lastId = localStorage.getItem(LAST_GAME_KEY);
-    const match = savedGames.find(g => g.id === lastId);
-    if (match) { loadGameIntoUI(match); return; }
-    setStatus('No saved game in this browser. Use Load tags if you exported from the other computer.');
+function autosaveHasRows(game) {
+    return !!(game && Array.isArray(game.rows) && game.rows.length);
 }
 
 function seekToLastTag() {
@@ -1617,8 +1760,16 @@ function seekToLastTag() {
     if (!rows.length) return;
     const sec = timeToSeconds(rows[rows.length - 1].start);
     if (!isFinite(sec) || sec < 0) return;
-    const duration = Number(video.duration);
-    video.currentTime = isFinite(duration) && duration > 0 ? Math.min(sec, duration) : sec;
+    const when = String(rows[rows.length - 1].start || '').trim();
+    if (when && lastTaggedTime) lastTaggedTime.textContent = when;
+    const apply = () => {
+        if (!video.paused) video.pause();
+        const duration = Number(video.duration);
+        const target = isFinite(duration) && duration > 0 ? Math.min(sec, Math.max(0, duration - 0.05)) : sec;
+        try { video.currentTime = target; } catch (_err) { /* metadata not ready yet */ }
+    };
+    if (video.readyState >= 1) apply();
+    else video.addEventListener('loadedmetadata', apply, { once: true });
 }
 
 function knownQ1EndSeconds() {
@@ -3395,6 +3546,10 @@ function bumpLedgerCount(delta) {
 }
 
 async function reviewAiEvent(eventId, action) {
+    if (!audienceCanEdit()) {
+        setStatus('A coach or admin can accept or reject. This login can watch.');
+        return;
+    }
     if (action === 'correct') {
         openAiCorrectDialog(eventId);
         return;
@@ -3846,8 +4001,16 @@ function handleDirectoryPick() {
 
 // ── Undo / Clear ────────────────────────────────────────────
 function undoLastRow() {
-    const rows = [...rowsBody.querySelectorAll('tr')]; if (!rows.length) return;
-    rows[rows.length - 1].remove(); handleRowsChanged(); updateEventCount(); setStatus('Undid last tagged event.');
+    const targets = undoTargetRows();
+    if (!targets.length) {
+        setStatus('Nothing to undo.');
+        return;
+    }
+    const names = targets.map(row => tagLogLine(getRowData(row)));
+    targets.forEach(row => row.remove());
+    handleRowsChanged();
+    updateEventCount();
+    setStatus(`Undid ${names.join(' and ')}.`);
 }
 
 // ── Analysis Status Polling ─────────────────────────────────
@@ -4597,7 +4760,8 @@ function attachEventHandlers() {
     });
     document.getElementById('saveGameBtn')?.addEventListener('click', saveCurrentGameToLibrary);
     document.getElementById('teachAiBtn')?.addEventListener('click', teachManualTagsToAi);
-    document.getElementById('resumeLastBtn')?.addEventListener('click', resumeLastGame);
+    document.getElementById('continueTaggingBtn')?.addEventListener('click', continueWhereLeftOff);
+    if (!audienceCanEdit()) document.getElementById('film-tool-root')?.classList.add('audience-view-only');
     document.getElementById('loadTagsBtn')?.addEventListener('click', () => document.getElementById('loadTagsFile')?.click());
     document.getElementById('loadTagsFile')?.addEventListener('change', handleLoadTagsFile);
     document.getElementById('generateReportBtn')?.addEventListener('click', generateReport);
@@ -4687,15 +4851,19 @@ function attachEventHandlers() {
 
 // ── Autosave Restore ────────────────────────────────────────
 async function initFromAutosave() {
-    const autosave = readAutosaveForOpenFilm();
-    if (autosave) {
-        setStatus('Saved tags stay put. Press Resume to load them.');
-        return;
-    }
-    const server = await pullServerTagsForOpenFilm();
-    if (server) {
-        loadGameIntoUI(server, { requireSameFilm: true });
-        setStatus(`Loaded ${server.rows.length} tags saved on the home PC for this film.`);
+    const source = await savedManualTagSource();
+    if (source) {
+        const rows = source.rows || [];
+        loadGameIntoUI(source, { requireSameFilm: true, seek: false });
+        showContinueIfNeeded(rows);
+        if (continueRequested() && !manualTagsAreComplete(rows)) {
+            continueWhereLeftOff();
+            return;
+        }
+        const where = rows.length ? String(rows[rows.length - 1].start || '').trim() : '';
+        setStatus(where
+            ? `Loaded ${rows.length} tags. Continue jumps to ${where}.`
+            : `Loaded ${rows.length} tags.`);
         return;
     }
     const leftover = loadJson(CURRENT_AUTOSAVE_KEY, null);
@@ -4795,7 +4963,6 @@ function init() {
     applyFilmToolDeepLinks();
     updateScoreLabels();
     renderScore();
-    initFromAutosave();
     syncGameTeamsFromContext({ forceGameOpponent: true });
     updateScoreLabels();
     renderScore();
@@ -4852,6 +5019,7 @@ function init() {
         setTimeout(focusPlayMatchesPanel, 280);
         setStatus('Play/set suggestions panel ready — ranked matches only (not auto-accepted).');
     }
+    initFromAutosave();
 
     function seekFromUrlParam() {
       const seconds = seekSeconds > 1000 ? seekSeconds / 1000 : seekSeconds;

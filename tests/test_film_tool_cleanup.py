@@ -56,6 +56,8 @@ def test_film_tool_manual_tagging_overlays_film(client):
     assert 'id="ftTagPaneOffense"' in html
     assert 'id="ftTagPaneDefense"' in html
     assert 'id="ftTagPaneFlow"' in html
+    assert 'id="ftTagLog"' in html
+    assert 'id="ftTagLogList"' in html
 
 
 def test_settings_includes_film_tool_section(client):
@@ -86,7 +88,11 @@ def test_film_tool_quick_tag_uses_game_roster_flow():
     assert "teamMode: 'team-only'" in blob
     assert "teamMode: 'team-only'" in slob
     assert "teamMode: 'team-only'" in timeout
-    assert "teamMode: 'team-only'" in turnover
+    assert "teamMode: 'team-player'" in turnover
+    assert "Who turned it over for ${team}?" in js
+    steal_pick = js.split("teamMode === 'special-steal'", 1)[1].split("return;", 1)[0]
+    assert "showTurnoverChooser(def, team, player)" in steal_pick
+    assert "player: p.turnoverPlayer || ''" in js
     assert "function askAssistAfterMake" in js
     assert "Did an assist occur?" in js
     assert "function playersOnFloor" in js

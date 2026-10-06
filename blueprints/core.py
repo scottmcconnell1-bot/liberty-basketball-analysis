@@ -1775,6 +1775,121 @@ def video_trim_page(vid_id):
     )
 
 
+def _tag_clock(timestamp_ms):
+    try:
+        ms = int(timestamp_ms)
+    except (TypeError, ValueError):
+        return ""
+    if ms < 0:
+        ms = 0
+    total_s = ms / 1000.0
+    minutes = int(total_s // 60)
+    seconds = total_s - (minutes * 60)
+    return f"{minutes}:{seconds:04.1f}"
+
+
+def _video_tag_heading(db, video):
+    from blueprints.ai import film_display_name
+
+    return film_display_name(
+        db,
+        opponent=video.get("opponent"),
+        stored_filename=video.get("stored_filename"),
+        game_id=video.get("game_id"),
+    )
+
+
+@core.route("/videos/<int:vid_id>/manual-tags")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def video_manual_tags_page(vid_id):
+    """Read-only list of Film Tool tags. Opening it does not save or teach."""
+    from film_tool_tags import load_manual_tags
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        abort(404)
+    video = dict(video)
+    saved = load_manual_tags(video.get("game_id") or "") if video.get("game_id") else None
+    rows = []
+    for row in (saved or {}).get("rows") or []:
+        if not isinstance(row, dict):
+            continue
+        rows.append({
+            "time": row.get("start") or "",
+            "quarter": row.get("quarter") or "",
+            "team": row.get("team") or "",
+            "player": row.get("player") or "",
+            "event": row.get("eventtype") or row.get("label") or "",
+            "result": row.get("result") or "",
+        })
+    return render_template(
+        "video_tag_list.html",
+        kind="manual",
+        heading=_video_tag_heading(db, video),
+        rows=rows,
+        last_time=(saved or {}).get("lastTaggedTime") or (rows[-1]["time"] if rows else ""),
+    )
+
+
+@core.route("/videos/<int:vid_id>/ai-tags")
+@require_feature("ENABLE_AUTO_STATS_M1")
+def video_ai_tags_page(vid_id):
+    """Read-only list of this film's AI events. Does not rename players or teach."""
+    from helpers import normalize_analysis_game_id, resolve_analysis_run_for_progress
+
+    db = get_db()
+    video = db.execute("SELECT * FROM videos WHERE id=?", (vid_id,)).fetchone()
+    if not video:
+        abort(404)
+    video = dict(video)
+    game_id = normalize_analysis_game_id(video.get("game_id") or "")
+    analysis_key = game_id
+    run = resolve_analysis_run_for_progress(db, game_id) if game_id else None
+    if run and run["analysis_key"]:
+        analysis_key = run["analysis_key"]
+        base_key = str(analysis_key).split("__rerun_", 1)[0]
+        newer = db.execute(
+            """SELECT analysis_key FROM analysis_runs
+                WHERE status='completed'
+                  AND id > ?
+                  AND (analysis_key=? OR base_analysis_key=? OR analysis_key LIKE ?)
+                ORDER BY id DESC
+                LIMIT 1""",
+            (run["id"], base_key, base_key, base_key + "__rerun_%"),
+        ).fetchone()
+        if newer and newer["analysis_key"]:
+            analysis_key = newer["analysis_key"]
+    stored = []
+    if analysis_key:
+        stored = db.execute(
+            """SELECT timestamp_ms, event_type, player, shot_result, review_status
+                 FROM events
+                WHERE game_id = ?
+                  AND (source_type IS NULL OR source_type = 'ai')
+                ORDER BY timestamp_ms ASC, id ASC""",
+            (analysis_key,),
+        ).fetchall()
+    rows = []
+    for row in stored:
+        event_type = (row["event_type"] or "").replace("_", " ").strip()
+        rows.append({
+            "time": _tag_clock(row["timestamp_ms"]),
+            "quarter": "",
+            "team": "",
+            "player": row["player"] or "",
+            "event": event_type[:1].upper() + event_type[1:] if event_type else "",
+            "result": row["shot_result"] or row["review_status"] or "",
+        })
+    return render_template(
+        "video_tag_list.html",
+        kind="ai",
+        heading=_video_tag_heading(db, video),
+        rows=rows,
+        last_time=rows[-1]["time"] if rows else "",
+    )
+
+
 @core.route("/review")
 @require_feature("ENABLE_MANUAL_TAG_MVP")
 def review_page():
@@ -1864,6 +1979,7 @@ def film(filename=None):
                 )
 
     review_mode = (request.args.get("review") or "").strip().lower() in {"1", "true", "yes"}
+    continue_mode = (request.args.get("continue") or "").strip().lower() in {"1", "true", "yes"}
     plays_mode = (request.args.get("plays") or "").strip().lower() in {"1", "true", "yes"}
     roster_season_id = None
     roster_level = None
@@ -1889,6 +2005,7 @@ def film(filename=None):
         uploaded_video_url=url_for("core.uploaded_file", filename=filename) if filename else None,
         analysis_results_url=analysis_results_url_for(game_id),
         review_mode=review_mode,
+        continue_mode=continue_mode,
         plays_mode=plays_mode,
         roster_season_id=roster_season_id,
         roster_level=roster_level,

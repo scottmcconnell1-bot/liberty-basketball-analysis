@@ -45,12 +45,28 @@ def load_manual_tags(game_id: str) -> dict[str, Any] | None:
     return data
 
 
-def save_manual_tags(game_id: str, payload: dict[str, Any] | None) -> dict[str, Any]:
+class TagClearRefused(ValueError):
+    """An empty list must not replace tags already saved for this film."""
+
+
+def save_manual_tags(
+    game_id: str,
+    payload: dict[str, Any] | None,
+    *,
+    allow_clear: bool = False,
+) -> dict[str, Any]:
     gid = sanitize_tag_game_id(game_id)
     data = dict(payload or {})
     rows = data.get("rows")
     if not isinstance(rows, list):
         raise ValueError("rows must be a list")
+    if not rows and not allow_clear:
+        existing = load_manual_tags(gid)
+        kept = existing.get("rows") if isinstance(existing, dict) else None
+        if kept:
+            raise TagClearRefused(
+                "Saved tags were kept. An empty list cannot replace them."
+            )
     data["analysisGameId"] = gid
     data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     TAGS_ROOT.mkdir(parents=True, exist_ok=True)

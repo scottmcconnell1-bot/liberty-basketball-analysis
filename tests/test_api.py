@@ -1819,12 +1819,116 @@ def test_api_videos_includes_game_display_fields(client, db):
     db.commit()
 
     payload = client.get("/api/videos").get_json()
-    assert payload[0]["display_game"] == "Liberty vs wilder"
+    assert payload[0]["display_game"] == "Liberty vs Wilder"
     assert payload[0]["team_label"] == "Boys Varsity"
     assert payload[0]["game_date"] == "2026-01-15"
-    # Default list is light (no global COUNT scans).
     assert payload[0]["detection_count"] is None
     assert payload[0]["event_count"] is None
+
+
+def test_away_film_title_uses_at_and_schedule_time(client, db):
+    season_id = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?, ?, ?)",
+        ("2025-26", "2025-11-01", "2026-03-01"),
+    ).lastrowid
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, game_time,
+            location_type, opponent_name, status)
+           VALUES (?, 'Liberty', 'boys_jh', 'boys', 'jr_high', '2026-02-10', '17:00',
+                   'away', 'Adrian', 'final')""",
+        (season_id,),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            "nfhs.mp4",
+            "nfhs.mp4",
+            "uploads/nfhs.mp4",
+            1000,
+            "Adrian (JrHigh) - NFHS clean",
+            "jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334",
+        ),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos").get_json()
+    assert payload[0]["display_game"] == "Liberty at Adrian"
+    assert payload[0]["squad_name"] == ""
+    assert payload[0]["program_gender"] == "Boys"
+    assert payload[0]["game_date"] == "2026-02-10"
+    assert payload[0]["game_time"] == "17:00"
+
+
+def test_extra_film_uses_earlier_tip_and_date_sort(client, db):
+    season_id = db.execute(
+        "INSERT INTO seasons (name, start_date, end_date) VALUES (?, ?, ?)",
+        ("2025-26", "2025-11-01", "2026-03-01"),
+    ).lastrowid
+    db.execute(
+        """INSERT INTO scheduled_games
+           (season_id, program_name, team, gender, level, game_date, game_time, jv_game_time,
+            location_type, opponent_name, status)
+           VALUES (?, 'Liberty', 'boys_jh', 'boys', 'jr_high', '2026-02-05', '17:00', '16:00',
+                   'away', 'Horseshoe Bend', 'final')""",
+        (season_id,),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            "LIBERTY_A_v_HSB_H.mp4",
+            "LIBERTY_A_v_HSB_H_20260809_221334.mp4",
+            "uploads/hsb.mp4",
+            1000,
+            "Horseshoe Bend",
+            "jrhigh_horseshoe_bend_LIBERTY_A_v_HSB_H_20260809_221334",
+        ),
+    )
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            "LIBERTY_A_v_HSB_H1.mp4",
+            "LIBERTY_A_v_HSB_H1_20260809_221334.mp4",
+            "uploads/hsb1.mp4",
+            1000,
+            "Horseshoe Bend",
+            "jrhigh_horseshoe_bend_LIBERTY_A_v_HSB_H1_20260809_221334",
+        ),
+    )
+    db.commit()
+
+    payload = client.get("/api/videos?light=1&sort=date").get_json()
+    assert [row["display_game"] for row in payload] == [
+        "Liberty at Horseshoe Bend",
+        "Liberty at Horseshoe Bend",
+    ]
+    assert [row["squad_name"] for row in payload] == ["JrHigh B", "JrHigh A"]
+    assert [row["program_gender"] for row in payload] == ["Boys", "Boys"]
+    assert [row["game_time"] for row in payload] == ["16:00", "17:00"]
+
+    renamed = client.post(
+        f"/api/videos/{payload[0]['id']}/squad-name",
+        json={"name": "JrHigh C"},
+    )
+    assert renamed.status_code == 200
+    again = client.get("/api/videos?light=1&sort=date").get_json()
+    assert again[0]["display_game"] == "Liberty at Horseshoe Bend"
+    assert again[0]["squad_name"] == "JrHigh C"
+    assert again[1]["squad_name"] == "JrHigh A"
+
+    cleared = client.post(
+        f"/api/videos/{payload[0]['id']}/squad-name",
+        json={"name": ""},
+    )
+    assert cleared.status_code == 200
+    restored = client.get("/api/videos?light=1&sort=date").get_json()
+    assert restored[0]["squad_name"] == "JrHigh B"
 
 
 def test_api_videos_counts_detections_via_relational_game_id(client, db):
@@ -2961,6 +3065,62 @@ def test_delete_video_deletes_unverified_events(client):
             (video_data["game_id"],)
         ).fetchone()[0]
         assert verified_count == 1, f"Expected 1 verified event, got {verified_count}"
+
+
+def test_delete_shared_game_video_keeps_the_other_films_analysis(client):
+    """An archived upload that shares a game id must not wipe the live film's runs."""
+    with client.application.app_context():
+        from helpers import get_db
+        from blueprints.ai import _ensure_videos_archived_column
+
+        db = get_db()
+        _ensure_videos_archived_column(db)
+        game_key = "shared_game_keep_live"
+        db.execute(
+            """INSERT INTO videos (
+                original_filename, stored_filename, file_path, file_size_bytes,
+                opponent, game_id, is_duplicate, upload_timestamp, archived
+            ) VALUES ('live.mp4', 'live_stored.mp4', '/tmp/live.mp4', 10,
+                      'Live', ?, 0, '2024-01-01', 0)""",
+            (game_key,),
+        )
+        live_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        db.execute(
+            """INSERT INTO videos (
+                original_filename, stored_filename, file_path, file_size_bytes,
+                opponent, game_id, is_duplicate, upload_timestamp, archived
+            ) VALUES ('old.mp4', 'old_stored.mp4', '/tmp/old.mp4', 10,
+                      'Old', ?, 0, '2024-01-02', 1)""",
+            (game_key,),
+        )
+        old_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        db.execute(
+            """INSERT INTO analysis_runs (
+                source_video_id, base_analysis_key, analysis_key, video_path, status
+            ) VALUES (?, ?, ?, '/tmp/live.mp4', 'completed')""",
+            (live_id, game_key, game_key),
+        )
+        db.execute(
+            """INSERT INTO events (
+                game_id, event_type, timestamp_ms, human_verified, source_type, confidence
+            ) VALUES (?, 'shot', 1000, 0, 'ai', 0.5)""",
+            (game_key,),
+        )
+        db.commit()
+
+        resp = client.delete(f"/api/videos/{old_id}")
+        assert resp.status_code == 200
+
+        assert db.execute("SELECT id FROM videos WHERE id=?", (old_id,)).fetchone() is None
+        assert db.execute("SELECT id FROM videos WHERE id=?", (live_id,)).fetchone() is not None
+        assert db.execute(
+            "SELECT COUNT(*) FROM analysis_runs WHERE analysis_key=?",
+            (game_key,),
+        ).fetchone()[0] == 1
+        assert db.execute(
+            "SELECT COUNT(*) FROM events WHERE game_id=?",
+            (game_key,),
+        ).fetchone()[0] == 1
 
 
 def test_delete_video_does_not_delete_verified_events(client):

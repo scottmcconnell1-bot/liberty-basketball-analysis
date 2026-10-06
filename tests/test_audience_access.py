@@ -78,6 +78,18 @@ def test_player_is_sent_to_own_stats_and_cannot_save(app, tmp_path, monkeypatch)
     assert b"audienceCanEdit" in page.data or b"false" in page.data
 
 
+def test_player_film_is_watch_only(app):
+    db = _db(app)
+    _add_user(db, "player-film@example.com", "player", "Owen Sullivan")
+    db.close()
+    client = app.test_client()
+    assert _login(client, "player-film@example.com").status_code == 302
+    page = client.get("/film/cont.mp4?game_id=continue_tags_game")
+    assert page.status_code == 200
+    assert b"AUDIENCE_CAN_EDIT = false" in page.data
+    assert b"Watch only" in page.data
+
+
 def test_coach_still_opens_the_dashboard(app):
     db = _db(app)
     _add_user(db, "coach1@example.com", "coach", "Coach One")

@@ -60,6 +60,7 @@ def _isolate_play_match_store(tmp_path, monkeypatch):
     import helpers
 
     monkeypatch.setattr(ai_mod, "_play_match_store_base", lambda: str(tmp_path / "play_matches"))
+    monkeypatch.setattr(ai_mod, "_squad_names_path", lambda: str(tmp_path / "video_squad_names.json"))
     # Analysis launcher logs default to <repo>/logs/ai-<game>.log; keep test logs in tmp_path too.
     log_dir = tmp_path / "logs"
     log_dir.mkdir(exist_ok=True)

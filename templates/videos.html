@@ -23,11 +23,11 @@
   }
   #videos-card .video-table .col-game {
     min-width: 12rem;
-    max-width: 18rem;
     word-break: break-word;
   }
-  #videos-card .video-table .col-gameid { min-width: 6.5rem; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; }
-  #videos-card .video-table .col-date { min-width: 6.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-level { min-width: 7.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-date { min-width: 8.5rem; white-space: nowrap; }
+  #videos-card .video-table .col-time { min-width: 5.5rem; white-space: nowrap; }
   #videos-card .video-table .col-size { min-width: 4.5rem; white-space: nowrap; }
   #videos-card .video-table .col-status { min-width: 9rem; }
   #videos-card .video-table .col-status .video-status-badge {
@@ -65,19 +65,114 @@
     display: none; /* light list: free space for Actions */
   }
   #videos-card .video-table .col-actions {
-    min-width: 17rem;
-    width: 17rem;
-    position: sticky;
-    right: 0;
-    z-index: 2;
+    min-width: 8.5rem;
+    width: 8.5rem;
     background: var(--color-surface, #f7f5f0);
-    box-shadow: -8px 0 12px -6px rgba(0, 0, 0, 0.25);
     overflow: visible;
     word-break: normal;
     border-left: 2px solid #01696f;
   }
+  #videos-card .row-actions-menu {
+    position: relative;
+  }
+  #videos-card .row-actions-menu > summary {
+    list-style: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 6px 8px;
+    border: 1px solid #6b675e;
+    border-radius: 6px;
+    background: #fff;
+    color: #1a1a1a;
+    text-align: center;
+  }
+  #videos-card .row-actions-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+  #videos-card .row-actions-list {
+    position: fixed;
+    z-index: 40;
+    min-width: 11rem;
+    margin: 0;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #6b675e;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+  }
+  #videos-card .row-actions-list button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+    cursor: pointer;
+    border-radius: 4px;
+    position: relative;
+  }
+  #videos-card .row-actions-list button:hover,
+  #videos-card .row-actions-list button:focus {
+    background: #e6f4f5;
+    outline: none;
+  }
+  #videos-card .row-actions-list button .hint {
+    display: none;
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #013f42;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #videos-card .row-actions-list button .hint::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-left-color: #013f42;
+  }
+  #videos-card .row-actions-list button:hover .hint,
+  #videos-card .row-actions-list button:focus .hint {
+    display: block;
+  }
+  .video-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: end;
+    margin: 0 0 14px;
+  }
+  .video-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #013f42;
+  }
+  .video-search input,
+  .video-search select {
+    font-size: 0.95rem;
+    padding: 6px 8px;
+    border: 1px solid #6b675e;
+    border-radius: 6px;
+    min-width: 12rem;
+    background: #fff;
+  }
   #videos-card .video-table thead .col-actions {
-    z-index: 3;
     background: #e6f4f5;
     color: #013f42;
     font-size: 0.95rem;
@@ -215,17 +310,45 @@
 
 <div class="card" style="margin-bottom:16px;padding:14px 20px;background:#f0fdfb;border-color:#99d4d6;">
   <strong>ℹ️ How it works:</strong>
-  This page loads a lightweight game list (sorted A–Z by title). Default view is
-  <strong>Active</strong> games — use <em>Archive</em> to hide finished games from the main list
-  (Film Tool / Review links still open). Switch to the <strong>Archive</strong> tab to unarchive.
-  Click <em>Film Tool</em> to open <strong>only that</strong> video — heavy detection/event counts
-  load there or via <em>Load counts</em>, not for every game up front.
+  This page loads a lightweight game list (sorted by date, then time). Search uses opponent, date, level, and Boys or Girls, any one of them or any combination.
+  The game name is Liberty vs or at the opponent. Level is its own column: JrHigh A, JrHigh B, JrHigh C, Varsity, or Jr Varsity.
+  Use <em>Actions → Level</em> when a film is an exception.
+  Default view is <strong>Active</strong>. <em>Actions</em> opens Film Tool, Review, Archive, and the rarely used tools.
+  <em>AI tags</em> opens the film so a coach or admin can accept or reject the AI marks. <em>Manual tags</em> opens the hand tagger. <em>Continue tagging</em> appears when that film is not finished and picks up at the last tag. Click anywhere off the menu to close it.
   Each upload gets a unique timestamped filename so you can re-upload the same game multiple times.
   Duplicates are flagged automatically.
   Use <em>Trim</em> to cut NFHS padding (previous game, warmups, empty gym) before analysis.
   <strong>Rebuild</strong> only works when detections are already saved — if Dets is 0, open <em>Film Tool</em> and click <em>Run AI Analysis</em> (or use <em>Re-run AI</em>).
   Use the 🗑 button on any row to permanently delete a video and its analysis data.
 </div>
+
+<form class="video-search card" id="video-search" onsubmit="return applyVideoSearch(event)" style="padding:12px 16px;">
+  <label>Opponent
+    <input id="search-opponent" type="search" placeholder="Notus, Adrian…" autocomplete="off">
+  </label>
+  <label>Date
+    <input id="search-date" type="date">
+  </label>
+  <label>Level
+    <select id="search-level">
+      <option value="">Any</option>
+      <option>JrHigh A</option>
+      <option>JrHigh B</option>
+      <option>JrHigh C</option>
+      <option>Varsity</option>
+      <option>Jr Varsity</option>
+    </select>
+  </label>
+  <label>Team
+    <select id="search-gender">
+      <option value="">Boys or Girls</option>
+      <option>Boys</option>
+      <option>Girls</option>
+    </select>
+  </label>
+  <button type="submit" class="btn btn-primary">Search</button>
+  <button type="button" class="btn btn-secondary" onclick="clearVideoSearch()">Clear</button>
+</form>
 
 <div class="card" id="videos-card" data-frame="4.2">
   <div id="videos-view-tabs" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
@@ -238,8 +361,9 @@
     <thead>
       <tr>
         <th class="col-game">Game</th>
-        <th class="col-gameid">GameID</th>
-        <th class="col-date">Game Date</th>
+        <th class="col-level">Level</th>
+        <th class="col-date">Date</th>
+        <th class="col-time">Time</th>
         <th class="col-size">Size</th>
         <th class="col-status">AI Status</th>
         <th class="col-count" title="Detections">Dets</th>
@@ -254,8 +378,33 @@
   <div id="empty-msg" style="display:none;color:#1a1a1a;padding:20px 0;text-align:center;font-weight:500;">
     No active games. Open the <button type="button" class="btn videos-tab" style="display:inline;padding:4px 10px;font-size:.85rem;" onclick="setVideosView('archive')">Archive</button> tab, or <a href="/film">upload a new video →</a>
   </div>
+  <div id="empty-search-msg" style="display:none;color:#1a1a1a;padding:20px 0;text-align:center;font-weight:500;">
+    No games match that search.
+  </div>
   <div id="empty-archive-msg" style="display:none;color:#1a1a1a;padding:20px 0;text-align:center;font-weight:500;">
     No archived games. Use <strong>Archive</strong> on the Active list to move games here.
+  </div>
+</div>
+
+<div id="squad-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 12px;font-size:1rem;">Level</h3>
+    <p id="squad-modal-desc" style="color:#4b5563;font-size:.9rem;margin-bottom:12px;"></p>
+    <label for="squad-choice" style="display:block;font-size:.8rem;font-weight:700;margin-bottom:6px;">Standard level</label>
+    <select id="squad-choice" style="width:100%;font-size:.95rem;padding:8px;margin-bottom:12px;" onchange="toggleSquadCustom()">
+      <option value="">Use the usual level</option>
+      <option>JrHigh A</option>
+      <option>JrHigh B</option>
+      <option>JrHigh C</option>
+      <option>Varsity</option>
+      <option>Jr Varsity</option>
+      <option value="__custom">Other name…</option>
+    </select>
+    <input id="squad-custom" type="text" maxlength="40" placeholder="Type the exception" style="display:none;width:100%;font-size:.95rem;padding:8px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button type="button" class="btn btn-secondary" onclick="closeSquadModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveSquadName()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -339,9 +488,24 @@ function formatGameDate(value) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatGameTime(timeValue) {
+  if (!timeValue) return '—';
+  const parts = String(timeValue).split(':');
+  const hour = Number(parts[0]);
+  const minute = Number(parts[1]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return '—';
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${String(minute).padStart(2, '0')} ${suffix}`;
+}
+
 function escHtml(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escAttr(str) {
+  return escHtml(str).replace(/"/g, '&quot;');
 }
 
 // ── Delete single video ─────────────────────────────────
@@ -366,7 +530,8 @@ document.getElementById('confirm-delete-btn').addEventListener('click', async ()
   btn.textContent = 'Deleting…';
   try {
     const r = await fetch(`/api/videos/${pendingDeleteId}`, { method: 'DELETE' });
-    if (!r.ok) throw new Error('Delete failed');
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || 'Delete failed');
     closeDeleteModal();
     loadVideos();
   } catch (e) {
@@ -406,6 +571,10 @@ async function doResetAll() {
 let videosPollTimer = null;
 let videosListLoaded = false;
 const videoCountsCache = {};
+let videoCatalog = [];
+let videoSearch = { opponent: '', date: '', level: '', gender: '' };
+let squadEditId = null;
+const SQUAD_CHOICES = ['JrHigh A', 'JrHigh B', 'JrHigh C', 'Varsity', 'Jr Varsity'];
 let videosView = (new URLSearchParams(window.location.search).get('view') || 'active').toLowerCase() === 'archive'
   ? 'archive'
   : 'active';
@@ -478,7 +647,7 @@ async function unarchiveVideo(videoId) {
   }
 }
 
-function actionButtons(v, deleteLabel) {
+function actionMenu(v, deleteLabel) {
   const status = v.analysis_status || 'not_started';
   const dets = v.detection_count;
   const countsKnown = dets !== null && dets !== undefined;
@@ -491,40 +660,141 @@ function actionButtons(v, deleteLabel) {
   const gameId = encodeURIComponent(v.game_id || v.analysis_key || '');
   const filmHref = `/film/${encodeURIComponent(v.stored_filename)}?game_id=${gameId}`;
   const reviewHref = `/film/${encodeURIComponent(v.stored_filename)}/review?game_id=${gameId}`;
-  const archiveBtn = isArchived
-    ? `<button type="button" class="btn btn-sm btn-archive" onclick="unarchiveVideo(${v.id})" title="Restore to Active list">Unarchive</button>`
-    : `<button type="button" class="btn btn-sm btn-archive" onclick="archiveVideo(${v.id})" title="Hide from Active list (deep links still work)">Archive</button>`;
+  const options = [
+    { action: 'film', label: 'Film Tool', hint: 'Tag this film' },
+    { action: 'manual', label: 'Manual tags', hint: 'Tag this film by hand' },
+    { action: 'ai', label: 'AI tags', hint: 'Accept or reject AI marks' },
+    { action: 'review', label: 'Review', hint: 'Check the tags' },
+    { action: 'squad', label: 'Level', hint: 'Set the team level' },
+    isArchived
+      ? { action: 'unarchive', label: 'Unarchive', hint: 'Return to Active' }
+      : { action: 'archive', label: 'Archive', hint: 'Hide from Active' },
+    { action: 'results', label: 'Results', hint: 'Open the box score' },
+    { action: 'trim', label: 'Trim', hint: 'Cut extra footage' },
+    { action: 'compare', label: 'Compare', hint: 'Side-by-side runs' },
+  ];
+  if (Number(v.manual_tag_count) > 0 && !v.manual_complete) {
+    const at = v.manual_last_time ? `Pick up at ${v.manual_last_time}` : 'Pick up at the last tag';
+    options.push({ action: 'continue', label: 'Continue tagging', hint: at });
+  }
+  if (showLoadCounts) options.push({ action: 'counts', label: 'Load counts', hint: 'Count detections' });
+  if (showRebuild) options.push({ action: 'rebuild', label: 'Rebuild', hint: 'Rewrite saved events' });
+  if (showRerun) options.push({ action: 'rerun', label: 'Re-run AI', hint: 'Watch the film again' });
+  options.push(
+    { action: 'debug', label: 'Debug', hint: 'Open the log' },
+    { action: 'delete', label: 'Delete', hint: 'Remove this film' },
+  );
+  const sortKey = (label) => label.toLowerCase().replace(/[^a-z0-9]/g, '');
+  options.sort((a, b) => sortKey(a.label).localeCompare(sortKey(b.label)));
+  const optionHtml = options.map((item) =>
+    `<button type="button" data-action="${item.action}" title="${escAttr(item.hint)}" onclick="runRowAction(this)">${escHtml(item.label)}<span class="hint">${escHtml(item.hint)}</span></button>`
+  ).join('');
+  return `<details class="row-actions-menu" aria-label="Actions for ${escAttr(deleteLabel)}"
+      data-id="${v.id}"
+      data-film="${escAttr(filmHref)}"
+      data-manual="/videos/${v.id}/manual-tags"
+      data-ai="/videos/${v.id}/ai-tags"
+      data-review="${escAttr(reviewHref)}"
+      data-results="${escAttr('/analysis/' + gameId)}"
+      data-trim="/videos/${v.id}/trim"
+      data-compare="/videos/${v.id}/compare"
+      data-debug="/api/videos/${v.id}/analysis-debug"
+      data-delete-label="${escAttr(deleteLabel)}"
+      data-squad="${escAttr(v.squad_name || '')}"
+      data-squad-default="${escAttr(v.squad_default || '')}"
+      ontoggle="placeActionMenu(this)">
+      <summary>Actions</summary>
+      <div class="row-actions-list">${optionHtml}</div>
+    </details>`;
+}
 
-  const secondary = [
-    `<a href="/analysis/${encodeURIComponent(gameId)}" class="btn btn-secondary btn-sm">Results</a>`,
-    showLoadCounts
-      ? `<button type="button" class="btn btn-secondary btn-sm" onclick="loadVideoCounts(${v.id})" title="Optional: count detections/events for this video only (can be slow on large games). Prefer Film Tool to open the video.">Load counts</button>`
-      : '',
-    showRebuild
-      ? `<button type="button" class="btn btn-secondary btn-sm" onclick="regenerateEvents(${v.id})" title="Rebuild events from saved detections (no full YOLO re-run)">Rebuild</button>`
-      : '',
-    showRerun
-      ? `<button type="button" class="btn btn-primary btn-sm" onclick="startVideoAnalysis(${v.id})" title="Run full YOLO detection on this video">Re-run AI</button>`
-      : '',
-    `<a href="/videos/${v.id}/trim" class="btn btn-secondary btn-sm">Trim</a>`,
-    `<a href="/videos/${v.id}/compare" class="btn btn-secondary btn-sm">Compare</a>`,
-    `<a href="/api/videos/${v.id}/analysis-debug" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Debug</a>`,
-    `<button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete(${v.id}, '${deleteLabel}')">Delete</button>`,
-  ].filter(Boolean).join('\n        ');
+document.addEventListener('click', (event) => {
+  document.querySelectorAll('.row-actions-menu[open]').forEach((menu) => {
+    if (!menu.contains(event.target)) menu.removeAttribute('open');
+  });
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll('.row-actions-menu[open]').forEach((menu) => {
+    menu.removeAttribute('open');
+  });
+});
 
-  return `
-    <div class="video-actions-primary">
-      <a href="${filmHref}" class="btn btn-primary btn-sm">Film Tool</a>
-      <a href="${reviewHref}" class="btn btn-sm btn-review">Review</a>
-      ${archiveBtn}
-      <details class="video-actions-more">
-        <summary class="btn btn-sm btn-more" title="More actions">More ▾</summary>
-        <div class="video-actions-secondary">
-          ${secondary}
-        </div>
-      </details>
-    </div>
-  `;
+function positionActionList(menu) {
+  const list = menu.querySelector('.row-actions-list');
+  const summary = menu.querySelector('summary');
+  if (!list || !summary) return;
+  const margin = 8;
+  const rect = summary.getBoundingClientRect();
+  list.style.right = `${Math.max(margin, window.innerWidth - rect.right)}px`;
+  list.style.left = 'auto';
+  list.style.bottom = 'auto';
+  list.style.overflowY = 'auto';
+  const listHeight = list.scrollHeight;
+  const spaceBelow = window.innerHeight - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  const openUp = spaceBelow < listHeight && spaceAbove > spaceBelow;
+  let top;
+  let maxHeight;
+  if (openUp) {
+    maxHeight = Math.max(120, Math.min(listHeight, spaceAbove - 4));
+    top = Math.max(margin, rect.top - 4 - maxHeight);
+    maxHeight = Math.max(120, rect.top - 4 - top);
+  } else {
+    top = Math.max(margin, rect.bottom + 4);
+    maxHeight = Math.max(120, window.innerHeight - top - margin);
+  }
+  list.style.top = `${top}px`;
+  list.style.maxHeight = `${maxHeight}px`;
+}
+
+function placeActionMenu(menu) {
+  if (!menu.open) return;
+  document.querySelectorAll('.row-actions-menu[open]').forEach((el) => {
+    if (el !== menu) el.removeAttribute('open');
+  });
+  positionActionList(menu);
+  trackOpenActionMenu();
+}
+
+let actionMenuFrame = 0;
+function trackOpenActionMenu() {
+  if (actionMenuFrame) return;
+  const tick = () => {
+    const open = document.querySelectorAll('.row-actions-menu[open]');
+    if (!open.length) {
+      actionMenuFrame = 0;
+      return;
+    }
+    open.forEach(positionActionList);
+    actionMenuFrame = requestAnimationFrame(tick);
+  };
+  actionMenuFrame = requestAnimationFrame(tick);
+}
+
+function runRowAction(btn) {
+  const menu = btn.closest('.row-actions-menu');
+  const action = btn.dataset.action;
+  if (menu) menu.removeAttribute('open');
+  const id = Number(menu.dataset.id);
+  if (!action) return;
+  if (action === 'film' || action === 'manual') window.location.href = menu.dataset.film;
+  else if (action === 'continue') {
+    const film = menu.dataset.film || '';
+    window.location.href = film + (film.includes('?') ? '&' : '?') + 'continue=1';
+  }
+  else if (action === 'ai' || action === 'review') window.location.href = menu.dataset.review;
+  else if (action === 'results') window.location.href = menu.dataset.results;
+  else if (action === 'trim') window.location.href = menu.dataset.trim;
+  else if (action === 'compare') window.location.href = menu.dataset.compare;
+  else if (action === 'debug') window.open(menu.dataset.debug, '_blank', 'noopener');
+  else if (action === 'archive') archiveVideo(id);
+  else if (action === 'unarchive') unarchiveVideo(id);
+  else if (action === 'counts') loadVideoCounts(id);
+  else if (action === 'rebuild') regenerateEvents(id);
+  else if (action === 'rerun') startVideoAnalysis(id);
+  else if (action === 'delete') confirmDelete(id, menu.dataset.deleteLabel);
+  else if (action === 'squad') openSquadModal(id, menu.dataset.squad || '', menu.dataset.squadDefault || '', menu.dataset.deleteLabel || '');
 }
 
 function renderVideoRow(v) {
@@ -536,11 +806,9 @@ function renderVideoRow(v) {
     ? `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:.72rem;font-weight:600;margin-left:6px;" title="Re-upload of a previously uploaded file">Dup</span>`
     : '';
   const gameLabel = escHtml(v.display_game || v.opponent || 'Liberty');
-  // Prefer identifiers Scott can match to scorebooks (light list already has these).
-  const gameIdDisplay = escHtml(
-    v.game_id || v.analysis_key || (v.relational_game_id != null ? String(v.relational_game_id) : '') || String(v.id) || '—'
-  );
+  const levelLabel = escHtml(v.squad_name || '—');
   const gameDate = formatGameDate(v.game_date);
+  const gameTime = formatGameTime(v.game_time);
   const deleteLabel = escHtml(v.display_game || v.opponent || v.stored_filename || 'this video').replace(/'/g, "\\'");
 
   const tr = document.createElement('tr');
@@ -549,8 +817,9 @@ function renderVideoRow(v) {
     <td class="col-game" data-label="Game">
       <strong>${gameLabel}</strong>${dupBadge}
     </td>
-    <td class="col-gameid" data-label="GameID" title="${gameIdDisplay}">${gameIdDisplay}</td>
-    <td class="col-date" data-label="Game Date">${gameDate}</td>
+    <td class="col-level" data-label="Level">${levelLabel}</td>
+    <td class="col-date" data-label="Date">${gameDate}</td>
+    <td class="col-time" data-label="Time">${gameTime}</td>
     <td class="col-size" data-label="Size">${formatBytes(v.file_size_bytes)}</td>
     <td class="col-status" data-label="AI Status">${statusBadge(v.analysis_status || 'not_started', v.detection_count, v.error_message, v.event_count, v)}</td>
     <td class="col-count" data-label="Detections">${formatCount(v.detection_count)}</td>
@@ -558,7 +827,7 @@ function renderVideoRow(v) {
     <td class="col-count" data-label="Runs">${v.analysis_run_count ?? 0}</td>
     <td class="col-actions" data-label="Actions">
       <div class="video-actions">
-        ${actionButtons(v, deleteLabel)}
+        ${actionMenu(v, deleteLabel)}
       </div>
     </td>
   `;
@@ -579,6 +848,137 @@ function scheduleVideosPoll(videos) {
   }
 }
 
+function videoMatchesSearch(v) {
+  const opponent = videoSearch.opponent.trim().toLowerCase();
+  const date = videoSearch.date;
+  const level = videoSearch.level.trim().toLowerCase();
+  const gender = videoSearch.gender.trim().toLowerCase();
+  if (opponent) {
+    const hay = `${v.display_game || ''} ${v.opponent || ''}`.toLowerCase();
+    if (!hay.includes(opponent)) return false;
+  }
+  if (date && String(v.game_date || '').slice(0, 10) !== date) return false;
+  if (level && String(v.squad_name || '').trim().toLowerCase() !== level) return false;
+  if (gender && String(v.program_gender || '').trim().toLowerCase() !== gender) return false;
+  return true;
+}
+
+function paintVideos(opts) {
+  const silent = !!(opts && opts.silent) && videosListLoaded;
+  const videos = videoCatalog.filter(videoMatchesSearch);
+  const searching = !!(
+    videoSearch.opponent.trim() || videoSearch.date || videoSearch.level.trim() || videoSearch.gender.trim()
+  );
+  document.getElementById('loading').style.display = 'none';
+  const emptyArchive = document.getElementById('empty-archive-msg');
+  const emptySearch = document.getElementById('empty-search-msg');
+  document.getElementById('empty-msg').style.display = 'none';
+  if (emptyArchive) emptyArchive.style.display = 'none';
+  if (emptySearch) emptySearch.style.display = 'none';
+
+  if (!videos.length) {
+    document.getElementById('video-table').style.display = 'none';
+    if (searching && emptySearch) emptySearch.style.display = 'block';
+    else if (videosView === 'archive' && emptyArchive) emptyArchive.style.display = 'block';
+    else document.getElementById('empty-msg').style.display = 'block';
+    scheduleVideosPoll(videoCatalog);
+    videosListLoaded = true;
+    return;
+  }
+
+  const tbody = document.getElementById('video-tbody');
+  const keepRows = silent && tbody.children.length > 0;
+  if (!keepRows) tbody.innerHTML = '';
+  const seen = new Set();
+  for (const v of videos) {
+    const tr = renderVideoRow(v);
+    seen.add(tr.id);
+    const old = keepRows ? document.getElementById(tr.id) : null;
+    if (old) old.replaceWith(tr);
+    else tbody.appendChild(tr);
+  }
+  if (keepRows) {
+    [...tbody.querySelectorAll('tr')].forEach((row) => {
+      if (!seen.has(row.id)) row.remove();
+    });
+  }
+  document.getElementById('video-table').style.display = 'table';
+  videosListLoaded = true;
+  scheduleVideosPoll(videoCatalog);
+}
+
+function applyVideoSearch(event) {
+  if (event) event.preventDefault();
+  videoSearch = {
+    opponent: document.getElementById('search-opponent').value || '',
+    date: document.getElementById('search-date').value || '',
+    level: document.getElementById('search-level').value || '',
+    gender: document.getElementById('search-gender').value || '',
+  };
+  paintVideos();
+  return false;
+}
+
+function clearVideoSearch() {
+  document.getElementById('search-opponent').value = '';
+  document.getElementById('search-date').value = '';
+  document.getElementById('search-level').value = '';
+  document.getElementById('search-gender').value = '';
+  videoSearch = { opponent: '', date: '', level: '', gender: '' };
+  paintVideos();
+}
+
+function toggleSquadCustom() {
+  const custom = document.getElementById('squad-choice').value === '__custom';
+  document.getElementById('squad-custom').style.display = custom ? 'block' : 'none';
+}
+
+function openSquadModal(videoId, squadName, squadDefault, gameLabel) {
+  squadEditId = videoId;
+  document.getElementById('squad-modal-desc').textContent = gameLabel || 'This film';
+  const choice = document.getElementById('squad-choice');
+  const custom = document.getElementById('squad-custom');
+  custom.value = '';
+  if (!squadName || squadName === squadDefault) choice.value = '';
+  else if (SQUAD_CHOICES.includes(squadName)) choice.value = squadName;
+  else {
+    choice.value = '__custom';
+    custom.value = squadName;
+  }
+  toggleSquadCustom();
+  document.getElementById('squad-modal').style.display = 'flex';
+}
+
+function closeSquadModal() {
+  document.getElementById('squad-modal').style.display = 'none';
+  squadEditId = null;
+}
+
+async function saveSquadName() {
+  if (!squadEditId) return;
+  const choice = document.getElementById('squad-choice').value;
+  const name = choice === '__custom'
+    ? document.getElementById('squad-custom').value.trim()
+    : choice;
+  if (choice === '__custom' && !name) {
+    alert('Type the level, or choose Use the usual level.');
+    return;
+  }
+  try {
+    const resp = await fetch(`/api/videos/${squadEditId}/squad-name`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Could not save the team name');
+    closeSquadModal();
+    loadVideos({ silent: true });
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
 async function loadVideos(opts) {
   const silent = !!(opts && opts.silent) && videosListLoaded;
   updateViewTabs();
@@ -588,59 +988,15 @@ async function loadVideos(opts) {
     document.getElementById('empty-msg').style.display = 'none';
     const emptyArchive = document.getElementById('empty-archive-msg');
     if (emptyArchive) emptyArchive.style.display = 'none';
+    const emptySearch = document.getElementById('empty-search-msg');
+    if (emptySearch) emptySearch.style.display = 'none';
   }
 
   const archivedParam = videosView === 'archive' ? '1' : '0';
-  const resp = await fetch(`/api/videos?light=1&sort=title&archived=${archivedParam}`);
-  const videos = await resp.json();
+  const resp = await fetch(`/api/videos?light=1&sort=date&archived=${archivedParam}`);
+  videoCatalog = await resp.json();
   refreshArchiveCounts();
-
-  document.getElementById('loading').style.display = 'none';
-
-  if (!videos.length) {
-    document.getElementById('video-table').style.display = 'none';
-    const emptyArchive = document.getElementById('empty-archive-msg');
-    if (videosView === 'archive' && emptyArchive) {
-      emptyArchive.style.display = 'block';
-    } else {
-      document.getElementById('empty-msg').style.display = 'block';
-    }
-    scheduleVideosPoll([]);
-    videosListLoaded = true;
-    return;
-  }
-
-  document.getElementById('empty-msg').style.display = 'none';
-  const emptyArchive = document.getElementById('empty-archive-msg');
-  if (emptyArchive) emptyArchive.style.display = 'none';
-  const tbody = document.getElementById('video-tbody');
-  const openMore = new Set(
-    [...tbody.querySelectorAll('details.video-actions-more[open]')].map((el) => el.closest('tr')?.id).filter(Boolean)
-  );
-  const keepRows = silent && tbody.children.length > 0;
-  if (!keepRows) tbody.innerHTML = '';
-
-  const seen = new Set();
-  for (const v of videos) {
-    const tr = renderVideoRow(v);
-    seen.add(tr.id);
-    const old = keepRows ? document.getElementById(tr.id) : null;
-    if (old) old.replaceWith(tr);
-    else tbody.appendChild(tr);
-    if (openMore.has(tr.id)) {
-      const details = tr.querySelector('details.video-actions-more');
-      if (details) details.open = true;
-    }
-  }
-  if (keepRows) {
-    [...tbody.querySelectorAll('tr')].forEach((row) => {
-      if (!seen.has(row.id)) row.remove();
-    });
-  }
-
-  document.getElementById('video-table').style.display = 'table';
-  videosListLoaded = true;
-  scheduleVideosPoll(videos);
+  paintVideos({ silent });
 }
 
 async function loadVideoCounts(videoId) {

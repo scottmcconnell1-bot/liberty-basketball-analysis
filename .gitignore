@@ -160,6 +160,7 @@ data/lineups/*.json
 
 # Film Tool tags (per film; Funnel reads these from home disk)
 data/film_tags/*.json
+data/video_squad_names.json
 
 # Hoop/net track (per film; CV sidecar, no schema)
 data/hoop_tracks/*.json

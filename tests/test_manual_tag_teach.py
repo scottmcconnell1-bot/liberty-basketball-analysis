@@ -364,3 +364,126 @@ def test_make_is_rejected_when_its_shot_did_not_go_in(app):
             (game_id,),
         ).fetchone()
         assert row["review_status"] == "rejected"
+
+
+def test_empty_manual_tags_do_not_replace_saved_rows(client):
+    game_id = "jrhigh_adrian,_or_KEEP_TAGS"
+    payload = {
+        "rows": [{
+            "eventtype": "EndQTR",
+            "start": "32:15.0",
+            "quarter": "Q2",
+            "result": "NA",
+        }],
+    }
+    saved = client.post(f"/api/film/{game_id}/manual-tags", json=payload)
+    assert saved.status_code == 200
+    wiped = client.post(f"/api/film/{game_id}/manual-tags", json={"rows": []})
+    assert wiped.status_code == 409
+    kept = client.get(f"/api/film/{game_id}/manual-tags").get_json()
+    assert kept["rows"][0]["start"] == "32:15.0"
+    taught = client.post(f"/api/film/{game_id}/teach-manual", json={"rows": []})
+    assert taught.status_code == 409
+    kept = client.get(f"/api/film/{game_id}/manual-tags").get_json()
+    assert kept["rows"][0]["start"] == "32:15.0"
+    cleared = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": [], "confirmClear": True},
+    )
+    assert cleared.status_code == 200
+    assert cleared.get_json()["rows"] == []
+
+
+def test_video_tag_pages_list_manual_and_ai(client, db):
+    game_id = "tag_pages_game"
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("tags.mp4", "tags.mp4", "uploads/tags.mp4", 1000, "Adrian", game_id),
+    )
+    db.execute(
+        "INSERT INTO analysis_runs (analysis_key, video_path, status) VALUES (?, ?, ?)",
+        (game_id, "uploads/tags.mp4", "completed"),
+    )
+    db.execute(
+        """INSERT INTO events
+           (game_id, player, event_type, shot_result, timestamp_ms, source_type, review_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (game_id, "0 Sullivan", "made_two", "make", 40700, "ai", "pending"),
+    )
+    db.commit()
+    video_id = db.execute(
+        "SELECT id FROM videos WHERE game_id=?",
+        (game_id,),
+    ).fetchone()["id"]
+    posted = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": [{"eventtype": "EndQTR", "start": "32:15.0", "quarter": "Q2", "player": "Sullivan"}]},
+    )
+    assert posted.status_code == 200
+
+    manual = client.get(f"/videos/{video_id}/manual-tags")
+    assert manual.status_code == 200
+    assert b"Manual tags" in manual.data
+    assert b"32:15.0" in manual.data
+    assert b"Sullivan" in manual.data
+
+    ai = client.get(f"/videos/{video_id}/ai-tags")
+    assert ai.status_code == 200
+    assert b"AI tags" in ai.data
+    assert b"Made two" in ai.data
+    assert b"0 Sullivan" in ai.data
+    assert b"32:15.0" not in ai.data
+
+
+def test_unfinished_manual_tags_are_not_complete(client, db):
+    game_id = "continue_tags_game"
+    db.execute(
+        """INSERT INTO videos
+           (original_filename, stored_filename, file_path, file_size_bytes, opponent, game_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("cont.mp4", "cont.mp4", "uploads/cont.mp4", 1000, "Adrian", game_id),
+    )
+    db.commit()
+    posted = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": [{"eventtype": "EndQTR", "start": "32:15.0", "quarter": "Q2", "result": "NA"}],
+              "lastTaggedTime": "32:15.0"},
+    )
+    assert posted.status_code == 200
+    videos = client.get("/api/videos?light=1").get_json()
+    row = next(item for item in videos if item["game_id"] == game_id)
+    assert row["manual_tag_count"] == 1
+    assert row["manual_complete"] is False
+    assert row["manual_last_time"] == "32:15.0"
+    finished = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": [{"eventtype": "EndQTR", "start": "64:00.0", "quarter": "Q4", "result": "NA"}],
+              "lastTaggedTime": "64:00.0"},
+    )
+    assert finished.status_code == 200
+    videos = client.get("/api/videos?light=1").get_json()
+    row = next(item for item in videos if item["game_id"] == game_id)
+    assert row["manual_complete"] is True
+
+
+def test_film_continue_flag_for_a_coach_session(client):
+    page = client.get("/film/cont.mp4?game_id=continue_tags_game&continue=1")
+    assert page.status_code == 200
+    assert b"FILM_TOOL_CONTINUE = true" in page.data
+    assert b"AUDIENCE_CAN_EDIT = true" in page.data
+    assert b"continueTaggingBtn" in page.data
+
+
+def test_videos_page_offers_tag_lists_and_click_away(client):
+    page = client.get("/videos")
+    assert page.status_code == 200
+    body = page.data
+    assert b"Manual tags" in body
+    assert b"AI tags" in body
+    assert b"Tag this film by hand" in body
+    assert b"Accept or reject AI marks" in body
+    assert b"Continue tagging" in body
+    assert b"row-actions-menu[open]" in body
+    assert b"trackOpenActionMenu" in body
