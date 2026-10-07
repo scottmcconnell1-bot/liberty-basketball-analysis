@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "play_id": 97,
+  "updated_at": "2026-10-06T23:01:55Z",
+  "source": "user_save",
+  "sticky": true,
+  "steps": [
+    {
+      "step_index": 0,
+      "source_image": "/uploads/bulk_imports/d125785a44474042b13589e9aadeca4f/page_0030.png",
+      "court_frac": {
+        "h": 0.6231,
+        "w": 0.8578,
+        "x": 0.0719,
+        "y": 0.1696
+      },
+      "positions": {
+        "o1": {
+          "x": 244.03,
+          "y": 274.79
+        },
+        "o2": {
+          "x": 34.87,
+          "y": 152.44
+        },
+        "o3": {
+          "x": 461.41,
+          "y": 157.46
+        },
+        "o4": {
+          "x": 147.22,
+          "y": 51.79
+        },
+        "o5": {
+          "x": 353.99,
+          "y": 51.79
+        }
+      },
+      "coachOrder": true,
+      "movements": [],
+      "ink": {
+        "paths": {},
+        "marks": {},
+        "passes": [],
+        "actions": []
+      }
+    }
+  ]
+}

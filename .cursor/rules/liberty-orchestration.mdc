@@ -24,6 +24,10 @@ Also follow `docs/BRANCH_POLICY.md`.
 - Mass-delete remote branches
 - A name that might be a misspelling of a roster or scorebook name. Ask Scott. Do not guess, and do not leave it unmatched without asking.
 
+## Follow-on instructions
+
+A new message during a job is added instruction. Finish the job already underway, and include the new instruction in that same job. Do not answer only the new sentence and leave the earlier job undone. Stop the earlier job only when Scott explicitly says to stop, drop, or switch. When you report back, say what the original job was and what the added instruction changed, in one place.
+
 ## Workflow
 
 - Working branch is `main`. Merge finished work onto `main` and push it. A side branch or a write-up is not the current code.

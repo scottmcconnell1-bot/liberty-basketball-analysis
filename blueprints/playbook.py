@@ -858,6 +858,7 @@ def _phases_from_steps(steps, choreography=None):
         if sticky_step and (sticky_step.get("coachOrder") or sticky_step.get("movements")):
             movements = sticky_step.get("movements") or []
         ball = "o1"
+        defense_tune = {}
         actions = []
         for movement in movements:
             if not isinstance(movement, dict):
@@ -865,6 +866,8 @@ def _phases_from_steps(steps, choreography=None):
             if movement.get("_meta"):
                 if movement.get("_ball"):
                     ball = movement["_ball"]
+                if isinstance(movement.get("_defense_tune"), dict):
+                    defense_tune = movement["_defense_tune"]
                 continue
             anchors = movement.get("anchors") or movement.get("points") or []
             dest = movement.get("dest")
@@ -884,6 +887,7 @@ def _phases_from_steps(steps, choreography=None):
             "label": row.get("label") or f"Picture {len(phases) + 1}",
             "notes": row.get("notes") or "",
             "ball": ball,
+            "defenseTune": defense_tune,
             "positions": positions,
             "actions": actions,
             "source_image": row.get("source_image") or "",
@@ -925,13 +929,16 @@ def playbook_draw(play_id=None):
     playbooks = db.execute(
         "SELECT * FROM playbooks WHERE COALESCE(kind, 'team') != 'opponent' ORDER BY name"
     ).fetchall()
+    from playbook_taxonomy import resolve_category_id_by_path
+
     return render_template(
         "play_draw.html",
         play=play,
         phases=phases,
         categories=_flatten_categories(category_tree),
         playbooks=[dict(row) for row in playbooks],
-        category_id=(play or {}).get("category_id") or _default_category_id(db),
+        category_id=(play or {}).get("category_id") or request.args.get("category_id", type=int) or _default_category_id(db),
+        defense_man_category_id=resolve_category_id_by_path(db, "defense/man"),
         **_team_template_kwargs(team_key),
     )
 
@@ -1459,9 +1466,15 @@ def playbook_save():
             positions = json.dumps(step.get("positions", {}))
             movements = list(step.get("movements", []))
             ball = step.get("ball")
-            if ball:
-                movements = [m for m in movements if not (isinstance(m, dict) and m.get("_meta"))]
-                movements.append({"_meta": True, "_ball": ball})
+            tune = step.get("defense_tune") or step.get("defenseTune") or None
+            movements = [m for m in movements if not (isinstance(m, dict) and m.get("_meta"))]
+            if ball or tune:
+                meta = {"_meta": True}
+                if ball:
+                    meta["_ball"] = ball
+                if tune:
+                    meta["_defense_tune"] = tune
+                movements.append(meta)
             movements = json.dumps(movements)
             label = step.get("label", "")
             notes = step.get("notes", "")

@@ -273,6 +273,10 @@
       <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next step</button>
       <button id="playStepBtn" class="btn btn-secondary btn-sm" onclick="playCurrentStep()" title="Play this sheet only">▶ Play step</button>
       <button id="playAllBtn" class="btn btn-primary btn-sm" onclick="playAnimation()" title="Play every sheet. After a pause, continues from here.">▶ Play All</button>
+      {% if view_mode != 'share' %}
+      <button type="button" id="addManDefenseBtn" class="btn btn-primary btn-sm" onclick="toggleManDefense()">Add defense</button>
+      <button type="button" id="moveManBtn" class="btn btn-secondary btn-sm" onclick="toggleManMove()">Move them</button>
+      {% endif %}
       <button type="button" class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo the last change">Undo</button>
       <button type="button" class="btn btn-secondary btn-sm" onclick="redoStep()" title="Put back what Undo removed">Redo</button>
       {% if view_mode != 'share' %}
@@ -613,7 +617,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/man_defense.js') }}"></script>
+<script src="{{ url_for('static', filename='js/man_defense.js') }}?v=man-shell8"></script>
 <script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-dnd.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
@@ -642,6 +646,9 @@ let selectedArrowIndex = null;
 let selectedArrowStep = 0;
 let arrowDrag = null;
 let currentTool = 'select';
+let manDefenseOn = false;
+let manMoveMode = false;
+let manDragStarts = null;
 let currentPathStyle = 'straight';
 let currentPlayerType = 'offense';
 let arrowStart = null;
@@ -1128,8 +1135,22 @@ function pinDefense(pid, pos) {
   if (!step || !pos || !String(pid).startsWith('d')) return;
   if (!step.pinnedDefense) step.pinnedDefense = {};
   step.pinnedDefense[pid] = { x: pos.x, y: pos.y };
-  if (!step.positions) step.positions = {};
-  step.positions[pid] = { x: pos.x, y: pos.y };
+}
+
+function offensePositions(src) {
+  const out = {};
+  Object.keys(src || {}).forEach((k) => {
+    if (!String(k).startsWith('o')) return;
+    const p = src[k];
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') out[k] = { x: p.x, y: p.y };
+  });
+  return out;
+}
+
+function manCutsFor(step, liveCut) {
+  const saved = (step && step.manCuts) || [];
+  const rest = saved.filter((cut) => cut && (!liveCut || cut.player !== liveCut.player));
+  return liveCut ? rest.concat([liveCut]) : rest;
 }
 
 function overlayPinnedDefense(positions, stepIndex) {
@@ -1145,6 +1166,100 @@ function overlayPinnedDefense(positions, stepIndex) {
   return positions;
 }
 
+function manRim() {
+  return { x: 250, y: 15, ftDepth: 145 };
+}
+
+function playWantsManShell() {
+  if (!editingPlay) return false;
+  const path = String(editingPlay.category_path || '').toLowerCase();
+  const cat = String(editingPlay.category || '').toLowerCase();
+  return path.indexOf('defense') !== -1 || cat === 'defense' || cat.indexOf('defense') === 0;
+}
+
+function manShellStorageKey() {
+  return playId ? ('liberty-man-shell:' + playId) : '';
+}
+
+function restoreManShell() {
+  const key = manShellStorageKey();
+  if (key) {
+    try {
+      const saved = sessionStorage.getItem(key);
+      if (saved === '1') return true;
+      if (saved === '0') return false;
+    } catch (err) { /* storage blocked */ }
+  }
+  return playWantsManShell();
+}
+
+function rememberManShell() {
+  const key = manShellStorageKey();
+  if (!key) return;
+  try { sessionStorage.setItem(key, manDefenseOn ? '1' : '0'); } catch (err) { /* storage blocked */ }
+}
+
+function syncManShellButton() {
+  const btn = document.getElementById('addManDefenseBtn');
+  if (btn) btn.textContent = manDefenseOn ? 'Remove defense' : 'Add defense';
+}
+
+function toggleManDefense() {
+  manDefenseOn = !manDefenseOn;
+  rememberManShell();
+  syncManShellButton();
+  const step = steps[currentStep];
+  if (!step) return;
+  if (!step.positions) step.positions = {};
+  if (manDefenseOn) {
+    for (let i = 0; i < 5; i += 1) {
+      const pid = 'o' + (i + 1);
+      if (!step.positions[pid]) step.positions[pid] = defaultOffensePos(i);
+    }
+    step.ball = step.ball || 'o1';
+    step.matchups = step.matchups || {};
+    step.defenseTune = step.defenseTune || {};
+    step.pinnedDefense = {};
+    const sel = document.getElementById('playCategoryId');
+    if (sel) {
+      for (let i = 0; i < sel.options.length; i += 1) {
+        const text = (sel.options[i].textContent || '').replace(/\s+/g, ' ').trim();
+        if (text === 'Defense / Man' || text.endsWith('Defense / Man')) {
+          sel.value = sel.options[i].value;
+          break;
+        }
+      }
+    }
+  } else {
+    ['d1', 'd2', 'd3', 'd4', 'd5'].forEach((id) => { delete step.positions[id]; });
+    step.matchups = {};
+    step.manCuts = [];
+    manMoveMode = false;
+    const moveBtn = document.getElementById('moveManBtn');
+    if (moveBtn) moveBtn.textContent = 'Move them';
+  }
+  renderStep();
+  const hint = document.getElementById('sheetAnimHint');
+  if (hint) {
+    hint.textContent = manDefenseOn
+      ? 'Drag each offensive player to his spot. Then press Move them and drag the way he goes.'
+      : '';
+  }
+}
+
+function toggleManMove() {
+  if (!manDefenseOn) toggleManDefense();
+  manMoveMode = !manMoveMode;
+  const btn = document.getElementById('moveManBtn');
+  if (btn) btn.textContent = manMoveMode ? 'Set spots' : 'Move them';
+  const hint = document.getElementById('sheetAnimHint');
+  if (hint) {
+    hint.textContent = manMoveMode
+      ? 'Drag an offensive player the way he goes. Defense answers on the way.'
+      : 'Drag each offensive player to his starting spot.';
+  }
+}
+
 function withManDefense(positions, ballPid) {
   const src = positions || {};
   const out = {};
@@ -1154,10 +1269,25 @@ function withManDefense(positions, ballPid) {
   });
   // Imported FastDraw/PDF sheets are offense-only. Auto x-defenders sit on the
   // ball offset and look like every player has a basketball.
-  if (playHasSheets()) return out;
+  if (playHasSheets() && !manDefenseOn) {
+    Object.keys(out).forEach((k) => { if (String(k).startsWith('d')) delete out[k]; });
+    return out;
+  }
   Object.keys(out).forEach((k) => { if (String(k).startsWith('d')) delete out[k]; });
+  if (!manDefenseOn && playHasSheets()) return out;
   const ball = ballPid || lastSyncedBallPid || (steps[currentStep] && steps[currentStep].ball) || 'o1';
-  const placed = LibertyManDefense.placeManDefense(out, ball, { rim: { x: 250, y: 15 } });
+  const step = steps[currentStep];
+  const screens = ((step && (step.actions || step.movements)) || []).filter((action) => action && action.type === 'screen' && !action._meta).map((action) => ({
+    screener: action.from,
+    point: action.dest || (action.anchors && action.anchors[1]),
+  }));
+  const placed = LibertyManDefense.placeManDefense(out, ball, {
+    rim: manRim(),
+    screens: screens,
+    cuts: manCutsFor(step, null),
+    tunes: step && step.defenseTune,
+    matchups: step && step.matchups,
+  });
   Object.keys(placed).forEach((k) => { out[k] = placed[k]; });
   return out;
 }
@@ -1166,6 +1296,12 @@ function playerColor(pid) {
   const num = parseInt(String(pid).replace(/^[od]/, ''), 10);
   const idx = Number.isFinite(num) && num >= 1 ? num - 1 : 0;
   return PLAYER_COLORS[idx] || PLAYER_COLORS[0];
+}
+
+function defenderColor(pid) {
+  const step = steps[currentStep];
+  const manId = (step && step.matchups && step.matchups[pid]) || ('o' + String(pid).replace(/\D/g, ''));
+  return playerColor(manId);
 }
 
 function playerLabel(pid) {
@@ -1232,13 +1368,19 @@ function syncPlayerTokens(positions, ballPid) {
         playerLayer,
         pid,
         pos,
-        playerColor(pid),
+        isDefense ? defenderColor(pid) : playerColor(pid),
         playerLabel(pid),
         isDefense ? 'defense' : 'offense'
       );
       g = playerLayer.querySelector(`[data-player="${pid}"]`);
     }
-    if (g) g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+    if (g) {
+      g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+      if (isDefense) {
+        const mark = g.querySelector('text');
+        if (mark) mark.setAttribute('fill', defenderColor(pid));
+      }
+    }
   });
   if (ballPid) lastSyncedBallPid = ballPid;
 
@@ -1248,6 +1390,7 @@ function syncPlayerTokens(positions, ballPid) {
     if (seen.has(pid)) return;
     // Sheet plays are offense-only in the position map. Keep defenders that are
     // already on the court so a pause does not erase them before a drag.
+    if (manDefenseOn && pid && /^d[1-5]$/.test(String(pid))) return;
     if (!incomingHasDefense && pid && String(pid).startsWith('d')) return;
     g.remove();
   });
@@ -1313,8 +1456,9 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
   text.setAttribute('paint-order', 'stroke fill');
   text.setAttribute('font-weight', '800');
   if (type === 'defense') {
-    text.setAttribute('dy', '5');
-    text.setAttribute('font-size', '16');
+    text.setAttribute('dy', '6');
+    text.setAttribute('font-size', '22');
+    text.setAttribute('fill', color);
     text.textContent = '×';
   } else {
     text.setAttribute('dy', '5');
@@ -1325,7 +1469,7 @@ function renderPlayerToken(parent, pid, pos, color, label, type) {
 
   const canEditChoreo = canEditSheetChoreography();
   // View mode blocks normal editor tools, but sheet choreography review must drag.
-  if (!isReadOnly || canEditChoreo) {
+  if (!isReadOnly || canEditChoreo || manDefenseOn) {
     g.style.cursor = 'grab';
     g.addEventListener('pointerdown', (e) => startDrag(e, pid));
     g.addEventListener('touchstart', (e) => startDragTouch(e, pid), { passive: false });
@@ -1727,6 +1871,11 @@ function beginTokenDrag(pid, clientX, clientY, event) {
     if (!step.positions[pid]) step.positions[pid] = { x: pos.x, y: pos.y };
   }
   dragOffset = { x: svgP.x - pos.x, y: svgP.y - pos.y };
+  manDragStarts = {};
+  Object.keys(live).forEach((id) => {
+    if (!String(id).startsWith('o') || !live[id]) return;
+    manDragStarts[id] = { x: live[id].x, y: live[id].y };
+  });
   if (event && event.pointerId != null) holdCourtPointer(event);
   if (event && event.preventDefault) event.preventDefault();
 }
@@ -1768,27 +1917,117 @@ function applyTokenDrag(clientX, clientY) {
     }
     return;
   }
-  if (!steps[currentStep].positions) steps[currentStep].positions = {};
-  steps[currentStep].positions[selectedPlayer] = next;
-  rememberSpacing(selectedPlayer, next);
-  if (String(selectedPlayer).startsWith('d')) pinDefense(selectedPlayer, next);
+  const step = steps[currentStep];
+  if (!step.positions) step.positions = {};
+  const draggingDefense = String(selectedPlayer).startsWith('d');
+  if (!draggingDefense) {
+    step.positions[selectedPlayer] = next;
+    rememberSpacing(selectedPlayer, next);
+    if (!manMoveMode && step.manCuts) {
+      step.manCuts = step.manCuts.filter((cut) => cut && cut.player !== selectedPlayer);
+    }
+  }
+  if (draggingDefense) {
+    if (manDefenseOn) {
+      const offense = offensePositions(positionsThrough(currentStep));
+      const manId = (step.matchups && step.matchups[selectedPlayer]) || ('o' + selectedPlayer.slice(1));
+      const man = offense[manId];
+      const ball = offense[step.ball || 'o1'] || man;
+      const tunes = Object.assign({}, step.defenseTune || {});
+      delete tunes[selectedPlayer];
+      const bare = LibertyManDefense.placeManDefense(offense, step.ball || 'o1', {
+        rim: manRim(),
+        cuts: manCutsFor(step, null),
+        tunes: tunes,
+        matchups: step.matchups,
+      });
+      step.defenseTune = step.defenseTune || {};
+      if (man && bare[selectedPlayer]) {
+        step.defenseTune[selectedPlayer] = LibertyManDefense.measureTune(next, bare[selectedPlayer], man, ball, manRim());
+      }
+      if (step.pinnedDefense) delete step.pinnedDefense[selectedPlayer];
+      const placed = LibertyManDefense.placeManDefense(offense, step.ball || 'o1', {
+        rim: manRim(),
+        cuts: manCutsFor(step, null),
+        tunes: step.defenseTune,
+        matchups: step.matchups,
+      });
+      paintManDefenders(placed, step);
+    } else {
+      pinDefense(selectedPlayer, next);
+      const token = document.querySelector(`#playerLayer [data-player="${selectedPlayer}"]`);
+      if (token) token.setAttribute('transform', `translate(${next.x}, ${next.y})`);
+    }
+    return;
+  }
   if (playHasSheets() && String(selectedPlayer).startsWith('o')) {
     ensureSheetAlignStep(currentStep);
     sheetAlignByStep[currentStep].positions[selectedPlayer] = { x: next.x, y: next.y };
   }
   const token = document.querySelector(`#playerLayer [data-player="${selectedPlayer}"]`);
   if (token) token.setAttribute('transform', `translate(${next.x}, ${next.y})`);
-  if (String(selectedPlayer).startsWith('o') && steps[currentStep]) {
-    const placed = LibertyManDefense.placeManDefense(
-      steps[currentStep].positions, steps[currentStep].ball, { rim: { x: 250, y: 15 } }
-    );
-    Object.keys(placed).forEach((did) => {
-      const pins = steps[currentStep].pinnedDefense;
-      if (pins && pins[did]) return;
-      const def = document.querySelector(`#playerLayer [data-player="${did}"]`);
-      if (def) def.setAttribute('transform', `translate(${placed[did].x}, ${placed[did].y})`);
+  if (String(selectedPlayer).startsWith('o') && (manDefenseOn || document.querySelector('#playerLayer [data-player="d1"]'))) {
+    const liveCut = (manMoveMode && manDragStarts && manDragStarts[selectedPlayer]) ? {
+      player: selectedPlayer,
+      from: manDragStarts[selectedPlayer],
+      to: next,
+      at: next,
+      live: true,
+      starts: manDragStarts,
+    } : null;
+    const offense = offensePositions(positionsThrough(currentStep));
+    offense[selectedPlayer] = { x: next.x, y: next.y };
+    const placed = LibertyManDefense.placeManDefense(offense, step.ball || 'o1', {
+      rim: manRim(),
+      cuts: manCutsFor(step, liveCut),
+      tunes: step.defenseTune,
+      matchups: step.matchups,
     });
+    paintManDefenders(placed, step);
   }
+}
+
+function paintManDefenders(placed, step) {
+  Object.keys(placed || {}).forEach((did) => {
+    if (!String(did).startsWith('d') || !placed[did]) return;
+    if (step && step.pinnedDefense && step.pinnedDefense[did]) return;
+    let def = document.querySelector(`#playerLayer [data-player="${did}"]`);
+    if (!def) {
+      const layer = document.getElementById('playerLayer');
+      if (layer) renderPlayerToken(layer, did, placed[did], defenderColor(did), '×', 'defense');
+      def = document.querySelector(`#playerLayer [data-player="${did}"]`);
+    }
+    if (def) {
+      def.setAttribute('transform', `translate(${placed[did].x}, ${placed[did].y})`);
+      const mark = def.querySelector('text');
+      if (mark) mark.setAttribute('fill', defenderColor(did));
+    }
+  });
+}
+
+function commitManCut(pid) {
+  const step = steps[currentStep];
+  if (!step || !manDefenseOn || !pid || !String(pid).startsWith('o')) return;
+  step.manCuts = step.manCuts || [];
+  if (!manMoveMode || !manDragStarts || !manDragStarts[pid] || !step.positions[pid]) {
+    step.manCuts = step.manCuts.filter((cut) => cut && cut.player !== pid);
+    return;
+  }
+  const starts = {};
+  Object.keys(manDragStarts).forEach((id) => {
+    if (manDragStarts[id]) starts[id] = { x: manDragStarts[id].x, y: manDragStarts[id].y };
+  });
+  const at = { x: step.positions[pid].x, y: step.positions[pid].y };
+  const cut = {
+    player: pid,
+    from: { x: manDragStarts[pid].x, y: manDragStarts[pid].y },
+    to: at,
+    at: at,
+    live: true,
+    starts: starts,
+  };
+  step.manCuts = step.manCuts.filter((row) => row && row.player !== pid);
+  step.manCuts.push(cut);
 }
 
 function nearestOffensePid(pt) {
@@ -1816,7 +2055,16 @@ function finishTokenDrag() {
   selectedPlayer = null;
   dragMoved = false;
   dragOrigin = null;
-  if (!moved) return;
+  if (!moved) {
+    if (manDefenseOn && pid && String(pid).startsWith('o') && steps[currentStep] && steps[currentStep].ball !== pid) {
+      steps[currentStep].ball = pid;
+      lastSyncedBallPid = pid;
+      renderStep();
+      const hint = document.getElementById('sheetAnimHint');
+      if (hint) hint.textContent = 'He has the ball. The shell shifted.';
+    }
+    return;
+  }
   if (pid === 'ball' && ballOverride) {
     const owner = nearestOffensePid(ballOverride);
     if (owner && steps[currentStep]) {
@@ -1835,6 +2083,7 @@ function finishTokenDrag() {
       );
     }
   }
+  if (String(pid).startsWith('o')) commitManCut(pid);
   if (steps[currentStep]) steps[currentStep].coachOrder = true;
   if (playHasSheets()) markSheetChoreographyDirty(currentStep, { keepInk: true });
   if (pausedCourtPose) {
@@ -7356,6 +7605,8 @@ function initSteps() {
     steps = [{ positions, movements: [], label: 'Initial', notes: '', source_image: '', ball: 'o1' }];
   }
   currentStep = 0;
+  manDefenseOn = restoreManShell();
+  syncManShellButton();
   sheetAlignByStep = [];
   sheetAlignReady = !playHasSheets() || useSheetSlideshowMode();
   sheetAlignPromise = null;

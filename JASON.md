@@ -4,6 +4,28 @@ Updated: 2026-10-06. This file is on `main` once this note is merged. Branch `ja
 
 The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is counting that game from the film. It is not the book yet. Do not copy the book totals onto the AI rows to make them match.
 
+## Man defense on the play court
+
+This commit is the Liberty man shell. It is not a new Adrian count.
+
+Open a play. **Add defense** and **Move them** are in the row with Play All. On a defense play the five X's are already on the floor. Each X is the color of the offensive player he guards.
+
+Click an offensive player and he has the ball. The shell shifts.
+
+- On the ball, the X takes the high shoulder. The middle is closed. The sideline and the baseline stay open.
+- One pass away, the X is on the line between his man and the ball.
+- A high post is half-denied while the ball is above the free-throw line.
+- When the ball is at the free-throw line or below, the posts are fronted.
+- Two passes away, one foot is in the lane. Three passes away, the X is help-side in the lane, in front of a lob.
+- Drag an offensive player and the X's answer on the way. **Move them** makes that drag a cut. On a post exchange the screener's X hedges, the cutter's X goes over, and they switch if the cutter beats the screen.
+- Drag one X and the other four stay. That nudge stays relative to the ball.
+
+Build a picture (`/playbook/draw`) has the same two buttons on the court bar. Add defense sets the category to Defense / Man.
+
+Code: `static/js/man_defense.js`, `templates/playbook.html`, `templates/play_draw.html`, `blueprints/playbook.py`.
+
+A new message while a job is running is added instruction. It does not replace the job. That rule is in `.cursor/rules/liberty-orchestration.mdc`.
+
 ## The new run is not a better count
 
 Results now open run 12, because it finished with corrected rows. It is not a better count than run 11.
@@ -173,12 +195,15 @@ Code that writes these rows: `event_generator.py`, `manual_tag_teach.py`, `track
 
 Tags: `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`. Confirmed book: `data/stat_books/confirmed/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`.
 
-## Left off commit 664a129
+## Left off commit 664a129, included now
 
-The film-library commit is on `main`. These files were on the home machine and were not included. Open them there if you want the contents. Do not add the credential file.
+The film-library commit left these on the home machine. They are in this commit.
 
-- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot. They were already changed before the film-library work. They are not the tagger or the video library.
-- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar. It is per-film data, not the app change.
-- `data/playbook/choreography/102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. They were already untracked and are not part of this film work.
+- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot. They are not the tagger or the video library.
+- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar.
+- `data/playbook/choreography/97.json`, `102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. `85.json` only changed its saved time.
+
+Still out:
+
 - `adrian_quality.py`, `pytest.ini`, and `tests/test_ui_comprehensive.py` showed as modified, and the diff was only line endings. There is no code change to review.
-- A GitHub credential file was untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.
+- A GitHub credential file is untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.

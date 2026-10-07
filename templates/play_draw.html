@@ -28,12 +28,16 @@
       <button type="button" class="draw-tool-btn" data-action="screen">Screen</button>
       <button type="button" class="btn btn-secondary btn-sm" id="ballBtn" style="margin-top:14px;width:100%;">Give him the ball</button>
       <button type="button" class="btn btn-secondary btn-sm" id="defenseBtn" style="margin-top:8px;width:100%;">Add defense</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="moveBtn" style="margin-top:8px;width:100%;">Move them</button>
+      <p class="text-muted" id="defenseRules" hidden style="font-size:0.72rem;margin-top:8px;">Man shell. Set each offensive player, then press Move them and drag him the way he goes. Click a player and the X's shift to the ball. Drag an X and he keeps that spot relative to the ball. On the ball we take the high shoulder and force the sideline and the baseline. One pass away is on the line. Two passes away is in the gap. Three passes away is off the inside shoulder, help side, in front of the lob. It stays ball-you-man on a cut to the basket. A cut across the lane is chest-to-chest. On a post exchange the screener's defender hedges and the cutter's defender goes over. If the screen beats him, they switch and the hedge fronts the cutter. High posts are half-denied. At the free-throw line and below, posts are fronted. Every screen is hedged and gone over. This picture files under Defense / Man.</p>
       <p class="text-muted" id="drawHint" style="font-size:0.75rem;margin-top:10px;">Drag players into place. Click the player who moves.</p>
     </div>
 
     <div class="card draw-court-card">
       <div class="draw-court-bar">
         <button type="button" class="btn btn-secondary btn-sm" id="playPhaseBtn">Play this picture</button>
+        <button type="button" class="btn btn-primary btn-sm" id="defenseBtnCourt">Add defense</button>
+        <button type="button" class="btn btn-primary btn-sm" id="moveBtnCourt">Move them</button>
         <button type="button" class="btn btn-primary btn-sm" id="playAllBtn">Play all</button>
         <button type="button" class="btn btn-secondary btn-sm" id="stopBtn">Stop</button>
         <button type="button" class="btn btn-secondary btn-sm" id="undoBtn" title="Undo the last change">Undo</button>
@@ -90,7 +94,8 @@
   .draw-action.is-on { border-color:#1e3a8a; background:#eff6ff; }
   @media (max-width: 980px) { .draw-tool { grid-template-columns: 1fr; } }
 </style>
-<script src="{{ url_for('static', filename='js/man_defense.js') }}"></script>
+<script>window.DEFENSE_MAN_CATEGORY_ID = {{ defense_man_category_id|tojson }};</script>
+<script src="{{ url_for('static', filename='js/man_defense.js') }}?v=man-shell8"></script>
 <script>
 (function () {
   const boot = JSON.parse(document.getElementById('drawBoot').textContent || '{}');
@@ -138,6 +143,7 @@
     phase.actions = phase.actions || [];
     phase.ball = phase.ball || 'o1';
     phase.pinnedDefense = phase.pinnedDefense || {};
+    phase.defenseTune = phase.defenseTune || {};
     Object.keys(phase.positions).forEach((pid) => {
       if (!String(pid).startsWith('d')) return;
       const spot = phase.positions[pid];
@@ -160,6 +166,7 @@
   let armed = null;
   let selected = null;
   let drag = null;
+  let moveMode = false;
   let playRun = 0;
   let playing = false;
   let playBall = null;
@@ -266,40 +273,103 @@
       ballPoint: live.ball || null,
     };
   }
-  function shownPositions() {
-    const positions = {};
+  function defenseContext() {
     const offense = {};
     Object.keys(phase().positions).forEach((pid) => {
-      if (String(pid).startsWith('d')) return;
+      if (!String(pid).startsWith('o')) return;
       const at = posOf(pid);
-      if (!at) return;
+      if (at) offense[pid] = at;
+    });
+    const screens = (phase().actions || []).filter((action) => action.type === 'screen').map((action) => ({
+      screener: action.from,
+      point: action.dest || (action.anchors && action.anchors[1]) || phase().positions[action.from],
+    }));
+    const cuts = [];
+    (phase().manCuts || []).forEach((cut) => {
+      if (cut && cut.player) cuts.push(cut);
+    });
+    (phase().actions || []).forEach((action) => {
+      if (!action.from || action.type === 'pass' || action.type === 'screen') return;
+      const from = (action.anchors && action.anchors[0]) || phase().positions[action.from];
+      const to = action.dest || (action.anchors && action.anchors[1]);
+      if (!from || !to) return;
+      const at = live[action.from] || phase().positions[action.from];
+      cuts.push({ player: action.from, from: from, to: to, at: at });
+    });
+    if (moveMode && drag && drag.kind === 'player' && drag.moved && String(drag.pid).startsWith('o')) {
+      const at = phase().positions[drag.pid];
+      const from = (drag.starts && drag.starts[drag.pid]) || drag.start;
+      if (at && from) {
+        const liveCut = { player: drag.pid, from: from, to: at, at: at, live: true, starts: drag.starts || {} };
+        const without = cuts.filter((cut) => cut.player !== drag.pid);
+        without.push(liveCut);
+        return { offense: offense, screens: screens, cuts: without };
+      }
+    }
+    return { offense: offense, screens: screens, cuts: cuts };
+  }
+  function shownPositions() {
+    const positions = {};
+    Object.keys(phase().positions).forEach((pid) => {
+      if (String(pid).startsWith('d') || String(pid).startsWith('_')) return;
+      const at = posOf(pid);
+      if (!at || typeof at.x !== 'number') return;
       positions[pid] = at;
-      if (String(pid).startsWith('o')) offense[pid] = at;
     });
     const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
-    if (hasD) {
-      const placed = LibertyManDefense.placeManDefense(
-        offense, playBall || phase().ball, defenseOptions()
+    if (!hasD) return positions;
+    const ctx = defenseContext();
+    phase().defenseTune = phase().defenseTune || {};
+    const pins = phase().pinnedDefense || {};
+    Object.keys(pins).forEach((pid) => {
+      if (phase().defenseTune[pid]) return;
+      const pin = pins[pid];
+      const man = ctx.offense['o' + String(pid).slice(1)];
+      if (!pin || !man) return;
+      if (Math.hypot(pin.x, pin.y) < 8) {
+        delete pins[pid];
+        return;
+      }
+      const bare = LibertyManDefense.placeManDefense(
+        ctx.offense, playBall || phase().ball, Object.assign(defenseOptions(), { screens: ctx.screens })
       );
-      Object.keys(placed).forEach((pid) => {
-        const pin = phase().pinnedDefense && phase().pinnedDefense[pid];
-        positions[pid] = pin || placed[pid];
-      });
-    }
+      const ballId = playBall || phase().ball;
+      const ball = ctx.offense[ballId] || man;
+      if (bare[pid]) {
+        phase().defenseTune[pid] = LibertyManDefense.measureTune(pin, bare[pid], man, ball, defenseOptions().rim);
+      }
+      delete pins[pid];
+    });
+    phase().matchups = phase().matchups || {};
+    const placed = LibertyManDefense.placeManDefense(
+      ctx.offense,
+      playBall || phase().ball,
+      Object.assign(defenseOptions(), {
+        screens: ctx.screens,
+        cuts: ctx.cuts,
+        tunes: phase().defenseTune,
+        matchups: phase().matchups,
+      })
+    );
+    Object.keys(placed).forEach((pid) => {
+      positions[pid] = placed[pid];
+      if (String(pid).startsWith('d')) phase().positions[pid] = { x: placed[pid].x, y: placed[pid].y };
+    });
     return positions;
   }
   function render() {
     const arrows = document.getElementById('arrowLayer');
     const players = document.getElementById('playerLayer');
+    const positions = shownPositions();
     arrows.innerHTML = '';
     players.innerHTML = '';
-    const positions = shownPositions();
     Object.keys(positions).forEach((pid) => {
       const at = positions[pid];
       if (!at) return;
       const g = el('g', {});
       if (String(pid).startsWith('d')) {
-        const color = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'][(parseInt(String(pid).slice(1), 10) - 1) % 5] || '#111827';
+        const manId = (phase().matchups && phase().matchups[pid]) || ('o' + String(pid).slice(1));
+        const color = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'][(parseInt(String(manId).replace(/\D/g, ''), 10) - 1) % 5] || '#111827';
         g.appendChild(el('line', { x1: at.x - 8, y1: at.y - 8, x2: at.x + 8, y2: at.y + 8, stroke: color, 'stroke-width': '3', 'stroke-linecap': 'round' }));
         g.appendChild(el('line', { x1: at.x - 8, y1: at.y + 8, x2: at.x + 8, y2: at.y - 8, stroke: color, 'stroke-width': '3', 'stroke-linecap': 'round' }));
       } else {
@@ -328,6 +398,10 @@
     if (document.activeElement !== notes) notes.value = phase().notes || '';
     const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
     document.getElementById('defenseBtn').textContent = hasD ? 'Remove defense' : 'Add defense';
+    const courtDefense = document.getElementById('defenseBtnCourt');
+    if (courtDefense) courtDefense.textContent = hasD ? 'Remove defense' : 'Add defense';
+    const rules = document.getElementById('defenseRules');
+    if (rules) rules.hidden = !hasD;
   }
 
   function renderActions() {
@@ -594,6 +668,12 @@
       }
       armed = btn.dataset.action;
       document.querySelectorAll('[data-action]').forEach((other) => other.classList.toggle('is-on', other === btn));
+      const defenseOn = Object.keys(phase().positions).some((id) => String(id).startsWith('d'));
+      if (defenseOn && armed === 'screen' && actor === (playBall || phase().ball)) {
+        armed = 'pick-screener';
+        setHint('Click the player who sets the screen. The ball stays put.');
+        return;
+      }
       setHint(armed === 'pass'
         ? 'Click the player who catches the pass.'
         : (armed === 'dribble' ? 'Click the spot he dribbles to.' : 'Click where he goes.'));
@@ -614,13 +694,41 @@
     pushUndo();
     const hasD = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
     if (hasD) {
+      phase().matchups = {};
       Object.keys(phase().positions).forEach((pid) => {
         if (String(pid).startsWith('d')) delete phase().positions[pid];
       });
     } else {
       Object.keys(DEFENSE).forEach((pid) => { phase().positions[pid] = { x: 0, y: 0 }; });
+      const sel = document.getElementById('categoryId');
+      const manId = window.DEFENSE_MAN_CATEGORY_ID;
+      if (sel && manId) {
+        const label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
+        if (label.indexOf('Defense') !== 0) sel.value = String(manId);
+        const hidden = document.querySelector('#drawForm input[name="category"]');
+        if (hidden) hidden.value = 'defense';
+      }
     }
     render();
+  });
+  document.getElementById('defenseBtnCourt').addEventListener('click', () => {
+    document.getElementById('defenseBtn').click();
+  });
+  document.getElementById('moveBtnCourt').addEventListener('click', () => {
+    document.getElementById('moveBtn').click();
+  });
+  document.getElementById('moveBtn').addEventListener('click', () => {
+    moveMode = !moveMode;
+    const btn = document.getElementById('moveBtn');
+    const courtBtn = document.getElementById('moveBtnCourt');
+    const label = moveMode ? 'Set spots' : 'Move them';
+    btn.textContent = label;
+    if (courtBtn) courtBtn.textContent = label;
+    btn.classList.toggle('is-on', moveMode);
+    if (courtBtn) courtBtn.classList.toggle('is-on', moveMode);
+    setHint(moveMode
+      ? 'Drag an offensive player the way he goes. Defense answers on the way.'
+      : 'Drag each offensive player to his starting spot.');
   });
   document.getElementById('phaseNotes').addEventListener('input', (e) => { phase().notes = e.target.value; });
 
@@ -637,6 +745,20 @@
   }
 
   function onCourtRelease(p, moved) {
+    if (armed === 'pick-screener') {
+      const screener = hitPlayer(p);
+      const ballId = playBall || phase().ball;
+      if (!screener || !String(screener).startsWith('o') || screener === ballId) {
+        setHint('Click the player who sets the screen. The ball stays put.');
+        return;
+      }
+      actor = screener;
+      armed = 'screen';
+      document.querySelectorAll('[data-action]').forEach((btn) => btn.classList.toggle('is-on', btn.dataset.action === 'screen'));
+      setHint('Click where he sets the screen.');
+      render();
+      return;
+    }
     if (armed === 'dribble' && actor && !moved) {
       const start = phase().positions[actor];
       if (!start || dist(start, p) < 12) {
@@ -691,8 +813,15 @@
       }
       actor = pid;
       armed = null;
+      const defenseOn = Object.keys(phase().positions).some((id) => String(id).startsWith('d'));
+      if (defenseOn && String(pid).startsWith('o')) {
+        phase().ball = pid;
+        playBall = pid;
+        setHint('He has the ball. The shell shifted.');
+      } else {
+        setHint('He starts here. Click Cut, Pass, Dribble, or Screen, then where he goes.');
+      }
       document.querySelectorAll('[data-action]').forEach((btn) => btn.classList.remove('is-on'));
-      setHint('He starts here. Click Cut, Pass, Dribble, or Screen, then where he goes.');
       render();
       return;
     }
@@ -723,7 +852,12 @@
     const defender = !armed ? hitDefender(p) : null;
     const pid = defender || hitPlayer(p);
     if (!pid) { drag = { kind: 'court', start: p, moved: false }; return; }
-    drag = { kind: 'player', pid, start: p, moved: false };
+    drag = { kind: 'player', pid, start: { x: p.x, y: p.y }, moved: false, starts: {} };
+    Object.keys(phase().positions).forEach((id) => {
+      if (!String(id).startsWith('o')) return;
+      const spot = phase().positions[id];
+      if (spot) drag.starts[id] = { x: spot.x, y: spot.y };
+    });
     svg.setPointerCapture(e.pointerId);
   });
   svg.addEventListener('pointermove', (e) => {
@@ -732,9 +866,33 @@
     drag.moved = drag.moved || dist(drag.start, p) > 4;
     if (drag.moved) {
       phase().positions[drag.pid] = { x: p.x, y: p.y };
+      if (!moveMode && String(drag.pid).startsWith('o')) {
+        phase().manCuts = (phase().manCuts || []).filter((cut) => cut && cut.player !== drag.pid);
+      }
       if (String(drag.pid).startsWith('d')) {
-        if (!phase().pinnedDefense) phase().pinnedDefense = {};
-        phase().pinnedDefense[drag.pid] = { x: p.x, y: p.y };
+        const oid = 'o' + String(drag.pid).slice(1);
+        const man = phase().positions[oid];
+        const ballId = playBall || phase().ball;
+        const ball = phase().positions[ballId] || man;
+        const tunes = Object.assign({}, phase().defenseTune || {});
+        delete tunes[drag.pid];
+        const offense = {};
+        Object.keys(phase().positions).forEach((id) => {
+          if (String(id).startsWith('o') && phase().positions[id]) offense[id] = phase().positions[id];
+        });
+        const bare = LibertyManDefense.placeManDefense(
+          offense, ballId, Object.assign(defenseOptions(), { tunes: tunes, cuts: (phase().manCuts || []), matchups: phase().matchups })
+        );
+        phase().defenseTune = phase().defenseTune || {};
+        if (man && bare[drag.pid]) {
+          phase().defenseTune[drag.pid] = LibertyManDefense.measureTune(
+            { x: p.x, y: p.y }, bare[drag.pid], man, ball, defenseOptions().rim
+          );
+        }
+        if (phase().pinnedDefense) delete phase().pinnedDefense[drag.pid];
+        setHint('He keeps that spot relative to the ball.');
+      } else if (moveMode && String(drag.pid).startsWith('o')) {
+        setHint('Defense is answering that cut.');
       }
     }
     render();
@@ -742,7 +900,26 @@
   svg.addEventListener('pointerup', (e) => {
     if (!drag) return;
     const moved = !!drag.moved;
+    const finished = drag;
     const p = svgPoint(e);
+    if (moved && moveMode && finished.kind === 'player' && String(finished.pid).startsWith('o') && finished.starts && finished.starts[finished.pid]) {
+      const at = phase().positions[finished.pid];
+      if (at) {
+        const starts = {};
+        Object.keys(finished.starts).forEach((id) => {
+          if (finished.starts[id]) starts[id] = { x: finished.starts[id].x, y: finished.starts[id].y };
+        });
+        phase().manCuts = (phase().manCuts || []).filter((cut) => cut && cut.player !== finished.pid);
+        phase().manCuts.push({
+          player: finished.pid,
+          from: { x: finished.starts[finished.pid].x, y: finished.starts[finished.pid].y },
+          to: { x: at.x, y: at.y },
+          at: { x: at.x, y: at.y },
+          live: true,
+          starts: starts,
+        });
+      }
+    }
     drag = null;
     if (moved && dragUndo) {
       undoStack.push(dragUndo);
@@ -759,6 +936,7 @@
       notes: item.notes || '',
       positions: item.positions,
       ball: item.ball || 'o1',
+      defense_tune: item.defenseTune || {},
       source_image: item.source_image || '',
       movements: layoutActions(item).map((action) => ({
         from: action.from,
@@ -807,6 +985,13 @@
     document.getElementById('stepsJson').value = JSON.stringify(picturePayload());
   });
 
+  const catLabel = (document.getElementById('categoryId') && document.getElementById('categoryId').selectedOptions[0])
+    ? document.getElementById('categoryId').selectedOptions[0].textContent
+    : '';
+  const alreadyGuarded = Object.keys(phase().positions).some((pid) => String(pid).startsWith('d'));
+  if (!alreadyGuarded && /defense/i.test(catLabel)) {
+    Object.keys(DEFENSE).forEach((pid) => { phase().positions[pid] = { x: 0, y: 0 }; });
+  }
   drawCourt();
   render();
 })();

@@ -14,6 +14,18 @@ Schema: `schema.sql`. Start with `analysis_runs`, `events`, `detections`, `track
 
 `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`
 
+## Man defense on the play court
+
+This commit is the Liberty man shell. It does not change `events` or the Adrian count.
+
+Open a play. **Add defense** and **Move them** are in the row with Play All. On a defense play the five X's are already on the floor. Each X is the color of the offensive player he guards. A click gives that player the ball and the shell shifts: high shoulder on the ball, on the line one pass away, half-deny on a high post while the ball is above the free-throw line, and a front when the ball is at the free-throw line or below. **Move them** makes a drag a cut. A post exchange hedges, goes over, and switches if the cutter beats the screen. Drag one X and the other four stay.
+
+Build a picture is `/playbook/draw`. Add defense sets category Defense / Man.
+
+Code: `static/js/man_defense.js`, `templates/playbook.html`, `templates/play_draw.html`, `blueprints/playbook.py`. A defender nudge is stored as `_defense_tune` on the step `_meta` object. It is not a new table. `schema.sql` did not change.
+
+A new message while a job is running is added instruction. It does not replace the job. That rule is in `.cursor/rules/liberty-orchestration.mdc`.
+
 ## The run on the results page
 
 Run 12 is what results open. It finished 2026-10-06 04:59:04 UTC, 1,452 events, no error, and it has corrected rows:
@@ -178,12 +190,15 @@ Do not change `schema.sql` without Scott. Do not turn auto-accept on (pull reque
 
 Code that writes these rows: `event_generator.py`, `manual_tag_teach.py`, `track_identity.py`, `court_slot_mapping.py`, `game_boxscore.py`. `ai_bridge.py` does not count a make.
 
-## Left off commit 664a129
+## Left off commit 664a129, included now
 
-The film-library commit is on `main`. These files were on the home machine and were not included. Open them there if you want the contents. Do not add the credential file.
+The film-library commit left these on the home machine. They are in this commit. They do not change the Adrian event rows.
 
-- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot. They were already changed before the film-library work. They are not the tagger or the video library.
-- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar. It is per-film data, not the app change.
-- `data/playbook/choreography/102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. They were already untracked and are not part of this film work.
+- `data/hoopsalytics/full_film_panel_latest.json` and `data/hoopsalytics/full_film_panel_history.jsonl` are the learning-panel snapshot.
+- `data/jersey_shades/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941.json` is the run 12 shirt-shade sidecar.
+- `data/playbook/choreography/97.json`, `102.json`, `103.json`, `149.json`, and `150.json` are saved play movements. `85.json` only changed its saved time.
+
+Still out:
+
 - `adrian_quality.py`, `pytest.ini`, and `tests/test_ui_comprehensive.py` showed as modified, and the diff was only line endings. There is no code change to review.
-- A GitHub credential file was untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.
+- A GitHub credential file is untracked in the repo root. It stays out. Do not commit it and do not paste it into a note.
