@@ -1271,7 +1271,9 @@ def teach_film_tool_manual(game_id):
     rows = data.get("rows")
     if not isinstance(rows, list):
         return jsonify({"ok": False, "error": "rows must be a list"}), 400
-    from film_tool_tags import TagClearRefused, load_manual_tags, save_manual_tags
+    from film_tool_tags import (
+        StaleTags, TagClearRefused, check_not_stale, load_manual_tags, save_manual_tags,
+    )
 
     existing = load_manual_tags(game_id)
     kept = existing.get("rows") if isinstance(existing, dict) else None
@@ -1280,13 +1282,19 @@ def teach_film_tool_manual(game_id):
             "ok": False,
             "error": "Saved tags were kept. An empty list cannot replace them.",
         }), 409
+    try:
+        check_not_stale(game_id, data)
+    except StaleTags as exc:
+        return jsonify({"ok": False, "error": str(exc), "stale": True}), 409
     db = get_db()
     result = teach_from_film_tool_rows(db, game_id, rows)
     try:
-        result["tag_file"] = save_manual_tags(
+        saved_tags = save_manual_tags(
             game_id,
             data if isinstance(data, dict) else {"rows": rows},
-        ).get("analysisGameId")
+        )
+        result["tag_file"] = saved_tags.get("analysisGameId")
+        result["tag_updated_at"] = saved_tags.get("updatedAt")
     except TagClearRefused as exc:
         return jsonify({"ok": False, "error": str(exc)}), 409
     except ValueError:
@@ -1323,15 +1331,18 @@ def film_manual_tags(game_id):
         if data is None:
             return jsonify({"analysisGameId": game_id, "rows": []}), 200
         return jsonify(data)
-    from film_tool_tags import TagClearRefused
+    from film_tool_tags import StaleTags, TagClearRefused, check_not_stale
 
     payload = request.get_json(silent=True) or {}
     try:
+        check_not_stale(game_id, payload)
         return jsonify(save_manual_tags(
             game_id,
             payload,
             allow_clear=bool(payload.get("confirmClear")),
         ))
+    except StaleTags as exc:
+        return jsonify({"error": str(exc), "stale": True}), 409
     except TagClearRefused as exc:
         return jsonify({"error": str(exc)}), 409
     except ValueError as exc:

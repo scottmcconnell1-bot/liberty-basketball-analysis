@@ -2454,10 +2454,30 @@ def ensure_detection_indexes(db):
     db.commit()
 
 
+def ensure_event_indexes(db):
+    """Index the two ways events are looked up: by game and time, by game and type.
+
+    The events table had no index, so every page and every teach pass read all of it.
+    Idempotent and quick (the table holds thousands of rows, not millions).
+    """
+    if not db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'"
+    ).fetchone():
+        return
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_events_game_ts ON events(game_id, timestamp_ms)"
+    )
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_events_game_type ON events(game_id, event_type)"
+    )
+    db.commit()
+
+
 def _ensure_migration_columns(db):
     """Add new columns/tables to existing databases without wiping data."""
     _migrate_analysis_runs_identity(db)
     ensure_detection_indexes(db)
+    ensure_event_indexes(db)
 
     # ── New tables (idempotent) ──────────────────────────────
     db.executescript("""

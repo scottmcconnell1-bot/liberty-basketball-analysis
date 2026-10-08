@@ -341,6 +341,39 @@ def test_tag_does_not_take_another_players_shot(app):
         assert row["review_status"] == "corrected"
 
 
+def test_a_tagged_make_is_never_rejected_by_the_ai_shot(app):
+    from manual_tag_teach import reconcile_makes_with_shots
+
+    game_id = "teach-tag-is-truth"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   details_json, source_type, review_status, human_verified, confidence)
+               VALUES (?, '#40 Dayley', 'made_two', 'make', 48200,
+                       '{"through_rim": false, "net_moved": false}', 'ai', 'corrected', 1, 1)""",
+            (game_id,),
+        )
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   details_json, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'shot', 'miss', 48200,
+                       '{"through_rim": false, "net_moved": false}', 'ai', 'pending', 0.5)""",
+            (game_id,),
+        )
+        db.commit()
+        report = reconcile_makes_with_shots(db, game_id)
+        db.commit()
+        assert report["rejected"] == 0
+        row = db.execute(
+            "SELECT review_status FROM events WHERE game_id=? AND event_type='made_two'",
+            (game_id,),
+        ).fetchone()
+        assert row["review_status"] == "corrected"
+
+
 def test_make_is_rejected_when_its_shot_did_not_go_in(app):
     from manual_tag_teach import reconcile_makes_with_shots
 
@@ -352,7 +385,7 @@ def test_make_is_rejected_when_its_shot_did_not_go_in(app):
                   (game_id, player, event_type, shot_result, timestamp_ms,
                    details_json, source_type, review_status, confidence)
                VALUES (?, '#40 Dayley', 'made_two', 'make', 48200,
-                       '{"through_rim": false, "net_moved": false}', 'ai', 'corrected', 1)""",
+                       '{"through_rim": false, "net_moved": false}', 'ai', 'pending', 1)""",
             (game_id,),
         )
         db.commit()
@@ -364,6 +397,97 @@ def test_make_is_rejected_when_its_shot_did_not_go_in(app):
             (game_id,),
         ).fetchone()
         assert row["review_status"] == "rejected"
+
+
+def test_an_older_shorter_save_leaves_the_longer_tags_recoverable(tmp_path, monkeypatch):
+    import json
+    import film_tool_tags
+
+    monkeypatch.setattr(film_tool_tags, "TAGS_ROOT", tmp_path)
+    game_id = "jrhigh_adrian,_or_HISTORY"
+
+    def rows(n):
+        return [{"eventtype": "2PT", "start": f"{i}:00.0", "quarter": "Q1", "result": "Make"} for i in range(n)]
+
+    film_tool_tags.save_manual_tags(game_id, {"rows": rows(378)})
+    assert not (tmp_path / "_history").exists()  # nothing to keep yet
+    film_tool_tags.save_manual_tags(game_id, {"rows": rows(246)})  # an older, shorter list arrives
+    kept = sorted((tmp_path / "_history").glob("*.json"))
+    assert len(kept) == 1
+    assert "378rows" in kept[0].name
+    assert len(json.loads(kept[0].read_text(encoding="utf-8"))["rows"]) == 378
+    # Growing saves within two minutes do not pile up copies.
+    film_tool_tags.save_manual_tags(game_id, {"rows": rows(247)})
+    film_tool_tags.save_manual_tags(game_id, {"rows": rows(248)})
+    assert len(sorted((tmp_path / "_history").glob("*.json"))) == 1
+
+
+def test_history_keeps_recent_copies_then_one_per_hour(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    import film_tool_tags
+
+    monkeypatch.setattr(film_tool_tags, "TAGS_ROOT", tmp_path)
+    monkeypatch.setattr(film_tool_tags, "HISTORY_KEEP", 3)
+    gid = "jrhigh_adrian,_or_THIN"
+    folder = tmp_path / "_history"
+    folder.mkdir()
+    now = datetime.now(timezone.utc)
+
+    def put(minutes_ago):
+        stamp = (now - timedelta(minutes=minutes_ago)).strftime("%Y%m%dT%H%M%S%fZ")
+        path = folder / f"{gid}__{stamp}__5rows.json"
+        path.write_text("{}", encoding="utf-8")
+        return path
+
+    recent = [put(m) for m in (1, 2, 3)]
+    # Three copies inside the same old hour, one from a week ago.
+    base = 600
+    old_same_hour = [put(base + k) for k in (0, 1, 2)]
+    week = put(60 * 24 * 7)
+    film_tool_tags._prune_history(sorted(folder.glob(f"{gid}__*.json")))
+    left = {p.name for p in folder.glob("*.json")}
+    assert all(p.name in left for p in recent)
+    assert week.name not in left
+    assert sum(p.name in left for p in old_same_hour) <= 2  # at most one per clock hour
+
+
+def test_a_stale_tab_cannot_overwrite_newer_tags(client):
+    game_id = "jrhigh_adrian,_or_STALE_TAB"
+
+    def rows(n):
+        return [{"eventtype": "2PT", "start": f"{i}:00.0", "quarter": "Q1", "result": "Make"} for i in range(n)]
+
+    first = client.post(f"/api/film/{game_id}/manual-tags", json={"rows": rows(5)})
+    assert first.status_code == 200
+    base1 = first.get_json()["updatedAt"]
+    second = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": rows(8), "baseUpdatedAt": base1},
+    )
+    assert second.status_code == 200
+    assert "baseUpdatedAt" not in second.get_json()
+    # A tab still built on the first version tries to save.
+    stale = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": rows(6), "baseUpdatedAt": base1},
+    )
+    assert stale.status_code == 409
+    assert stale.get_json()["stale"] is True
+    # A tab opened before this check sent no version at all.
+    old_tab = client.post(f"/api/film/{game_id}/manual-tags", json={"rows": rows(6)})
+    assert old_tab.status_code == 409
+    kept = client.get(f"/api/film/{game_id}/manual-tags").get_json()
+    assert len(kept["rows"]) == 8
+    # The Teach AI route is guarded the same way.
+    taught = client.post(f"/api/film/{game_id}/teach-manual", json={"rows": rows(6)})
+    assert taught.status_code == 409
+    assert len(client.get(f"/api/film/{game_id}/manual-tags").get_json()["rows"]) == 8
+    # A script that means to replace the copy can say so.
+    forced = client.post(
+        f"/api/film/{game_id}/manual-tags",
+        json={"rows": rows(9), "force": True},
+    )
+    assert forced.status_code == 200
 
 
 def test_empty_manual_tags_do_not_replace_saved_rows(client):
@@ -388,7 +512,7 @@ def test_empty_manual_tags_do_not_replace_saved_rows(client):
     assert kept["rows"][0]["start"] == "32:15.0"
     cleared = client.post(
         f"/api/film/{game_id}/manual-tags",
-        json={"rows": [], "confirmClear": True},
+        json={"rows": [], "confirmClear": True, "baseUpdatedAt": saved.get_json()["updatedAt"]},
     )
     assert cleared.status_code == 200
     assert cleared.get_json()["rows"] == []
@@ -460,7 +584,8 @@ def test_unfinished_manual_tags_are_not_complete(client, db):
     finished = client.post(
         f"/api/film/{game_id}/manual-tags",
         json={"rows": [{"eventtype": "EndQTR", "start": "64:00.0", "quarter": "Q4", "result": "NA"}],
-              "lastTaggedTime": "64:00.0"},
+              "lastTaggedTime": "64:00.0",
+              "baseUpdatedAt": posted.get_json()["updatedAt"]},
     )
     assert finished.status_code == 200
     videos = client.get("/api/videos?light=1").get_json()

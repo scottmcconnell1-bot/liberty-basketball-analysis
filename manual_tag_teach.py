@@ -347,6 +347,9 @@ def reconcile_makes_with_shots(db, game_id: str) -> dict[str, int]:
     A tag may name an unnamed tracker. It may not take a shot that already
     belongs to someone else. A make whose own shot says the ball did not go
     in is rejected.
+
+    A make the coach tagged is truth (Scott, 2026-10-07). Rows already
+    corrected from a tag, or marked human_verified, are never rejected here.
     """
     game_id = normalize_analysis_game_id(game_id)
     makes = db.execute(
@@ -355,7 +358,8 @@ def reconcile_makes_with_shots(db, game_id: str) -> dict[str, int]:
             WHERE game_id=?
               AND COALESCE(source_type,'ai')='ai'
               AND event_type IN ('made_two','made_three','made_free_throw')
-              AND review_status != 'rejected'""",
+              AND review_status NOT IN ('rejected','corrected')
+              AND COALESCE(human_verified,0)=0""",
         (game_id,),
     ).fetchall()
     rejected = 0

@@ -91,6 +91,9 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at     TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_events_game_ts ON events(game_id, timestamp_ms);
+CREATE INDEX IF NOT EXISTS idx_events_game_type ON events(game_id, event_type);
+
 -- ── Season & schedule ─────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS seasons (

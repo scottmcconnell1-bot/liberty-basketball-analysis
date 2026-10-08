@@ -1,41 +1,28 @@
 # Agent Handoffs
 
-Current coordination uses **one active task file** — not GitHub labels.
+One active task file, not GitHub labels.
 
 ## Start here
 
-1. `docs/ORCHESTRATION.md` — account setup, roles, usage rules
-2. **`docs/agent_handoffs/ACTIVE.md`** — current bounded task and report
-3. `PROJECT_STATUS.md` — long-lived verified facts
+1. `AUTHORITY.md` and `AGENT_PROTOCOL.md` at the repo root
+2. **`docs/agent_handoffs/ACTIVE.md`** — current state, open decisions, do-nots (kept short)
+3. `docs/BRANCH_POLICY.md` — work on `main`
 
 ## Workflow
 
-1. Orchestrator writes or updates `ACTIVE.md` with objective + checklist.
-2. Current review work is `cursor/playbook-jason-clean-slate-ac1f` (pull request 151). `main` and `jason-5-may-updates` stay at pull request 150 until 151 is reviewed.
-3. Agent updates the Report section (Proven / Inferred / Unknown) and sets status to `done`.
-4. Completed tasks move to `ARCHIVE/`.
-5. Code changes go through a PR on `cursor/<task>-ac1f`.
-
-Scott starts a session with:
-
-```
-Read docs/ORCHESTRATION.md and docs/agent_handoffs/ACTIVE.md. Execute the active task.
-```
+1. Update `ACTIVE.md` when a task actually completes. Replace the paragraph it changes. Move old text to `ARCHIVE/`.
+2. Code changes go to `main`. Open a pull request for Jason when asked, and the same one for Brad on `Brad/Claude`.
+3. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes' note is `HERMES.md`.
 
 ## Legacy (retired)
 
-Alpha/Owl GitHub label polling (`OWL ACTION`, `OWL DONE`, `OWL NEEDS`) is historical. Do not create new Owl-labeled issues.
-
-Older snapshots remain for audit:
-
-- `ALPHA_GITHUB_SYNC_2026-07-05.md`
-- `ISSUE_*` files
+Alpha/Owl GitHub label polling is historical. The old issue and queue notes are in `ARCHIVE/legacy-alpha-owl/`. Do not create new Owl-labeled issues.
 
 ## Report format
 
 ```markdown
 ### Proven
-(directly verified)
+(directly verified, say what was checked)
 
 ### Inferred
 (reasonable conclusions)

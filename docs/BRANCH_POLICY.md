@@ -1,19 +1,21 @@
 # Branch Policy
 
-Updated: 2026-09-11
+Updated: 2026-10-07
 
 ## Keep it small
 
 | Branch | Role |
 | --- | --- |
-| `main` | Only integration line / GitHub default |
-| `cursor/<topic>-ac1f` | **One** active work branch |
+| `main` | Working branch and GitHub default. Finished work is merged here and pushed. |
+| `jason-5-may-updates`, `Brad/Claude` | Mirrors. They stay even with `main`. |
 | Short-lived PR branches | Merge to `main`, then delete |
 
 ## Rules
 
-1. Do not start a second topic branch without Scott’s OK.  
-2. After merge: delete remote feature branch.  
-3. Park work: note in `ACTIVE.md`, then delete or leave clearly named `parked/…` only if Scott asks.  
-4. Legacy name `jason-5-may-updates` may remain temporarily as a pointer; new work targets **`main`**.  
-5. Propose branch deletes as a list; Scott approves before mass delete.
+1. Work on `main`. A side branch or a write-up is not the current code.
+2. Do not start a second topic branch without Scott's OK.
+3. When a pull request is opened for Jason, push the same commits to `Brad/Claude` and open the matching pull request there.
+4. After a merge, delete the short-lived remote branch.
+5. Park work in a note in `ACTIVE.md`. Do not leave unnamed branches behind.
+6. Propose branch deletes as a list. Scott approves before any mass delete.
+7. Never force-push and never amend a pushed commit.

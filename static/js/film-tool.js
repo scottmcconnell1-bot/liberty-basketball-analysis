@@ -154,6 +154,10 @@ let pendingRosterImportSide = 'our';
 let editingRosterPlayerLabel = null;
 let selectedGameId = null;
 let autosavePaused = false;
+let suppressServerPush = false;
+const TAG_SERVER_SAVE_EVERY_MS = 30000;
+let tagServerBase = '';   // updatedAt of the server tag copy this tab is built on
+let lastServerSig = '';   // the rows the server already has
 let currentStarters = null;
 let currentLineups = { liberty: new Set(), opponent: new Set() };
 let startersMode = 'initial';
@@ -687,7 +691,17 @@ function mapTeamToRosterKey(team) {
     return getRosterKey(rosterSideForTeam(team));
 }
 
+// While a pass over many rows runs, the sorted roster for a team is worked out once.
+let rosterPassCache = null;
+
 function rosterForTeam(team) {
+    if (rosterPassCache) {
+        const cached = rosterPassCache.get(team);
+        if (cached) return cached;
+        const fresh = sortPlayers(rosters[mapTeamToRosterKey(team)] || []);
+        rosterPassCache.set(team, fresh);
+        return fresh;
+    }
     return sortPlayers(rosters[mapTeamToRosterKey(team)] || []);
 }
 
@@ -808,12 +822,22 @@ function ensureSelectValue(select, value) {
 function repairEmptyTeams() {
     if (!rowsBody) return false;
     let changed = false;
+    // A game repeats the same twenty or so players across hundreds of rows.
+    // Work each player out once per pass, not once per row.
+    const inferredFor = new Map();
+    const matchesTeam = new Map();
+    rosterPassCache = new Map();
+    try {
     [...rowsBody.querySelectorAll('tr')].forEach(tr => {
         const teamEl = tr.querySelector('[data-key="team"]');
         const playerEl = tr.querySelector('[data-key="player"]');
         if (!teamEl) return;
         const player = (playerEl && playerEl.value) || '';
-        const inferred = inferTeamFromPlayer(player);
+        let inferred = inferredFor.get(player);
+        if (inferred === undefined) {
+            inferred = inferTeamFromPlayer(player);
+            inferredFor.set(player, inferred);
+        }
         if (inferred) {
             if (teamEl.value !== inferred) {
                 ensureSelectValue(teamEl, inferred);
@@ -821,12 +845,22 @@ function repairEmptyTeams() {
             }
             return;
         }
-        if (player && teamEl.value && teamEl.value !== 'Our Team' && teamEl.value !== 'Opponent'
-            && !rosterPlayerMatch(rosterForTeam(teamEl.value), player)) {
-            teamEl.value = '';
-            changed = true;
+        if (player && teamEl.value && teamEl.value !== 'Our Team' && teamEl.value !== 'Opponent') {
+            const pairKey = `${teamEl.value}\u0001${player}`;
+            let ok = matchesTeam.get(pairKey);
+            if (ok === undefined) {
+                ok = rosterPlayerMatch(rosterForTeam(teamEl.value), player);
+                matchesTeam.set(pairKey, ok);
+            }
+            if (!ok) {
+                teamEl.value = '';
+                changed = true;
+            }
         }
     });
+    } finally {
+        rosterPassCache = null;
+    }
     return changed;
 }
 
@@ -1412,6 +1446,7 @@ function handleRowsChanged() {
     updateEventCount();
     renderScore();
     autosaveCurrentGame();
+    queueAutosave();
 }
 
 function clearAllRows() {
@@ -1546,7 +1581,7 @@ function getGameMeta() {
 }
 
 function serializeCurrentGame() {
-    return { ...getGameMeta(), rows: getAllRows() };
+    return { ...getGameMeta(), rows: getAllRows(), baseUpdatedAt: tagServerBase };
 }
 
 function loadGameIntoUI(game, opts = {}) {
@@ -1569,7 +1604,13 @@ function loadGameIntoUI(game, opts = {}) {
     rowsBody.innerHTML = '';
     (game.rows || []).forEach(addRow);
     autosavePaused = false;
-    handleRowsChanged();
+    // A saved game from another film must never be sent to this film's file.
+    suppressServerPush = !!openAnalysisGameId() && !autosaveMatchesOpenFilm(game);
+    try {
+        handleRowsChanged();
+    } finally {
+        suppressServerPush = false;
+    }
     renderGames();
     if (opts.seek !== false) seekToLastTag();
     const count = (game.rows || []).length;
@@ -1588,10 +1629,13 @@ function autosaveCurrentGame() {
 }
 
 let autosaveTimeout = null;
+// Every tag added, edited, or deleted is sent to the server a moment later.
+// Before this, only Save, Teach AI, and the old Resume button sent tags, so a
+// browser list could sit ahead of the saved copy for days.
 function queueAutosave() {
+    if (autosavePaused || suppressServerPush) return;
     clearTimeout(autosaveTimeout);
     autosaveTimeout = setTimeout(() => {
-        autosaveCurrentGame();
         pushServerTags();
     }, 800);
 }
@@ -1638,13 +1682,23 @@ async function teachManualTagsToAi() {
         return null;
     }
     try {
+        await pushServerTags();  // the server copy must match the screen before teaching
         const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/teach-manual`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rows }),
+            body: JSON.stringify({ rows, baseUpdatedAt: tagServerBase }),
         });
         const data = await response.json().catch(() => ({}));
+        if (response.status === 409 && data.stale) {
+            await adoptNewerServerTags();
+            return null;
+        }
         if (!response.ok) throw new Error(data.error || 'Teach failed');
+        if (data.tag_updated_at) {
+            tagServerBase = data.tag_updated_at;
+            lastServerSig = rowsSignature(rows);
+            autosaveCurrentGame();
+        }
         setStatus(`Taught AI: ${data.manual_saved || 0} tags saved, ${data.corrected || 0} AI plays corrected, ${data.rejected || 0} extras dropped.`);
         return data;
     } catch (err) {
@@ -1660,7 +1714,10 @@ async function pullServerTagsForOpenFilm() {
         const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`);
         if (!response.ok) return null;
         const data = await response.json();
+        // The version this tab is working from. Saves are refused if it is older.
+        tagServerBase = (data && data.updatedAt) || '';
         if (!data || !Array.isArray(data.rows) || !data.rows.length) return null;
+        lastServerSig = rowsSignature(data.rows);
         data.analysisGameId = data.analysisGameId || gameId;
         return data;
     } catch (_err) {
@@ -1696,12 +1753,45 @@ function lastTagClock() {
     return String(rows[rows.length - 1].start || '').trim();
 }
 
+function tagListStamp(game) {
+    const ms = Date.parse(String((game && game.updatedAt) || ''));
+    return isFinite(ms) ? ms : 0;
+}
+
+// The saved copy on the server is not always the newest. A browser list that
+// was edited after the server copy was written must not be replaced by it.
+function newestTagSource(server, autosave) {
+    const hasServer = !!(server && Array.isArray(server.rows) && server.rows.length);
+    const hasLocal = autosaveHasRows(autosave);
+    if (hasServer && hasLocal) {
+        // The server moved on after this browser copy was built from it
+        // (another tab or computer saved). The server copy wins.
+        const base = Date.parse(String((autosave && autosave.baseUpdatedAt) || ''));
+        if (isFinite(base) && tagListStamp(server) > base) {
+            return { source: server, from: 'server', conflict: true };
+        }
+        if (tagListStamp(autosave) > tagListStamp(server)) return { source: autosave, from: 'browser' };
+        return { source: server, from: 'server' };
+    }
+    if (hasServer) return { source: server, from: 'server' };
+    if (hasLocal) return { source: autosave, from: 'browser' };
+    return null;
+}
+
 async function savedManualTagSource() {
     const server = await pullServerTagsForOpenFilm();
-    if (server && Array.isArray(server.rows) && server.rows.length) return server;
     const autosave = readAutosaveForOpenFilm();
-    if (autosaveHasRows(autosave)) return autosave;
-    return null;
+    const pick = newestTagSource(server, autosave);
+    if (!pick) return null;
+    if (pick.conflict) {
+        setAsideBrowserTags(autosave);
+        setStatus('Newer tags were saved from another tab or computer. Showing those. Your older browser copy was set aside.');
+    }
+    if (pick.from === 'browser' && server && Array.isArray(server.rows) && server.rows.length) {
+        // Newer than the server copy: send it up so the server keeps it.
+        setTimeout(() => { pushServerTags(); }, 1500);
+    }
+    return pick.source;
 }
 
 async function continueWhereLeftOff() {
@@ -1725,7 +1815,46 @@ function continueRequested() {
     return window.FILM_TOOL_CONTINUE === true || window.FILM_TOOL_CONTINUE === 'true';
 }
 
-async function pushServerTags(opts = {}) {
+// Keep this tab's own list under a separate key when newer tags are on the
+// server, so nothing typed here is lost and nothing newer is overwritten.
+function setAsideBrowserTags(game) {
+    if (!game || !Array.isArray(game.rows) || !game.rows.length) return;
+    try {
+        saveJson(`${autosaveStorageKey()}:set-aside`, { ...game, setAsideAt: new Date().toISOString() });
+    } catch (_err) { /* storage full: the server history still has the older copy */ }
+}
+
+// Same tags give the same text, whatever order the fields are listed in.
+function rowsSignature(rows) {
+    try {
+        return JSON.stringify((rows || []).map((row) => {
+            const out = {};
+            Object.keys(row || {}).sort().forEach((key) => { out[key] = row[key]; });
+            return out;
+        }));
+    } catch (_err) { return ''; }
+}
+
+// A save was refused because the server copy is newer than the one this tab
+// was built on. Take the server copy and set this tab's list aside.
+async function adoptNewerServerTags() {
+    setAsideBrowserTags(serializeCurrentGame());
+    const server = await pullServerTagsForOpenFilm();
+    if (server) {
+        loadGameIntoUI(server, { requireSameFilm: true, seek: false });
+        setStatus('Newer tags were saved from another tab or computer. Showing those. This tab\'s older list was set aside.');
+    }
+}
+
+let pushChain = Promise.resolve();
+
+// One save at a time, so each one starts from the version the last one made.
+function pushServerTags(opts = {}) {
+    pushChain = pushChain.then(() => pushServerTagsNow(opts)).catch(() => {});
+    return pushChain;
+}
+
+async function pushServerTagsNow(opts = {}) {
     if (!audienceCanEdit()) return;
     const gameId = openAnalysisGameId();
     if (!gameId) return;
@@ -1733,7 +1862,10 @@ async function pushServerTags(opts = {}) {
     if (!autosaveMatchesOpenFilm(game)) return;
     const rows = Array.isArray(game.rows) ? game.rows : [];
     if (!rows.length && !opts.confirmClear) return;
+    const sig = rowsSignature(rows);
+    if (!opts.confirmClear && sig === lastServerSig) return;  // nothing new to send
     if (opts.confirmClear) game.confirmClear = true;
+    game.baseUpdatedAt = tagServerBase;
     try {
         const response = await fetch(`/api/film/${encodeURIComponent(gameId)}/manual-tags`, {
             method: 'POST',
@@ -1741,14 +1873,34 @@ async function pushServerTags(opts = {}) {
             body: JSON.stringify(game),
         });
         if (response.status === 409) {
+            const body = await response.json().catch(() => ({}));
+            if (body.stale) {
+                await adoptNewerServerTags();
+                return;
+            }
             setStatus('Saved tags were kept. An empty list cannot replace them.');
             const server = await pullServerTagsForOpenFilm();
             if (server) loadGameIntoUI(server, { requireSameFilm: true });
             return;
         }
+        if (response.ok) {
+            const saved = await response.json().catch(() => ({}));
+            if (saved && saved.updatedAt) tagServerBase = saved.updatedAt;
+            lastServerSig = sig;
+            autosaveCurrentGame();  // the browser copy now records the new server version
+        }
         if (opts.confirmClear && response.ok) setStatus('Saved tags were erased.');
     } catch (_err) {}
 }
+
+// Send changes to the server on a timer too, in case an edit's own timer was
+// held back (a hidden tab slows its timers), and when the tab is hidden.
+setInterval(() => {
+    if (!autosavePaused && !suppressServerPush) pushServerTags();
+}, TAG_SERVER_SAVE_EVERY_MS);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && !autosavePaused && !suppressServerPush) pushServerTags();
+});
 
 function autosaveHasRows(game) {
     return !!(game && Array.isArray(game.rows) && game.rows.length);

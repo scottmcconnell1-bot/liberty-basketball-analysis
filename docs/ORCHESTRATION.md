@@ -1,4 +1,4 @@
-﻿# Liberty Orchestration â€” Cursor-Only Workflow
+# Liberty Orchestration â€” Cursor-Only Workflow
 
 Updated: 2026-07-05
 Branch at that date: `jason-5-may-updates`
@@ -141,7 +141,7 @@ Scott may switch PCs. Use **one shared feature branch** (see `ACTIVE.md`; curren
 - `docs/DUAL_MACHINE.md` — home + work PC pull/push protocol (code/docs only)
 
 - `docs/agent_handoffs/ACTIVE.md` â€” current task
-- `docs/agent_handoffs/ALPHA_GITHUB_SYNC_2026-07-05.md` â€” branch snapshot
+- `docs/agent_handoffs/ARCHIVE/legacy-alpha-owl/ALPHA_GITHUB_SYNC_2026-07-05.md` â€” branch snapshot
 - `PROJECT_STATUS.md` â€” verified project facts
 - `ROADMAP.md` â€” direction
 - `AUTHORITY.md` â€” who approves what

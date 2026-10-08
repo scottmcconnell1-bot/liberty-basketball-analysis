@@ -174,3 +174,13 @@ _tmp_*
 _review_frames*/
 _review_frames*
 artifacts/
+
+# Film tool tag history copies and Chrome storage recovery backups (2026-10-07)
+data/film_tags/_history/
+tag-exports/_leveldb_*/
+
+flask_out.log
+flask_err.log
+
+# Local database archive (pushed only if Scott approves)
+db-archive/
