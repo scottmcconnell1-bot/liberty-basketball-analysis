@@ -1,7 +1,8 @@
 # Encrypted archive: Adrian detections (2026-10-07)
 
 `liberty_adrian_detections_20261007.enc` holds the `detections` rows of five older
-Adrian reruns, taken out of `film_analysis.db` on 2026-10-08 to shrink it.
+Adrian reruns, copied from `film_analysis.db` on 2026-10-07 as a backup before any
+of them are removed from it. As of 2026-10-08 the rows are still in the database.
 
 | Rerun | Rows |
 | --- | --- |
