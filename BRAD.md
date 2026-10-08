@@ -1,10 +1,34 @@
 # Brad — start here
 
-Updated: 2026-10-06. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Scott is texting you to open this branch. Jason's copy of this status is `JASON.md`.
+Updated: 2026-10-08. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`.
 
 You are a database analyst. The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is trying to count that game from the film. It is not close enough. Do not copy the book totals onto the AI rows to make them match.
 
-The database is `film_analysis.db` in the repo root on Scott's home machine. It is about 15 GB. It is not in git. School does not have this file. Do not overwrite it from another machine.
+The database is `film_analysis.db` in the repo root on Scott's home machine. It is about 379 MB after the 2026-10-08 prune (it was about 14.5 GB, almost all empty pages). It is not in git. School does not have this file. Do not overwrite it from another machine.
+
+## 2026-10-07 and 2026-10-08 (read this first)
+
+The sections under "Man defense" are the 2026-10-06 snapshot. Where a number disagrees, this section wins.
+
+**Tags.** 378 rows in `data/film_tags/<base game id>.json`. Through three quarters they score Liberty 43, Adrian 24 (Q3 Liberty 16, Adrian 9), matching the book. Q3 ends 55:17.1. Jenkins at 55:14.2 is a 3PT miss, corrected from a free throw. One Q4 Start QTR at 56:26.7 is the inbound that starts the quarter. Q4 is not tagged. The fourth-quarter book remainder is Liberty 8, Adrian 2.
+
+**The lost tags.** On 2026-10-07 the page replaced those 378 rows with a 246-row server file. `queueAutosave()` had existed since 2026-09-16 and had no caller, so the browser list was ahead of the server. Commit `664a129` then loaded the server copy first. The 378 rows were recovered from Chrome. Now every edit posts to `/api/film/<game_id>/manual-tags` (about 0.8 seconds, plus every 30 seconds, plus when the tab hides). The body includes `baseUpdatedAt`. `film_tool_tags.check_not_stale` returns 409 `stale` when that stamp is missing or older than the file, and the file is not written. History copies go to `data/film_tags/_history` at most every 2 minutes unless the list shrinks, which copies immediately. Newest 120, then one per hour for 72 hours.
+
+**Tag is truth.** `reconcile_makes_with_shots` (`manual_tag_teach.py`) no longer selects rows with `review_status` `corrected` or `human_verified` 1. It was rejecting a tagged make when `through_rim` and `net_moved` were both false, including on a different player's shot at the same `timestamp_ms`. Seven run-12 makes were updated back to `review_status='corrected'`, `human_verified=1`, `review_notes='Film Tool teach'` (12 points). Before-state is local only, `tag-exports/rejected_makes_before_restore_20261007.json`, not in git. Run 12 make points where `review_status != 'rejected'`: corrected 31, pending 45, rejected 4. Sum of the first two is 76. Book is 77. Do not publish 76 as accuracy. The pending 45 are unchecked.
+
+**Run 12 shot rows, makes actually seen** (`through_rim` or `net_moved`): Q1 19/46, Q2 14/37, Q3 2/86, Q4 4/37. The rest are stored as misses. Scott said keep that rule for now (`event_generator.py` around 806-846). 132 of 170 rebounds fall within 6 seconds after a both-false miss. 804 of 1,452 events are `possession_change`. `credit_steal` (`stat_rules.py`) returned false for every candidate (8 steal tags, 0 events). `emit_fouls` is false (18 foul tags, 0 events).
+
+**Rows removed 2026-10-08.** These `analysis_key` / `game_id` values are gone from `analysis_runs`, `detections`, `events`, `review_items`, `human_corrections`, `shot_classifications`, `play_recognitions`, `track_identity_labels`, `player_minutes`, `player_effect`, `stats`, and event `provenance_records`:
+
+- `...__rerun_20260915_193718` (failed)
+- `...__rerun_20260927_042234` (failed)
+- `...__rerun_20260928_031027`
+- `...__rerun_20260930_160546`
+- `...__rerun_20260930_191418` (run 11)
+
+That was 4,139,840 `detections` rows and 7,055 `events` rows. Still present: the base id (866,471 detections) and run 12 `...__rerun_20261006_033941` (883,276 detections, 1,452 events). The detection rows are in `encrypted-archive/liberty_adrian_detections_20261007.enc` (AES-256-GCM). Every archived row was compared to the live table before encryption. The passphrase is not in the repo. `restore_detections.py` is inside the archive and skips ids that are already present. `events` indexes: `idx_events_game_ts (game_id, timestamp_ms)`, `idx_events_game_type (game_id, event_type)`.
+
+## Man defense on the play court
 
 Film file: `uploads\nfhs_gam0a66d85e12.mp4` (video id 73). Do not use video 64.
 
@@ -27,6 +51,8 @@ Code: `static/js/man_defense.js`, `templates/playbook.html`, `templates/play_dra
 A new message while a job is running is added instruction. It does not replace the job. That rule is in `.cursor/rules/liberty-orchestration.mdc`.
 
 ## The run on the results page
+
+The counts in this section are the 2026-10-06 snapshot. As of 2026-10-08, run 12 non-rejected make points are 76 (corrected 31, pending 45, rejected 4), not the 64 in the table. Run 11's rows are deleted. The 206-shot comparison is still valid as a description of what run 12 contains.
 
 Run 12 is what results open. It finished 2026-10-06 04:59:04 UTC, 1,452 events, no error, and it has corrected rows:
 

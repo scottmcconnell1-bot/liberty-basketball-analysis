@@ -1,8 +1,38 @@
 # Jason — start here
 
-Updated: 2026-10-06. This file is on `main` once this note is merged. Branch `jason-5-may-updates` is kept even with `main`. Open that branch, then read this file. The same words are on `Brad/Claude` in `BRAD.md`.
+Updated: 2026-10-08. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`.
 
 The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is counting that game from the film. It is not the book yet. Do not copy the book totals onto the AI rows to make them match.
+
+## 2026-10-07 and 2026-10-08 (read this first)
+
+The sections under "Man defense" are the 2026-10-06 snapshot. Where they disagree with this section, this section wins. Run 12 is still the run to open. Run 11 is gone from the database.
+
+### Scott's tags are the book through three quarters
+
+378 tag rows are saved on the server in `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`. Quarter ends: Q1 16:00.7, Q2 32:15.0, Q3 55:17.1. The last Q3 play is Jenkins' 3-point miss at 55:14.2. It had been stored as a free throw and was corrected. Those tags score Liberty 43, Adrian 24 after three quarters (Q3 is Liberty 16, Adrian 9). That matches the book. The fourth-quarter remainder is Liberty 8, Adrian 2. The one Q4 row, Start QTR at 56:26.7, is the ball being handed in to start the quarter. It belongs. Q4 is not tagged yet.
+
+On the evening of 2026-10-07 the 378 rows disappeared from the page. The server file was an older 246-row copy. The page loaded that copy and replaced the newer list, which lived only in Chrome. The rows were recovered from Chrome's older storage. The cause was in our code: `queueAutosave()` had existed since 2026-09-16 and nothing called it, so tags reached the server only from Resume, Save, or Teach AI. Commit `664a129` (2026-10-06) removed Resume and opened the server copy first.
+
+### Tags now save, and an old tab cannot overwrite a newer one
+
+Every add, edit, or delete is sent to the server about 0.8 seconds later, and again every 30 seconds and when the tab is hidden, but only when the rows actually changed. Each save names the server version it was built on. The server refuses a save built on an older version, or a save with no version (a tab opened before this fix), and keeps its copy. The refused tab sets its own list aside in the browser and shows the newer copy. Dated copies are kept in `data/film_tags/_history`: one every 2 minutes while tags are changing, the newest 120 in full, then one per hour for 72 hours. Typing in the 378-row table took 4.7 seconds and now takes 0.07 seconds. Checked on the live Adrian film, then the real tag file was put back byte for byte.
+
+### A tag Scott entered is truth
+
+`reconcile_makes_with_shots` was rejecting a tagged make because a different shot at that same moment had `through_rim` false and `net_moved` false. It no longer rejects a make that is `corrected` or `human_verified`. Seven of those makes on run 12, 12 points, were restored. Run 12's non-rejected makes are now 76 points: 17 corrected rows (31 points) plus 21 pending rows (45 points). The book is 77. The 45 pending points are not checked against the film, so 76 is not an accuracy number. The four rejected rows that were only on run 11 went away with that rerun.
+
+### What the count still gets wrong
+
+Run 12, `...__rerun_20261006_033941`, is still 1,452 events and the same 206 shot rows as before. Shots where a make was actually seen (ball through the rim, or the net moved): Q1 19 of 46, Q2 14 of 37, Q3 2 of 86, Q4 4 of 37. Every other shot is stored as a miss. There is no "not seen" result. Q3 has 86 shot rows against about 42 real attempts in the tags. Scott said to keep writing an unseen shot as a miss for now. It may need refining. Do not change `event_generator.py` for this until he says so.
+
+132 of 170 rebounds are written within 6 seconds after one of those unseen misses. 804 of the 1,452 events are `possession_change`, which the box score ignores. Steals: `credit_steal` wrote none, against 8 steal tags. It only counts a steal when the turnover did not follow a shot, play was not stopped, the ball was lost abruptly, and the next touch was close. Fouls are off on purpose (`emit_fouls` is false); there are 18 foul tags and zero foul events. The second-half drop (about 40% of first-half shots show a make, 2% in Q3) looks like the hoop or net lock failing on the second-half camera. That is not yet checked on frames. Another detection pass of this film will reprint the same baskets until that read changes.
+
+### The database
+
+Five older Adrian reruns were removed on 2026-10-08, after their 4,139,840 detection rows had been checked one by one against an archive. The archive is `encrypted-archive/liberty_adrian_detections_20261007.enc` on `main` (AES-256-GCM, commit `df83b66`). The passphrase is not in the repo. Scott has it on the home PC, outside the repo. `encrypted-archive/README.md` says how to put the rows back.
+
+Removed: `__rerun_20260915_193718`, `__rerun_20260927_042234`, `__rerun_20260928_031027`, `__rerun_20260930_160546`, and run 11 `__rerun_20260930_191418`. Kept: the base game id, and run 12. `film_analysis.db` on the home machine is about 379 MB. It was 14.5 GB, almost all of that empty pages. It is not in git. `events` now has indexes `idx_events_game_ts` and `idx_events_game_type`.
 
 ## Man defense on the play court
 
@@ -28,7 +58,9 @@ A new message while a job is running is added instruction. It does not replace t
 
 ## The new run is not a better count
 
-Results now open run 12, because it finished with corrected rows. It is not a better count than run 11.
+The point totals in this section are the 2026-10-06 snapshot. Run 12's live makes are 76 points as of 2026-10-08 (31 corrected, 45 pending), not the 64 below, because seven tagged makes were restored. Run 11 is no longer in the database. The shot-by-shot comparison is still the right diagnosis.
+
+Results now open run 12, because it finished with corrected rows. It is not a better count than run 11 was.
 
 Run 12, finished 2026-10-06 04:59:04 UTC, 1,452 events, no error:
 
