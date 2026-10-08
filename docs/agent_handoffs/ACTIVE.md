@@ -10,7 +10,7 @@ Count stats for one game (Liberty at Adrian, NFHS video 73, `uploads\nfhs_gam0a6
 
 **Proven:**
 - Scott's hand tags are saved on the server: 378 rows in `data/film_tags/<game id>.json`. Quarter ends: Q1 16:00.7, Q2 32:15.0, Q3 55:17.1 (last play is Jenkins' 3PT miss at 55:14.2). The tags score Liberty 43, Adrian 24 after three quarters (Q3 16-9). That matches the book. The fourth quarter remainder is Liberty 8, Adrian 2. The last tag is a Q4 Start QTR at 56:26.7 (the ball handed in); it belongs. Q4 is not tagged yet.
-- Newest run is `...__rerun_20261006_033941` (run 12): 1,452 events, 206 shot rows (run 11 had the same 206). Live points 64, book 77.
+- Newest run is `...__rerun_20261006_033941` (run 12): 1,452 events, 206 shot rows. The 2026-10-06 card was 64 live points. After the seven tagged makes were restored it is 76 non-rejected make points (31 corrected, 45 pending). Book 77. The 45 are not film-checked. Run 11 was removed from the database on 2026-10-08.
 - Shot rows where a make was seen (ball through rim or net moved): Q1 19 of 46, Q2 14 of 37, Q3 2 of 86, Q4 4 of 37. Every other row has `through_rim` false and `net_moved` false and is written as a miss. There is no "unknown" result. Q3 has 86 shot rows against about 42 real attempts Scott tagged (32 field goals, 10 free throws).
 - 132 of the 170 rebounds are written within 6 seconds after one of those both-false misses. 804 of the 1,452 events are `possession_change`, which the box score ignores.
 - Steals and fouls are not written (8 steal tags and 18 foul tags, zero events). Fouls are off by design (`emit_fouls` is False).
@@ -19,6 +19,8 @@ Count stats for one game (Liberty at Adrian, NFHS video 73, `uploads\nfhs_gam0a6
 **Inferred:** The second-half collapse (about 40% of shots show a make in Q1 and Q2, 2% in Q3) looks like the hoop or net lock failing on the second-half camera view. The same code finds makes in the first half. Not yet checked against second-half frames.
 
 **Unknown:** Why the lock fails in Q3 and Q4. Whether the fix is a setting, a rule, or the detector.
+
+**Self-check (why):** Scott started it because the assistant had been wrong (the book does have a third quarter; his Q3 tags vanished; Jenkins was left as a free throw; typed tags were not saved). He asked whether the code, tools, and rules were what the AI was obeying. Results are in `JASON.md` and `BRAD.md`. The test run first called a hang did finish: 1,046 passed, 9 failed, 25 errors, almost all `tests/test_transfer_bundle.py` because the `bash` bundle build failed on Windows. A second copy was stopped and has no result. He asked on 2026-10-08 for the check to be run again.
 
 Full first-run write-ups are in `JASON.md` and `BRAD.md`. Do not copy the book onto the rows. Do not start another detection pass expecting new baskets.
 

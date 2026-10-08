@@ -34,6 +34,23 @@ Five older Adrian reruns were removed on 2026-10-08, after their 4,139,840 detec
 
 Removed: `__rerun_20260915_193718`, `__rerun_20260927_042234`, `__rerun_20260928_031027`, `__rerun_20260930_160546`, and run 11 `__rerun_20260930_191418`. Kept: the base game id, and run 12. `film_analysis.db` on the home machine is about 379 MB. It was 14.5 GB, almost all of that empty pages. It is not in git. `events` now has indexes `idx_events_game_ts` and `idx_events_game_type`.
 
+### Self-check (Scott, 2026-10-07 night)
+
+Scott started this because the assistant had been making errors, and he did not want those treated as the film AI being wrong. The errors he had already caught: the assistant said the book had no third-quarter line (the book says Adrian 9, Liberty 16 for the quarter, running Adrian 24, Liberty 43); his third-quarter tags disappeared; Jenkins at 55:14.2 was left as a free throw; and tags he typed were not reaching the server. His question was whether the AI was doing exactly what the code, tools, and rules say, and those were the thing written wrong.
+
+What the check found, and what was done:
+
+- The tag loss was our save path. `queueAutosave()` existed and was never called. Fixed. An old tab can no longer overwrite a newer server copy.
+- The tag table redrew the roster on every keystroke. Measured 4.7 seconds, then 0.07 seconds, same results.
+- `reconcile_makes_with_shots` rejected Scott's tagged makes using another player's miss. He said a manual tag is always truth. That rejection is stopped, and the seven run-12 makes were restored.
+- A shot with no rim and no net is stored as a miss, and most rebounds are built from those rows. Scott said keep that for now. It may need refining. Not changed.
+- `credit_steal` wrote no steals. Explained. Not loosened.
+- `events` had no index. Indexes added, with his OK.
+- `ACTIVE.md` had grown to 35 KB of stacked, sometimes contradictory notes, and `AUTHORITY.md` still said to work on a `cursor/...` branch and that Hermes was not in the project. Slimmed and corrected. The old `ACTIVE.md` is in `docs/agent_handoffs/ARCHIVE/`.
+- The database was 14.5 GB because empty pages and six copies of the Adrian detections were still in it. Archived, encrypted, compacted, then the five older reruns removed, with his OK.
+
+The full test suite was first reported as an unknown hang. That report was incomplete. One run did finish, in 26 minutes: 1,046 passed, 9 failed, 1 skipped, 25 errors. Almost all of the failures are `tests/test_transfer_bundle.py`, which builds a bundle with `bash`. On this Windows machine that build did not succeed, so the whole group failed together. A second copy of the same run was stopped and has no result. It is not established that a test deadlocked. Scott has asked for the self-check to be run again. It is not finished.
+
 ## Man defense on the play court
 
 This commit is the Liberty man shell. It is not a new Adrian count.

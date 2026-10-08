@@ -28,7 +28,13 @@ The sections under "Man defense" are the 2026-10-06 snapshot. Where a number dis
 
 That was 4,139,840 `detections` rows and 7,055 `events` rows. Still present: the base id (866,471 detections) and run 12 `...__rerun_20261006_033941` (883,276 detections, 1,452 events). The detection rows are in `encrypted-archive/liberty_adrian_detections_20261007.enc` (AES-256-GCM). Every archived row was compared to the live table before encryption. The passphrase is not in the repo. `restore_detections.py` is inside the archive and skips ids that are already present. `events` indexes: `idx_events_game_ts (game_id, timestamp_ms)`, `idx_events_game_type (game_id, event_type)`.
 
-## Man defense on the play court
+**Self-check.** Scott started it on 2026-10-07 because the assistant had been wrong in ways that were not the film model: it said the book had no third quarter (the book is Adrian 9, Liberty 16 that quarter, running 24–43); the third-quarter tags vanished; Jenkins at 55:14.2 stayed a free throw; typed tags never reached the server. He asked for a check of the code, tools, and rules, in case the AI was only following those.
+
+Checked and changed: `queueAutosave` had no caller (tags now post, and a stale `baseUpdatedAt` is a 409); the tag table was 4.7 seconds per keystroke and is 0.07 seconds; `reconcile_makes_with_shots` no longer rejects `corrected` or `human_verified` makes; `events` indexes added; `ACTIVE.md` cut from 35 KB and the branch/Hermes lines in `AUTHORITY.md` corrected; database compacted from 14.5 GB to about 379 MB after the five reruns above were removed. Not changed, by Scott's decision: a shot with both `through_rim` and `net_moved` false is still stored as a miss. `credit_steal` was explained and not loosened.
+
+Test suite: first called an unknown hang. The run that finished took 26 minutes and reported 1,046 passed, 9 failed, 1 skipped, 25 errors, almost all `tests/test_transfer_bundle.py` (the fixture runs `bash scripts/build_transfer_bundle.sh`, which did not succeed on this Windows PC, so every test using that fixture errored). A second copy was killed and recorded nothing. No deadlock was shown. He has asked for the check to be run again.
+
+## Where the film and the schema are
 
 Film file: `uploads\nfhs_gam0a66d85e12.mp4` (video id 73). Do not use video 64.
 
