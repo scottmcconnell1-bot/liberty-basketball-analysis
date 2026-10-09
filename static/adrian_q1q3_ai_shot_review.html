@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adrian first-half makes the AI missed</title>
+<style>
+  body { font: 15px/1.4 Georgia, serif; margin: 24px; color: #1c1c1c; background: #f7f6f3; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { max-width: 760px; }
+  .bar { position: sticky; top: 0; background: #f7f6f3; padding: 8px 0 12px; display: flex; gap: 8px; align-items: center; }
+  button { font: 14px/1 sans-serif; padding: 8px 12px; border: 1px solid #1c1c1c; background: #fff; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border-bottom: 1px solid #ddd; padding: 8px; vertical-align: top; text-align: left; }
+  th { font: 12px sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  input[type=text], select { width: 100%; font: 14px sans-serif; padding: 6px; box-sizing: border-box; }
+  a { color: #0b57d0; }
+  .muted { color: #555; font: 13px sans-serif; }
+</style>
+</head>
+<body>
+<h1>First-half makes the AI did not write</h1>
+<p>These seven are makes you tagged in Q1 and Q2. There is no AI shot within 8 seconds, so the AI cell is blank. Watch the film. Accept means the make is right and the AI missed it. Reject means this tag should not count. A note says what you see.</p>
+<p class="muted">Same page as the Q2 review. Download saves adrian_first_half_makes.csv.</p>
+<div class="bar">
+  <button type="button" id="save">Download my answers</button>
+  <span class="muted" id="count"></span>
+</div>
+<table>
+  <thead>
+    <tr><th>Q</th><th>Clock</th><th>Your tag</th><th>AI tag</th><th>Why it is on this list</th><th>Film</th><th>Decision</th><th>Note</th></tr>
+  </thead>
+  <tbody id="body"></tbody>
+</table>
+<script>
+const ROWS = [
+  {"q": "Q1", "clock": "8:21.9", "ms": 501900, "you": "23 - Rodus  FT Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=501900"},
+  {"q": "Q1", "clock": "9:50.9", "ms": 590900, "you": "13 - Mendoza  FT Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=590900"},
+  {"q": "Q2", "clock": "19:41.7", "ms": 1181700, "you": "21 - Colman  FT Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1181700"},
+  {"q": "Q2", "clock": "20:31.4", "ms": 1231400, "you": "25 - Alvarez  FT Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1231400"},
+  {"q": "Q2", "clock": "26:22.0", "ms": 1582000, "you": "13 - Mendoza  2 Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1582000"},
+  {"q": "Q2", "clock": "26:43.9", "ms": 1603900, "you": "40 - Dayley  2 Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1603900"},
+  {"q": "Q2", "clock": "30:36.7", "ms": 1836700, "you": "21 - Colman  3 Make", "ai": "", "issue": "No AI row within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1836700"}
+];
+const body = document.getElementById("body");
+document.getElementById("count").textContent = ROWS.length + " first-half makes";
+ROWS.forEach((r, i) => {
+  const tr = document.createElement("tr");
+  const link = document.createElement("a");
+  link.href = r.watch;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = "Watch";
+  tr.appendChild(cell(r.q));
+  tr.appendChild(cell(r.clock));
+  tr.appendChild(cell(r.you || "—"));
+  tr.appendChild(cell(r.ai || "—"));
+  tr.appendChild(cell(r.issue));
+  const film = document.createElement("td");
+  film.appendChild(link);
+  tr.appendChild(film);
+  const decision = document.createElement("td");
+  const select = document.createElement("select");
+  select.dataset.i = String(i);
+  select.dataset.k = "decision";
+  ["", "Accept", "Reject", "Note"].forEach((label) => {
+    const option = document.createElement("option");
+    option.value = label;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+  decision.appendChild(select);
+  tr.appendChild(decision);
+  const noteCell = document.createElement("td");
+  const note = document.createElement("input");
+  note.type = "text";
+  note.dataset.i = String(i);
+  note.dataset.k = "note";
+  note.placeholder = "What happened on this make";
+  noteCell.appendChild(note);
+  tr.appendChild(noteCell);
+  body.appendChild(tr);
+});
+function cell(text) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  return td;
+}
+document.getElementById("save").onclick = () => {
+  const answers = ROWS.map((r, i) => {
+    const decision = document.querySelector('[data-i="' + i + '"][data-k="decision"]').value;
+    const note = document.querySelector('[data-i="' + i + '"][data-k="note"]').value;
+    return [r.q, r.clock, r.ms, r.you, r.ai, r.issue, r.watch, decision, note];
+  });
+  const header = ["quarter","clock","film_ms","your_tag","ai_tag","issue","watch","decision","note"];
+  const csv = [header].concat(answers).map(line => line.map(cellText => {
+    const s = String(cellText ?? "");
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(",")).join("\n");
+  const blob = new Blob([csv], {type: "text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "adrian_first_half_makes.csv";
+  a.click();
+};
+</script>
+</body>
+</html>
