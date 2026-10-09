@@ -45,7 +45,24 @@ def bundle_names(tmp_path_factory):
     # Snapshot the legacy in-repo location so we can prove the build never touched it.
     stray = os.path.join(REPO_ROOT, "transfer-bundles", f"liberty-basketball-analysis-transfer-{stamp}.tar.gz")
     stray_mtime_before = os.path.getmtime(stray) if os.path.exists(stray) else None
-    env = dict(os.environ, LIBERTY_TRANSFER_OUT_DIR=str(out_dir), LIBERTY_TRANSFER_SKIP_MODELS="1")
+    # bash on this PC is WSL. WSL drops Windows env vars unless they are named
+    # in WSLENV. /p turns the Windows temp path into a /mnt/c path.
+    wslenv_parts = [p for p in os.environ.get("WSLENV", "").split(":") if p]
+    wslenv_names = {p.split("/")[0] for p in wslenv_parts}
+    for entry in (
+        "LIBERTY_TRANSFER_OUT_DIR/p",
+        "LIBERTY_TRANSFER_SKIP_MODELS",
+        "LIBERTY_TRANSFER_SKIP_BULK",
+    ):
+        if entry.split("/")[0] not in wslenv_names:
+            wslenv_parts.append(entry)
+    env = dict(
+        os.environ,
+        LIBERTY_TRANSFER_OUT_DIR=str(out_dir),
+        LIBERTY_TRANSFER_SKIP_MODELS="1",
+        LIBERTY_TRANSFER_SKIP_BULK="1",
+        WSLENV=":".join(wslenv_parts),
+    )
     result = subprocess.run(
         ["bash", "scripts/build_transfer_bundle.sh", stamp],
         cwd=REPO_ROOT,
@@ -71,6 +88,12 @@ def test_transfer_bundle_includes_required_paths(bundle_names, rel_path):
 def test_transfer_bundle_excludes_benchmark_scripts(bundle_names):
     benchmark_hits = [n for n in bundle_names["names"] if os.path.basename(n).startswith("benchmark_")]
     assert benchmark_hits == []
+
+
+def test_transfer_bundle_skips_bulk_files(bundle_names):
+    names = set(bundle_names["names"])
+    assert "film_analysis.db" not in names
+    assert not any(n == "uploads" or n.startswith("uploads/") for n in names)
 
 
 def test_transfer_bundle_does_not_write_into_repo(bundle_names):

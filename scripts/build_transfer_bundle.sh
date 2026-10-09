@@ -28,6 +28,11 @@ for rel_path in \
   film_analysis.db \
   uploads
 do
+  # Tests set this. uploads on the home PC is about 17 GB, and film_analysis.db
+  # is hundreds of MB. Packing either one makes the suite look hung.
+  if [[ "${LIBERTY_TRANSFER_SKIP_BULK:-0}" == "1" && ( "${rel_path}" == "film_analysis.db" || "${rel_path}" == "uploads" ) ]]; then
+    continue
+  fi
   if [[ -e "${ROOT_DIR}/${rel_path}" ]]; then
     INCLUDE_PATHS+=("${rel_path}")
   fi
