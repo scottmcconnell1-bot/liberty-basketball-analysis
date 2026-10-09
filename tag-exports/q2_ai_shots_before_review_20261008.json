@@ -1,0 +1,442 @@
+[
+  {
+    "id": 30768,
+    "timestamp_ms": 1038800,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30769,
+    "timestamp_ms": 1038800,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30773,
+    "timestamp_ms": 1051800,
+    "player": "#23 Rodus",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30774,
+    "timestamp_ms": 1051800,
+    "player": "#23 Rodus",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30781,
+    "timestamp_ms": 1083840,
+    "player": "#22 Foster",
+    "event_type": "shot",
+    "review_status": "rejected",
+    "review_notes": "Film Tool teach: extra AI event in tagged window"
+  },
+  {
+    "id": 30782,
+    "timestamp_ms": 1083840,
+    "player": "#22 Foster",
+    "event_type": "missed_two",
+    "review_status": "rejected",
+    "review_notes": "Film Tool teach: extra AI event in tagged window"
+  },
+  {
+    "id": 30789,
+    "timestamp_ms": 1099960,
+    "player": "#23 Rodus",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30790,
+    "timestamp_ms": 1099960,
+    "player": "#23 Rodus",
+    "event_type": "missed_two",
+    "review_status": "rejected",
+    "review_notes": "This player's team did not have the ball, so no shot was attempted."
+  },
+  {
+    "id": 30799,
+    "timestamp_ms": 1126240,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30800,
+    "timestamp_ms": 1126240,
+    "player": "#40 Dayley",
+    "event_type": "made_free_throw",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30826,
+    "timestamp_ms": 1198000,
+    "player": "#22 Foster",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30827,
+    "timestamp_ms": 1198000,
+    "player": "#22 Foster",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30850,
+    "timestamp_ms": 1263200,
+    "player": "#22 Foster",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30851,
+    "timestamp_ms": 1263200,
+    "player": "#22 Foster",
+    "event_type": "missed_three",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30859,
+    "timestamp_ms": 1275800,
+    "player": "7",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30860,
+    "timestamp_ms": 1275800,
+    "player": "7",
+    "event_type": "made_free_throw",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30864,
+    "timestamp_ms": 1297040,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30865,
+    "timestamp_ms": 1297040,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30881,
+    "timestamp_ms": 1388600,
+    "player": "7",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30882,
+    "timestamp_ms": 1388600,
+    "player": "7",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30887,
+    "timestamp_ms": 1398200,
+    "player": "#22 Foster",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30888,
+    "timestamp_ms": 1398200,
+    "player": "#22 Foster",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30893,
+    "timestamp_ms": 1411200,
+    "player": "#13 Mendoza",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30894,
+    "timestamp_ms": 1411200,
+    "player": "#13 Mendoza",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30897,
+    "timestamp_ms": 1421200,
+    "player": "#13 Mendoza",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30898,
+    "timestamp_ms": 1421200,
+    "player": "#13 Mendoza",
+    "event_type": "made_three",
+    "review_status": "rejected",
+    "review_notes": "This player's team did not have the ball, so no shot was attempted."
+  },
+  {
+    "id": 30939,
+    "timestamp_ms": 1529200,
+    "player": "#22 Foster",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30940,
+    "timestamp_ms": 1529200,
+    "player": "#22 Foster",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30944,
+    "timestamp_ms": 1548400,
+    "player": "#13 Mendoza",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30945,
+    "timestamp_ms": 1548400,
+    "player": "#13 Mendoza",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30958,
+    "timestamp_ms": 1565000,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "rejected",
+    "review_notes": "Film Tool teach: extra AI event in tagged window"
+  },
+  {
+    "id": 30959,
+    "timestamp_ms": 1565000,
+    "player": "#40 Dayley",
+    "event_type": "made_two",
+    "review_status": "rejected",
+    "review_notes": "Film Tool teach: extra AI event in tagged window"
+  },
+  {
+    "id": 30960,
+    "timestamp_ms": 1565000,
+    "player": "7",
+    "event_type": "assist",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30964,
+    "timestamp_ms": 1569760,
+    "player": "#13 Mendoza",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30965,
+    "timestamp_ms": 1569760,
+    "player": "#13 Mendoza",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30979,
+    "timestamp_ms": 1687000,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 30980,
+    "timestamp_ms": 1687000,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 30999,
+    "timestamp_ms": 1733440,
+    "player": "7",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31000,
+    "timestamp_ms": 1733440,
+    "player": "7",
+    "event_type": "missed_three",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31022,
+    "timestamp_ms": 1784800,
+    "player": "#23 Rodus",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31023,
+    "timestamp_ms": 1784800,
+    "player": "#23 Rodus",
+    "event_type": "made_two",
+    "review_status": "rejected",
+    "review_notes": "This player's team did not have the ball, so no shot was attempted."
+  },
+  {
+    "id": 31033,
+    "timestamp_ms": 1805800,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31034,
+    "timestamp_ms": 1805800,
+    "player": "#40 Dayley",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31041,
+    "timestamp_ms": 1825800,
+    "player": "3",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31042,
+    "timestamp_ms": 1825800,
+    "player": "3",
+    "event_type": "missed_three",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31049,
+    "timestamp_ms": 1847400,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31050,
+    "timestamp_ms": 1847400,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31055,
+    "timestamp_ms": 1856600,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31056,
+    "timestamp_ms": 1856600,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31059,
+    "timestamp_ms": 1860600,
+    "player": "#25 Alvarez",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31060,
+    "timestamp_ms": 1860600,
+    "player": "#25 Alvarez",
+    "event_type": "made_two",
+    "review_status": "pending",
+    "review_notes": null
+  },
+  {
+    "id": 31062,
+    "timestamp_ms": 1867800,
+    "player": "#40 Dayley",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31063,
+    "timestamp_ms": 1867800,
+    "player": "#40 Dayley",
+    "event_type": "missed_two",
+    "review_status": "rejected",
+    "review_notes": "This player's team did not have the ball, so no shot was attempted."
+  },
+  {
+    "id": 31074,
+    "timestamp_ms": 1915400,
+    "player": "7",
+    "event_type": "shot",
+    "review_status": "accepted",
+    "review_notes": "Auto-accepted (high confidence)"
+  },
+  {
+    "id": 31075,
+    "timestamp_ms": 1915400,
+    "player": "7",
+    "event_type": "missed_two",
+    "review_status": "pending",
+    "review_notes": null
+  }
+]

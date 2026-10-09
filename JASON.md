@@ -1,8 +1,26 @@
 # Jason — start here
 
-Updated: 2026-10-08. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`.
+Updated: 2026-10-08 night. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`.
 
 The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is counting that game from the film. It is not the book yet. Do not copy the book totals onto the AI rows to make them match.
+
+## What Scott is having us do (2026-10-08 night)
+
+This section wins where an older paragraph disagrees. He does not want a fast answer. He wants an accurate one.
+
+A shot he tagged is correct. Do not ask him to accept or reject his own tags. If the program never writes a row for that shot, the counting stats are wrong. He can reject a false row. He cannot correct a row that was never written. On the shots he tagged, the ball went through the hoop and the net moved. Some arcs are very high and some are very low, so one arc height cannot be the test for whether a shot happened.
+
+He is having us find a way to write that shot, by looking at how other basketball-film programs do it, and to test the method on this film before it is turned on. A rule that does not add these shots, or that adds shots he did not tag, is not the answer. That search is not finished. Do not copy his tags onto the AI rows to make the card match. Do not drop the 170-pixel rise until a tested method says so. Do not start another ball-detector pass.
+
+What is already true on the home database, run 12, queried 2026-10-08 night: 1,509 events. Non-rejected make points are 49 (14 two-point makes, 5 threes, 6 free throws). The book is 77. 49 is not an accuracy claim. The database is not in git. A pull does not add these rows.
+
+His Q2 review rejected all 27 extra AI shots. The notes are on those rows. Shots between his EndQTR tag and the next StartQTR tag are now rejected, unless one of his shot tags is within 8 seconds. That, plus the Q2 sheet, took the live make points from 59 to 43.
+
+Then the generator was changed so that, on a frame with two ball boxes, it keeps the box at the locked hoop instead of the one with higher confidence, and that box is the shot peak when it is above the rim and within 280 pixels. On this film that wrote six misses that had no shot within 8 seconds. His tags graded five: Mendoza’s 2-point miss at 6:13.7, Colman’s free-throw make at 19:41.7, Dayley’s 2-point make at 26:43.9, Rodus’s 3-point miss at 28:28.1, and Colman’s 3-point make at 30:36.7. Those three makes are the points from 43 to 49. Foster’s miss at 12:53.2 has no tag and is still pending.
+
+Four makes he tagged still have no row: Rodus’s free throw at 8:21.9, Mendoza’s free throw at 9:50.9, Alvarez’s free throw at 20:31.4, and Mendoza’s 2 at 26:22.0. The make checks (ball through the rim, net moved) run only after an arc has already been accepted. A live shot must also rise 170 pixels. For these four, no stored ball box reaches the hoop the program had locked, and the nylon under that locked point does not move in the video around his tag. He says the real net did move, so that locked point is not the rim he watched. Other programs (HoopCut, NBAction, and basket-appearance papers) decide a make from the ball crossing a detected rim or from the net in that hoop’s picture, and they do not require one arc height. Aimed at our current lock, that test still does not see these four. Finding the rim he actually saw, and only then writing the shot, is the open job.
+
+A shot with both `through_rim` and `net_moved` false is still stored as a miss. `emit_fouls` stays false. The 8-second window stays 8 seconds. `models/ball_detector.pt` and `ball_confidence` were not changed.
 
 ## 2026-10-07 and 2026-10-08 (read this first)
 

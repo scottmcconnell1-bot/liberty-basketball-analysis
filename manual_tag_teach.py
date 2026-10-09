@@ -12,7 +12,7 @@ import sqlite3
 from typing import Any
 
 from helpers import is_foul_event, normalize_analysis_game_id
-from review_actions import reject_event
+from review_actions import AUTO_ACCEPT_NOTE, reject_event
 
 TEACH_NOTE = "Film Tool teach"
 MATCH_TOLERANCE_MS = 8000
@@ -518,6 +518,12 @@ def apply_saved_manual_teach(
             rejected += 1
 
     reconcile_makes_with_shots(db, game_id)
+    reject_shots_when_the_other_team_has_the_ball(
+        db, game_id, pending_only=pending_only, commit=False,
+    )
+    reject_shots_when_the_ball_is_not_in_play(
+        db, game_id, pending_only=pending_only, commit=False,
+    )
 
     if commit:
         db.commit()
@@ -527,6 +533,269 @@ def apply_saved_manual_teach(
         "unmatched_manual": unmatched_manual,
         "window_ms": [start_ms, end_ms],
     }
+
+
+def _shooter_team(details: dict, player: str | None, roster: list[dict]) -> str | None:
+    """Liberty or the opponent name. A bare tracker id has no team."""
+    named = str(details.get("team") or "").strip()
+    if named:
+        return named
+    side = details.get("team_side")
+    by_last = {}
+    for person in roster:
+        label = str(person.get("side_label") or "").strip()
+        last = _person_key(person.get("name"))
+        if label and last:
+            by_last[last] = label
+    person = _person_key(player)
+    if person and person in by_last:
+        return by_last[person]
+    if side in {"home", "away"} and roster:
+        liberty_home = next((p.get("team") == "home" for p in roster if p.get("side") == "liberty"), None)
+        opponent = next((str(p.get("side_label") or "") for p in roster if p.get("side") == "opponent"), "")
+        if liberty_home is True:
+            return "Liberty" if side == "home" else opponent or None
+        if liberty_home is False:
+            return "Liberty" if side == "away" else opponent or None
+    return None
+
+
+def _tag_points(rows: list[dict]) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
+    possession = []
+    shots = []
+    for row in rows:
+        team = str(row.get("team") or "").strip()
+        side = str(row.get("side") or "").strip()
+        try:
+            ts = time_to_ms(row.get("start"))
+        except (TypeError, ValueError):
+            continue
+        if side in {"Offense", "Defense"} and team:
+            possession.append((ts, team, side))
+        if str(row.get("eventtype") or "") in {"2PT", "3PT", "FT"} and team:
+            shots.append((ts, team))
+    return possession, shots
+
+
+NO_BALL_NOTE = "This player's team did not have the ball, so no shot was attempted."
+NOT_IN_PLAY_NOTE = "The ball is not in play between quarters."
+
+
+def reject_shots_when_the_other_team_has_the_ball(
+    db, game_id: str, *, pending_only: bool = False, commit: bool = True,
+    tag_rows: list[dict] | None = None, dry_run: bool = False,
+) -> dict[str, Any]:
+    """Drop an AI shot credited to the team the film tags say is on defense.
+
+    Scott's Q1 notes: the named player was on defense, that team did not have
+    the ball, and no shot was attempted. The 8-second same-stat match leaves
+    those rows in place because the nearby tag is a foul, an out-of-bounds,
+    or the other team's play. A shot tag for the shooter's own team within
+    8 seconds is left alone.
+    """
+    from stat_rules import possession_tag_for_shot, team_has_the_ball
+
+    game_id = normalize_analysis_game_id(game_id)
+    if tag_rows is None:
+        from film_tool_tags import load_manual_tags
+
+        base = str(game_id).split("__rerun_", 1)[0]
+        loaded = load_manual_tags(base)
+        tag_rows = (loaded or {}).get("rows") if isinstance(loaded, dict) else None
+    if not tag_rows:
+        return {"rejected": 0, "checked": 0}
+    possession, shot_tags = _tag_points(tag_rows)
+    if not possession:
+        return {"rejected": 0, "checked": 0}
+
+    from program_mode import analysis_players_from_scorebook, load_scorebook
+
+    roster = analysis_players_from_scorebook(load_scorebook(str(game_id))) or []
+    status_sql = "review_status = 'pending'" if pending_only else "review_status IN ('pending', 'accepted')"
+    rows = db.execute(
+        f"""SELECT id, player, event_type, timestamp_ms, details_json, review_status
+              FROM events
+             WHERE game_id=?
+               AND COALESCE(source_type,'ai')='ai'
+               AND COALESCE(human_verified,0)=0
+               AND {status_sql}
+               AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})
+             ORDER BY timestamp_ms, id""",
+        (game_id, *sorted(AI_SHOT_TYPES)),
+    ).fetchall()
+    rejected = 0
+    checked = 0
+    plan: list[dict] = []
+    seen_ms: set[int] = set()
+    for row in rows:
+        shot_ms = int(_row_get(row, "timestamp_ms") or 0)
+        if shot_ms in seen_ms:
+            continue
+        details = _details(_row_get(row, "details_json"))
+        shooter = _shooter_team(details, _row_get(row, "player"), roster)
+        if not shooter:
+            continue
+        checked += 1
+        if any(abs(shot_ms - ts) <= MATCH_TOLERANCE_MS and team == shooter for ts, team in shot_tags):
+            continue
+        tag = possession_tag_for_shot(possession, shot_ms)
+        if tag is None:
+            continue
+        has_ball = team_has_the_ball(shooter, tag[1], tag[2])
+        if has_ball is not False:
+            continue
+        seen_ms.add(shot_ms)
+        plan.append({
+            "ms": shot_ms,
+            "player": _row_get(row, "player"),
+            "shooter_team": shooter,
+            "tag_team": tag[1],
+            "tag_side": tag[2],
+        })
+        if dry_run:
+            continue
+        twins = [
+            other for other in rows
+            if int(_row_get(other, "timestamp_ms") or 0) == shot_ms
+            and str(_row_get(other, "player") or "") == str(_row_get(row, "player") or "")
+        ]
+        for twin in twins:
+            before = _row_get(twin, "review_status")
+            result = reject_event(
+                db,
+                int(_row_get(twin, "id")),
+                notes=NO_BALL_NOTE,
+                commit=False,
+            )
+            if result and before != "rejected":
+                rejected += 1
+        assists = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND event_type='assist'
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND COALESCE(human_verified,0)=0
+                   AND {status_sql}""",
+            (game_id, shot_ms),
+        ).fetchall()
+        for assist in assists:
+            before = _row_get(assist, "review_status")
+            result = reject_event(
+                db,
+                int(_row_get(assist, "id")),
+                notes=NO_BALL_NOTE,
+                commit=False,
+            )
+            if result and before != "rejected":
+                rejected += 1
+    if commit and not dry_run:
+        db.commit()
+    return {"rejected": rejected, "checked": checked, "plan": plan}
+
+
+def _quarter_marks(rows: list[dict]) -> list[tuple[int, str]]:
+    marks = []
+    for row in rows:
+        kind = str(row.get("eventtype") or "")
+        if kind not in {"EndQTR", "StartQTR"}:
+            continue
+        try:
+            marks.append((time_to_ms(row.get("start")), kind))
+        except (TypeError, ValueError):
+            continue
+    return marks
+
+
+def reject_shots_when_the_ball_is_not_in_play(
+    db, game_id: str, *, pending_only: bool = False, commit: bool = True,
+    tag_rows: list[dict] | None = None, dry_run: bool = False,
+) -> dict[str, Any]:
+    """Drop an AI shot that falls after EndQTR and before the next StartQTR.
+
+    Scott's Q2 notes on 17:18.8 and 17:31.8: the break between quarters, the
+    ball is not in play. A shot tag within 8 seconds is left alone, so a
+    buzzer shot next to the EndQTR click is not removed.
+    """
+    from stat_rules import shot_is_between_quarters
+
+    game_id = normalize_analysis_game_id(game_id)
+    if tag_rows is None:
+        from film_tool_tags import load_manual_tags
+
+        base = str(game_id).split("__rerun_", 1)[0]
+        loaded = load_manual_tags(base)
+        tag_rows = (loaded or {}).get("rows") if isinstance(loaded, dict) else None
+    if not tag_rows:
+        return {"rejected": 0, "checked": 0}
+    marks = _quarter_marks(tag_rows)
+    if not any(kind == "EndQTR" for _ts, kind in marks) or not any(kind == "StartQTR" for _ts, kind in marks):
+        return {"rejected": 0, "checked": 0}
+    _possession, shot_tags = _tag_points(tag_rows)
+    status_sql = "review_status = 'pending'" if pending_only else "review_status IN ('pending', 'accepted')"
+    # Auto-accepted shot twins are human_verified but still machine output.
+    verified_sql = "COALESCE(human_verified,0)=0" if pending_only else (
+        "(COALESCE(human_verified,0)=0 OR review_notes=?)"
+    )
+    params: list[Any] = [game_id]
+    if not pending_only:
+        params.append(AUTO_ACCEPT_NOTE)
+    params.extend(sorted(AI_SHOT_TYPES))
+    rows = db.execute(
+        f"""SELECT id, player, event_type, timestamp_ms, review_status
+              FROM events
+             WHERE game_id=?
+               AND COALESCE(source_type,'ai')='ai'
+               AND {verified_sql}
+               AND {status_sql}
+               AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})
+             ORDER BY timestamp_ms, id""",
+        params,
+    ).fetchall()
+    rejected = 0
+    checked = 0
+    plan: list[dict] = []
+    seen_ms: set[int] = set()
+    for row in rows:
+        shot_ms = int(_row_get(row, "timestamp_ms") or 0)
+        if shot_ms in seen_ms:
+            continue
+        gap = shot_is_between_quarters(marks, shot_ms)
+        if gap is None:
+            continue
+        checked += 1
+        if any(abs(shot_ms - ts) <= MATCH_TOLERANCE_MS for ts, _team in shot_tags):
+            continue
+        seen_ms.add(shot_ms)
+        plan.append({"ms": shot_ms, "player": _row_get(row, "player"), "gap": list(gap)})
+        if dry_run:
+            continue
+        twins = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND player=?
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND {status_sql}
+                   AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})""",
+            (game_id, shot_ms, _row_get(row, "player"), *sorted(AI_SHOT_TYPES)),
+        ).fetchall()
+        for twin in twins:
+            before = _row_get(twin, "review_status")
+            result = reject_event(db, int(_row_get(twin, "id")), notes=NOT_IN_PLAY_NOTE, commit=False)
+            if result and before != "rejected":
+                rejected += 1
+        assists = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND event_type='assist'
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND {status_sql}""",
+            (game_id, shot_ms),
+        ).fetchall()
+        for assist in assists:
+            before = _row_get(assist, "review_status")
+            result = reject_event(db, int(_row_get(assist, "id")), notes=NOT_IN_PLAY_NOTE, commit=False)
+            if result and before != "rejected":
+                rejected += 1
+    if commit and not dry_run:
+        db.commit()
+    return {"rejected": rejected, "checked": checked, "plan": plan}
 
 
 def _manual_teach_rows(db, game_id: str):

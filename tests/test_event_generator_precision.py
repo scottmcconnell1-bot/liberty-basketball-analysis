@@ -95,7 +95,7 @@ def test_mode_override_routes_to_precision_even_when_rebuild_forces_expanded(mon
     monkeypatch.setattr(eg, "_cluster_players_spatially", lambda d, **k: d.assign(cluster_id=1))
     monkeypatch.setattr(eg, "find_ball_possession", lambda d, **k: d)
     monkeypatch.setattr(eg, "build_possession_segments", lambda d, **k: [])
-    monkeypatch.setattr(eg, "build_ball_track", lambda d: pd.DataFrame())
+    monkeypatch.setattr(eg, "build_ball_track", lambda d, hoop_samples=None: pd.DataFrame())
     monkeypatch.setattr(eg, "persist_events", lambda *a, **k: None)
     monkeypatch.setattr(eg, "load_all_settings", lambda **k: {"ai": {"event_generator_mode": "expanded"}})
     db = tmp_path / "x.db"
@@ -322,3 +322,61 @@ def test_dropped_pump_fake_does_not_block_same_players_real_shot():
     events = eg.generate_precision_events_from_segments("g", segs, ball)
     shots = [e for e in events if e["event_type"] == "shot"]
     assert [(s["player"], s["timestamp_ms"]) for s in shots] == [("1", 91 * 33)]
+
+
+def test_a_lower_confidence_ball_at_the_hoop_is_the_shot():
+    """A higher box away from the hoop must not hide the ball at the rim.
+
+    Frame 12 has two balls: a confident box high and far, and a slightly less
+    confident box at the hoop. The shot time is the ball at the hoop.
+    """
+    hoop = [{"timestamp_ms": 0, "x": 400.0, "y": 180.0, "r": 20.0}]
+    frames = list(range(0, 30))
+    rows = []
+    for frame in frames:
+        rows.append({
+            "frame_number": frame,
+            "timestamp_ms": frame * 100,
+            "x_center": 200.0,
+            "y_center": 450.0,
+            "confidence": 0.80,
+            "class_name": "ball",
+        })
+    rows.append({
+        "frame_number": 12,
+        "timestamp_ms": 1200,
+        "x_center": 390.0,
+        "y_center": 100.0,
+        "confidence": 0.40,
+        "class_name": "ball",
+    })
+    rows.append({
+        "frame_number": 12,
+        "timestamp_ms": 1200,
+        "x_center": 80.0,
+        "y_center": 40.0,
+        "confidence": 0.90,
+        "class_name": "ball",
+    })
+    rows.append({
+        "frame_number": 10,
+        "timestamp_ms": 1000,
+        "x_center": 80.0,
+        "y_center": 30.0,
+        "confidence": 0.90,
+        "class_name": "ball",
+    })
+    raw = pd.DataFrame(rows)
+    track = eg.build_ball_track(raw, hoop_samples=hoop)
+    kept = track[track["frame_number"] == 12].iloc[0]
+    assert float(kept["x_center"]) == 390.0
+
+    shot = eg.detect_shot_from_segment(
+        _seg("1", 0, 20),
+        track,
+        min_ball_rise=80,
+        hoop_samples=hoop,
+    )
+    assert shot is not None
+    assert shot["timestamp_ms"] == 1200
+    assert shot["peak_x"] == 390.0

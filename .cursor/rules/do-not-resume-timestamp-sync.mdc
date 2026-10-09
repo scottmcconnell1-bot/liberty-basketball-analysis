@@ -1,0 +1,10 @@
+---
+description: Do not resume the finished Adrian timestamp-sync search
+alwaysApply: true
+---
+
+# Do not resume Explore Adrian timestamp sync
+
+The explore agent `a4e6aae5-7ad7-48e0-a657-0faf69984c15` ("Explore Adrian timestamp sync") finished on 2026-08-26. Scott stopped it on 2026-10-08. It is archived.
+
+Do not resume it, interrupt it, or start another agent with that description. A resume is what put the chip back on "Starting up."

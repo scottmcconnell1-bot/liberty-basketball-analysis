@@ -16,9 +16,44 @@ from stat_rules import (
     credit_block,
     credit_steal,
     points_for_kind,
+    possession_tag_for_shot,
     scoring_event_type,
+    shot_is_between_quarters,
     second_chance_make,
+    team_has_the_ball,
 )
+
+
+def test_a_team_on_defense_does_not_have_the_ball():
+    assert team_has_the_ball("Liberty", "Liberty", "Defense") is False
+    assert team_has_the_ball("Adrian", "Liberty", "Defense") is True
+    assert team_has_the_ball("Liberty", "Adrian", "Offense") is False
+    assert team_has_the_ball("Adrian", "Adrian", "Offense") is True
+    assert team_has_the_ball("Liberty", "", "Defense") is None
+    assert team_has_the_ball("", "Liberty", "Offense") is None
+
+
+def test_a_shot_between_end_and_start_is_not_in_play():
+    marks = [(960700, "EndQTR"), (1055800, "StartQTR"), (1935000, "EndQTR")]
+    assert shot_is_between_quarters(marks, 1038800) == (960700, 1055800)
+    assert shot_is_between_quarters(marks, 960700) is None
+    assert shot_is_between_quarters(marks, 1055800) is None
+    assert shot_is_between_quarters(marks, 1126240) is None
+    assert shot_is_between_quarters([(960700, "EndQTR")], 1038800) is None
+
+
+def test_possession_tag_uses_the_closer_same_beat():
+    tags = [
+        (151400, "Liberty", "Defense"),
+        (167200, "Adrian", "Offense"),
+    ]
+    assert possession_tag_for_shot(tags, 151600) == (151400, "Liberty", "Defense")
+    foul = [
+        (151400, "Liberty", "Defense"),
+        (482700, "Liberty", "Defense"),
+    ]
+    assert possession_tag_for_shot(foul, 482200) == (482700, "Liberty", "Defense")
+    assert possession_tag_for_shot([(0, "Adrian", "Offense")], 40000) is None
 
 
 def test_assist_requires_made_fg_short_hold_not_ft():

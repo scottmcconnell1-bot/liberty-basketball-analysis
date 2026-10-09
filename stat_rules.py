@@ -142,6 +142,69 @@ def points_off_turnover(*, previous_was_live_to: bool, scoring_team_is_defense_o
     return bool(made and previous_was_live_to and scoring_team_is_defense_of_that_to)
 
 
+def team_has_the_ball(shooter_team: str | None, tag_team: str | None, tag_side: str | None) -> bool | None:
+    """Whether this shooter can have attempted a shot.
+
+    A Film Tool tag with side Defense means that team does not have the ball.
+    A tag with side Offense means that team does. None when the tag does not say.
+    """
+    shooter = (shooter_team or "").strip()
+    team = (tag_team or "").strip()
+    side = (tag_side or "").strip()
+    if not shooter or not team or side not in {"Offense", "Defense"}:
+        return None
+    if side == "Offense":
+        return shooter == team
+    return shooter != team
+
+
+def possession_tag_for_shot(
+    tags: list[tuple[int, str, str]],
+    shot_ms: int,
+    forward_ms: int = 3000,
+    lookback_ms: int = 8000,
+) -> tuple[int, str, str] | None:
+    """The offense/defense tag on this beat, not a possession carried for minutes.
+
+    The latest tag at or before the shot counts only inside lookback_ms.
+    A tag up to forward_ms later replaces it when that tag is closer, so a
+    foul or out-of-bounds on the same beat is the tag for the shot.
+    """
+    points = [
+        (int(ts), str(team), str(side))
+        for ts, team, side in tags
+        if str(team or "").strip() and str(side or "").strip() in {"Offense", "Defense"}
+    ]
+    prior = [point for point in points if shot_ms - lookback_ms <= point[0] <= shot_ms]
+    following = [point for point in points if shot_ms < point[0] <= shot_ms + forward_ms]
+    chosen = max(prior, key=lambda point: point[0]) if prior else None
+    if following:
+        nxt = min(following, key=lambda point: point[0])
+        if chosen is None or (nxt[0] - shot_ms) < (shot_ms - chosen[0]):
+            chosen = nxt
+    return chosen
+
+
+def shot_is_between_quarters(marks: list[tuple[int, str]], shot_ms: int) -> tuple[int, int] | None:
+    """The open gap after EndQTR and before the next StartQTR, if this shot is in it.
+
+    Scott's Q2 notes: between quarters the ball is not in play, so an AI row
+    there is not a shot. A shot exactly on either mark is outside the gap.
+    """
+    ordered = sorted(
+        (int(ts), str(kind))
+        for ts, kind in marks
+        if str(kind) in {"EndQTR", "StartQTR"}
+    )
+    for index, (ts, kind) in enumerate(ordered):
+        if kind != "EndQTR":
+            continue
+        nxt = next((point for point in ordered[index + 1:] if point[1] == "StartQTR"), None)
+        if nxt and ts < int(shot_ms) < nxt[0]:
+            return (ts, nxt[0])
+    return None
+
+
 def points_for_kind(shot_kind: str, made: bool) -> int:
     if not made:
         return 0

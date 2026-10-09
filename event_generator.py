@@ -174,12 +174,71 @@ def append_unique_event(events, seen_keys, event):
     events.append(event)
 
 
-def build_ball_track(detections_df):
+# A second ball box on the same frame is often a false ball with slightly higher
+# confidence. The box at the locked hoop is the one a shot can be corrected from.
+_RIM_MAX_DIST = 280.0
+_RIM_CONF_FLOOR = 0.35
+
+
+def _hoop_on_court(hoop) -> bool:
+    if not hoop:
+        return False
+    x = float(hoop.get("x") or 0)
+    y = float(hoop.get("y") or 0)
+    return 80.0 <= x <= 1840.0 and 40.0 <= y <= 450.0
+
+
+def _ball_at_hoop(x, y, confidence, hoop) -> bool:
+    """True when this box is above the locked rim and within the attempt gate."""
+    if not _hoop_on_court(hoop):
+        return False
+    if confidence is not None and float(confidence) < _RIM_CONF_FLOOR:
+        return False
+    hx = float(hoop["x"])
+    hy = float(hoop["y"])
+    if float(y) >= hy:
+        return False
+    dx = float(x) - hx
+    dy = float(y) - hy
+    return (dx * dx + dy * dy) ** 0.5 <= _RIM_MAX_DIST
+
+
+def _load_hoop_samples(game_id):
+    try:
+        from net_detector import load_hoop_track
+
+        return load_hoop_track(game_id) or []
+    except Exception:
+        return []
+
+
+def build_ball_track(detections_df, hoop_samples=None):
     ball_df = detections_df[detections_df["class_name"] == "ball"].copy()
     if ball_df.empty:
         return ball_df
     ball_df = ball_df.sort_values(["frame_number", "confidence"], ascending=[True, False])
-    return ball_df.groupby("frame_number", as_index=False).first()
+    if not hoop_samples:
+        return ball_df.groupby("frame_number", as_index=False).first()
+
+    from net_detector import hoop_at
+
+    chosen = []
+    has_conf = "confidence" in ball_df.columns
+    for _frame, grp in ball_df.groupby("frame_number", sort=False):
+        hoop = hoop_at(hoop_samples, int(grp.iloc[0]["timestamp_ms"]))
+        at_rim = []
+        for idx, row in grp.iterrows():
+            conf = row["confidence"] if has_conf else 1.0
+            if _ball_at_hoop(row["x_center"], row["y_center"], conf, hoop):
+                dx = float(row["x_center"]) - float(hoop["x"])
+                dy = float(row["y_center"]) - float(hoop["y"])
+                at_rim.append(((dx * dx + dy * dy), idx))
+        if at_rim:
+            at_rim.sort()
+            chosen.append(grp.loc[at_rim[0][1]])
+        else:
+            chosen.append(grp.iloc[0])
+    return pd.DataFrame(chosen).reset_index(drop=True)
 
 
 def _numpy_kmeans_fit(coords, n_clusters, max_iter=20, seed=42):
@@ -403,8 +462,29 @@ def build_possession_segments(detections_with_possession_df, max_ball_distance=N
     return segments
 
 
+def _shot_peak_index(search_window, hoop_samples):
+    """Highest ball that is at the hoop. A higher box away from the hoop is not the shot."""
+    if (
+        hoop_samples
+        and not search_window.empty
+        and "timestamp_ms" in search_window.columns
+    ):
+        from net_detector import hoop_at
+
+        has_conf = "confidence" in search_window.columns
+        rim_idx = []
+        for idx, row in search_window.iterrows():
+            conf = row["confidence"] if has_conf else None
+            hoop = hoop_at(hoop_samples, int(row["timestamp_ms"]))
+            if _ball_at_hoop(row["x_center"], row["y_center"], conf, hoop):
+                rim_idx.append(idx)
+        if rim_idx:
+            return search_window.loc[rim_idx, "y_center"].idxmin()
+    return search_window["y_center"].idxmin()
+
+
 def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment_start=None,
-                              secondary_pass=False, ball_y_threshold=400):
+                              secondary_pass=False, ball_y_threshold=400, hoop_samples=None):
     """
     Detect if a shot was taken at the end of a possession segment.
 
@@ -444,7 +524,7 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
             return None
 
         # Find the ball's highest point (minimum y_center) in the wide window
-        peak_idx = search_window["y_center"].idxmin()
+        peak_idx = _shot_peak_index(search_window, hoop_samples)
         peak_row = search_window.loc[peak_idx]
         peak_y = float(peak_row["y_center"])
         peak_x = float(peak_row["x_center"])
@@ -489,7 +569,7 @@ def detect_shot_from_segment(segment, ball_track, min_ball_rise=10, next_segment
         return None
 
     # Find the ball's highest point (minimum y_center) in the window
-    peak_idx = search_window["y_center"].idxmin()
+    peak_idx = _shot_peak_index(search_window, hoop_samples)
     peak_row = search_window.loc[peak_idx]
     peak_y = float(peak_row["y_center"])
     peak_x = float(peak_row["x_center"])
@@ -663,7 +743,8 @@ def generate_precision_events_from_segments(
     for index, segment in enumerate(segments):
         next_start = segments[index + 1]["start_frame"] if index + 1 < len(segments) else None
         shot_info = detect_shot_from_segment(
-            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start
+            segment, ball_track, min_ball_rise=p["shot_min_ball_rise"], next_segment_start=next_start,
+            hoop_samples=hoop_samples,
         )
         if not shot_info:
             continue
@@ -1403,7 +1484,7 @@ def main(
 
         if generator_mode == "precision":
             segments = build_possession_segments(detections_with_possession_df)
-            ball_track = build_ball_track(detections_df)
+            ball_track = build_ball_track(detections_df, hoop_samples=_load_hoop_samples(game_id))
             print(f"INFO: Built {len(segments)} possession segments for precision generation.")
             frame_reader = _open_frame_reader(conn, game_id)
             try:
@@ -1418,7 +1499,7 @@ def main(
             persist_events(conn, game_id, events_to_persist, relational_game_id=relational_game_id)
         elif generator_mode == "expanded":
             segments = build_possession_segments(detections_with_possession_df)
-            ball_track = build_ball_track(detections_df)
+            ball_track = build_ball_track(detections_df, hoop_samples=_load_hoop_samples(game_id))
             print(f"INFO: Built {len(segments)} possession segments for expanded generation.")
             events_to_persist = generate_expanded_events_from_segments(game_id, segments, ball_track)
             print(f"INFO: Expanded generator produced {len(events_to_persist)} events.")

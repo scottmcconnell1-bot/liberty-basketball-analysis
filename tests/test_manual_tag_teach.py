@@ -158,7 +158,69 @@ def test_persist_events_keeps_manual_and_regrades_ai(app):
         assert "Colman" in (ai["player"] or "")
 
 
-def test_teach_keeps_the_make_and_does_not_reject_its_shot_twin(app):
+def test_a_shot_between_quarters_is_rejected(app):
+    from manual_tag_teach import reject_shots_when_the_ball_is_not_in_play
+
+    game_id = "teach-between-quarters"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'missed_two', 'miss', 1038800, 0, 'ai', 'pending', 0.4)""",
+            (game_id,),
+        )
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms, review_notes,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'shot', 'miss', 1038800, 'Auto-accepted (high confidence)',
+                       1, 'ai', 'accepted', 0.9)""",
+            (game_id,),
+        )
+        db.commit()
+        report = reject_shots_when_the_ball_is_not_in_play(db, game_id, tag_rows=[
+            {"eventtype": "EndQTR", "start": "16:00.7", "quarter": "Q1"},
+            {"eventtype": "StartQTR", "start": "17:35.8", "quarter": "Q2"},
+            {"eventtype": "2PT", "start": "18:00.0", "team": "Liberty", "result": "Miss"},
+        ])
+        statuses = db.execute(
+            "SELECT event_type, review_status, review_notes FROM events WHERE game_id=? ORDER BY event_type",
+            (game_id,),
+        ).fetchall()
+        assert report["rejected"] == 2
+        assert {row["review_status"] for row in statuses} == {"rejected"}
+        assert all("not in play" in row["review_notes"] for row in statuses)
+
+
+def test_a_shot_by_the_team_on_defense_is_rejected(app):
+    from manual_tag_teach import reject_shots_when_the_other_team_has_the_ball
+
+    game_id = "teach-defense-no-shot"
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """INSERT INTO events
+                  (game_id, player, event_type, shot_result, timestamp_ms, details_json,
+                   human_verified, source_type, review_status, confidence)
+               VALUES (?, '#40 Dayley', 'missed_two', 'miss', 151600, ?, 0, 'ai', 'pending', 0.4)""",
+            (game_id, '{"team": "Liberty"}'),
+        )
+        db.commit()
+        report = reject_shots_when_the_other_team_has_the_ball(db, game_id, tag_rows=[{
+            "team": "Liberty",
+            "side": "Defense",
+            "eventtype": "OB",
+            "start": "2:31.4",
+        }])
+        status = db.execute(
+            "SELECT review_status, review_notes FROM events WHERE game_id=?",
+            (game_id,),
+        ).fetchone()
+        assert report["rejected"] == 1
+        assert status["review_status"] == "rejected"
+        assert "did not have the ball" in status["review_notes"]
     game_id = "teach-shot-twin"
     with app.app_context():
         db = get_db()

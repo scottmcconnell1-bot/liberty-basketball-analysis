@@ -1,6 +1,29 @@
 # Brad — start here
 
-Updated: 2026-10-08. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`.
+Updated: 2026-10-08 night. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`.
+
+## What Scott is having us do (2026-10-08 night)
+
+This section wins where a number below disagrees. He asked for an accurate answer, not a fast one.
+
+His film tags are truth. Do not ask him to grade his own tags. A tagged shot with no `events` row makes the count wrong. He can reject a false row. He cannot repair a missing one. He says the ball went through the hoop and the net moved on those shots, and that arc height varies too widely for a single rise threshold to decide that no shot occurred.
+
+The open job is to find a detection method, from other basketball-film programs, that writes that row, then test it on run 12 before any gate is loosened. Do not insert his tags as AI makes to force the total. Do not remove `live_shot_min_ball_rise` (170) until that test says the missing rows appear and new untagged shots do not. Do not start another ball-detector pass. `ball_through_rim` / `net_moved` still run only after an arc is accepted (`event_generator.py`, the precision shot loop). Both-false remains a miss.
+
+**Home database only** (`film_analysis.db` is not in git). Run 12 `...__rerun_20261006_033941`, queried 2026-10-08 night:
+
+- `events` for that `game_id`: 1,509 rows.
+- Non-rejected makes (`review_status` in accepted, corrected, pending): `made_two` 14 (28 pts), `made_three` 5 (15), `made_free_throw` 6 (6). Total 49. Book 77. Do not publish 49 as accuracy.
+
+Code now in the repo, not yet a new detection pass:
+
+- `shot_is_between_quarters` in `stat_rules.py`. `reject_shots_when_the_ball_is_not_in_play` in `manual_tag_teach.py`. An AI shot strictly after his EndQTR and before the next StartQTR is rejected. A shot tag within 8 seconds (`MATCH_TOLERANCE_MS`) protects it. His Q2 sheet plus this rule took non-rejected make points from 59 to 43.
+- `build_ball_track(..., hoop_samples=)` keeps the ball within 280px above an on-court hoop when another box on that frame has higher confidence. `_shot_peak_index` uses that ball as the peak. Test: `test_a_lower_confidence_ball_at_the_hoop_is_the_shot`.
+- Those six new `missed_two` rows exist only in the home database. Five were then `_correct_ai_from_manual` from the base game id’s `source_type='manual'` shot tags: Mendoza 2 miss at 6:13.7 (374800 ms graded from 373700), Colman FT make at 19:41.7, Dayley 2 make at 26:43.9, Rodus 3 miss at 28:28.1, Colman 3 make at 30:36.7. That is +6 points, 43 to 49. Foster `missed_two` at 773200 ms (12:53.2) stayed `pending`. No tag within 8 seconds.
+
+Still no AI shot within 8 seconds, and still no row: Rodus FT 501900 (8:21.9), Mendoza FT 590900 (9:50.9), Alvarez FT 1231400 (20:31.4), Mendoza 2 1582000 (26:22.0). Checked this night: `ball_through_rim` geometry on stored `object_class='ball'` rows finds no box within 72px of the locked hoop (at the iron). `net_kicked` on `uploads/nfhs_gam0a66d85e12.mp4` under that same lock, including frames around the tag, is false for all four. Hoop samples for Mendoza’s free throw swing off the court (x as low as 16). He says the net he watched did move, so the lock is not that rim.
+
+Looked at, not shipped: HoopCut scores a make when the segment from the last ball above the rim to the first ball below it intersects the hoop. NBAction scores when the ball is inside a small radius of a stabilized hoop. A 2020 basket-appearance method uses the picture around the basket, not arc height. None of those, pointed at the current lock, add these four rows. The unfinished work is to locate that rim, then test again.
 
 You are a database analyst. The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is trying to count that game from the film. It is not close enough. Do not copy the book totals onto the AI rows to make them match.
 
