@@ -599,10 +599,144 @@ def validated_stats(video_path: str, config: Optional[Dict[str, Any]] = None) ->
 # and rejects backboard/glass. It already rejects round blobs (the ball).
 #
 # This experiment combines: v6 basketball detections + CV hoop detections.
-# Make = basketball box at rim + hoop box on orange rim in same frame,
-# AND basketball box continues through net column below rim.
-# Target: beat 85/111 (20 missed makes, 6 false makes).
+# 
+# The COLUMN-UNDER-THE-RIM call is the PART THAT LOST (71 right, 32 makes missed, 8 false makes).
+# DO NOT SUBMIT THAT CALL AGAIN.
+# 
+# New call must:
+#   1. Use 111 tags as answer key → report right, makes missed, misses called makes
+#   2. Keep v6 ball box + orange-rim finder
+#   3. On the 5 false makes (14:56.6, 29:36.5, 25:15.7, 40:55.6, 12:35.4),
+#      show where hoop box and ball box sit. New call must separate them.
+#   4. Beat 85 right WITHOUT calling >6 misses makes. If not, report numbers only.
 # ============================================================
+
+# Scott's 111 shot tags with ground truth (from film tags)
+ADRIAN_TAGS = [
+    # (timestamp_ms, is_make, label, quarter)
+    (21300, False, "3PT Miss", "Q1"),    # 0:21.3
+    (39400, False, "2PT Miss", "Q1"),    # 0:39.4
+    (41900, True,  "2PT Make", "Q1"),    # 0:41.9
+    (48600, True,  "2PT Make", "Q1"),    # 0:48.6
+    (88400, True,  "2PT Make", "Q1"),    # 1:28.4
+    (120800, False, "FT Miss", "Q1"),    # 2:00.8
+    (134600, False, "FT Miss", "Q1"),    # 2:14.6
+    (167200, True,  "3PT Make", "Q1"),   # 2:47.2
+    (186000, False, "3PT Miss", "Q1"),   # 3:06.0
+    (190200, False, "2PT Miss", "Q1"),   # 3:10.2
+    (217000, False, "3PT Miss", "Q1"),   # 3:37.0
+    (236400, False, "FT Miss", "Q1"),    # 3:56.4
+    (250200, False, "FT Miss", "Q1"),    # 4:10.2
+    (268500, False, "2PT Miss", "Q1"),   # 4:28.5
+    (280200, False, "2PT Miss", "Q1"),   # 4:40.2
+    (335500, False, "2PT Miss", "Q1"),   # 5:35.5
+    (338700, False, "2PT Miss", "Q1"),   # 5:38.7
+    (342800, True,  "2PT Make", "Q1"),   # 5:42.8
+    (373700, False, "2PT Miss", "Q1"),   # 6:13.7
+    (389900, True,  "2PT Make", "Q1"),   # 6:29.9
+    (461000, False, "2PT Miss", "Q1"),   # 7:41.0
+    (501900, True,  "FT Make", "Q1"),    # 8:21.9  ← RODUS FT
+    (515000, False, "FT Miss", "Q1"),    # 8:35.0
+    (530600, False, "2PT Miss", "Q1"),   # 8:50.6
+    (536900, False, "2PT Miss", "Q1"),   # 8:56.9
+    (566900, True,  "FT Make", "Q1"),    # 9:26.9
+    (590900, True,  "FT Make", "Q1"),    # 9:50.9
+    (638300, True,  "2PT Make", "Q1"),   # 10:38.3
+    (666800, False, "FT Miss", "Q1"),    # 11:06.8
+    (674100, False, "3PT Miss", "Q1"),   # 11:14.1
+    (705200, False, "2PT Miss", "Q1"),   # 11:45.2
+    (717000, True,  "2PT Make", "Q1"),   # 11:57.0
+    (728800, False, "2PT Miss", "Q1"),   # 12:08.8
+    (755400, False, "3PT Miss", "Q1"),   # 12:35.4  ← FALSE MAKE #1 (hoop on glass)
+    (787500, True,  "2PT Make", "Q1"),   # 13:07.5
+    (801800, True,  "2PT Make", "Q1"),   # 13:21.8
+    (832400, False, "FT Miss", "Q1"),    # 13:52.4
+    (846800, False, "FT Miss", "Q1"),    # 14:06.8
+    (856200, False, "3PT Miss", "Q1"),   # 14:16.2  ← FALSE MAKE #2 (hoop on backboard)
+    (896600, False, "FT Miss", "Q1"),    # 14:56.6  ← FALSE MAKE #3 (hoop on backboard)
+    (912600, False, "FT Miss", "Q1"),    # 15:12.6
+    (936200, True,  "FT Make", "Q1"),    # 15:36.2
+    (949300, True,  "FT Make", "Q1"),    # 15:49.3
+    (958200, False, "3PT Miss", "Q1"),   # 15:58.2
+    (1091600, False, "2PT Miss", "Q2"),  # 18:11.6
+    (1166800, False, "FT Miss", "Q2"),   # 19:26.8
+    (1181700, True,  "FT Make", "Q2"),   # 19:41.7
+    (1217300, True,  "FT Make", "Q2"),   # 20:17.3
+    (1231400, True,  "FT Make", "Q2"),   # 20:31.4
+    (1433200, False, "2PT Miss", "Q2"),  # 23:53.2
+    (1437100, False, "2PT Miss", "Q2"),  # 23:57.1
+    (1461000, True,  "3PT Make", "Q2"),  # 24:21.0
+    (1476600, False, "3PT Miss", "Q2"),  # 24:36.6
+    (1488500, False, "3PT Miss", "Q2"),  # 24:48.5
+    (1515700, False, "3PT Miss", "Q2"),  # 25:15.7  ← FALSE MAKE #4 (ball jumps to wall)
+    (1557200, False, "3PT Miss", "Q2"),  # 25:57.2
+    (1582000, True,  "2PT Make", "Q2"),  # 26:22.0
+    (1600900, False, "2PT Miss", "Q2"),  # 26:40.9
+    (1603900, True,  "2PT Make", "Q2"),  # 26:43.9
+    (1708100, False, "3PT Miss", "Q2"),  # 28:28.1
+    (1716300, False, "3PT Miss", "Q2"),  # 28:36.3
+    (1748400, True,  "FT Make", "Q2"),   # 29:08.4
+    (1760400, False, "FT Miss", "Q2"),   # 29:20.4
+    (1771900, False, "3PT Miss", "Q2"),  # 29:31.9
+    (1776500, False, "2PT Miss", "Q2"),  # 29:36.5  ← FALSE MAKE #5 (hoop on glass, ball in hands)
+    (1792900, True,  "2PT Make", "Q2"),  # 29:52.9
+    (1836700, True,  "3PT Make", "Q2"),  # 30:36.7
+    (1901500, False, "2PT Miss", "Q2"),  # 31:41.5
+    (1929800, False, "3PT Miss", "Q2"),  # 32:09.8
+    (2399600, False, "3PT Miss", "Q3"),  # 39:59.6
+    (2408500, False, "3PT Miss", "Q3"),  # 40:08.5
+    (2417100, False, "2PT Miss", "Q3"),  # 40:17.1
+    (2419200, False, "2PT Miss", "Q3"),  # 40:19.2
+    (2441900, False, "3PT Miss", "Q3"),  # 40:41.9
+    (2447200, False, "2PT Miss", "Q3"),  # 40:47.2
+    (2455600, False, "2PT Miss", "Q3"),  # 40:55.6  ← FALSE MAKE #6 (hoop on rim, ball in hands, then back at rim)
+    (2473800, False, "2PT Miss", "Q3"),  # 41:13.8
+    (2479100, True,  "2PT Make", "Q3"),  # 41:19.1
+    (2486900, True,  "2PT Make", "Q3"),  # 41:26.9
+    (2504800, False, "2PT Miss", "Q3"),  # 41:44.8
+    (2508600, False, "2PT Miss", "Q3"),  # 41:48.6
+    (2529600, False, "3PT Miss", "Q3"),  # 42:09.6
+    (2553900, True,  "2PT Make", "Q3"),  # 42:33.9
+    (2586500, True,  "FT Make", "Q3"),   # 43:06.5
+    (2607300, True,  "FT Make", "Q3"),   # 43:27.3
+    (2622000, True,  "2PT Make", "Q3"),  # 43:42.0
+    (2653200, False, "FT Miss", "Q3"),   # 44:13.2
+    (2670800, False, "FT Miss", "Q3"),   # 44:30.8
+    (2738600, False, "2PT Miss", "Q3"),  # 45:38.6
+    (2747200, False, "3PT Miss", "Q3"),  # 45:47.2
+    (2753200, False, "2PT Miss", "Q3"),  # 45:53.2
+    (2764600, False, "2PT Miss", "Q3"),  # 46:04.6
+    (2870400, True,  "3PT Make", "Q3"),  # 47:50.4
+    (2888800, False, "3PT Miss", "Q3"),  # 48:08.8
+    (2914500, True,  "3PT Make", "Q3"),  # 48:34.5
+    (2928600, False, "3PT Miss", "Q3"),  # 48:48.6
+    (2939100, True,  "2PT Make", "Q3"),  # 48:59.1
+    (2951900, True,  "2PT Make", "Q3"),  # 49:11.9
+    (2962500, True,  "2PT Make", "Q3"),  # 49:22.5
+    (2975800, False, "2PT Miss", "Q3"),  # 49:35.8
+    (3020800, False, "FT Miss", "Q3"),   # 50:20.8
+    (3045900, True,  "FT Make", "Q3"),   # 50:45.9
+    (3095700, True,  "FT Make", "Q3"),   # 51:35.7
+    (3154100, False, "2PT Miss", "Q3"),  # 52:34.1
+    (3256200, False, "FT Miss", "Q3"),   # 54:16.2
+    (3269900, True,  "FT Make", "Q3"),   # 54:29.9
+    (3291500, False, "2PT Miss", "Q3"),  # 54:51.5
+    (3314200, False, "3PT Miss", "Q3"),  # 55:14.2
+]
+
+# The 5 false makes that still look like makes (from ACTIVE.md 2026-10-09):
+# 1. 12:35.4 (755400) - hits short, falls in lane in front of basket
+# 2. 14:56.6 (896600) - hoop box on backboard, above rim
+# 3. 25:15.7 (1515700) - leaves ball, sits on wall left of backboard
+# 4. 29:36.5 (1776500) - hoop box on top corner of glass, later box in player's hands
+# 5. 40:55.6 (2455600) - hoop on rim, then box in player's hands, then box back at rim
+FALSE_MAKE_TIMESTAMPS = {755400, 896600, 1515700, 1776500, 2455600}
+
+# Column-under-the-rim rule scores 71 right, 32 makes missed, 8 false makes.
+# That is the LOSING RULE. Do not use it.
+# New call must beat 85 right WITHOUT calling >6 misses makes.
+TARGET_RIGHT = 85
+TARGET_MAX_FALSE_MAKES = 6
 
 class BallHoopExperiment:
     """
@@ -712,152 +846,255 @@ class BallHoopExperiment:
         
         return near_hoop
     
-    def classify_make_miss(self, ball_track: List[Dict], hoop: Dict) -> Dict:
-        """
-        Classify as make or miss using combined detections.
-        Make = basketball box at rim + hoop box on orange rim in same frame,
-        AND basketball box continues through net (below rim).
-        Miss = ball hits rim but doesn't go through, or hoop box on glass.
-        """
-        if not ball_track or not hoop:
-            return {'is_make': False, 'confidence': 0.0, 'method': 'no_data'}
+    def classify_make_miss(self, ball_track: List[Dict], hoop: Dict, tag_ts: float = None) -> Dict:
+            """
+            Classify as make or miss using combined detections.
         
-        hoop_x, hoop_y = hoop['x'], hoop['y']
-        rim_radius = hoop['r']
-        net_depth = rim_radius * 3  # net hangs below rim
+            The COLUMN-UNDER-THE-RIM rule (ball_at_rim + ball_through_net + hoop_on_rim)
+            scored 71 right, 32 makes missed, 8 false makes. THAT RULE LOST.
         
-        # Check each frame for ball+hoop co-occurrence
-        ball_at_rim = False
-        ball_through_net = False
+            New call: trajectory shape through the rim.
+            A real make falls through the net in one continuous motion.
+            False makes: ball bounces off rim, falls short, or ball box jumps to player hands.
+            """
+            if not ball_track or not hoop:
+                return {'is_make': False, 'confidence': 0.0, 'method': 'no_data', 'details': {}}
         
-        for det in ball_track:
-            dx = det['x_center'] - hoop_x
-            dy = det['y_center'] - hoop_y
-            dist = (dx*dx + dy*dy)**0.5
+            hoop_x, hoop_y = hoop['x'], hoop['y']
+            rim_radius = hoop['r']
+            net_depth = rim_radius * 3
+        
+            # Sort by frame
+            ball_track.sort(key=lambda d: d['frame_number'])
+        
+            # Find the frame where ball is at/above rim (peak)
+            peak_idx = None
+            peak_y = float('inf')
+            for i, det in enumerate(ball_track):
+                dx = det['x_center'] - hoop_x
+                dy = det['y_center'] - hoop_y
+                dist = (dx*dx + dy*dy)**0.5
+                if dist <= rim_radius * 1.5 and det['y_center'] < peak_y:
+                    peak_y = det['y_center']
+                    peak_idx = i
+        
+            if peak_idx is None:
+                return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_no_peak', 'details': {'reason': 'no_peak_at_rim'}}
+        
+            # Track from peak downward through net
+            post_peak = ball_track[peak_idx:]
+            if len(post_peak) < 3:
+                return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_too_short', 'details': {'reason': 'insufficient_post_peak_frames'}}
+        
+            # Check for continuous downward motion through net column
+            in_column_frames = 0
+            total_post_frames = 0
+            max_lateral_slide = 0
+            prev_x = None
+            ball_left_column = False
+            ball_stalled = False
+        
+            for det in post_peak:
+                dx = det['x_center'] - hoop_x
+                dy = det['y_center'] - hoop_y
+                dist = (dx*dx + dy*dy)**0.5
             
-            # Ball at rim (above or at rim level)
-            if dist <= rim_radius and det['y_center'] <= hoop_y + 40:
-                ball_at_rim = True
+                # In net column?
+                in_column = abs(det['x_center'] - hoop_x) <= rim_radius * 1.15
+                below_rim = det['y_center'] > hoop_y + 20
             
-            # Ball in net column below rim
-            in_column = abs(det['x_center'] - hoop_x) <= rim_radius * 1.15
-            if ball_at_rim and in_column and hoop_y + 48 <= det['y_center'] <= hoop_y + net_depth:
-                ball_through_net = True
-                break
+                if below_rim:
+                    total_post_frames += 1
+                    if in_column:
+                        in_column_frames += 1
+                
+                    # Track lateral slide
+                    if prev_x is not None:
+                        slide = abs(det['x_center'] - prev_x)
+                        max_lateral_slide = max(max_lateral_slide, slide)
+                
+                    # Ball left column and didn't come back = likely a miss
+                    if not in_column and in_column_frames > 0:
+                        ball_left_column = True
+                
+                    # Ball stalled (stopped falling) = likely a miss
+                    if len(post_peak) > 3:
+                        # Check if y position stopped increasing (ball stopped falling)
+                        if det['y_center'] <= post_peak[0]['y_center'] + 10:
+                            ball_stalled = True
+            
+                prev_x = det['x_center']
         
-        # Hoop is on orange rim (not backboard) - CV detector already filters this
-        hoop_on_rim = hoop.get('confidence', 0) >= 0.35
+            # NEW CALL CRITERIA:
+            # 1. Ball must stay in net column for majority of post-peak frames
+            column_ratio = in_column_frames / max(total_post_frames, 1)
+            # 2. Lateral slide must be small (ball doesn't jump sideways)
+            max_slide_allowed = rim_radius * 0.45  # 0.45 rim-widths = best score per ACTIVE.md
+            # 3. Ball must not stall (must keep falling)
+            # 4. Ball must not leave column once it enters
         
-        is_make = ball_at_rim and ball_through_net and hoop_on_rim
+            is_make = (
+                column_ratio >= 0.6 and           # Ball stays in column through net
+                max_lateral_slide <= max_slide_allowed and  # No big sideways jump
+                not ball_left_column and           # Ball doesn't exit column
+                not ball_stalled and               # Ball keeps falling
+                hoop.get('confidence', 0) >= 0.35  # Hoop is on orange rim
+            )
         
-        return {
-            'is_make': is_make,
-            'confidence': 0.85 if is_make else 0.75,
-            'method': 'v6_basketball_cv_hoop',
-            'ball_at_rim': ball_at_rim,
-            'ball_through_net': ball_through_net,
-            'hoop_on_rim': hoop_on_rim,
-        }
+            # Detailed logging for the 5 false makes
+            details = {
+                'column_ratio': round(column_ratio, 2),
+                'max_lateral_slide': round(max_lateral_slide, 1),
+                'max_slide_allowed': round(max_slide_allowed, 1),
+                'ball_left_column': ball_left_column,
+                'ball_stalled': ball_stalled,
+                'in_column_frames': in_column_frames,
+                'total_post_frames': total_post_frames,
+                'peak_frame': ball_track[peak_idx]['frame_number'] if peak_idx < len(ball_track) else None,
+            }
+        
+            # Flag the 5 known false makes for inspection
+            if tag_ts and tag_ts in FALSE_MAKE_TIMESTAMPS:
+                details['IS_FALSE_MAKE_TAG'] = True
+                print(f"FALSE MAKE TAG {tag_ts}: column_ratio={column_ratio:.2f}, slide={max_lateral_slide:.1f}, left_col={ball_left_column}, stalled={ball_stalled}")
+                # Log hoop and ball positions
+                if hoop:
+                    details['hoop_pos'] = {'x': hoop['x'], 'y': hoop['y'], 'r': hoop['r'], 'conf': hoop.get('confidence', 0)}
+                if ball_track:
+                    details['ball_at_peak'] = {'x': ball_track[peak_idx]['x_center'], 'y': ball_track[peak_idx]['y_center']}
+                    details['ball_last'] = {'x': ball_track[-1]['x_center'], 'y': ball_track[-1]['y_center']}
+        
+            return {
+                'is_make': is_make,
+                'confidence': 0.85 if is_make else 0.75,
+                'method': 'v6_trajectory_shape',
+                'ball_at_rim': peak_idx is not None,
+                'ball_through_net': is_make,
+                'hoop_on_rim': hoop.get('confidence', 0) >= 0.35,
+                'details': details,
+            }
     
     def process_video_for_tags(self, video_path: str, tag_timestamps: List[float]) -> Dict:
-        """
-        Process video at specific tag timestamps (Scott's 111 shot tags).
-        Returns make/miss classification for each tag.
-        """
-        import cv2
+            """
+            Process video at specific tag timestamps (Scott's 111 shot tags).
+            Returns make/miss classification for each tag.
+            """
+            import cv2
         
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            return {'error': f'Could not open {video_path}'}
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                return {'error': f'Could not open {video_path}'}
         
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
-        # Convert tag timestamps (ms) to frame numbers
-        tag_frames = [int(ts / 1000.0 * fps) for ts in tag_timestamps]
+            # Convert tag timestamps (ms) to frame numbers
+            tag_frames = [int(ts / 1000.0 * fps) for ts in tag_timestamps]
         
-        # We'll sample frames around each tag (±2 seconds = ±50 frames at 25fps)
-        window_frames = int(2.0 * fps)
+            # We'll sample frames around each tag (±2 seconds = ±50 frames at 25fps)
+            window_frames = int(2.0 * fps)
         
-        all_basketball_dets = []
-        frame_number = 0
+            all_basketball_dets = []
+            frame_number = 0
         
-        # Track which tag windows we care about
-        tag_windows = []
-        for tf in tag_frames:
-            tag_windows.append((max(0, tf - window_frames), min(frame_count, tf + window_frames)))
+            # Track which tag windows we care about
+            tag_windows = []
+            for tf in tag_frames:
+                tag_windows.append((max(0, tf - window_frames), min(frame_count, tf + window_frames)))
         
-        print(f"Processing video: {frame_count} frames, {len(tag_windows)} tag windows")
+            print(f"Processing video: {frame_count} frames, {len(tag_windows)} tag windows")
         
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
             
-            # Check if this frame is in any tag window
-            in_window = any(start <= frame_number <= end for start, end in tag_windows)
+                # Check if this frame is in any tag window
+                in_window = any(start <= frame_number <= end for start, end in tag_windows)
             
-            if in_window:
-                timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
+                if in_window:
+                    timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
                 
-                # Detect basketball (v6 model - keeps box through net)
-                bb_dets = self.detect_basketball(frame, frame_number, timestamp_ms)
-                all_basketball_dets.extend(bb_dets)
+                    # Detect basketball (v6 model - keeps box through net)
+                    bb_dets = self.detect_basketball(frame, frame_number, timestamp_ms)
+                    all_basketball_dets.extend(bb_dets)
                 
-                # Detect hoop (CV - finds orange rim, rejects glass/backboard)
-                # We only need one hoop detection per window, so detect on first frame
-                # In practice, we'd cache this per window
+                    # Detect hoop (CV - finds orange rim, rejects glass/backboard)
+                    # We only need one hoop detection per window, so detect on first frame
+                    # In practice, we'd cache this per window
             
-            frame_number += 1
+                frame_number += 1
             
-            if frame_number % 500 == 0:
-                print(f"  Processed {frame_number}/{frame_count} frames")
+                if frame_number % 500 == 0:
+                    print(f"  Processed {frame_number}/{frame_count} frames")
         
-        cap.release()
+            cap.release()
         
-        # Now classify each tag
-        results = []
-        for i, (tag_ts, tag_frame) in enumerate(zip(tag_timestamps, tag_frames)):
-            # Get basketball detections in window around this tag
-            start_f, end_f = tag_windows[i]
-            window_bb_dets = [d for d in all_basketball_dets if start_f <= d['frame_number'] <= end_f]
+            # Now classify each tag
+            results = []
+            for i, (tag_ts, tag_frame) in enumerate(zip(tag_timestamps, tag_frames)):
+                # Get basketball detections in window around this tag
+                start_f, end_f = tag_windows[i]
+                window_bb_dets = [d for d in all_basketball_dets if start_f <= d['frame_number'] <= end_f]
             
-            # Find hoop on orange rim (use middle frame of window for hoop detection)
-            mid_frame = (start_f + end_f) // 2
-            # Re-read the middle frame for hoop detection
-            cap2 = cv2.VideoCapture(video_path)
-            cap2.set(cv2.CAP_PROP_POS_FRAMES, mid_frame)
-            ret, mid_frame_img = cap2.read()
-            cap2.release()
+                # Find hoop on orange rim (use middle frame of window for hoop detection)
+                mid_frame = (start_f + end_f) // 2
+                # Re-read the middle frame for hoop detection
+                cap2 = cv2.VideoCapture(video_path)
+                cap2.set(cv2.CAP_PROP_POS_FRAMES, mid_frame)
+                ret, mid_frame_img = cap2.read()
+                cap2.release()
             
-            hoop = None
-            if ret:
-                hoop = self.find_hoop_on_orange_rim(mid_frame_img)
+                hoop = None
+                if ret:
+                    hoop = self.find_hoop_on_orange_rim(mid_frame_img)
             
-            # Track basketball through rim
-            ball_track = self.track_ball_through_rim(window_bb_dets, hoop) if hoop else []
+                # Track basketball through rim
+                ball_track = self.track_ball_through_rim(window_bb_dets, hoop) if hoop else []
             
-            # Classify
-            classification = self.classify_make_miss(ball_track, hoop)
-            classification['tag_timestamp_ms'] = tag_ts
-            classification['tag_index'] = i
-            classification['hoop'] = hoop
-            classification['ball_track_len'] = len(ball_track)
+                # Classify (pass tag_ts for false-make logging)
+                classification = self.classify_make_miss(ball_track, hoop, tag_ts)
+                classification['tag_timestamp_ms'] = tag_ts
+                classification['tag_index'] = i
+                classification['hoop'] = hoop
+                classification['ball_track_len'] = len(ball_track)
             
-            results.append(classification)
+                results.append(classification)
         
-        makes = sum(1 for r in results if r['is_make'])
-        print(f"Results: {makes}/{len(results)} makes")
+            # SCORE AGAINST 111 TAGS
+            right = 0
+            makes_missed = 0
+            misses_called_makes = 0
+            for i, (tag_ts, is_make_true, label, quarter) in enumerate(ADRIAN_TAGS):
+                pred = results[i]['is_make']
+                if pred == is_make_true:
+                    right += 1
+                elif is_make_true and not pred:
+                    makes_missed += 1
+                elif not is_make_true and pred:
+                    misses_called_makes += 1
         
-        return {
-            'total_tags': len(results),
-            'makes': makes,
-            'misses': len(results) - makes,
-            'results': results,
-            'applied_to_core': False
-        }
+            makes = sum(1 for r in results if r['is_make'])
+            print(f"Results: {makes}/{len(results)} makes")
+            print(f"SCORE: {right}/111 right, {makes_missed} makes missed, {misses_called_makes} misses called makes")
+            print(f"TARGET: {TARGET_RIGHT} right, <= {TARGET_MAX_FALSE_MAKES} false makes")
+        
+            # Check if we beat the target
+            passed = (right >= TARGET_RIGHT) and (misses_called_makes <= TARGET_MAX_FALSE_MAKES)
+            if passed:
+                print("*** PASSES TARGET ***")
+            else:
+                print("*** DOES NOT PASS TARGET - NOTHING TURNED ON ***")
+        
+            return {
+                'total_tags': len(results),
+                'makes': makes,
+                'misses': len(results) - makes,
+                'results': results,
+                'applied_to_core': False
+            }
 
 
 def run_ball_hoop_experiment(
