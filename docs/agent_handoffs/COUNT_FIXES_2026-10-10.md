@@ -1,6 +1,6 @@
 # What needs done and what needs fixed
 
-Updated: 2026-10-10. Read this with `COUNT_ROADMAP_2026-10-10.md`. If this file and `ACTIVE.md` disagree on a number from 2026-10-09, this file wins for the make/miss count. `ACTIVE.md` still wins for steals, fouls, tags, and the teach rules.
+Updated: 2026-10-10. This file is the current Adrian count only. The whole program is `PROGRAM_FOR_JASON_2026-10-10.md`. Read this with `COUNT_ROADMAP_2026-10-10.md`. If this file and `ACTIVE.md` disagree on a number from 2026-10-09, this file wins for the make/miss count. `ACTIVE.md` still wins for steals, fouls, tags, and the teach rules.
 
 ## What the program is for
 

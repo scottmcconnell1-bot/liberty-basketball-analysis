@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-10-10. Jason: start at `docs/agent_handoffs/COUNT_FIXES_2026-10-10.md` and `docs/agent_handoffs/COUNT_ROADMAP_2026-10-10.md`. The 2026-10-09 pickup bullet below is the measurement those files summarize. The steal and foul lines replace the 2026-10-07 note that those stats were not written. The full text of the previous, much longer version is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`. If this file and the archive disagree, this file wins. Read the archive only when you need a date or a number from an old run.
+Updated: 2026-10-10. Jason: start at `docs/agent_handoffs/PROGRAM_FOR_JASON_2026-10-10.md`. The shorter count notes are `COUNT_FIXES_2026-10-10.md` and `COUNT_ROADMAP_2026-10-10.md`. The 2026-10-09 pickup bullet below is the measurement those files summarize. The steal and foul lines replace the 2026-10-07 note that those stats were not written. The full text of the previous, much longer version is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`. If this file and the archive disagree, this file wins. Read the archive only when you need a date or a number from an old run.
 
 ## Goal
 
