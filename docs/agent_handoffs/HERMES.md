@@ -1,6 +1,14 @@
 # Hermes handoff
 
-Updated: 2026-09-30 afternoon. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins.
+Updated: 2026-10-09 night. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+
+## Pickup (2026-10-09 night)
+
+Counting run is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941` (run 12) on the home database. The book is Liberty 51, Adrian 26. The count is not solved.
+
+Stay in `ai_bridge.py`. Do not edit `event_generator.py`, `net_detector.py`, or `models/ball_detector.pt`. Do not change `ball_confidence`. Do not write database rows. Do not train another ball-weights file. Do not copy Scott's tags onto AI rows. Do not resume the four finished agents named in `ACTIVE.md`.
+
+The best offline score on his 111 shot tags is 85 right, with 20 makes still missed and 6 misses called makes. Five of those misses still look like makes because the hoop box is on the glass or the backboard, or the ball box jumps off the ball. The next check is a hoop box on the orange rim and a ball box that stays on the ball. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object. Read the 2026-10-09 pickup bullet in `ACTIVE.md` before proposing anything.
 
 ## How Cursor and Hermes work
 

@@ -1,6 +1,16 @@
 # Brad — start here
 
-Updated: 2026-10-08 night. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`.
+Updated: 2026-10-09 night. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-09 night)
+
+This section wins over the 2026-10-08 night section where a number disagrees. The count is not solved. The measurement list is the 2026-10-09 pickup bullet in `docs/agent_handoffs/ACTIVE.md`.
+
+Do not train another ball-weights file. Do not change `models/ball_detector.pt` or `ball_confidence`. Do not write `events` from the offline tests. Do not insert Scott's tags as makes. Do not resume the four finished agents listed in `ACTIVE.md`.
+
+Best offline score on 111 shot tags: 85 right, 20 makes missed, 6 misses called makes (sideways slide under the rim greater than 0.45 rim-widths, from 80px below the hoop to 180px). Not shipped. The five remaining false makes, opened on the film: 755400 short and in the lane; 896600 hoop box on the backboard; 1515700 ball box jumps to the wall; 1776500 hoop box on the glass, later box in a player's hands; 2455600 hoop is on the rim, then the box is in someone's hands, then back at the rim. Next: hoop box on the orange rim, ball box stays on the ball. Rim is orange. Net is white. Exit sign is the only red object.
+
+Code now in the repo, still not a new detection pass: `stabilize_hoop_track` (median of surrounding samples) inside `load_hoop_track`; round-blob rejection in `detect_hoop_cv`; player-carry filter in `build_ball_track`; `rim_arc_shots` is defined and not called. Tests: `test_a_round_ball_does_not_become_the_rim`, `test_a_one_sample_jump_does_not_move_the_rim`, `test_a_ball_on_a_player_loses_to_the_ball_in_the_air`, `test_the_possession_pass_does_not_write_a_bare_rim_arc`. Offline weights are on the home PC Temp folder only (`ball_net_runs\v6`), not in git.
 
 ## What Scott is having us do (2026-10-08 night)
 

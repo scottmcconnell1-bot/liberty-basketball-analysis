@@ -42,11 +42,43 @@ def test_detects_red_rim_like_nfhs_camera():
     assert 50 <= found["y"] <= 120
 
 
+def test_a_round_ball_does_not_become_the_rim():
+    cv2 = pytest.importorskip("cv2")
+
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    frame[:] = (90, 90, 90)
+    cv2.circle(frame, (180, 70), 16, (0, 0, 220), -1)
+    cv2.ellipse(frame, (420, 96), (34, 10), 0, 0, 360, (0, 0, 210), -1)
+    cv2.rectangle(frame, (396, 102), (444, 150), (210, 210, 210), -1)
+    found = detect_hoop_cv(frame)
+    assert found is not None
+    assert abs(found["x"] - 420) < 40
+    assert abs(found["x"] - 180) > 80
+
+
 def test_detect_hoop_ignores_empty_frame():
     assert detect_hoop(np.zeros((0, 0, 3), dtype=np.uint8)) is None
     pytest.importorskip("cv2")  # detect_hoop_cv needs OpenCV
     blank = np.zeros((240, 320, 3), dtype=np.uint8)
     assert detect_hoop_cv(blank) is None
+
+
+def test_a_one_sample_jump_does_not_move_the_rim():
+    from net_detector import stabilize_hoop_track
+
+    samples = [
+        {"timestamp_ms": 0, "x": 100, "y": 200, "r": 40},
+        {"timestamp_ms": 2000, "x": 110, "y": 205, "r": 40},
+        {"timestamp_ms": 4000, "x": 120, "y": 200, "r": 40},
+        {"timestamp_ms": 6000, "x": 700, "y": 90, "r": 30},
+        {"timestamp_ms": 8000, "x": 130, "y": 198, "r": 40},
+    ]
+    locked = stabilize_hoop_track(samples)
+    at_jump = hoop_at(locked, 6000)
+    assert abs(at_jump["x"] - 120) < 5
+    assert abs(at_jump["y"] - 200) < 5
+    followed = hoop_at(locked, 8000)
+    assert abs(followed["x"] - 130) < 5
 
 
 def test_hoop_at_picks_nearest_sample():

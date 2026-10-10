@@ -3,8 +3,13 @@ description: Do not resume the finished Adrian timestamp-sync search
 alwaysApply: true
 ---
 
-# Do not resume Explore Adrian timestamp sync
+# Do not resume these finished agents
 
-The explore agent `a4e6aae5-7ad7-48e0-a657-0faf69984c15` ("Explore Adrian timestamp sync") finished on 2026-08-26. Scott stopped it on 2026-10-08. It is archived.
+These four finished. Scott stopped them. They are archived. On 2026-10-09 they were still showing "Starting up" after the app was reopened. That list is not live work.
 
-Do not resume it, interrupt it, or start another agent with that description. A resume is what put the chip back on "Starting up."
+- `a4e6aae5-7ad7-48e0-a657-0faf69984c15` — Explore Adrian timestamp sync. Finished 2026-08-26. Scott stopped it 2026-10-08.
+- `5cb51e6b-92f6-4927-8332-2bbc4dae58c3` — Write steals and fouls. Finished.
+- `666207e1-46d2-4d32-89b7-39d86bd2de44` — Shot detection literature. Finished.
+- `62491ff3-e01c-42dd-b52e-9238c4113df3` — Raw boxes on nine shots. Finished.
+
+Do not resume them, interrupt them, or start another agent with those descriptions. A resume is what put the chip back on "Starting up."

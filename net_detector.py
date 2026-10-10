@@ -96,6 +96,11 @@ def _red_rims(hsv: np.ndarray, roi_bgr: np.ndarray, frame_h: int) -> list[dict[s
             continue
         if bh > bw * 1.5:
             continue
+        # The ball and this rim land in the same orange hue on this camera. The ball is round. The rim is a wide band.
+        # A round blob cannot be the hoop. Measured on the Adrian film: the ball is
+        # about 44 by 46, the rim about 65 by 30.
+        if bw < bh * 1.45:
+            continue
         cx = int(cents[i][0])
         cy = int(cents[i][1])
         if cy < int(h * 0.10) or cy > int(h * 0.72):
@@ -388,6 +393,38 @@ def detect_hoop_from_court_pose(frame_bgr: np.ndarray, model_path: Path | None =
     }
 
 
+# Samples are two seconds apart. Three on each side is about 14 seconds.
+# One orange blob (the ball, or the exit sign) cannot win the median.
+_HOOP_MEDIAN_HALF = 3
+
+
+def stabilize_hoop_track(
+    samples: list[dict[str, Any]],
+    half: int = _HOOP_MEDIAN_HALF,
+) -> list[dict[str, Any]]:
+    """Put the rim on the orange mark that stays put across several samples.
+
+    The ball and the rim are both orange, and the exit sign is red, so one
+    frame can pick any of them. The median of the surrounding samples stays on
+    the rim. A camera move that holds is followed. A one-sample jump is not.
+    """
+    rows = [s for s in samples if s.get("x") is not None and s.get("y") is not None]
+    rows.sort(key=lambda s: int(s.get("timestamp_ms") or 0))
+    if len(rows) < 3 or half < 1:
+        return rows
+    locked: list[dict[str, Any]] = []
+    for i, cur in enumerate(rows):
+        window = rows[max(0, i - half) : i + half + 1]
+        xs = sorted(float(s["x"]) for s in window)
+        ys = sorted(float(s["y"]) for s in window)
+        held = dict(cur)
+        held["x"] = xs[len(xs) // 2]
+        held["y"] = ys[len(ys) // 2]
+        held["source"] = "median_rim"
+        locked.append(held)
+    return locked
+
+
 def load_hoop_track(game_id: str) -> list[dict[str, Any]]:
     path = track_path(game_id)
     if not path.is_file() and "__rerun_" in str(game_id or ""):
@@ -399,10 +436,12 @@ def load_hoop_track(game_id: str) -> list[dict[str, Any]]:
     except (OSError, json.JSONDecodeError):
         return []
     if isinstance(data, dict):
-        return list(data.get("samples") or [])
-    if isinstance(data, list):
-        return data
-    return []
+        samples = list(data.get("samples") or [])
+    elif isinstance(data, list):
+        samples = data
+    else:
+        return []
+    return stabilize_hoop_track(samples)
 
 
 def save_hoop_track(game_id: str, samples: list[dict[str, Any]], video: str = "") -> Path:

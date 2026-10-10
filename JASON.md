@@ -1,6 +1,16 @@
 # Jason — start here
 
-Updated: 2026-10-08 night. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`.
+Updated: 2026-10-09 night. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-09 night)
+
+This section wins over the 2026-10-08 night section where they disagree. The count is not solved. Full measurements are the 2026-10-09 pickup bullet in `docs/agent_handoffs/ACTIVE.md`.
+
+Do not train another ball-weights file. Do not change `models/ball_detector.pt` or `ball_confidence`. Do not write rows from the offline tests. Do not copy Scott's tags onto AI rows. Do not resume the four finished agents named in `ACTIVE.md` and in `.cursor/rules/do-not-resume-timestamp-sync.mdc`.
+
+On 111 shot tags, the best offline score is 85 right: 20 makes still missed, 6 misses called makes. That rule throws out a ball that slides sideways under the rim. It is not turned on. Five misses still look like makes because the hoop box sits on the glass or the backboard, or the ball box jumps to the wall or to a ball in someone's hands. The next check is a hoop box on the orange rim and a ball box that stays on the ball. The rim is orange. The net is white. The exit sign is the only red object.
+
+`load_hoop_track` now uses the median of the surrounding samples. `detect_hoop_cv` rejects a round blob so the ball is not chosen as the rim. `build_ball_track` drops a ball box that sits on a player who is in that spot just before and just after, when another box on that frame is off the player. `rim_arc_shots` exists and is not called from the shot pass. Both-false is still a miss. The 170-pixel rise and the 8-second window stay.
 
 The job is Liberty at Adrian. The official book is Liberty 51, Adrian 26 (77 points). The program is counting that game from the film. It is not the book yet. Do not copy the book totals onto the AI rows to make them match.
 

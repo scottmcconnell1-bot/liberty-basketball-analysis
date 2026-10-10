@@ -212,22 +212,108 @@ def _load_hoop_samples(game_id):
         return []
 
 
+# A player missing for less than a second was not gone. 20 frames is 0.8s at 25fps.
+_PLAYER_GAP_FRAMES = 20
+# The same player, not a different one across the court.
+_PLAYER_SAME_SPOT = 160.0
+_PLAYER_BOX_PAD = 24.0
+
+
+def _person_boxes_by_frame(detections_df):
+    """Real person boxes, keyed by frame. A 1px edge sliver is not a player."""
+    if detections_df is None or getattr(detections_df, "empty", True):
+        return {}
+    if "class_name" not in detections_df.columns:
+        return {}
+    persons = detections_df[detections_df["class_name"] == "person"]
+    if persons.empty or "width" not in persons.columns:
+        return {}
+    boxes = {}
+    for row in persons.itertuples(index=False):
+        width = float(getattr(row, "width", 0) or 0)
+        height = float(getattr(row, "height", 0) or 0)
+        if width < 30 or height < 40:
+            continue
+        frame = int(row.frame_number)
+        boxes.setdefault(frame, []).append(
+            (float(row.x_center), float(row.y_center), width, height)
+        )
+    return boxes
+
+
+def _people_near(frame, boxes_by_frame, frame_list):
+    """Person boxes in the short gap before and after this frame."""
+    import bisect
+
+    lo = bisect.bisect_left(frame_list, frame - _PLAYER_GAP_FRAMES)
+    hi = bisect.bisect_right(frame_list, frame + _PLAYER_GAP_FRAMES)
+    before = []
+    after = []
+    for person_frame in frame_list[lo:hi]:
+        people = boxes_by_frame[person_frame]
+        if person_frame < frame:
+            before.extend(people)
+        elif person_frame > frame:
+            after.extend(people)
+    return before, after
+
+
+def _ball_on_carried_player(x, y, frame, boxes_by_frame, frame_list) -> bool:
+    """True when this box sits on a player who is in that spot just before and just after.
+
+    The person score can dip under the save cutoff for a few frames. The player
+    is still there. A ball box on that body is not the ball in the air.
+    """
+    before, after = _people_near(frame, boxes_by_frame, frame_list)
+    if not before or not after:
+        return False
+    px, py = float(x), float(y)
+    for bx, by, bw, bh in before:
+        if abs(px - bx) > bw / 2.0 + _PLAYER_BOX_PAD or abs(py - by) > bh / 2.0 + _PLAYER_BOX_PAD:
+            continue
+        for ax, ay, _aw, _ah in after:
+            dx = bx - ax
+            dy = by - ay
+            if (dx * dx + dy * dy) ** 0.5 <= _PLAYER_SAME_SPOT:
+                return True
+    for ax, ay, aw, ah in after:
+        if abs(px - ax) > aw / 2.0 + _PLAYER_BOX_PAD or abs(py - ay) > ah / 2.0 + _PLAYER_BOX_PAD:
+            continue
+        for bx, by, _bw, _bh in before:
+            dx = bx - ax
+            dy = by - ay
+            if (dx * dx + dy * dy) ** 0.5 <= _PLAYER_SAME_SPOT:
+                return True
+    return False
+
+
 def build_ball_track(detections_df, hoop_samples=None):
     ball_df = detections_df[detections_df["class_name"] == "ball"].copy()
     if ball_df.empty:
         return ball_df
     ball_df = ball_df.sort_values(["frame_number", "confidence"], ascending=[True, False])
-    if not hoop_samples:
-        return ball_df.groupby("frame_number", as_index=False).first()
-
+    person_boxes = _person_boxes_by_frame(detections_df)
+    person_frames = sorted(person_boxes)
     from net_detector import hoop_at
 
     chosen = []
     has_conf = "confidence" in ball_df.columns
     for _frame, grp in ball_df.groupby("frame_number", sort=False):
-        hoop = hoop_at(hoop_samples, int(grp.iloc[0]["timestamp_ms"]))
+        frame = int(_frame)
+        rows = list(grp.iterrows())
+        if person_boxes and len(rows) > 1:
+            off_player = [
+                (idx, row)
+                for idx, row in rows
+                if not _ball_on_carried_player(
+                    row["x_center"], row["y_center"], frame, person_boxes, person_frames
+                )
+            ]
+            if off_player:
+                rows = off_player
+        hoop = hoop_at(hoop_samples, int(rows[0][1]["timestamp_ms"])) if hoop_samples else None
         at_rim = []
-        for idx, row in grp.iterrows():
+        for idx, row in rows:
             conf = row["confidence"] if has_conf else 1.0
             if _ball_at_hoop(row["x_center"], row["y_center"], conf, hoop):
                 dx = float(row["x_center"]) - float(hoop["x"])
@@ -237,7 +323,7 @@ def build_ball_track(detections_df, hoop_samples=None):
             at_rim.sort()
             chosen.append(grp.loc[at_rim[0][1]])
         else:
-            chosen.append(grp.iloc[0])
+            chosen.append(rows[0][1])
     return pd.DataFrame(chosen).reset_index(drop=True)
 
 
@@ -981,6 +1067,60 @@ def generate_precision_events_from_segments(
             offense_ids = []
 
     return events
+
+def rim_arc_shots(ball_track, hoop_samples, min_rise=170.0, max_dist=280.0, cluster_ms=4000):
+    """Peaks where the kept ball rises, falls, and is within max_dist of the rim.
+
+    Not used to write shots. On the Adrian film this pattern matches tagged
+    shots and moments with no tag, because the kept box jumps between samples
+    either way. Peaks within cluster_ms are one moment.
+    """
+    if ball_track is None or getattr(ball_track, "empty", True) or not hoop_samples:
+        return []
+    from net_detector import hoop_at
+
+    rows = ball_track.sort_values("timestamp_ms")
+    points = [
+        (int(r.timestamp_ms), float(r.x_center), float(r.y_center), int(r.frame_number))
+        for r in rows.itertuples(index=False)
+    ]
+    found = []
+    for ts, x, y, frame in points:
+        window = [p for p in points if ts - 1500 <= p[0] <= ts + 2000]
+        if len(window) < 3 or min(window, key=lambda p: p[2])[0] != ts:
+            continue
+        before = [p[2] for p in window if p[0] < ts]
+        after = [p[2] for p in window if p[0] > ts]
+        if not before or not after:
+            continue
+        rise = max(before) - y
+        if rise < min_rise or max(after) - y < 8:
+            continue
+        hoop = hoop_at(hoop_samples, ts)
+        if not hoop:
+            continue
+        dx = x - float(hoop["x"])
+        dy = y - float(hoop["y"])
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist > max_dist:
+            continue
+        found.append({
+            "timestamp_ms": ts,
+            "peak_frame": frame,
+            "peak_x": round(x, 1),
+            "peak_y": round(y, 1),
+            "ball_rise": round(rise, 1),
+            "rim_distance": round(dist, 1),
+        })
+    kept = []
+    for arc in found:
+        if kept and arc["timestamp_ms"] - kept[-1]["timestamp_ms"] <= cluster_ms:
+            if arc["rim_distance"] < kept[-1]["rim_distance"]:
+                kept[-1] = arc
+            continue
+        kept.append(arc)
+    return kept
+
 
 def generate_expanded_events_from_segments(game_id, segments, ball_track):
     events = []

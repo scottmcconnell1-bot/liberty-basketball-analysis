@@ -324,6 +324,142 @@ def test_dropped_pump_fake_does_not_block_same_players_real_shot():
     assert [(s["player"], s["timestamp_ms"]) for s in shots] == [("1", 91 * 33)]
 
 
+def test_a_ball_on_a_player_loses_to_the_ball_in_the_air():
+    """The higher score on the shooter's shorts is not the ball.
+
+    The player is stored just before and just after. One frame in between
+    dropped him. The box in the air is the ball.
+    """
+    rows = []
+    for frame in (8, 16):
+        rows.append({
+            "frame_number": frame,
+            "timestamp_ms": frame * 100,
+            "x_center": 80.0,
+            "y_center": 400.0,
+            "width": 120.0,
+            "height": 220.0,
+            "confidence": 0.53,
+            "class_name": "person",
+        })
+    rows.append({
+        "frame_number": 12,
+        "timestamp_ms": 1200,
+        "x_center": 80.0,
+        "y_center": 400.0,
+        "width": 30.0,
+        "height": 60.0,
+        "confidence": 0.74,
+        "class_name": "ball",
+    })
+    rows.append({
+        "frame_number": 12,
+        "timestamp_ms": 1200,
+        "x_center": 400.0,
+        "y_center": 80.0,
+        "width": 40.0,
+        "height": 40.0,
+        "confidence": 0.35,
+        "class_name": "ball",
+    })
+    track = eg.build_ball_track(pd.DataFrame(rows))
+    kept = track[track["frame_number"] == 12].iloc[0]
+    assert float(kept["x_center"]) == 400.0
+    assert float(kept["y_center"]) == 80.0
+
+
+def test_the_only_ball_on_a_player_is_kept():
+    rows = [
+        {
+            "frame_number": 8,
+            "timestamp_ms": 800,
+            "x_center": 80.0,
+            "y_center": 400.0,
+            "width": 120.0,
+            "height": 220.0,
+            "confidence": 0.53,
+            "class_name": "person",
+        },
+        {
+            "frame_number": 16,
+            "timestamp_ms": 1600,
+            "x_center": 80.0,
+            "y_center": 400.0,
+            "width": 120.0,
+            "height": 220.0,
+            "confidence": 0.53,
+            "class_name": "person",
+        },
+        {
+            "frame_number": 12,
+            "timestamp_ms": 1200,
+            "x_center": 80.0,
+            "y_center": 400.0,
+            "width": 30.0,
+            "height": 60.0,
+            "confidence": 0.74,
+            "class_name": "ball",
+        },
+    ]
+    track = eg.build_ball_track(pd.DataFrame(rows))
+    kept = track[track["frame_number"] == 12].iloc[0]
+    assert float(kept["x_center"]) == 80.0
+
+
+def test_a_rim_arc_without_a_possession_is_a_shot():
+    hoop = [{"timestamp_ms": 9000, "x": 400.0, "y": 200.0, "r": 30.0}]
+    rows = []
+    for frame, y in enumerate([500, 420, 300, 180, 320, 460]):
+        rows.append({
+            "frame_number": 80 + frame,
+            "timestamp_ms": 8000 + frame * 400,
+            "x_center": 400.0,
+            "y_center": float(y),
+            "confidence": 0.8,
+            "class_name": "ball",
+        })
+    arcs = eg.rim_arc_shots(pd.DataFrame(rows), hoop, min_rise=170)
+    assert len(arcs) == 1
+    assert arcs[0]["timestamp_ms"] == 9200
+    far = pd.DataFrame(rows)
+    far["x_center"] = 40.0
+    assert eg.rim_arc_shots(far, hoop, min_rise=170) == []
+
+
+def test_the_possession_pass_does_not_write_a_bare_rim_arc(monkeypatch):
+    """A rise in the ball track is not a shot by itself.
+
+    On this film the same rise appears on tagged shots and on moments with no
+    tag. The box jumps between samples either way, so the generator does not
+    write a row from that pattern alone.
+    """
+    monkeypatch.setattr(
+        "net_detector.load_hoop_track",
+        lambda _gid: [{"timestamp_ms": 9000, "x": 400.0, "y": 200.0, "r": 30.0}],
+    )
+    rows = []
+    for frame in range(0, 30):
+        rows.append({
+            "frame_number": frame,
+            "timestamp_ms": frame * 33,
+            "x_center": 400.0,
+            "y_center": 600.0,
+            "confidence": 0.8,
+            "class_name": "ball",
+        })
+    for frame, y in enumerate([500, 420, 300, 180, 320, 460]):
+        rows.append({
+            "frame_number": 80 + frame,
+            "timestamp_ms": 8000 + frame * 400,
+            "x_center": 400.0,
+            "y_center": float(y),
+            "confidence": 0.8,
+            "class_name": "ball",
+        })
+    events = eg.generate_precision_events_from_segments("g", [_seg("1", 0, 20)], pd.DataFrame(rows))
+    assert not any(e["event_type"] == "shot" and e["timestamp_ms"] == 9200 for e in events)
+
+
 def test_a_lower_confidence_ball_at_the_hoop_is_the_shot():
     """A higher box away from the hoop must not hide the ball at the rim.
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T05:00:04.112355+00:00",
+  "generated_at": "2026-10-09T05:00:02.396672+00:00",
   "targets": {
     "final_score_exact": 1.0,
     "player_points_exact": 1.0,
@@ -66,21 +66,21 @@
       "film_id": "hoopsalytics-harper_or-2025-12-05",
       "analysis_key_preferred": "hoopsalytics_harper_or_2025-12-05",
       "analysis_key": "hoopsalytics_harper_or_2025-12-05",
-      "event_count": 1334,
+      "event_count": 297,
       "flags": [
         "opponent_ai_points_unavailable",
         "final_score_requires_both_team_totals; opponent side Unknown from AI"
       ],
       "truth_stat_events": 157,
       "ok": true,
-      "precision": 0.0582,
+      "precision": 0.0651,
       "recall": 0.1083,
       "exact": 17,
       "disagree": 24,
       "miss": 116,
-      "extra": 251,
+      "extra": 220,
       "truth_events": 157,
-      "ai_stat_events": 292,
+      "ai_stat_events": 261,
       "truth_meta": {
         "liberty_source": "referenceBoxScore.team_totals",
         "opponent_source": "pbp_makes",
@@ -228,21 +228,21 @@
       "film_id": "hoopsalytics-nyssa-2025-12-04",
       "analysis_key_preferred": "hoopsalytics_nyssa_2025-12-04",
       "analysis_key": "hoopsalytics_nyssa_2025-12-04",
-      "event_count": 2195,
+      "event_count": 506,
       "flags": [
         "opponent_ai_points_unavailable",
         "final_score_requires_both_team_totals; opponent side Unknown from AI"
       ],
       "truth_stat_events": 172,
       "ok": true,
-      "precision": 0.0285,
+      "precision": 0.0327,
       "recall": 0.0814,
       "exact": 14,
       "disagree": 23,
       "miss": 135,
-      "extra": 455,
+      "extra": 391,
       "truth_events": 172,
-      "ai_stat_events": 492,
+      "ai_stat_events": 428,
       "truth_meta": {
         "liberty_source": "referenceBoxScore.team_totals",
         "opponent_source": "pbp_makes",
@@ -426,7 +426,7 @@
       },
       "event_precision_min": {
         "required": 0.9,
-        "actual": 0.0433,
+        "actual": 0.0489,
         "pass": false,
         "games_scored": 2,
         "games_total": 6,
@@ -442,7 +442,7 @@
       }
     },
     "overall_pass": false,
-    "mean_precision": 0.0433,
+    "mean_precision": 0.0489,
     "mean_recall": 0.0948,
     "games_scored": 2,
     "games_total": 6
