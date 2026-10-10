@@ -588,19 +588,26 @@ def validated_stats(video_path: str, config: Optional[Dict[str, Any]] = None) ->
     return stats
 
 # ============================================================
-# EXPERIMENT: Separate ball + hoop detection (v6 weights)
+# EXPERIMENT: Separate ball + hoop detection (v6 + CV hoop)
 # Per ACTIVE.md 2026-10-09: "The next check is a hoop box on the
 # orange rim and a ball box that stays on the ball."
-# The v6 weights at /mnt/c/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt
-# detect basketball and hoop as different classes (not ball_detector.pt).
-# On Rodus FT at 8:21.9, the basketball box stays on the ball at the rim.
-# This experiment tests the 111 shot tags: current best 85/111 (20 missed makes, 6 false makes).
-# Target: hoop box locks on orange rim (not glass/backboard), ball box stays on ball through net.
+# 
+# v6 weights (ball_net_runs/v6/weights/best.pt) detect BASKETBALL only.
+# They keep the ball box through the white net cords (unlike ball_detector.pt).
+# 
+# net_detector.detect_hoop_cv finds the ORANGE RIM (wide band, not round)
+# and rejects backboard/glass. It already rejects round blobs (the ball).
+#
+# This experiment combines: v6 basketball detections + CV hoop detections.
+# Make = basketball box at rim + hoop box on orange rim in same frame,
+# AND basketball box continues through net column below rim.
+# Target: beat 85/111 (20 missed makes, 6 false makes).
 # ============================================================
 
 class BallHoopExperiment:
     """
-    Experiment using v6 weights that detect ball and hoop as separate classes.
+    Experiment using v6 weights for basketball (keeps box through net)
+    + net_detector CV hoop detector (orange rim, rejects glass/backboard).
     Implements: make = ball box AND hoop box (on orange rim) in same frame,
     with ball box persisting through the net.
     """
@@ -611,27 +618,26 @@ class BallHoopExperiment:
             'v6_weights_path',
             r"/mnt/c/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt"
         )
-        self.model = None
-        self.frame_times = []
-        self._load_model()
+        self.basketball_model = None
+        self._load_models()
     
-    def _load_model(self):
-        """Load the v6 YOLO model that detects ball and hoop separately."""
+    def _load_models(self):
+        """Load v6 basketball model. Hoop detector uses net_detector (CV, no weights)."""
         try:
             from ultralytics import YOLO
-            self.model = YOLO(self.v6_weights_path)
-            print(f"Loaded v6 model from {self.v6_weights_path}")
-            print(f"Model classes: {self.model.names}")
+            self.basketball_model = YOLO(self.v6_weights_path)
+            print(f"Loaded v6 basketball model from {self.v6_weights_path}")
+            print(f"Model classes: {self.basketball_model.names}")
         except Exception as e:
-            print(f"Failed to load v6 model: {e}")
-            self.model = None
+            print(f"Failed to load v6 basketball model: {e}")
+            self.basketball_model = None
     
-    def detect_frame(self, frame: np.ndarray, frame_number: int, timestamp_ms: float) -> List[Dict]:
-        """Run v6 detection on a single frame. Returns list of {class, conf, x, y, w, h}."""
-        if self.model is None:
+    def detect_basketball(self, frame: np.ndarray, frame_number: int, timestamp_ms: float) -> List[Dict]:
+        """Run v6 basketball detection on a single frame."""
+        if self.basketball_model is None:
             return []
         
-        results = self.model(frame, verbose=False)
+        results = self.basketball_model(frame, verbose=False)
         detections = []
         
         for result in results:
@@ -639,7 +645,7 @@ class BallHoopExperiment:
                 continue
             for box in result.boxes:
                 cls_id = int(box.cls[0])
-                class_name = self.model.names[cls_id]
+                class_name = self.basketball_model.names[cls_id]  # 'basketball'
                 confidence = float(box.conf[0])
                 x1, y1, x2, y2 = map(float, box.xyxy[0])
                 cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
@@ -648,7 +654,7 @@ class BallHoopExperiment:
                 detections.append({
                     'frame_number': frame_number,
                     'timestamp_ms': timestamp_ms,
-                    'class_name': class_name,  # 'basketball' or 'hoop' (or 'rim')
+                    'class_name': class_name,  # 'basketball'
                     'confidence': confidence,
                     'x_center': cx,
                     'y_center': cy,
@@ -659,58 +665,45 @@ class BallHoopExperiment:
         
         return detections
     
-    def find_hoop_on_orange_rim(self, detections: List[Dict]) -> Optional[Dict]:
+    def detect_hoop_cv(self, frame: np.ndarray) -> Optional[Dict]:
         """
-        From detections, find the hoop box that's on the ORANGE RIM.
-        Reject hoop boxes on glass/backboard (the 4 false makes in ACTIVE.md).
+        Use net_detector's CV hoop detector to find orange rim.
+        Returns {x, y, r, confidence, source} or None.
+        Already rejects round blobs (ball) and backboard/glass.
+        """
+        try:
+            from net_detector import detect_hoop_cv
+            return detect_hoop_cv(frame)
+        except Exception as e:
+            print(f"Hoop detection failed: {e}")
+            return None
+    
+    def find_hoop_on_orange_rim(self, frame: np.ndarray) -> Optional[Dict]:
+        """
+        Find hoop on orange rim using CV detector.
+        Rejects hoop boxes on glass/backboard (the 4 false makes in ACTIVE.md).
         The rim is orange (hue ~5), wide band ~65x30. The ball is round ~44x46.
         """
-        hoop_candidates = [d for d in detections if d['class_name'] in ('hoop', 'rim', 'basket')]
-        
-        if not hoop_candidates:
-            return None
-        
-        # Filter: hoop should be wide (w > h * 1.45), not round like ball
-        # Rim is orange - check color if we have the frame (later)
-        # For now, use geometry: wide band, positioned at rim height
-        rim_candidates = []
-        for d in hoop_candidates:
-            w, h = d['width'], d['height']
-            if w > h * 1.3:  # wide band, not round
-                rim_candidates.append(d)
-        
-        if not rim_candidates:
-            # Fallback: highest confidence hoop
-            rim_candidates = hoop_candidates
-        
-        # Pick the one at typical rim height (not on backboard)
-        # Backboard is higher and wider
-        best = max(rim_candidates, key=lambda d: d['confidence'])
-        return best
+        return self.detect_hoop_cv(frame)
     
-    def track_ball_through_rim(self, all_detections: List[Dict], hoop: Dict) -> List[Dict]:
+    def track_ball_through_rim(self, ball_detections: List[Dict], hoop: Dict) -> List[Dict]:
         """
         Track the basketball through the rim using v6 detections.
         Returns list of ball positions with frame numbers.
         The ball box should stay on the ball (not jump to player hands, not drop out).
         """
-        if not hoop:
+        if not hoop or not ball_detections:
             return []
         
-        hoop_x, hoop_y = hoop['x_center'], hoop['y_center']
-        rim_radius = max(hoop['width'], hoop['height']) / 2
-        
-        # Get all basketball detections
-        ball_dets = [d for d in all_detections if d['class_name'] == 'basketball']
-        if not ball_dets:
-            return []
+        hoop_x, hoop_y = hoop['x'], hoop['y']
+        rim_radius = hoop['r']
         
         # Sort by frame
-        ball_dets.sort(key=lambda d: d['frame_number'])
+        ball_detections.sort(key=lambda d: d['frame_number'])
         
-        # Find ball detections near the hoop (within rim_radius * 2)
+        # Find ball detections near the hoop (within rim_radius * 2.5)
         near_hoop = []
-        for d in ball_dets:
+        for d in ball_detections:
             dx = d['x_center'] - hoop_x
             dy = d['y_center'] - hoop_y
             dist = (dx*dx + dy*dy)**0.5
@@ -721,16 +714,16 @@ class BallHoopExperiment:
     
     def classify_make_miss(self, ball_track: List[Dict], hoop: Dict) -> Dict:
         """
-        Classify as make or miss using the v6 detections.
-        Make = ball box AND hoop box on orange rim in same frame,
-        AND ball box continues through net (below rim).
+        Classify as make or miss using combined detections.
+        Make = basketball box at rim + hoop box on orange rim in same frame,
+        AND basketball box continues through net (below rim).
         Miss = ball hits rim but doesn't go through, or hoop box on glass.
         """
         if not ball_track or not hoop:
             return {'is_make': False, 'confidence': 0.0, 'method': 'no_data'}
         
-        hoop_x, hoop_y = hoop['x_center'], hoop['y_center']
-        rim_radius = max(hoop['width'], hoop['height']) / 2
+        hoop_x, hoop_y = hoop['x'], hoop['y']
+        rim_radius = hoop['r']
         net_depth = rim_radius * 3  # net hangs below rim
         
         # Check each frame for ball+hoop co-occurrence
@@ -752,16 +745,15 @@ class BallHoopExperiment:
                 ball_through_net = True
                 break
         
-        # Also verify hoop is on orange rim (not backboard)
-        # The hoop box from v6 should be on the rim if detection is correct
-        hoop_on_rim = True  # v6 model trained to distinguish
+        # Hoop is on orange rim (not backboard) - CV detector already filters this
+        hoop_on_rim = hoop.get('confidence', 0) >= 0.35
         
         is_make = ball_at_rim and ball_through_net and hoop_on_rim
         
         return {
             'is_make': is_make,
             'confidence': 0.85 if is_make else 0.75,
-            'method': 'v6_ball_hoop_separate',
+            'method': 'v6_basketball_cv_hoop',
             'ball_at_rim': ball_at_rim,
             'ball_through_net': ball_through_net,
             'hoop_on_rim': hoop_on_rim,
@@ -781,7 +773,7 @@ class BallHoopExperiment:
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cv2.CAP_PROP_FRAME_HEIGHT)
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         # Convert tag timestamps (ms) to frame numbers
         tag_frames = [int(ts / 1000.0 * fps) for ts in tag_timestamps]
@@ -789,7 +781,7 @@ class BallHoopExperiment:
         # We'll sample frames around each tag (±2 seconds = ±50 frames at 25fps)
         window_frames = int(2.0 * fps)
         
-        all_detections = []
+        all_basketball_dets = []
         frame_number = 0
         
         # Track which tag windows we care about
@@ -809,8 +801,14 @@ class BallHoopExperiment:
             
             if in_window:
                 timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-                dets = self.detect_frame(frame, frame_number, timestamp_ms)
-                all_detections.extend(dets)
+                
+                # Detect basketball (v6 model - keeps box through net)
+                bb_dets = self.detect_basketball(frame, frame_number, timestamp_ms)
+                all_basketball_dets.extend(bb_dets)
+                
+                # Detect hoop (CV - finds orange rim, rejects glass/backboard)
+                # We only need one hoop detection per window, so detect on first frame
+                # In practice, we'd cache this per window
             
             frame_number += 1
             
@@ -822,15 +820,24 @@ class BallHoopExperiment:
         # Now classify each tag
         results = []
         for i, (tag_ts, tag_frame) in enumerate(zip(tag_timestamps, tag_frames)):
-            # Get detections in window around this tag
+            # Get basketball detections in window around this tag
             start_f, end_f = tag_windows[i]
-            window_dets = [d for d in all_detections if start_f <= d['frame_number'] <= end_f]
+            window_bb_dets = [d for d in all_basketball_dets if start_f <= d['frame_number'] <= end_f]
             
-            # Find hoop on orange rim
-            hoop = self.find_hoop_on_orange_rim(window_dets)
+            # Find hoop on orange rim (use middle frame of window for hoop detection)
+            mid_frame = (start_f + end_f) // 2
+            # Re-read the middle frame for hoop detection
+            cap2 = cv2.VideoCapture(video_path)
+            cap2.set(cv2.CAP_PROP_POS_FRAMES, mid_frame)
+            ret, mid_frame_img = cap2.read()
+            cap2.release()
             
-            # Track ball through rim
-            ball_track = self.track_ball_through_rim(window_dets, hoop) if hoop else []
+            hoop = None
+            if ret:
+                hoop = self.find_hoop_on_orange_rim(mid_frame_img)
+            
+            # Track basketball through rim
+            ball_track = self.track_ball_through_rim(window_bb_dets, hoop) if hoop else []
             
             # Classify
             classification = self.classify_make_miss(ball_track, hoop)
@@ -860,7 +867,8 @@ def run_ball_hoop_experiment(
 ) -> Dict[str, Any]:
     """
     Main entry point for the ball+hoop separation experiment.
-    Uses v6 weights that detect basketball and hoop as different classes.
+    Uses v6 weights for basketball (keeps box through net cords)
+    + net_detector CV for hoop (orange rim, rejects glass/backboard).
     
     Per ACTIVE.md 2026-10-09: The next check is a hoop box on the orange rim
     and a ball box that stays on the ball. Current best: 85/111 right.
