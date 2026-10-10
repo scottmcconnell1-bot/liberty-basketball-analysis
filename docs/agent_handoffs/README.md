@@ -5,8 +5,9 @@ One active task file, not GitHub labels.
 ## Start here
 
 1. `AUTHORITY.md` and `AGENT_PROTOCOL.md` at the repo root
-2. **`docs/agent_handoffs/ACTIVE.md`** — current state, open decisions, do-nots (kept short)
-3. `docs/BRANCH_POLICY.md` — work on `main`
+2. **`docs/agent_handoffs/COUNT_FIXES_2026-10-10.md`** and **`docs/agent_handoffs/COUNT_ROADMAP_2026-10-10.md`** — what is broken, and the order to fix it
+3. **`docs/agent_handoffs/ACTIVE.md`** — current state, open decisions, do-nots
+4. `docs/BRANCH_POLICY.md` — work on `main`
 
 ## Workflow
 
