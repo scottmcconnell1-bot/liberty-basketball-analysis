@@ -36,12 +36,27 @@ Each fixture has:
 
 | Fixture | Precision | Recall | F1 | Matched | Shot tags: right / missed / false makes |
 |---|---:|---:|---:|---:|---|
-| wilder_q1 | 10.1% | 28.3% | 14.9% | 15 / 53 | 23 tags: 12 / 8 / 3 |
+| wilder_q1 | 9.9% | 26.4% | 14.4% | — | 23 tags: 12 / 8 / 3 |
 
 Raised from 8.8% / 24.5% / 13.0% (2026-09-30, commit 194e38b). The code had already got
-better than the committed floor and nobody had raised it, so the gate was loose by two
-points of precision and four of recall. Re-measured and locked in on 2026-10-11 along with
-the first shot-tag floor.
+better than the committed floor and nobody had raised it, so the gate was loose.
+
+**The float metrics are measured in CI, and the floor is the CI number.** They are not
+portable between environments: the same commit on the same frozen detections scored
+10.1% / 28.3% / 14.9% on Python 3.14 with current numpy/scikit-learn, and
+9.9% / 26.4% / 14.4% on the CI runner's 3.13. The cause is upstream of the event logic —
+player clustering falls out slightly differently, which moved the possession count from
+1,269 segments to 1,271, and a couple of segments is enough to move recall by nearly two
+points.
+
+So: **a local number up to ~2 points away from this table is not a regression, and not an
+improvement either.** Only the CI figure gates. If a runner image change drops it, re-measure
+and say so in the pull request rather than lowering the floor to match.
+
+**The shot-tag counts did not drift.** 12 / 8 / 3 came out identical in both environments,
+across that 2-segment difference. They are integers over a much smaller set of events, and
+they are the numbers the count actually turns on — which is why they get an exact floor
+while precision and recall get a measured one.
 
 On this answer key, calling every shot a miss would score **11 right**. The generator
 scores 12. That is the honest size of the make/miss signal here, and the reason the Adrian
