@@ -862,8 +862,18 @@ class BallHoopExperiment:
             if not hoop:
                 return [], None
         
+            # Verify this hoop is near the ball's crossing point
             hoop_x, hoop_y = hoop['x'], hoop['y']
             rim_radius = hoop['r']
+        
+            # Check ball at crossing is actually near this hoop
+            cross_det = ball_detections[cross_idx]
+            dx = cross_det['x_center'] - hoop_x
+            dy = cross_det['y_center'] - hoop_y
+            dist = (dx*dx + dy*dy)**0.5
+            if dist > rim_radius * 2:
+                # Hoop is not on this ball's play
+                return [], None
         
             # Return ALL ball detections in the window (don't filter by distance)
             # The classifier will find the relevant ones
@@ -871,152 +881,127 @@ class BallHoopExperiment:
     
     def classify_make_miss(self, ball_track: List[Dict], hoop: Dict, tag_ts: float = None) -> Dict:
                     """
-                    Classify as make or miss using combined detections.
+                    Classify as make or miss using the ACTUAL 85-score rule:
                 
-                    The 85-score rule (ACTIVE.md 2026-10-09) is TWO STEPS:
-                    1. Ball crosses the opening AND keeps falling (through the net)
+                    The 85-score rule (ACTIVE.md 2026-10-09):
+                    1. Line through the opening (ball crosses rim and keeps falling through net)
                     2. On shots that pass step 1, lateral drift > 0.45 rim-widths 
-                       between 80 and 180px below rim → call it a MISS
+                       between 80px and 180px below rim → call it a MISS
                 
-                    Column-under-rim (71 right) and trajectory-shape (failed) — DO NOT SUBMIT.
+                    Column-under-rim (71 right) and trajectory-shape — DO NOT SUBMIT.
                     """
                     if not ball_track or not hoop:
                         return {'is_make': False, 'confidence': 0.0, 'method': 'no_data', 'details': {}}
             
                     hoop_x, hoop_y = hoop['x'], hoop['y']
                     rim_radius = hoop['r']
-                    net_depth = rim_radius * 3
             
                     # Sort by frame
                     ball_track.sort(key=lambda d: d['frame_number'])
             
-                    # Find crossing point (ball at rim level, moving down)
+                    # STEP 1: Line through the opening
+                    # Find the frame where ball is at rim level (y minimum)
                     cross_idx = None
                     cross_y = float('inf')
                     for i, det in enumerate(ball_track):
                         dx = det['x_center'] - hoop_x
                         dy = det['y_center'] - hoop_y
                         dist = (dx*dx + dy*dy)**0.5
-                        if dist <= rim_radius * 1.5 and det['y_center'] < cross_y:
+                        # Ball must be within rim radius (at the opening)
+                        if dist <= rim_radius * 1.0 and det['y_center'] < cross_y:
                             cross_y = det['y_center']
                             cross_idx = i
             
                     if cross_idx is None:
-                        return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_no_cross', 'details': {'reason': 'no_cross_at_rim'}}
+                        return {'is_make': False, 'confidence': 0.0, 'method': 'no_cross', 'details': {'reason': 'no_ball_at_rim'}}
             
-                    # STEP 1: Ball crosses opening AND keeps falling through net
+                    # Check line through opening: ball at rim, then falls through net
                     post_cross = ball_track[cross_idx:]
-                    if len(post_cross) < 3:
-                        return {'is_make': False, 'confidence': 0.5, 'method': 'insufficient_post_cross', 'details': {'reason': 'not_enough_post_cross_frames'}}
+                    if len(post_cross) < 5:
+                        return {'is_make': False, 'confidence': 0.0, 'method': 'short_track', 'details': {'reason': 'not_enough_post_cross_frames'}}
             
-                    # Check continuous falling through net (overall trend, allow noise)
-                    # Count how many frames continue downward vs stall/go up
+                    # STEP 1a: Ball must go through net depth (reach at least 150px below rim)
+                    # Net depth is ~3 * rim_radius. Need ball to reach 180px below rim.
+                    last_y = post_cross[-1]['y_center']
+                    if last_y < hoop_y + 180:
+                        return {'is_make': False, 'confidence': 0.0, 'method': 'no_net_depth', 'details': {'reason': 'ball_did_not_reach_net_depth', 'max_y_below_rim': round(last_y - hoop_y, 1)}}
+            
+                    # STEP 1b: Continuous falling through net (no upward ticks)
+                    # Allow small noise: count frames that continue downward
                     down_frames = 0
-                    total_frames = len(post_cross) - 1
                     for i in range(1, len(post_cross)):
                         if post_cross[i]['y_center'] > post_cross[i-1]['y_center']:
                             down_frames += 1
-                
-                    fall_ratio = down_frames / max(total_frames, 1) if total_frames > 0 else 0
-                
-                    # Also check it goes at least 60px below rim (through net depth)
-                    # 60px is realistic for this camera (net_depth ≈ 3*rim_radius ≈ 150px, but we need reachable)
-                    last_y = post_cross[-1]['y_center']
-                    falls_through_net = (fall_ratio >= 0.6) and (last_y >= hoop_y + 60)
+                    fall_ratio = down_frames / max(len(post_cross) - 1, 1)
+                    if fall_ratio < 0.8:  # 80% of frames must continue downward
+                        return {'is_make': False, 'confidence': 0.0, 'method': 'ball_stalled', 'details': {'reason': 'ball_stopped_falling', 'fall_ratio': round(fall_ratio, 2)}}
             
-                    if not falls_through_net:
-                        # STEP 1 FAILED: ball didn't go through net cleanly
-                        return {
-                            'is_make': False, 'confidence': 0.7, 'method': 'no_fall_through_net',
-                            'ball_at_rim': True, 'ball_through_net': False, 'hoop_on_rim': hoop.get('confidence', 0) >= 0.35,
-                            'details': {'reason': 'ball_stopped_falling_or_did_not_reach_net_depth',
-                                       'fall_ratio': round(fall_ratio, 2), 'last_y_below_rim': round(last_y - hoop_y, 1)}
-                        }
-            
-                    # STEP 2: On shots that pass step 1, check lateral drift 80→180px below rim
-                    # Measure ball x at y = hoop_y + 80 and y = hoop_y + 180
-                    # If we don't reach 180px, use the farthest point available
+                    # STEP 2: Lateral drift 80px to 180px below rim
+                    # Measure ball x at exactly 80px and 180px below rim
                     x_at_80 = None
-                    x_at_farthest = None
-                    farthest_y_rel = 0
-            
+                    x_at_180 = None
                     for det in post_cross:
                         y_rel = det['y_center'] - hoop_y
                         if x_at_80 is None and y_rel >= 80:
                             x_at_80 = det['x_center']
-                        if y_rel > farthest_y_rel:
-                            farthest_y_rel = y_rel
-                            x_at_farthest = det['x_center']
+                        if y_rel >= 180:
+                            x_at_180 = det['x_center']
+                            break
             
-                    # Need at least 80px and some drift measurement
-                    lateral_drift = None
-                    drift_distance = None
-                    if x_at_80 is not None and x_at_farthest is not None and farthest_y_rel >= 80:
-                        drift_distance = abs(x_at_farthest - x_at_80)
-                        lateral_drift = drift_distance / rim_radius
+                    if x_at_80 is None or x_at_180 is None:
+                        return {'is_make': False, 'confidence': 0.0, 'method': 'no_drift_measurement', 'details': {'reason': 'missing_80_or_180_measurement', 'x_at_80': x_at_80, 'x_at_180': x_at_180}}
             
-                    # BALL TRACK CONTINUITY: does the ball box stay on the ball?
-                    # Real ball motion between frames is ~30px on this camera
+                    lateral_drift = abs(x_at_180 - x_at_80) / rim_radius
+            
+                    # BALL TRACK CONTINUITY: box stays on ball
+                    # Real ball motion ~30px/frame. Jump > 60px = box teleported
                     max_frame_jump = 0
                     for i in range(1, len(post_cross)):
                         jump = ((post_cross[i]['x_center'] - post_cross[i-1]['x_center'])**2 + 
                                (post_cross[i]['y_center'] - post_cross[i-1]['y_center'])**2)**0.5
                         max_frame_jump = max(max_frame_jump, jump)
             
-                    # Box stays on ball: jump <= 50px (realistic for this camera)
-                    box_stays_on_ball = max_frame_jump <= 50
+                    box_stays_on_ball = max_frame_jump <= 60  # 2x real motion
             
                     # HOOP ON ORANGE RIM (not glass/backboard)
-                    # Check both confidence AND position (orange rim is wide, not round)
+                    # detect_hoop_cv already rejects round blobs and backboard
+                    # Check confidence + that it's on the orange rim (not backboard)
                     hoop_on_rim = hoop.get('confidence', 0) >= 0.35
-                    # Also check hoop geometry: wide band (w > h * 1.3)
-                    if 'width' in hoop and 'height' in hoop:
-                        if hoop['width'] < hoop['height'] * 1.3:
-                            hoop_on_rim = False  # Round blob = ball, not rim
             
-                    # TWO-STEP CALL:
-                    # Step 1 passed (falls through net)
-                    # Step 2: lateral_drift ≤ 0.45 rim-widths (80px to farthest point)
-                    # AND box stays on ball (no teleport to hands/wall)
-                    # AND hoop on orange rim
+                    # THE ACTUAL 85-SCORE RULE:
+                    # Make = line through opening + net depth + continuous fall + 
+                    #        lateral drift ≤ 0.45 rim-widths (80→180px) + box stays on ball
                     is_make = (
-                        lateral_drift is not None and lateral_drift <= 0.45 and
-                        box_stays_on_ball and
-                        hoop_on_rim
+                        lateral_drift <= 0.45 and
+                        max_frame_jump <= 60
                     )
             
                     details = {
-                        'lateral_drift': round(lateral_drift, 3) if lateral_drift else None,
-                        'x_at_80': round(x_at_80, 1) if x_at_80 else None,
-                        'x_at_farthest': round(x_at_farthest, 1) if x_at_farthest else None,
-                        'farthest_y_rel': round(farthest_y_rel, 1),
+                        'lateral_drift': round(lateral_drift, 3),
+                        'x_at_80': round(x_at_80, 1),
+                        'x_at_180': round(x_at_180, 1),
                         'rim_radius': round(rim_radius, 1),
                         'max_frame_jump': round(max_frame_jump, 1),
-                        'box_stays_on_ball': box_stays_on_ball,
-                        'hoop_confidence': hoop.get('confidence', 0),
-                        'hoop_on_rim': hoop_on_rim,
-                        'cross_frame': ball_track[cross_idx]['frame_number'] if cross_idx < len(ball_track) else None,
-                        'falls_through_net': falls_through_net,
-                        'fall_ratio': round(fall_ratio, 2) if 'fall_ratio' in locals() else 0,
-                        'last_y_below_rim': round(last_y - hoop_y, 1) if 'last_y' in locals() else 0,
+                        'cross_frame': ball_track[cross_idx]['frame_number'],
+                        'last_y_below_rim': round(post_cross[-1]['y_center'] - hoop_y, 1),
                     }
             
                     if tag_ts and tag_ts in FALSE_MAKE_TIMESTAMPS:
                         details['IS_FALSE_MAKE_TAG'] = True
-                        print(f"FALSE MAKE TAG {tag_ts}: drift={lateral_drift}, box_stays={box_stays_on_ball}, hoop_conf={hoop.get('confidence', 0)}")
+                        print(f"FALSE MAKE TAG {tag_ts}: drift={lateral_drift:.3f}, jump={max_frame_jump:.1f}")
                         if hoop:
                             details['hoop_pos'] = {'x': hoop['x'], 'y': hoop['y'], 'r': hoop['r'], 'conf': hoop.get('confidence', 0)}
                         if ball_track:
-                            details['ball_at_cross'] = {'x': ball_track[cross_idx]['x_center'], 'y': ball_track[cross_idx]['y_center']}
-                            details['ball_last'] = {'x': post_cross[-1]['x_center'], 'y': post_cross[-1]['y_center']}
+                            details['ball_at_80'] = {'x': x_at_80, 'y': hoop_y + 80}
+                            details['ball_at_180'] = {'x': x_at_180, 'y': hoop_y + 180}
             
                     return {
                         'is_make': is_make,
                         'confidence': 0.85 if is_make else 0.75,
-                        'method': 'v6_lateral_drift_80_farthest_twostep',
+                        'method': 'v6_line_drift_80_180',
                         'ball_at_rim': True,
-                        'ball_through_net': falls_through_net,
-                        'hoop_on_rim': hoop_on_rim,
+                        'ball_through_net': True,
+                        'hoop_on_rim': hoop.get('confidence', 0) >= 0.35,
                         'details': details,
                     }
     
