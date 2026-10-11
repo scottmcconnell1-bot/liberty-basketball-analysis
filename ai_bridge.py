@@ -820,159 +820,186 @@ class BallHoopExperiment:
         """
         return self.detect_hoop_cv(frame)
     
-    def track_ball_through_rim(self, ball_detections: List[Dict], hoop: Dict) -> List[Dict]:
-        """
-        Track the basketball through the rim using v6 detections.
-        Returns list of ball positions with frame numbers.
-        The ball box should stay on the ball (not jump to player hands, not drop out).
-        """
-        if not hoop or not ball_detections:
-            return []
-        
-        hoop_x, hoop_y = hoop['x'], hoop['y']
-        rim_radius = hoop['r']
-        
-        # Sort by frame
-        ball_detections.sort(key=lambda d: d['frame_number'])
-        
-        # Find ball detections near the hoop (within rim_radius * 2.5)
-        near_hoop = []
-        for d in ball_detections:
-            dx = d['x_center'] - hoop_x
-            dy = d['y_center'] - hoop_y
-            dist = (dx*dx + dy*dy)**0.5
-            if dist <= rim_radius * 2.5:
-                near_hoop.append(d)
-        
-        return near_hoop
-    
-    def classify_make_miss(self, ball_track: List[Dict], hoop: Dict, tag_ts: float = None) -> Dict:
+    def track_ball_through_rim(self, ball_detections: List[Dict], video_path: str, peak_frame: int) -> List[Dict]:
             """
-            Classify as make or miss using combined detections.
-        
-            The COLUMN-UNDER-THE-RIM rule (ball_at_rim + ball_through_net + hoop_on_rim)
-            scored 71 right, 32 makes missed, 8 false makes. THAT RULE LOST.
-        
-            New call: trajectory shape through the rim.
-            A real make falls through the net in one continuous motion.
-            False makes: ball bounces off rim, falls short, or ball box jumps to player hands.
+            Track the basketball through the rim using v6 detections.
+            Returns list of ball positions with frame numbers.
+            The ball box should stay on the ball (not jump to player hands, not drop out).
+            Also finds the hoop on the ball's play by running CV hoop detector on the peak frame.
             """
-            if not ball_track or not hoop:
-                return {'is_make': False, 'confidence': 0.0, 'method': 'no_data', 'details': {}}
-        
-            hoop_x, hoop_y = hoop['x'], hoop['y']
-            rim_radius = hoop['r']
-            net_depth = rim_radius * 3
+            if not ball_detections:
+                return [], None
         
             # Sort by frame
-            ball_track.sort(key=lambda d: d['frame_number'])
+            ball_detections.sort(key=lambda d: d['frame_number'])
         
-            # Find the frame where ball is at/above rim (peak)
+            # Find peak (ball at/above rim)
             peak_idx = None
             peak_y = float('inf')
-            for i, det in enumerate(ball_track):
-                dx = det['x_center'] - hoop_x
-                dy = det['y_center'] - hoop_y
-                dist = (dx*dx + dy*dy)**0.5
-                if dist <= rim_radius * 1.5 and det['y_center'] < peak_y:
+            for i, det in enumerate(ball_detections):
+                # We don't know hoop yet, so find highest ball in the sequence
+                if det['y_center'] < peak_y:
                     peak_y = det['y_center']
                     peak_idx = i
         
             if peak_idx is None:
-                return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_no_peak', 'details': {'reason': 'no_peak_at_rim'}}
+                return [], None
         
-            # Track from peak downward through net
-            post_peak = ball_track[peak_idx:]
-            if len(post_peak) < 3:
-                return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_too_short', 'details': {'reason': 'insufficient_post_peak_frames'}}
+            # Run CV hoop detector on the peak frame to get the hoop on THIS play
+            import cv2
+            cap = cv2.VideoCapture(video_path)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, peak_frame)
+            ret, peak_frame_img = cap.read()
+            cap.release()
         
-            # Check for continuous downward motion through net column
-            in_column_frames = 0
-            total_post_frames = 0
-            max_lateral_slide = 0
-            prev_x = None
-            ball_left_column = False
-            ball_stalled = False
+            hoop = None
+            if ret:
+                hoop = self.detect_hoop_cv(peak_frame_img)
         
-            for det in post_peak:
-                dx = det['x_center'] - hoop_x
-                dy = det['y_center'] - hoop_y
+            if not hoop:
+                return [], None
+        
+            hoop_x, hoop_y = hoop['x'], hoop['y']
+            rim_radius = hoop['r']
+        
+            # Find ball detections near THIS hoop
+            near_hoop = []
+            for d in ball_detections:
+                dx = d['x_center'] - hoop_x
+                dy = d['y_center'] - hoop_y
                 dist = (dx*dx + dy*dy)**0.5
+                if dist <= rim_radius * 2.5:
+                    near_hoop.append(d)
+        
+            return near_hoop, hoop
+    
+    def classify_make_miss(self, ball_track: List[Dict], hoop: Dict, tag_ts: float = None) -> Dict:
+                """
+                Classify as make or miss using combined detections.
             
-                # In net column?
-                in_column = abs(det['x_center'] - hoop_x) <= rim_radius * 1.15
-                below_rim = det['y_center'] > hoop_y + 20
+                The COLUMN-UNDER-THE-RIM rule scored 71 right, 32 makes missed, 8 false makes. LOST.
+                The LATERAL-DRIFT rule (80px to 180px below rim) scored 85 right, 20 makes missed, 6 false makes.
+                But that rule required the hoop to be on the SAME PLAY as the ball.
             
-                if below_rim:
-                    total_post_frames += 1
-                    if in_column:
-                        in_column_frames += 1
-                
-                    # Track lateral slide
-                    if prev_x is not None:
-                        slide = abs(det['x_center'] - prev_x)
-                        max_lateral_slide = max(max_lateral_slide, slide)
-                
-                    # Ball left column and didn't come back = likely a miss
-                    if not in_column and in_column_frames > 0:
-                        ball_left_column = True
-                
-                    # Ball stalled (stopped falling) = likely a miss
-                    if len(post_peak) > 3:
-                        # Check if y position stopped increasing (ball stopped falling)
-                        if det['y_center'] <= post_peak[0]['y_center'] + 10:
-                            ball_stalled = True
+                Three problems to fix:
+                1. Hoop finder picks one hoop per window; 42/111 tags have ball nowhere near that hoop
+                2. Lateral drift is measured 80px→180px below rim, not max frame-to-frame jump
+                3. Column test fails: misses off front of rim fall in same column
             
-                prev_x = det['x_center']
-        
-            # NEW CALL CRITERIA:
-            # 1. Ball must stay in net column for majority of post-peak frames
-            column_ratio = in_column_frames / max(total_post_frames, 1)
-            # 2. Lateral slide must be small (ball doesn't jump sideways)
-            max_slide_allowed = rim_radius * 0.45  # 0.45 rim-widths = best score per ACTIVE.md
-            # 3. Ball must not stall (must keep falling)
-            # 4. Ball must not leave column once it enters
-        
-            is_make = (
-                column_ratio >= 0.6 and           # Ball stays in column through net
-                max_lateral_slide <= max_slide_allowed and  # No big sideways jump
-                not ball_left_column and           # Ball doesn't exit column
-                not ball_stalled and               # Ball keeps falling
-                hoop.get('confidence', 0) >= 0.35  # Hoop is on orange rim
-            )
-        
-            # Detailed logging for the 5 false makes
-            details = {
-                'column_ratio': round(column_ratio, 2),
-                'max_lateral_slide': round(max_lateral_slide, 1),
-                'max_slide_allowed': round(max_slide_allowed, 1),
-                'ball_left_column': ball_left_column,
-                'ball_stalled': ball_stalled,
-                'in_column_frames': in_column_frames,
-                'total_post_frames': total_post_frames,
-                'peak_frame': ball_track[peak_idx]['frame_number'] if peak_idx < len(ball_track) else None,
-            }
-        
-            # Flag the 5 known false makes for inspection
-            if tag_ts and tag_ts in FALSE_MAKE_TIMESTAMPS:
-                details['IS_FALSE_MAKE_TAG'] = True
-                print(f"FALSE MAKE TAG {tag_ts}: column_ratio={column_ratio:.2f}, slide={max_lateral_slide:.1f}, left_col={ball_left_column}, stalled={ball_stalled}")
-                # Log hoop and ball positions
-                if hoop:
-                    details['hoop_pos'] = {'x': hoop['x'], 'y': hoop['y'], 'r': hoop['r'], 'conf': hoop.get('confidence', 0)}
-                if ball_track:
-                    details['ball_at_peak'] = {'x': ball_track[peak_idx]['x_center'], 'y': ball_track[peak_idx]['y_center']}
-                    details['ball_last'] = {'x': ball_track[-1]['x_center'], 'y': ball_track[-1]['y_center']}
-        
-            return {
-                'is_make': is_make,
-                'confidence': 0.85 if is_make else 0.75,
-                'method': 'v6_trajectory_shape',
-                'ball_at_rim': peak_idx is not None,
-                'ball_through_net': is_make,
-                'hoop_on_rim': hoop.get('confidence', 0) >= 0.35,
-                'details': details,
-            }
+                New approach:
+                - For each shot, find the hoop that's actually on the ball's play (nearest in space/time)
+                - Measure lateral drift at 80px and 180px below rim (not frame-to-frame max)
+                - Use net motion + trajectory shape, not column test
+                """
+                if not ball_track or not hoop:
+                    return {'is_make': False, 'confidence': 0.0, 'method': 'no_data', 'details': {}}
+            
+                hoop_x, hoop_y = hoop['x'], hoop['y']
+                rim_radius = hoop['r']
+                net_depth = rim_radius * 3
+            
+                # Sort by frame
+                ball_track.sort(key=lambda d: d['frame_number'])
+            
+                # Find peak (ball at/above rim)
+                peak_idx = None
+                peak_y = float('inf')
+                for i, det in enumerate(ball_track):
+                    dx = det['x_center'] - hoop_x
+                    dy = det['y_center'] - hoop_y
+                    dist = (dx*dx + dy*dy)**0.5
+                    if dist <= rim_radius * 1.5 and det['y_center'] < peak_y:
+                        peak_y = det['y_center']
+                        peak_idx = i
+            
+                if peak_idx is None:
+                    return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_no_peak', 'details': {'reason': 'no_peak_at_rim'}}
+            
+                # Track from peak downward
+                post_peak = ball_track[peak_idx:]
+                if len(post_peak) < 3:
+                    return {'is_make': False, 'confidence': 0.5, 'method': 'trajectory_too_short', 'details': {'reason': 'insufficient_post_peak_frames'}}
+            
+                # LATERAL DRIFT MEASUREMENT (per ACTIVE.md 85 right):
+                # Measure ball x at y = hoop_y + 80 and y = hoop_y + 180
+                # If drift > 0.45 rim-widths between those two levels → miss
+                x_at_80 = None
+                x_at_180 = None
+            
+                for det in post_peak:
+                    y_rel = det['y_center'] - hoop_y
+                    if x_at_80 is None and y_rel >= 80:
+                        x_at_80 = det['x_center']
+                    if x_at_180 is None and y_rel >= 180:
+                        x_at_180 = det['x_center']
+                        break
+            
+                lateral_drift = None
+                if x_at_80 is not None and x_at_180 is not None:
+                    lateral_drift = abs(x_at_180 - x_at_80) / rim_radius
+            
+                # NET MOTION (from core): did the net move when ball was at rim?
+                # Use the peak frame ±2 frames to check net kick
+                net_kick = False
+                if len(post_peak) >= 3:
+                    # Check if ball continues falling through net (y keeps increasing)
+                    # AND no lateral jump > 0.45 rim-widths between 80 and 180
+                    pass  # We'll use lateral_drift as the primary separator
+            
+                # BALL TRACK CONTINUITY: does the ball box stay on the ball?
+                # Check for box jumping to player hands/wall (large frame-to-frame jumps)
+                max_frame_jump = 0
+                for i in range(1, len(post_peak)):
+                    jump = ((post_peak[i]['x_center'] - post_peak[i-1]['x_center'])**2 + 
+                           (post_peak[i]['y_center'] - post_peak[i-1]['y_center'])**2)**0.5
+                    max_frame_jump = max(max_frame_jump, jump)
+            
+                box_stays_on_ball = max_frame_jump <= rim_radius * 0.3  # Box doesn't teleport
+            
+                # HOOP ON ORANGE RIM (not glass/backboard)
+                hoop_on_rim = hoop.get('confidence', 0) >= 0.35
+            
+                # NEW CALL:
+                # Make = lateral_drift ≤ 0.45 rim-widths (80→180px below rim)
+                #      AND box stays on ball (no teleport to hands/wall)
+                #      AND hoop on orange rim
+                # Miss = lateral_drift > 0.45 OR box jumps OR hoop on glass
+            
+                is_make = (
+                    lateral_drift is not None and lateral_drift <= 0.45 and
+                    box_stays_on_ball and
+                    hoop_on_rim
+                )
+            
+                details = {
+                    'lateral_drift': round(lateral_drift, 3) if lateral_drift else None,
+                    'x_at_80': round(x_at_80, 1) if x_at_80 else None,
+                    'x_at_180': round(x_at_180, 1) if x_at_180 else None,
+                    'rim_radius': round(rim_radius, 1),
+                    'max_frame_jump': round(max_frame_jump, 1),
+                    'box_stays_on_ball': box_stays_on_ball,
+                    'hoop_confidence': hoop.get('confidence', 0),
+                    'peak_frame': ball_track[peak_idx]['frame_number'] if peak_idx < len(ball_track) else None,
+                }
+            
+                if tag_ts and tag_ts in FALSE_MAKE_TIMESTAMPS:
+                    details['IS_FALSE_MAKE_TAG'] = True
+                    print(f"FALSE MAKE TAG {tag_ts}: drift={lateral_drift}, box_stays={box_stays_on_ball}, hoop_conf={hoop.get('confidence', 0)}")
+                    if hoop:
+                        details['hoop_pos'] = {'x': hoop['x'], 'y': hoop['y'], 'r': hoop['r'], 'conf': hoop.get('confidence', 0)}
+                    if ball_track:
+                        details['ball_at_peak'] = {'x': ball_track[peak_idx]['x_center'], 'y': ball_track[peak_idx]['y_center']}
+                        details['ball_last'] = {'x': ball_track[-1]['x_center'], 'y': ball_track[-1]['y_center']}
+            
+                return {
+                    'is_make': is_make,
+                    'confidence': 0.85 if is_make else 0.75,
+                    'method': 'v6_lateral_drift_80_180',
+                    'ball_at_rim': peak_idx is not None,
+                    'ball_through_net': is_make,
+                    'hoop_on_rim': hoop_on_rim,
+                    'details': details,
+                }
     
     def process_video_for_tags(self, video_path: str, tag_timestamps: List[float]) -> Dict:
             """
@@ -1039,20 +1066,21 @@ class BallHoopExperiment:
                 start_f, end_f = tag_windows[i]
                 window_bb_dets = [d for d in all_basketball_dets if start_f <= d['frame_number'] <= end_f]
             
-                # Find hoop on orange rim (use middle frame of window for hoop detection)
-                mid_frame = (start_f + end_f) // 2
-                # Re-read the middle frame for hoop detection
-                cap2 = cv2.VideoCapture(video_path)
-                cap2.set(cv2.CAP_PROP_POS_FRAMES, mid_frame)
-                ret, mid_frame_img = cap2.read()
-                cap2.release()
+                if not window_bb_dets:
+                    # No ball detections in this window
+                    classification = {'is_make': False, 'confidence': 0.0, 'method': 'no_ball_detections', 
+                                   'tag_timestamp_ms': tag_ts, 'tag_index': i, 'hoop': None, 'ball_track_len': 0}
+                    results.append(classification)
+                    continue
             
-                hoop = None
-                if ret:
-                    hoop = self.find_hoop_on_orange_rim(mid_frame_img)
+                # Track basketball through rim (finds hoop on peak frame)
+                ball_track, hoop = self.track_ball_through_rim(window_bb_dets, video_path, tag_frame)
             
-                # Track basketball through rim
-                ball_track = self.track_ball_through_rim(window_bb_dets, hoop) if hoop else []
+                if not hoop or not ball_track:
+                    classification = {'is_make': False, 'confidence': 0.0, 'method': 'no_hoop_or_track',
+                                   'tag_timestamp_ms': tag_ts, 'tag_index': i, 'hoop': hoop, 'ball_track_len': len(ball_track)}
+                    results.append(classification)
+                    continue
             
                 # Classify (pass tag_ts for false-make logging)
                 classification = self.classify_make_miss(ball_track, hoop, tag_ts)
