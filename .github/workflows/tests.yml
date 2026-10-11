@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      # One version failing must not cancel the other: when 3.13 took the run down
+      # with it, 3.12's numbers were lost and a cross-version difference could not be
+      # told apart from a regression.
+      fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
     steps:
@@ -31,8 +35,14 @@ jobs:
         run: python -m pytest tests/ -q
       - name: Accuracy benchmark
         # Event generator vs the coach's tags on frozen real detections; fails on a
-        # precision/recall/F1 drop below benchmarks/accuracy/baseline.json. The table is
-        # written to the job summary.
+        # precision/recall/F1 drop, or a shot-tag score drop, below
+        # benchmarks/accuracy/baseline.json. The table is written to the job summary.
+        #
+        # always(): a step after a failing one is skipped by default, so while the two
+        # known e2e failures stand, this and the secrets audit had stopped running at
+        # all. A gate that only runs when everything else is already green is not a gate.
+        if: always()
         run: python scripts/accuracy_benchmark.py
       - name: Secrets audit
+        if: always()
         run: python scripts/audit_secrets.py
