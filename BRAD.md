@@ -1,6 +1,10 @@
 # Brad — start here
 
-Updated: 2026-10-11 afternoon. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-11 evening. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-11 evening) — auto-accept stays at 0.85
+
+Scott says `auto_accept_event_confidence` at 0.85 is fine for now. Leave it. The home database already stores `ai.auto_accept_event_confidence` as `0.85`, and `event_generator.py` calls `auto_accept_high_confidence_events` after a counting run, so a pending AI row at or above 0.85 is accepted. Do not turn it off. Do not merge pull request 147 to change it. The same paragraph is at the top of `JASON.md`.
 
 ## Pickup (2026-10-11 afternoon) — the laptop files are on the shared drive
 
