@@ -51,7 +51,7 @@ This is the per-stat measurement against Scott's **first-half** tags. A match is
 | Free throws | Fails | 11 of 21 | 10 | 4 |
 | Rebounds | Fails | 13 of 29 | 16 | 39 |
 | Turnovers | Fails | 3 of 16 | 13 | 17 |
-| **Assists** | Fails | **0 of 6** | 6 | 8 |
+| **Assists** | Fails | **0 of 6** (first half; 0 of 10 full game, measured 2026-10-11) | 6 | 8 |
 | Steals | Not written | 0 of 8 | 8 | 0 |
 | Fouls | Not written | 0 of 18 | 18 | 0 |
 | Blocks | Unchecked | no tags | — | 4, all after 32:15 |
@@ -66,11 +66,15 @@ Two specific defects to fix, not just measure:
 
 **132 of 170 rebounds are written within 6 seconds after an unseen miss** — a shot row with both flags false. Rebounds are currently a shadow of the shot-detection failure. If step 1 through 4 worked, this number should move on its own before you write any rebound logic. Measure it before and after.
 
-**804 of the 1,452 events are `possession_change`**, which the box score ignores.
+**804 of the events are `possession_change`**, which the box score ignores. That 804 was counted against a 1,452-event run; the run holds **1,555** events as of 2026-10-11, so re-count it rather than quoting the ratio.
 
 ## Assists are a sixth category
 
-The program file's step 8 lists rebounds, turnovers, steals, fouls, and blocks — **it omits assists**. The tag file has 6 assist tags (Peterson 1, Sullivan 2, Colman 2, Foster 1) and run 12 has 10 pending assists matching none of them. `credit_assist` already exists at `stat_rules.py:21`.
+The program file's step 8 lists rebounds, turnovers, steals, fouls, and blocks — **it omits assists**. `credit_assist` already exists at `stat_rules.py:21`.
+
+**Scott's answer, 2026-10-11: include them in step 8, after the shot count.** Measured on the home machine: **10 assist tags, and 10 stored rows — 8 pending, 2 rejected, and none of the 10 within 8 seconds of a tag.** Leave them where they are until the shot count is right; assists hang off made field goals, so they cannot be better than the make/miss rule underneath them.
+
+The 6 assist tags named below (Peterson 1, Sullivan 2, Colman 2, Foster 1) are the **first-half** slice of those 10, not a different count.
 
 Treat assists as in scope and say so in the report. If Scott wants them deferred, that is his call to make with the number in front of him.
 
@@ -82,7 +86,7 @@ The sources look contradictory and are not. `ACTIVE.md` (2026-10-08) settles it:
 
 So **Liberty 8 + Adrian 6 = the 14**. `JASON.md`'s "8 of 8 steal tags missed" is the earlier, first-half-only measurement taken *before* the steal-and-foul write, by the now-finished agent `5cb51e6b-92f6-4927-8332-2bbc4dae58c3` (**do not resume it**).
 
-Residual uncertainty worth one query: `JASON.md` lists its 8 first-half steal tags as Liberty 4 (Colman 2, Sullivan 1, Dayley 1) and Adrian 4 (Foster 2, Linkhart 1, Mendoza 1) — a 4/4 split, where the card shows 8/6. Confirm the split against run 12 before using either as a denominator.
+**Answered 2026-10-11, and it is not an open split.** Scott measured it on the home machine: 14 tags, 14 accepted film-tool rows, each sitting on its tag. Through Q3 that is **Liberty 8 and Adrian 6, which is the card.** The 4-and-4 split in `JASON.md` is **Q1 and Q2 only** — a first-half slice of the same 14, not a competing total. Use 8/6 through Q3.
 
 **These 14 steals and 18 fouls came from Scott's tags, not from the film.** They are your labelled set, not detector output. Producing them from the film is the job.
 

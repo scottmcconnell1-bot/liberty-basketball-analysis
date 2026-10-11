@@ -35,10 +35,25 @@ METRICS = ("precision_exact", "recall_exact", "f1_exact")
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tag-exports"))
 
+import shot_tag_gate  # noqa: E402  (needs ROOT on sys.path first)
+
 
 def fixtures() -> list[Path]:
     return sorted(p for p in BENCH_DIR.iterdir() if (p / "truth.json").is_file()
                   and (p / "detections.csv.gz").is_file()) if BENCH_DIR.is_dir() else []
+
+
+def waiting_on_detections() -> list[Path]:
+    """Fixtures that have the coach's tags but no frozen detections yet.
+
+    Reported out loud. A fixture that is quietly skipped is a fixture nobody ever
+    finishes, and the one that matters most -- the Adrian film -- can only be
+    built on a machine that has the film.
+    """
+    if not BENCH_DIR.is_dir():
+        return []
+    return sorted(p for p in BENCH_DIR.iterdir()
+                  if (p / "truth.json").is_file() and not (p / "detections.csv.gz").is_file())
 
 
 def _load_detections(db_path: Path, fixture: Path, key: str) -> int:
@@ -146,9 +161,19 @@ def score_fixture(fixture: Path) -> dict:
         conn.close()
 
     manual = [r for r in filter_manual_q1_rows(truth["rows"]) if r.get("eventtype") in STAT_EVENTTYPES]
-    ai_rows = ai_stat_rows([e for e in events if 0 <= int(e.get("timestamp_ms") or 0) <= window_ms])
+    in_window = [e for e in events if 0 <= int(e.get("timestamp_ms") or 0) <= window_ms]
+    ai_rows = ai_stat_rows(in_window)
     matches, extras, misses, disagreements = event_level_match(manual, ai_rows)
     summary = pr_summary(matches, extras, misses, disagreements)
+
+    # The count gate: right / makes missed / misses called makes on the shot tags
+    # only, at the teach pass's own 8 s tolerance. Precision and recall above score
+    # every event type at +-10 s; this scores the thing the card is made of.
+    shots = shot_tag_gate.score(
+        shot_tag_gate.shot_tags(truth["rows"]),
+        shot_tag_gate.stored_makes(in_window),
+    )
+    shots.pop("detail", None)
 
     by_type = {}
     truth_counts = Counter(match_key(r) for r in manual)
@@ -167,6 +192,7 @@ def score_fixture(fixture: Path) -> dict:
         "missed": summary["false_negatives_ai_misses"],
         "wrong_label": summary["disagreements_near_but_wrong_label"],
         "by_type": by_type,
+        "shots": shots,
     }
 
 
@@ -174,10 +200,17 @@ def regressions(result: dict, baseline: dict) -> list[str]:
     base = baseline.get(result["fixture"])
     if not base:
         return [f"{result['fixture']}: no baseline (run with --update-baseline)"]
-    return [
+    failed = [
         f"{result['fixture']}: {m} {result[m]:.4f} < baseline {base[m]:.4f}"
         for m in METRICS if result[m] + 1e-9 < float(base[m])
     ]
+    shot_floor = base.get("shots")
+    if shot_floor:
+        failed += [f"{result['fixture']} shots: {msg}"
+                   for msg in shot_tag_gate.regressions(result["shots"], shot_floor)]
+    else:
+        failed.append(f"{result['fixture']}: no shot-tag floor (run with --update-baseline)")
+    return failed
 
 
 def markdown(results: list[dict], baseline: dict) -> str:
@@ -190,6 +223,16 @@ def markdown(results: list[dict], baseline: dict) -> str:
             f"| {r['fixture']} | {r['precision_exact']:.1%} | {r['recall_exact']:.1%} | {r['f1_exact']:.1%} | "
             f"{r['true_positives']} / {r['truth_events']} | {r['ai_events']} | "
             f"{b.get('precision_exact', 0):.1%} / {b.get('recall_exact', 0):.1%} |")
+    lines += ["", "Shot tags -- right / makes missed / misses called makes, at 8 s:", "",
+              "| Fixture | Tags | Right | Makes missed | Misses called makes | Floor |",
+              "|---|---:|---:|---:|---:|---|"]
+    for r in results:
+        s = r["shots"]
+        f = baseline.get(r["fixture"], {}).get("shots") or {}
+        floor = (f"{f.get('right', '?')} / {f.get('makes_missed', '?')} / "
+                 f"{f.get('misses_called_makes', '?')}") if f else "none"
+        lines.append(f"| {r['fixture']} | {s['tags']} | {s['right']} | {s['makes_missed']} | "
+                     f"{s['misses_called_makes']} | {floor} |")
     for r in results:
         lines += ["", f"<details><summary>{r['fixture']} by event type</summary>", "",
                   "| Type | Truth | AI | Matched |", "|---|---:|---:|---:|"]
@@ -205,12 +248,19 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     found = fixtures()
+    pending = waiting_on_detections()
     if not found:
         print("No accuracy fixtures under benchmarks/accuracy/.")
         return 1
     results = [score_fixture(f) for f in found]
+    for p in pending:
+        print(f"WAITING: {p.name} has truth.json but no detections.csv.gz "
+              f"(see {p.relative_to(ROOT)}/README.md)")
     baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8")) if BASELINE_PATH.is_file() else {}
     report = markdown(results, baseline)
+    if pending:
+        report += ("\nWaiting on frozen detections (build them where the film is): "
+                   + ", ".join(p.name for p in pending) + "\n")
     print(report)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
@@ -218,7 +268,13 @@ def main(argv=None) -> int:
     if args.json:
         args.json.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     if args.update_baseline:
-        new = {r["fixture"]: {m: r[m] for m in METRICS} for r in results}
+        new = {
+            r["fixture"]: {
+                **{m: r[m] for m in METRICS},
+                "shots": {k: r["shots"][k] for k in ("tags", *shot_tag_gate.METRICS)},
+            }
+            for r in results
+        }
         BASELINE_PATH.write_text(json.dumps(new, indent=2) + "\n", encoding="utf-8")
         print(f"Baseline written to {BASELINE_PATH.relative_to(ROOT)}")
         return 0

@@ -29,7 +29,7 @@ Jersey identity is wrong often enough that Scott rejected rows **for the wrong p
 
 `JASON.md`: cluster `7` holds 7 points and cluster `0` holds 3 on run 12, neither matching any book line. **Cluster 7 stays unnamed. Do not assign those points to a Liberty player.** Naming a cluster to close a per-player gap is the identity-step version of copying the book onto the rows.
 
-Note how little naming achieved last time: run 12 filled in a name, jersey, or side on 52 of the 206 shot rows, 25 of them in the second half, and **it did not find a new shot**. Naming does not create the missing Colman, Sullivan, Peterson, Flores, Rodus, or Allison points. Identity is a correctness fix, not a recall fix — do not expect this step to move the total.
+Note how little naming achieved last time: run 12 filled in a name, jersey, or side on 52 shot rows, 25 of them in the second half (the 52 was counted when the run held 206 shot rows; it holds **229** as of 2026-10-11, 155 of them not rejected, so re-count the fraction before quoting it), and **it did not find a new shot**. Naming does not create the missing Colman, Sullivan, Peterson, Flores, Rodus, or Allison points. Identity is a correctness fix, not a recall fix — do not expect this step to move the total.
 
 Two second-half names are known wrong against the book: Foster's two at 57:42 (his book two is already in the first-half tags) and Alvarez's two at 58:32 (the book gives him one free throw there). Both are in the test set.
 

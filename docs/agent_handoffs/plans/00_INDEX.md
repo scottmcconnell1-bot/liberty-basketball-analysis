@@ -69,13 +69,15 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 - Turn on `rim_arc_shots` (`event_generator.py:1071`). It is written and deliberately not called.
 - Change `models/ball_detector.pt` or `ball_confidence`.
 - Train another ball-weights file of the same kind and call it the fix. v1 through v6 were tried. v6 put more boxes on the ball in the net and the count did not move.
-- Merge `Scott_Hermes` commit `6143e83`, or treat `cbeb0ed` on PR #168 as step 1 or step 3. Both are analysed in `COUNT_FIXES_2026-10-10.md` section 4.
+- Merge `Scott_Hermes`. Not the branch and not commit `6143e83`. Six of its rules were scored on the 111 tags and all six lost: 71/32/8, 66/37/8, 73/38/0, 73/38/0, 72/34/5, 75/36/0 (`HERMES.md`, 2026-10-11). Three of those six score at or below the 73 you get by calling every shot a miss. Do not resubmit any of them: the column under the rim, a frame-to-frame jump called 0.45, drift used as the whole make, a farthest-point substitute for 180 px, or a last-box depth check. Also do not treat `cbeb0ed` on PR #168 as step 1 or step 3 — both are analysed in `COUNT_FIXES_2026-10-10.md` section 4.
 - Treat the bottom of `HERMES.md` ("Where the Adrian count stands") as the counting run. That is the September 30 rerun.
 - **Open `GET /api/analysis/<game_id>` for this game** (`blueprints/ai.py:809`). **That request rewrites identity rows.** Read the `events` table directly, or the HTML results page. This is the easiest way for an agent to silently corrupt the run it is measuring.
 - Merge **pull request 147** ("Re-enable auto-accept (0.85) for full-stack bring-up", open as of 2026-10-11). It turns auto-accept on at 0.85 and Scott has not approved that.
 - Start the **teach loop**.
 - Use **video 64**. The film is **video id 73**, `uploads/nfhs_gam0a66d85e12.mp4`.
 - Commit the untracked GitHub credential file in the repo root, or paste it into a note.
+- Commit **anything out of the Shared drive folder**. It contains `.env` (the coach portal password), the database snapshot, the films and the tag files. `scripts/check_scott_gates.py` refuses the obvious ones, but it is not a substitute for not trying.
+- Copy the Shared drive's `film_analysis.db` **back over** the home laptop's database. The snapshot is read-only and sanitised; the home copy is the real one.
 
 ## The run under test
 
@@ -96,8 +98,8 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 | Review exports | `tag-exports/` — Q1 and Q2 shot reviews, before-states, hoop probe images. **In git.** The test set for steps 4 and 7. |
 | Tags with no AI row | **22 of 111** (6 makes, 16 misses); 9 of them in Q3; 17 of the 22 are within 280px of the median rim |
 | Hoop track | runs to 64:56, 1,949 raw samples, ±3-sample median |
-| Run 12 shot rows | 206 |
-| Run 12 event count | 1,452 (2026-10-06), 1,509 (2026-10-08 night) |
+| Run 12 shot rows | **229**, of which **155** are not rejected (measured 2026-10-11). 206 is an older count. |
+| Run 12 event count | **1,555** (measured 2026-10-11). 1,452, 1,503 and 1,509 are older nights. |
 
 ### Run 12 point totals move — know which number you are looking at
 
@@ -108,12 +110,15 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 | 64 | 2026-10-06 snapshot | the original run 12 count |
 | 76 | 2026-10-07 | seven tagged makes restored when `reconcile_makes_with_shots` stopped rejecting corrected rows |
 | 59 → 43 | 2026-10-08 | Q2 review rejected all 27 extra AI shots, and between-quarters shots were rejected |
-| **49** | **2026-10-08 night** | **current.** The locked-hoop ball-box change wrote six misses; his tags graded five of them, three were makes (43 → 49). 14 twos, 5 threes, 6 free throws. |
+| 49 | 2026-10-08 night | The locked-hoop ball-box change wrote six misses; his tags graded five of them, three were makes (43 → 49). 14 twos, 5 threes, 6 free throws. |
+| **55** | **2026-10-11, measured** | **current.** Non-rejected makes: 15 twos, 5 threes, 10 free throws. |
+| **53** | **2026-10-11, measured** | **distinct baskets.** One `made_two` at 0:48.2 is **stored twice**, both taught Dayley rows. |
 
-**49 is the number to re-measure against.** It is not an accuracy claim. The book is 77.
+**55 and 53 are the numbers to work from.** The book is 77.
 
-Two more small discrepancies, neither load-bearing — just do not treat either as a regression:
-- **Run 12 event count**: `ACTIVE.md` says 1,503 after the 2026-10-08 steal and foul write (was 1,452); `JASON.md` says 1,509. Re-query rather than quoting.
+**The duplicate at 0:48.2 is a defect, not a rounding difference.** Two stored rows for one basket put two points on the card that the film only shows once, with no detector error involved. Step 5 names it; find out whether it is one row written twice or two rows taught from the same tag before changing anything.
+
+One more discrepancy, not load-bearing — just do not treat it as a regression:
 - **"The 79 unmatched tags stay unmatched"** is a standing decision in `ACTIVE.md`. That 79 is all unmatched manual tags of every type, **not** the 22 shot tags with no AI row. Do not conflate them.
 | Best offline make/miss | 85 right, 20 makes missed, 6 misses called makes. **Not turned on. No rows written from it.** |
 
@@ -133,19 +138,29 @@ Scott asked for the **self-check to be run again**. `JASON.md`: "It is not finis
 
 ## What the author of these plans could not check
 
-These plans were written on 2026-10-11 from `PROGRAM_FOR_JASON_2026-10-10.md` (PR #168), `JASON.md`, `ACTIVE.md`, `HERMES.md`, and the source code. **Every number in them is quoted from those documents. None was re-measured**, because the things that would measure it are not in git.
+These plans were written on 2026-10-11 from `PROGRAM_FOR_JASON_2026-10-10.md` (PR #168), `JASON.md`, `ACTIVE.md`, `HERMES.md`, and the source code. **No frame of film was opened and no database row was read while writing them.** Every figure below that is not marked "measured" is quoted from those documents.
 
-**Not in the repo — so nothing depending on them is Proven here:**
+Scott then re-measured the run on the home laptop on 2026-10-11 and answered the open questions; those answers are in `JASON.md`, `BRAD.md` and `HERMES.md`, and the numbers in this index now carry them.
 
-| Missing | What that makes unverified |
+**Not in git, but now on the Shared drive** (Google Shared drive **Liberty Basketball** → folder **Program data from home laptop 2026-10-11**). Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. Membership is needed; it is not a public link.
+
+| Not in git | What it unlocks |
 | --- | --- |
-| `film_analysis.db` (home PC, ~379 MB) — no `.db` file anywhere in the tree | Every run-12 figure: 1,452 / 1,503 / 1,509 events, 206 shot rows, 49 make points, the per-player lines, the 22 tags with no AI row, the per-quarter make counts, the 132-of-170 rebounds, the steal and foul counts |
-| The film — `uploads/` is empty, `nfhs_gam0a66d85e12.mp4` (video 73) is absent | **Every frame claim.** 896600, 1776500, 1515700, 2455600, 755400, 856200, 280200, and the whole Q3 stretch. No frame in these plans was opened. |
-| `data/film_tags/<game id>.json` — the directory holds only `.gitkeep` | The 378 tag rows and the **111 shot tags themselves**. The grader for steps 3, 4, 7 and 8 is not here. |
-| `data/film_tags/_history` | The dated tag copies |
-| v6 weights (`ball_net_runs\v6\weights\best.pt`, Windows Temp), `v6_tracks.json`, the BODD public model | Every row of the try table, including the 85 / 20 / 6 best score |
-| `tag-exports/rejected_makes_before_restore_20261007.json` | Cited in `ACTIVE.md`; **checked and not present.** Probably home-machine-only. |
-| The passphrase for `encrypted-archive/liberty_adrian_detections_20261007.enc` | The archived detections |
+| `film_analysis.db` — read-only snapshot, 2026-10-11. Password hashes, phone numbers, session tokens, the NFHS login and share tokens were removed first. | Every run-12 figure: the event count, the shot rows, the make points, the per-player lines, the 22 tags with no AI row, the per-quarter make counts, the rebounds, the steals and fouls |
+| `uploads/nfhs_gam0a66d85e12.mp4` — the Adrian film only (video 73) | **Every frame claim.** 896600, 1776500, 1515700, 2455600, 755400, 856200, 280200, and the Q3 stretch |
+| `data/film_tags/`, including the history copies | The 378 tag rows and the **111 shot tags** — the grader for steps 3, 4, 7 and 8 |
+| `data/hoop_tracks/`, `data/lineups/`, `data/hoopsalytics/` (state files; logs left off) | The locked hoop track, the lineup work, the panel state |
+| `tag-exports/` — the review exports, including `rejected_makes_before_restore_20261007.json`, which is **not** in git | The step 4 and step 7 test set |
+| `offline/v6/weights/best.pt`, `offline/v6_tracks.json`, `offline/bodd_shots.json`, `offline/hermes_suggestion_tracks.json` | **Every row of the try table, including the 85 / 20 / 6 best score.** These are not a replacement for `models/ball_detector.pt`. |
+| `.env` — the coach portal password only | Running the app against the snapshot |
+
+**Still nowhere, on purpose:**
+
+| Missing | What stays unverified |
+| --- | --- |
+| The passphrase for `encrypted-archive/liberty_adrian_detections_20261007.enc` | The archived detections. Scott has it off-repo. |
+| The NFHS login | Fetching film |
+| The other eight game films | Step 10b's second gym |
 | HUDL teach state | — |
 
 **Present and usable, which is more than the handoffs imply:**
@@ -159,7 +174,25 @@ These plans were written on 2026-10-11 from `PROGRAM_FOR_JASON_2026-10-10.md` (P
 - `data/hoopsalytics/` — `full_film_panel_latest.json`, `full_film_panel_history.jsonl`, `full_film_panel_targets.json`, and a `TEACH_LOOP_PAUSED` marker.
 - `data/jersey_shades/` — 6 files including the run-12 sidecar.
 
-**What this means for an agent picking up a step:** the plans are a map, not a measurement. Treat every quoted number as the last recorded value and re-measure it on the home machine before you act on it. The first task of each step is to confirm its own starting numbers are still true.
+**What this means for an agent picking up a step:** the plans are a map, not a measurement. Treat every quoted number as the last recorded value and re-measure it before you act on it. The first task of each step is to confirm its own starting numbers are still true. Since 2026-10-11 that is a real possibility rather than a formality — the Shared drive folder makes the database, the film, the tags and the v6 tracks openable off the home laptop.
+
+## How a change proves it did not break the count
+
+Three numbers decide it, and they are the same three everywhere: **right**, **makes missed**, **misses called makes**, on the coach's shot tags. Each tag lands in exactly one bucket, so the three always add up to the tag count — which is why the recorded best reads 85 + 20 + 6 = 111, and why calling every shot a miss reads 73 + 38 + 0.
+
+| Tool | Where it runs | What it holds |
+| --- | --- | --- |
+| `scripts/shot_tag_score.py` | Home laptop, or a clone with the Shared drive folder copied over | Scores a run against the real tag file. Floor in `benchmarks/shot_tags/baseline.json`: **85 / 20 / 6** on `adrian_111`. Exit status 1 when the score is below it. |
+| `scripts/accuracy_benchmark.py` | **CI, every pull request** | Runs the event generator on frozen detections and scores it, now including the three shot numbers. Floors in `benchmarks/accuracy/baseline.json`. |
+| `tests/test_shot_tag_gate.py` | CI, plus the real film where the data is | Pins the arithmetic, the 8-second tolerance and what counts as the program's own claim. The 111-tag test skips where the data is absent and says so. |
+| `scripts/check_scott_gates.py` | **CI, every pull request** (`.github/workflows/guardrails.yml`) | Refuses a change that crosses a Scott gate without naming it, and a change to how a shot is read that carries no score. |
+
+Two things that follow from this, for any agent proposing a rule:
+
+- **A note that says a rule is implemented is not a result.** Paste the line: `right=N makes_missed=N misses_called_makes=N`. The guardrail job blocks a pull request that changes `net_detector.py`, `event_generator.py`, `ai_bridge.py`, `stat_rules.py`, `manual_tag_teach.py`, `ai_analyzer.py` or `court_memory.py` without one.
+- **A taught row is not the program's work.** `shot_tag_gate.stored_makes` ignores rejected rows, manual rows, and rows the teach pass corrected from a tag inside the tolerance. Counting a corrected row would grade the tags against themselves. `--count-taught` exists to answer "what does the card say now" and cannot be used to claim a gate score.
+
+`benchmarks/accuracy/adrian_q1/` holds the coach's 134 Q1 tags (44 shot tags) ready to go, built from a file that **is** in git. It has no frozen detections, so the benchmark prints `WAITING: adrian_q1` and scores nothing. Building them needs the film — see that folder's README. Until then the make/miss gate in CI runs on a different gym's film, which is better than nothing and is not the Adrian count.
 
 ## Report format — every step, every agent
 
@@ -180,7 +213,7 @@ A fix is **not Proven** until it was run against the real thing it fixes — the
 
 When a step completes, replace the paragraph it changes in `ACTIVE.md`. Do not stack a new Proven paragraph on top of one it contradicts. Move old text to `ARCHIVE/`.
 
-## One open discrepancy, found 2026-10-11
+## The two rise gates — raised 2026-10-11, answered the same day
 
 The program file and the roadmap both say "the 170-pixel rise". There are **two** rise gates in `event_generator.py`, not one:
 
@@ -189,4 +222,4 @@ The program file and the roadmap both say "the 170-pixel rise". There are **two*
 
 A tagged shot that never becomes a row may be dropped at the 80px primary gate, before the 170px live gate is ever reached. Any step-4 work that reasons only about "the 170" is reasoning about the second gate of two. `adrian_quality.py:45` has a third, separate `MIN_SHOT_BALL_RISE = 120.0` on the quality-pass path.
 
-This is a documentation gap, not a decision. Confirm with Scott which gate he means before changing either.
+**Scott's answer (2026-10-11): both stay, and change neither number.** The 80 is the primary pass. The 170 is the live field-goal pass and is the one he refused to drop. **Lane free throws skip the 170 and keep the 80** — which matters for step 4, where 4 of the 6 never-stored makes are free throws, so those four never met the 170 in the first place. Neither number moves until a tested rule beats 85 right with no more than 6 misses called makes *and* the same test shows the missing tagged rows appearing without new untagged shots. Both numbers are watched by `scripts/check_scott_gates.py`.

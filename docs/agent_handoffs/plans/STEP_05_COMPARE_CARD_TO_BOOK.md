@@ -13,11 +13,26 @@ Read `00_INDEX.md` first. Source of scope: `PROGRAM_FOR_JASON_2026-10-10.md` sec
 | Scott's tags through three quarters | Liberty 43, Adrian 24 — **matches the book** |
 | Q3 alone, from tags | Liberty 16, Adrian 9 |
 | Q4 remainder | Liberty 8, Adrian 2 — **Q4 is not tagged** |
-| Run 12 non-rejected make points, measured 2026-10-08 | **49** (14 twos, 5 threes, 6 free throws) |
+| Run 12 non-rejected make points, measured 2026-10-11 | **55** (15 twos, 5 threes, 10 free throws) |
+| Run 12 distinct baskets, measured 2026-10-11 | **53** — one `made_two` is stored twice |
+| Run 12 shot rows, measured 2026-10-11 | **229**, of which **155** are not rejected |
 | Quarter ends | Q1 16:00.7, Q2 32:15.0, Q3 55:17.1 |
 | Q4 Start QTR tag | 56:26.7 — this is the inbound, not a tagged quarter |
 
-The 49 was a measurement on one night, before step 4. **It is not an accuracy claim.** Re-measure it; do not quote it as current.
+Neither 55 nor 53 is an accuracy claim; they are what the card held on 2026-10-11. The 49 from 2026-10-08 and the 64 / 76 / 59 / 43 before it are older nights, not contradictions. Re-measure before quoting.
+
+## The duplicate basket at 0:48.2 — find this before comparing anything
+
+One `made_two` at **0:48.2** is stored **twice**, and both rows are taught Dayley rows. That is why non-rejected makes add to 55 points but distinct baskets are 53.
+
+This is a data defect, not a detector error and not a rounding difference. Two points sit on the card that the film shows once. Before you explain any gap against the book, establish which it is:
+
+- **one basket written twice** — the same event persisted on two passes, in which case look for others and ask how `persist_events` let it through; or
+- **two rows taught from one tag** — the teach pass graded two nearby AI rows against a single tag, in which case the 8-second window matched twice and the second row should have stayed pending.
+
+Either way it changes the arithmetic of this step, and **neither is fixed by writing more rows.** Report which one it is. Do not delete a row to make the total come out: deleting data without an archive plan is a Scott gate, and a card that reads 53 for the right reason is worth more than one that reads 53 because a row was removed.
+
+A whole-card check for the same shape: `scripts/shot_tag_score.py` reports `unmatched_stored_makes`, the stored makes that graded no tag at all. Two rows on one tag show up as one of them going unmatched.
 
 ## The per-player gap is already written down
 

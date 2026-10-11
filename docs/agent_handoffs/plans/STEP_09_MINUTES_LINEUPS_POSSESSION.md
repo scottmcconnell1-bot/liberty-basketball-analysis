@@ -25,7 +25,11 @@ Checked 2026-10-11, the picture is more specific than "no table":
 - It is **written** by `helpers.py:2079` (`INSERT INTO possessions`) and **read** by `stats.py` (lines 694, 729, 747, 762, 768, 795), `playbook_play_match.py:541`, and `blueprints/clips.py:153`.
 - Meanwhile the film pipeline builds its own possession segments in memory — `build_possession_segments` (`event_generator.py:455`), `find_ball_possession` (`:93`), `_merge_short_segments` (`:738`) — and those are what the shot pass actually uses.
 
-So the gap is almost certainly **not a missing table**. It is that the film pipeline's segments and the `possessions` rows are two different records of the same thing. **Verify this before designing anything** — this is Inferred from reading the code, not Proven by running it. Establishing which record each module actually reads is the first task of this step, and it may change the whole shape of the work.
+So the gap is **not a missing table**. It is that the film pipeline's segments and the `possessions` rows are two different records of the same thing.
+
+**Confirmed by Scott on the home machine, 2026-10-11:** the table already exists (`schema.sql:306`) and `helpers.py:2079` writes it, while the film shot pass still builds its segments in memory. This step maps which screen reads which record. **It does not create a second table.** A schema change is still a Scott gate, and `scripts/check_scott_gates.py` will refuse a pull request that touches `schema.sql` without naming it.
+
+Establishing which record each module actually reads is the first task of this step.
 
 ## Where the code is
 
