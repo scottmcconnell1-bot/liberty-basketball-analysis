@@ -835,7 +835,6 @@ class BallHoopExperiment:
             ball_detections.sort(key=lambda d: d['frame_number'])
         
             # Find the frame where ball crosses the rim level (y minimum before descending)
-            # This is the "crossing" frame, not the peak
             cross_idx = None
             cross_y = float('inf')
             for i, det in enumerate(ball_detections):
@@ -875,6 +874,15 @@ class BallHoopExperiment:
                 # Hoop is not on this ball's play
                 return [], None
         
+            # STEP 1: Reject hoop on glass/backboard (above the rim)
+            # The rim is a wide orange band at height hoop_y. 
+            # Glass/backboard is ABOVE the rim (lower y value).
+            # If hoop center is significantly above the rim crossing, it's on glass.
+            # The rim crossing y should be at or slightly below hoop_y.
+            if cross_y < hoop_y - rim_radius:
+                # Hoop detection is above the ball's rim crossing = on glass/backboard
+                return [], None
+        
             # Return ALL ball detections in the window (don't filter by distance)
             # The classifier will find the relevant ones
             return ball_detections, hoop
@@ -900,7 +908,7 @@ class BallHoopExperiment:
                     ball_track.sort(key=lambda d: d['frame_number'])
             
                     # STEP 1: Line through the opening
-                    # Find the frame where ball is at rim level (y minimum)
+                    # Find the frame where ball is at rim level (y minimum at rim)
                     cross_idx = None
                     cross_y = float('inf')
                     for i, det in enumerate(ball_track):
@@ -920,7 +928,7 @@ class BallHoopExperiment:
                     if len(post_cross) < 5:
                         return {'is_make': False, 'confidence': 0.0, 'method': 'short_track', 'details': {'reason': 'not_enough_post_cross_frames'}}
             
-                    # STEP 1a: Ball must go through net depth (reach at least 150px below rim)
+                    # STEP 1a: Ball must go through net depth (reach at least 180px below rim)
                     # Net depth is ~3 * rim_radius. Need ball to reach 180px below rim.
                     last_y = post_cross[-1]['y_center']
                     if last_y < hoop_y + 180:
