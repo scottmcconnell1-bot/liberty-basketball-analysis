@@ -1,6 +1,24 @@
 # Brad — start here
 
-Updated: 2026-10-09 night. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-11. This is the note on branch `Brad/Claude`. That branch stays even with `main`. Jason's copy is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-11) — answers on the phase plans
+
+This section wins over the 2026-10-09 night section where a number disagrees. The count is not solved. The plans are pull request 169, branch `docs/phase-plans-2026-10-11`, one file per roadmap step. The same commits are the matching pull request into `Brad/Claude`. Docs only. Use them. Steps 1 and 2 stay offline and can run together. Step 3 is the gate: more than 85 right, no more than 6 misses called makes. Step 4 is the first step that writes rows. Do not merge `Scott_Hermes`.
+
+The plans quoted older nights because the database, the film, and the tags are not in git. Re-measured on the home machine 2026-10-11, run 12 (`...__rerun_20261006_033941`):
+
+- **Two rise gates, and both stay.** `shot_min_ball_rise` 80 is the primary shot pass (`event_generator.py` 707, applied at 832). `live_shot_min_ball_rise` 170 is the live field-goal pass (710, applied at 946). The 170 is the one Scott refused to drop. Lane free throws skip the 170 on purpose and keep the 80. A missing row can die at the 80 and never reach the 170. Change neither number until a tested rule beats 85 right and 6 false makes, and that same test shows the missing tagged rows appear without new untagged shots.
+- **Events: 1,555.** 1,503 and 1,509 are older nights. The 1,509 line below is that older night.
+- **Points: 55** from non-rejected makes (15 twos, 5 threes, 10 free throws). One `made_two` at 0:48.2 is stored twice, both taught Dayley rows, so distinct baskets are 53 points. 49 is the 2026-10-08 night snapshot. The book is still 77.
+- **Shot rows: 229**, 155 not rejected. 206 is an older count.
+- **Steals are written.** 14 tags, 14 accepted `film_tool_teach` rows, each on its tag. Through Q3 that is Liberty 8 and Adrian 6, which is the card. The 4-and-4 split is Q1–Q2 only.
+- **Assists belong in step 8.** 10 tags (6 through Q2; Q3 added Dayley, Jenkins twice, and Foster). 10 rows: 8 pending, 2 rejected, none within 8 seconds of a tag.
+- **Possessions already have a table** (`schema.sql` 306). `helpers.py` 2079 inserts into it. The film shot pass still builds segments in memory. Step 9 maps which screen reads which record. It does not create a second table. A schema change still waits for Scott.
+- **`tag-exports/rejected_makes_before_restore_20261007.json`** is on the home machine and stays out of git. The repo is public. Do not commit it.
+- **The self-check is still open and is not one of the ten steps.** It is the re-run of whether the program does what the code says, after the book's third-quarter line, tags disappearing, Jenkins at 55:14.2 left as a free throw, and tags not reaching the server. Do not fold it into step 1. It has not been re-run.
+
+Hermes commits after the program note, scored on the 111 tags, did not beat 85 right and 6 false makes: 71/32/8, 66/37/8, 73/38/0, 73/38/0, 72/34/5, 75/36/0. Do not merge any of them.
 
 ## Pickup (2026-10-09 night)
 
