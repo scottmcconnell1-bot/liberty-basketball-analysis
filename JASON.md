@@ -1,6 +1,24 @@
 # Jason — start here
 
-Updated: 2026-10-11. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-11 afternoon. Branch `jason-5-may-updates` is kept even with `main`. The same note is `BRAD.md` on `Brad/Claude`. Hermes reads `docs/agent_handoffs/HERMES.md` and `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-11 afternoon) — the laptop files are on the shared drive
+
+The code is still this GitHub repo. The files that are not in git are now on the Google Shared drive named **Liberty Basketball**, in the folder **Program data from home laptop 2026-10-11**. You have to be a member of that Shared drive to open it. It is not a public link. If the drive is not in your Google Drive, Scott still has to add your account. `README.txt` in that folder says the same thing as this section.
+
+Clone the repo, run `git lfs pull`, then copy that folder on top of the clone so these paths match:
+
+- `film_analysis.db` — read-only snapshot from 2026-10-11. User password hashes, phone numbers, session tokens, the NFHS login, and share tokens were removed before the copy. Do not copy this file back over the database on the home laptop.
+- `uploads\nfhs_gam0a66d85e12.mp4` — the Adrian film only (video id 73).
+- `data\film_tags\` including the history copies.
+- `data\hoop_tracks\`
+- `data\lineups\`
+- `data\hoopsalytics\` — the small state files. The logs were left off.
+- `tag-exports\` — the review exports. The browser backup was left off.
+- `.env` — the coach portal password only.
+- `offline\v6\weights\best.pt`, `offline\v6_tracks.json`, `offline\bodd_shots.json`, and `offline\hermes_suggestion_tracks.json` — the offline ball weights and the tracks behind the 85 score. These are not a replacement for `models/ball_detector.pt`.
+
+Left on the home laptop, on purpose: the other eight game films, the model weight files (those are in GitHub), the NFHS login, and the archive passphrase. Run 12 in the snapshot is `...__rerun_20261006_033941`, 1,555 events. Keep the Shared drive private to the people Scott added.
 
 ## Pickup (2026-10-11) — answers on the phase plans
 
