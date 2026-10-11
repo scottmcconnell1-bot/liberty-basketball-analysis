@@ -45,6 +45,8 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 - Do not load `yolov8n.pt`. Do not call `validated_stats` on the game film. Do not restart Flask to load the adapter.
 - A report lists what was run and what the output was.
 
+**Auto-accept is on, at 0.85, and that is deliberate.** Scott confirmed it on 2026-10-11 evening. Two things follow for every step below. First, a run you measure may contain rows that were promoted from `pending` to `accepted` with no human looking at them, so "accepted" does not mean "Scott saw it". Second, the comment at `review_actions.py:197` still reads "Threshold 0 (default) fully disables auto-accept" — the default in `settings_store.py:30` is `0.85`, not `0`. Believe the stored setting, not the comment. Changing the number in either direction is a Scott gate, and `scripts/check_scott_gates.py` blocks it unless the pull request body names it.
+
 **Stop and ask Scott** before: a `schema.sql` change, flipping a feature flag False to True, touching `models/ball_detector.pt` or `ball_confidence`, unpausing teach or auto-accept, deleting data or features, mass-deleting branches, or treating a close spelling as a known name.
 
 **The core sequence is sequential. Do not reorganize it.** `ai_analyzer.py` → `event_generator.py` → `court_memory.py` / `net_detector.py` → `manual_tag_teach.py` → `game_boxscore.py` / `scoreboard_clock.py`.
@@ -72,7 +74,7 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 - Merge `Scott_Hermes`. Not the branch and not commit `6143e83`. Six of its rules were scored on the 111 tags and all six lost: 71/32/8, 66/37/8, 73/38/0, 73/38/0, 72/34/5, 75/36/0 (`HERMES.md`, 2026-10-11). Three of those six score at or below the 73 you get by calling every shot a miss. Do not resubmit any of them: the column under the rim, a frame-to-frame jump called 0.45, drift used as the whole make, a farthest-point substitute for 180 px, or a last-box depth check. Also do not treat `cbeb0ed` on PR #168 as step 1 or step 3 — both are analysed in `COUNT_FIXES_2026-10-10.md` section 4.
 - Treat the bottom of `HERMES.md` ("Where the Adrian count stands") as the counting run. That is the September 30 rerun.
 - **Open `GET /api/analysis/<game_id>` for this game** (`blueprints/ai.py:809`). **That request rewrites identity rows.** Read the `events` table directly, or the HTML results page. This is the easiest way for an agent to silently corrupt the run it is measuring.
-- Merge **pull request 147** ("Re-enable auto-accept (0.85) for full-stack bring-up", open as of 2026-10-11). It turns auto-accept on at 0.85 and Scott has not approved that.
+- Merge **pull request 147** ("Re-enable auto-accept (0.85) for full-stack bring-up", open as of 2026-10-11). Scott settled this on the evening of 2026-10-11 (`JASON.md`, `BRAD.md`): **auto-accept stays at 0.85**, the home database already stores `ai.auto_accept_event_confidence` as `0.85`, and `event_generator.py:1554` calls `auto_accept_high_confidence_events` after a counting run, so a pending AI row at or above 0.85 is accepted. The pull request is therefore not needed, and it is not the place to change the value either way. **Do not turn auto-accept off either** — that is the same gate in the other direction.
 - Start the **teach loop**.
 - Use **video 64**. The film is **video id 73**, `uploads/nfhs_gam0a66d85e12.mp4`.
 - Commit the untracked GitHub credential file in the repo root, or paste it into a note.
@@ -141,6 +143,8 @@ Scott asked for the **self-check to be run again**. `JASON.md`: "It is not finis
 These plans were written on 2026-10-11 from `PROGRAM_FOR_JASON_2026-10-10.md` (PR #168), `JASON.md`, `ACTIVE.md`, `HERMES.md`, and the source code. **No frame of film was opened and no database row was read while writing them.** Every figure below that is not marked "measured" is quoted from those documents.
 
 Scott then re-measured the run on the home laptop on 2026-10-11 and answered the open questions; those answers are in `JASON.md`, `BRAD.md` and `HERMES.md`, and the numbers in this index now carry them.
+
+One item was still unreadable from here after that: the stored `ai.auto_accept_event_confidence` in the home database, which decides whether the 0.85 default actually promotes rows. Scott answered it on the evening of 2026-10-11 — it is stored as `0.85`, and it stays. Nothing in these plans now rests on an unanswered question about a setting.
 
 **Not in git, but now on the Shared drive** (Google Shared drive **Liberty Basketball** → folder **Program data from home laptop 2026-10-11**). Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. Membership is needed; it is not a public link.
 
