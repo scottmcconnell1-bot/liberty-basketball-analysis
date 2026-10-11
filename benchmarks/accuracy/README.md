@@ -41,22 +41,35 @@ Each fixture has:
 Raised from 8.8% / 24.5% / 13.0% (2026-09-30, commit 194e38b). The code had already got
 better than the committed floor and nobody had raised it, so the gate was loose.
 
-**The float metrics are measured in CI, and the floor is the CI number.** They are not
-portable between environments: the same commit on the same frozen detections scored
-10.1% / 28.3% / 14.9% on Python 3.14 with current numpy/scikit-learn, and
-9.9% / 26.4% / 14.4% on the CI runner's 3.13. The cause is upstream of the event logic —
-player clustering falls out slightly differently, which moved the possession count from
-1,269 segments to 1,271, and a couple of segments is enough to move recall by nearly two
-points.
+**The float metrics are not reproducible run to run.** The same commit on the same frozen
+detections has scored both 10.1% / 28.3% / 14.9% and 9.9% / 26.4% / 14.4%. Four observations
+so far:
 
-So: **a local number up to ~2 points away from this table is not a regression, and not an
-improvement either.** Only the CI figure gates. If a runner image change drops it, re-measure
-and say so in the pull request rather than lowering the floor to match.
+| Run | Python | Possession segments | Precision / recall / F1 |
+|---|---|---:|---|
+| local | 3.14 | 1,269 | 10.1 / 28.3 / 14.9 |
+| CI run 1 | 3.13 | **1,271** | **9.9 / 26.4 / 14.4** |
+| CI run 2 | 3.13 | 1,269 | 10.1 / 28.3 / 14.9 |
+| CI run 2 | 3.12 | 1,269 | 10.1 / 28.3 / 14.9 |
 
-**The shot-tag counts did not drift.** 12 / 8 / 3 came out identical in both environments,
-across that 2-segment difference. They are integers over a much smaller set of events, and
-they are the numbers the count actually turns on — which is why they get an exact floor
-while precision and recall get a measured one.
+It is not a Python version difference and not a local-versus-CI difference: 3.13 produced
+both results, and every environment has produced 1,269 at least once. The generator is
+**nondeterministic across runs**, upstream of the event logic — player clustering falls out
+differently and the possession count moves, and two segments out of 1,269 is enough to shift
+recall by nearly two points.
+
+So the float floor here is a **low-water mark over observed runs, not a target.** A number
+above it is not an improvement, and a fresh low is not necessarily a regression — re-run
+before concluding anything, and if a genuine new low appears, lower the floor *with the
+evidence in the pull request* rather than silently. Worth fixing properly at some point by
+seeding the clustering; that is a change to the generator and so a Scott gate, and it is not
+this benchmark's job.
+
+**The shot-tag counts are stable.** 12 / 8 / 3 came out identical in all four runs above,
+including the 1,271-segment one that moved recall two points. They are integers over a much
+smaller set of events, and they are the numbers the count actually turns on. That is why
+they get an exact floor while precision and recall get a low-water mark — and it is a good
+reason to trust the make/miss gate over the precision figure when the two disagree.
 
 On this answer key, calling every shot a miss would score **11 right**. The generator
 scores 12. That is the honest size of the make/miss signal here, and the reason the Adrian
