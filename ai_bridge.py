@@ -834,13 +834,48 @@ class BallHoopExperiment:
             # Sort by frame
             ball_detections.sort(key=lambda d: d['frame_number'])
         
-            # Find the frame where ball crosses the rim level (y minimum before descending)
+            # We need a hoop to find the rim crossing. 
+            # First, get a hoop estimate from the middle of the window to know rim height.
+            # Then find where ball crosses that height.
+            # But we need hoop first... chicken-and-egg.
+            # Solution: run hoop detector on the middle frame of the window first to get rim height.
+            import cv2
+            cap = cv2.VideoCapture(video_path)
+            mid_frame_num = tag_frame
+            cap.set(cv2.CAP_PROP_POS_FRAMES, mid_frame_num)
+            ret, mid_frame_img = cap.read()
+            cap.release()
+        
+            hoop = None
+            if ret:
+                hoop = self.detect_hoop_cv(mid_frame_img)
+        
+            if not hoop:
+                return [], None
+        
+            hoop_x, hoop_y = hoop['x'], hoop['y']
+            rim_radius = hoop['r']
+        
+            # STEP 1: Reject hoop on glass/backboard
+            # Glass/backboard is ABOVE the rim (lower y). 
+            # The hoop center should be at the rim height (hoop_y).
+            # If the hoop detector found something significantly above the actual rim, it's on glass.
+            # We can check this by looking at the vertical position relative to the frame.
+            # The rim should be in the upper portion but not at the very top.
+            # We'll check this later with the actual crossing.
+        
+            # Sort by frame
+            ball_detections.sort(key=lambda d: d['frame_number'])
+        
+            # Find the frame where ball crosses the rim height (y = hoop_y)
+            # The rim crossing is where ball y crosses hoop_y (going down)
             cross_idx = None
-            cross_y = float('inf')
             for i, det in enumerate(ball_detections):
-                if det['y_center'] < cross_y:
-                    cross_y = det['y_center']
+                y = det['y_center']
+                if y >= hoop_y - rim_radius and y <= hoop_y + rim_radius:
+                    # Ball is near rim height - this is the crossing
                     cross_idx = i
+                    break
         
             if cross_idx is None:
                 return [], None
@@ -874,7 +909,7 @@ class BallHoopExperiment:
                 # Hoop is not on this ball's play
                 return [], None
         
-            # STEP 1: Reject hoop on glass/backboard (above the rim)
+            # STEP 1: Reject hoop on glass/backboard
             # The rim is a wide orange band at height hoop_y. 
             # Glass/backboard is ABOVE the rim (lower y value).
             # If hoop center is significantly above the rim crossing, it's on glass.
@@ -908,17 +943,14 @@ class BallHoopExperiment:
                     ball_track.sort(key=lambda d: d['frame_number'])
             
                     # STEP 1: Line through the opening
-                    # Find the frame where ball is at rim level (y minimum at rim)
+                    # Find the frame where ball crosses the rim level (y = hoop_y ± rim_radius)
                     cross_idx = None
-                    cross_y = float('inf')
                     for i, det in enumerate(ball_track):
-                        dx = det['x_center'] - hoop_x
-                        dy = det['y_center'] - hoop_y
-                        dist = (dx*dx + dy*dy)**0.5
-                        # Ball must be within rim radius (at the opening)
-                        if dist <= rim_radius * 1.0 and det['y_center'] < cross_y:
-                            cross_y = det['y_center']
+                        y = det['y_center']
+                        if y >= hoop_y - rim_radius and y <= hoop_y + rim_radius:
+                            # Ball is near rim height - this is the crossing
                             cross_idx = i
+                            break
             
                     if cross_idx is None:
                         return {'is_make': False, 'confidence': 0.0, 'method': 'no_cross', 'details': {'reason': 'no_ball_at_rim'}}
@@ -990,7 +1022,7 @@ class BallHoopExperiment:
                         'x_at_180': round(x_at_180, 1),
                         'rim_radius': round(rim_radius, 1),
                         'max_frame_jump': round(max_frame_jump, 1),
-                        'cross_frame': ball_track[cross_idx]['frame_number'],
+                        'cross_frame': post_cross[0]['frame_number'],
                         'last_y_below_rim': round(post_cross[-1]['y_center'] - hoop_y, 1),
                     }
             
