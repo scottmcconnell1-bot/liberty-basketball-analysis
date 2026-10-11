@@ -41,35 +41,36 @@ Each fixture has:
 Raised from 8.8% / 24.5% / 13.0% (2026-09-30, commit 194e38b). The code had already got
 better than the committed floor and nobody had raised it, so the gate was loose.
 
-**The float metrics are not reproducible run to run.** The same commit on the same frozen
-detections has scored both 10.1% / 28.3% / 14.9% and 9.9% / 26.4% / 14.4%. Four observations
-so far:
+**The generator is not reproducible run to run, and it lands in one of two modes.** The
+same commit on the same frozen detections gives one of these, correlated with the
+possession count:
 
-| Run | Python | Possession segments | Precision / recall / F1 |
-|---|---|---:|---|
-| local | 3.14 | 1,269 | 10.1 / 28.3 / 14.9 |
-| CI run 1 | 3.13 | **1,271** | **9.9 / 26.4 / 14.4** |
-| CI run 2 | 3.13 | 1,269 | 10.1 / 28.3 / 14.9 |
-| CI run 2 | 3.12 | 1,269 | 10.1 / 28.3 / 14.9 |
+| Possession segments | Precision / recall / F1 | AI events | Shot tags: right / makes missed / misses called makes |
+|---:|---|---:|---|
+| 1,269 | 10.1 / 28.3 / 14.9 | 163 | 12 / 8 / 3 |
+| 1,271 | 9.9 / 26.4 / 14.4 | 157 | 13 / 8 / 2 |
 
-It is not a Python version difference and not a local-versus-CI difference: 3.13 produced
-both results, and every environment has produced 1,269 at least once. The generator is
-**nondeterministic across runs**, upstream of the event logic — player clustering falls out
-differently and the possession count moves, and two segments out of 1,269 is enough to shift
-recall by nearly two points.
+Observed across six runs: 1,269 on a local 3.14, on CI 3.13 twice and on CI 3.12 once;
+1,271 on CI 3.13 once and on CI 3.12 once. **It is not a Python version difference and not
+a local-versus-CI difference** -- both interpreters have produced both modes. Player
+clustering falls out differently between runs, two segments out of 1,269 move, and
+everything downstream shifts with them.
 
-So the float floor here is a **low-water mark over observed runs, not a target.** A number
-above it is not an improvement, and a fresh low is not necessarily a regression — re-run
-before concluding anything, and if a genuine new low appears, lower the floor *with the
-evidence in the pull request* rather than silently. Worth fixing properly at some point by
-seeding the clustering; that is a change to the generator and so a Scott gate, and it is not
-this benchmark's job.
+Note that the two metric families move in **opposite** directions between the modes: the
+1,271 mode scores nearly two points worse on recall while scoring *better* on the shot tags
+(one more right, one less false make), because it emits six fewer AI events. Reading either
+family alone would tell you the run got better, or worse, when what actually happened is
+that the clustering landed somewhere else.
 
-**The shot-tag counts are stable.** 12 / 8 / 3 came out identical in all four runs above,
-including the 1,271-segment one that moved recall two points. They are integers over a much
-smaller set of events, and they are the numbers the count actually turns on. That is why
-they get an exact floor while precision and recall get a low-water mark — and it is a good
-reason to trust the make/miss gate over the precision figure when the two disagree.
+**So every floor here is a low-water mark over observed runs, not a target.** The committed
+floor passes in both modes, deliberately: `right` may not fall, the two error counts may not
+rise, and the floats sit at the lower mode. A score above the floor is not an improvement,
+and a fresh low is not necessarily a regression -- re-run before concluding anything, and
+lower a floor only with the evidence in the pull request.
+
+The proper fix is to seed the clustering so a fixture scores the same twice. That is a
+change to the generator, so it is a Scott gate, and it is not this benchmark's job. Until
+then, treat a single run as one sample.
 
 On this answer key, calling every shot a miss would score **11 right**. The generator
 scores 12. That is the honest size of the make/miss signal here, and the reason the Adrian

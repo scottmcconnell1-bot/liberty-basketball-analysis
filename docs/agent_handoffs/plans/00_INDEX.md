@@ -192,6 +192,8 @@ Two things that follow from this, for any agent proposing a rule:
 - **A note that says a rule is implemented is not a result.** Paste the line: `right=N makes_missed=N misses_called_makes=N`. The guardrail job blocks a pull request that changes `net_detector.py`, `event_generator.py`, `ai_bridge.py`, `stat_rules.py`, `manual_tag_teach.py`, `ai_analyzer.py` or `court_memory.py` without one.
 - **A taught row is not the program's work.** `shot_tag_gate.stored_makes` ignores rejected rows, manual rows, and rows the teach pass corrected from a tag inside the tolerance. Counting a corrected row would grade the tags against themselves. `--count-taught` exists to answer "what does the card say now" and cannot be used to claim a gate score.
 
+**One sample is not a measurement.** The event generator is nondeterministic: the same commit on the same frozen detections lands in one of two modes, 1,269 or 1,271 possession segments, and the scores differ between them — on the CI fixture, 10.1/28.3/14.9 with shot tags 12/8/3, or 9.9/26.4/14.4 with shot tags 13/8/2. Both interpreters in CI have produced both. So **run a scoring job twice before you believe it moved**, and read a single run as one sample. `benchmarks/accuracy/README.md` records the observations. Seeding the clustering would fix it and is a Scott gate.
+
 `benchmarks/accuracy/adrian_q1/` holds the coach's 134 Q1 tags (44 shot tags) ready to go, built from a file that **is** in git. It has no frozen detections, so the benchmark prints `WAITING: adrian_q1` and scores nothing. Building them needs the film — see that folder's README. Until then the make/miss gate in CI runs on a different gym's film, which is better than nothing and is not the Adrian count.
 
 ## Report format — every step, every agent
