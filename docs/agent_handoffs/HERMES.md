@@ -1,6 +1,10 @@
 # Hermes handoff
 
-Updated: 2026-10-11 evening. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+Updated: 2026-10-12 morning. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+
+## Pickup (2026-10-12 morning)
+
+Scott has been pasting proposals from Gemini Code. Gemini cannot see this repo. Read `docs/agent_handoffs/HERMES_GEMINI_2026-10-12.md` and continue that thread. Measure each new proposal on all 111 tags before anyone writes it into the pipeline. The current hoop median is within 150 pixels of the tagged rim on 89 tags. Nothing Gemini proposed beat that. The last score, a 40-pixel cluster picked by highest confidence, is 49 of 111. Your make/miss job from 2026-10-11 is unchanged: the 6 misses still called makes, no tag times, `applied_to_core` false. Do not edit `net_detector.py`.
 
 ## Pickup (2026-10-11 evening)
 
