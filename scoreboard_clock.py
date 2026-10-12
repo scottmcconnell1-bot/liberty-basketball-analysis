@@ -21,12 +21,33 @@ TRACK_DIR = ROOT / "data" / "scoreboard_tracks"
 _BOARD = (1535, 840, 1880, 1030)
 _CELLS = {
     "clock": (100, 0, 260, 52),
-    "home_score": (15, 55, 100, 115),
+    "home_score": (5, 65, 105, 135),
     "period": (145, 55, 200, 115),
-    "guest_score": (255, 55, 340, 120),
+    "guest_score": (250, 65, 345, 135),
     "home_fouls": (15, 125, 70, 175),
     "player_foul": (115, 120, 240, 180),
     "guest_fouls": (270, 125, 340, 180),
+}
+
+# The red scores are two fixed seven-segment slots (tens, ones) inside each score cell.
+# Splitting on blank columns cut a 4 at its thin crossbar and read the upright as a 1.
+_SCORE_CELLS = ("home_score", "guest_score")
+_SCORE_SLOTS = ((12, 20, 43, 57), (50, 20, 80, 57))
+_SEGMENTS = {
+    "a": (0.25, 0.00, 0.75, 0.14),
+    "b": (0.72, 0.10, 1.00, 0.45),
+    "c": (0.72, 0.55, 1.00, 0.90),
+    "d": (0.25, 0.86, 0.75, 1.00),
+    "e": (0.00, 0.55, 0.28, 0.90),
+    "f": (0.00, 0.10, 0.28, 0.45),
+    "g": (0.25, 0.43, 0.75, 0.57),
+}
+# Lit segments measured >= 0.18 of their pixels on this film, unlit <= 0.05.
+_SEGMENT_ON = 0.12
+_SEVEN_SEGMENT = {
+    "abcdef": "0", "bc": "1", "abdeg": "2", "abcdg": "3", "bcfg": "4",
+    "acdfg": "5", "acdefg": "6", "abc": "7", "abcdefg": "8", "abcdfg": "9",
+    "abcf": "7", "cdefg": "6", "abcfg": "9",
 }
 
 _DIGIT_FILE = ROOT / "data" / "scoreboard_digits.npz"
@@ -47,6 +68,59 @@ def _warm_mask(crop: np.ndarray) -> np.ndarray:
 
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
     return ((hsv[:, :, 1] > 90) & (hsv[:, :, 2] > 150)).astype(np.uint8)
+
+
+def _red_mask(crop: np.ndarray) -> np.ndarray:
+    import cv2
+
+    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    low = cv2.inRange(hsv, (0, 90, 120), (12, 255, 255))
+    high = cv2.inRange(hsv, (165, 90, 120), (180, 255, 255))
+    mask = cv2.bitwise_or(low, high)
+    return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+
+
+def _slot_digit(mask: np.ndarray, slot: tuple[int, int, int, int]) -> str | None:
+    """One seven-segment slot: a digit, "" when dark, None for a pattern that is no digit."""
+    x0, y0, x1, y1 = slot
+    width = x1 - x0
+    height = y1 - y0
+    lit = ""
+    for name, (fx0, fy0, fx1, fy1) in _SEGMENTS.items():
+        sx0 = x0 + int(fx0 * width)
+        sx1 = max(x0 + int(fx1 * width), sx0 + 1)
+        sy0 = y0 + int(fy0 * height)
+        sy1 = max(y0 + int(fy1 * height), sy0 + 1)
+        cell = mask[sy0:sy1, sx0:sx1]
+        if cell.size and float((cell > 0).mean()) > _SEGMENT_ON:
+            lit += name
+    if not lit:
+        return ""
+    return _SEVEN_SEGMENT.get(lit)
+
+
+def _score_text(board: np.ndarray, box: tuple[int, int, int, int]) -> list[str]:
+    x0, y0, x1, y1 = box
+    crop = board[y0:y1, x0:x1]
+    if crop.size == 0:
+        return []
+    mask = _red_mask(crop)
+    tens, ones = (_slot_digit(mask, slot) for slot in _SCORE_SLOTS)
+    if tens == "" and ones == "":
+        return []
+    if ones == "":
+        ones = None
+    return [("?" if tens is None else tens) + ("?" if ones is None else ones)]
+
+
+def _score_value(groups: list[str]) -> int | None:
+    """A dark tens slot is a one-digit score. A lit tens 0 or any unread slot is no score."""
+    if len(groups) != 1 or "?" in groups[0]:
+        return None
+    text = groups[0]
+    if len(text) == 2 and text[0] == "0":
+        return None
+    return _as_int(text)
 
 
 def _load_templates() -> tuple[np.ndarray, np.ndarray] | None:
@@ -210,7 +284,9 @@ def read_scoreboard(frame_bgr: np.ndarray) -> dict[str, Any] | None:
         return None
     x0, y0, x1, y1 = _BOARD
     board = frame_bgr[y0:y1, x0:x1]
-    cells = {name: _cell_text(board, box) for name, box in _CELLS.items()}
+    cells = {
+        name: (_score_text if name in _SCORE_CELLS else _cell_text)(board, box) for name, box in _CELLS.items()
+    }
     period = _as_int(_joined_digits(cells.get("period") or []))
     if period is not None and period not in (1, 2, 3, 4, 5):
         period = None
@@ -218,8 +294,8 @@ def read_scoreboard(frame_bgr: np.ndarray) -> dict[str, Any] | None:
     return {
         "clock": _clock_text(cells.get("clock") or []),
         "period": period,
-        "mustangs": _as_int(_joined_digits(cells.get("home_score") or [])),
-        "guest": _as_int(_joined_digits(cells.get("guest_score") or [])),
+        "mustangs": _score_value(cells.get("home_score") or []),
+        "guest": _score_value(cells.get("guest_score") or []),
         "mustangs_fouls": _as_int(_joined_digits(cells.get("home_fouls") or [])),
         "guest_fouls": _as_int(_joined_digits(cells.get("guest_fouls") or [])),
         "foul_jersey": _as_int(player_groups[0]) if player_groups else None,
