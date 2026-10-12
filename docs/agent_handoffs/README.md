@@ -5,8 +5,11 @@ One active task file, not GitHub labels.
 ## Start here
 
 1. `AUTHORITY.md` and `AGENT_PROTOCOL.md` at the repo root
-2. **`docs/agent_handoffs/ACTIVE.md`** — current state, open decisions, do-nots (kept short)
-3. `docs/BRANCH_POLICY.md` — work on `main`
+2. **`docs/agent_handoffs/PROGRAM_FOR_JASON_2026-10-10.md`** — the whole program, then the current film count, the tries, and the order to finish
+3. **`docs/agent_handoffs/COUNT_FIXES_2026-10-10.md`** and **`docs/agent_handoffs/COUNT_ROADMAP_2026-10-10.md`** — the current job only, in shorter form
+4. **`docs/agent_handoffs/plans/00_INDEX.md`** — the same ten steps as one delegable file each, with the do-nots and the numbers Scott measured on 2026-10-11. Read this before picking up a step.
+5. **`docs/agent_handoffs/ACTIVE.md`** — current state, open decisions, do-nots (kept short)
+6. `docs/BRANCH_POLICY.md` — work on `main`
 
 ## Workflow
 

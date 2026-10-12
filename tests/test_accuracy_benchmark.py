@@ -27,13 +27,48 @@ def test_event_accuracy_does_not_regress(fixture):
     assert bench.regressions(result, baseline) == []
 
 
+SHOTS = {"tags": 10, "right": 6, "makes_missed": 3, "misses_called_makes": 1}
+
+
 def test_regression_check_flags_a_drop():
-    baseline = {"clip": {"precision_exact": 0.10, "recall_exact": 0.50, "f1_exact": 0.17}}
-    same = {"fixture": "clip", "precision_exact": 0.10, "recall_exact": 0.50, "f1_exact": 0.17}
+    baseline = {"clip": {"precision_exact": 0.10, "recall_exact": 0.50, "f1_exact": 0.17,
+                         "shots": SHOTS}}
+    same = {"fixture": "clip", "precision_exact": 0.10, "recall_exact": 0.50,
+            "f1_exact": 0.17, "shots": dict(SHOTS)}
     worse = dict(same, recall_exact=0.40)
     assert bench.regressions(same, baseline) == []
     assert bench.regressions(worse, baseline) == ["clip: recall_exact 0.4000 < baseline 0.5000"]
     assert bench.regressions(dict(same, fixture="new"), baseline)  # unknown fixture needs a baseline
+
+
+def test_a_fixture_without_a_shot_floor_is_not_quietly_ungated():
+    """Precision and recall can hold steady while makes go missing. The shot floor is
+    the part that notices, so a baseline that lacks one is treated as incomplete."""
+    baseline = {"clip": {"precision_exact": 0.10, "recall_exact": 0.50, "f1_exact": 0.17}}
+    result = {"fixture": "clip", "precision_exact": 0.10, "recall_exact": 0.50,
+              "f1_exact": 0.17, "shots": dict(SHOTS)}
+    problems = bench.regressions(result, baseline)
+    assert problems and "no shot-tag floor" in problems[0]
+
+
+def test_losing_a_made_basket_fails_even_when_precision_holds():
+    baseline = {"clip": {"precision_exact": 0.10, "recall_exact": 0.50, "f1_exact": 0.17,
+                         "shots": SHOTS}}
+    lost_a_make = {"fixture": "clip", "precision_exact": 0.10, "recall_exact": 0.50,
+                   "f1_exact": 0.17,
+                   "shots": {"tags": 10, "right": 5, "makes_missed": 4,
+                             "misses_called_makes": 1}}
+    assert bench.regressions(lost_a_make, baseline)
+
+
+def test_a_fixture_waiting_on_detections_is_listed_not_hidden():
+    """benchmarks/accuracy/adrian_q1/ has tags and no detections; it must be visible."""
+    waiting = [p.name for p in bench.waiting_on_detections()]
+    scored = [p.name for p in bench.fixtures()]
+    assert not set(waiting) & set(scored)
+    for name in waiting:
+        assert (bench.BENCH_DIR / name / "README.md").is_file(), \
+            f"{name} waits on detections but does not say how to build them"
 
 
 def test_truth_files_carry_no_player_names():

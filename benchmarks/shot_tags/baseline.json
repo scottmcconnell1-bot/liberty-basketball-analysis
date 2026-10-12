@@ -1,0 +1,20 @@
+{
+  "_note": [
+    "Floors for scripts/shot_tag_score.py. right + makes_missed + misses_called_makes",
+    "must equal tags, because every tag lands in exactly one bucket.",
+    "adrian_111 is the best score anyone has recorded on the coach's 111 shot tags",
+    "(38 makes, 73 misses), carried over from docs/agent_handoffs/HERMES.md and",
+    "ACTIVE.md. It was measured offline on the v6 tracks, which are not in git, so",
+    "nobody has reproduced it from this repo alone. The first person to run",
+    "scripts/shot_tag_score.py on the home laptop should say in the pull request",
+    "whether the database reproduces it, and correct this number if it does not.",
+    "Do not lower a floor to make a change pass. Raise it when a change beats it,",
+    "in the same pull request, and say what moved."
+  ],
+  "adrian_111": {
+    "tags": 111,
+    "right": 85,
+    "makes_missed": 20,
+    "misses_called_makes": 6
+  }
+}
