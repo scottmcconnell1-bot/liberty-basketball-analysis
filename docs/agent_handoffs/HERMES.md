@@ -1,6 +1,41 @@
 # Hermes handoff
 
-Updated: 2026-10-09 night. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+Updated: 2026-10-11. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. Stop reading at the Architecture section. The section "Where the Adrian count stands" is the September 30 rerun, not the counting run.
+
+## Pickup (2026-10-11)
+
+This section wins over the 2026-10-09 night section where a number disagrees. The count is not solved. Jason's plans are pull request 169. Brad's copy is pull request 170. One file per roadmap step, under `docs/agent_handoffs/plans/`. Docs only. Steps 1 and 2 stay offline. Step 3 is the gate: more than 85 right, no more than 6 misses called makes. Nothing is turned on until that gate passes.
+
+Stay in `ai_bridge.py`. Do not edit the core pipeline, do not write database rows, and do not widen this file so it can. `applied_to_core` stays false. Do not train another ball-weights file. Do not change `models/ball_detector.pt` or `ball_confidence`. A manual tag is truth. The answer key is Scott's 111 shot tags (38 makes, 73 misses), not the AI rows in the database.
+
+The best offline score is still 85 right, 20 makes missed, 6 misses called makes. That score was two steps on a ball track that actually falls through the net: the ball goes through the opening and keeps falling, then a make is thrown out only when the ball slides more than 0.45 rim-widths between 80px and 180px below the rim. It is not turned on.
+
+These `Scott_Hermes` commits were scored on those 111 tags and lost. Do not resubmit them:
+
+| Commit | What it did | Right | Makes missed | Misses called makes |
+| --- | --- | --- | --- | --- |
+| column under the rim | ball in the column under the hoop | 71 | 32 | 8 |
+| `70516e2` | frame-to-frame slide called 0.45 | 66 | 37 | 8 |
+| `1bf7e45` | drift of 0.45 treated as the whole make | 73 | 38 | 0 |
+| `168beb8` | required 180px below a hoop the track had already cut off | 73 | 38 | 0 |
+| `2e73ebe` | drift measured to the lowest box in the window | 72 | 34 | 5 |
+| `69439fd` | threw out a shot whose highest ball was more than 2 rim-radii from the hoop | 75 | 36 | 0 |
+
+Calling every shot a miss scores 73. A note that says the 85 rule is implemented is not a result. Cursor scores the code. If the score is not above 85 right with no more than 6 misses called makes, nothing is turned on.
+
+Re-measured on the home machine 2026-10-11, counting run `...__rerun_20261006_033941`:
+
+- **Two rise gates, and both stay.** `shot_min_ball_rise` 80 is the primary shot pass. `live_shot_min_ball_rise` 170 is the live field-goal pass. The 170 is the one Scott refused to drop. Lane free throws skip the 170 and keep the 80. Change neither number.
+- **Events: 1,555.** 1,503 and 1,509 are older nights.
+- **Points: 55** from non-rejected makes (15 twos, 5 threes, 10 free throws). One `made_two` at 0:48.2 is stored twice, both taught Dayley rows, so distinct baskets are 53 points. 49 is the 2026-10-08 night snapshot. The book is Liberty 51, Adrian 26.
+- **Shot rows: 229**, 155 not rejected.
+- **Steals are written.** 14 tags, 14 accepted film-tool rows. Through Q3 that is Liberty 8 and Adrian 6.
+- **Assists do not match.** 10 tags. 10 rows: 8 pending, 2 rejected, none within 8 seconds of a tag. Leave them. That is step 8, after the shot count.
+- **Possessions already have a table.** The film shot pass still builds segments in memory. Do not create a second table.
+- **`tag-exports/rejected_makes_before_restore_20261007.json`** stays out of git.
+- **The self-check is not this assignment.** Do not fold it into `ai_bridge.py`.
+
+The next experiment, still inside `ai_bridge.py`, scores all 111 tags as right, makes missed, and misses called makes. Do not grade a shorter list and print "/111". Do not resubmit the column rule, a frame-to-frame jump called 0.45, drift used as the whole make, a farthest-point substitute for 180px, or a last-box depth check. The five misses that still look like makes are 755400, 896600, 1515700, 1776500, and 2455600. The hoop box has to sit on the orange rim. The ball box has to stay on the ball. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object.
 
 ## Pickup (2026-10-09 night)
 

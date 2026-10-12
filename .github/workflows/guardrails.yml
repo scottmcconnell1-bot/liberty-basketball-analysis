@@ -1,0 +1,74 @@
+# Checks the rules the handoff notes state in prose, on every pull request.
+#
+# tests.yml runs the suite and the accuracy benchmark. This one is about process:
+# a change that crosses one of Scott's gates has to say so in the pull request, and
+# a change to how a shot is read has to carry a score. Neither is about whether the
+# code is good -- only about whether the change is the kind that stops and asks.
+#
+# Nothing here needs the film, the database or the tags, so it all runs in CI.
+name: guardrails
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scott-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          # The checker diffs base...head, so it needs both sides.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Scott gates
+        # The body goes through the environment, never into the command line: a pull
+        # request description is untrusted text and must not reach a shell.
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr_body.txt
+          python scripts/check_scott_gates.py \
+            --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --branch "$HEAD_REF" \
+            --body-file /tmp/pr_body.txt | tee /tmp/gates.txt
+      - name: Write the findings to the job summary
+        if: always()
+        run: |
+          {
+            echo '### Scott gates'
+            echo
+            echo '```'
+            cat /tmp/gates.txt 2>/dev/null || echo 'the check did not run'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  branch-policy:
+    # Never fails. A reminder in the job summary, because rule 3 is easy to forget
+    # and nobody notices a missing twin pull request until Jason or Brad asks.
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Rule 3, the matching pull request
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          {
+            echo '### Branch policy'
+            echo
+            echo "This pull request: \`$HEAD_REF\` into \`$BASE_REF\`."
+            if [ "$BASE_REF" = "main" ]; then
+              echo
+              echo "docs/BRANCH_POLICY.md rule 3: a pull request opened for Jason also goes"
+              echo "to \`Brad/Claude\` with a matching pull request. If this one is for"
+              echo "Jason, open the twin from the same branch."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

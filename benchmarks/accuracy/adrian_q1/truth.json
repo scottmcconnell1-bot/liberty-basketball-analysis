@@ -1,0 +1,1080 @@
+{
+ "source": "Film Tool manual tags by the coach, Liberty vs Adrian, client game game-1789612866585, from tag-exports/jrhigh_adrian_q1_manual_tags.json",
+ "film": "uploads/nfhs_gam0a66d85e12.mp4 (Adrian Jr High vs Liberty A, video 73), Q1",
+ "window_sec": 961,
+ "note": "Player names and notes removed; matching uses event type, result and time only.",
+ "rows": [
+  {
+   "quarter": "Q1",
+   "start": "0:02.0",
+   "category": "Quarter",
+   "eventtype": "JumpBall",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:08.9",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:08.9",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:21.3",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:23.7",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:35.2",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:35.2",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:39.4",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:40.0",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:41.9",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:41.9",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:46.2",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:46.2",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:48.6",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "0:56.7",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "1:28.4",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "1:41.2",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:00.8",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:14.6",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:19.6",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:26.1",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:31.4",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:42.5",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:47.2",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "2:47.2",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:06.0",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:08.4",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:10.2",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:10.2",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:20.6",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:33.1",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:37.0",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:40.2",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "3:56.4",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:10.2",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:14.7",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:28.5",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:30.0",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:40.2",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:45.8",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "4:58.7",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:14.5",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:17.2",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:31.7",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:35.5",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:38.5",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:38.7",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:41.7",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "5:42.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:05.5",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:09.3",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:13.7",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:16.0",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:27.2",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:27.2",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:29.9",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:42.3",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:50.6",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:54.7",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "6:54.7",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:01.6",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:23.5",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:41.0",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:44.9",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "7:58.3",
+   "category": "BLOB",
+   "eventtype": "BLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:02.7",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:21.9",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:35.0",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:36.5",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:50.6",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:52.8",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:56.9",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:58.6",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "8:59.9",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:26.9",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:37.4",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:45.9",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:45.9",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "9:50.9",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:13.0",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:26.6",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:38.3",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:57.8",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:57.8",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:57.8",
+   "category": "Substitution",
+   "eventtype": "SubOut",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "10:57.8",
+   "category": "Substitution",
+   "eventtype": "SubIn",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:06.8",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:09.7",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:14.1",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:21.5",
+   "category": "Quarter",
+   "eventtype": "JumpBall",
+   "result": "NA",
+   "side": "Neutral"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:45.2",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:48.6",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "11:57.0",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:08.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:13.0",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:35.4",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:43.6",
+   "category": "Defense",
+   "eventtype": "OB",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "12:54.3",
+   "category": "SLOB",
+   "eventtype": "SLOB",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:07.5",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:07.5",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:17.4",
+   "category": "Defense",
+   "eventtype": "Steal",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:17.4",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:21.8",
+   "category": "Offense",
+   "eventtype": "2PT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:21.8",
+   "category": "Offense",
+   "eventtype": "Assist",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:29.3",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "13:52.4",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:06.8",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:10.0",
+   "category": "Defense",
+   "eventtype": "DefRebound",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:16.2",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:19.5",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:22.6",
+   "category": "Offense",
+   "eventtype": "Turnover",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:33.7",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "14:56.6",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:12.6",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:16.0",
+   "category": "Offense",
+   "eventtype": "OffRebound",
+   "result": "NA",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:15.6",
+   "category": "Defense",
+   "eventtype": "Foul",
+   "result": "NA",
+   "side": "Defense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:36.2",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:49.3",
+   "category": "Offense",
+   "eventtype": "FT",
+   "result": "Make",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "15:58.2",
+   "category": "Offense",
+   "eventtype": "3PT",
+   "result": "Miss",
+   "side": "Offense"
+  },
+  {
+   "quarter": "Q1",
+   "start": "16:00.7",
+   "category": "Quarter",
+   "eventtype": "EndQTR",
+   "result": "NA",
+   "side": "Neutral"
+  }
+ ]
+}

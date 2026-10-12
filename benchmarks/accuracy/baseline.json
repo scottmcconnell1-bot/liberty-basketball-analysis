@@ -1,7 +1,13 @@
 {
   "wilder_q1": {
-    "precision_exact": 0.0884,
-    "recall_exact": 0.2453,
-    "f1_exact": 0.13
+    "precision_exact": 0.0993,
+    "recall_exact": 0.2642,
+    "f1_exact": 0.1443,
+    "shots": {
+      "tags": 23,
+      "right": 12,
+      "makes_missed": 8,
+      "misses_called_makes": 3
+    }
   }
 }
