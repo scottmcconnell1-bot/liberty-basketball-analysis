@@ -240,7 +240,7 @@ def test_play_create_reload_edit_delete(client, db):
          "movements": loaded[1]["movements"], "ball": "o3", "notes": "n2",
          "source_image": loaded[1]["source_image"]},
         {"label": "Initial v2", "positions": loaded[0]["positions"],
-         "movements": loaded[0]["movements"], "notes": "", "source_image": ""},
+         "movements": loaded[0]["movements"], "ball": "o1", "notes": "", "source_image": ""},
     ]
     assert _save_play(client, play_id=str(pid), name="Horns Flare 2",
                       category_id=str(man["id"]), steps_json=new_steps) == pid
