@@ -79,8 +79,8 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 - Start the **teach loop**.
 - Use **video 64**. The film is **video id 73**, `uploads/nfhs_gam0a66d85e12.mp4`.
 - Commit the untracked GitHub credential file in the repo root, or paste it into a note.
-- Commit **anything out of the Shared drive folder**. It contains `.env` (the coach portal password), the database snapshot, the films and the tag files. `scripts/check_scott_gates.py` refuses the obvious ones, but it is not a substitute for not trying.
-- Copy the Shared drive's `film_analysis.db` **back over** the home laptop's database. The snapshot is read-only and sanitised; the home copy is the real one.
+- Commit **anything out of the home-laptop share** (`http://100.107.224.49:8091/`, `HOME_TAILSCALE_SHARE.md`). It contains `.env` (the coach portal password), the database snapshot, the film and the tag files. `scripts/check_scott_gates.py` refuses the obvious ones, but it is not a substitute for not trying.
+- Copy the share's `film_analysis.db` **back over** the home laptop's database. The snapshot is read-only and sanitised; the home copy is the real one.
 
 ## The run under test
 
@@ -147,7 +147,7 @@ Scott then re-measured the run on the home laptop on 2026-10-11 and answered the
 
 One item was still unreadable from here after that: the stored `ai.auto_accept_event_confidence` in the home database, which decides whether the 0.85 default actually promotes rows. Scott answered it on the evening of 2026-10-11 — it is stored as `0.85`, and it stays. Nothing in these plans now rests on an unanswered question about a setting.
 
-**Not in git, but now on the Shared drive** (Google Shared drive **Liberty Basketball** → folder **Program data from home laptop 2026-10-11**). Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. Membership is needed; it is not a public link.
+**Not in git, but reachable from the home laptop over Tailscale.** Google Drive was the plan on the afternoon of 2026-10-11 and is **not** the handoff any more: the personal account filled up and the work account cannot share the folder (`HOME_TAILSCALE_SHARE.md`, pull request 171). The files stay on the home laptop and are served on its tailnet address only, at `http://100.107.224.49:8091/`, while that laptop is on and `scripts/serve_home_share.ps1` is running. Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. A Tailscale invite to this network is what grants access; it is not a public link, and **Funnel must not be turned on for port 8091**. Two consequences: the files are reachable only while the laptop is awake, so plan a step around copying once rather than reading live; and the share is an unauthenticated directory listing to every device on the tailnet, so treat tailnet membership as the only thing protecting it.
 
 | Not in git | What it unlocks |
 | --- | --- |
@@ -179,7 +179,7 @@ One item was still unreadable from here after that: the stored `ai.auto_accept_e
 - `data/hoopsalytics/` — `full_film_panel_latest.json`, `full_film_panel_history.jsonl`, `full_film_panel_targets.json`, and a `TEACH_LOOP_PAUSED` marker.
 - `data/jersey_shades/` — 6 files including the run-12 sidecar.
 
-**What this means for an agent picking up a step:** the plans are a map, not a measurement. Treat every quoted number as the last recorded value and re-measure it before you act on it. The first task of each step is to confirm its own starting numbers are still true. Since 2026-10-11 that is a real possibility rather than a formality — the Shared drive folder makes the database, the film, the tags and the v6 tracks openable off the home laptop.
+**What this means for an agent picking up a step:** the plans are a map, not a measurement. Treat every quoted number as the last recorded value and re-measure it before you act on it. The first task of each step is to confirm its own starting numbers are still true. Since 2026-10-11 that is a real possibility rather than a formality — the home-laptop share makes the database, the film, the tags and the v6 tracks openable off that laptop.
 
 ## How a change proves it did not break the count
 
@@ -187,7 +187,7 @@ Three numbers decide it, and they are the same three everywhere: **right**, **ma
 
 | Tool | Where it runs | What it holds |
 | --- | --- | --- |
-| `scripts/shot_tag_score.py` | Home laptop, or a clone with the Shared drive folder copied over | Scores a run against the real tag file. Floor in `benchmarks/shot_tags/baseline.json`: **85 / 20 / 6** on `adrian_111`. Exit status 1 when the score is below it. |
+| `scripts/shot_tag_score.py` | Home laptop, or a clone with the served folder copied over | Scores a run against the real tag file. Floor in `benchmarks/shot_tags/baseline.json`: **85 / 20 / 6** on `adrian_111`. Exit status 1 when the score is below it. |
 | `scripts/accuracy_benchmark.py` | **CI, every pull request** | Runs the event generator on frozen detections and scores it, now including the three shot numbers. Floors in `benchmarks/accuracy/baseline.json`. |
 | `tests/test_shot_tag_gate.py` | CI, plus the real film where the data is | Pins the arithmetic, the 8-second tolerance and what counts as the program's own claim. The 111-tag test skips where the data is absent and says so. |
 | `scripts/check_scott_gates.py` | **CI, every pull request** (`.github/workflows/guardrails.yml`) | Refuses a change that crosses a Scott gate without naming it, and a change to how a shot is read that carries no score. |

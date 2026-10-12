@@ -6,7 +6,7 @@ Read `00_INDEX.md` first. Source of scope: `PROGRAM_FOR_JASON_2026-10-10.md` sec
 **Depends on:** Step 1 and Step 2, both landed. **Blocks:** Step 4, and therefore everything after it.
 **Offline only. No database writes.** This is the gate. Nothing is written to the ledger until this step passes.
 
-**The gate now runs as a command.** `python scripts/shot_tag_score.py --game-id "<run 12 key>" --fixture adrian_111` prints the three numbers and exits 1 when they are below the floor in `benchmarks/shot_tags/baseline.json` (85 / 20 / 6). Report its output verbatim; a summary in prose is not a result. It needs the database and the tag file, so run it on the home laptop or on a clone with the Shared drive folder copied over it. If the floor turns out not to be reproducible from the database — the 85 was measured offline on the v6 tracks, which nobody has re-run from this repo — say so and correct the floor in the same pull request rather than scoring against a number that was never checked.
+**The gate now runs as a command.** `python scripts/shot_tag_score.py --game-id "<run 12 key>" --fixture adrian_111` prints the three numbers and exits 1 when they are below the floor in `benchmarks/shot_tags/baseline.json` (85 / 20 / 6). Report its output verbatim; a summary in prose is not a result. It needs the database and the tag file, so run it on the home laptop or on a clone with the home-laptop share copied over it (`HOME_TAILSCALE_SHARE.md`). If the floor turns out not to be reproducible from the database — the 85 was measured offline on the v6 tracks, which nobody has re-run from this repo — say so and correct the floor in the same pull request rather than scoring against a number that was never checked.
 
 ## The bar
 
