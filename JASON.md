@@ -6,9 +6,9 @@ Updated: 2026-10-11 evening. Branch `jason-5-may-updates` is kept even with `mai
 
 Scott says `auto_accept_event_confidence` at 0.85 is fine for now. Leave it. The home database already stores `ai.auto_accept_event_confidence` as `0.85`, and `event_generator.py` calls `auto_accept_high_confidence_events` after a counting run, so a pending AI row at or above 0.85 is accepted. Do not turn it off. Do not merge pull request 147 to change it.
 
-## Pickup (2026-10-11 afternoon) — the laptop files are on the shared drive
+## Pickup (2026-10-12) — the laptop files are on Tailscale
 
-The code is still this GitHub repo. The files that are not in git are now on the Google Shared drive named **Liberty Basketball**, in the folder **Program data from home laptop 2026-10-11**. You have to be a member of that Shared drive to open it. It is not a public link. If the drive is not in your Google Drive, Scott still has to add your account. `README.txt` in that folder says the same thing as this section.
+Google Drive is not the handoff. The files that are not in git stay on the home laptop. While `scripts/serve_home_share.ps1` is running, that script prints the address. Ask Scott for it. It is not written in this repo. The full note is `docs/agent_handoffs/HOME_TAILSCALE_SHARE.md`. Do not turn Funnel on for port 8091.
 
 Clone the repo, run `git lfs pull`, then copy that folder on top of the clone so these paths match:
 
@@ -19,10 +19,9 @@ Clone the repo, run `git lfs pull`, then copy that folder on top of the clone so
 - `data\lineups\`
 - `data\hoopsalytics\` — the small state files. The logs were left off.
 - `tag-exports\` — the review exports. The browser backup was left off.
-- `.env` — the coach portal password only.
 - `offline\v6\weights\best.pt`, `offline\v6_tracks.json`, `offline\bodd_shots.json`, and `offline\hermes_suggestion_tracks.json` — the offline ball weights and the tracks behind the 85 score. These are not a replacement for `models/ball_detector.pt`.
 
-Left on the home laptop, on purpose: the other eight game films, the model weight files (those are in GitHub), the NFHS login, and the archive passphrase. Run 12 in the snapshot is `...__rerun_20261006_033941`, 1,555 events. Keep the Shared drive private to the people Scott added.
+The coach portal password is not in that folder. Ask Scott for it separately. Left on the home laptop, on purpose: the other eight game films, the model weight files (those are in GitHub), the NFHS login, and the archive passphrase. Run 12 in the snapshot is `...__rerun_20261006_033941`, 1,555 events.
 
 ## Pickup (2026-10-11) — answers on the phase plans
 

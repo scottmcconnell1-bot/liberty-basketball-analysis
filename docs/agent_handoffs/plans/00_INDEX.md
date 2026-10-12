@@ -81,7 +81,7 @@ These are from `AUTHORITY.md`, `AGENT_PROTOCOL.md`, and the program file. They a
 - Start the **teach loop**.
 - Use **video 64**. The film is **video id 73**, `uploads/nfhs_gam0a66d85e12.mp4`.
 - Commit the untracked GitHub credential file in the repo root, or paste it into a note.
-- Commit **anything out of the home-laptop share** (`http://100.107.224.49:8091/`, `HOME_TAILSCALE_SHARE.md`). It contains `.env` (the coach portal password), the database snapshot, the film and the tag files. `scripts/check_scott_gates.py` refuses the obvious ones, but it is not a substitute for not trying.
+- Commit **anything out of the home-laptop share** (`HOME_TAILSCALE_SHARE.md`). It contains the database snapshot, the film, and the tag files. It must not contain `.env`. `scripts/check_scott_gates.py` refuses the obvious ones, but it is not a substitute for not trying.
 - Copy the share's `film_analysis.db` **back over** the home laptop's database. The snapshot is read-only and sanitised; the home copy is the real one.
 
 ## The run under test
@@ -149,7 +149,7 @@ Scott then re-measured the run on the home laptop on 2026-10-11 and answered the
 
 One item was still unreadable from here after that: the stored `ai.auto_accept_event_confidence` in the home database, which decides whether the 0.85 default actually promotes rows. Scott answered it on the evening of 2026-10-11 — it is stored as `0.85`, and it stays. Nothing in these plans now rests on an unanswered question about a setting.
 
-**Not in git, but reachable from the home laptop over Tailscale.** Google Drive was the plan on the afternoon of 2026-10-11 and is **not** the handoff any more: the personal account filled up and the work account cannot share the folder (`HOME_TAILSCALE_SHARE.md`, pull request 171). The files stay on the home laptop and are served on its tailnet address only, at `http://100.107.224.49:8091/`, while that laptop is on and `scripts/serve_home_share.ps1` is running. Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. A Tailscale invite to this network is what grants access; it is not a public link, and **Funnel must not be turned on for port 8091**. Two consequences: the files are reachable only while the laptop is awake, so plan a step around copying once rather than reading live; and the share is an unauthenticated directory listing to every device on the tailnet, so treat tailnet membership as the only thing protecting it.
+**Not in git, but reachable from the home laptop over Tailscale.** Google Drive was the plan on the afternoon of 2026-10-11 and is **not** the handoff any more: the personal account filled up and the work account cannot share the folder (`HOME_TAILSCALE_SHARE.md`, pull request 171). The files stay on the home laptop. While `scripts/serve_home_share.ps1` is running, that script prints the address. Ask Scott for it. It is not written in this repo. Clone the repo, `git lfs pull`, then copy that folder over the clone so the paths line up. A Tailscale invite to this network is what grants access; it is not a public link, and **Funnel must not be turned on for port 8091**. The script refuses to start if that port is already proxied. Two consequences: the files are reachable only while the laptop is awake, so plan a step around copying once rather than reading live; and the share is an unauthenticated directory listing to every device on the tailnet, so treat tailnet membership as the only thing protecting it.
 
 | Not in git | What it unlocks |
 | --- | --- |
@@ -159,7 +159,7 @@ One item was still unreadable from here after that: the stored `ai.auto_accept_e
 | `data/hoop_tracks/`, `data/lineups/`, `data/hoopsalytics/` (state files; logs left off) | The locked hoop track, the lineup work, the panel state |
 | `tag-exports/` — the review exports, including `rejected_makes_before_restore_20261007.json`, which is **not** in git | The step 4 and step 7 test set |
 | `offline/v6/weights/best.pt`, `offline/v6_tracks.json`, `offline/bodd_shots.json`, `offline/hermes_suggestion_tracks.json` | **Every row of the try table, including the 85 / 20 / 6 best score.** These are not a replacement for `models/ball_detector.pt`. |
-| `.env` — the coach portal password only | Running the app against the snapshot |
+| Coach portal password. Not in the share. Ask Scott. Do not put `.env` in the served folder. | Running the app against the snapshot |
 
 **Still nowhere, on purpose:**
 
