@@ -1,6 +1,10 @@
 # Hermes handoff
 
-Updated: 2026-10-09 night. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+Updated: 2026-10-11 evening. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+
+## Pickup (2026-10-11 evening)
+
+Read `docs/agent_handoffs/HERMES_CURSOR_2026-10-11.md` first. The target is every shot right; 85 was only a starting line. Your last `ai_bridge.py` used tag times inside the rule (`short_makes`); without them it scores 81 / 26 / 4, and it deleted code that `tests/test_pr151_fixes.py` needs. Cursor's video rule scores 91 / 14 / 6 with your Case B and no tag times. The scoreboard check is right on all 111 but is not the method, because many gyms show no board. The answer key has 109 unique shots. Your next job is the 6 misses still called makes.
 
 ## Pickup (2026-10-09 night)
 
