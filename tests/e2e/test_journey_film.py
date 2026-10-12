@@ -873,15 +873,18 @@ def test_resaving_film_tool_tags_after_highlight_clip(env):
     key, video, _ = _completed_upload(env)
     rows = [{"eventtype": "3PT", "result": "Make", "player": "3", "team": "Liberty", "start": "00:05"}]
     path = f"/api/film/{quote(key, safe='')}/teach-manual"
-    assert env.post_json(path, {"rows": rows}).status_code == 200
+    first = env.post_json(path, {"rows": rows})
+    assert first.status_code == 200
+    base = first.get_json()["tag_updated_at"]
     manual = env.one("SELECT id FROM events WHERE game_id=? AND source_type='manual'", (key,))
     out = env.post_json("/api/highlights/generate", {"game_id": key, "event_ids": [manual["id"]], "cut_video": False})
     assert out.status_code == 201 and len(out.get_json()["saved_clips"]) == 1
 
     rows[0]["player"] = "33"  # coach corrects the jersey and saves again
-    r = _post_catching(lambda: env.post_json(path, {"rows": rows}))
+    r = _post_catching(lambda: env.post_json(path, {"rows": rows, "baseUpdatedAt": base}))
     assert not isinstance(r, Exception), f"teach re-save crashed: {r!r}"
     assert r.status_code == 200 and r.get_json()["replaced"] == 1
+    base = r.get_json()["tag_updated_at"]
     # the clip still points at the (updated) tag
     now = env.one("SELECT id, player FROM events WHERE game_id=? AND source_type='manual'", (key,))
     assert now == {"id": manual["id"], "player": "33"}
@@ -890,7 +893,7 @@ def test_resaving_film_tool_tags_after_highlight_clip(env):
 
     # dropping that tag and adding another: the clip is detached, not a 500
     rows = [{"eventtype": "Steal", "result": "NA", "player": "5", "team": "Liberty", "start": "00:30"}]
-    r = _post_catching(lambda: env.post_json(path, {"rows": rows}))
+    r = _post_catching(lambda: env.post_json(path, {"rows": rows, "baseUpdatedAt": base}))
     assert not isinstance(r, Exception), f"teach re-save crashed: {r!r}"
     assert r.status_code == 200 and (r.get_json()["manual_saved"], r.get_json()["replaced"]) == (1, 1)
     manual_rows = env.q("SELECT event_type, timestamp_ms FROM events WHERE game_id=? AND source_type='manual'", (key,))
