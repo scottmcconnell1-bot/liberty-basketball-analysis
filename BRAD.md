@@ -4,13 +4,9 @@ Updated: 2026-10-11. This is the note on branch `Brad/Claude`. That branch stays
 
 ## Pickup (2026-10-11) — the laptop files are on Tailscale
 
-Google Drive is not the handoff. The files that are not in git are on the home laptop, served only on its Tailscale address while `scripts/serve_home_share.ps1` is running:
+Google Drive is not the handoff. The files that are not in git stay on the home laptop. While `scripts/serve_home_share.ps1` is running, that script prints the address. Ask Scott for it. It is not written in this repo. The address works for a machine on the same Tailscale network. It is not the public coach site. Do not turn Funnel on for port 8091. The full note is `docs/agent_handoffs/HOME_TAILSCALE_SHARE.md`. The same paragraph is at the top of `JASON.md`.
 
-`http://100.107.224.49:8091/`
-
-That address works for a machine on the same Tailscale network. It is not the public coach site. Do not turn Funnel on for port 8091. The full note is `docs/agent_handoffs/HOME_TAILSCALE_SHARE.md`. The same paragraph is at the top of `JASON.md`.
-
-Clone the repo, run `git lfs pull`, then copy that folder on top of the clone. `film_analysis.db` is a read-only snapshot from 2026-10-11 with passwords and the NFHS login already removed. Do not copy it back over the home database. The folder has the Adrian film only, the tags, the hoop track, the lineups, the coach-portal password in `.env`, and the offline v6 weights. The other game films and the archive passphrase stayed on the home laptop.
+Clone the repo, run `git lfs pull`, then copy that folder on top of the clone. `film_analysis.db` is a read-only snapshot from 2026-10-11 with passwords and the NFHS login already removed. Do not copy it back over the home database. The folder has the Adrian film only, the tags, the hoop track, the lineups, and the offline v6 weights. The coach portal password is not in the folder. The other game films and the archive passphrase stayed on the home laptop.
 
 ## Pickup (2026-10-09 night)
 

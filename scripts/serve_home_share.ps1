@@ -14,6 +14,19 @@ if (-not (Test-Path -LiteralPath $root)) {
     throw "Share folder is not on this machine: $root"
 }
 
+$envFile = Join-Path $root ".env"
+if (Test-Path -LiteralPath $envFile) {
+    throw "Refusing to serve. .env is in the share folder. Take it out. The coach portal password is passed separately."
+}
+
+$serveStatus = & tailscale serve status 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0) {
+    throw "Refusing to serve. Could not read Tailscale serve status, so this script cannot tell whether port 8091 is proxied."
+}
+if ($serveStatus -match "8091") {
+    throw "Refusing to serve. Tailscale serve status mentions port 8091. Do not proxy this folder."
+}
+
 $port = 8091
 $python = Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\python.exe"
 if (-not (Test-Path -LiteralPath $python)) {
