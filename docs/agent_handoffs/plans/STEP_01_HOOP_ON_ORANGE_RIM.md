@@ -96,6 +96,37 @@ Options allowed by the roadmap, in preference order: the orange-band finder alre
 
 **v6 does not emit a hoop class.** It has one class, `basketball`, loaded and checked 2026-10-10. Any approach that filters detections for a class named `hoop`, `rim`, or `basket` against v6 gets an empty list. That is exactly the bug in `Scott_Hermes` `6143e83` and still in `cbeb0ed` — `ai_bridge.py:662` `find_hoop_on_orange_rim` filters on those three names and `ai_bridge.py:757` then hardcodes `hoop_on_rim = True`. Do not repeat it, and do not build on it.
 
+## Twelve hoop-lock rules have already been measured, and all twelve lost
+
+This is the most useful thing on this step and it is not in `main`. `docs/agent_handoffs/HERMES_GEMINI_2026-10-12.md`, on branch `Scott_Hermes`, records a scored sweep from the morning of 2026-10-12. **Read it before writing a line of code here**, or you will spend the day re-measuring a negative result.
+
+The score is the hoop lock against the 111 tag hoops in `v6_tracks.json`: nearest raw sample within 2500 ms, a window of that sample plus three either side, a hit being within 150 px of the grouped tag hoop. **Baseline, the current separate x/y median: 89 of 111.** Nothing beat it:
+
+| Rule | Score |
+|---|---:|
+| Current separate x/y median | **89** |
+| 2D medoid of the window | 89 |
+| Largest cluster then medoid (50 px) | 70 |
+| Same at 150 / 300 / 500 px | 77 / 80 / 85 |
+| Confidence-weighted distance | 59 |
+| Highest-confidence sample alone | 48 |
+| Pan chain, 120 px from the centre sample | 75 |
+| Consensus support, 120 px × index gap | 78 |
+| Velocity hold, freeze on a long step | 9 |
+| Smoothest three-point run | 84 |
+| Highest-confidence cluster, 40 px, floor 0.60 | 49 |
+
+Six non-voting checks were also tried and rejected on measurement, not opinion: interior brightness spread, hue and saturation, a 30 px border reject, a height penalty for the top fifth of the frame, the court box, and hardcoded sign and arm boxes. The notes give the numbers for each.
+
+**The four mechanical facts behind those results.** They are worth more than the table.
+
+1. `stabilize_hoop_track` takes the median of x and the median of y **separately**, so the lock can be a point that was never detected. At 00:41 the seven raw x values are 10, 562, 797, 811, 648, 311, 409; the middle is 562, and the lock (562, 213) lands on the backboard arm while the two real rim samples, 797 and 811, sit at the end of the sorted list.
+2. **The median never reads `confidence`.** Changing a candidate's confidence — including setting it to 0.01 — cannot move the lock. Any proposal that works by scoring candidates has to change the vote as well.
+3. **The rim does not sit still in screen pixels** on this sideline camera: the median step between consecutive raw samples is 100 px, and 824 of 1,948 steps are longer than 150 px. That is why every "static fixture" and velocity-hold idea collapses.
+4. The raw file on disk is unstabilised, one sample about every 2 s, 1,949 samples; `save_hoop_track` does not write the median back. `data/hoop_tracks/` in git is empty — the file is on the home laptop share.
+
+The three named failures are **00:41** (phantom on the arm, 270 px off), **26:43** and **43:06** (both locked onto the EXIT sign, 500 and 538 px off, where four sign samples out-vote three rim samples). A rule that fixes one of those and drops the 89 is not a win, and two of the twelve did exactly that.
+
 ## Exit test
 
 All three must hold. Report the evidence for each.
@@ -118,6 +149,7 @@ A passing test alone is not verification. The frames are the verification.
 - Do not start a production detection pass of this film expecting new baskets.
 - Do not call the rim red paint. The hue bins in older notes are camera numbers.
 - Do not treat `Scott_Hermes` `6143e83` or PR #168 `cbeb0ed` as this step. Neither looks at the picture.
+- Do not re-propose any of the twelve rules in the table above, or any of the six rejected checks, without saying what is different and what it scores. They were measured against the 111 and they lost. The baseline to beat is **89**, and it has to be reported the same way.
 - Do not reorganize the core sequence.
 
 ## Hand off with

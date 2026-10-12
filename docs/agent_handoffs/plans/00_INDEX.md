@@ -5,6 +5,8 @@ If a number in a plan file disagrees with that program file, the program file wi
 
 **Where the source docs are.** `PROGRAM_FOR_JASON_2026-10-10.md`, `COUNT_FIXES_2026-10-10.md`, `COUNT_ROADMAP_2026-10-10.md` and `HERMES_EXPERIMENT_2026-10-09.md` sit in `docs/agent_handoffs/` **on this branch**, copied from PR #168 because every plan below cites them and that pull request cannot merge (see the do-not). `ACTIVE.md`, `HERMES.md`, `AUTHORITY.md`, and `AGENT_PROTOCOL.md` are on `main`.
 
+**The hoop work has already been measured once. Read `docs/agent_handoffs/HERMES_GEMINI_2026-10-12.md` on branch `Scott_Hermes` before starting step 1.** Twelve hoop-lock rules were scored against the 111 tag hoops on the morning of 2026-10-12 and **none beat the current separate x/y median, which hits 89 of 111**. Two of the twelve fixed a named failure and dropped the 89. The table and the four mechanical facts behind it are in `STEP_01`. The same document is where the duplicate tag times `2738600` and `2747200` are recorded, which makes the answer key 109 unique shots in 111 rows; step 3 says to keep scoring all 111.
+
 **Read `JASON.md` in the repo root too.** It is on `main`, it is 286 lines, and it is more specific than the PR #168 docs on what is actually wrong with run 12 — it names the individual shots, gives the per-stat baseline table, and carries operational do-nots the program file leaves out. Where it disagrees with `PROGRAM_FOR_JASON_2026-10-10.md`, the program file is newer and wins, but the detail in `JASON.md` is not repeated there and is not optional.
 
 These files exist so one step can be handed to one agent without that agent reading the whole program.

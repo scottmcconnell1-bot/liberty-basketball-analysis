@@ -97,6 +97,8 @@ Two live bugs in that file, confirmed 2026-10-11 — fix or route around them be
 
 A number produced by that file without fixing those is not a score.
 
+**Two of the 111 tag times are duplicated.** `HERMES_GEMINI_2026-10-12.md` (branch `Scott_Hermes`) reports `2738600` and `2747200` appearing twice in `v6_tracks.json`, so the answer key is **109 unique shots recorded as 111 rows**. Score all 111 anyway — that is how the 85 / 20 / 6 and the six `Scott_Hermes` scores were produced, and a score over 109 is not comparable to any of them. `scripts/shot_tag_score.py` already refuses to compare a score taken over a different tag count, so changing the denominator shows up as a refusal rather than a quiet shift. Note this alongside the duplicate stored `made_two` at 0:48.2 in step 5: two different duplicates, in two different places, and neither is a row to delete before it is diagnosed.
+
 ## Exit test
 
 - More than 85 right, **and** misses called makes not higher than 6.
