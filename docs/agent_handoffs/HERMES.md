@@ -1,14 +1,47 @@
 # Hermes handoff
 
-Updated: 2026-10-09 night. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun below is not the counting run.
+Updated: 2026-10-13. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below.
 
-## Pickup (2026-10-09 night)
+## Pickup (2026-10-13)
 
-Counting run is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941` (run 12) on the home database. The book is Liberty 51, Adrian 26. The count is not solved.
+Counting run is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941` (run 12) on the home database. The book is Liberty 51, Adrian 26. The count is not solved. The adapter experiment is solved at the best score these tracks can hold.
 
-Stay in `ai_bridge.py`. Do not edit `event_generator.py`, `net_detector.py`, or `models/ball_detector.pt`. Do not change `ball_confidence`. Do not write database rows. Do not train another ball-weights file. Do not copy Scott's tags onto AI rows. Do not resume the four finished agents named in `ACTIVE.md`.
+The working rule is `run_saved_v6_rule` in `ai_bridge.py` on `main`. The file still has `validated_stats` and `BasketballStatsAdapter`. The scored rule has no tag-time lists. Scored on the saved v6 tracks: **99 of 111 right, 12 makes missed, 0 misses called makes.** `applied_to_core` is false. A make on the film is still `ball_through_rim` or `net_moved_after_shot`. Do not merge `Scott_Hermes`.
 
-The best offline score on his 111 shot tags is 85 right, with 20 makes still missed and 6 misses called makes. Five of those misses still look like makes because the hoop box is on the glass or the backboard, or the ball box jumps off the ball. The next check is a hoop box on the orange rim and a ball box that stays on the ball. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object. Read the 2026-10-09 pickup bullet in `ACTIVE.md` before proposing anything.
+A ball that goes wide below 80 px and then returns at least 0.40 hoop-widths, ending within 0.70, keeps the make. That recovers 2486900 and 2914500. The ball at 180 px may sit out to 0.85 hoop-widths. Sideways drift vetoes above 0.43 hoop-widths. Do not move the hoop center onto the ball. 896600 and 3256200 walk off the rim and never return.
+
+These proposals were scored on all 111 tags and are not in the file. Do not bring them back:
+
+- A wider column, a depth-gated column, or a hoop recenter. Each one called at least one miss a make.
+- Raising the box-jump limit from 60 px to 85 px. The two missed jumps are 97 px and 110 px. The change called 530600 and 1776500 makes.
+- A pre-drift check on the points above 80 px. It recovered 3 makes and called 8 misses makes, including 3256200.
+- Replacing the grouped hoop with the detector hoop from `bodd_shots.json`. Score 95 right, 15 makes missed, 1 miss called a make.
+- Box width and confidence. On 1231400 and 2870400 the box stays ball-sized and the confidence stays high while the center walks off.
+
+The 12 the rule still misses are 342800 (bounce, then the box leaves the net), 638300 (starts well below), 717000, 801800, 2479100, 3095700 (no crossing), 1231400 and 2870400 (the box walks off), 1792900 (short net), 1836700 and 3045900 (box jumps), and 2962500 (sideways drift). Another cutoff on these centers will call a miss a make.
+
+## Where the files are
+
+Hermes does not have these in git. They are on the home PC.
+
+| What | Path |
+|---|---|
+| The rule to edit | `ai_bridge.py` in the repo root, function `run_saved_v6_rule` |
+| The 111 saved tracks | `C:\Users\scott\AppData\Local\Temp\v6_tracks.json` |
+| Detector boxes (width, height, confidence) | `C:\Users\scott\AppData\Local\Temp\bodd_shots.json` |
+| Score the rule | `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe C:\Users\scott\AppData\Local\Temp\score_hermes_now.py` |
+| Scott's 111 shot tags | `data\film_tags\jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json` |
+| Home database | `film_analysis.db` in the repo root |
+
+Each track row has `t`, `result`, `hoop` (`x`, `y`, `w`, `area`), `ball`, and `bodd`. A point is `[frame, x, y]`. There is no box width on the track. The tag file stores shots in `rows`. The clock is `start` (`20:31.4`). The type is `eventtype` (`2PT`, `3PT`, `FT`). `map_manual_row` in `manual_tag_teach.py` already turns those into `made_two`, `missed_three`, and the free-throw types. Hermes does not edit that file.
+
+## How Hermes can contribute
+
+Stay in `ai_bridge.py`. A change counts only when `score_hermes_now.py` prints a better line than 99 right, 12 makes missed, 0 misses called makes. Report those three numbers and `applied_to_core`. If the false-make count is not 0, take the change back out.
+
+Do not write `film_analysis.db`. Do not copy tags onto AI rows. The card gap is not an adapter cutoff. A `shot` row scores 0 points. The card scores the made or missed row at the same timestamp. Ten of the sixteen shots within 2 seconds of a disagreeing tag already have that scoring row on the tag's side. Six scoring rows still disagree and are Cursor's to correct: 31364, 31457, 31479, 31498, 31547, and 31624. Thirteen tags sit 2 to 8 seconds from a shot and stay untouched. Fifteen tags have no shot within 8 seconds. Hermes does not insert those rows.
+
+Do not edit `event_generator.py`, `net_detector.py`, `manual_tag_teach.py`, or `models/ball_detector.pt`. Do not change `ball_confidence`. Do not train another weights file. Do not resume the four finished agents named in `ACTIVE.md`. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object.
 
 ## How Cursor and Hermes work
 
