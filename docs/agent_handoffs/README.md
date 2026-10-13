@@ -12,7 +12,7 @@ One active task file, not GitHub labels.
 
 1. Update `ACTIVE.md` when a task actually completes. Replace the paragraph it changes. Move old text to `ARCHIVE/`.
 2. Code changes go to `main`. Open a pull request for Jason when asked, and the same one for Brad on `Brad/Claude`.
-3. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes' note is `HERMES.md`.
+3. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes' note is `HERMES.md`. Gemini's note is `GEMINI.md`. Gemini cannot see GitHub. Upload the repo-root folder `gemini-upload/`.
 
 ## Legacy (retired)
 
