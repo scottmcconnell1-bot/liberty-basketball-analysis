@@ -6,6 +6,10 @@ Updated: 2026-10-10. Jason: start at `docs/agent_handoffs/PROGRAM_FOR_JASON_2026
 
 Count stats for one game (Liberty at Adrian, NFHS video 73, `uploads\nfhs_gam0a66d85e12.mp4`, game id `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`) and check them against Scott's confirmed scorebook (Liberty 51, Adrian 26). Accuracy matters more than speed. It must work by 1 Nov 2026.
 
+## Adapter experiment (2026-10-12)
+
+**Proven:** Hermes's note is `docs/agent_handoffs/HERMES.md`, updated 2026-10-13. The uncommitted `ai_bridge.py` has no tag-time lists. Scored on the saved v6 tracks: 99 of 111 right, 12 makes missed, 0 misses called makes. A ball that goes wide below 80 px and then returns at least 0.40 hoop-widths, ending within 0.70, keeps the make. That recovers 2486900 and 2914500. 896600 and 3256200 never return, so the hoop is not moved onto them. A column fails when fewer than half the points from 80 px down are inside 0.60 hoop-widths. The ball at 180 px may sit out to 0.85 hoop-widths. That pair recovers 590900. 896600 stays a miss because only one of its three net points is inside 0.60 widths. A short track is a make when it disappears inside the rim. A jump under 12 pixels per frame is kept, and so is a jump that starts once the ball is already 200 px below the rim and still in the column. An upward jump is still a swap. Sideways drift vetoes above 0.43 hoop-widths. A track that opens within 100 px below the rim, inside 0.55 hoop-widths, and falls another 80 px is not treated as a putback. `applied_to_core` is false. The live make is still `ball_through_rim` or `net_moved_after_shot`. The 12 missed makes are 1231400 and 2870400, which leave the column and do not come back, 342800 which bounces, 4 with no crossing, 2 box jumps, 2962500 which drifts sideways, 1 short net, and 1 that starts well below the hoop.
+
 ## Adrian count today (2026-10-07)
 
 **Proven:**
