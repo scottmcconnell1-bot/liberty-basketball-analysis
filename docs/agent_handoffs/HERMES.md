@@ -1,12 +1,12 @@
 # Hermes handoff
 
-Updated: 2026-10-13. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below. Gemini cannot see GitHub. Upload the folder `gemini-upload/` in this repo. Its note is `docs/agent_handoffs/GEMINI.md`.
+Updated: 2026-10-13. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below. Gemini cannot see GitHub. Its note is `docs/agent_handoffs/GEMINI.md` and its upload folder is `gemini-upload/`.
 
 ## Pickup (2026-10-13)
 
 Counting run is `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941` (run 12) on the home database. The book is Liberty 51, Adrian 26. The count is not solved. The adapter experiment is solved at the best score these tracks can hold.
 
-The working rule is the uncommitted `ai_bridge.py` in the repo root. It has no tag-time lists. Scored on the saved v6 tracks: **99 of 111 right, 12 makes missed, 0 misses called makes.** `applied_to_core` is false. A make on the film is still `ball_through_rim` or `net_moved_after_shot`. Do not merge `Scott_Hermes`.
+The working rule is `run_saved_v6_rule` in `ai_bridge.py` on `main`. The file still has `validated_stats` and `BasketballStatsAdapter`. The scored rule has no tag-time lists. Scored on the saved v6 tracks: **99 of 111 right, 12 makes missed, 0 misses called makes.** `applied_to_core` is false. A make on the film is still `ball_through_rim` or `net_moved_after_shot`. Do not merge `Scott_Hermes`.
 
 A ball that goes wide below 80 px and then returns at least 0.40 hoop-widths, ending within 0.70, keeps the make. That recovers 2486900 and 2914500. The ball at 180 px may sit out to 0.85 hoop-widths. Sideways drift vetoes above 0.43 hoop-widths. Do not move the hoop center onto the ball. 896600 and 3256200 walk off the rim and never return.
 
@@ -26,7 +26,7 @@ Hermes does not have these in git. They are on the home PC.
 
 | What | Path |
 |---|---|
-| The rule to edit | `C:\Users\scott\Documents\liberty-basketball-analysis\ai_bridge.py` |
+| The rule to edit | `ai_bridge.py` in the repo root, function `run_saved_v6_rule` |
 | The 111 saved tracks | `C:\Users\scott\AppData\Local\Temp\v6_tracks.json` |
 | Detector boxes (width, height, confidence) | `C:\Users\scott\AppData\Local\Temp\bodd_shots.json` |
 | Score the rule | `C:\Users\scott\AppData\Local\Programs\Python\Python312\python.exe C:\Users\scott\AppData\Local\Temp\score_hermes_now.py` |

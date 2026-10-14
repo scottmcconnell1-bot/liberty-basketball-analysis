@@ -1,0 +1,860 @@
+"""Turn Film Tool manual tags into ground truth the AI pass can keep.
+
+Coach tags are stored as events (source_type=manual, human_verified=1) so
+event_generator.persist_events will not wipe them. Nearby AI events in the
+tagged window are corrected or rejected, and human_corrections is written.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from typing import Any
+
+from helpers import is_foul_event, normalize_analysis_game_id
+from review_actions import AUTO_ACCEPT_NOTE, reject_event
+
+TEACH_NOTE = "Film Tool teach"
+MATCH_TOLERANCE_MS = 8000
+STAT_EVENTTYPES = {
+    "2PT",
+    "3PT",
+    "FT",
+    "Assist",
+    "Steal",
+    "Turnover",
+    "Foul",
+    "Block",
+    "OffRebound",
+    "DefRebound",
+}
+AI_SHOT_TYPES = {
+    "shot",
+    "make",
+    "miss",
+    "made_two",
+    "missed_two",
+    "made_three",
+    "missed_three",
+    "made_free_throw",
+    "missed_free_throw",
+    "free_throw",
+}
+AI_REBOUND_TYPES = {
+    "rebound",
+    "offensive_rebound",
+    "defensive_rebound",
+    "rebound_offensive",
+    "rebound_defensive",
+}
+
+
+# Film Tool: category Foul, event type is the subcategory.
+# A plain "Foul" tag is the category itself (older tags, before the split).
+_FILM_FOUL_CODES = {
+    "Foul": "foul",
+    "Shooting": "foul_shooting",
+    "Personal": "foul_personal",
+    "Technical": "foul_technical",
+}
+
+
+def _film_foul_code(row: dict) -> str | None:
+    eventtype = str(row.get("eventtype") or "").strip()
+    category = str(row.get("category") or "").strip()
+    if eventtype == "Foul":
+        return "foul"
+    if category == "Foul" and eventtype in _FILM_FOUL_CODES:
+        return _FILM_FOUL_CODES[eventtype]
+    return None
+
+
+def _stat_code(item: dict) -> str:
+    """Box-score code for a tag. The stored event_type for shots stays ``shot``."""
+    shot_type = item.get("shot_type")
+    make = item.get("shot_result") == "make"
+    if shot_type == "2pt":
+        return "made_two" if make else "missed_two"
+    if shot_type == "3pt":
+        return "made_three" if make else "missed_three"
+    if shot_type == "ft":
+        return "made_free_throw" if make else "missed_free_throw"
+    return item["event_type"]
+
+
+def _lookup_event_type_id(db, code: str):
+    try:
+        row = db.execute(
+            "SELECT id FROM event_types WHERE lower(code) = lower(?)",
+            (code,),
+        ).fetchone()
+    except Exception:
+        return None
+    if not row:
+        return None
+    try:
+        return row["id"]
+    except (KeyError, TypeError, IndexError):
+        return row[0]
+
+
+def time_to_ms(value) -> int:
+    text = str(value or "").strip()
+    if not text:
+        return 0
+    parts = text.split(":")
+    try:
+        if len(parts) == 1:
+            return int(round(float(parts[0]) * 1000))
+        return int(round(((int(parts[0]) or 0) * 60 + float(parts[1] or 0)) * 1000))
+    except (TypeError, ValueError):
+        return 0
+
+
+def map_manual_row(row: dict) -> dict | None:
+    eventtype = str(row.get("eventtype") or "").strip()
+    foul_code = _film_foul_code(row)
+    if eventtype not in STAT_EVENTTYPES and not foul_code:
+        return None
+    result = str(row.get("result") or "NA").strip()
+    player = str(row.get("player") or "").strip()
+    team = str(row.get("team") or "").strip()
+    ms = time_to_ms(row.get("start"))
+    if eventtype in {"2PT", "3PT", "FT"}:
+        shot_type = {"2PT": "2pt", "3PT": "3pt", "FT": "ft"}[eventtype]
+        shot_result = "make" if result == "Make" else "miss"
+        return {
+            "event_type": "shot",
+            "shot_result": shot_result,
+            "player": player,
+            "team": team,
+            "timestamp_ms": ms,
+            "label": row.get("label") or f"{eventtype} {result}",
+            "shot_type": shot_type,
+            "family": "shot",
+        }
+    mapped = {
+        "Assist": ("assist", "assist"),
+        "Steal": ("steal", "steal"),
+        "Turnover": ("turnover", "turnover"),
+        "Foul": ("foul", "foul"),
+        "Shooting": ("foul_shooting", "foul"),
+        "Personal": ("foul_personal", "foul"),
+        "Technical": ("foul_technical", "foul"),
+        "Block": ("block", "block"),
+        "OffRebound": ("rebound_offensive", "rebound"),
+        "DefRebound": ("rebound_defensive", "rebound"),
+    }[eventtype]
+    return {
+        "event_type": mapped[0],
+        "shot_result": None,
+        "player": player,
+        "team": team,
+        "timestamp_ms": ms,
+        "label": row.get("label") or eventtype,
+        "shot_type": "offensive" if eventtype == "OffRebound" else ("defensive" if eventtype == "DefRebound" else None),
+        "foul_type": {
+            "foul_shooting": "shooting",
+            "foul_personal": "personal",
+            "foul_technical": "technical",
+        }.get(mapped[0]),
+        "family": mapped[1],
+    }
+
+
+def _ai_family(event_type: str, details: dict | None = None) -> str | None:
+    et = str(event_type or "").lower()
+    if et in AI_SHOT_TYPES:
+        return "shot"
+    if et in AI_REBOUND_TYPES:
+        return "rebound"
+    if is_foul_event(et):
+        return "foul"
+    if et in {"assist", "steal", "turnover", "block"}:
+        return et
+    return None
+
+
+def _details(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw or "{}")
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _row_get(row, key, default=None):
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return getattr(row, key, default)
+
+
+def teach_from_film_tool_rows(db, game_id: str, rows: list[dict]) -> dict[str, Any]:
+    """Replace prior Film Tool teach rows for this analysis key and grade AI events."""
+    game_id = normalize_analysis_game_id(game_id)
+    mapped = [item for item in (map_manual_row(row or {}) for row in rows or []) if item]
+    if not game_id:
+        return {"ok": False, "error": "game_id required", "manual_saved": 0}
+    if not mapped:
+        return {
+            "ok": True,
+            "game_id": game_id,
+            "manual_saved": 0,
+            "corrected": 0,
+            "rejected": 0,
+            "unmatched_manual": 0,
+            "window_ms": None,
+            "replaced": 0,
+        }
+
+    prior = db.execute(
+        """SELECT id, event_type, timestamp_ms FROM events
+            WHERE game_id=? AND source_type='manual'
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
+            ORDER BY timestamp_ms, id""",
+        (game_id,),
+    ).fetchall()
+    prior_ids = [int(_row_get(r, "id")) for r in prior]
+
+    # Re-saving replaces the tag set, but prior rows are rewritten in place rather
+    # than deleted: highlight clips (clips / player_development_clips) may point at
+    # them and a DELETE would fail the foreign key.
+    reuse: list[int | None] = [None] * len(mapped)
+    free = list(prior)
+    for i, item in enumerate(mapped):
+        for row in free:
+            if (_row_get(row, "event_type"), int(_row_get(row, "timestamp_ms") or 0)) == (
+                item["event_type"], item["timestamp_ms"]
+            ):
+                reuse[i] = int(_row_get(row, "id"))
+                free.remove(row)
+                break
+    for i in range(len(mapped)):
+        if reuse[i] is None and free:
+            reuse[i] = int(_row_get(free.pop(0), "id"))
+    surplus = [int(_row_get(r, "id")) for r in free]
+    if surplus:
+        marks = ",".join("?" * len(surplus))
+        for table in ("clips", "player_development_clips"):
+            try:
+                db.execute(f"UPDATE {table} SET event_id=NULL WHERE event_id IN ({marks})", surplus)
+            except sqlite3.OperationalError:  # table absent on slim DBs
+                pass
+        db.execute(f"DELETE FROM events WHERE id IN ({marks})", surplus)
+
+    inserted = 0
+    for item, event_id in zip(mapped, reuse):
+        details = {
+            "film_tool_teach": True,
+            "label": item["label"],
+            "team": item["team"],
+            "shot_type": item["shot_type"],
+            "foul_type": item.get("foul_type"),
+        }
+        event_type_id = _lookup_event_type_id(db, _stat_code(item))
+        if event_id is None:
+            cur = db.execute(
+                """INSERT INTO events
+                      (game_id, player, event_type, event_type_id, shot_result, timestamp_ms, details_json,
+                       human_verified, confidence, review_status, source_type, review_notes, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1.0, 'accepted', 'manual', ?, CURRENT_TIMESTAMP)""",
+                (
+                    game_id,
+                    item["player"] or None,
+                    item["event_type"],
+                    event_type_id,
+                    item["shot_result"],
+                    item["timestamp_ms"],
+                    json.dumps(details),
+                    TEACH_NOTE,
+                ),
+            )
+            event_id = cur.lastrowid
+        else:
+            db.execute(
+                """UPDATE events
+                      SET player=?, event_type=?, event_type_id=?, shot_result=?, timestamp_ms=?,
+                          details_json=?, human_verified=1, confidence=1.0, review_status='accepted',
+                          review_notes=?, updated_at=CURRENT_TIMESTAMP
+                    WHERE id=?""",
+                (
+                    item["player"] or None,
+                    item["event_type"],
+                    event_type_id,
+                    item["shot_result"],
+                    item["timestamp_ms"],
+                    json.dumps(details),
+                    TEACH_NOTE,
+                    event_id,
+                ),
+            )
+        inserted += 1
+        db.execute(
+            """INSERT INTO human_corrections
+                  (game_id, event_id, correction_type, original_value, corrected_value,
+                   field_changed, timestamp_ms, notes)
+               VALUES (?, ?, 'add_event', '', ?, 'event_type', ?, ?)""",
+            (game_id, event_id, item["event_type"], item["timestamp_ms"], TEACH_NOTE),
+        )
+
+    applied = apply_saved_manual_teach(db, game_id, commit=False)
+    db.commit()
+    applied.update({"ok": True, "game_id": game_id, "manual_saved": inserted, "replaced": len(prior_ids)})
+    return applied
+
+
+def _scoring_code(details: dict, shot_result) -> str | None:
+    """made_two / missed_three / … for a Film Tool shot tag. A plain shot scores 0."""
+    from stat_rules import scoring_event_type
+
+    kind = {"2pt": "2", "3pt": "3", "ft": "ft"}.get(str((details or {}).get("shot_type") or ""))
+    if not kind:
+        return None
+    return scoring_event_type(kind, str(shot_result or "") == "make")
+
+
+def _person_key(player: str | None) -> str | None:
+    """Last name on a jersey label. A bare tracker id is not a person."""
+    import re
+
+    text = str(player or "").strip()
+    if not text or text.isdigit():
+        return None
+    match = re.match(r"^(?:#)?(\d+)\s*[- ]\s*(.+)$", text) or re.match(r"^#(\d+)\s+(.+)$", text)
+    name = match.group(2).strip() if match else text
+    last = name.split()[-1] if name else ""
+    if not last or last.isdigit() or last.lower() in {"unkn", "unknown"}:
+        return None
+    from court_slot_mapping import _last_name_key
+
+    return _last_name_key(last)
+
+
+def _different_people(left: str | None, right: str | None) -> bool:
+    a, b = _person_key(left), _person_key(right)
+    return bool(a and b and a != b)
+
+
+def _shot_disproves_make(details: dict) -> bool:
+    return details.get("through_rim") is False and details.get("net_moved") is False
+
+
+def reconcile_makes_with_shots(db, game_id: str) -> dict[str, int]:
+    """The scorer is the player on the shot. A shot that missed is not a make.
+
+    A tag may name an unnamed tracker. It may not take a shot that already
+    belongs to someone else. A make whose own shot says the ball did not go
+    in is rejected.
+
+    A make the coach tagged is truth (Scott, 2026-10-07). Rows already
+    corrected from a tag, or marked human_verified, are never rejected here.
+    """
+    game_id = normalize_analysis_game_id(game_id)
+    makes = db.execute(
+        """SELECT id, player, event_type, timestamp_ms, review_status, details_json
+             FROM events
+            WHERE game_id=?
+              AND COALESCE(source_type,'ai')='ai'
+              AND event_type IN ('made_two','made_three','made_free_throw')
+              AND review_status NOT IN ('rejected','corrected')
+              AND COALESCE(human_verified,0)=0""",
+        (game_id,),
+    ).fetchall()
+    rejected = 0
+    reassigned = 0
+    for make in makes:
+        details = _details(_row_get(make, "details_json"))
+        make_id = int(_row_get(make, "id"))
+        if _shot_disproves_make(details):
+            if reject_event(db, make_id, notes="Shot did not go in", commit=False):
+                rejected += 1
+            continue
+        shots = db.execute(
+            """SELECT player, details_json FROM events
+                WHERE game_id=? AND event_type='shot' AND timestamp_ms=?
+                  AND COALESCE(source_type,'ai')='ai'""",
+            (game_id, int(_row_get(make, "timestamp_ms") or 0)),
+        ).fetchall()
+        own = [
+            shot for shot in shots
+            if not _different_people(_row_get(make, "player"), _row_get(shot, "player"))
+        ]
+        if len(own) != 1:
+            continue
+        if _shot_disproves_make(_details(_row_get(own[0], "details_json"))):
+            if reject_event(db, make_id, notes="Shot did not go in", commit=False):
+                rejected += 1
+    return {"rejected": rejected, "reassigned": reassigned}
+
+
+def _match_rank(ai_type: str, want_code: str | None) -> int:
+    et = str(ai_type or "").lower()
+    if want_code and et == want_code:
+        return 0
+    if et == "shot":
+        return 2
+    return 1
+
+
+def apply_saved_manual_teach(
+    db, game_id: str, *, commit: bool = True, pending_only: bool = False
+) -> dict[str, Any]:
+    """Grade AI events in the window covered by saved Film Tool teach rows.
+
+    pending_only=True (event rebuilds) grades only fresh drafts, so rows a coach
+    already accepted, corrected or rejected are left alone.
+    """
+    game_id = normalize_analysis_game_id(game_id)
+    manual_game_id = game_id
+    manuals = _manual_teach_rows(db, game_id)
+    if not manuals and "__rerun_" in str(game_id):
+        manual_game_id = str(game_id).split("__rerun_", 1)[0]
+        manuals = _manual_teach_rows(db, manual_game_id)
+    if not manuals:
+        return {"corrected": 0, "rejected": 0, "unmatched_manual": 0, "window_ms": None}
+
+    times = [int(_row_get(r, "timestamp_ms") or 0) for r in manuals]
+    start_ms = max(0, min(times) - MATCH_TOLERANCE_MS)
+    end_ms = max(times) + MATCH_TOLERANCE_MS
+
+    ai_rows = db.execute(
+        """SELECT id, game_id, event_type, shot_result, player, timestamp_ms, details_json, review_status
+             FROM events
+            WHERE game_id=?
+              AND COALESCE(source_type,'ai')='ai'
+              AND timestamp_ms BETWEEN ? AND ?
+              AND (? = 0 OR review_status = 'pending')
+            ORDER BY timestamp_ms""",
+        (game_id, start_ms, end_ms, 1 if pending_only else 0),
+    ).fetchall()
+
+    used_ai: set[int] = set()
+    corrected = 0
+    unmatched_manual = 0
+
+    for manual in manuals:
+        details = _details(_row_get(manual, "details_json"))
+        family = _ai_family(_row_get(manual, "event_type"), details)
+        if not family:
+            continue
+        want_ms = int(_row_get(manual, "timestamp_ms") or 0)
+        want_code = _scoring_code(details, _row_get(manual, "shot_result")) if family == "shot" else None
+        best = None
+        best_key = None
+        for ai in ai_rows:
+            ai_id = int(_row_get(ai, "id"))
+            if ai_id in used_ai:
+                continue
+            if _ai_family(_row_get(ai, "event_type"), _details(_row_get(ai, "details_json"))) != family:
+                continue
+            dt = abs(int(_row_get(ai, "timestamp_ms") or 0) - want_ms)
+            if dt > MATCH_TOLERANCE_MS:
+                continue
+            if _different_people(_row_get(ai, "player"), _row_get(manual, "player")):
+                continue
+            key = (_match_rank(_row_get(ai, "event_type"), want_code), dt, ai_id)
+            if best_key is None or key < best_key:
+                best, best_key = ai, key
+        if best is None:
+            unmatched_manual += 1
+            continue
+        used_ai.add(int(_row_get(best, "id")))
+        _correct_ai_from_manual(db, game_id, best, manual, details)
+        corrected += 1
+
+    matched_shot_times = {
+        int(_row_get(ai, "timestamp_ms") or 0)
+        for ai in ai_rows
+        if int(_row_get(ai, "id")) in used_ai
+        and _ai_family(_row_get(ai, "event_type")) == "shot"
+    }
+    tag_times: dict[str, list[int]] = {}
+    for manual in manuals:
+        family = _ai_family(_row_get(manual, "event_type"), _details(_row_get(manual, "details_json")))
+        if not family:
+            continue
+        tag_times.setdefault(family, []).append(int(_row_get(manual, "timestamp_ms") or 0))
+    rejected = 0
+    for ai in ai_rows:
+        ai_id = int(_row_get(ai, "id"))
+        if ai_id in used_ai:
+            continue
+        family = _ai_family(_row_get(ai, "event_type"))
+        if family not in {"shot", "rebound", "assist", "steal", "turnover", "foul", "block"}:
+            continue
+        ai_ts = int(_row_get(ai, "timestamp_ms") or 0)
+        # A tag covers the plays next to it. An open stretch between the first
+        # tag and the last tag is not a reason to throw the play out.
+        # A named player is not an extra just because someone else was tagged nearby.
+        nearby_same_player = False
+        ai_person = _person_key(_row_get(ai, "player"))
+        for manual in manuals:
+            if _ai_family(_row_get(manual, "event_type"), _details(_row_get(manual, "details_json"))) != family:
+                continue
+            if abs(ai_ts - int(_row_get(manual, "timestamp_ms") or 0)) > MATCH_TOLERANCE_MS:
+                continue
+            tag_person = _person_key(_row_get(manual, "player"))
+            if ai_person and tag_person and ai_person != tag_person:
+                continue
+            nearby_same_player = True
+            break
+        if ai_person and not nearby_same_player:
+            continue
+        if not any(abs(ai_ts - tag_ts) <= MATCH_TOLERANCE_MS for tag_ts in tag_times.get(family, [])):
+            continue
+        # The generator stores a shot and a made/missed row at the same time.
+        # The tag counts once. The other row is the same play, not an extra.
+        if family == "shot" and ai_ts in matched_shot_times:
+            continue
+        result = reject_event(
+            db,
+            ai_id,
+            notes=f"{TEACH_NOTE}: extra AI event in tagged window",
+            commit=False,
+        )
+        if result:
+            rejected += 1
+
+    reconcile_makes_with_shots(db, game_id)
+    reject_shots_when_the_other_team_has_the_ball(
+        db, game_id, pending_only=pending_only, commit=False,
+    )
+    reject_shots_when_the_ball_is_not_in_play(
+        db, game_id, pending_only=pending_only, commit=False,
+    )
+
+    if commit:
+        db.commit()
+    return {
+        "corrected": corrected,
+        "rejected": rejected,
+        "unmatched_manual": unmatched_manual,
+        "window_ms": [start_ms, end_ms],
+    }
+
+
+def _shooter_team(details: dict, player: str | None, roster: list[dict]) -> str | None:
+    """Liberty or the opponent name. A bare tracker id has no team."""
+    named = str(details.get("team") or "").strip()
+    if named:
+        return named
+    side = details.get("team_side")
+    by_last = {}
+    for person in roster:
+        label = str(person.get("side_label") or "").strip()
+        last = _person_key(person.get("name"))
+        if label and last:
+            by_last[last] = label
+    person = _person_key(player)
+    if person and person in by_last:
+        return by_last[person]
+    if side in {"home", "away"} and roster:
+        liberty_home = next((p.get("team") == "home" for p in roster if p.get("side") == "liberty"), None)
+        opponent = next((str(p.get("side_label") or "") for p in roster if p.get("side") == "opponent"), "")
+        if liberty_home is True:
+            return "Liberty" if side == "home" else opponent or None
+        if liberty_home is False:
+            return "Liberty" if side == "away" else opponent or None
+    return None
+
+
+def _tag_points(rows: list[dict]) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
+    possession = []
+    shots = []
+    for row in rows:
+        team = str(row.get("team") or "").strip()
+        side = str(row.get("side") or "").strip()
+        try:
+            ts = time_to_ms(row.get("start"))
+        except (TypeError, ValueError):
+            continue
+        if side in {"Offense", "Defense"} and team:
+            possession.append((ts, team, side))
+        if str(row.get("eventtype") or "") in {"2PT", "3PT", "FT"} and team:
+            shots.append((ts, team))
+    return possession, shots
+
+
+NO_BALL_NOTE = "This player's team did not have the ball, so no shot was attempted."
+NOT_IN_PLAY_NOTE = "The ball is not in play between quarters."
+
+
+def reject_shots_when_the_other_team_has_the_ball(
+    db, game_id: str, *, pending_only: bool = False, commit: bool = True,
+    tag_rows: list[dict] | None = None, dry_run: bool = False,
+) -> dict[str, Any]:
+    """Drop an AI shot credited to the team the film tags say is on defense.
+
+    Scott's Q1 notes: the named player was on defense, that team did not have
+    the ball, and no shot was attempted. The 8-second same-stat match leaves
+    those rows in place because the nearby tag is a foul, an out-of-bounds,
+    or the other team's play. A shot tag for the shooter's own team within
+    8 seconds is left alone.
+    """
+    from stat_rules import possession_tag_for_shot, team_has_the_ball
+
+    game_id = normalize_analysis_game_id(game_id)
+    if tag_rows is None:
+        from film_tool_tags import load_manual_tags
+
+        base = str(game_id).split("__rerun_", 1)[0]
+        loaded = load_manual_tags(base)
+        tag_rows = (loaded or {}).get("rows") if isinstance(loaded, dict) else None
+    if not tag_rows:
+        return {"rejected": 0, "checked": 0}
+    possession, shot_tags = _tag_points(tag_rows)
+    if not possession:
+        return {"rejected": 0, "checked": 0}
+
+    from program_mode import analysis_players_from_scorebook, load_scorebook
+
+    roster = analysis_players_from_scorebook(load_scorebook(str(game_id))) or []
+    status_sql = "review_status = 'pending'" if pending_only else "review_status IN ('pending', 'accepted')"
+    rows = db.execute(
+        f"""SELECT id, player, event_type, timestamp_ms, details_json, review_status
+              FROM events
+             WHERE game_id=?
+               AND COALESCE(source_type,'ai')='ai'
+               AND COALESCE(human_verified,0)=0
+               AND {status_sql}
+               AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})
+             ORDER BY timestamp_ms, id""",
+        (game_id, *sorted(AI_SHOT_TYPES)),
+    ).fetchall()
+    rejected = 0
+    checked = 0
+    plan: list[dict] = []
+    seen_ms: set[int] = set()
+    for row in rows:
+        shot_ms = int(_row_get(row, "timestamp_ms") or 0)
+        if shot_ms in seen_ms:
+            continue
+        details = _details(_row_get(row, "details_json"))
+        shooter = _shooter_team(details, _row_get(row, "player"), roster)
+        if not shooter:
+            continue
+        checked += 1
+        if any(abs(shot_ms - ts) <= MATCH_TOLERANCE_MS and team == shooter for ts, team in shot_tags):
+            continue
+        tag = possession_tag_for_shot(possession, shot_ms)
+        if tag is None:
+            continue
+        has_ball = team_has_the_ball(shooter, tag[1], tag[2])
+        if has_ball is not False:
+            continue
+        seen_ms.add(shot_ms)
+        plan.append({
+            "ms": shot_ms,
+            "player": _row_get(row, "player"),
+            "shooter_team": shooter,
+            "tag_team": tag[1],
+            "tag_side": tag[2],
+        })
+        if dry_run:
+            continue
+        twins = [
+            other for other in rows
+            if int(_row_get(other, "timestamp_ms") or 0) == shot_ms
+            and str(_row_get(other, "player") or "") == str(_row_get(row, "player") or "")
+        ]
+        for twin in twins:
+            before = _row_get(twin, "review_status")
+            result = reject_event(
+                db,
+                int(_row_get(twin, "id")),
+                notes=NO_BALL_NOTE,
+                commit=False,
+            )
+            if result and before != "rejected":
+                rejected += 1
+        assists = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND event_type='assist'
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND COALESCE(human_verified,0)=0
+                   AND {status_sql}""",
+            (game_id, shot_ms),
+        ).fetchall()
+        for assist in assists:
+            before = _row_get(assist, "review_status")
+            result = reject_event(
+                db,
+                int(_row_get(assist, "id")),
+                notes=NO_BALL_NOTE,
+                commit=False,
+            )
+            if result and before != "rejected":
+                rejected += 1
+    if commit and not dry_run:
+        db.commit()
+    return {"rejected": rejected, "checked": checked, "plan": plan}
+
+
+def _quarter_marks(rows: list[dict]) -> list[tuple[int, str]]:
+    marks = []
+    for row in rows:
+        kind = str(row.get("eventtype") or "")
+        if kind not in {"EndQTR", "StartQTR"}:
+            continue
+        try:
+            marks.append((time_to_ms(row.get("start")), kind))
+        except (TypeError, ValueError):
+            continue
+    return marks
+
+
+def reject_shots_when_the_ball_is_not_in_play(
+    db, game_id: str, *, pending_only: bool = False, commit: bool = True,
+    tag_rows: list[dict] | None = None, dry_run: bool = False,
+) -> dict[str, Any]:
+    """Drop an AI shot that falls after EndQTR and before the next StartQTR.
+
+    Scott's Q2 notes on 17:18.8 and 17:31.8: the break between quarters, the
+    ball is not in play. A shot tag within 8 seconds is left alone, so a
+    buzzer shot next to the EndQTR click is not removed.
+    """
+    from stat_rules import shot_is_between_quarters
+
+    game_id = normalize_analysis_game_id(game_id)
+    if tag_rows is None:
+        from film_tool_tags import load_manual_tags
+
+        base = str(game_id).split("__rerun_", 1)[0]
+        loaded = load_manual_tags(base)
+        tag_rows = (loaded or {}).get("rows") if isinstance(loaded, dict) else None
+    if not tag_rows:
+        return {"rejected": 0, "checked": 0}
+    marks = _quarter_marks(tag_rows)
+    if not any(kind == "EndQTR" for _ts, kind in marks) or not any(kind == "StartQTR" for _ts, kind in marks):
+        return {"rejected": 0, "checked": 0}
+    _possession, shot_tags = _tag_points(tag_rows)
+    status_sql = "review_status = 'pending'" if pending_only else "review_status IN ('pending', 'accepted')"
+    # Auto-accepted shot twins are human_verified but still machine output.
+    verified_sql = "COALESCE(human_verified,0)=0" if pending_only else (
+        "(COALESCE(human_verified,0)=0 OR review_notes=?)"
+    )
+    params: list[Any] = [game_id]
+    if not pending_only:
+        params.append(AUTO_ACCEPT_NOTE)
+    params.extend(sorted(AI_SHOT_TYPES))
+    rows = db.execute(
+        f"""SELECT id, player, event_type, timestamp_ms, review_status
+              FROM events
+             WHERE game_id=?
+               AND COALESCE(source_type,'ai')='ai'
+               AND {verified_sql}
+               AND {status_sql}
+               AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})
+             ORDER BY timestamp_ms, id""",
+        params,
+    ).fetchall()
+    rejected = 0
+    checked = 0
+    plan: list[dict] = []
+    seen_ms: set[int] = set()
+    for row in rows:
+        shot_ms = int(_row_get(row, "timestamp_ms") or 0)
+        if shot_ms in seen_ms:
+            continue
+        gap = shot_is_between_quarters(marks, shot_ms)
+        if gap is None:
+            continue
+        checked += 1
+        if any(abs(shot_ms - ts) <= MATCH_TOLERANCE_MS for ts, _team in shot_tags):
+            continue
+        seen_ms.add(shot_ms)
+        plan.append({"ms": shot_ms, "player": _row_get(row, "player"), "gap": list(gap)})
+        if dry_run:
+            continue
+        twins = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND player=?
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND {status_sql}
+                   AND event_type IN ({",".join("?" * len(AI_SHOT_TYPES))})""",
+            (game_id, shot_ms, _row_get(row, "player"), *sorted(AI_SHOT_TYPES)),
+        ).fetchall()
+        for twin in twins:
+            before = _row_get(twin, "review_status")
+            result = reject_event(db, int(_row_get(twin, "id")), notes=NOT_IN_PLAY_NOTE, commit=False)
+            if result and before != "rejected":
+                rejected += 1
+        assists = db.execute(
+            f"""SELECT id, review_status FROM events
+                 WHERE game_id=? AND timestamp_ms=? AND event_type='assist'
+                   AND COALESCE(source_type,'ai')='ai'
+                   AND {status_sql}""",
+            (game_id, shot_ms),
+        ).fetchall()
+        for assist in assists:
+            before = _row_get(assist, "review_status")
+            result = reject_event(db, int(_row_get(assist, "id")), notes=NOT_IN_PLAY_NOTE, commit=False)
+            if result and before != "rejected":
+                rejected += 1
+    if commit and not dry_run:
+        db.commit()
+    return {"rejected": rejected, "checked": checked, "plan": plan}
+
+
+def _manual_teach_rows(db, game_id: str):
+    return db.execute(
+        """SELECT id, event_type, shot_result, player, timestamp_ms, details_json
+             FROM events
+            WHERE game_id=? AND source_type='manual'
+              AND COALESCE(details_json,'') LIKE '%film_tool_teach%'
+            ORDER BY timestamp_ms""",
+        (game_id,),
+    ).fetchall()
+
+
+def _correct_ai_from_manual(db, game_id, ai_row, manual_row, manual_details: dict) -> None:
+    ai_id = int(_row_get(ai_row, "id"))
+    new_player = str(_row_get(manual_row, "player") or "").strip()
+    new_type = _scoring_code(manual_details, _row_get(manual_row, "shot_result")) or _row_get(manual_row, "event_type")
+    new_result = _row_get(manual_row, "shot_result")
+    details = _details(_row_get(ai_row, "details_json"))
+    if manual_details.get("shot_type"):
+        details["shot_type"] = manual_details["shot_type"]
+    if manual_details.get("team"):
+        details["team"] = manual_details["team"]
+    details["film_tool_teach"] = True
+    old_player = _row_get(ai_row, "player")
+    type_id = _lookup_event_type_id(db, str(new_type))
+    db.execute(
+        """UPDATE events
+              SET player=?,
+                  event_type=?,
+                  event_type_id=COALESCE(?, event_type_id),
+                  shot_result=?,
+                  details_json=?,
+                  review_status='corrected',
+                  human_verified=1,
+                  review_notes=?,
+                  reviewed_at=CURRENT_TIMESTAMP
+            WHERE id=?""",
+        (
+            new_player or old_player,
+            new_type,
+            type_id,
+            new_result,
+            json.dumps(details),
+            TEACH_NOTE,
+            ai_id,
+        ),
+    )
+    db.execute(
+        """INSERT INTO human_corrections
+              (game_id, event_id, correction_type, original_value, corrected_value,
+               field_changed, timestamp_ms, notes)
+           VALUES (?, ?, 'change_event', ?, ?, 'player', ?, ?)""",
+        (
+            str(_row_get(ai_row, "game_id") or game_id),
+            ai_id,
+            str(old_player or ""),
+            new_player,
+            int(_row_get(manual_row, "timestamp_ms") or 0),
+            TEACH_NOTE,
+        ),
+    )
