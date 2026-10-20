@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-10-20. Jason, Brad, and Hermes: start at the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, and Muse: start at the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
 
 ## Pickup (2026-10-20)
 
@@ -70,10 +70,10 @@ Full first-run write-ups are in `JASON.md` and `BRAD.md`. Do not copy the book o
 
 ## Standing facts
 
-- Working branch is `main`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`, Brad's is `BRAD.md`. Push the same commits to `Brad/Claude` when a pull request is opened for Jason. Auto-accept pull request 147 is still open and is not on `main`.
+- Working branch is `main`. On 2026-10-20 `cursor/count-roadmap-2026-10-10` was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`. Brad's is `BRAD.md`. Hermes's is `docs/agent_handoffs/HERMES.md`. Gemini's is `docs/agent_handoffs/GEMINI.md` (upload folder `gemini-upload/`). Muse's is `MUSE.md`. Muse has no separate branch. Push the same commits to `Brad/Claude` when a pull request is opened for Jason. Auto-accept pull request 147 is still open and is not on `main`.
 - Home owns data. School uses Funnel only: https://liberty-coach.tail368a37.ts.net.
 - Names: Dayley, Daley, and Daly are one Liberty player (#40, roster name Daly). Liberty has no 2 and no 6. Foster #22 is Adrian. Ask Scott before treating any other close spelling as the same person.
-- A make is `ball_through_rim` or `net_moved_after_shot`. Only the core sequence writes one. Hermes may edit `ai_bridge.py` only; it is never called from the core. Its notes are `HERMES.md`.
+- A make is `ball_through_rim` or `net_moved_after_shot`. Only the core sequence writes one. Hermes may edit `ai_bridge.py` only; it is never called from the core. Its notes are `HERMES.md`. Muse's note is `MUSE.md`.
 - NFHS counting rules (Scott, 2026-09-15): FT is the lane lined up around the key with the camera locked on it. Assist is the last pass before a made field goal, 1-2 dribbles, no FT assists. Turnover is the offense losing the ball before a shot. Steal is the defender's active play causing that turnover. OREB or DREB comes from shooter and rebounder shirt color. Block is a deflection near the shooter's hand; if it still goes in, it is a field goal. Starters are the five the coach picks per game.
 - Decisions still in force: both-false shots stay misses for now. The 79 unmatched tags stay unmatched (do not insert them as makes). Scott (2026-10-08) kept the 8-second window (`MATCH_TOLERANCE_MS = 8000`). A rerun reads its own rows for identity and does not copy labels from the base game id.
 

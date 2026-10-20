@@ -1,6 +1,12 @@
 # Gemini handoff
 
-Updated: 2026-10-18. Gemini cannot see GitHub. Chat memory is not the record. If this file and an older note disagree, this file wins. The upload folder is `gemini-upload/` at the repo root. Upload that whole folder. Hermes reads `docs/agent_handoffs/HERMES.md`. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-20. Gemini cannot see GitHub. Chat memory is not the record. If this file and an older note disagree, this file wins. The upload folder is `gemini-upload/` at the repo root. Upload that whole folder again after 2026-10-20. A pull does not reach Gemini. Hermes reads `docs/agent_handoffs/HERMES.md`. Muse reads `MUSE.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`.
+
+## Pickup (2026-10-20)
+
+The program is on `main` at `3eea117`. From 2026-10-10 through the morning of 2026-10-20 the checkout was `cursor/count-roadmap-2026-10-10`. That branch was fast-forwarded onto `main`. `jason-5-may-updates` and `Brad/Claude` are the same commit.
+
+Scott tagged all four Adrian quarters: 458 rows, 129 shots. `run_saved_v6_rule` is 99 of 111 on the Q1–Q3 tracks (12 makes missed, 0 misses called makes) and 113 of 129 on the whole film. Notus A1 Q1 is 24 of 31, 7 makes missed, 0 misses called makes. A longer window, a straight-line fill, ByteTrack, and DeepSORT all scored worse. Do not propose those again. `applied_to_core` is false. Scott did not accept the contract on 2026-10-20. A make on the film is still `ball_through_rim` or `net_moved_after_shot`. Do not change `models/ball_detector.pt` or `ball_confidence`.
 
 `main`, `jason-5-may-updates`, and `Brad/Claude` carry this same folder. `Scott_Hermes` does not. When the rule, the tags, the schema, the teach mapping, or the card scoring changes, refresh every file in `gemini-upload/` from `main` and push that commit to `main`, Jason, and Brad together.
 
@@ -9,6 +15,7 @@ Updated: 2026-10-18. Gemini cannot see GitHub. Chat memory is not the record. If
 | File | What it is |
 |---|---|
 | `GEMINI.md` | This note |
+| `MUSE.md` | Muse's note. Muse reads `main` and does not get a separate branch |
 | `ai_bridge.py` | The published adapter. The scored rule is `run_saved_v6_rule`. `validated_stats` and `BasketballStatsAdapter` stay in the file |
 | `HERMES.md` | Hermes's note. Hermes may edit `ai_bridge.py` only |
 | `ACTIVE.md` | The count record |

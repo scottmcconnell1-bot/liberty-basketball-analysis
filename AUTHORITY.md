@@ -8,6 +8,7 @@
 | --- | --- |
 | **Scott** | Scope, product direction, all gates below |
 | **Cursor** | Implement, verify, update `docs/agent_handoffs/ACTIVE.md`, push to `main`, open PRs for Jason and Brad |
+| **Muse** | Read `MUSE.md` and `ACTIVE.md` on `main`. Same gates as Cursor. No separate branch |
 
 ## Scott gates (stop and ask)
 
