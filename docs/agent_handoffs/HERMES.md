@@ -1,6 +1,6 @@
 # Hermes handoff
 
-Updated: 2026-10-20. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below. Gemini cannot see GitHub. Its note is `docs/agent_handoffs/GEMINI.md` and its upload folder is `gemini-upload/`. Muse reads `MUSE.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`.
+Updated: 2026-10-20. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below. Gemini cannot see GitHub. Its note is `docs/agent_handoffs/GEMINI.md` and its upload folder is `gemini-upload/`. Muse reads `MUSE.md`. Ollama reads `OLLAMA.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`.
 
 ## Pickup (2026-10-20)
 

@@ -34,6 +34,6 @@ A new message during a job is added instruction. Finish the job already underway
 - Review results (including another agent's PR branch) are implemented by merging them into `main` and pushing.
 - Update `docs/agent_handoffs/ACTIVE.md` when task completes; archive to `ARCHIVE/`
 - PR for code changes; no GitHub label coordination
-- When a PR is opened for Jason/Claude, push the same commits to `Brad/Claude` and open a matching PR for Brad. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Both are at the repo root. Muse's note is `MUSE.md`. Muse reads `main` and does not get a separate branch.
+- When a PR is opened for Jason/Claude, push the same commits to `Brad/Claude` and open a matching PR for Brad. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Both are at the repo root. Muse's note is `MUSE.md`. Ollama's note is `OLLAMA.md`. Muse and Ollama read `main` and do not get a separate branch. Ollama runs on this PC.
 - GitHub's default branch is `main`
 - Gemini cannot see GitHub. Its note is `docs/agent_handoffs/GEMINI.md`. Its upload folder is `gemini-upload/`. When the adapter rule, film tags, schema, teach mapping, or card scoring changes, refresh every file in that folder from `main` and push the same commit to `main`, `jason-5-may-updates`, and `Brad/Claude`.

@@ -1,6 +1,6 @@
 # Gemini handoff
 
-Updated: 2026-10-20. Gemini cannot see GitHub. Chat memory is not the record. If this file and an older note disagree, this file wins. The upload folder is `gemini-upload/` at the repo root. Upload that whole folder again after 2026-10-20. A pull does not reach Gemini. Hermes reads `docs/agent_handoffs/HERMES.md`. Muse reads `MUSE.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-20. Gemini cannot see GitHub. Chat memory is not the record. If this file and an older note disagree, this file wins. The upload folder is `gemini-upload/` at the repo root. Upload that whole folder again after 2026-10-20. A pull does not reach Gemini. Hermes reads `docs/agent_handoffs/HERMES.md`. Muse reads `MUSE.md`. Ollama reads `OLLAMA.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`.
 
 ## Pickup (2026-10-20)
 
@@ -16,6 +16,7 @@ Scott tagged all four Adrian quarters: 458 rows, 129 shots. `run_saved_v6_rule` 
 |---|---|
 | `GEMINI.md` | This note |
 | `MUSE.md` | Muse's note. Muse reads `main` and does not get a separate branch |
+| `OLLAMA.md` | Ollama's note. Ollama runs on this PC and does not get a separate branch |
 | `ai_bridge.py` | The published adapter. The scored rule is `run_saved_v6_rule`. `validated_stats` and `BasketballStatsAdapter` stay in the file |
 | `HERMES.md` | Hermes's note. Hermes may edit `ai_bridge.py` only |
 | `ACTIVE.md` | The count record |

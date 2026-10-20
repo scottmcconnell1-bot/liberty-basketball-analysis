@@ -1,12 +1,12 @@
 # Active Task
 
-Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, and Muse: start at the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Muse, and Ollama: start at the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
 
 ## Pickup (2026-10-20)
 
 Scott tagged all four Adrian quarters. The tag file on the home PC has 458 rows and 129 shots: 111 in Q1–Q3 and 18 in Q4. `data/film_tags/*.json` is gitignored, so that file is not in this commit.
 
-**Proven:** `run_saved_v6_rule` is make or miss only. On the 111 Q1–Q3 tracks it is 99 right, 12 makes missed, 0 misses called makes. On the whole Adrian film it is 113 of 129. On Notus A1 Q1 (`jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334`, 31 shots) it is 24 right, 7 makes missed, 0 misses called makes. A longer window, a straight-line fill, ByteTrack, and DeepSORT all scored worse than 24 of 31. The live detector matched 0 of those 31 tags on player, shot type, and make or miss together. `applied_to_core` is false. Scott (2026-10-20) did not accept the contract. A make on the film is still `ball_through_rim` or `net_moved_after_shot`.
+**Proven:** `run_saved_v6_rule` is make or miss only. On the 111 Q1–Q3 tracks it is 99 right, 12 makes missed, 0 misses called makes. On the whole Adrian film it is 113 of 129. On Notus A1 Q1 (`jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334`, 31 shots) it is 24 right, 7 makes missed, 0 misses called makes. A longer window, a straight-line fill, ByteTrack, and DeepSORT all scored worse than 24 of 31. The seven clocks and those trial scores are in `OLLAMA.md`. `SESSION_STATE.md` is Ollama's short status and it now says Idle. The live detector matched 0 of those 31 tags on player, shot type, and make or miss together. `applied_to_core` is false. Scott (2026-10-20) did not accept the contract. A make on the film is still `ball_through_rim` or `net_moved_after_shot`.
 
 The card that reads Liberty 51, Adrian 26 is the tags written onto the card. It is not the live detector. Rebounds, assists, steals, turnovers, and fouls are in the tags. They were not part of the 113. `emit_fouls` stays false.
 
@@ -70,7 +70,7 @@ Full first-run write-ups are in `JASON.md` and `BRAD.md`. Do not copy the book o
 
 ## Standing facts
 
-- Working branch is `main`. On 2026-10-20 `cursor/count-roadmap-2026-10-10` was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`. Brad's is `BRAD.md`. Hermes's is `docs/agent_handoffs/HERMES.md`. Gemini's is `docs/agent_handoffs/GEMINI.md` (upload folder `gemini-upload/`). Muse's is `MUSE.md`. Muse has no separate branch. Push the same commits to `Brad/Claude` when a pull request is opened for Jason. Auto-accept pull request 147 is still open and is not on `main`.
+- Working branch is `main`. On 2026-10-20 `cursor/count-roadmap-2026-10-10` was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason's note is `JASON.md`. Brad's is `BRAD.md`. Hermes's is `docs/agent_handoffs/HERMES.md`. Gemini's is `docs/agent_handoffs/GEMINI.md` (upload folder `gemini-upload/`). Muse's is `MUSE.md`. Ollama's is `OLLAMA.md`. Muse and Ollama have no separate branch. Ollama runs on this PC. Its short status file is `SESSION_STATE.md`. Push the same commits to `Brad/Claude` when a pull request is opened for Jason. Auto-accept pull request 147 is still open and is not on `main`.
 - Home owns data. School uses Funnel only: https://liberty-coach.tail368a37.ts.net.
 - Names: Dayley, Daley, and Daly are one Liberty player (#40, roster name Daly). Liberty has no 2 and no 6. Foster #22 is Adrian. Ask Scott before treating any other close spelling as the same person.
 - A make is `ball_through_rim` or `net_moved_after_shot`. Only the core sequence writes one. Hermes may edit `ai_bridge.py` only; it is never called from the core. Its notes are `HERMES.md`. Muse's note is `MUSE.md`.

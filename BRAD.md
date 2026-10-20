@@ -1,6 +1,6 @@
 # Brad — start here
 
-Updated: 2026-10-20. Branch `Brad/Claude` is even with `main`. Pull `main` before you start. Jason's note is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Muse reads `MUSE.md`.
+Updated: 2026-10-20. Branch `Brad/Claude` is even with `main`. Pull `main` before you start. Jason's note is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Muse reads `MUSE.md`. Ollama reads `OLLAMA.md`.
 
 ## Pickup (2026-10-20) — you are on main
 
