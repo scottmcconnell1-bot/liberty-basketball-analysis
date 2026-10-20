@@ -1,0 +1,63 @@
+{
+  "game_id": "q4_blind_rerun_20261013",
+  "home_is_light": true,
+  "split": 120.0,
+  "tracks": {
+    "1": {
+      "mean_s": 63.6,
+      "mean_v": 148.0,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "2": {
+      "mean_s": 73.9,
+      "mean_v": 111.1,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "3": {
+      "mean_s": 62.7,
+      "mean_v": 149.9,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "4": {
+      "mean_s": 75.0,
+      "mean_v": 145.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "5": {
+      "mean_s": 67.2,
+      "mean_v": 128.4,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "6": {
+      "mean_s": 61.8,
+      "mean_v": 148.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "7": {
+      "mean_s": 67.0,
+      "mean_v": 136.6,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "9": {
+      "mean_s": 53.8,
+      "mean_v": 137.0,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    }
+  }
+}

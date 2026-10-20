@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adrian Q2 AI shot review</title>
+<style>
+  body { font: 15px/1.4 Georgia, serif; margin: 24px; color: #1c1c1c; background: #f7f6f3; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { max-width: 760px; }
+  .bar { position: sticky; top: 0; background: #f7f6f3; padding: 8px 0 12px; display: flex; gap: 8px; align-items: center; }
+  button { font: 14px/1 sans-serif; padding: 8px 12px; border: 1px solid #1c1c1c; background: #fff; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border-bottom: 1px solid #ddd; padding: 8px; vertical-align: top; text-align: left; }
+  th { font: 12px sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  input[type=text], select { width: 100%; font: 14px sans-serif; padding: 6px; box-sizing: border-box; }
+  a { color: #0b57d0; }
+  .muted { color: #555; font: 13px sans-serif; }
+</style>
+</head>
+<body>
+<h1>Adrian Q2, AI shots to review</h1>
+<p>Q1 is done and those rows are off this page. These are the Q2 shots the AI wrote that do not match one of your tags within 8 seconds. A row already marked rejected is off the card. Accept it, reject it, or leave a note that explains it.</p>
+<p class="muted">Same choices as Q1. Watch opens that moment of the film.</p>
+<div class="bar">
+  <button type="button" id="save">Download my answers</button>
+  <span class="muted" id="count"></span>
+</div>
+<table>
+  <thead>
+    <tr><th>Q</th><th>Clock</th><th>Your tag</th><th>AI tag</th><th>Why it is on this list</th><th>Film</th><th>Decision</th><th>Note</th></tr>
+  </thead>
+  <tbody id="body"></tbody>
+</table>
+<script>
+const ROWS = [
+  {"q": "Q2", "clock": "17:18.8", "ms": 1038800, "you": "", "ai": "#40 Dayley  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1038800"},
+  {"q": "Q2", "clock": "17:31.8", "ms": 1051800, "you": "", "ai": "#23 Rodus  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1051800"},
+  {"q": "Q2", "clock": "18:03.8", "ms": 1083840, "you": "", "ai": "#22 Foster  2 Miss  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1083840"},
+  {"q": "Q2", "clock": "18:20.0", "ms": 1099960, "you": "", "ai": "#23 Rodus  2 Miss  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1099960"},
+  {"q": "Q2", "clock": "18:46.2", "ms": 1126240, "you": "", "ai": "#40 Dayley  FT Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1126240"},
+  {"q": "Q2", "clock": "19:58.0", "ms": 1198000, "you": "", "ai": "#22 Foster  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1198000"},
+  {"q": "Q2", "clock": "21:03.2", "ms": 1263200, "you": "", "ai": "#22 Foster  3 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1263200"},
+  {"q": "Q2", "clock": "21:15.8", "ms": 1275800, "you": "", "ai": "7  FT Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1275800"},
+  {"q": "Q2", "clock": "21:37.0", "ms": 1297040, "you": "", "ai": "#40 Dayley  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1297040"},
+  {"q": "Q2", "clock": "23:08.6", "ms": 1388600, "you": "", "ai": "7  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1388600"},
+  {"q": "Q2", "clock": "23:18.2", "ms": 1398200, "you": "", "ai": "#22 Foster  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1398200"},
+  {"q": "Q2", "clock": "23:31.2", "ms": 1411200, "you": "", "ai": "#13 Mendoza  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1411200"},
+  {"q": "Q2", "clock": "23:41.2", "ms": 1421200, "you": "", "ai": "#13 Mendoza  3 Make  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1421200"},
+  {"q": "Q2", "clock": "25:29.2", "ms": 1529200, "you": "", "ai": "#22 Foster  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1529200"},
+  {"q": "Q2", "clock": "25:48.4", "ms": 1548400, "you": "", "ai": "#13 Mendoza  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1548400"},
+  {"q": "Q2", "clock": "26:05.0", "ms": 1565000, "you": "", "ai": "#40 Dayley  2 Make  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1565000"},
+  {"q": "Q2", "clock": "26:09.8", "ms": 1569760, "you": "", "ai": "#13 Mendoza  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1569760"},
+  {"q": "Q2", "clock": "28:07.0", "ms": 1687000, "you": "", "ai": "#40 Dayley  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1687000"},
+  {"q": "Q2", "clock": "28:53.4", "ms": 1733440, "you": "", "ai": "7  3 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1733440"},
+  {"q": "Q2", "clock": "29:44.8", "ms": 1784800, "you": "", "ai": "#23 Rodus  2 Make  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1784800"},
+  {"q": "Q2", "clock": "30:05.8", "ms": 1805800, "you": "", "ai": "#40 Dayley  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1805800"},
+  {"q": "Q2", "clock": "30:25.8", "ms": 1825800, "you": "", "ai": "3  3 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1825800"},
+  {"q": "Q2", "clock": "30:47.4", "ms": 1847400, "you": "", "ai": "#40 Dayley  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1847400"},
+  {"q": "Q2", "clock": "30:56.6", "ms": 1856600, "you": "", "ai": "#40 Dayley  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1856600"},
+  {"q": "Q2", "clock": "31:00.6", "ms": 1860600, "you": "", "ai": "#25 Alvarez  2 Make  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1860600"},
+  {"q": "Q2", "clock": "31:07.8", "ms": 1867800, "you": "", "ai": "#40 Dayley  2 Miss  rejected", "issue": "Extra AI row, already rejected", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1867800"},
+  {"q": "Q2", "clock": "31:55.4", "ms": 1915400, "you": "", "ai": "7  2 Miss  pending", "issue": "Extra AI row, no tag within 8 seconds", "watch": "http://127.0.0.1:8080/film/nfhs_gam0a66d85e12.mp4?game_id=jrhigh_adrian%2C_or_LIBERTY_A_v_ADRIAN_H_20260809_221334&t=1915400"}
+];
+const body = document.getElementById("body");
+document.getElementById("count").textContent = ROWS.length + " Q2 AI shots";
+ROWS.forEach((r, i) => {
+  const tr = document.createElement("tr");
+  const link = document.createElement("a");
+  link.href = r.watch;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = "Watch";
+  tr.appendChild(cell(r.q));
+  tr.appendChild(cell(r.clock));
+  tr.appendChild(cell(r.you || "—"));
+  tr.appendChild(cell(r.ai));
+  tr.appendChild(cell(r.issue));
+  const film = document.createElement("td");
+  film.appendChild(link);
+  tr.appendChild(film);
+  const decision = document.createElement("td");
+  const select = document.createElement("select");
+  select.dataset.i = String(i);
+  select.dataset.k = "decision";
+  ["", "Accept", "Reject", "Note"].forEach((label) => {
+    const option = document.createElement("option");
+    option.value = label;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+  decision.appendChild(select);
+  tr.appendChild(decision);
+  const noteCell = document.createElement("td");
+  const note = document.createElement("input");
+  note.type = "text";
+  note.dataset.i = String(i);
+  note.dataset.k = "note";
+  note.placeholder = "Explain this AI tag";
+  noteCell.appendChild(note);
+  tr.appendChild(noteCell);
+  body.appendChild(tr);
+});
+function cell(text) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  return td;
+}
+document.getElementById("save").onclick = () => {
+  const answers = ROWS.map((r, i) => {
+    const decision = document.querySelector('[data-i="' + i + '"][data-k="decision"]').value;
+    const note = document.querySelector('[data-i="' + i + '"][data-k="note"]').value;
+    return [r.q, r.clock, r.ms, r.you, r.ai, r.issue, r.watch, decision, note];
+  });
+  const header = ["quarter","clock","film_ms","your_tag","ai_tag","issue","watch","decision","note"];
+  const csv = [header].concat(answers).map(line => line.map(cellText => {
+    const s = String(cellText ?? "");
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(",")).join("\n");
+  const blob = new Blob([csv], {type: "text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "adrian_q2_ai_shot_review.csv";
+  a.click();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,650 @@
+{
+ "info": {
+  "journal_mode": "wal",
+  "user_version": 0,
+  "page_size": 4096,
+  "page_count": 3718036,
+  "freelist": 3329962,
+  "auto_vacuum": 0
+ },
+ "objects": [
+  [
+   "index",
+   "idx_detections_game_frame",
+   "detections",
+   "CREATE INDEX idx_detections_game_frame ON detections(game_id, frame_number)"
+  ],
+  [
+   "index",
+   "idx_events_game_ts",
+   "events",
+   "CREATE INDEX idx_events_game_ts ON events(game_id, timestamp_ms)"
+  ],
+  [
+   "index",
+   "idx_events_game_type",
+   "events",
+   "CREATE INDEX idx_events_game_type ON events(game_id, event_type)"
+  ],
+  [
+   "index",
+   "idx_film_tool_games_analysis_key",
+   "film_tool_games",
+   "CREATE INDEX idx_film_tool_games_analysis_key\n            ON film_tool_games(analysis_key)"
+  ],
+  [
+   "index",
+   "idx_film_tool_games_relational_game_id",
+   "film_tool_games",
+   "CREATE INDEX idx_film_tool_games_relational_game_id\n            ON film_tool_games(relational_game_id)"
+  ],
+  [
+   "index",
+   "idx_plays_share_token",
+   "plays",
+   "CREATE UNIQUE INDEX idx_plays_share_token ON plays(share_token)"
+  ],
+  [
+   "index",
+   "sqlite_autoindex_app_settings_1",
+   "app_settings",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_conversation_members_1",
+   "conversation_members",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_event_types_1",
+   "event_types",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_film_roster_players_1",
+   "film_roster_players",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_film_tool_games_1",
+   "film_tool_games",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_maxpreps_rankings_1",
+   "maxpreps_rankings",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_message_read_receipts_1",
+   "message_read_receipts",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_module_entitlements_1",
+   "module_entitlements",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_play_categories_1",
+   "play_categories",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_playbook_plays_1",
+   "playbook_plays",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_player_effect_1",
+   "player_effect",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_player_minutes_1",
+   "player_minutes",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_practice_playlist_clips_1",
+   "practice_playlist_clips",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_push_subscriptions_1",
+   "push_subscriptions",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_recruiting_profiles_1",
+   "recruiting_profiles",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_review_items_1",
+   "review_items",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_scouting_tendencies_aggregated_1",
+   "scouting_tendencies_aggregated",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_seasons_1",
+   "seasons",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_stats_1",
+   "stats",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_track_identity_labels_1",
+   "track_identity_labels",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_user_sessions_1",
+   "user_sessions",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_users_1",
+   "users",
+   ""
+  ],
+  [
+   "index",
+   "sqlite_autoindex_videos_1",
+   "videos",
+   ""
+  ],
+  [
+   "table",
+   "analysis_runs",
+   "analysis_runs",
+   "CREATE TABLE analysis_runs (\n    id           INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id      INTEGER REFERENCES games(id),\n    analysis_key TEXT NOT NULL,\n    video_path   TEXT NOT NULL,\n    source_video_id INTEGER REFERENCES videos(id),\n    base_game_id TEXT,\n    base_analysis_key TEXT,\n    run_label    TEXT,\n    settings_json TEXT,\n    run_kind     TEXT NOT NULL DEFAULT 'primary',\n    status       TEXT NOT NULL DEFAULT 'pending',\n    progress_pct REAL DEFAULT 0,\n    progress_step TEXT,\n    started_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    completed_at TIMESTAMP,\n    error_message TEXT\n)"
+  ],
+  [
+   "table",
+   "app_settings",
+   "app_settings",
+   "CREATE TABLE app_settings (\n    key        TEXT PRIMARY KEY,\n    value      TEXT NOT NULL,\n    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "clip_tags",
+   "clip_tags",
+   "CREATE TABLE clip_tags (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    clip_id            INTEGER NOT NULL REFERENCES clips(id) ON DELETE CASCADE,\n    tag                TEXT NOT NULL,\n    category           TEXT,\n    created_by_user_id INTEGER REFERENCES users(id),\n    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "clips",
+   "clips",
+   "CREATE TABLE clips (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id            INTEGER REFERENCES games(id),\n    video_asset_id     INTEGER REFERENCES video_assets(id),\n    event_id           INTEGER REFERENCES events(id),\n    possession_id      INTEGER REFERENCES possessions(id),\n    clip_type          TEXT NOT NULL DEFAULT 'event',\n    title              TEXT NOT NULL,\n    start_timestamp_ms INTEGER NOT NULL,\n    end_timestamp_ms   INTEGER NOT NULL,\n    created_by_user_id INTEGER REFERENCES users(id),\n    source             TEXT NOT NULL DEFAULT 'manual',\n    review_status      TEXT NOT NULL DEFAULT 'reviewed',\n    confidence         REAL,\n    notes              TEXT,\n    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "conversation_members",
+   "conversation_members",
+   "CREATE TABLE conversation_members (\n    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,\n    user_id         TEXT NOT NULL,\n    role            TEXT NOT NULL DEFAULT 'member',\n    last_read_at    TIMESTAMP,\n    joined_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (conversation_id, user_id)\n)"
+  ],
+  [
+   "table",
+   "conversations",
+   "conversations",
+   "CREATE TABLE conversations (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    title           TEXT,\n    type            TEXT NOT NULL DEFAULT 'direct',\n    created_by      TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "detections",
+   "detections",
+   "CREATE TABLE detections (\n    id           INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id      TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    frame_number INTEGER NOT NULL,\n    timestamp_ms INTEGER NOT NULL,\n    object_class TEXT NOT NULL,\n    confidence   REAL NOT NULL,\n    x_center     INTEGER NOT NULL,\n    y_center     INTEGER NOT NULL,\n    width        INTEGER NOT NULL,\n    height       INTEGER NOT NULL,\n    tracker_id   INTEGER,\n    jersey_read  INTEGER,\n    jersey_confidence REAL,\n    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, player_cluster INTEGER)"
+  ],
+  [
+   "table",
+   "event_participants",
+   "event_participants",
+   "CREATE TABLE event_participants (\n    id                   INTEGER PRIMARY KEY AUTOINCREMENT,\n    event_id             INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,\n    player_id            INTEGER REFERENCES players(id),\n    roster_membership_id INTEGER REFERENCES roster_memberships(id),\n    team_id              INTEGER REFERENCES teams(id),\n    role                 TEXT NOT NULL,\n    tracker_id           INTEGER,\n    confidence           REAL,\n    source               TEXT NOT NULL DEFAULT 'manual',\n    created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "event_types",
+   "event_types",
+   "CREATE TABLE event_types (\n    id                     INTEGER PRIMARY KEY AUTOINCREMENT,\n    code                   TEXT UNIQUE NOT NULL,\n    label                  TEXT NOT NULL,\n    category               TEXT,\n    counts_for_stats       INTEGER NOT NULL DEFAULT 1,\n    is_scoring_event       INTEGER NOT NULL DEFAULT 0,\n    is_possession_boundary INTEGER NOT NULL DEFAULT 0,\n    created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "events",
+   "events",
+   "CREATE TABLE events (\n    id             INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id        TEXT NOT NULL,\n    player         TEXT,\n    event_type     TEXT NOT NULL,\n    shot_result    TEXT,\n    timestamp_ms   INTEGER NOT NULL,\n    details_json   TEXT,\n    source_video   TEXT,\n    source_frame   INTEGER,\n    human_verified INTEGER NOT NULL DEFAULT 0,\n    confidence     REAL,\n    review_status  TEXT NOT NULL DEFAULT 'pending',\n    source_type    TEXT DEFAULT 'ai',\n    possession_id  INTEGER REFERENCES possessions(id),\n    relational_game_id INTEGER REFERENCES games(id),\n    event_type_id  INTEGER REFERENCES event_types(id),\n    team_id        INTEGER REFERENCES teams(id),\n    primary_player_id INTEGER REFERENCES players(id),\n    primary_roster_membership_id INTEGER REFERENCES roster_memberships(id),\n    reviewed_by_user_id INTEGER REFERENCES users(id),\n    reviewed_at    TIMESTAMP,\n    review_notes   TEXT,\n    created_by_user_id INTEGER REFERENCES users(id),\n    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at     TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "film_roster_players",
+   "film_roster_players",
+   "CREATE TABLE film_roster_players (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    season_id       INTEGER NOT NULL REFERENCES seasons(id),\n    level           TEXT NOT NULL,\n    gender          TEXT NOT NULL,\n    side            TEXT NOT NULL,\n    player_label    TEXT NOT NULL,\n    jersey_number   TEXT,\n    name            TEXT,\n    grade           TEXT,\n    position        TEXT,\n    sort_order      INTEGER NOT NULL DEFAULT 0,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(season_id, level, gender, side, player_label)\n)"
+  ],
+  [
+   "table",
+   "film_tool_games",
+   "film_tool_games",
+   "CREATE TABLE film_tool_games (\n            id                  INTEGER PRIMARY KEY AUTOINCREMENT,\n            client_game_id      TEXT NOT NULL UNIQUE,\n            analysis_key        TEXT,\n            relational_game_id  INTEGER REFERENCES games(id),\n            game_type           TEXT NOT NULL DEFAULT 'my',\n            game_date           TEXT,\n            our_team            TEXT,\n            opponent            TEXT,\n            tag_count           INTEGER NOT NULL DEFAULT 0,\n            state_json          TEXT NOT NULL,\n            created_by_user_id  INTEGER REFERENCES users(id),\n            created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n        )"
+  ],
+  [
+   "table",
+   "games",
+   "games",
+   "CREATE TABLE games (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    scheduled_game_id  INTEGER REFERENCES scheduled_games(id),\n    start_time         TIMESTAMP,\n    end_time           TIMESTAMP,\n    source_type        TEXT NOT NULL DEFAULT 'manual',\n    source_key         TEXT NOT NULL,\n    nfhs_game_id       TEXT,\n    nfhs_url           TEXT,\n    home_score         INTEGER,\n    away_score         INTEGER,\n    result             TEXT,\n    is_conference      INTEGER NOT NULL DEFAULT 0,\n    created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "human_corrections",
+   "human_corrections",
+   "CREATE TABLE human_corrections (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id         TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    event_id        INTEGER REFERENCES events(id) ON DELETE SET NULL,\n    correction_type TEXT NOT NULL,  -- 'add_event', 'remove_event', 'change_event', 'change_shot_type', 'change_play_type', 'change_player'\n    original_value  TEXT,\n    corrected_value TEXT NOT NULL,\n    field_changed   TEXT NOT NULL,\n    timestamp_ms    INTEGER,\n    notes           TEXT,\n    applied_to_model INTEGER DEFAULT 0,  -- whether this correction has been used to improve the model\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "issue_reports",
+   "issue_reports",
+   "CREATE TABLE issue_reports (\n    id           INTEGER PRIMARY KEY AUTOINCREMENT,\n    entry_type   TEXT NOT NULL DEFAULT 'issue',\n    title        TEXT NOT NULL,\n    details      TEXT NOT NULL,\n    source_path  TEXT,\n    browser_console TEXT,\n    status       TEXT NOT NULL DEFAULT 'open',\n    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    completed_at TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "maxpreps_rankings",
+   "maxpreps_rankings",
+   "CREATE TABLE maxpreps_rankings (\n            id              INTEGER PRIMARY KEY AUTOINCREMENT,\n            team_key        TEXT NOT NULL,\n            state           TEXT NOT NULL DEFAULT 'Idaho',\n            ranking         INTEGER,\n            ranking_url     TEXT,\n            scraped_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(team_key, state)\n        )"
+  ],
+  [
+   "table",
+   "message_read_receipts",
+   "message_read_receipts",
+   "CREATE TABLE message_read_receipts (\n    message_id      INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,\n    user_id         TEXT NOT NULL,\n    read_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (message_id, user_id)\n)"
+  ],
+  [
+   "table",
+   "messages",
+   "messages",
+   "CREATE TABLE messages (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,\n    sender_id       TEXT NOT NULL,\n    body            TEXT NOT NULL,\n    attachment_url  TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "module_entitlements",
+   "module_entitlements",
+   "CREATE TABLE module_entitlements (\n    id         INTEGER PRIMARY KEY AUTOINCREMENT,\n    team_id    INTEGER REFERENCES teams(id),\n    module_key TEXT NOT NULL,\n    enabled    INTEGER NOT NULL DEFAULT 1,\n    starts_at  TIMESTAMP,\n    ends_at    TIMESTAMP,\n    notes      TEXT,\n    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(team_id, module_key)\n)"
+  ],
+  [
+   "table",
+   "nfhs_credentials",
+   "nfhs_credentials",
+   "CREATE TABLE nfhs_credentials (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    email           TEXT NOT NULL,\n    password_enc    TEXT NOT NULL,  -- encrypted password\n    is_active       INTEGER NOT NULL DEFAULT 1,\n    last_login_at   TIMESTAMP,\n    last_login_status TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "nfhs_matches",
+   "nfhs_matches",
+   "CREATE TABLE nfhs_matches (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    scheduled_game_id  INTEGER NOT NULL REFERENCES scheduled_games(id),\n    nfhs_game_id       TEXT NOT NULL,\n    nfhs_url           TEXT NOT NULL,\n    match_status       TEXT NOT NULL DEFAULT 'candidate',\n    confidence         REAL,\n    created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "notifications",
+   "notifications",
+   "CREATE TABLE notifications (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    type            TEXT NOT NULL,\n    title           TEXT NOT NULL,\n    body            TEXT,\n    link            TEXT,\n    is_read         INTEGER NOT NULL DEFAULT 0,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "play_categories",
+   "play_categories",
+   "CREATE TABLE play_categories (\n            id              INTEGER PRIMARY KEY AUTOINCREMENT,\n            parent_id       INTEGER REFERENCES play_categories(id) ON DELETE CASCADE,\n            name            TEXT NOT NULL,\n            slug            TEXT NOT NULL,\n            slug_path       TEXT NOT NULL UNIQUE,\n            sort_order      INTEGER NOT NULL DEFAULT 0,\n            is_system       INTEGER NOT NULL DEFAULT 0,\n            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n        )"
+  ],
+  [
+   "table",
+   "play_recognitions",
+   "play_recognitions",
+   "CREATE TABLE play_recognitions (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id         TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    play_type       TEXT NOT NULL,  -- 'pick_and_roll', 'isolation', 'transition', 'post_up', 'zone_press', 'man_to_man', 'fast_break', 'half_court_set'\n    play_subtype    TEXT,           -- e.g., 'pnr_ball_handler', 'pnr_screener', 'iso_left', 'iso_right'\n    start_frame     INTEGER NOT NULL,\n    end_frame       INTEGER NOT NULL,\n    start_timestamp_ms INTEGER NOT NULL,\n    end_timestamp_ms INTEGER,\n    primary_tracker_id INTEGER,  -- main player involved\n    secondary_tracker_id INTEGER,  -- screener, helper, etc.\n    confidence      REAL,\n    details_json    TEXT,  -- JSON with player positions, movement vectors\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "play_steps",
+   "play_steps",
+   "CREATE TABLE play_steps (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    play_id         INTEGER NOT NULL REFERENCES plays(id) ON DELETE CASCADE,\n    step_number     INTEGER NOT NULL DEFAULT 0,\n    label           TEXT,\n    positions_json  TEXT NOT NULL DEFAULT '{}',\n    movements_json  TEXT NOT NULL DEFAULT '[]',\n    notes           TEXT,\n    source_image    TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "playbook_plays",
+   "playbook_plays",
+   "CREATE TABLE playbook_plays (\n            id              INTEGER PRIMARY KEY AUTOINCREMENT,\n            playbook_id     INTEGER NOT NULL REFERENCES playbooks(id) ON DELETE CASCADE,\n            play_id         INTEGER NOT NULL REFERENCES plays(id) ON DELETE CASCADE,\n            sort_order      INTEGER NOT NULL DEFAULT 0,\n            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(playbook_id, play_id)\n        )"
+  ],
+  [
+   "table",
+   "playbooks",
+   "playbooks",
+   "CREATE TABLE playbooks (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    name            TEXT NOT NULL,\n    description     TEXT,\n    created_by      TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, kind TEXT NOT NULL DEFAULT 'team', opponent_name TEXT)"
+  ],
+  [
+   "table",
+   "player_development_clips",
+   "player_development_clips",
+   "CREATE TABLE player_development_clips (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    player_id       INTEGER REFERENCES players(id),\n    game_id         TEXT,\n    event_id        INTEGER REFERENCES events(id),\n    canonical_clip_id INTEGER REFERENCES clips(id),\n    relational_game_id INTEGER REFERENCES games(id),\n    clip_start_ms   INTEGER NOT NULL,\n    clip_end_ms     INTEGER NOT NULL,\n    clip_label      TEXT NOT NULL,\n    clip_category   TEXT NOT NULL DEFAULT 'general',\n    season_id       INTEGER REFERENCES seasons(id),\n    notes           TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "player_effect",
+   "player_effect",
+   "CREATE TABLE player_effect (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id         TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    tracker_id      INTEGER NOT NULL,\n    jersey_number   INTEGER,\n    plus_minus      INTEGER DEFAULT 0,  -- score differential while on court\n    possessions_on  INTEGER DEFAULT 0,\n    possessions_off INTEGER DEFAULT 0,\n    points_for      INTEGER DEFAULT 0,\n    points_against  INTEGER DEFAULT 0,\n    ortg            REAL,  -- offensive rating\n    drtg            REAL,  -- defensive rating\n    net_rating      REAL,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(game_id, tracker_id)\n)"
+  ],
+  [
+   "table",
+   "player_minutes",
+   "player_minutes",
+   "CREATE TABLE player_minutes (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id         TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    tracker_id      INTEGER NOT NULL,\n    jersey_number   INTEGER,\n    player_name     TEXT,\n    first_frame     INTEGER NOT NULL,\n    last_frame      INTEGER NOT NULL,\n    total_frames    INTEGER NOT NULL,\n    minutes_played  REAL NOT NULL,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE (game_id, tracker_id)\n)"
+  ],
+  [
+   "table",
+   "players",
+   "players",
+   "CREATE TABLE players (\n    id            INTEGER PRIMARY KEY AUTOINCREMENT,\n    name          TEXT NOT NULL,\n    jersey_number INTEGER,\n    position      TEXT,\n    grade         INTEGER,\n    program_name  TEXT NOT NULL DEFAULT 'Liberty',\n    gender        TEXT NOT NULL DEFAULT 'boys',\n    level         TEXT NOT NULL DEFAULT 'jr_high',\n    season_id     INTEGER REFERENCES seasons(id),\n    tracker_id    INTEGER,\n    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "plays",
+   "plays",
+   "CREATE TABLE plays (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    playbook_id     INTEGER REFERENCES playbooks(id) ON DELETE SET NULL,\n    name            TEXT NOT NULL,\n    description     TEXT,\n    category        TEXT NOT NULL DEFAULT 'offense',\n    tags            TEXT,\n    diagram_json    TEXT,\n    created_by      TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, category_id INTEGER REFERENCES play_categories(id), program TEXT DEFAULT 'shared', share_token TEXT, parent_play_id INTEGER REFERENCES plays(id) ON DELETE SET NULL, progression_order INTEGER NOT NULL DEFAULT 0, list_order INTEGER, team_key TEXT NOT NULL DEFAULT 'hs_boys')"
+  ],
+  [
+   "table",
+   "possessions",
+   "possessions",
+   "CREATE TABLE possessions (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id            INTEGER NOT NULL REFERENCES games(id),\n    team_id            INTEGER REFERENCES teams(id),\n    opponent_team_id   INTEGER REFERENCES teams(id),\n    period             INTEGER,\n    start_timestamp_ms INTEGER NOT NULL,\n    end_timestamp_ms   INTEGER,\n    start_event_id     INTEGER REFERENCES events(id),\n    end_event_id       INTEGER REFERENCES events(id),\n    outcome            TEXT,\n    points_for         INTEGER NOT NULL DEFAULT 0,\n    source             TEXT NOT NULL DEFAULT 'manual',\n    review_status      TEXT NOT NULL DEFAULT 'unreviewed',\n    confidence         REAL,\n    notes              TEXT,\n    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "practice_plan_items",
+   "practice_plan_items",
+   "CREATE TABLE practice_plan_items (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    practice_id     INTEGER NOT NULL REFERENCES practices(id) ON DELETE CASCADE,\n    playlist_id     INTEGER REFERENCES practice_playlists(id),\n    item_type       TEXT NOT NULL DEFAULT 'drill',\n    title           TEXT NOT NULL,\n    description     TEXT,\n    duration_min    INTEGER,\n    sort_order      INTEGER NOT NULL DEFAULT 0,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "practice_playlist_clips",
+   "practice_playlist_clips",
+   "CREATE TABLE practice_playlist_clips (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    playlist_id     INTEGER NOT NULL REFERENCES practice_playlists(id) ON DELETE CASCADE,\n    clip_id         INTEGER NOT NULL REFERENCES player_development_clips(id) ON DELETE CASCADE,\n    sort_order      INTEGER NOT NULL DEFAULT 0,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(playlist_id, clip_id)\n)"
+  ],
+  [
+   "table",
+   "practice_playlists",
+   "practice_playlists",
+   "CREATE TABLE practice_playlists (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    name            TEXT NOT NULL,\n    season_id       INTEGER REFERENCES seasons(id),\n    level           TEXT NOT NULL DEFAULT 'jr_high',\n    status          TEXT NOT NULL DEFAULT 'draft',\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "practices",
+   "practices",
+   "CREATE TABLE practices (\n    id               INTEGER PRIMARY KEY AUTOINCREMENT,\n    season_id        INTEGER REFERENCES seasons(id),\n    level            TEXT NOT NULL DEFAULT 'jr_high',\n    practice_date    DATE NOT NULL,\n    status           TEXT NOT NULL DEFAULT 'planned',\n    plan_source      TEXT DEFAULT 'manual',\n    plan_text        TEXT,\n    coach_notes      TEXT,\n    ai_notes         TEXT,\n    combined_summary TEXT,\n    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "provenance_records",
+   "provenance_records",
+   "CREATE TABLE provenance_records (\n    id                  INTEGER PRIMARY KEY AUTOINCREMENT,\n    entity_type         TEXT NOT NULL,\n    entity_id           INTEGER NOT NULL,\n    source_type         TEXT NOT NULL,\n    source_id           TEXT,\n    source_path         TEXT,\n    source_frame        INTEGER,\n    source_timestamp_ms INTEGER,\n    model_name          TEXT,\n    model_version       TEXT,\n    confidence          REAL,\n    created_by_user_id  INTEGER REFERENCES users(id),\n    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    details_json        TEXT\n)"
+  ],
+  [
+   "table",
+   "push_subscriptions",
+   "push_subscriptions",
+   "CREATE TABLE push_subscriptions (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    endpoint        TEXT NOT NULL,\n    p256dh          TEXT NOT NULL,\n    auth_key        TEXT NOT NULL,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(user_id, endpoint)\n)"
+  ],
+  [
+   "table",
+   "recruiting_profiles",
+   "recruiting_profiles",
+   "CREATE TABLE recruiting_profiles (\n            id               INTEGER PRIMARY KEY AUTOINCREMENT,\n            player_id        INTEGER REFERENCES players(id),\n            display_name     TEXT NOT NULL,\n            grad_year        INTEGER,\n            position         TEXT,\n            height           TEXT,\n            school_program   TEXT,\n            program_level    TEXT,\n            contact_email    TEXT,\n            highlight_url    TEXT,\n            film_links_json  TEXT,\n            bio              TEXT,\n            season_summary   TEXT,\n            career_summary   TEXT,\n            share_token      TEXT UNIQUE,\n            is_published     INTEGER NOT NULL DEFAULT 0,\n            created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n        )"
+  ],
+  [
+   "table",
+   "review_items",
+   "review_items",
+   "CREATE TABLE review_items (\n    id                  INTEGER PRIMARY KEY AUTOINCREMENT,\n    entity_type         TEXT NOT NULL,\n    entity_id           INTEGER NOT NULL,\n    game_id             TEXT,\n    relational_game_id  INTEGER REFERENCES games(id),\n    review_status       TEXT NOT NULL DEFAULT 'pending',\n    priority            TEXT NOT NULL DEFAULT 'normal',\n    reason              TEXT,\n    assigned_to_user_id INTEGER REFERENCES users(id),\n    reviewed_by_user_id INTEGER REFERENCES users(id),\n    reviewed_at         TIMESTAMP,\n    notes               TEXT,\n    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(entity_type, entity_id)\n)"
+  ],
+  [
+   "table",
+   "roster_memberships",
+   "roster_memberships",
+   "CREATE TABLE roster_memberships (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    player_id       INTEGER NOT NULL REFERENCES players(id),\n    team_id         INTEGER NOT NULL REFERENCES teams(id),\n    season_id       INTEGER REFERENCES seasons(id),\n    jersey_number   INTEGER,\n    position        TEXT,\n    grade           INTEGER,\n    status          TEXT NOT NULL DEFAULT 'active',\n    start_date      DATE,\n    end_date        DATE,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scheduled_games",
+   "scheduled_games",
+   "CREATE TABLE scheduled_games (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    season_id       INTEGER NOT NULL REFERENCES seasons(id),\n    program_name    TEXT NOT NULL DEFAULT 'Liberty',\n    team            TEXT NOT NULL DEFAULT 'boys_hs',\n    gender          TEXT NOT NULL DEFAULT 'boys',\n    level           TEXT NOT NULL DEFAULT 'jr_high',\n    game_date       DATE NOT NULL,\n    game_time       TIME,\n    jv_game_time    TIME,\n    frosh_game_time TIME,\n    location_type   TEXT NOT NULL DEFAULT 'home',\n    opponent_name   TEXT NOT NULL,\n    tournament_name TEXT,\n    status          TEXT NOT NULL DEFAULT 'scheduled',\n    notes           TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_clips",
+   "scouting_clips",
+   "CREATE TABLE scouting_clips (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    clip_type       TEXT NOT NULL,  -- 'offensive_set', 'defensive_action', 'tendency', 'mismatch', 'situational', 'practice_example'\n    game_time       TEXT,  -- e.g., \"Q2 5:32\"\n    quarter         INTEGER,\n    description     TEXT NOT NULL,\n    coach_cue       TEXT,  -- short cue line for pre-game meeting\n    video_timestamp_ms INTEGER,  -- timestamp in the source video\n    source          TEXT,  -- 'ai_detected', 'manual_tag'\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_defensive_tendencies",
+   "scouting_defensive_tendencies",
+   "CREATE TABLE scouting_defensive_tendencies (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    scheme          TEXT NOT NULL,  -- 'man', 'zone_23', 'zone_32', 'press', 'trap'\n    pnr_coverage    TEXT,  -- 'drop', 'switch', 'ice', 'show', 'hedge'\n    frequency       REAL,  -- % of possessions\n    ppp_allowed     REAL,\n    weak_rotations  TEXT,  -- JSON array of weak rotation points\n    notes           TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_mismatches",
+   "scouting_mismatches",
+   "CREATE TABLE scouting_mismatches (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    opponent_jersey INTEGER,\n    opponent_name   TEXT,\n    vulnerability   TEXT NOT NULL,  -- 'struggles_vs_smaller', 'struggles_vs_bigger', 'poor_closeout', 'slow_rotation', 'turnover_under_pressure'\n    exploit_action  TEXT,  -- what we should do to exploit\n    notes           TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_offensive_sets",
+   "scouting_offensive_sets",
+   "CREATE TABLE scouting_offensive_sets (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    set_name        TEXT NOT NULL,  -- 'horns', 'sideline_out', 'early_pnr', 'isolation', 'spread_pnr', 'post_up'\n    trigger_action  TEXT,  -- what starts the set\n    frequency       INTEGER DEFAULT 0,  -- times observed\n    ppp             REAL,  -- points per possession on this set\n    result_vs_pressure TEXT,  -- what they do when pressured\n    notes           TEXT,\n    clip_timestamps TEXT,  -- JSON array of {game_time, quarter, description}\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_personnel",
+   "scouting_personnel",
+   "CREATE TABLE scouting_personnel (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    jersey_number   INTEGER,\n    player_name     TEXT,\n    role            TEXT NOT NULL,  -- 'ball_handler', 'go_to_scorer', 'rim_protector', 'best_rebounder', 'spot_up_shooter', 'role_player'\n    notes           TEXT,\n    usage_rate      REAL,  -- estimated % of possessions used\n    ppp             REAL,  -- points per possession when involved\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_practice_points",
+   "scouting_practice_points",
+   "CREATE TABLE scouting_practice_points (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    point_number    INTEGER NOT NULL,  -- 1, 2, 3\n    description     TEXT NOT NULL,\n    drill_name      TEXT,\n    measurable_target TEXT,  -- e.g., \"reduce open corner 3s off PnR by 50%\"\n    clip_timestamps TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_reports",
+   "scouting_reports",
+   "CREATE TABLE scouting_reports (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id         INTEGER REFERENCES games(id),\n    opponent_name   TEXT NOT NULL,\n    scout_date      DATE NOT NULL,\n    film_source     TEXT,  -- 'nfhs_vod', 'pixellot', 'manual_upload'\n    nfhs_game_id    TEXT,\n    status          TEXT NOT NULL DEFAULT 'draft',  -- 'draft', 'in_progress', 'completed'\n    offensive_identity TEXT,\n    defensive_identity TEXT,\n    tempo           TEXT,  -- 'fast', 'slow', 'methodical', 'varies'\n    executive_summary TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_situational",
+   "scouting_situational",
+   "CREATE TABLE scouting_situational (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    situation       TEXT NOT NULL,  -- 'late_shot_clock', 'end_of_quarter', 'out_of_bounds', 'press_breaker', 'foul_game'\n    description     TEXT NOT NULL,\n    frequency       INTEGER DEFAULT 0,\n    ppp             REAL,\n    clip_timestamps TEXT,\n    notes           TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_tendencies",
+   "scouting_tendencies",
+   "CREATE TABLE scouting_tendencies (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    report_id       INTEGER NOT NULL REFERENCES scouting_reports(id) ON DELETE CASCADE,\n    tendency_type   TEXT NOT NULL,  -- 'offensive', 'defensive', 'situational', 'habit'\n    category        TEXT,  -- 'shot_selection', 'drive_direction', 'late_clock', 'transition', 'rebounding', 'turnover'\n    description     TEXT NOT NULL,\n    frequency       TEXT,  -- 'always', 'often', 'sometimes', 'rarely' or percentage\n    clip_timestamps TEXT,  -- JSON array of {game_time, quarter, description}\n    exploitable     INTEGER DEFAULT 0,  -- 1 if this is something we can exploit\n    practice_drill  TEXT,  -- mapped drill to counter this\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "scouting_tendencies_aggregated",
+   "scouting_tendencies_aggregated",
+   "CREATE TABLE scouting_tendencies_aggregated (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    opponent_name   TEXT NOT NULL,\n    tendency_type   TEXT NOT NULL,  -- 'shot_selection', 'drive_direction', 'play_type', 'defensive_scheme', 'transition', 'late_clock'\n    category        TEXT,           -- sub-category\n    description     TEXT NOT NULL,\n    games_observed  INTEGER DEFAULT 1,\n    frequency       TEXT,           -- 'always', 'often', 'sometimes', 'rarely' or percentage\n    confidence      REAL,\n    last_updated    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    details_json    TEXT,\n    UNIQUE(opponent_name, tendency_type, category)\n)"
+  ],
+  [
+   "table",
+   "seasons",
+   "seasons",
+   "CREATE TABLE seasons (\n    id         INTEGER PRIMARY KEY AUTOINCREMENT,\n    name       TEXT NOT NULL UNIQUE,\n    start_date DATE NOT NULL,\n    end_date   DATE NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n, season_type TEXT NOT NULL DEFAULT 'regular')"
+  ],
+  [
+   "table",
+   "shot_classifications",
+   "shot_classifications",
+   "CREATE TABLE shot_classifications (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    event_id        INTEGER REFERENCES events(id) ON DELETE CASCADE,\n    game_id         TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    tracker_id      INTEGER,\n    jersey_number   INTEGER,\n    shot_type       TEXT NOT NULL,  -- '2pt', '3pt', 'ft'\n    shot_result     TEXT NOT NULL,  -- 'make', 'miss'\n    court_x         REAL,  -- normalized court position (0-1)\n    court_y         REAL,  -- normalized court position (0-1)\n    confidence      REAL,\n    timestamp_ms    INTEGER NOT NULL,\n    details_json    TEXT,\n    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "sources",
+   "sources",
+   "CREATE TABLE sources (\n    id          INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id     INTEGER NOT NULL REFERENCES games(id),\n    source_type TEXT NOT NULL,\n    source_path TEXT NOT NULL,\n    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "sqlite_sequence",
+   "sqlite_sequence",
+   "CREATE TABLE sqlite_sequence(name,seq)"
+  ],
+  [
+   "table",
+   "stats",
+   "stats",
+   "CREATE TABLE stats (\n    id          INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id     TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    player_id   INTEGER REFERENCES players(id),\n    tracker_id  INTEGER,\n    player_name TEXT,\n    team        TEXT,\n    minutes     REAL,\n    pts         INTEGER NOT NULL DEFAULT 0,\n    fgm         INTEGER NOT NULL DEFAULT 0,\n    fga         INTEGER NOT NULL DEFAULT 0,\n    threes_made INTEGER NOT NULL DEFAULT 0,\n    threes_att  INTEGER NOT NULL DEFAULT 0,\n    ast         INTEGER NOT NULL DEFAULT 0,\n    reb         INTEGER NOT NULL DEFAULT 0,\n    tov         INTEGER NOT NULL DEFAULT 0,\n    stl         INTEGER NOT NULL DEFAULT 0,\n    blk         INTEGER NOT NULL DEFAULT 0,\n    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(game_id, player_id)\n)"
+  ],
+  [
+   "table",
+   "team_photos",
+   "team_photos",
+   "CREATE TABLE team_photos (\n            id              INTEGER PRIMARY KEY AUTOINCREMENT,\n            team_key        TEXT NOT NULL,\n            filename        TEXT NOT NULL,\n            original_name   TEXT NOT NULL,\n            caption         TEXT,\n            uploaded_by     INTEGER,\n            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (uploaded_by) REFERENCES users(id)\n        )"
+  ],
+  [
+   "table",
+   "teams",
+   "teams",
+   "CREATE TABLE teams (\n    id                INTEGER PRIMARY KEY AUTOINCREMENT,\n    organization_name TEXT,\n    team_name         TEXT NOT NULL,\n    program_name      TEXT,\n    gender            TEXT,\n    level             TEXT,\n    season_default_id INTEGER REFERENCES seasons(id),\n    created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "track_identity_labels",
+   "track_identity_labels",
+   "CREATE TABLE track_identity_labels (\n    id                 INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id            TEXT NOT NULL,\n    relational_game_id INTEGER REFERENCES games(id),\n    tracker_id         INTEGER NOT NULL,\n    identity_type      TEXT NOT NULL DEFAULT 'cluster',\n    jersey_number      INTEGER,\n    player_name        TEXT,\n    player_id          INTEGER,\n    confidence         REAL,\n    sample_count       INTEGER,\n    source             TEXT DEFAULT 'ocr_votes',\n    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(game_id, identity_type, tracker_id)\n)"
+  ],
+  [
+   "table",
+   "user_notification_prefs",
+   "user_notification_prefs",
+   "CREATE TABLE user_notification_prefs (\n    user_id                 INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,\n    notify_email_messages   INTEGER NOT NULL DEFAULT 1,\n    notify_email_schedule   INTEGER NOT NULL DEFAULT 1,\n    notify_push_messages    INTEGER NOT NULL DEFAULT 1,\n    notify_push_schedule    INTEGER NOT NULL DEFAULT 1,\n    notify_sms_game_reminder INTEGER NOT NULL DEFAULT 0,\n    quiet_hours_start       TEXT,\n    quiet_hours_end         TEXT,\n    updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "user_sessions",
+   "user_sessions",
+   "CREATE TABLE user_sessions (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    session_token   TEXT UNIQUE NOT NULL,\n    ip_address      TEXT,\n    user_agent      TEXT,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    expires_at      TIMESTAMP NOT NULL\n)"
+  ],
+  [
+   "table",
+   "users",
+   "users",
+   "CREATE TABLE users (\n    id              INTEGER PRIMARY KEY AUTOINCREMENT,\n    email           TEXT UNIQUE NOT NULL,\n    password_hash   TEXT NOT NULL,\n    display_name    TEXT NOT NULL,\n    role            TEXT NOT NULL DEFAULT 'player',\n    avatar_url      TEXT,\n    phone           TEXT,\n    is_active       INTEGER NOT NULL DEFAULT 1,\n    email_verified  INTEGER NOT NULL DEFAULT 0,\n    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    last_login_at   TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "video_assets",
+   "video_assets",
+   "CREATE TABLE video_assets (\n    id                INTEGER PRIMARY KEY AUTOINCREMENT,\n    game_id           INTEGER REFERENCES games(id),\n    source_id         INTEGER REFERENCES sources(id),\n    original_filename TEXT,\n    stored_filename   TEXT,\n    file_path         TEXT,\n    source_type       TEXT,\n    camera_label      TEXT,\n    angle_label       TEXT,\n    file_size_bytes   INTEGER,\n    duration_ms       INTEGER,\n    frame_rate        REAL,\n    width             INTEGER,\n    height            INTEGER,\n    checksum          TEXT,\n    transcode_status  TEXT,\n    sync_group_id     TEXT,\n    primary_asset     INTEGER NOT NULL DEFAULT 0,\n    created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+  ],
+  [
+   "table",
+   "videos",
+   "videos",
+   "CREATE TABLE videos (\n    id                INTEGER PRIMARY KEY AUTOINCREMENT,\n    original_filename TEXT NOT NULL,\n    stored_filename   TEXT NOT NULL UNIQUE,\n    file_path         TEXT NOT NULL,\n    file_size_bytes   INTEGER,\n    opponent          TEXT,\n    game_id           TEXT,\n    relational_game_id INTEGER REFERENCES games(id),\n    upload_timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    is_duplicate      INTEGER NOT NULL DEFAULT 0,\n    duplicate_of_id   INTEGER REFERENCES videos(id)\n, archived INTEGER NOT NULL DEFAULT 0, archived_at TIMESTAMP)"
+  ]
+ ],
+ "counts": {
+  "analysis_runs": 7,
+  "app_settings": 4,
+  "clip_tags": 0,
+  "clips": 0,
+  "conversation_members": 0,
+  "conversations": 0,
+  "detections": 5889587,
+  "event_participants": 0,
+  "event_types": 31,
+  "events": 10977,
+  "film_roster_players": 60,
+  "film_tool_games": 54,
+  "games": 53,
+  "human_corrections": 2623,
+  "issue_reports": 0,
+  "maxpreps_rankings": 2,
+  "message_read_receipts": 0,
+  "messages": 0,
+  "module_entitlements": 3,
+  "nfhs_credentials": 1,
+  "nfhs_matches": 0,
+  "notifications": 0,
+  "play_categories": 16,
+  "play_recognitions": 9117,
+  "play_steps": 189,
+  "playbook_plays": 0,
+  "playbooks": 0,
+  "player_development_clips": 0,
+  "player_effect": 20,
+  "player_minutes": 430,
+  "players": 3,
+  "plays": 66,
+  "possessions": 0,
+  "practice_plan_items": 0,
+  "practice_playlist_clips": 0,
+  "practice_playlists": 0,
+  "practices": 0,
+  "provenance_records": 8079,
+  "push_subscriptions": 0,
+  "recruiting_profiles": 0,
+  "review_items": 20632,
+  "roster_memberships": 3,
+  "scheduled_games": 60,
+  "scouting_clips": 0,
+  "scouting_defensive_tendencies": 0,
+  "scouting_mismatches": 0,
+  "scouting_offensive_sets": 0,
+  "scouting_personnel": 0,
+  "scouting_practice_points": 0,
+  "scouting_reports": 0,
+  "scouting_situational": 0,
+  "scouting_tendencies": 0,
+  "scouting_tendencies_aggregated": 0,
+  "seasons": 3,
+  "shot_classifications": 4340,
+  "sources": 4,
+  "sqlite_sequence": 34,
+  "stats": 212,
+  "team_photos": 1,
+  "teams": 1,
+  "track_identity_labels": 586,
+  "user_notification_prefs": 0,
+  "user_sessions": 5,
+  "users": 4,
+  "video_assets": 72,
+  "videos": 9
+ }
+}

@@ -1,0 +1,70 @@
+{
+  "game_id": "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334",
+  "home_is_light": true,
+  "split": 120.0,
+  "tracks": {
+    "1": {
+      "mean_s": 58.9,
+      "mean_v": 99.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "2": {
+      "mean_s": 43.6,
+      "mean_v": 110.4,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "3": {
+      "mean_s": 68.2,
+      "mean_v": 80.1,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "4": {
+      "mean_s": 60.9,
+      "mean_v": 98.0,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "5": {
+      "mean_s": 42.2,
+      "mean_v": 104.2,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "6": {
+      "mean_s": 75.5,
+      "mean_v": 83.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "7": {
+      "mean_s": 66.2,
+      "mean_v": 73.6,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "8": {
+      "mean_s": 51.6,
+      "mean_v": 109.6,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    },
+    "9": {
+      "mean_s": 74.1,
+      "mean_v": 85.8,
+      "samples": 8,
+      "shade": "dark",
+      "side": "away"
+    }
+  }
+}

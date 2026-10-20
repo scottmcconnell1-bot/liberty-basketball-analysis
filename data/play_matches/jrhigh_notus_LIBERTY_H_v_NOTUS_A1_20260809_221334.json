@@ -1,0 +1,5775 @@
+{
+  "version": 1,
+  "game_id": "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334",
+  "updated_at": "2026-10-14T18:46:10Z",
+  "method": "formation_path_rank",
+  "limits": [
+    "Film points are cloud-normalized (no court homography).",
+    "Scores are ranks within the loaded playbook library, not probabilities.",
+    "Sticky choreography preferred; missing sticky/steps weakens matches.",
+    "Suggestions only \u2014 never auto-accepted into the ledger."
+  ],
+  "library_size": 36,
+  "possessions": [
+    {
+      "possession_id": null,
+      "start_ms": 10360,
+      "end_ms": 12480,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 4,
+      "suggestions": [
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.8958,
+          "components": {
+            "formation": 0.8958,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.7503,
+          "components": {
+            "formation": 0.7503,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 118,
+          "play_name": "Runner",
+          "library_source": "play_steps",
+          "score": 0.7343,
+          "components": {
+            "formation": 0.7343,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 122,
+          "play_name": "Wheel",
+          "library_source": "play_steps",
+          "score": 0.6918,
+          "components": {
+            "formation": 0.6918,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 124,
+          "play_name": "Miami",
+          "library_source": "play_steps",
+          "score": 0.6761,
+          "components": {
+            "formation": 0.6761,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Pinch",
+      "top_rank_score": 0.8958
+    },
+    {
+      "possession_id": null,
+      "start_ms": 12480,
+      "end_ms": 24880,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.603,
+          "components": {
+            "formation": 0.7094,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.603,
+          "components": {
+            "formation": 0.7094,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5926,
+          "components": {
+            "formation": 0.6972,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5926,
+          "components": {
+            "formation": 0.6972,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5758,
+          "components": {
+            "formation": 0.6774,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.603
+    },
+    {
+      "possession_id": null,
+      "start_ms": 24880,
+      "end_ms": 27040,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 2,
+      "suggestions": [
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.5155,
+          "components": {
+            "formation": 0.5155,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4591,
+          "components": {
+            "formation": 0.4591,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4516,
+          "components": {
+            "formation": 0.4516,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 82,
+          "play_name": "Flob",
+          "library_source": "play_steps",
+          "score": 0.4071,
+          "components": {
+            "formation": 0.4071,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 106,
+          "play_name": "Double",
+          "library_source": "play_steps",
+          "score": 0.2431,
+          "components": {
+            "formation": 0.2431,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Box 1",
+      "top_rank_score": 0.5155
+    },
+    {
+      "possession_id": null,
+      "start_ms": 27040,
+      "end_ms": 36760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6463,
+          "components": {
+            "formation": 0.6463,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5511,
+          "components": {
+            "formation": 0.5511,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.529,
+          "components": {
+            "formation": 0.529,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.5259,
+          "components": {
+            "formation": 0.5259,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 118,
+          "play_name": "Runner",
+          "library_source": "play_steps",
+          "score": 0.5044,
+          "components": {
+            "formation": 0.5044,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6463
+    },
+    {
+      "possession_id": null,
+      "start_ms": 39760,
+      "end_ms": 42960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6388,
+          "components": {
+            "formation": 0.6388,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6388,
+          "components": {
+            "formation": 0.6388,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6322,
+          "components": {
+            "formation": 0.7438,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6322,
+          "components": {
+            "formation": 0.7438,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6308,
+          "components": {
+            "formation": 0.7421,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Back",
+      "top_rank_score": 0.6388
+    },
+    {
+      "possession_id": null,
+      "start_ms": 42960,
+      "end_ms": 45720,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6472,
+          "components": {
+            "formation": 0.6472,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6472,
+          "components": {
+            "formation": 0.6472,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6183,
+          "components": {
+            "formation": 0.7274,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6183,
+          "components": {
+            "formation": 0.7274,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.6166,
+          "components": {
+            "formation": 0.7254,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Back",
+      "top_rank_score": 0.6472
+    },
+    {
+      "possession_id": null,
+      "start_ms": 45720,
+      "end_ms": 49800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6309,
+          "components": {
+            "formation": 0.6309,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6309,
+          "components": {
+            "formation": 0.6309,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.625,
+          "components": {
+            "formation": 0.625,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6073,
+          "components": {
+            "formation": 0.7145,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6073,
+          "components": {
+            "formation": 0.7145,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Back",
+      "top_rank_score": 0.6309
+    },
+    {
+      "possession_id": null,
+      "start_ms": 49800,
+      "end_ms": 51400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6273,
+          "components": {
+            "formation": 0.6273,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6273,
+          "components": {
+            "formation": 0.6273,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6193,
+          "components": {
+            "formation": 0.6193,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6082,
+          "components": {
+            "formation": 0.7155,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6082,
+          "components": {
+            "formation": 0.7155,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Back",
+      "top_rank_score": 0.6273
+    },
+    {
+      "possession_id": null,
+      "start_ms": 51400,
+      "end_ms": 54120,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6238,
+          "components": {
+            "formation": 0.6238,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6215,
+          "components": {
+            "formation": 0.6215,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.5325,
+          "components": {
+            "formation": 0.5325,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4966,
+          "components": {
+            "formation": 0.4966,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4938,
+          "components": {
+            "formation": 0.4938,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.6238
+    },
+    {
+      "possession_id": null,
+      "start_ms": 54120,
+      "end_ms": 55800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6304,
+          "components": {
+            "formation": 0.6304,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5968,
+          "components": {
+            "formation": 0.5968,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5903,
+          "components": {
+            "formation": 0.5903,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5776,
+          "components": {
+            "formation": 0.6795,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5776,
+          "components": {
+            "formation": 0.6795,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6304
+    },
+    {
+      "possession_id": null,
+      "start_ms": 55800,
+      "end_ms": 57640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.6369,
+          "components": {
+            "formation": 0.6369,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.587,
+          "components": {
+            "formation": 0.587,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5836,
+          "components": {
+            "formation": 0.5836,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5836,
+          "components": {
+            "formation": 0.5836,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5752,
+          "components": {
+            "formation": 0.5752,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Pinch",
+      "top_rank_score": 0.6369
+    },
+    {
+      "possession_id": null,
+      "start_ms": 57640,
+      "end_ms": 74480,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5623,
+          "components": {
+            "formation": 0.5623,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.5592,
+          "components": {
+            "formation": 0.5592,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5358,
+          "components": {
+            "formation": 0.5358,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4973,
+          "components": {
+            "formation": 0.585,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4973,
+          "components": {
+            "formation": 0.585,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.5623
+    },
+    {
+      "possession_id": null,
+      "start_ms": 75080,
+      "end_ms": 93120,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5061,
+          "components": {
+            "formation": 0.5061,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.4965,
+          "components": {
+            "formation": 0.4965,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4702,
+          "components": {
+            "formation": 0.4702,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4513,
+          "components": {
+            "formation": 0.5309,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4513,
+          "components": {
+            "formation": 0.5309,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5061
+    },
+    {
+      "possession_id": null,
+      "start_ms": 93120,
+      "end_ms": 95000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5841,
+          "components": {
+            "formation": 0.5841,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5548,
+          "components": {
+            "formation": 0.5548,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5311,
+          "components": {
+            "formation": 0.5311,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.513,
+          "components": {
+            "formation": 0.513,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.513,
+          "components": {
+            "formation": 0.513,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5841
+    },
+    {
+      "possession_id": null,
+      "start_ms": 95800,
+      "end_ms": 106320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5847,
+          "components": {
+            "formation": 0.5847,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5546,
+          "components": {
+            "formation": 0.5546,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5487,
+          "components": {
+            "formation": 0.6455,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5487,
+          "components": {
+            "formation": 0.6455,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5449,
+          "components": {
+            "formation": 0.6411,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5847
+    },
+    {
+      "possession_id": null,
+      "start_ms": 106320,
+      "end_ms": 108040,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6335,
+          "components": {
+            "formation": 0.6335,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5874,
+          "components": {
+            "formation": 0.5874,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5629,
+          "components": {
+            "formation": 0.5629,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.5113,
+          "components": {
+            "formation": 0.6772,
+            "path": 0.4933,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4759,
+          "components": {
+            "formation": 0.4759,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6335
+    },
+    {
+      "possession_id": null,
+      "start_ms": 108040,
+      "end_ms": 111080,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.6828,
+          "components": {
+            "formation": 0.6828,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.6055,
+          "components": {
+            "formation": 0.6055,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5899,
+          "components": {
+            "formation": 0.5899,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.563,
+          "components": {
+            "formation": 0.563,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5579,
+          "components": {
+            "formation": 0.5579,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32-C",
+      "top_rank_score": 0.6828
+    },
+    {
+      "possession_id": null,
+      "start_ms": 111080,
+      "end_ms": 113640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.6301,
+          "components": {
+            "formation": 0.6301,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6226,
+          "components": {
+            "formation": 0.6226,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5757,
+          "components": {
+            "formation": 0.5757,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5646,
+          "components": {
+            "formation": 0.5646,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.5615,
+          "components": {
+            "formation": 0.5615,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32-C",
+      "top_rank_score": 0.6301
+    },
+    {
+      "possession_id": null,
+      "start_ms": 113640,
+      "end_ms": 115600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6604,
+          "components": {
+            "formation": 0.7769,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6604,
+          "components": {
+            "formation": 0.7769,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6578,
+          "components": {
+            "formation": 0.7739,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6578,
+          "components": {
+            "formation": 0.7739,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.633,
+          "components": {
+            "formation": 0.7447,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6604
+    },
+    {
+      "possession_id": null,
+      "start_ms": 115600,
+      "end_ms": 128680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5394,
+          "components": {
+            "formation": 0.5394,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5228,
+          "components": {
+            "formation": 0.5228,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4984,
+          "components": {
+            "formation": 0.5864,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4984,
+          "components": {
+            "formation": 0.5864,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4912,
+          "components": {
+            "formation": 0.5779,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5394
+    },
+    {
+      "possession_id": null,
+      "start_ms": 128680,
+      "end_ms": 131560,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6202,
+          "components": {
+            "formation": 0.6202,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6147,
+          "components": {
+            "formation": 0.6147,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6079,
+          "components": {
+            "formation": 0.6079,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5799,
+          "components": {
+            "formation": 0.6822,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5799,
+          "components": {
+            "formation": 0.6822,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.6202
+    },
+    {
+      "possession_id": null,
+      "start_ms": 134520,
+      "end_ms": 140600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5555,
+          "components": {
+            "formation": 0.5555,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5253,
+          "components": {
+            "formation": 0.618,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5253,
+          "components": {
+            "formation": 0.618,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5223,
+          "components": {
+            "formation": 0.6145,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5223,
+          "components": {
+            "formation": 0.6145,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5555
+    },
+    {
+      "possession_id": null,
+      "start_ms": 140600,
+      "end_ms": 142960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6392,
+          "components": {
+            "formation": 0.6392,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6157,
+          "components": {
+            "formation": 0.6157,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5811,
+          "components": {
+            "formation": 0.5811,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5811,
+          "components": {
+            "formation": 0.5811,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5568,
+          "components": {
+            "formation": 0.5568,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6392
+    },
+    {
+      "possession_id": null,
+      "start_ms": 144600,
+      "end_ms": 146320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6418,
+          "components": {
+            "formation": 0.6418,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5743,
+          "components": {
+            "formation": 0.5743,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5653,
+          "components": {
+            "formation": 0.5653,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.4757,
+          "components": {
+            "formation": 0.4757,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4747,
+          "components": {
+            "formation": 0.4747,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6418
+    },
+    {
+      "possession_id": null,
+      "start_ms": 147280,
+      "end_ms": 149400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6438,
+          "components": {
+            "formation": 0.6438,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5733,
+          "components": {
+            "formation": 0.5733,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5659,
+          "components": {
+            "formation": 0.5659,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5659,
+          "components": {
+            "formation": 0.5659,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4851,
+          "components": {
+            "formation": 0.4851,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6438
+    },
+    {
+      "possession_id": null,
+      "start_ms": 149400,
+      "end_ms": 152320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.538,
+          "components": {
+            "formation": 0.6329,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.538,
+          "components": {
+            "formation": 0.6329,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5353,
+          "components": {
+            "formation": 0.6297,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5353,
+          "components": {
+            "formation": 0.6297,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 98,
+          "play_name": "1-Game",
+          "library_source": "sticky",
+          "score": 0.5246,
+          "components": {
+            "formation": 0.6171,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Crush",
+      "top_rank_score": 0.538
+    },
+    {
+      "possession_id": null,
+      "start_ms": 153680,
+      "end_ms": 159000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4342,
+          "components": {
+            "formation": 0.4342,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.3759,
+          "components": {
+            "formation": 0.3759,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.2937,
+          "components": {
+            "formation": 0.2937,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.2846,
+          "components": {
+            "formation": 0.2846,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2816,
+          "components": {
+            "formation": 0.2427,
+            "path": 0.4579,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.4342
+    },
+    {
+      "possession_id": null,
+      "start_ms": 160440,
+      "end_ms": 166800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5267,
+          "components": {
+            "formation": 0.5267,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5247,
+          "components": {
+            "formation": 0.6173,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5247,
+          "components": {
+            "formation": 0.6173,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.518,
+          "components": {
+            "formation": 0.6094,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.518,
+          "components": {
+            "formation": 0.6094,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5267
+    },
+    {
+      "possession_id": null,
+      "start_ms": 166800,
+      "end_ms": 170720,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5334,
+          "components": {
+            "formation": 0.6276,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5334,
+          "components": {
+            "formation": 0.6276,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5252,
+          "components": {
+            "formation": 0.5252,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5252,
+          "components": {
+            "formation": 0.5252,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.523,
+          "components": {
+            "formation": 0.6153,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.5334
+    },
+    {
+      "possession_id": null,
+      "start_ms": 170720,
+      "end_ms": 175320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6901,
+          "components": {
+            "formation": 0.6901,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5816,
+          "components": {
+            "formation": 0.5816,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5115,
+          "components": {
+            "formation": 0.5115,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5115,
+          "components": {
+            "formation": 0.5115,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4912,
+          "components": {
+            "formation": 0.4912,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6901
+    },
+    {
+      "possession_id": null,
+      "start_ms": 176440,
+      "end_ms": 180240,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4877,
+          "components": {
+            "formation": 0.4877,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4656,
+          "components": {
+            "formation": 0.5478,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4656,
+          "components": {
+            "formation": 0.5478,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4656,
+          "components": {
+            "formation": 0.4656,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4637,
+          "components": {
+            "formation": 0.5455,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.4877
+    },
+    {
+      "possession_id": null,
+      "start_ms": 180240,
+      "end_ms": 183280,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6533,
+          "components": {
+            "formation": 0.6533,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4667,
+          "components": {
+            "formation": 0.4667,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4333,
+          "components": {
+            "formation": 0.4333,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4228,
+          "components": {
+            "formation": 0.5114,
+            "path": 0.4775,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4122,
+          "components": {
+            "formation": 0.4122,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6533
+    },
+    {
+      "possession_id": null,
+      "start_ms": 184640,
+      "end_ms": 190920,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.7177,
+          "components": {
+            "formation": 0.7177,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5872,
+          "components": {
+            "formation": 0.5872,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5375,
+          "components": {
+            "formation": 0.6323,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5375,
+          "components": {
+            "formation": 0.6323,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5341,
+          "components": {
+            "formation": 0.6284,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.7177
+    },
+    {
+      "possession_id": null,
+      "start_ms": 190920,
+      "end_ms": 193000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5095,
+          "components": {
+            "formation": 0.5095,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4407,
+          "components": {
+            "formation": 0.5185,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4407,
+          "components": {
+            "formation": 0.5185,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4294,
+          "components": {
+            "formation": 0.5052,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4294,
+          "components": {
+            "formation": 0.5052,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5095
+    },
+    {
+      "possession_id": null,
+      "start_ms": 193000,
+      "end_ms": 205640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5308,
+          "components": {
+            "formation": 0.5308,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4234,
+          "components": {
+            "formation": 0.4982,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4234,
+          "components": {
+            "formation": 0.4982,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4166,
+          "components": {
+            "formation": 0.4901,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4166,
+          "components": {
+            "formation": 0.4901,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5308
+    },
+    {
+      "possession_id": null,
+      "start_ms": 205640,
+      "end_ms": 207280,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5007,
+          "components": {
+            "formation": 0.5007,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4963,
+          "components": {
+            "formation": 0.4963,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.4887,
+          "components": {
+            "formation": 0.4887,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.4692,
+          "components": {
+            "formation": 0.4692,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3659,
+          "components": {
+            "formation": 0.3659,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.5007
+    },
+    {
+      "possession_id": null,
+      "start_ms": 207280,
+      "end_ms": 208920,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6369,
+          "components": {
+            "formation": 0.6369,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5878,
+          "components": {
+            "formation": 0.5878,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5735,
+          "components": {
+            "formation": 0.5735,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5551,
+          "components": {
+            "formation": 0.5551,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5527,
+          "components": {
+            "formation": 0.5527,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6369
+    },
+    {
+      "possession_id": null,
+      "start_ms": 211360,
+      "end_ms": 214560,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6344,
+          "components": {
+            "formation": 0.6344,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5645,
+          "components": {
+            "formation": 0.5645,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5372,
+          "components": {
+            "formation": 0.5372,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5372,
+          "components": {
+            "formation": 0.5372,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5193,
+          "components": {
+            "formation": 0.611,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.6344
+    },
+    {
+      "possession_id": null,
+      "start_ms": 214560,
+      "end_ms": 218160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6536,
+          "components": {
+            "formation": 0.7689,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6536,
+          "components": {
+            "formation": 0.7689,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.645,
+          "components": {
+            "formation": 0.7588,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.645,
+          "components": {
+            "formation": 0.7588,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.6299,
+          "components": {
+            "formation": 0.7411,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6536
+    },
+    {
+      "possession_id": null,
+      "start_ms": 219640,
+      "end_ms": 223880,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5762,
+          "components": {
+            "formation": 0.5762,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.574,
+          "components": {
+            "formation": 0.6753,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.574,
+          "components": {
+            "formation": 0.6753,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5694,
+          "components": {
+            "formation": 0.6698,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5694,
+          "components": {
+            "formation": 0.6698,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.5762
+    },
+    {
+      "possession_id": null,
+      "start_ms": 225080,
+      "end_ms": 229760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5317,
+          "components": {
+            "formation": 0.5317,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5219,
+          "components": {
+            "formation": 0.5219,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5129,
+          "components": {
+            "formation": 0.5129,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5129,
+          "components": {
+            "formation": 0.5129,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4967,
+          "components": {
+            "formation": 0.4967,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.5317
+    },
+    {
+      "possession_id": null,
+      "start_ms": 233600,
+      "end_ms": 235320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6497,
+          "components": {
+            "formation": 0.6497,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.531,
+          "components": {
+            "formation": 0.531,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.531,
+          "components": {
+            "formation": 0.531,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.521,
+          "components": {
+            "formation": 0.521,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4354,
+          "components": {
+            "formation": 0.6652,
+            "path": 0.2935,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6497
+    },
+    {
+      "possession_id": null,
+      "start_ms": 235320,
+      "end_ms": 237960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6234,
+          "components": {
+            "formation": 0.6234,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5393,
+          "components": {
+            "formation": 0.5393,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5355,
+          "components": {
+            "formation": 0.5355,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5355,
+          "components": {
+            "formation": 0.5355,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5316,
+          "components": {
+            "formation": 0.5316,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6234
+    },
+    {
+      "possession_id": null,
+      "start_ms": 237960,
+      "end_ms": 241400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6413,
+          "components": {
+            "formation": 0.6413,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5201,
+          "components": {
+            "formation": 0.5201,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.456,
+          "components": {
+            "formation": 0.6065,
+            "path": 0.4364,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4387,
+          "components": {
+            "formation": 0.4387,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4387,
+          "components": {
+            "formation": 0.4387,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6413
+    },
+    {
+      "possession_id": null,
+      "start_ms": 241400,
+      "end_ms": 244400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5144,
+          "components": {
+            "formation": 0.5144,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4961,
+          "components": {
+            "formation": 0.4961,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4451,
+          "components": {
+            "formation": 0.5237,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4451,
+          "components": {
+            "formation": 0.5237,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.4445,
+          "components": {
+            "formation": 0.4445,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5144
+    },
+    {
+      "possession_id": null,
+      "start_ms": 244400,
+      "end_ms": 252000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.53,
+          "components": {
+            "formation": 0.53,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4977,
+          "components": {
+            "formation": 0.5855,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4977,
+          "components": {
+            "formation": 0.5855,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4899,
+          "components": {
+            "formation": 0.5764,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4899,
+          "components": {
+            "formation": 0.5764,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.53
+    },
+    {
+      "possession_id": null,
+      "start_ms": 252000,
+      "end_ms": 254400,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.6853,
+          "components": {
+            "formation": 0.6853,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6706,
+          "components": {
+            "formation": 0.6706,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5834,
+          "components": {
+            "formation": 0.5834,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5215,
+          "components": {
+            "formation": 0.5215,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5011,
+          "components": {
+            "formation": 0.5895,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.6853
+    },
+    {
+      "possession_id": null,
+      "start_ms": 254520,
+      "end_ms": 259680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6466,
+          "components": {
+            "formation": 0.6466,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5766,
+          "components": {
+            "formation": 0.5766,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5488,
+          "components": {
+            "formation": 0.6456,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5488,
+          "components": {
+            "formation": 0.6456,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5442,
+          "components": {
+            "formation": 0.5442,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Rip",
+      "top_rank_score": 0.6466
+    },
+    {
+      "possession_id": null,
+      "start_ms": 259680,
+      "end_ms": 261399,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5272,
+          "components": {
+            "formation": 0.5272,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.5201,
+          "components": {
+            "formation": 0.5201,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3657,
+          "components": {
+            "formation": 0.3657,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 79,
+          "play_name": "Box 1",
+          "library_source": "play_steps",
+          "score": 0.359,
+          "components": {
+            "formation": 0.359,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3521,
+          "components": {
+            "formation": 0.3521,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.5272
+    },
+    {
+      "possession_id": null,
+      "start_ms": 261399,
+      "end_ms": 269280,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6437,
+          "components": {
+            "formation": 0.7573,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6437,
+          "components": {
+            "formation": 0.7573,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6298,
+          "components": {
+            "formation": 0.741,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6298,
+          "components": {
+            "formation": 0.741,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.6156,
+          "components": {
+            "formation": 0.7242,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6437
+    },
+    {
+      "possession_id": null,
+      "start_ms": 269280,
+      "end_ms": 272240,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5317,
+          "components": {
+            "formation": 0.5317,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5247,
+          "components": {
+            "formation": 0.5247,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5169,
+          "components": {
+            "formation": 0.5169,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5085,
+          "components": {
+            "formation": 0.5982,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5085,
+          "components": {
+            "formation": 0.5982,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5317
+    },
+    {
+      "possession_id": null,
+      "start_ms": 272240,
+      "end_ms": 282160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6205,
+          "components": {
+            "formation": 0.6205,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.6205,
+          "components": {
+            "formation": 0.6205,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5851,
+          "components": {
+            "formation": 0.5851,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.5702,
+          "components": {
+            "formation": 0.5702,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5511,
+          "components": {
+            "formation": 0.5511,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Back",
+      "top_rank_score": 0.6205
+    },
+    {
+      "possession_id": null,
+      "start_ms": 286040,
+      "end_ms": 288640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6387,
+          "components": {
+            "formation": 0.6387,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.477,
+          "components": {
+            "formation": 0.477,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.4589,
+          "components": {
+            "formation": 0.4589,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.441,
+          "components": {
+            "formation": 0.5352,
+            "path": 0.4954,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 100,
+          "play_name": "32-C",
+          "library_source": "play_steps",
+          "score": 0.4212,
+          "components": {
+            "formation": 0.4212,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6387
+    },
+    {
+      "possession_id": null,
+      "start_ms": 288640,
+      "end_ms": 298480,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5885,
+          "components": {
+            "formation": 0.5885,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5703,
+          "components": {
+            "formation": 0.5703,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5304,
+          "components": {
+            "formation": 0.5304,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5304,
+          "components": {
+            "formation": 0.5304,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5014,
+          "components": {
+            "formation": 0.5899,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5885
+    },
+    {
+      "possession_id": null,
+      "start_ms": 298480,
+      "end_ms": 304800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.6491,
+          "components": {
+            "formation": 0.6491,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 118,
+          "play_name": "Runner",
+          "library_source": "play_steps",
+          "score": 0.6345,
+          "components": {
+            "formation": 0.6345,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6185,
+          "components": {
+            "formation": 0.6185,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.615,
+          "components": {
+            "formation": 0.615,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6149,
+          "components": {
+            "formation": 0.6149,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Opposite",
+      "top_rank_score": 0.6491
+    },
+    {
+      "possession_id": null,
+      "start_ms": 305520,
+      "end_ms": 308000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5967,
+          "components": {
+            "formation": 0.5967,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5081,
+          "components": {
+            "formation": 0.5977,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5081,
+          "components": {
+            "formation": 0.5977,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5005,
+          "components": {
+            "formation": 0.5888,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5005,
+          "components": {
+            "formation": 0.5888,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.5967
+    },
+    {
+      "possession_id": null,
+      "start_ms": 308000,
+      "end_ms": 321800,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.7961,
+          "components": {
+            "formation": 0.7961,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.4686,
+          "components": {
+            "formation": 0.4686,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4507,
+          "components": {
+            "formation": 0.4507,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4507,
+          "components": {
+            "formation": 0.4507,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4423,
+          "components": {
+            "formation": 0.5204,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Horns",
+      "top_rank_score": 0.7961
+    },
+    {
+      "possession_id": null,
+      "start_ms": 321800,
+      "end_ms": 331160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.559,
+          "components": {
+            "formation": 0.559,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5581,
+          "components": {
+            "formation": 0.5581,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5512,
+          "components": {
+            "formation": 0.5512,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 116,
+          "play_name": "Pinch",
+          "library_source": "play_steps",
+          "score": 0.5018,
+          "components": {
+            "formation": 0.5018,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 115,
+          "play_name": "Opposite",
+          "library_source": "play_steps",
+          "score": 0.4944,
+          "components": {
+            "formation": 0.4944,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.559
+    },
+    {
+      "possession_id": null,
+      "start_ms": 331160,
+      "end_ms": 334520,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5244,
+          "components": {
+            "formation": 0.5244,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4603,
+          "components": {
+            "formation": 0.4732,
+            "path": 0.6391,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.451,
+          "components": {
+            "formation": 0.5306,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.451,
+          "components": {
+            "formation": 0.5306,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4409,
+          "components": {
+            "formation": 0.5188,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5244
+    },
+    {
+      "possession_id": null,
+      "start_ms": 336400,
+      "end_ms": 338720,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5784,
+          "components": {
+            "formation": 0.5784,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5609,
+          "components": {
+            "formation": 0.5609,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 108,
+          "play_name": "Flat",
+          "library_source": "play_steps",
+          "score": 0.5299,
+          "components": {
+            "formation": 0.5299,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 124,
+          "play_name": "Miami",
+          "library_source": "play_steps",
+          "score": 0.5221,
+          "components": {
+            "formation": 0.5221,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5182,
+          "components": {
+            "formation": 0.6096,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5784
+    },
+    {
+      "possession_id": null,
+      "start_ms": 338720,
+      "end_ms": 341000,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.625,
+          "components": {
+            "formation": 0.625,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5539,
+          "components": {
+            "formation": 0.5539,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5414,
+          "components": {
+            "formation": 0.6369,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5414,
+          "components": {
+            "formation": 0.6369,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5387,
+          "components": {
+            "formation": 0.6338,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.625
+    },
+    {
+      "possession_id": null,
+      "start_ms": 341000,
+      "end_ms": 345960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6112,
+          "components": {
+            "formation": 0.6112,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6058,
+          "components": {
+            "formation": 0.6058,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5188,
+          "components": {
+            "formation": 0.5188,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5188,
+          "components": {
+            "formation": 0.5188,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5145,
+          "components": {
+            "formation": 0.5145,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6112
+    },
+    {
+      "possession_id": null,
+      "start_ms": 345960,
+      "end_ms": 348240,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6023,
+          "components": {
+            "formation": 0.7086,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6023,
+          "components": {
+            "formation": 0.7086,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5893,
+          "components": {
+            "formation": 0.6933,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5893,
+          "components": {
+            "formation": 0.6933,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5776,
+          "components": {
+            "formation": 0.6795,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6023
+    },
+    {
+      "possession_id": null,
+      "start_ms": 348640,
+      "end_ms": 356360,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6473,
+          "components": {
+            "formation": 0.6473,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5425,
+          "components": {
+            "formation": 0.5425,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5425,
+          "components": {
+            "formation": 0.5425,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5376,
+          "components": {
+            "formation": 0.5376,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.5241,
+          "components": {
+            "formation": 0.681,
+            "path": 0.5246,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6473
+    },
+    {
+      "possession_id": null,
+      "start_ms": 357840,
+      "end_ms": 359760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5775,
+          "components": {
+            "formation": 0.5775,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5485,
+          "components": {
+            "formation": 0.5485,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5229,
+          "components": {
+            "formation": 0.5229,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4991,
+          "components": {
+            "formation": 0.4991,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.4991,
+          "components": {
+            "formation": 0.4991,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5775
+    },
+    {
+      "possession_id": null,
+      "start_ms": 359760,
+      "end_ms": 362160,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6621,
+          "components": {
+            "formation": 0.6621,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.562,
+          "components": {
+            "formation": 0.562,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5421,
+          "components": {
+            "formation": 0.5421,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5421,
+          "components": {
+            "formation": 0.5421,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5316,
+          "components": {
+            "formation": 0.5316,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6621
+    },
+    {
+      "possession_id": null,
+      "start_ms": 362160,
+      "end_ms": 363960,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6616,
+          "components": {
+            "formation": 0.6616,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5599,
+          "components": {
+            "formation": 0.5599,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5372,
+          "components": {
+            "formation": 0.5372,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5372,
+          "components": {
+            "formation": 0.5372,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5345,
+          "components": {
+            "formation": 0.5345,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6616
+    },
+    {
+      "possession_id": null,
+      "start_ms": 363960,
+      "end_ms": 368080,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6328,
+          "components": {
+            "formation": 0.6328,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5714,
+          "components": {
+            "formation": 0.5714,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5492,
+          "components": {
+            "formation": 0.5492,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.5178,
+          "components": {
+            "formation": 0.7108,
+            "path": 0.4641,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5167,
+          "components": {
+            "formation": 0.5167,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6328
+    },
+    {
+      "possession_id": null,
+      "start_ms": 369880,
+      "end_ms": 372600,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.6519,
+          "components": {
+            "formation": 0.6519,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5509,
+          "components": {
+            "formation": 0.5509,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5466,
+          "components": {
+            "formation": 0.5466,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.535,
+          "components": {
+            "formation": 0.535,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.535,
+          "components": {
+            "formation": 0.535,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.6519
+    },
+    {
+      "possession_id": null,
+      "start_ms": 373240,
+      "end_ms": 381320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.5008,
+          "components": {
+            "formation": 0.5008,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4002,
+          "components": {
+            "formation": 0.4002,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3863,
+          "components": {
+            "formation": 0.3863,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.3315,
+          "components": {
+            "formation": 0.3315,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3169,
+          "components": {
+            "formation": 0.3396,
+            "path": 0.4203,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.5008
+    },
+    {
+      "possession_id": null,
+      "start_ms": 383200,
+      "end_ms": 386640,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5963,
+          "components": {
+            "formation": 0.7016,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5963,
+          "components": {
+            "formation": 0.7016,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5951,
+          "components": {
+            "formation": 0.7002,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5951,
+          "components": {
+            "formation": 0.7002,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 108,
+          "play_name": "Flat",
+          "library_source": "play_steps",
+          "score": 0.5818,
+          "components": {
+            "formation": 0.5818,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Crush",
+      "top_rank_score": 0.5963
+    },
+    {
+      "possession_id": null,
+      "start_ms": 386640,
+      "end_ms": 390200,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5909,
+          "components": {
+            "formation": 0.6952,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.5909,
+          "components": {
+            "formation": 0.6952,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5813,
+          "components": {
+            "formation": 0.6839,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.5813,
+          "components": {
+            "formation": 0.6839,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5681,
+          "components": {
+            "formation": 0.6684,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.5909
+    },
+    {
+      "possession_id": null,
+      "start_ms": 390200,
+      "end_ms": 394760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6339,
+          "components": {
+            "formation": 0.7458,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.6339,
+          "components": {
+            "formation": 0.7458,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6182,
+          "components": {
+            "formation": 0.7273,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.6182,
+          "components": {
+            "formation": 0.7273,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 101,
+          "play_name": "41",
+          "library_source": "sticky",
+          "score": 0.5997,
+          "components": {
+            "formation": 0.7056,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "32",
+      "top_rank_score": 0.6339
+    },
+    {
+      "possession_id": null,
+      "start_ms": 394760,
+      "end_ms": 404320,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5926,
+          "components": {
+            "formation": 0.5926,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5128,
+          "components": {
+            "formation": 0.5128,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5128,
+          "components": {
+            "formation": 0.5128,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.4802,
+          "components": {
+            "formation": 0.5609,
+            "path": 0.5708,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4761,
+          "components": {
+            "formation": 0.4761,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5926
+    },
+    {
+      "possession_id": null,
+      "start_ms": 404320,
+      "end_ms": 417920,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4923,
+          "components": {
+            "formation": 0.4923,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 83,
+          "play_name": "Triangle",
+          "library_source": "play_steps",
+          "score": 0.3868,
+          "components": {
+            "formation": 0.3868,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3679,
+          "components": {
+            "formation": 0.3679,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3343,
+          "components": {
+            "formation": 0.3343,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.3241,
+          "components": {
+            "formation": 0.2876,
+            "path": 0.5152,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.4923
+    },
+    {
+      "possession_id": null,
+      "start_ms": 417920,
+      "end_ms": 425680,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 85,
+          "play_name": "1-2-2",
+          "library_source": "sticky",
+          "score": 0.3923,
+          "components": {
+            "formation": 0.3923,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.3512,
+          "components": {
+            "formation": 0.3512,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 109,
+          "play_name": "Horns",
+          "library_source": "play_steps",
+          "score": 0.3307,
+          "components": {
+            "formation": 0.3307,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 80,
+          "play_name": "Cross",
+          "library_source": "play_steps",
+          "score": 0.292,
+          "components": {
+            "formation": 0.292,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 137,
+          "play_name": "Pitt 5",
+          "library_source": "sticky",
+          "score": 0.2619,
+          "components": {
+            "formation": 0.2292,
+            "path": 0.4209,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "1-2-2",
+      "top_rank_score": 0.3923
+    },
+    {
+      "possession_id": null,
+      "start_ms": 425680,
+      "end_ms": 429440,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5511,
+          "components": {
+            "formation": 0.5511,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5467,
+          "components": {
+            "formation": 0.5467,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.482,
+          "components": {
+            "formation": 0.482,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4784,
+          "components": {
+            "formation": 0.5628,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4784,
+          "components": {
+            "formation": 0.5628,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5511
+    },
+    {
+      "possession_id": null,
+      "start_ms": 429440,
+      "end_ms": 433080,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.5968,
+          "components": {
+            "formation": 0.5968,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5467,
+          "components": {
+            "formation": 0.5467,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 103,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4879,
+          "components": {
+            "formation": 0.574,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 150,
+          "play_name": "Crush",
+          "library_source": "sticky",
+          "score": 0.4879,
+          "components": {
+            "formation": 0.574,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.4813,
+          "components": {
+            "formation": 0.4813,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.5968
+    },
+    {
+      "possession_id": null,
+      "start_ms": 433080,
+      "end_ms": 435760,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.6341,
+          "components": {
+            "formation": 0.6341,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.6282,
+          "components": {
+            "formation": 0.6282,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 102,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5706,
+          "components": {
+            "formation": 0.5706,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 149,
+          "play_name": "Back",
+          "library_source": "sticky",
+          "score": 0.5706,
+          "components": {
+            "formation": 0.5706,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5474,
+          "components": {
+            "formation": 0.5474,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Man to Man",
+      "top_rank_score": 0.6341
+    },
+    {
+      "possession_id": null,
+      "start_ms": 436840,
+      "end_ms": 441120,
+      "outcome": null,
+      "window_source": "event_boundaries",
+      "track_count": 5,
+      "suggestions": [
+        {
+          "play_id": 104,
+          "play_name": "Curl",
+          "library_source": "play_steps",
+          "score": 0.5504,
+          "components": {
+            "formation": 0.5504,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 1
+        },
+        {
+          "play_id": 125,
+          "play_name": "Rip",
+          "library_source": "play_steps",
+          "score": 0.5313,
+          "components": {
+            "formation": 0.5313,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 2
+        },
+        {
+          "play_id": 97,
+          "play_name": "Man to Man",
+          "library_source": "sticky",
+          "score": 0.4857,
+          "components": {
+            "formation": 0.4857,
+            "path": 0.0,
+            "action": 0.5
+          },
+          "rank": 3
+        },
+        {
+          "play_id": 99,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4589,
+          "components": {
+            "formation": 0.5399,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 4
+        },
+        {
+          "play_id": 147,
+          "play_name": "32",
+          "library_source": "sticky",
+          "score": 0.4589,
+          "components": {
+            "formation": 0.5399,
+            "path": 0.0,
+            "action": 0.0
+          },
+          "rank": 5
+        }
+      ],
+      "top_play_name": "Curl",
+      "top_rank_score": 0.5504
+    }
+  ]
+}
