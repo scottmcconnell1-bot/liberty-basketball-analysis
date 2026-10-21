@@ -41,6 +41,8 @@ These were scored and did not beat 24 of 31:
 
 The live detector matched 0 of the 31 tags on player, shot type, and make or miss together. Player and 2/3/FT are unsolved and are not this score.
 
+A later proposal to interpolate sparse frames and widen the column was rejected. The record is `DETECTOR_PROPOSAL_REJECTION.md`. Do not write `inspect_rule_logic.py`.
+
 **Next step:** a new ball weights file, scored by `C:\Users\scott\AppData\Local\Temp\validate_ball_weights.py`. Keep it only if Adrian still has 0 misses called makes and no more than 12 makes missed, and Notus misses fewer than 7 makes. Do not copy it over `models/ball_detector.pt`. Do not change `ball_confidence`. Do not edit the cutoffs in `ai_bridge.py`.
 
 ## Do not

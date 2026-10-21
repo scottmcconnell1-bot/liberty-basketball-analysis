@@ -6,7 +6,7 @@ Updated: 2026-10-20. Paste this into a new Hermes window. Chat memory is not the
 
 Work from `main`. From 2026-10-10 through the morning of 2026-10-20 the checkout was `cursor/count-roadmap-2026-10-10`. That branch was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` are the same commit.
 
-This section wins over the 2026-10-13 score line where they disagree. The Q1–Q3 file is still 99 of 111, 12 makes missed, 0 misses called makes. The whole Adrian film, after Scott tagged Q4, is 113 of 129. Notus A1 Q1 is 24 of 31, 7 makes missed, 0 misses called makes. A longer window, a straight-line fill, ByteTrack, and DeepSORT all scored worse than 24 of 31. Do not loosen a cutoff to chase those seven. Scott did not accept the contract on 2026-10-20. `applied_to_core` stays false. A future weights file is scored by `C:\Users\scott\AppData\Local\Temp\validate_ball_weights.py` and is not copied onto `models/ball_detector.pt`.
+This section wins over the 2026-10-13 score line where they disagree. The Q1–Q3 file is still 99 of 111, 12 makes missed, 0 misses called makes. The whole Adrian film, after Scott tagged Q4, is 113 of 129. Notus A1 Q1 is 24 of 31, 7 makes missed, 0 misses called makes. A longer window, a straight-line fill, ByteTrack, and DeepSORT all scored worse than 24 of 31. Do not loosen a cutoff to chase those seven. Interpolation and a wider column were rejected in `DETECTOR_PROPOSAL_REJECTION.md`. Do not write `inspect_rule_logic.py`. Scott did not accept the contract on 2026-10-20. `applied_to_core` stays false. A future weights file is scored by `C:\Users\scott\AppData\Local\Temp\validate_ball_weights.py` and is not copied onto `models/ball_detector.pt`.
 
 ## Pickup (2026-10-13)
 

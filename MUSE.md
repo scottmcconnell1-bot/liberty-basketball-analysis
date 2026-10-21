@@ -27,6 +27,8 @@ These trials did not beat 24 of 31. Do not rerun them.
 
 `SESSION_STATE.md` is Ollama’s short status. It says Idle. If it still says the detector trials are pending, `OLLAMA.md` wins.
 
+A proposal to interpolate sparse frames and widen the column was rejected. The record is `DETECTOR_PROPOSAL_REJECTION.md`. Do not write `inspect_rule_logic.py`.
+
 A future weights file is scored by `C:\Users\scott\AppData\Local\Temp\validate_ball_weights.py`. It does not replace `models/ball_detector.pt`. It is kept only if Adrian still has 0 misses called makes and no more than 12 makes missed, and Notus misses fewer than 7 makes.
 
 The extended `results` shape (shooter and shot value beside make or miss) was drafted for review and was not written into `ai_bridge.py`. The current track has no shooter and no shot type.
