@@ -107,7 +107,7 @@ Count Adrian from the film and check it against Liberty 51, Adrian 26. Accuracy 
 
 He was clear about the shape of a fix. A shot he tagged is correct. If the program never writes a row, the counting stats are wrong. He can reject a false row. He cannot correct a row that was never written. On the shots he tagged, the ball went through the hoop and the net moved. Arc height varies, so one rise number cannot be the reason to write nothing. A rule that adds shots he did not tag is also not the answer. Both problems stand: write the missing shots, and do not create extras he must reject.
 
-Do not train another ball-weights file of the same kind. Do not change `models/ball_detector.pt` or `ball_confidence`. Do not drop the 170-pixel live rise until a test shows the missing rows appear and new untagged shots do not. Do not widen the 8-second window. Do not resume these finished agents (a resume puts the chip back on "Starting up"):
+Scott (2026-10-20) lifted the training ban. A candidate weights file may be written. Do not copy it over `models/ball_detector.pt`. Do not change `ball_confidence`. The sentence below from 10 October is the record of what had been tried, and the 2026-10-20 pickup in `ACTIVE.md` wins. Do not train another ball-weights file of the same kind and call it the fix. Do not change `models/ball_detector.pt` or `ball_confidence`. Do not drop the 170-pixel live rise until a test shows the missing rows appear and new untagged shots do not. Do not widen the 8-second window. Do not resume these finished agents (a resume puts the chip back on "Starting up"):
 
 - `a4e6aae5-7ad7-48e0-a657-0faf69984c15` — Explore Adrian timestamp sync
 - `5cb51e6b-92f6-4927-8332-2bbc4dae58c3` — Write steals and fouls

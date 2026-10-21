@@ -47,7 +47,7 @@ Stay in `ai_bridge.py`. A change counts only when `score_hermes_now.py` prints a
 
 Do not write `film_analysis.db`. Do not copy tags onto AI rows. The card gap is not an adapter cutoff. A `shot` row scores 0 points. The card scores the made or missed row at the same timestamp. Ten of the sixteen shots within 2 seconds of a disagreeing tag already have that scoring row on the tag's side. Six scoring rows still disagree and are Cursor's to correct: 31364, 31457, 31479, 31498, 31547, and 31624. Thirteen tags sit 2 to 8 seconds from a shot and stay untouched. Fifteen tags have no shot within 8 seconds. Hermes does not insert those rows.
 
-Do not edit `event_generator.py`, `net_detector.py`, `manual_tag_teach.py`, or `models/ball_detector.pt`. Do not change `ball_confidence`. Do not train another weights file. Do not resume the four finished agents named in `ACTIVE.md`. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object.
+Do not edit `event_generator.py`, `net_detector.py`, `manual_tag_teach.py`, or `models/ball_detector.pt`. Do not change `ball_confidence`. Scott (2026-10-20) allowed a candidate weights file. Do not copy it over `models/ball_detector.pt`. Keep it only when the validator passes. Do not resume the four finished agents named in `ACTIVE.md`. The rim is orange. The net is white and cone-shaped. The exit sign is the only red object.
 
 ## How Cursor and Hermes work
 

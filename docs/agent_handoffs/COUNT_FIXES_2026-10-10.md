@@ -61,7 +61,7 @@ Opened frames:
 
 Both-false (`ball_through_rim` and `net_moved` both false) is still stored as a miss. Scott kept that. Do not change it until a tested rule beats 85 right without calling more misses makes.
 
-Do not train another ball-weights file of the same kind. v6 put more boxes on the ball in the net. The make/miss count did not move past the line rule (80 of 111) until the sideways check, and that check is not shipped.
+Scott (2026-10-20) allowed a candidate weights file. See the pickup in `ACTIVE.md`. Do not copy it over `models/ball_detector.pt`. Do not train another ball-weights file of the same kind and call it the fix. v6 put more boxes on the ball in the net. The make/miss count did not move past the line rule (80 of 111) until the sideways check, and that check is not shipped.
 
 Do not drop the 170-pixel rise or widen the 8-second teach window until a test shows the missing tagged shots appear and new untagged shots do not.
 

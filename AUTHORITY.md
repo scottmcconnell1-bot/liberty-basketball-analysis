@@ -11,6 +11,8 @@
 | **Muse** | Read `MUSE.md` and `ACTIVE.md` on `main`. Same gates as Cursor. No separate branch |
 | **Ollama** | Read `OLLAMA.md` on this PC. Local model `gemma4:cloud`. No separate branch. Does not edit the core |
 
+Scott (2026-10-20) allowed a candidate ball weights file. It is not `models/ball_detector.pt`. That production file and `ball_confidence` stay behind the gate above.
+
 ## Scott gates (stop and ask)
 
 - `schema.sql` (or equivalent DDL) changes

@@ -12,6 +12,8 @@ This section wins over every older paragraph that says the fourth quarter is unt
 
 The card that reads Liberty 51, Adrian 26 is the tags written onto the card. It is not the live detector. Rebounds, assists, steals, turnovers, and fouls are in the tags. They were not part of the 113. `emit_fouls` stays false. Do not change `models/ball_detector.pt` or `ball_confidence`. A future weights file is scored by `C:\Users\scott\AppData\Local\Temp\validate_ball_weights.py` and is not copied over the production weights. It is kept only if Adrian still has 0 misses called makes and no more than 12 makes missed, and Notus misses fewer than 7 makes.
 
+Scott (2026-10-20, evening) allowed writing a candidate ball weights file. The 9 October "do not train" line below is history. The new file is not copied over `models/ball_detector.pt`. `ball_confidence` stays. `applied_to_core` stays false. Keep it only when `validate_ball_weights.py` reports Adrian with 0 misses called makes, no more than 12 makes missed, and Notus with fewer than 7 makes missed. No candidate has been written yet.
+
 **Unknown:** a weights file that holds the ball through the net on the seven Notus misses without a false make on Adrian. Player and 2/3/FT are a separate unsolved count.
 
 The full record is `docs/agent_handoffs/ACTIVE.md`. The same paragraph is at the top of `JASON.md`.

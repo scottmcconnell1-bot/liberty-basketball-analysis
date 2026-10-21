@@ -37,7 +37,7 @@ The extended `results` shape (shooter and shot value beside make or miss) was dr
 
 ## Do not
 
-- Change `models/ball_detector.pt` or `ball_confidence`.
+- Copy a new weights file over `models/ball_detector.pt`, or change `ball_confidence`. Writing a candidate file is allowed as of 2026-10-20. It stays only when `validate_ball_weights.py` passes.
 - Set `applied_to_core` true. Scott connects the adapter only after he accepts the contract.
 - Call `ai_bridge.py` from the core sequence.
 - Rewrite `ai_analyzer.py`, `event_generator.py`, `court_memory.py`, `net_detector.py`, `manual_tag_teach.py`, `game_boxscore.py`, or `scoreboard_clock.py`.

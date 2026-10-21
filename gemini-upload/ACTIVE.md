@@ -14,7 +14,9 @@ A new ball weights file is scored with `C:\Users\scott\AppData\Local\Temp\valida
 
 The extended `results` shape (shooter and shot value beside make or miss) was drafted for review and was not written into `ai_bridge.py`. The current track has no shooter and no shot type, so those predicted fields cannot be filled from it.
 
-**Unknown:** a weights file that holds the ball through the net on the seven Notus misses without a false make on Adrian.
+Scott (2026-10-20, evening) allowed writing a candidate ball weights file. The 9 October sentence that said not to train is history. The new file is saved beside the run. It is not copied over `models/ball_detector.pt`. `ball_confidence` stays. `applied_to_core` stays false. It is kept only when `validate_ball_weights.py` reports Adrian with 0 misses called makes, no more than 12 makes missed, and Notus with fewer than 7 makes missed.
+
+**Unknown:** a weights file that holds the ball through the net on the seven Notus misses without a false make on Adrian. No candidate has been written yet.
 
 ## Goal
 
