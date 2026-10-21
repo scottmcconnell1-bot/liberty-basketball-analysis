@@ -14,6 +14,7 @@ Scott tagged all four Adrian quarters: 458 rows, 129 shots. `run_saved_v6_rule` 
 
 | File | What it is |
 |---|---|
+| `AGENT_OPERATIONAL_PROTOCOL.md` | The note Scott pastes into a new chat. It wins over a chat that puts Ollama in charge |
 | `GEMINI.md` | This note |
 | `MUSE.md` | Muse's note. Muse reads `main` and does not get a separate branch |
 | `OLLAMA.md` | Ollama's note. Ollama runs on this PC and does not get a separate branch |

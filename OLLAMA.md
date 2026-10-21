@@ -4,7 +4,7 @@ Updated: 2026-10-20. Ollama runs on this PC. The model in use is `gemma4:cloud` 
 
 Jason reads `JASON.md`. Brad reads `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Muse reads `MUSE.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.
 
-Start a reply with WORKING while a tool is running. Start a reply with IDLE when the task is finished and you are waiting. Do not start another analysis of the 24/31 score. That measurement is below.
+Start a reply with WORKING while a tool is running. Start a reply with IDLE when the task is finished and you are waiting. Do not start another analysis of the 24/31 score. That measurement is below. Scott talks to any agent directly. The paste note is `AGENT_OPERATIONAL_PROTOCOL.md`. Ollama does not assign Cursor's work.
 
 ## Pickup (2026-10-20)
 

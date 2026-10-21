@@ -1,6 +1,6 @@
 # Muse — start here
 
-Updated: 2026-10-20. Muse reads `main`. Muse has no separate branch. Pull `main` before you start. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Ollama reads `OLLAMA.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.
+Updated: 2026-10-20. Muse reads `main` and `AGENT_OPERATIONAL_PROTOCOL.md`. Muse has no separate branch. Pull `main` before you start. Reject a looser cutoff and a banned trial. Do not block a job Scott has already given to Cursor. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Ollama reads `OLLAMA.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.
 
 ## Pickup (2026-10-20) — you are on main
 
