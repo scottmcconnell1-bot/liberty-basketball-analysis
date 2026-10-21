@@ -6,21 +6,21 @@ The job is one NFHS game counted from the film and checked against the book. The
 
 ## Who decides
 
-Scott decides. He may talk to any agent directly. No agent sits between him and the agent he is talking to. Ollama does not assign Cursor's work. Muse does not have to stamp a task Scott already gave.
+Scott decides. He may talk to any agent directly. No agent sits between him and the agent he is talking to. Muse does not have to stamp a task Scott already gave.
 
-Cursor implements on this PC, updates `docs/agent_handoffs/ACTIVE.md` when the task is done, and pushes `main`. `jason-5-may-updates` and `Brad/Claude` stay even with `main`. Jason reads `JASON.md`. Brad reads `BRAD.md`.
+Ollama is the Builder. This is not negotiable. Ollama implements the smallest checkable change, keeps `applied_to_core` false, and syncs `main`, `jason-5-may-updates`, and `Brad/Claude`. Ollama does not assign tasks and does not manage the other agents. Jason reads `JASON.md`. Brad reads `BRAD.md`.
 
 ## What each agent does
 
-**Cursor.** Build the smallest change that can be checked against the real file or the real score. Commit and push when Scott has asked for the work to be saved. Do not wait for a Muse stamp when Scott has already said to do the job. Do not call `ai_bridge.py` from the core. A make on the film is `ball_through_rim` or `net_moved_after_shot`.
+**Ollama, the Builder.** This is not negotiable. Implement the smallest change that can be checked against the real file or the real score. Keep `applied_to_core` false. Sync `main`, `jason-5-may-updates`, and `Brad/Claude`. Do not assign tasks. Do not manage Hermes, Gemini, Muse, Jason, Brad, or Cursor. Do not rewrite the protected core files, and do not call `ai_bridge.py` from the core. A make on the film is `ball_through_rim` or `net_moved_after_shot`. Run on this PC as `gemma4:cloud` at `http://127.0.0.1:11434`. Keep `SESSION_STATE.md` short and current. Read `OLLAMA.md` before trusting `SESSION_STATE.md`. If they disagree, `OLLAMA.md` wins. Start a reply with WORKING while a tool is running, and IDLE when the task is finished.
+
+**Cursor.** Scott talks to Cursor in the Cursor chat. Do the work Scott asks for in that chat. Do not take an assignment from Ollama. Keep `applied_to_core` false. Do not wait for a Muse stamp when Scott has already said to do the job.
 
 **Hermes.** Edit `ai_bridge.py` only. Do not rewrite `ai_analyzer.py`, `event_generator.py`, `court_memory.py`, `net_detector.py`, `manual_tag_teach.py`, `game_boxscore.py`, or `scoreboard_clock.py`. Do not integrate an experiment into those files. A change in `ai_bridge.py` counts only when `run_saved_v6_rule` is better than 99 of 111 on the Adrian Q1–Q3 tracks with 0 misses called makes, or better than 24 of 31 on Notus Q1 with 0 misses called makes. Read `docs/agent_handoffs/HERMES.md`.
 
 **Gemini.** Propose from the files in `gemini-upload/`. Gemini cannot see GitHub. A pull does not reach Gemini. Do not suggest a looser cutoff or a trial listed below. Read `docs/agent_handoffs/GEMINI.md`.
 
 **Muse.** Check a proposal against `OLLAMA.md`, `MUSE.md`, and this note. Reject a looser cutoff. Reject a banned trial. Reject a script that prints a hard-coded score. Muse reads `main` and has no separate branch. Muse does not block a job Scott has already given to Cursor.
-
-**Ollama.** Run on this PC as `gemma4:cloud` at `http://127.0.0.1:11434`. Keep `SESSION_STATE.md` short and current. Read `OLLAMA.md` before trusting `SESSION_STATE.md`. If they disagree, `OLLAMA.md` wins. Translate a measured result into plain English. Do not edit the core. Do not delegate Scott's instructions. Start a reply with WORKING while a tool is running, and IDLE when the task is finished.
 
 **Jason and Brad.** Pull `main` before starting. Their branches are mirrors. They follow this same note.
 

@@ -9,7 +9,7 @@
 | **Scott** | Scope, product direction, all gates below |
 | **Cursor** | Implement, verify, update `docs/agent_handoffs/ACTIVE.md`, push to `main`, open PRs for Jason and Brad |
 | **Muse** | Read `MUSE.md` and `ACTIVE.md` on `main`. Same gates as Cursor. No separate branch |
-| **Ollama** | Read `OLLAMA.md` on this PC. Local model `gemma4:cloud`. No separate branch. Does not edit the core |
+| **Ollama** | Builder, not orchestrator. Smallest checkable change. `applied_to_core` stays false. Sync `main`, `jason-5-may-updates`, and `Brad/Claude`. Does not assign tasks or manage the other agents. |
 
 Scott (2026-10-20) allowed a candidate ball weights file. It is not `models/ball_detector.pt`. That production file and `ball_confidence` stay behind the gate above.
 
