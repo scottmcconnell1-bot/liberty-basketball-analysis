@@ -20,6 +20,8 @@ except ImportError:
     ball_through_rim = None
     net_moved_after_shot = None
 
+from court_homography import apply_homography_to_tracks
+
 @dataclass
 class DetectionData:
     """Standardized detection data contract"""
@@ -853,7 +855,7 @@ class BallHoopExperiment:
         }
 
 
-def short_track_stays_in_net(net_depth_frames, bodd, ball, hoop_x, hoop_y, hoop_w):
+def short_track_stays_in_net(net_depth_frames, bodd, ball, hoop_x, hoop_y, hoop_w, scale_y=1.0):
     """A short ball track is a make when it disappears inside the rim.
 
     The ball's last point is inside 0.65 hoop-widths. A body-track point in the
@@ -872,23 +874,23 @@ def short_track_stays_in_net(net_depth_frames, bodd, ball, hoop_x, hoop_y, hoop_
     def width(pt):
         return abs(pt[1] - hoop_x) / hoop_w
 
-    band = [pt for pt in after if max_y < (pt[2] - hoop_y) <= max_y + 70]
+    band = [pt for pt in after if max_y < (pt[2] - hoop_y) <= max_y + (70.0 * scale_y)]
     if band and min(width(pt) for pt in band) > 1.0:
         return False
     if after:
         y0 = after[0][2]
-        falling = [pt for pt in after if pt[2] > y0 + 40]
+        falling = [pt for pt in after if pt[2] > y0 + (40.0 * scale_y)]
         if falling and min(width(pt) for pt in falling) > 0.85 and end_w > 0.15:
             return False
     in_column_fall = bool(after) and any(
-        pt[2] > after[0][2] + 40 and width(pt) <= 0.85 for pt in after
+        pt[2] > after[0][2] + (40.0 * scale_y) and width(pt) <= 0.85 for pt in after
     )
-    if max_y < 150 and end_w > 0.20 and not in_column_fall:
+    if max_y < (150.0 * scale_y) and end_w > 0.20 and not in_column_fall:
         return False
     return True
 
 
-def detect_dynamic_entry_crossing(combined_track, hoop_x, hoop_y, hoop_w):
+def detect_dynamic_entry_crossing(combined_track, hoop_x, hoop_y, hoop_w, scale_y=1.0):
     """Crossing at the first point when the window opens at the hoop and the ball is falling.
 
     Used when no above-hoop crossing was found. No tag time is consulted.
@@ -897,7 +899,7 @@ def detect_dynamic_entry_crossing(combined_track, hoop_x, hoop_y, hoop_w):
         return None
     first_x = combined_track[0][1]
     first_y = combined_track[0][2]
-    if first_y >= hoop_y - 10 and abs(first_x - hoop_x) <= 0.55 * hoop_w:
+    if first_y >= hoop_y - (10.0 * scale_y) and abs(first_x - hoop_x) <= 0.55 * hoop_w:
         if combined_track[1][2] > first_y:
             return 0
     return None
@@ -905,7 +907,8 @@ def detect_dynamic_entry_crossing(combined_track, hoop_x, hoop_y, hoop_w):
 
 def run_saved_v6_rule(
     tag_timestamps: List[float],
-    v6_tracks_path: str = "/mnt/c/Users/scott/AppData/Local/Temp/v6_tracks.json"
+    v6_tracks_path: str = "/mnt/c/Users/scott/AppData/Local/Temp/v6_tracks.json",
+    homography_matrix: Optional[np.ndarray] = None
 ) -> Dict[str, Any]:
     """
     Run the EXACT 85-score rule on SAVED v6 tracks, then add 100% fixes.
@@ -958,6 +961,9 @@ def run_saved_v6_rule(
     with open(v6_tracks_path) as f:
         saved_tracks = json.load(f)
     
+    if homography_matrix is not None:
+        saved_tracks = apply_homography_to_tracks(saved_tracks, homography_matrix)
+    
     track_by_time = {}
     for track in saved_tracks:
         track_by_time[track['t']] = track
@@ -981,6 +987,9 @@ def run_saved_v6_rule(
         track = track_by_time[tag_ts]
         hoop = track['hoop']  # [x, y, w, area] - grouped hoop, w = width (diameter)
         hoop_x, hoop_y, hoop_w, hoop_area = hoop
+        scale_x = track.get('_court_scale_x', 1.0)
+        scale_y = track.get('_court_scale_y', 1.0)
+        geo_mean_scale = math.sqrt(scale_x * scale_y)
         
         # ball: dense through net (for column check and drift)
         ball = track.get('ball', [])
@@ -1031,7 +1040,7 @@ def run_saved_v6_rule(
                     # Continue checking other above frames if no crossing found
             
             if cross_idx is None:
-                cross_idx = detect_dynamic_entry_crossing(combined, hoop_x, hoop_y, hoop_w)
+                cross_idx = detect_dynamic_entry_crossing(combined, hoop_x, hoop_y, hoop_w, scale_y)
             
             if cross_idx is None:
                 pred = False
@@ -1044,7 +1053,7 @@ def run_saved_v6_rule(
                 net_depth_frames = []
                 for pt in post_cross_dense:
                     y_rel = pt[2] - hoop_y
-                    if y_rel <= 180:
+                    if y_rel <= (180.0 * scale_y):
                         net_depth_frames.append(pt)
                     else:
                         break
@@ -1067,7 +1076,7 @@ def run_saved_v6_rule(
                         for pt in net_depth_frames:
                             frame, x, y = pt
                             y_rel = y - hoop_y
-                            if y_rel >= 80:
+                            if y_rel >= (80.0 * scale_y):
                                 total_in_zone += 1
                                 horiz_dist = abs(x - hoop_x)
                                 if horiz_dist <= 0.6 * hoop_w:
@@ -1076,7 +1085,7 @@ def run_saved_v6_rule(
                         column_ratio = in_column_count / total_in_zone if total_in_zone >= 3 else 1.0
                         
                         came_back = False
-                        deep_pts = [pt for pt in ball if pt[2] - hoop_y >= 80]
+                        deep_pts = [pt for pt in ball if pt[2] - hoop_y >= (80.0 * scale_y)]
                         if hoop_w and len(deep_pts) >= 3:
                             widths = [abs(pt[1] - hoop_x) / hoop_w for pt in deep_pts]
                             widest = max(range(len(widths)), key=lambda k: widths[k])
@@ -1112,16 +1121,16 @@ def run_saved_v6_rule(
                                         pt2 = ball[i]
                                         gap = max(1, pt2[0] - pt1[0])
                                         jump = ((pt2[1]-pt1[1])**2 + (pt2[2]-pt1[2])**2)**0.5
-                                        upward = pt2[2] < pt1[2] - 20
+                                        upward = pt2[2] < pt1[2] - (20.0 * scale_y)
                                         # A box that leaves after the ball is already 200px
                                         # below the rim, still in the column, is not the shot.
-                                        through = (pt1[2] - hoop_y) >= 200 and abs(pt1[1] - hoop_x) <= 0.6 * hoop_w
-                                        slow = jump / gap <= 12 and not upward
+                                        through = (pt1[2] - hoop_y) >= (200.0 * scale_y) and abs(pt1[1] - hoop_x) <= 0.6 * hoop_w
+                                        slow = jump / gap <= (12.0 * geo_mean_scale) and not upward
                                         if through or slow:
                                             continue
                                         max_jump = max(max_jump, jump)
                             
-                            if max_jump > 60:
+                            if max_jump > (60.0 * geo_mean_scale):
                                 pred = False
                                 details = {'reason': 'ball_box_jump', 'max_jump': round(max_jump, 1)}
                             else:
@@ -1130,14 +1139,14 @@ def run_saved_v6_rule(
                                 ball_starts_below = False
                                 if ball:
                                     first_ball_y = ball[0][2]
-                                    if first_ball_y > hoop_y + 50:
+                                    if first_ball_y > hoop_y + (50.0 * scale_y):
                                         ball_starts_below = True
                                 
-                                fell_on = bool(ball) and (max(pt[2] for pt in ball) - ball[0][2]) >= 80
+                                fell_on = bool(ball) and (max(pt[2] for pt in ball) - ball[0][2]) >= (80.0 * scale_y)
                                 near_rim_start = (
                                     bool(ball)
                                     and abs(ball[0][1] - hoop_x) <= 0.55 * hoop_w
-                                    and ball[0][2] <= hoop_y + 100
+                                    and ball[0][2] <= hoop_y + (100.0 * scale_y)
                                 )
                                 if ball_starts_below and fell_on and near_rim_start:
                                     ball_starts_below = False
@@ -1152,7 +1161,7 @@ def run_saved_v6_rule(
                                         first_ball_frame = ball[0][0] if ball else -1
                                         bodd_before_ball = [pt for pt in bodd if pt[0] < first_ball_frame]
                                         # Check if any bodd frame was deep below hoop (>180px) and then rose
-                                        floor_frames = [pt for pt in bodd_before_ball if pt[2] - hoop_y > 180]
+                                        floor_frames = [pt for pt in bodd_before_ball if pt[2] - hoop_y > (180.0 * scale_y)]
                                         if floor_frames:
                                             # Ball was on floor before rising - this is a putback
                                             pred = False
@@ -1181,7 +1190,7 @@ def run_saved_v6_rule(
                                                     max_frame_gap = gap
                                             
                                             # Small frame gap but large spatial gap = tracker swap
-                                            if max_frame_gap <= 3 and spatial_gap > 100:
+                                            if max_frame_gap <= 3 and spatial_gap > (100.0 * geo_mean_scale):
                                                 pred = False
                                                 details = {'reason': 'tracker_swap_bodd_ball', 'spatial_gap': round(spatial_gap, 1), 'frame_gap': max_frame_gap}
                                                 ball_starts_below = True  # for logic consistency
@@ -1194,9 +1203,9 @@ def run_saved_v6_rule(
                                         for pt in post_cross_dense:
                                             frame, x, y = pt
                                             y_rel = y - hoop_y
-                                            if x_at_80 is None and y_rel >= 80:
+                                            if x_at_80 is None and y_rel >= (80.0 * scale_y):
                                                 x_at_80 = x
-                                            if y_rel >= 180:
+                                            if y_rel >= (180.0 * scale_y):
                                                 x_at_180 = x
                                                 break
                                         
@@ -1245,7 +1254,7 @@ def run_saved_v6_rule(
                                             if max_depth_idx is not None:
                                                 for i in range(max_depth_idx + 1, len(net_depth_frames)):
                                                     y_rel = net_depth_frames[i][2] - hoop_y
-                                                    if y_rel < max_depth - 5:  # goes up by >5px
+                                                    if y_rel < max_depth - (5.0 * scale_y):  # goes up by >5px
                                                         pred = False
                                                         details['vetoed'] = True
                                                         details['veto_reason'] = 'ball_bounces_up'
@@ -1253,7 +1262,7 @@ def run_saved_v6_rule(
                                         
                                         if pred and is_short_make:
                                             if not short_track_stays_in_net(
-                                                net_depth_frames, bodd, ball, hoop_x, hoop_y, hoop_w
+                                                net_depth_frames, bodd, ball, hoop_x, hoop_y, hoop_w, scale_y
                                             ):
                                                 pred = False
                                                 details['vetoed'] = True
@@ -1261,7 +1270,7 @@ def run_saved_v6_rule(
                                             else:
                                                 last_ball_frame = ball[-1][0] if ball else -1
                                                 bodd_after = [pt for pt in bodd if pt[0] > last_ball_frame]
-                                                deep = [pt for pt in bodd_after if pt[2] - hoop_y > 180]
+                                                deep = [pt for pt in bodd_after if pt[2] - hoop_y > (180.0 * scale_y)]
                                                 if len(deep) >= 2:
                                                     bodd_ratio = sum(
                                                         1 for pt in deep
