@@ -21,11 +21,13 @@ To eliminate "AI theater" and prevent banned trials, all work must follow this f
 
 ### Hermes (The Architect)
 - **Role:** Structural integrity and integration.
-- **Expectation:** Ensure new logic fits the core pipeline without causing regressions in other modules.
+- **Expectation:** Ensure new logic fits the core pipeline without causing regressions.
 
-### Cursor (The Builder)
-- **Role:** Implementation and refactoring.
-- **Expectation:** Execute the smallest possible change for verification.
+### Cursor (The Developer & Reviewer)
+- **Role:** Implementation and first-pass code audit.
+- **Expectation:** NO BLIND SAVES. Before updating any file, Cursor must diff the proposed code against the version on disk.
+- **The Auditor Role:** If any core logic or helper function is deleted or truncated in a proposal, Cursor MUST refuse to save and report the missing lines to the User.
+- **Execution:** Execute the smallest change for verification.
 - **Rule:** No code is to be written or run until it has passed the Muse Audit.
 
 ### Muse (The Auditor/Gatekeeper)
