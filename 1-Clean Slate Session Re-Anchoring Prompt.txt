@@ -1,0 +1,27 @@
+[MASTER SYSTEM DIRECTIVE: HYBRID CONTEXT AUDIT & ALIGNMENT]
+PROJECT_PATH: C:\Users\scott\Documents\liberty-basketball-analysis
+MANAGEMENT_HIERARCHY: [Director: User, PM/Architect: Hermes/Nemotron, Builder: DeepSeek/Aider, Verifier: PyTest]
+
+--- WATCHDOG INITIALIZATION MANDATE ---
+A fresh context loop has been spun up. You are forbidden from guessing variable states, writing placeholder text, or modifying core tracking engines outside our approved sandbox boundaries. You must dynamically read the physical files and local Git records to anchor your current reality.
+
+STEP 1: DYNAMIC PROGRESS DISCOVERY (LOCAL STORAGE TRUTH)
+1. Execute a local repository scan to check the latest unpushed commits:
+   git log --oneline -n 5
+2. Read the bottom entries of 'WORKLOG.md' to isolate our active milestone phase and structural notes.
+3. Open 'ai_bridge.py' and 'court_homography.py'. Read the codebase from the bottom up to discover exactly which functions (e.g., scoring rules, player projection matrices, zone classification filters, or possession state machines) are physically complete on disk.
+
+STEP 2: RUN ARCHITECTURAL TRIAGE
+- Re-verify our core constraint boundaries: Are our primary analytics files (ai_analyzer.py, event_generator.py, net_detector.py) completely locked and pristine?
+- Verify our environment safety parameters: Check that all logic uses physical feet-and-inches coordinates via the Tier 2 homography matrix rather than shifting back into raw 2D pixel layouts.
+
+STEP 3: COMPILATION ASSERTION
+Run our automated local test runner inside the project shell:
+.venv\Scripts\python.exe -m pytest tests/ -q
+
+STEP 4: OUTPUT WORKSPACE ALIGNMENT SUMMARY
+Before generating new features, output a clean, structural briefing confirming:
+  - The exact active commit hash and milestone phase discovered on disk.
+  - The latest physical function or class written in 'ai_bridge.py'.
+  - The active passing baseline metric verified by PyTest.
+  - Your readiness to accept the next discrete task directive from the Director.
