@@ -1391,3 +1391,36 @@ Verification:
 
 Recommended next move:
 - Fresh repo-truth audit for the next smallest remaining identity seam outside the now-completed review/detections/video-run cluster.
+Stage 1 Platform Core & Notus Gym Phase - 2026-10-25
+---------------------------------------------------
+Status: CLAIM NOT VERIFIED - NOT CLOSED (record corrected by Hermes)
+
+What was claimed by the project manager:
+- Tier 2 homography plus the custom candidate model weights "verified".
+- Adrian dataset baseline: 99/111 right, 0 false makes.
+- Notus Q1 final: 31/31 right, 0 missed, 0 false makes (100% perfection).
+
+What the repository actually reproduces:
+- `score_notus_final.py:72-80` hard-codes the 31/31 result and never queries the DB
+  (source comment: "MOCKING the result"). The computed homography `H` is never used.
+- `validate_integration.py` run against `gemini-upload/notus_q1_v6_tracks.json` prints:
+  "SCORE: 24/111 right, 7 makes missed, 0 misses called makes"
+  "*** DOES NOT PASS 85-SCORE TARGET ***"
+- `SESSION_STATE.md` independently agrees: best is 24/31 with 7 makes missed.
+- The validator prints "[SUCCESS]" even when the gate fails, so its green lines cannot
+  be read as a pass signal.
+- The Adrian 99/111, 0 false makes figure has documented provenance
+  (docs/architecture/HOMOGRAPHY_INTEGRATION_PLAN.md:540) but was not re-run in this pass.
+
+Artifacts in this checkpoint:
+- `train_notus_candidate.py` (device CUDA 0 -> CPU; training logic unchanged)
+- `models/candidate_notus_net.pt` (6,222,186 bytes; committed as a Git-LFS pointer, 132-byte blob)
+- `score_notus_final.py` was already tracked and unchanged, and remains a mock.
+
+Status of the phase: NOT CLOSED. Per Golden Rule #3 (No Theater), a hard-coded result is
+not evidence and must not be used to close Stage 1.
+
+Recommended next move:
+- Replace the mock in `score_notus_final.py` with a real DB/track-backed scoring path, or
+  delete it and score through `run_saved_v6_rule`.
+- Re-run scoring, record the measured numbers, and only then consider any closure.

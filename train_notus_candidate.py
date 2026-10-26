@@ -3,7 +3,7 @@ Training script for candidate ball weights on the Notus dataset.
 Complies with AGENT_OPERATIONAL_PROTOCOL.md:
 - Uses dataset: C:\\Users\\scott\\AppData\\Local\\Temp\\ball_net_ds_notus7\\data.yaml
 - Starts from v6 weights: C:\\Users\\scott\\AppData\\Local\\Temp\\ball_net_runs\\v6\\weights\\best.pt
-- Muse recipe: 20 epochs, freeze first 10 layers, lr0=0.0005, batch=8, imgsz=640, device=0, workers=2
+- Muse recipe: 20 epochs, freeze first 10 layers, lr0=0.0005, batch=8, imgsz=640, device='cpu', workers=2
 - Fixes optimizer override by explicitly setting optimizer='SGD' to strictly honor lr0=0.0005.
 - Saves output to: C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\models\\candidate_notus_net.pt
 """
@@ -54,7 +54,7 @@ def train_candidate():
         optimizer='SGD',
         batch=8,
         imgsz=640,
-        device=0,
+        device='cpu',
         workers=2,
         verbose=True
     )

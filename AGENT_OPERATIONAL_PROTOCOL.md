@@ -54,3 +54,21 @@ To eliminate "AI theater" and prevent banned trials, all work must follow this f
 - All agents must check `SESSION_STATE.md` before starting a task.
 - Technical agents must explain *why* a proposal is not a banned trial.
 - All responses must be direct and evidence-based.
+## 6. Technical Operational Matrix (established 2026-10-25)
+
+### 6.1 Lead Architect & Project Manager
+- **Primary:** Hermes (local). Reads `WORKLOG.md` and `PROJECT_VISION.md`, maintains architectural structure, breaks macro roadmaps into single isolated tasks.
+- **Alternate:** OpenAI GPT-4o / Claude 3.5 Sonnet (cloud failover), engaged when local context limits or shell-execution locks are detected.
+- **Identity note:** the acting agent in this session is `deepseek-v4.1-flash-free`, not Nemotron-3-Ultra-550B. Model identity is whatever the runtime reports; do not stamp a different model name.
+
+### 6.2 Mechanical Code Writer (The Builder)
+- **Primary:** DeepSeek V4.1 (Flash Free) via Aider CLI.
+- **Duty:** translate the Architect's instructions into discrete Python blocks.
+- **Strict rule:** purely additive edits. Do not refactor legacy pixel loops or tracking variables inside `run_saved_v6_rule` without a specific, isolated safety-wrapper assignment.
+
+### 6.3 Teams Judge & Verifier (The Gatekeeper)
+- **Primary:** pytest suite plus local git hooks.
+- **Command:** `pytest tests/ -q`. Bare `pytest` resolves to Python 3.12 (pytest 8.4.2); `python -m pytest` fails because `python` on PATH is the `hermes-agent` 3.11 venv, which has no pytest.
+- **Verified baseline:** 1104 tests collected as of 2026-10-25. The previously quoted 1,095 figure has no basis in the repository (no "1095" reference exists).
+- **Fail-safe:** if an edit drops the pass count below the recorded baseline, immediately run `git checkout HEAD -- <file>`.
+- **Known gap:** no pre-commit hook is installed. `.git/hooks` holds only the stock `pre-push` sample plus Git-LFS `post-merge`/`post-checkout`, so this fail-safe is manual until a pre-commit gate is written.
