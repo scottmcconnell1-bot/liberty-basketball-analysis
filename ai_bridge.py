@@ -1420,3 +1420,128 @@ def check_adrian_rerun_score(db_path: str = "/mnt/c/Users/scott/Documents/libert
 #     stats = validated_stats("path/to/video.mp4")
 #     print(json.dumps(stats, indent=2))
 #     check_adrian_rerun_score()
+
+def project_player_tracks_to_court(tracks: list, homography: np.ndarray, scale_x: float, scale_y: float) -> list:
+    """
+    Projects player centroid tracks from image pixels to court feet.
+    Input tracks format: [{'tracker_id': int, 'centroids': [(frame, x_img, y_img), ...],
+                           'jersey_read': str, 'jersey_conf': float}, ...]
+    Adds '_court_x' and '_court_y' metrics using court_homography structures.
+
+    '_court_centroids' holds every projected centroid as (frame, court_x, court_y).
+    '_court_x' and '_court_y' hold the most recent projected centroid (None when a
+    track has no usable centroids). scale_x/scale_y are recorded as
+    '_court_scale_x'/'_court_scale_y' and are not re-applied, because
+    image_to_court already returns floor-plane feet; applying them again would
+    double-scale the coordinates.
+
+    The input tracks and their centroids are never mutated; new dicts are returned.
+    """
+    from court_homography import image_to_court
+
+    projected_tracks = []
+
+    for track in tracks:
+        if not isinstance(track, dict):
+            continue
+
+        new_track = dict(track)
+        new_track['_court_scale_x'] = float(scale_x)
+        new_track['_court_scale_y'] = float(scale_y)
+
+        court_centroids = []
+        last_court_x = None
+        last_court_y = None
+
+        if homography is not None:
+            for centroid in track.get('centroids') or []:
+                if centroid is None or len(centroid) < 3:
+                    continue
+                frame, x_img, y_img = centroid[0], centroid[1], centroid[2]
+                court_x, court_y = image_to_court(homography, float(x_img), float(y_img))
+                court_centroids.append((int(frame), float(court_x), float(court_y)))
+                last_court_x, last_court_y = float(court_x), float(court_y)
+
+        new_track['_court_centroids'] = court_centroids
+        new_track['_court_x'] = last_court_x
+        new_track['_court_y'] = last_court_y
+        projected_tracks.append(new_track)
+
+    return projected_tracks
+
+def classify_court_zone(x_ft: float, y_ft: float, hoop_x: float = 0.0, hoop_y: float = 0.0) -> str:
+    """
+    Classifies court zones based on standard NFHS high school dimensions
+    relative to the basket center (0,0).
+    Origin (0,0) is the hoop center.
+
+    Zone precedence (first match wins, so every band stays reachable):
+      1. 'rim'        distance from hoop <= 4.0 ft
+      2. 'backcourt'  y < 0.0 (behind the backboard/baseline axis)
+      3. 'transition' y > 41.75 (past the half-court plane; 47.0 - 5.25 baseline offset)
+      4. 'paint'      -6.0 <= x <= 6.0 and 0.0 <= y <= 19.0
+      5. 'three'      distance from hoop > 19.75 ft
+      6. 'perimeter'  outside the paint but inside the 3-point arc
+
+    'transition' is tested before 'three' because every point past half court is
+    also beyond the 19.75 ft arc; testing the arc first would make 'transition'
+    unreachable. All bounds are compared as plain floats against the values above.
+    """
+    x_ft = float(x_ft)
+    y_ft = float(y_ft)
+    hoop_x = float(hoop_x)
+    hoop_y = float(hoop_y)
+
+    distance_from_hoop = math.hypot(x_ft - hoop_x, y_ft - hoop_y)
+
+    if distance_from_hoop <= 4.0:
+        return 'rim'
+    if y_ft < 0.0:
+        return 'backcourt'
+    if y_ft > 41.75:
+        return 'transition'
+    if -6.0 <= x_ft <= 6.0 and 0.0 <= y_ft <= 19.0:
+        return 'paint'
+    if distance_from_hoop > 19.75:
+        return 'three'
+    return 'perimeter'
+
+def classify_court_zone(x_ft: float, y_ft: float, hoop_x: float = 0.0, hoop_y: float = 0.0, config: dict = None) -> str:
+    """
+    Classifies court zones based on standard NFHS high school dimensions
+    relative to the basket center (0,0). Origin (0,0) is the hoop center.
+
+    Zone precedence (first match wins):
+      1. 'rim'        distance from hoop <= 4.0 ft
+      2. 'backcourt'  y < 0.0 (behind the backboard/baseline axis)
+      3. 'transition' y > half_court_limit (dynamic based on court length)
+      4. 'paint'      -6.0 <= x <= 6.0 and 0.0 <= y <= 19.0
+      5. 'three'      distance from hoop > 19.75 ft
+      6. 'perimeter'  outside the paint but inside the 3-point arc
+    """
+    import math
+    x_ft = float(x_ft)
+    y_ft = float(y_ft)
+    hoop_x = float(hoop_x)
+    hoop_y = float(hoop_y)
+
+    if config is None:
+        config = {'court_length_ft': 94.0}
+
+    # Calculate dynamic half-court limit based on gym size:
+    # (Total Court Length / 2) - 5.25 ft hoop offset from baseline
+    half_court_limit = (config.get('court_length_ft', 94.0) / 2.0) - 5.25
+
+    distance_from_hoop = math.hypot(x_ft - hoop_x, y_ft - hoop_y)
+
+    if distance_from_hoop <= 4.0:
+        return 'rim'
+    if y_ft < 0.0:
+        return 'backcourt'
+    if y_ft > half_court_limit:
+        return 'transition'
+    if -6.0 <= x_ft <= 6.0 and 0.0 <= y_ft <= 19.0:
+        return 'paint'
+    if distance_from_hoop > 19.75:
+        return 'three'
+    return 'perimeter'
