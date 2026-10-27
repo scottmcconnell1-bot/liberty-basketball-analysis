@@ -1469,42 +1469,53 @@ def project_player_tracks_to_court(tracks: list, homography: np.ndarray, scale_x
 
     return projected_tracks
 
-def classify_court_zone(x_ft: float, y_ft: float, hoop_x: float = 0.0, hoop_y: float = 0.0) -> str:
+HOOP_TO_BASELINE_FT = 5.25
+DEFAULT_COURT_LENGTH_FT = 94.0
+# A measured half-court line outside this band (hoop-origin feet) is a bad click
+# or a bad projection: 74 ft court -> 31.75, 94 ft court -> 41.75.
+HALF_COURT_Y_MIN_FT = 28.0
+HALF_COURT_Y_MAX_FT = 46.0
+
+
+def half_court_y_from_image_points(homography: np.ndarray, center_line_points: list) -> Optional[float]:
     """
-    Classifies court zones based on standard NFHS high school dimensions
-    relative to the basket center (0,0).
-    Origin (0,0) is the hoop center.
+    Measures this gym's half-court line from points clicked (or detected) on it.
 
-    Zone precedence (first match wins, so every band stays reachable):
-      1. 'rim'        distance from hoop <= 4.0 ft
-      2. 'backcourt'  y < 0.0 (behind the backboard/baseline axis)
-      3. 'transition' y > 41.75 (past the half-court plane; 47.0 - 5.25 baseline offset)
-      4. 'paint'      -6.0 <= x <= 6.0 and 0.0 <= y <= 19.0
-      5. 'three'      distance from hoop > 19.75 ft
-      6. 'perimeter'  outside the paint but inside the 3-point arc
+    Every gym is a different length, but the free-throw line and the basket sit at
+    fixed NFHS distances from the baseline, so the homography built from those points
+    already gives true feet. Projecting the center line through it gives that gym's
+    half court directly, without knowing the court length.
 
-    'transition' is tested before 'three' because every point past half court is
-    also beyond the 19.75 ft arc; testing the arc first would make 'transition'
-    unreachable. All bounds are compared as plain floats against the values above.
+    center_line_points: [(x_img, y_img), ...] pixel points on the half-court line.
+    Returns the mean court Y in feet (origin = hoop center, +Y toward midcourt), or
+    None if there are no points or the result is outside the plausible band.
     """
-    x_ft = float(x_ft)
-    y_ft = float(y_ft)
-    hoop_x = float(hoop_x)
-    hoop_y = float(hoop_y)
+    from court_homography import image_to_court
 
-    distance_from_hoop = math.hypot(x_ft - hoop_x, y_ft - hoop_y)
+    if homography is None or not center_line_points:
+        return None
+    ys = [image_to_court(homography, x, y)[1] for x, y in center_line_points]
+    half_court_y = float(sum(ys) / len(ys))
+    if not (HALF_COURT_Y_MIN_FT <= half_court_y <= HALF_COURT_Y_MAX_FT):
+        return None
+    return half_court_y
 
-    if distance_from_hoop <= 4.0:
-        return 'rim'
-    if y_ft < 0.0:
-        return 'backcourt'
-    if y_ft > 41.75:
-        return 'transition'
-    if -6.0 <= x_ft <= 6.0 and 0.0 <= y_ft <= 19.0:
-        return 'paint'
-    if distance_from_hoop > 19.75:
-        return 'three'
-    return 'perimeter'
+
+def resolve_half_court_limit(config: dict = None) -> Tuple[float, str]:
+    """
+    Returns (half-court Y in hoop-origin feet, source).
+
+    Source order: a measured 'half_court_y_ft' for this gym, then 'court_length_ft',
+    then the 94 ft NFHS maximum. The source string says which one was used.
+    """
+    config = config or {}
+    measured = config.get('half_court_y_ft')
+    if measured is not None:
+        return float(measured), 'measured'
+    if config.get('court_length_ft') is not None:
+        return float(config['court_length_ft']) / 2.0 - HOOP_TO_BASELINE_FT, 'court_length'
+    return DEFAULT_COURT_LENGTH_FT / 2.0 - HOOP_TO_BASELINE_FT, 'default_94ft'
+
 
 def classify_court_zone(x_ft: float, y_ft: float, hoop_x: float = 0.0, hoop_y: float = 0.0, config: dict = None) -> str:
     """
@@ -1514,23 +1525,24 @@ def classify_court_zone(x_ft: float, y_ft: float, hoop_x: float = 0.0, hoop_y: f
     Zone precedence (first match wins):
       1. 'rim'        distance from hoop <= 4.0 ft
       2. 'backcourt'  y < 0.0 (behind the backboard/baseline axis)
-      3. 'transition' y > half_court_limit (dynamic based on court length)
+      3. 'transition' y > half_court_limit (see resolve_half_court_limit)
       4. 'paint'      -6.0 <= x <= 6.0 and 0.0 <= y <= 19.0
       5. 'three'      distance from hoop > 19.75 ft
       6. 'perimeter'  outside the paint but inside the 3-point arc
+
+    'transition' is tested before 'three' because every point past half court is
+    also beyond the 19.75 ft arc; testing the arc first would make 'transition'
+    unreachable.
+
+    config may carry 'half_court_y_ft' (measured for this gym, preferred) or
+    'court_length_ft'. With neither, half court is the 94 ft NFHS maximum (41.75).
     """
-    import math
     x_ft = float(x_ft)
     y_ft = float(y_ft)
     hoop_x = float(hoop_x)
     hoop_y = float(hoop_y)
 
-    if config is None:
-        config = {'court_length_ft': 94.0}
-
-    # Calculate dynamic half-court limit based on gym size:
-    # (Total Court Length / 2) - 5.25 ft hoop offset from baseline
-    half_court_limit = (config.get('court_length_ft', 94.0) / 2.0) - 5.25
+    half_court_limit, _source = resolve_half_court_limit(config)
 
     distance_from_hoop = math.hypot(x_ft - hoop_x, y_ft - hoop_y)
 
