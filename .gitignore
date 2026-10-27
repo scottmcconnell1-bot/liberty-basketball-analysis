@@ -184,3 +184,4 @@ flask_err.log
 
 # Local database archive (pushed only if Scott approves)
 db-archive/
+.aider*
