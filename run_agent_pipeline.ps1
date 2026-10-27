@@ -4,7 +4,7 @@ Set-Location $RepoPath
 
 # Builder model: must appear in `ollama list`. Change here to swap models
 # (e.g. after `ollama pull qwen2.5-coder:32b`, set this to "qwen2.5-coder:32b").
-$OllamaModel = "gemma4:cloud"
+$OllamaModel = "nemotron-3-nano:30b"
 $env:OLLAMA_API_BASE = "http://127.0.0.1:11434"
 
 # Files the Builder may edit; also the rollback scope on failure.
@@ -30,7 +30,9 @@ while ($true) {
     $LinuxRepoPath = "/mnt/c/Users/scott/Documents/liberty-basketball-analysis"
 
     # 1. Define the pristine architectural instruction string
-    $PromptText = "Analyze workspace. Read the bottom entries of $LinuxRepoPath/WORKLOG.md and current local git log to anchor your position. Identify the next single additive task block for Stage 2 (TASK-2.2 Possession Detection State Machine). Output the exact architectural code specifications directly into a new file on disk named $LinuxRepoPath/NEXT_TASK.md. Do not edit source files directly."
+    # The task comes from the repo record, not from this script, so the prompt cannot go stale.
+    # No double quotes, backticks, or dollar signs inside the text below (PowerShell and bash both parse it).
+    $PromptText = "Work in $LinuxRepoPath. Read AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md, CLAUDE.md, SESSION_STATE.md, docs/agent_handoffs/ACTIVE.md and docs/agent_handoffs/HERMES.md, plus the local git log. The current goal and next step are in ACTIVE.md; follow it, not older stage names. Choose the single smallest additive code task that moves that goal forward AND can be done by editing only ai_bridge.py, settings_store.py and tests/test_ai_bridge.py. It must obey the Golden Rules (no looser cutoffs, no banned trials, no hard-coded results, applied_to_core stays false) and must not cross any Scott gate in AUTHORITY.md. Write the exact code specification, including the tests to add, to $LinuxRepoPath/NEXT_TASK.md. Quote test counts and scores only from commands you ran. If no such task exists, do not create NEXT_TASK.md; say why. Do not edit source files yourself."
 
     # 2. Escape single quotes for the bash single-quoted string below
     $EscapedPrompt = $PromptText -replace "'", "'\''"
