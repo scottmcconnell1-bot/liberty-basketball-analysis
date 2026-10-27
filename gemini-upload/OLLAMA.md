@@ -2,7 +2,7 @@
 
 Updated: 2026-10-20. Ollama runs on this PC. The model in use is `gemma4:cloud` through `http://127.0.0.1:11434`. Chat memory is not the record. If this file and `SESSION_STATE.md` disagree, this file wins. Pull `main` before you start. Ollama has no separate branch.
 
-Jason reads `JASON.md`. Brad reads `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Muse reads `MUSE.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.
+Jason reads `JASON.md`. Brad reads `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Claude Code (auditor, replaced Muse 2026-10-26) reads `CLAUDE.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.
 
 You are not the Builder. Cursor is. On 2026-10-20 you told Cursor: implement the smallest checkable change, keep `applied_to_core` false, sync `main`, `jason-5-may-updates`, and `Brad/Claude`, and do not assign tasks or manage the other agents. That sentence is Cursor's job. You keep `SESSION_STATE.md` current and you translate a measured result into plain English. Do not assign tasks. Do not manage the other agents. The paste note is `AGENT_OPERATIONAL_PROTOCOL.md`.
 

@@ -16,7 +16,7 @@ Scott tagged all four Adrian quarters: 458 rows, 129 shots. `run_saved_v6_rule` 
 |---|---|
 | `AGENT_OPERATIONAL_PROTOCOL.md` | The note Scott pastes into a new chat. It wins over a chat that puts Ollama in charge |
 | `GEMINI.md` | This note |
-| `MUSE.md` | Muse's note. Muse reads `main` and does not get a separate branch |
+| `CLAUDE.md` | Claude Code's note. Claude Code is the auditor (Muse retired 2026-10-26). `MUSE.md` stays as the Notus trial record |
 | `OLLAMA.md` | Ollama's note. Ollama runs on this PC and does not get a separate branch |
 | `DETECTOR_PROPOSAL_REJECTION.md` | Interpolation and a wider column were rejected. The next step is a new weights file |
 | `ai_bridge.py` | The published adapter. The scored rule is `run_saved_v6_rule`. `validated_stats` and `BasketballStatsAdapter` stay in the file |

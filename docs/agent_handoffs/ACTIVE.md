@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Muse, and Ollama: start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Ollama, and Claude Code (auditor, replaced Muse 2026-10-26): start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
 
 ## Pickup (2026-10-20)
 

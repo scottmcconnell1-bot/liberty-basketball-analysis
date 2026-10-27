@@ -14,7 +14,7 @@ One active task file, not GitHub labels.
 
 1. Update `ACTIVE.md` when a task actually completes. Replace the paragraph it changes. Move old text to `ARCHIVE/`.
 2. Code changes go to `main`. Open a pull request for Jason when asked, and the same one for Brad on `Brad/Claude`.
-3. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes' note is `HERMES.md`. Gemini's note is `GEMINI.md`. Muse's note is `MUSE.md`. Ollama's note is `OLLAMA.md`. Gemini cannot see GitHub. Upload the repo-root folder `gemini-upload/`. Muse and Ollama read `main` and do not get a separate branch. Ollama runs on this PC.
+3. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes' note is `HERMES.md`. Gemini's note is `GEMINI.md`. Claude Code's note is `CLAUDE.md` (auditor; Muse retired 2026-10-26, `MUSE.md` kept as the Notus trial record). Ollama's note is `OLLAMA.md`. Gemini cannot see GitHub. Upload the repo-root folder `gemini-upload/`. Muse and Ollama read `main` and do not get a separate branch. Ollama runs on this PC.
 
 ## Legacy (retired)
 
