@@ -12,9 +12,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = ROOT / "models"
 POINTER_RE = re.compile(
-    r"^version https://git-lfs\.github\.com/spec/v1\n"
-    r"oid sha256:([0-9a-f]{64})\n"
-    r"size (\d+)\n?$",
+    r"^version https://git-lfs\.github\.com/spec/v1\r?\n"
+    r"oid sha256:([0-9a-f]{64})\r?\n"
+    r"size (\d+)(?:\r?\n)?$",
     re.MULTILINE,
 )
 
