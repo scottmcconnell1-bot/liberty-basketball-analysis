@@ -1,6 +1,6 @@
 # TEAM RECOVERY — Liberty Basketball Analysis
 
-**Last updated: 2026-10-26 21:00 MDT by Claude Code (vetter)**
+**Last updated: 2026-10-26 21:10 MDT by Claude Code (vetter)**
 
 > If anything breaks, start here. This file is the single source for who does what, how to open each agent, and where the work stands.
 > Every agent reads it first: Hermes and OpenCode load `AGENTS.md` automatically, Claude Code loads `CLAUDE.md`, and both point here.
@@ -34,10 +34,11 @@
 | **Hermes** | Architect | Reads the project, writes ONE small task to `NEXT_TASK.md` (with its tests) | Edit source files |
 | **OpenCode (DeepSeek)** | Coder | Builds a plan that Claude stamped `VETTED`, touching only the files it names | Plan, or check its own work |
 | **Claude Code** | Vetter | Checks the plan before code; reads the diff and runs the real tests before commit; keeps the record honest; updates this file | Plan, write project code, assign work |
+| **Muse** | Checks the vetter | Reviews each VETTED or PASS verdict from Claude; answers AGREE or DISAGREE. A DISAGREE stops the loop for Scott. Free (OpenCode, `opencode/glm-5.3-flash-free`). | Plan, code, or do the first vet |
 | **Cursor** | Idle | Nothing; left installed (costs nothing) | — |
-| Retired 2026-10-26 | — | Muse, Ollama (project manager), Gemini, Aider. `MUSE.md` and `OLLAMA.md` are kept as the trial record. | — |
+| Retired 2026-10-26 | — | Ollama (project manager), Gemini, Aider. `MUSE.md` and `OLLAMA.md` are kept as the trial record. | — |
 
-**Flow:** Scott → Hermes (plan) → Claude (vet plan) → OpenCode (code) → Claude (vet code and tests) → commit on the work branch → Scott says push/merge/save.
+**Flow:** Scott → Hermes (plan) → Claude (vet plan) → OpenCode (code) → Claude (vet code and tests) → Muse (check the vetter) → commit on the work branch → Scott says push/merge/save.
 
 **Rules every agent follows:** `AUTHORITY.md` (Scott's gates) and `AGENT_OPERATIONAL_PROTOCOL.md` (Golden Rules: no looser cutoffs, no banned trials, no hard-coded results, `applied_to_core` stays false). No agent checks its own work.
 
@@ -85,6 +86,12 @@ opencode
 ```
 Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/deepseek-v4.1-flash-free "your prompt"`.
 
+**Muse (checks the vetter):** Start → Windows PowerShell →
+```powershell
+cd C:\Users\scott\Documents\liberty-basketball-analysis
+opencode run -m opencode/glm-5.3-flash-free "Read MUSE.md and TEAM_RECOVERY.md. You are Muse."
+```
+
 **Cursor:** idle. Do not start it for this project.
 
 ---
@@ -96,6 +103,9 @@ Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/d
 
 **Claude Code:**
 > Read TEAM_RECOVERY.md and CLAUDE.md. You are the Vetter. Check that section 6 is current against git and ACTIVE.md. If NEXT_TASK.md exists, vet it and stamp it VETTED or REJECTED with the reason. If there are uncommitted code changes, read the diff and run the tests. Report Proven / Inferred / Unknown. Save long reports to a file in C:\Users\scott\Documents and open it in Notepad.
+
+**Muse:**
+> Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code). Read the plan or diff and Claude's verdict. Check it against the Golden Rules, Scott's gates, ACTIVE.md, and OLLAMA.md. Answer MUSE: AGREE, or MUSE: DISAGREE: <reason>. Do not edit files.
 
 **OpenCode:**
 > Read TEAM_RECOVERY.md and AGENTS.md. You are the Coder. Build NEXT_TASK.md only if it carries a VETTED stamp from Claude Code. Change only the files it names, purely additive, and add the tests it lists. Run the tests with .\.venv\Scripts\python.exe -m pytest <the test files> -q. Do not commit; Claude vets first. Report exactly what you changed.
@@ -137,6 +147,8 @@ Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/d
 ---
 
 ## 8. Update log
+
+- 2026-10-26 21:10 MDT — Claude Code: Muse restored to check the vetter (free, GLM via OpenCode).
 
 - 2026-10-26 21:00 MDT — Claude Code: scoreboard-only makes proven on Adrian (43/43, 51-26); goal is now no manual tagging.
 
