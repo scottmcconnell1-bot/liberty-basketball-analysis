@@ -4,11 +4,13 @@
 
 ## 1. The Chain of Command (Scott, 2026-10-26)
 Every agent can see the repo and the local folder. Each agent keeps to its one role:
-**Scott** $ightarrow$ **Hermes (Architect: plan)** $ightarrow$ **Claude Code (Vetter: check the plan)** $ightarrow$ **OpenCode/DeepSeek (Coder: write the code)** $ightarrow$ **Claude Code (Vetter: check the code and tests)** $ightarrow$ commit $ightarrow$ **Scott**
+**Scott** → **Hermes (Architect: plan)** → **Claude Code (Vetter: check the plan)** → **OpenCode/DeepSeek (Coder: write the code)** → **Claude Code (Vetter: check the code and tests)** → **Muse (check the vetter)** → commit → **Scott**
 
 No agent checks its own work. The agents talk through files: Hermes writes `NEXT_TASK.md`, the coder reads it, and every agent reads `docs/agent_handoffs/ACTIVE.md`.
 
-**Retired 2026-10-26:** Muse (replaced by Claude Code), Ollama as project manager, Gemini, and Aider as builder. `MUSE.md` and `OLLAMA.md` stay as the record of the Notus trials.
+**Muse is back (2026-10-26) in a new role: it checks the vetter.** It runs free on OpenCode with `opencode/glm-5.3-flash-free`, a model family different from Hermes (Nemotron), OpenCode (DeepSeek), and Claude.
+
+**Retired 2026-10-26:** Ollama as project manager, Gemini, and Aider as builder. `MUSE.md` and `OLLAMA.md` stay as the record of the Notus trials.
 **Idle:** Cursor (Scott, 2026-10-26). Start every session from `TEAM_RECOVERY.md`.
 
 ## 2. Agent Roles & Responsibilities
@@ -32,6 +34,11 @@ No agent checks its own work. The agents talk through files: Hermes writes `NEXT
 - **The Veto:** If a plan or change loosens thresholds or reruns banned trials, Claude Code MUST reject it immediately.
 - **Record:** Writes verified results into `ACTIVE.md` (Proven / Inferred / Unknown).
 - **Note:** `CLAUDE.md`.
+
+### Muse (Checks the Vetter)
+- **Role:** After Claude Code stamps a plan `VETTED` or code `PASS`, Muse reads the plan or diff and Claude's verdict and answers `MUSE: AGREE` or `MUSE: DISAGREE: <reason>`.
+- **A DISAGREE stops the loop for Scott.** Neither Claude nor Muse overrides the other.
+- **Expectation:** the Muse rules in `MUSE.md` (reject looser cutoffs and banned trials; check claims against the record). Does not plan, code, or do the first vet.
 
 ## 3. The Golden Rules (Non-Negotiable)
 1. **No Loosening:** Do not move cutoffs in `ai_bridge.py` (e.g., the 170 / 80 / 8000 thresholds) to fix Notus if it risks an Adrian miss becoming a make.
