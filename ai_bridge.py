@@ -1476,6 +1476,17 @@ DEFAULT_COURT_LENGTH_FT = 94.0
 HALF_COURT_Y_MIN_FT = 28.0
 HALF_COURT_Y_MAX_FT = 46.0
 
+# Known court lengths by home gym (Scott, 2026-10-26). Unknown gyms use the 94 ft default.
+GYM_COURT_LENGTH_FT = {
+    'liberty': 92.0,
+}
+
+
+def court_config_for_gym(gym: str) -> dict:
+    """Zone config for a home gym: its known court length, or {} for the 94 ft default."""
+    length = GYM_COURT_LENGTH_FT.get((gym or '').strip().lower())
+    return {'court_length_ft': length} if length is not None else {}
+
 
 def half_court_y_from_image_points(homography: np.ndarray, center_line_points: list) -> Optional[float]:
     """

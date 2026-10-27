@@ -57,6 +57,14 @@ def test_half_court_source_order():
         {'court_length_ft': 84.0, 'half_court_y_ft': 33.0}) == (33.0, 'measured')
 
 
+def test_liberty_gym_is_92_ft_and_unknown_gyms_use_the_default():
+    liberty = ai_bridge.court_config_for_gym('Liberty')
+    assert ai_bridge.resolve_half_court_limit(liberty) == (40.75, 'court_length')
+    assert ai_bridge.classify_court_zone(0, 41.0, config=liberty) == 'transition'
+    assert ai_bridge.court_config_for_gym('Adrian') == {}
+    assert ai_bridge.resolve_half_court_limit(ai_bridge.court_config_for_gym(None))[1] == 'default_94ft'
+
+
 def test_zones_are_unchanged_without_gym_config():
     zone = ai_bridge.classify_court_zone
     assert zone(0, 2) == 'rim'
