@@ -1,6 +1,6 @@
 # Active Task
 
-Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Ollama, and Claude Code (auditor, replaced Muse 2026-10-26): start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-26 court section and the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+Updated: 2026-10-20. Jason, Brad, Hermes (architect), OpenCode (coder), and Claude Code (vetter): roles as of 2026-10-26 are in `AUTHORITY.md`; Muse, Ollama, Gemini, and Aider are retired. Each agent: start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-26 court section and the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
 
 ## Court size and the moving camera (2026-10-26)
 
@@ -22,7 +22,9 @@ The extended `results` shape (shooter and shot value beside make or miss) was dr
 
 Scott (2026-10-20, evening) allowed writing a candidate ball weights file. The 9 October sentence that said not to train is history. The new file is saved beside the run. It is not copied over `models/ball_detector.pt`. `ball_confidence` stays. `applied_to_core` stays false. It is kept only when `validate_ball_weights.py` reports Adrian with 0 misses called makes, no more than 12 makes missed, and Notus with fewer than 7 makes missed.
 
-**Unknown:** a weights file that holds the ball through the net on the seven Notus misses without a false make on Adrian. No candidate has been written yet.
+**Proven (Claude Code, 2026-10-26):** `models/candidate_notus_net.pt` (Oct 25, sha256 16542a15c9d5…) was scored with `validate_ball_weights.py`. Notus Q1: 24 of 31, 7 makes missed, 0 misses called makes (recovers 1 of the original seven, loses another). Adrian: 94 of 111, 15 makes missed, 2 misses called makes. `keep_candidate False`. The Oct 25 "verified" claim for it was not true. The Oct 20 file of the same name scored Notus 23 of 31 (1 miss called a make) and Adrian 95 of 111 (3 misses called makes); its results are in `%TEMP%alidate_backup_2026-10-20`. `run_saved_v6_rule` prints "/111" for every film, so its Notus line reads 24/111; the true total is 31.
+
+**Unknown:** a weights file that holds the ball through the net on the seven Notus misses without a false make on Adrian. Two candidates have failed the gate.
 
 ## Goal
 

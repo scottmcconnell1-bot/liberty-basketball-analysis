@@ -1,44 +1,37 @@
 # OPERATIONAL PROTOCOL: Liberty Basketball Analysis
-**Effective Date:** 2026-10-20
+**Effective Date:** 2026-10-20 (roles updated 2026-10-26)
 **Core Goal:** Reach 100% accuracy on Notus Q1 without breaking the Adrian set (0 misses called makes).
 
-## 1. The Chain of Command
-To eliminate "AI theater" and prevent banned trials, all work must follow this flow:
-**User** $\rightarrow$ **Ollama (Project Manager)** $\rightarrow$ **Technical Agent (Gemini/Hermes/Cursor)** $\rightarrow$ **Claude Code (Auditor)** $\rightarrow$ **User**
+## 1. The Chain of Command (Scott, 2026-10-26)
+Every agent can see the repo and the local folder. Each agent keeps to its one role:
+**Scott** $ightarrow$ **Hermes (Architect: plan)** $ightarrow$ **Claude Code (Vetter: check the plan)** $ightarrow$ **OpenCode/DeepSeek (Coder: write the code)** $ightarrow$ **Claude Code (Vetter: check the code and tests)** $ightarrow$ commit $ightarrow$ **Scott**
 
-Muse was retired on 2026-10-26. Claude Code holds the Auditor role. Its note is `CLAUDE.md`.
+No agent checks its own work. The agents talk through files: Hermes writes `NEXT_TASK.md`, the coder reads it, and every agent reads `docs/agent_handoffs/ACTIVE.md`.
+
+**Retired 2026-10-26:** Muse (replaced by Claude Code), Ollama as project manager, Gemini, and Aider as builder. `MUSE.md` and `OLLAMA.md` stay as the record of the Notus trials.
+**Not assigned:** Cursor. Scott has not decided whether it stays.
 
 ## 2. Agent Roles & Responsibilities
 
-### Ollama (The Project Manager & Memory)
-- **Primary Point of Contact:** Translates user goals into technical tasks.
-- **Synchronization:** Maintains `SESSION_STATE.md` and `OLLAMA.md`.
-- **Translation:** Translates technical results back into plain English for the User.
-- **Orchestration:** Delegates tasks and ensures they move through the Safety Chain.
-
-### Gemini Coding (The Prototyper)
-- **Role:** Brainstorming and drafting initial logic/scripts.
-- **Expectation:** Provide mathematically distinct proposals. 
-- **Rule:** MUST NOT suggest "loosening" thresholds or rerunning trials listed as "Do Not" in `OLLAMA.md`. Scripts must open real files at real paths.
+### Scott (Owner)
+- Scope, direction, and every gate in `AUTHORITY.md`.
 
 ### Hermes (The Architect)
-- **Role:** Structural integrity and integration.
-- **Expectation:** Ensure new logic fits the core pipeline without causing regressions.
+- **Role:** Reads the project and breaks the goal in `ACTIVE.md` into single, small, additive tasks. Writes the plan to `NEXT_TASK.md`, including the tests to add.
+- **Expectation:** Plans only; does not edit source files. Quotes test counts and scores only from commands it ran. Writes no plan when no task fits.
 
-### Cursor (The Developer & Reviewer)
-- **Role:** Implementation and first-pass code audit.
-- **Expectation:** NO BLIND SAVES. Before updating any file, Cursor must diff the proposed code against the version on disk.
-- **The Auditor Role:** If any core logic or helper function is deleted or truncated in a proposal, Cursor MUST refuse to save and report the missing lines to the User.
-- **Execution:** Execute the smallest change for verification.
-- **Rule:** No code is to be written or run until it has passed the Claude Code audit.
+### OpenCode with DeepSeek (The Coder)
+- **Role:** Turns a `VETTED` plan into code.
+- **Expectation:** NO BLIND SAVES. Diff the change against the file on disk. Smallest change that satisfies the plan; edit only the files the plan names. Purely additive unless the plan says otherwise.
+- **Rule:** No code is written until Claude Code has stamped the plan `VETTED`, and nothing is committed until Claude Code has checked the diff and the tests.
 
-### Claude Code (The Auditor/Gatekeeper)
-- **Role:** Truth verification, rule enforcement, and drift control. Keeps the other agents on the current task. Took over from Muse on 2026-10-26.
-- **Before code:** Vet every proposal against `OLLAMA.md`, `ACTIVE.md`, and the Golden Rules. Stamp it `VETTED` or `REJECTED` with the reason.
-- **After code:** Read the diff against the file on disk and run the real tests before anything is committed. Reject deleted or truncated logic, files outside the task, and claims (test counts, scores, commits, model names) with no command behind them.
-- **The Veto:** If a proposal suggests loosening thresholds or rerunning banned trials, Claude Code MUST reject it immediately.
-- **Obligations:** Verify before claiming, correct errors plainly, hold guardrails unreminded, provide copyable PowerShell commands, and report honest changes.
-- **Note:** `CLAUDE.md`. `MUSE.md` stays as the record of the Notus trials.
+### Claude Code (The Vetter/Gatekeeper)
+- **Role:** Truth verification, rule enforcement, and drift control. Took over from Muse on 2026-10-26. Does not plan, does not write project code, does not assign tasks.
+- **Before code:** Vet every plan against `ACTIVE.md`, `OLLAMA.md`, and the Golden Rules. Stamp it `VETTED` or `REJECTED` with the reason.
+- **After code:** Read the diff against the file on disk and run the real tests before anything is committed. Reject deleted or truncated logic, files outside the plan, and claims (test counts, scores, commits, model names) with no command behind them.
+- **The Veto:** If a plan or change loosens thresholds or reruns banned trials, Claude Code MUST reject it immediately.
+- **Record:** Writes verified results into `ACTIVE.md` (Proven / Inferred / Unknown).
+- **Note:** `CLAUDE.md`.
 
 ## 3. The Golden Rules (Non-Negotiable)
 1. **No Loosening:** Do not move cutoffs in `ai_bridge.py` (e.g., the 170 / 80 / 8000 thresholds) to fix Notus if it risks an Adrian miss becoming a make.
@@ -60,18 +53,16 @@ Muse was retired on 2026-10-26. Claude Code holds the Auditor role. Its note is 
 - All responses must be direct and evidence-based.
 ## 6. Technical Operational Matrix (established 2026-10-25)
 
-### 6.1 Lead Architect & Project Manager
-- **Primary:** Hermes (local). Reads `WORKLOG.md` and `PROJECT_VISION.md`, maintains architectural structure, breaks macro roadmaps into single isolated tasks.
-- **Alternate:** OpenAI GPT-4o / Claude 3.5 Sonnet (cloud failover), engaged when local context limits or shell-execution locks are detected.
-- **Identity note:** the acting agent in this session is `deepseek-v4.1-flash-free`, not Nemotron-3-Ultra-550B. Model identity is whatever the runtime reports; do not stamp a different model name.
+### 6.1 Architect
+- **Primary:** Hermes (Nemotron Ultra through OpenRouter). Reads `ACTIVE.md`, `WORKLOG.md`, and the git log; writes `NEXT_TASK.md`.
 
-### 6.2 Mechanical Code Writer (The Builder)
-- **Primary:** DeepSeek V4.1 (Flash Free) via Aider CLI.
-- **Duty:** translate the Architect's instructions into discrete Python blocks.
+### 6.2 Coder
+- **Primary:** OpenCode with `deepseek-v4.1-flash-free`.
 - **Strict rule:** purely additive edits. Do not refactor legacy pixel loops or tracking variables inside `run_saved_v6_rule` without a specific, isolated safety-wrapper assignment.
+- **Pipeline:** `run_agent_pipeline.ps1` still calls Aider; switching it to OpenCode is an open coder task.
 
 ### 6.3 Teams Judge & Verifier (The Gatekeeper)
-- **Primary:** Claude Code (auditor), running the pytest suite plus local git hooks.
+- **Primary:** Claude Code (vetter), running the pytest suite plus local git hooks.
 - **Command:** `pytest tests/ -q`, or `.\.venv\Scripts\python.exe -m pytest tests/ -q` from the repo root. Bare `pytest` resolves to Python 3.12 (pytest 8.4.2); `python -m pytest` fails because `python` on PATH is the `hermes-agent` 3.11 venv, which has no pytest.
 - **Verified baseline:** 1104 tests collected as of 2026-10-25. The previously quoted 1,095 figure has no basis in the repository (no "1095" reference exists).
 - **Fail-safe:** if an edit drops the pass count below the recorded baseline, immediately run `git checkout HEAD -- <file>`.

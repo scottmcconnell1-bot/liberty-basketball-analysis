@@ -1,5 +1,7 @@
 # Ollama — start here
 
+> **Retired 2026-10-26.** Ollama is no longer the project manager (Scott). This file stays as the record of the Notus trials and the seven missed makes. Roles are in `AUTHORITY.md`.
+
 Updated: 2026-10-20. Ollama runs on this PC. The model in use is `gemma4:cloud` through `http://127.0.0.1:11434`. Chat memory is not the record. If this file and `SESSION_STATE.md` disagree, this file wins. Pull `main` before you start. Ollama has no separate branch.
 
 Jason reads `JASON.md`. Brad reads `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Claude Code (auditor, replaced Muse 2026-10-26) reads `CLAUDE.md`. The count record is `docs/agent_handoffs/ACTIVE.md`.

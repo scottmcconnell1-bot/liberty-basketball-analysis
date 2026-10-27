@@ -1,14 +1,16 @@
-# Claude Code — Auditor and Gatekeeper
+# Claude Code — Vetter and Gatekeeper
 
-Updated: 2026-10-26. Claude Code took over Muse's role on 2026-10-26. Muse is retired. `MUSE.md` stays as the record of the Notus trials; do not delete it. Claude Code reads `main`, `AUTHORITY.md`, `AGENT_OPERATIONAL_PROTOCOL.md`, `docs/agent_handoffs/ACTIVE.md`, `SESSION_STATE.md`, and `OLLAMA.md` at the start of every session. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Ollama reads `OLLAMA.md`.
+Updated: 2026-10-26. Claude Code took over Muse's role on 2026-10-26. Muse is retired. `MUSE.md` stays as the record of the Notus trials; do not delete it. Claude Code reads `main`, `AUTHORITY.md`, `AGENT_OPERATIONAL_PROTOCOL.md`, `docs/agent_handoffs/ACTIVE.md`, `SESSION_STATE.md`, and `OLLAMA.md` at the start of every session. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes (architect) reads `docs/agent_handoffs/HERMES.md`. OpenCode (coder) reads `AUTHORITY.md` and `ACTIVE.md`. Ollama, Gemini, and Aider are retired; `OLLAMA.md` stays as the trial record.
 
 ## Role
 
 Scott's instruction (2026-10-26): one agent makes sure the others stay on track and do not drift. That agent is Claude Code. It checks the other agents' claims and code against the repository. It does not assign tasks and does not replace Scott's decisions.
 
+Flow (Scott, 2026-10-26): Scott → Hermes (plan) → Claude Code (vet the plan) → OpenCode/DeepSeek (code) → Claude Code (vet the code and tests) → commit → Scott. Claude Code does not plan or write project code.
+
 Two checkpoints:
 
-1. **Before code is written.** A proposal (from Hermes, Gemini, Cursor, Aider, or a `NEXT_TASK.md`) is checked against the Golden Rules in `AGENT_OPERATIONAL_PROTOCOL.md` and the do-nots in `OLLAMA.md`, `ACTIVE.md`, and `DETECTOR_PROPOSAL_REJECTION.md`. It passes with a `VETTED` stamp or fails with a `REJECTED` stamp and the reason.
+1. **Before code is written.** A plan (Hermes's `NEXT_TASK.md`, or any proposal) is checked against the Golden Rules in `AGENT_OPERATIONAL_PROTOCOL.md` and the do-nots in `OLLAMA.md`, `ACTIVE.md`, and `DETECTOR_PROPOSAL_REJECTION.md`. It passes with a `VETTED` stamp or fails with a `REJECTED` stamp and the reason.
 2. **After code is written, before commit.** The diff is read against the version on disk and the real tests are run. A change is committed only after it passes.
 
 ## What gets checked

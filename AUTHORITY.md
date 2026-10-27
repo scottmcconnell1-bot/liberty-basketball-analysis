@@ -1,15 +1,17 @@
 # Authority — Liberty Basketball Analysis
 
-**Executor: Cursor.** Scott owns decisions; Cursor implements. Hermes may edit `ai_bridge.py` only (see `docs/agent_handoffs/HERMES.md`). Hermes never edits or is called from the core sequence.
+**Roles (Scott, 2026-10-26):** Scott decides. Hermes plans. OpenCode (DeepSeek) codes. Claude Code vets the plan and the code. Every agent can see the repo and the local folder. Hermes plans and does not edit source files; nothing is ever called from the core sequence.
 
 ## Roles
 
 | Role | Responsibility |
 | --- | --- |
 | **Scott** | Scope, product direction, all gates below |
-| **Cursor** | Builder, not orchestrator. Smallest checkable change. `applied_to_core` stays false. Sync `main`, `jason-5-may-updates`, and `Brad/Claude`. Does not assign tasks or manage the other agents. |
-| **Claude Code** | Auditor and gatekeeper (took over from Muse 2026-10-26). Read `CLAUDE.md` and `ACTIVE.md` on `main`. Vets proposals, checks diffs and test results before commit, rejects drift. Same gates as Cursor. Does not assign tasks. No separate branch |
-| **Ollama** | Read `OLLAMA.md` on this PC. Local model `gemma4:cloud`. Keep `SESSION_STATE.md`. Does not build, assign tasks, or manage the other agents. |
+| **Hermes** | Architect. Reads `ACTIVE.md` and the repo, writes one small task to `NEXT_TASK.md`. Plans only; does not edit source files. Note: `docs/agent_handoffs/HERMES.md` |
+| **OpenCode (DeepSeek)** | Coder. Implements a `VETTED` plan with the smallest checkable change. `applied_to_core` stays false. Does not assign tasks or check its own work. |
+| **Claude Code** | Vetter and gatekeeper (took over from Muse 2026-10-26). Vets the plan before code, checks the diff and the real tests before commit, rejects drift, records verified results. Does not plan, code, or assign tasks. Note: `CLAUDE.md` |
+| **Cursor** | Not assigned. Scott has not decided whether it stays. |
+| **Retired 2026-10-26** | Muse, Ollama (project manager), Gemini, Aider (builder). `MUSE.md` and `OLLAMA.md` stay as records. |
 
 Scott (2026-10-20) allowed a candidate ball weights file. It is not `models/ball_detector.pt`. That production file and `ball_confidence` stay behind the gate above.
 
@@ -25,7 +27,7 @@ Scott (2026-10-20) allowed a candidate ball weights file. It is not `models/ball
 - A name that might be a misspelling of a roster or scorebook name
 - Changes to the protected core files in `.cursorrules` beyond a bug Scott has asked to fix
 
-## Cursor may do without asking
+## The coder may do without asking
 
 - Bugfixes and refactors that do not cross the gates above
 - Docs updates to ACTIVE / protocol / branch policy

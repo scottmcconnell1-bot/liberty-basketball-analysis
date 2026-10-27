@@ -1,5 +1,7 @@
 # Gemini handoff
 
+> **Retired 2026-10-26.** Scott dropped Gemini. `gemini-upload/` stays because scripts and tests read the Notus tracks in it.
+
 Updated: 2026-10-20. Gemini cannot see GitHub. Chat memory is not the record. If this file and an older note disagree, this file wins. The upload folder is `gemini-upload/` at the repo root. Upload that whole folder again after 2026-10-20. A pull does not reach Gemini. Hermes reads `docs/agent_handoffs/HERMES.md`. Muse reads `MUSE.md`. Ollama reads `OLLAMA.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`.
 
 ## Pickup (2026-10-20)
