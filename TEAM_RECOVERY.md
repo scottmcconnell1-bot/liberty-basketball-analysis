@@ -1,6 +1,6 @@
 # TEAM RECOVERY — Liberty Basketball Analysis
 
-**Last updated: 2026-10-26 20:40 MDT by Claude Code (vetter)**
+**Last updated: 2026-10-26 21:00 MDT by Claude Code (vetter)**
 
 > If anything breaks, start here. This file is the single source for who does what, how to open each agent, and where the work stands.
 > Every agent reads it first: Hermes and OpenCode load `AGENTS.md` automatically, Claude Code loads `CLAUDE.md`, and both point here.
@@ -11,7 +11,10 @@
 
 ## 1. The goal (Scott, 2026-10-26)
 
-**Now:** call every shot make or miss correctly from the film.
+**Now:** call every shot make or miss 100% correctly from the film, with NO manual tagging (Scott, 2026-10-26).
+- Makes, team, and points come from the scoreboard: proven 43 of 43 on Adrian, final 51-26 = book (see `ACTIVE.md`).
+- The video finds shot attempts (no score change = miss) and who shot.
+- Next: confirm on both Notus games against their scorebooks, then Hermes structures shooter identification, then the other stats.
 - Measured with `run_saved_v6_rule` in `ai_bridge.py` against Scott's tags.
 - **Goal reached** = Notus A1 Q1 31 of 31 right, AND Adrian 0 misses called makes with no more makes missed than today (`AGENT_OPERATIONAL_PROTOCOL.md`: "Reach 100% accuracy on Notus Q1 without breaking the Adrian set").
 - **Progress** = more shots right on either film while Adrian stays at 0 misses called makes.
@@ -134,6 +137,8 @@ Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/d
 ---
 
 ## 8. Update log
+
+- 2026-10-26 21:00 MDT — Claude Code: scoreboard-only makes proven on Adrian (43/43, 51-26); goal is now no manual tagging.
 
 - 2026-10-26 20:40 MDT — Claude Code: team loop vetted on `team/auto`; Jason and Brad update written; their branches fast-forwarded.
 
