@@ -21,8 +21,26 @@ $OpenCodePromptPath = Join-Path $TeamDir 'prompt_opencode.txt'
 $ClaudePromptPath = Join-Path $TeamDir 'prompt_claude.txt'
 $OpenCodePromptArg = 'Read .team/prompt_opencode.txt and follow it exactly.'
 $ClaudePromptArg = 'Read .team/prompt_claude.txt and follow it exactly.'
+$MusePromptPath = Join-Path $TeamDir 'prompt_muse.txt'
+$MuseDiffPath = Join-Path $TeamDir 'muse_diff.txt'
+$ClaudeVerdictPath = Join-Path $TeamDir 'last_claude_verdict.txt'
+$BaselinePath = Join-Path $TeamDir 'baseline_score.json'
+$RoundStartPath = Join-Path $TeamDir 'round_start.json'
 $Python = Join-Path $Repo '.venv\Scripts\python.exe'
 $ScoreScript = Join-Path $Repo 'scripts\team_score.py'
+$GateScript = Join-Path $Repo 'scripts\team_gate.py'
+$MusePromptArg = 'Read .team/prompt_muse.txt and follow it exactly.'
+$OpenCodeModels = @(
+    'opencode/deepseek-v4.1-flash-free',
+    'opencode/mimo-v2.6-flash-free',
+    'opencode/nemotron-3.5-super-vl-free'
+)
+$MuseModels = @(
+    'opencode/glm-5.3-flash-free',
+    'opencode/flint-40b-free',
+    'opencode/beam-free'
+)
+$StandInModel = 'opencode/nemotron-3-ultra-free'
 $Dash = [char]0x2014
 $NewLine = [Environment]::NewLine
 
@@ -43,6 +61,7 @@ $script:CurrentStep = 'start'
 $script:CurrentRound = 0
 $script:StepStarted = $null
 $script:LastActivity = $null
+$script:LimitWaitMinutes = 0
 
 
 function Format-Command {
@@ -105,6 +124,54 @@ function Get-GitStatusText {
     } catch {
         return ''
     }
+}
+
+function Write-RoundStartSnapshot {
+    $map = [ordered]@{}
+    try {
+        $statusLines = @(& $GitExe status --porcelain 2>$null)
+    } catch {
+        $statusLines = @()
+    }
+    foreach ($line in $statusLines) {
+        if ($null -eq $line) {
+            continue
+        }
+        $text = [string]$line
+        if ($text.Length -lt 4) {
+            continue
+        }
+        $path = $text.Substring(3)
+        if ($path -match ' -> ') {
+            $path = ($path -split ' -> ', 2)[1]
+        }
+        $path = $path.Trim()
+        if ($path.Length -ge 2 -and $path.StartsWith('"') -and $path.EndsWith('"')) {
+            $path = $path.Substring(1, $path.Length - 2)
+        }
+        $path = $path -replace '\\', '/'
+        while ($path.StartsWith('./')) {
+            $path = $path.Substring(2)
+        }
+        if (-not $path) {
+            continue
+        }
+        $full = Join-Path $Repo $path
+        $hash = 'deleted'
+        if (Test-Path -LiteralPath $full -PathType Leaf) {
+            try {
+                $hash = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
+            } catch {
+                $hash = 'deleted'
+            }
+        }
+        $map[$path] = $hash
+    }
+    $json = $map | ConvertTo-Json -Compress
+    if (-not $json) {
+        $json = '{}'
+    }
+    Write-TextFile -Path $RoundStartPath -Text ($json + $NewLine)
 }
 
 function Write-Status {
@@ -184,11 +251,55 @@ $HermesShLinux = '/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team
 $HermesPromptLinux = '/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/prompt_hermes.txt'
 
 
+function Test-Limited {
+    param([string]$Output)
+    if (-not $Output) {
+        return $false
+    }
+    return [bool]($Output -match '(?i)429|rate limit|usage limit|quota|too many requests')
+}
+
+function Wait-ForLimits {
+    param([string]$Step = 'wait')
+    if ($script:LimitWaitMinutes -ge 480) {
+        Stop-Loop 'all models limited for 8 hours'
+        return $false
+    }
+    $retryAt = (Get-Date).AddMinutes(60)
+    $prefix = 'WAITING for limits ' + $Dash + ' retry at ' + $retryAt.ToString('HH:mm')
+    Write-Status -Step $Step -Prefix $prefix
+    Write-Log -Agent 'Loop' -What $prefix
+    Start-Sleep -Seconds 3600
+    $script:LimitWaitMinutes += 60
+    return $true
+}
+
+function Stop-ProcessTree {
+    param([datetime]$Since)
+    foreach ($name in @('opencode', 'node', 'claude', 'wsl')) {
+        $procs = @()
+        try {
+            $procs = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+        } catch {
+            $procs = @()
+        }
+        foreach ($proc in $procs) {
+            try {
+                if ($proc.StartTime -ge $Since) {
+                    & taskkill /PID $proc.Id /T /F 2>$null | Out-Null
+                }
+            } catch {
+            }
+        }
+    }
+}
+
 function Invoke-Process {
     param(
         [string]$FilePath,
         [string[]]$Arguments,
         [int]$TimeoutMinutes = 30,
+        [int]$StallMinutes = 20,
         [switch]$Force,
         [string]$Agent = 'Loop',
         [string]$Step = 'run',
@@ -209,6 +320,7 @@ function Invoke-Process {
     $script:StepStarted = Get-Date
     $script:LastActivity = Get-Date
     Write-Status -Agent $Agent -Step $Step -Round $Round
+    $jobStarted = Get-Date
     $request = [pscustomobject]@{
         WorkingDirectory = $Repo
         FilePath = $FilePath
@@ -260,7 +372,7 @@ function Invoke-Process {
         if ($finished) {
             break
         }
-        if (((Get-Date) - $lastActivity).TotalMinutes -ge 20) {
+        if (((Get-Date) - $lastActivity).TotalMinutes -ge $StallMinutes) {
             $stalled = $true
             break
         }
@@ -273,7 +385,8 @@ function Invoke-Process {
     if ($stalled) {
         Stop-Job -Job $job -ErrorAction SilentlyContinue
         Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-        $reason = 'STALLED: ' + $Agent + ' ' + $Step + ' ' + $Dash + ' no activity for 20 min'
+        Stop-ProcessTree -Since $jobStarted
+        $reason = 'STALLED: ' + $Agent + ' ' + $Step + ' ' + $Dash + ' no activity for ' + $StallMinutes + ' min'
         Write-Status -Agent $Agent -Step $Step -Round $Round -Prefix $reason
         Write-Host $reason
         Stop-Loop $reason
@@ -289,6 +402,7 @@ function Invoke-Process {
     if ($hardTimeout) {
         Stop-Job -Job $job -ErrorAction SilentlyContinue
         Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+        Stop-ProcessTree -Since $jobStarted
         Write-Host ('TIMEOUT: ' + $display)
         Write-Status -Agent $Agent -Step $Step -Round $Round -Prefix ('TIMEOUT: ' + $Agent + ' ' + $Step)
         return [pscustomobject]@{
@@ -337,6 +451,49 @@ function Invoke-Process {
     }
 }
 
+function Invoke-OpenCodeFallback {
+    param(
+        [string[]]$Models,
+        [string]$PromptArg,
+        [string]$Agent,
+        [string]$Step,
+        [int]$Round = -1
+    )
+    $index = 0
+    while ($true) {
+        if (-not $script:Running) {
+            return $null
+        }
+        $model = $Models[$index]
+        $args = @('run', '-m', $model, $PromptArg)
+        $res = Invoke-Process -FilePath $OpenCodeExe -Arguments $args -Agent $Agent -Step $Step -Round $Round
+        if ($DryRun) {
+            return $res
+        }
+        if ($res.TimedOut) {
+            return $res
+        }
+        if ($res.ExitCode -eq 0) {
+            return $res
+        }
+        if (-not (Test-Limited -Output $res.Output)) {
+            return $res
+        }
+        if ($index -lt ($Models.Count - 1)) {
+            $next = $Models[$index + 1]
+            Write-Log -Agent $Agent -What ('limited; switching model to ' + $next) -Body ($model + ': ' + $res.Output)
+            Write-Host ('LIMITED: ' + $model + ' -> ' + $next)
+            $index++
+            continue
+        }
+        Write-Log -Agent $Agent -What ('all models limited for ' + $Step) -Body ($model + ': ' + $res.Output)
+        if (-not (Wait-ForLimits -Step $Step)) {
+            return $null
+        }
+        $index = 0
+    }
+}
+
 function Get-Score {
     $scoreArgs = @($ScoreScript)
     if ($DryRun) {
@@ -367,6 +524,110 @@ function Get-Score {
         return [pscustomobject]@{ Failed = $true; Error = ('could not parse score output: ' + $res.Output); ExitCode = 0 }
     }
     return [pscustomobject]@{ Failed = $false; Score = $parsed; Error = ''; ExitCode = 0 }
+}
+
+function Invoke-Gate {
+    $gateArgs = @($GateScript, '--plan', $TaskPath, '--baseline', $BaselinePath, '--round-start', $RoundStartPath)
+    if ($DryRun) {
+        Write-Host ('DRY RUN: ' + (Format-Command -FilePath $Python -Arguments $gateArgs))
+        Write-Status -Agent 'Gate' -Step 'team_gate.py' -Round $script:CurrentRound
+        return [pscustomobject]@{ Pass = $true; Failures = @(); Error = ''; ExitCode = 0 }
+    }
+    $res = Invoke-Process -FilePath $Python -Arguments $gateArgs -TimeoutMinutes 30 -Agent 'Gate' -Step 'team_gate.py' -Round $script:CurrentRound
+    if ($res.TimedOut) {
+        return [pscustomobject]@{ Pass = $false; Failures = @('team_gate.py timed out'); Error = 'timed out'; ExitCode = -1 }
+    }
+    $lines = @($res.Output -split "`r?`n" | Where-Object { $_.Trim() -ne '' })
+    $parsed = $null
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        try {
+            $parsed = $lines[$i] | ConvertFrom-Json
+            break
+        } catch {
+            $parsed = $null
+        }
+    }
+    if ($null -eq $parsed) {
+        return [pscustomobject]@{
+            Pass = $false
+            Failures = @('gate output not parseable: ' + $res.Output)
+            Error = 'parse'
+            ExitCode = $res.ExitCode
+        }
+    }
+    $failures = @()
+    if ($parsed.failures) {
+        $failures = @($parsed.failures)
+    }
+    return [pscustomobject]@{
+        Pass = [bool]$parsed.pass
+        Failures = $failures
+        Error = ''
+        ExitCode = $res.ExitCode
+    }
+}
+
+function Run-Muse {
+    param(
+        [string]$Stage,
+        [string]$PlanPath
+    )
+    $verdictText = [string]$script:LastClaudeVerdict
+    if (-not $verdictText) {
+        $verdictText = '(no verdict text)'
+    }
+    Write-TextFile -Path $ClaudeVerdictPath -Text $verdictText
+    $prompt = @'
+Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code). Read the plan or diff and Claude's verdict. Check it against the Golden Rules, Scott's gates, ACTIVE.md, and OLLAMA.md. Answer MUSE: AGREE, or MUSE: DISAGREE: <reason>. Do not edit files.
+'@
+    $prompt = $prompt + $NewLine + $NewLine + 'Plan path: ' + $PlanPath
+    $prompt = $prompt + $NewLine + 'Claude verdict file: .team/last_claude_verdict.txt'
+    if ($Stage -eq 'code') {
+        $diffText = ''
+        try {
+            $diffText = (& $GitExe diff 2>$null) -join $NewLine
+        } catch {
+            $diffText = ''
+        }
+        if ($diffText.Length -gt 20000) {
+            $diffText = $diffText.Substring(0, 20000)
+        }
+        Write-TextFile -Path $MuseDiffPath -Text $diffText
+        $prompt = $prompt + $NewLine + 'Diff file (first 20000 characters of git diff): .team/muse_diff.txt'
+    }
+    Write-TextFile -Path $MusePromptPath -Text $prompt
+    $res = Invoke-OpenCodeFallback -Models $MuseModels -PromptArg $MusePromptArg -Agent 'Muse' -Step ('check ' + $Stage) -Round $script:CurrentRound
+    if ($null -eq $res) {
+        return $false
+    }
+    if ($DryRun) {
+        Write-Log -Agent 'Muse' -What ('DRY RUN - would check the ' + $Stage + ' verdict')
+        return $true
+    }
+    Write-Log -Agent 'Muse' -What ('check ' + $Stage + ' verdict') -Body 'Ran opencode with the Muse prompt.'
+    if ($res.TimedOut) {
+        Stop-Loop 'Muse timed out'
+        return $false
+    }
+    if ($res.ExitCode -ne 0) {
+        Stop-Loop ('Muse failed with exit code ' + $res.ExitCode)
+        return $false
+    }
+    Write-Log -Agent 'Muse' -What ('Muse reply for ' + $Stage) -Body $res.Output
+    if ($res.Output -match 'MUSE:\s*DISAGREE:?\s*(.*)') {
+        $reason = $Matches[1].Trim()
+        if (-not $reason) {
+            $reason = 'no reason given'
+        }
+        Stop-Loop ('MUSE DISAGREES with the vetter: ' + $reason + ' (Scott decides)')
+        return $false
+    }
+    if ($res.Output -match 'MUSE:\s*AGREE') {
+        Write-Log -Agent 'Muse' -What ('AGREE on the ' + $Stage + ' verdict')
+        return $true
+    }
+    Stop-Loop 'MUSE DISAGREES with the vetter: no parseable answer (Scott decides)'
+    return $false
 }
 
 function Get-PlanFiles {
@@ -591,24 +852,33 @@ function Run-Hermes {
     )
     Write-TextFile -Path $HermesPromptPath -Text $Prompt
     $hermesArgs = @('--exec', 'bash', '-l', $HermesShLinux, $HermesPromptLinux)
-    $res = Invoke-Process -FilePath $WslExe -Arguments $hermesArgs -Agent 'Hermes' -Step $What -Round $script:CurrentRound
-    if ($DryRun) {
-        Write-Log -Agent 'Hermes' -What ('DRY RUN - would ' + $What) -Body (Format-Command -FilePath $WslExe -Arguments $hermesArgs)
-    } else {
+    while ($true) {
+        $res = Invoke-Process -FilePath $WslExe -Arguments $hermesArgs -TimeoutMinutes 45 -StallMinutes 40 -Agent 'Hermes' -Step $What -Round $script:CurrentRound
+        if ($DryRun) {
+            Write-Log -Agent 'Hermes' -What ('DRY RUN - would ' + $What) -Body (Format-Command -FilePath $WslExe -Arguments $hermesArgs)
+            return $true
+        }
         Write-Log -Agent 'Hermes' -What $What -Body 'Wrote .team/prompt_hermes.txt and ran hermes chat -q.'
+        if ($res.TimedOut) {
+            Stop-Loop 'Hermes timed out'
+            return $false
+        }
+        if ($res.ExitCode -ne 0 -and (Test-Limited -Output $res.Output)) {
+            Write-Log -Agent 'Hermes' -What 'limited; waiting' -Body $res.Output
+            if (-not (Wait-ForLimits -Step $What)) {
+                return $false
+            }
+            continue
+        }
+        if ($res.ExitCode -ne 0) {
+            Stop-Loop ('Hermes failed with exit code ' + $res.ExitCode)
+            return $false
+        }
+        if ($res.Output) {
+            Write-Log -Agent 'Hermes' -What 'reply' -Body $res.Output
+        }
+        return $true
     }
-    if ($res.TimedOut) {
-        Stop-Loop 'Hermes timed out'
-        return $false
-    }
-    if ($res.ExitCode -ne 0) {
-        Stop-Loop ('Hermes failed with exit code ' + $res.ExitCode)
-        return $false
-    }
-    if (-not $DryRun -and $res.Output) {
-        Write-Log -Agent 'Hermes' -What 'reply' -Body $res.Output
-    }
-    return $true
 }
 
 function Run-VetPlan {
@@ -617,6 +887,7 @@ Read TEAM_RECOVERY.md and CLAUDE.md. You are the Vetter. Vet NEXT_TASK.md agains
 '@
     $vetArgs = @(
         '-p', $ClaudePromptArg,
+        '--model', 'sonnet',
         '--allowedTools',
         'Read',
         'Grep',
@@ -638,13 +909,31 @@ Read TEAM_RECOVERY.md and CLAUDE.md. You are the Vetter. Vet NEXT_TASK.md agains
         Stop-Loop 'Claude plan vet timed out'
         return $null
     }
-    if ($res.ExitCode -ne 0) {
+    $verdictOutput = $res.Output
+    if ($res.ExitCode -ne 0 -and (Test-Limited -Output $res.Output)) {
+        Write-Host 'STAND-IN VETTER (Claude limited)'
+        Write-Log -Agent 'Claude' -What 'STAND-IN VETTER (Claude limited)' -Body $res.Output
+        $standIn = Invoke-OpenCodeFallback -Models @($StandInModel) -PromptArg $ClaudePromptArg -Agent 'Claude' -Step 'vet plan (stand-in)' -Round $script:CurrentRound
+        if ($null -eq $standIn) {
+            return $null
+        }
+        if ($standIn.TimedOut) {
+            Stop-Loop 'Stand-in vetter timed out'
+            return $null
+        }
+        if ($standIn.ExitCode -ne 0) {
+            Stop-Loop ('Stand-in vetter failed with exit code ' + $standIn.ExitCode)
+            return $null
+        }
+        $verdictOutput = $standIn.Output
+        Write-Log -Agent 'Claude' -What 'stand-in plan verdict' -Body $verdictOutput
+    } elseif ($res.ExitCode -ne 0) {
         Stop-Loop ('Claude plan vet failed with exit code ' + $res.ExitCode)
         return $null
     }
-    $script:LastClaudeVerdict = $res.Output
-    Write-Log -Agent 'Claude' -What 'plan verdict' -Body $res.Output
-    if ($res.Output -match 'VERDICT:\s*VETTED') {
+    $script:LastClaudeVerdict = $verdictOutput
+    Write-Log -Agent 'Claude' -What 'plan verdict' -Body $verdictOutput
+    if ($verdictOutput -match 'VERDICT:\s*VETTED') {
         return 'VETTED'
     }
     return 'REJECTED'
@@ -656,6 +945,7 @@ Read git diff and git status. Check that only the files in the plan Files sectio
 '@
     $vetArgs = @(
         '-p', $ClaudePromptArg,
+        '--model', 'sonnet',
         '--allowedTools',
         'Read',
         'Grep',
@@ -678,19 +968,37 @@ Read git diff and git status. Check that only the files in the plan Files sectio
         Stop-Loop 'Claude code vet timed out'
         return [pscustomobject]@{ Verdict = 'STOPPED'; Reason = 'timed out' }
     }
-    if ($res.ExitCode -ne 0) {
+    $verdictOutput = $res.Output
+    if ($res.ExitCode -ne 0 -and (Test-Limited -Output $res.Output)) {
+        Write-Host 'STAND-IN VETTER (Claude limited)'
+        Write-Log -Agent 'Claude' -What 'STAND-IN VETTER (Claude limited)' -Body $res.Output
+        $standIn = Invoke-OpenCodeFallback -Models @($StandInModel) -PromptArg $ClaudePromptArg -Agent 'Claude' -Step 'vet code (stand-in)' -Round $script:CurrentRound
+        if ($null -eq $standIn) {
+            return [pscustomobject]@{ Verdict = 'STOPPED'; Reason = 'stand-in stopped' }
+        }
+        if ($standIn.TimedOut) {
+            Stop-Loop 'Stand-in vetter timed out'
+            return [pscustomobject]@{ Verdict = 'STOPPED'; Reason = 'timed out' }
+        }
+        if ($standIn.ExitCode -ne 0) {
+            Stop-Loop ('Stand-in vetter failed with exit code ' + $standIn.ExitCode)
+            return [pscustomobject]@{ Verdict = 'STOPPED'; Reason = 'failed' }
+        }
+        $verdictOutput = $standIn.Output
+        Write-Log -Agent 'Claude' -What 'stand-in code verdict' -Body $verdictOutput
+    } elseif ($res.ExitCode -ne 0) {
         Stop-Loop ('Claude code vet failed with exit code ' + $res.ExitCode)
         return [pscustomobject]@{ Verdict = 'STOPPED'; Reason = 'failed' }
     }
-    $script:LastClaudeVerdict = $res.Output
-    Write-Log -Agent 'Claude' -What 'code verdict' -Body $res.Output
-    if ($res.Output -match 'VERDICT:\s*PASS') {
+    $script:LastClaudeVerdict = $verdictOutput
+    Write-Log -Agent 'Claude' -What 'code verdict' -Body $verdictOutput
+    if ($verdictOutput -match 'VERDICT:\s*PASS') {
         return [pscustomobject]@{ Verdict = 'PASS'; Reason = '' }
     }
-    if ($res.Output -match 'VERDICT:\s*FAIL:?\s*(.*)') {
+    if ($verdictOutput -match 'VERDICT:\s*FAIL:?\s*(.*)') {
         return [pscustomobject]@{ Verdict = 'FAIL'; Reason = $Matches[1] }
     }
-    return [pscustomobject]@{ Verdict = 'FAIL'; Reason = $res.Output }
+    return [pscustomobject]@{ Verdict = 'FAIL'; Reason = $verdictOutput }
 }
 
 function Run-Code {
@@ -703,8 +1011,11 @@ Read TEAM_RECOVERY.md and AGENTS.md. You are the Coder. Build NEXT_TASK.md only 
         $prompt = $prompt + $NewLine + $NewLine + 'Vetter feedback from the failed attempt: ' + $safe
     }
     Write-TextFile -Path $OpenCodePromptPath -Text $prompt
-    $codeArgs = @('run', '-m', 'opencode/deepseek-v4.1-flash-free', $OpenCodePromptArg)
-    $res = Invoke-Process -FilePath $OpenCodeExe -Arguments $codeArgs -Agent 'OpenCode' -Step 'code' -Round $script:CurrentRound
+    $codeArgs = @('run', '-m', $OpenCodeModels[0], $OpenCodePromptArg)
+    $res = Invoke-OpenCodeFallback -Models $OpenCodeModels -PromptArg $OpenCodePromptArg -Agent 'OpenCode' -Step 'code' -Round $script:CurrentRound
+    if ($null -eq $res) {
+        return [pscustomobject]@{ ExitCode = -1; Output = 'all models limited'; TimedOut = $false }
+    }
     if ($DryRun) {
         Write-Log -Agent 'OpenCode' -What 'DRY RUN - would code' -Body (Format-Command -FilePath $OpenCodeExe -Arguments $codeArgs)
         return [pscustomobject]@{ ExitCode = 0; Output = 'DRY RUN'; TimedOut = $false }
@@ -745,8 +1056,10 @@ You are the Architect. The team is stalled. Read TEAM_RECOVERY.md, AUTHORITY.md,
 Read TEAM_RECOVERY.md and AGENTS.md. The team is stalled. Propose up to 3 ideas that could move the goal in TEAM_RECOVERY.md section 1 forward. For each idea, say why it is not a banned trial or a looser cutoff. Do not edit any files.
 '@
     Write-TextFile -Path $OpenCodePromptPath -Text $openPrompt
-    $openArgs = @('run', '-m', 'opencode/deepseek-v4.1-flash-free', $OpenCodePromptArg)
-    $open = Invoke-Process -FilePath $OpenCodeExe -Arguments $openArgs -Agent 'OpenCode' -Step 'brainstorm' -Round $script:CurrentRound
+    $open = Invoke-OpenCodeFallback -Models $OpenCodeModels -PromptArg $OpenCodePromptArg -Agent 'OpenCode' -Step 'brainstorm' -Round $script:CurrentRound
+    if ($null -eq $open) {
+        return
+    }
     Write-Log -Agent 'OpenCode' -What 'brainstorm' -Body 'Ran opencode run for brainstorm ideas.'
     if ($open.TimedOut) {
         Stop-Loop 'OpenCode brainstorm timed out'
@@ -841,6 +1154,15 @@ for ($round = 1; $round -le $MaxRounds; $round++) {
     $script:CurrentRound = $round
     Write-Status -Agent 'Loop' -Step ('round ' + $round) -Round $round
     Write-Log -Agent 'Loop' -What ('round ' + $round)
+    if ($null -ne $previous) {
+        $previousJson = $previous | ConvertTo-Json -Compress
+        Write-TextFile -Path $BaselinePath -Text ($previousJson + $NewLine)
+        Write-Log -Agent 'Score' -What ('baseline for round ' + $round) -Body $previousJson
+    }
+    if (-not $DryRun) {
+        Write-RoundStartSnapshot
+        Write-Log -Agent 'Loop' -What ('round start snapshot for round ' + $round)
+    }
 
     $roundFiles = @()
     $planAccepted = $false
@@ -923,6 +1245,13 @@ If the goal is reached or no task fits, write .team/STOP.md whose first line is 
             break
         }
         if ($verdict -eq 'VETTED') {
+            $museOk = Run-Muse -Stage 'plan' -PlanPath $TaskPath
+            if (-not $script:Running) {
+                break
+            }
+            if (-not $museOk) {
+                break
+            }
             $planAccepted = $true
             $roundFiles = $planFiles
             break
@@ -958,6 +1287,26 @@ If the goal is reached or no task fits, write .team/STOP.md whose first line is 
             break
         }
 
+        $gateResult = Invoke-Gate
+        if (-not $script:Running) {
+            break
+        }
+        if (-not $gateResult.Pass) {
+            $codeTries++
+            $gateText = @($gateResult.Failures) -join '; '
+            if (-not $gateText) {
+                $gateText = $gateResult.Error
+            }
+            Write-Log -Agent 'Gate' -What ('gate FAIL (' + $codeTries + ' of 2)') -Body (@($gateResult.Failures) -join $NewLine)
+            if ($codeTries -ge 2) {
+                Undo-PlanFiles -PlanFiles $roundFiles
+                Write-Log -Agent 'Git' -What 'rolled back plan files'
+                break
+            }
+            $feedback = 'The free team gate failed. Fix these failures exactly: ' + $gateText
+            continue
+        }
+
         $codeVerdict = Run-VetCode
         if (-not $script:Running) {
             break
@@ -966,6 +1315,13 @@ If the goal is reached or no task fits, write .team/STOP.md whose first line is 
             break
         }
         if ($codeVerdict.Verdict -eq 'PASS') {
+            $museOk = Run-Muse -Stage 'code' -PlanPath $TaskPath
+            if (-not $script:Running) {
+                break
+            }
+            if (-not $museOk) {
+                break
+            }
             $codeAccepted = $true
             break
         }
