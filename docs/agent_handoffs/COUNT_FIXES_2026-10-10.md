@@ -6,7 +6,7 @@ Updated: 2026-10-10. This file is the current Adrian count only. The whole progr
 
 Liberty is a coach-facing ledger. From a film, write the game: shots, makes, misses, who shot, which team, then minutes, lineups, and the rest. The same path has to work on the next gym, not only on one tagged list.
 
-Adrian is the first film that ledger has to get right. Book: Liberty 51, Adrian 26. Due 1 Nov 2026. Accuracy over speed.
+Adrian is the first film that ledger has to get right. Book: Liberty 51, Adrian 26. No deadline (Scott, 2026-10-26). Accuracy over speed.
 
 ## Read first
 

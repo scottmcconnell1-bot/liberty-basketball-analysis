@@ -26,7 +26,7 @@ Scott (2026-10-20, evening) allowed writing a candidate ball weights file. The 9
 
 ## Goal
 
-Count stats for one game (Liberty at Adrian, NFHS video 73, `uploads\nfhs_gam0a66d85e12.mp4`, game id `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`) and check them against Scott's confirmed scorebook (Liberty 51, Adrian 26). Accuracy matters more than speed. It must work by 1 Nov 2026.
+Count stats for one game (Liberty at Adrian, NFHS video 73, `uploads\nfhs_gam0a66d85e12.mp4`, game id `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334`) and check them against Scott's confirmed scorebook (Liberty 51, Adrian 26). Accuracy matters more than speed. Scott (2026-10-26): there is no deadline now. The goal stays active.
 
 ## Adapter experiment (2026-10-13)
 

@@ -21,7 +21,7 @@ The coach should be able to:
 
 The film count is the hard part. Schedule, roster, playbook, scouting, practice, clips, and messaging already exist as pages. They are not the thing stuck on 10 October 2026. The ledger is. If the film writes the wrong shot, or writes no shot, every stat, lineup, scouting note, and assistant answer built on that game is wrong.
 
-Adrian (Liberty at Adrian, book Liberty 51, Adrian 26, due 1 Nov 2026) is the first game that ledger has to get right against a book Scott has confirmed. It is not a separate product. The same path has to work on the next gym, on a film that has not been tagged shot by shot.
+Adrian (Liberty at Adrian, book Liberty 51, Adrian 26, no deadline since 2026-10-26) is the first game that ledger has to get right against a book Scott has confirmed. It is not a separate product. The same path has to work on the next gym, on a film that has not been tagged shot by shot.
 
 Home owns the database and the films. School uses Funnel only: https://liberty-coach.tail368a37.ts.net. Do not overwrite the home database from school. The database, the films, and the offline weights are not in git. A pull does not bring them.
 
@@ -103,7 +103,7 @@ In this order. The film ledger is first because everything else reads it.
 
 ## 5. The current job
 
-Count Adrian from the film and check it against Liberty 51, Adrian 26. Accuracy over speed. Due 1 Nov 2026.
+Count Adrian from the film and check it against Liberty 51, Adrian 26. Accuracy over speed. No deadline (Scott, 2026-10-26).
 
 He was clear about the shape of a fix. A shot he tagged is correct. If the program never writes a row, the counting stats are wrong. He can reject a false row. He cannot correct a row that was never written. On the shots he tagged, the ball went through the hoop and the net moved. Arc height varies, so one rise number cannot be the reason to write nothing. A rule that adds shots he did not tag is also not the answer. Both problems stand: write the missing shots, and do not create extras he must reject.
 
