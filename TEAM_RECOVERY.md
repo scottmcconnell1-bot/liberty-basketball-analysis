@@ -1,6 +1,6 @@
 # TEAM RECOVERY — Liberty Basketball Analysis
 
-**Last updated: 2026-10-26 20:05 MDT by Claude Code (vetter)**
+**Last updated: 2026-10-26 20:40 MDT by Claude Code (vetter)**
 
 > If anything breaks, start here. This file is the single source for who does what, how to open each agent, and where the work stands.
 > Every agent reads it first: Hermes and OpenCode load `AGENTS.md` automatically, Claude Code loads `CLAUDE.md`, and both point here.
@@ -106,7 +106,12 @@ Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/d
 - **Candidate ball-weights files:** both failed the gate (Oct 20 and Oct 25). Details in `ACTIVE.md`.
 - **Court:** Liberty is 92 ft (half court 40.75 ft from the hoop). The NFHS camera pans, so one four-point calibration fits one camera view only.
 - **Tests:** 1115 collected. Failures that existed before 2026-10-26 (transfer-bundle tar on Windows, Ollama-pull, panel write, calendar day) are unchanged.
-- **In progress:** OpenCode is to build the team loop; Claude vets it.
+- **In progress (branch `team/auto`, not pushed):**
+  - The team loop `team_loop.ps1` is built and vetted (`6843dec`).
+  - OpenCode is building the make/miss review page.
+  - Next: the free gate script, the cheaper Claude model, and free-model fallbacks.
+- **Team status:** `.team/STATUS.md` (desktop shortcut "TEAM STATUS - Liberty").
+- **Jason and Brad:** updated with `docs/agent_handoffs/UPDATE_2026-10-26.md`; their branches are even with `main`.
 - **Open for Scott:** none blocking.
 
 ---
@@ -129,5 +134,7 @@ Pick the model `deepseek-v4.1-flash-free`. One-shot: `opencode run -m opencode/d
 ---
 
 ## 8. Update log
+
+- 2026-10-26 20:40 MDT — Claude Code: team loop vetted on `team/auto`; Jason and Brad update written; their branches fast-forwarded.
 
 - 2026-10-26 20:05 MDT — Claude Code: file created. Roster (Hermes/OpenCode/Claude), goal (make/miss first), how to open and recover, offline backup of Temp scoring files and film tags.
