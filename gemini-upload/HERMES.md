@@ -2,6 +2,12 @@
 
 Updated: 2026-10-20. Paste this into a new Hermes window. Chat memory is not the record. If this file and an older note disagree, this file wins. The Adrian count record is `docs/agent_handoffs/ACTIVE.md`. The September 30 rerun at the bottom of this file is not the counting run. `origin/Scott_Hermes` at `87afd11` does not contain the rule below. Gemini cannot see GitHub. Its note is `docs/agent_handoffs/GEMINI.md` and its upload folder is `gemini-upload/`. Claude Code (auditor, replaced Muse 2026-10-26) reads `CLAUDE.md`. Ollama reads `OLLAMA.md`. Jason reads `JASON.md`. Brad reads `BRAD.md`.
 
+## Court size and the moving camera (2026-10-26)
+
+**Proven:** Half court is now measured, not assumed. `resolve_half_court_limit` in `ai_bridge.py` uses a measured `half_court_y_ft`, then `court_length_ft`, then the 94 ft NFHS maximum, and says which one it used. `pick_court_points.py --halfcourt` adds two center-line clicks to `manual_calibration.json` and prints the court length they imply. Scott (2026-10-26): Liberty's gym is full size, so 94 ft is right for Liberty home games (Notus A1 was played there). Other gyms' lengths are unknown and use the 94 ft default. Court length changes only the transition/backcourt split near half court. Rim, paint, three-point, and perimeter come from the lane, which is the same in every gym.
+
+**Proven:** The NFHS camera follows the play. It pans and zooms. In the Notus A1 film (frames every 15 s, first 10 minutes) no frame shows both the lane corners and the half-court line. The four clicks in `manual_calibration.json` describe one camera position only. A homography from them is correct only on frames where the camera points the same way. Do not apply one calibration to a whole game, and do not build more on the single-frame bird's-eye until the court lines are found and the homography rebuilt per frame. `run_saved_v6_rule` scores in pixels near the hoop and is not affected. Nothing calls `classify_court_zone` yet.
+
 ## Pickup (2026-10-20)
 
 Work from `main`. From 2026-10-10 through the morning of 2026-10-20 the checkout was `cursor/count-roadmap-2026-10-10`. That branch was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` are the same commit.

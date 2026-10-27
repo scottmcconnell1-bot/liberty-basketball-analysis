@@ -1,6 +1,12 @@
 # Active Task
 
-Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Ollama, and Claude Code (auditor, replaced Muse 2026-10-26): start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+Updated: 2026-10-20. Jason, Brad, Hermes, Gemini, Ollama, and Claude Code (auditor, replaced Muse 2026-10-26): start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-26 court section and the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
+
+## Court size and the moving camera (2026-10-26)
+
+**Proven:** Half court is now measured, not assumed. `resolve_half_court_limit` in `ai_bridge.py` uses a measured `half_court_y_ft`, then `court_length_ft`, then the 94 ft NFHS maximum, and says which one it used. `pick_court_points.py --halfcourt` adds two center-line clicks to `manual_calibration.json` and prints the court length they imply. Scott (2026-10-26): Liberty's gym is full size, so 94 ft is right for Liberty home games (Notus A1 was played there). Other gyms' lengths are unknown and use the 94 ft default. Court length changes only the transition/backcourt split near half court. Rim, paint, three-point, and perimeter come from the lane, which is the same in every gym.
+
+**Proven:** The NFHS camera follows the play. It pans and zooms. In the Notus A1 film (frames every 15 s, first 10 minutes) no frame shows both the lane corners and the half-court line. The four clicks in `manual_calibration.json` describe one camera position only. A homography from them is correct only on frames where the camera points the same way. Do not apply one calibration to a whole game, and do not build more on the single-frame bird's-eye until the court lines are found and the homography rebuilt per frame. `run_saved_v6_rule` scores in pixels near the hoop and is not affected. Nothing calls `classify_court_zone` yet.
 
 ## Pickup (2026-10-20)
 
