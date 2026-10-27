@@ -10,7 +10,7 @@
 | **Hermes** | Architect. Reads `ACTIVE.md` and the repo, writes one small task to `NEXT_TASK.md`. Plans only; does not edit source files. Note: `docs/agent_handoffs/HERMES.md` |
 | **OpenCode (DeepSeek)** | Coder. Implements a `VETTED` plan with the smallest checkable change. `applied_to_core` stays false. Does not assign tasks or check its own work. |
 | **Claude Code** | Vetter and gatekeeper (took over from Muse 2026-10-26). Vets the plan before code, checks the diff and the real tests before commit, rejects drift, records verified results. Does not plan, code, or assign tasks. Note: `CLAUDE.md` |
-| **Cursor** | Not assigned. Scott has not decided whether it stays. |
+| **Cursor** | Idle (Scott, 2026-10-26). Left installed; not used for this project. |
 | **Retired 2026-10-26** | Muse, Ollama (project manager), Gemini, Aider (builder). `MUSE.md` and `OLLAMA.md` stay as records. |
 
 Scott (2026-10-20) allowed a candidate ball weights file. It is not `models/ball_detector.pt`. That production file and `ball_confidence` stay behind the gate above.

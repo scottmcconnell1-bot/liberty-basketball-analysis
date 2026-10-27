@@ -9,7 +9,7 @@ Every agent can see the repo and the local folder. Each agent keeps to its one r
 No agent checks its own work. The agents talk through files: Hermes writes `NEXT_TASK.md`, the coder reads it, and every agent reads `docs/agent_handoffs/ACTIVE.md`.
 
 **Retired 2026-10-26:** Muse (replaced by Claude Code), Ollama as project manager, Gemini, and Aider as builder. `MUSE.md` and `OLLAMA.md` stay as the record of the Notus trials.
-**Not assigned:** Cursor. Scott has not decided whether it stays.
+**Idle:** Cursor (Scott, 2026-10-26). Start every session from `TEAM_RECOVERY.md`.
 
 ## 2. Agent Roles & Responsibilities
 

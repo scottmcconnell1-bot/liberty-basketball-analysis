@@ -1,5 +1,7 @@
 # Claude Code — Vetter and Gatekeeper
 
+**Read `TEAM_RECOVERY.md` first.** Update its section 6 and update log, with a timestamp, at the end of every session.
+
 Updated: 2026-10-26. Claude Code took over Muse's role on 2026-10-26. Muse is retired. `MUSE.md` stays as the record of the Notus trials; do not delete it. Claude Code reads `main`, `AUTHORITY.md`, `AGENT_OPERATIONAL_PROTOCOL.md`, `docs/agent_handoffs/ACTIVE.md`, `SESSION_STATE.md`, and `OLLAMA.md` at the start of every session. Jason's note is `JASON.md`. Brad's note is `BRAD.md`. Hermes (architect) reads `docs/agent_handoffs/HERMES.md`. OpenCode (coder) reads `AUTHORITY.md` and `ACTIVE.md`. Ollama, Gemini, and Aider are retired; `OLLAMA.md` stays as the trial record.
 
 ## Role
