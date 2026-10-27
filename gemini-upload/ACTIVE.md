@@ -2,6 +2,26 @@
 
 Updated: 2026-10-20. Jason, Brad, Hermes (architect), OpenCode (coder), and Claude Code (vetter): roles as of 2026-10-26 are in `AUTHORITY.md`; Muse, Ollama, Gemini, and Aider are retired. Each agent: start with `AGENT_OPERATIONAL_PROTOCOL.md`, then the 2026-10-26 court section and the 2026-10-20 pickup. The 2026-10-09 section below is history. If it still says the fourth quarter is untagged, this pickup wins. The full text of the 2026-10-07 note is `ARCHIVE/ACTIVE-snapshot-2026-10-07.md`.
 
+## Makes from the scoreboard, no tagging (2026-10-26)
+
+**Proven (Claude Code, 2026-10-26):** the Adrian scoreboard track (`data/scoreboard_tracks/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json`, read by `scoreboard_clock.py`) was used ALONE, with no tags.
+
+- **Rule (set once, not tuned):** a team's score counts when the new value holds for 3 one-second samples; each rise is one made basket worth the rise.
+- **Result:**
+  - 43 made baskets found; all 43 tagged makes matched to a rise within 25 s of the tag; 0 rises with no tag.
+  - Points by value match the tags exactly: Liberty 17 twos, 5 threes, 2 free throws; Adrian 5 twos, 1 three, 13 free throws.
+  - Final score 51-26 matches the scorebook.
+- **Against the tags with the tagged team:** 126 of 126 readable shots agree; 3 had no reading after the shot.
+
+**Scott (2026-10-26): the program must not need manual tagging, and makes and misses must be 100% accurate.** Direction:
+- Makes, team, and points come from the scoreboard.
+- The video's job is to find shot attempts (an attempt with no score change is a miss) and who shot.
+
+**Unknown:** whether this holds on other films. Next:
+1. Build scoreboard tracks for both Notus games (Liberty played Notus twice: A1, book Liberty 29 Notus 48; A, book Liberty 38 Notus 21) and run the same check against both scorebooks.
+2. Hermes structures how to identify the shooter.
+3. Then the other stats.
+
 ## Court size and the moving camera (2026-10-26)
 
 **Proven:** Half court is now measured, not assumed. `resolve_half_court_limit` in `ai_bridge.py` uses a measured `half_court_y_ft`, then `court_length_ft`, then the 94 ft NFHS maximum, and says which one it used. `pick_court_points.py --halfcourt` adds two center-line clicks to `manual_calibration.json` and prints the court length they imply. Scott (2026-10-26): Liberty's gym is 92 ft, so half court there is 40.75 ft from the hoop. It is stored in `GYM_COURT_LENGTH_FT` in `ai_bridge.py`; `court_config_for_gym('liberty')` returns it. Notus A1 was played at Liberty. Other gyms' lengths are unknown and use the 94 ft default. Court length changes only the transition/backcourt split near half court. Rim, paint, three-point, and perimeter come from the lane, which is the same in every gym.

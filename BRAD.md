@@ -2,6 +2,15 @@
 
 Updated: 2026-10-20. Branch `Brad/Claude` is even with `main`. Pull `main` before you start. Jason's note is `JASON.md`. Hermes reads `docs/agent_handoffs/HERMES.md`. Gemini reads `docs/agent_handoffs/GEMINI.md` and the folder `gemini-upload/`. Claude Code (auditor, replaced Muse 2026-10-26) reads `CLAUDE.md`. Ollama reads `OLLAMA.md`.
 
+## Update (2026-10-26) — read this first
+
+Scott asked for a full review update. Read `docs/agent_handoffs/UPDATE_2026-10-26.md`, then `TEAM_RECOVERY.md`. New roles:
+- Hermes plans.
+- OpenCode (DeepSeek) codes.
+- Claude Code vets the plan and the code.
+
+Muse, Ollama (project manager), Gemini, and Aider are retired; Cursor is idle. The Oct 25 candidate weights failed the gate. Liberty's court is 92 ft. The deadline is dropped. Your branch was fast-forwarded to `main`.
+
 ## Pickup (2026-10-20) — you are on main
 
 From 2026-10-10 through the morning of 2026-10-20 the working checkout was `cursor/count-roadmap-2026-10-10`, not `main`. On 2026-10-20 that branch was fast-forwarded onto `main` at `3eea117`. `jason-5-may-updates` and `Brad/Claude` are that same commit. Do not keep working from the side branch.
