@@ -33,12 +33,16 @@ $MusePromptArg = 'Read .team/prompt_muse.txt and follow it exactly.'
 $OpenCodeModels = @(
     'opencode/deepseek-v4.1-flash-free',
     'opencode/mimo-v2.6-flash-free',
-    'opencode/nemotron-3.5-super-vl-free'
+    'opencode/nemotron-3.5-super-vl-free',
+    'ollama/gemma4:cloud',
+    'ollama/nemotron-3-nano:30b'
 )
 $MuseModels = @(
     'opencode/glm-5.3-flash-free',
     'opencode/flint-40b-free',
-    'opencode/beam-free'
+    'opencode/beam-free',
+    'ollama/beam:cloud',
+    'ollama/nemotron-3-nano:30b'
 )
 $StandInModel = 'opencode/nemotron-3-ultra-free'
 $Dash = [char]0x2014

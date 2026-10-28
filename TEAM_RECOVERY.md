@@ -119,11 +119,13 @@ opencode run -m opencode/glm-5.3-flash-free "Read MUSE.md and TEAM_RECOVERY.md. 
 - **Candidate ball-weights files:** both failed the gate (Oct 20 and Oct 25). Details in `ACTIVE.md`.
 - **Court:** Liberty is 92 ft (half court 40.75 ft from the hoop). The NFHS camera pans, so one four-point calibration fits one camera view only.
 - **Tests:** 1115 collected. Failures that existed before 2026-10-26 (transfer-bundle tar on Windows, Ollama-pull, panel write, calendar day) are unchanged.
-- **In progress (branch `team/auto`, not pushed):**
-  - The team loop `team_loop.ps1` is built and vetted (`6843dec`).
-  - OpenCode is building the make/miss review page.
-  - Next: the free gate script, the cheaper Claude model, and free-model fallbacks.
-- **Team status:** `.team/STATUS.md` (desktop shortcut "TEAM STATUS - Liberty").
+- **In progress (2026-10-27 evening; nothing pushed, nothing committed):**
+  - **Scoreboard reader SHELVED** (Scott, 2026-10-27): not the make/miss detector. Revisit later for fouls, timeouts, possessions. Notes: `.team/reader_v9_PARKED/PARKED.md`.
+  - **Shot work order:** Hermes wrote `.team/specs/13_shot_work_order_plan.md`, then added Scott's stitched-court idea (stitch frames into one full-court map per game; fallback for frames with few lines). NOT yet vetted by Claude Code; then Muse.
+  - **Court lines:** `.team/specs/08_stage1b_court_lines_plan.md` v4 VETTED + Muse AGREE; needs a fresh 60-frame measurement set.
+  - **Playbook** (worktree `C:\Users\scott\Documents\liberty-playbook`, branch `team/playbook`): server side of the player app accepted. Viewer rebuild started on DeepSeek at ~19:10 (`.team/prompt_opencode_app_viewer3.txt`, output `.team/opencode_app_viewer3_run.txt`, old files in `.team/viewer_backup_v2/`). Vetter must rerun the sync check and pytest itself. Then: catalog build (`11_catalog_build_PARKED.md`), then numbered lines (`12_numbered_lines_plan.md` v3 VETTED + Muse AGREE).
+  - Fallback chain: `.team/oc.sh` (coder), `.team/run_muse_or.sh` (Muse). DeepSeek free limit was back at ~19:05.
+- **Team status:** `.team/STATUS.md` (desktop shortcut "TEAM STATUS - Liberty"). Drift log: `.team/drift_log.md`.
 - **Jason and Brad:** updated with `docs/agent_handoffs/UPDATE_2026-10-26.md`; their branches are even with `main`.
 - **Open for Scott:** none blocking.
 
@@ -147,6 +149,8 @@ opencode run -m opencode/glm-5.3-flash-free "Read MUSE.md and TEAM_RECOVERY.md. 
 ---
 
 ## 8. Update log
+
+- 2026-10-27 19:15 MDT — Claude Code: scoreboard reader shelved (Scott); shot work order planned by Hermes (not yet vetted); four plans VETTED with Muse AGREE or Scott's decision; viewer rebuild started on DeepSeek. Saved before a Claude Code update.
 
 - 2026-10-26 21:10 MDT — Claude Code: Muse restored to check the vetter (free, GLM via OpenCode).
 
