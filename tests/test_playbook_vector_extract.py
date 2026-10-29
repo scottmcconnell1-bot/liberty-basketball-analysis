@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 
 from playbook_vector_extract import (
+    _attach_end_mark,
+    _end_marks,
     _has_dash_pattern,
+    _poly_from_drawing,
     classify_pdf,
     extract_page,
     extract_sheet_from_image_url,
@@ -129,8 +132,76 @@ def test_vector_dashed_pass_solid_cut_known_sheets():
     pitt = extract_page(PDF, 173)
     assert pitt["ink"]["passes"] == []
     marks_pitt = pitt["ink"]["marks"]
-    assert marks_pitt.get("o4") == "cut"
+    # 4's line ends in a screen bar next to 5 (4 screens, then rolls); the old
+    # extractor missed the bar and called it a cut (plan 12 fix 5).
+    assert marks_pitt.get("o4") == "screen"
     assert marks_pitt.get("o5") == "cut"
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_short_cut_kept_with_its_arrowhead():
+    """p32: 4's and 5's cuts are 31 pt strokes + a separate filled arrowhead (fix 2)."""
+    acts = extract_page(PDF, 32)["ink"]["actions"]
+    kinds = {(a["kind"], a["pid"]) for a in acts}
+    assert {("cut", "o4"), ("cut", "o5"), ("cut", "o3"), ("pass", "o1")} <= kinds
+    assert len(acts) == 4
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_inbounder_above_baseline_is_a_player():
+    """p1/p2: the inbounder stands ~17 pt above the baseline (fix 1)."""
+    for page in (1, 2):
+        step = extract_page(PDF, page)
+        assert step["positions"]["o3"]["y"] == 0.0
+        assert any(a["pid"] == "o3" for a in step["ink"]["actions"])
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_screen_bar_marks_a_screen_not_an_arrow():
+    """p2: 5's line ends in a thin filled bar = screen, no extra tip point (fix 5)."""
+    acts = extract_page(PDF, 2)["ink"]["actions"]
+    screens = [a for a in acts if a["kind"] == "screen"]
+    assert [a["pid"] for a in screens] == ["o5"]
+    assert len(screens[0]["points"]) == 2
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_large_ball_handler_ring_is_not_a_line():
+    """p30/p261: a 47 pt ring round the ball handler was read as a cut (fix 3)."""
+    for page in (30, 261):
+        assert extract_page(PDF, page)["ink"]["actions"] == []
+
+
+def test_end_marks_split_arrowheads_from_screen_bars():
+    def quad(pts):
+        items = [("l", _P(*a), _P(*b)) for a, b in zip(pts, pts[1:] + pts[:1])]
+        return {"fill": (0.0, 0.0, 0.0), "color": None, "items": items}
+
+    head = quad([(392, 441), (380, 420), (395, 428), (405, 418)])
+    bar = quad([(272, 202), (244, 212), (243, 209), (271, 199)])
+    heads, bars = _end_marks([head, bar])
+    assert len(heads) == 1 and len(bars) == 1
+
+    pts, mark = _attach_end_mark([(300, 300), (379, 423)], heads, bars, set())
+    assert mark == "arrow"
+    assert pts[0] == (300, 300) and len(pts) == 3
+    # Reversed stroke is turned round so the arrow end is last.
+    pts, mark = _attach_end_mark([(379, 423), (300, 300)], heads, bars, set())
+    assert mark == "arrow" and pts[0] == (300, 300)
+    pts, mark = _attach_end_mark([(300, 300), (258, 205)], heads, bars, set())
+    assert mark == "screen" and pts == [(300, 300), (258, 205)]
+    assert _attach_end_mark([(0, 0), (50, 0)], heads, bars, set()) == ([(0, 0), (50, 0)], None)
+
+
+def test_bezier_sampled_ten_steps():
+    """Fix 4: a curve gives 10 sampled points after its start (was 4)."""
+    d = {"items": [("c", _P(0, 0), _P(0, 50), _P(50, 50), _P(50, 0))]}
+    assert len(_poly_from_drawing(d)) == 11
+
+
+class _P:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
 
 
 @pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")

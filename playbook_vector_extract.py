@@ -26,6 +26,11 @@ SVG_THREE_Y = 235.0  # rim y=15 + 3pt radius 220
 # title panel behind it. Measured on Fast Scout 1-Game / Rip / Pitt 5 / Rub.
 _DEFAULT_COURT_PDF = (87.8, 207.2, 525.2, 618.4)
 
+_BEZIER_STEPS = 10
+
+# How far above the baseline an out-of-bounds inbounder digit is accepted (PDF pt).
+_INBOUND_PAD = 45.0
+
 _PAGE_RE = re.compile(r"page_(\d+)\.(?:png|jpe?g)$", re.I)
 
 
@@ -402,6 +407,9 @@ def _extract_digit_positions(
     x0, y0, x1, y1 = court
     pad = 8.0
     by_digit: dict[int, tuple[float, float, float]] = {}
+    # Inbounder: a digit standing out of bounds above the baseline (31 Fast Scout
+    # pages put it 16-20 pt above). Used only when that digit is not on the court.
+    outside: dict[int, tuple[float, float, float]] = {}
     for w in page.get_text("words") or []:
         text = (w[4] or "").strip()
         if text not in ("1", "2", "3", "4", "5"):
@@ -409,19 +417,28 @@ def _extract_digit_positions(
         digit = int(text)
         cx = (float(w[0]) + float(w[2])) / 2.0
         cy = (float(w[1]) + float(w[3])) / 2.0
+        area = abs(float(w[2]) - float(w[0])) * abs(float(w[3]) - float(w[1]))
         if cx < x0 - pad or cx > x1 + pad or cy < y0 - pad or cy > y1 + pad:
+            if x0 - pad <= cx <= x1 + pad and y0 - _INBOUND_PAD <= cy < y0 - pad:
+                prev = outside.get(digit)
+                if prev is None or area >= prev[0]:
+                    outside[digit] = (area, cx, cy)
             continue
         # Prefer the glyph inside the court (ignore footer duplicates).
-        area = abs(float(w[2]) - float(w[0])) * abs(float(w[3]) - float(w[1]))
         prev = by_digit.get(digit)
         if prev is None or area >= prev[0]:
             by_digit[digit] = (area, cx, cy)
+    for digit, hit in outside.items():
+        by_digit.setdefault(digit, hit)
     pdf_digits: dict[str, tuple[float, float]] = {}
     out: dict[str, dict[str, float]] = {}
     for digit, (_area, cx, cy) in by_digit.items():
         oid = f"o{digit}"
         pdf_digits[oid] = (cx, cy)
-        out[oid] = _pdf_to_svg(cx, cy, court, landmarks)
+        svg = _pdf_to_svg(cx, cy, court, landmarks)
+        # The court SVG is 0..470 tall; an inbounder sits on the baseline edge.
+        svg["y"] = max(0.0, svg["y"])
+        out[oid] = svg
     return out, pdf_digits
 
 
@@ -438,7 +455,9 @@ def _poly_from_drawing(d: dict) -> list[tuple[float, float]]:
             p1, c1, c2, p2 = it[1], it[2], it[3], it[4]
             if not pts:
                 pts.append((float(p1.x), float(p1.y)))
-            for t in (0.25, 0.5, 0.75, 1.0):
+            # 10 samples per curve so bent cuts keep their shape (was 4).
+            for k in range(1, _BEZIER_STEPS + 1):
+                t = k / _BEZIER_STEPS
                 u = 1.0 - t
                 x = (
                     u**3 * float(p1.x)
@@ -558,6 +577,102 @@ def _nearest_oid(
     return best
 
 
+# FastDraw ends every play stroke with a separate small filled black 4-point
+# polygon: an arrowhead (cut/pass, ~91 pt around; p32 stroke end (379,423),
+# head (392,441)) or a thin screen bar (~64 pt around, 29 x 3 pt; p2 5's screen).
+_MARK_MAX_PERIM = 130.0
+_HEAD_ATTACH_DIST = 30.0
+_BAR_MAX_SHORT_EDGE = 5.0
+_BAR_ATTACH_DIST = 12.0
+
+
+def _end_marks(drawings: list[dict]) -> tuple[list[list[tuple[float, float]]], list[list[tuple[float, float]]]]:
+    """(arrowheads, screen bars) as vertex lists of FastDraw's small filled polygons."""
+    heads: list[list[tuple[float, float]]] = []
+    bars: list[list[tuple[float, float]]] = []
+    for d in drawings:
+        if not d.get("fill") or d.get("color") is not None:
+            continue
+        items = d.get("items") or []
+        if not (3 <= len(items) <= 4) or any(it[0] != "l" for it in items):
+            continue
+        pts = _poly_from_drawing(d)
+        if _path_len(pts) > _MARK_MAX_PERIM:
+            continue
+        verts: list[tuple[float, float]] = []
+        for p in pts:
+            if not any(abs(p[0] - q[0]) < 0.5 and abs(p[1] - q[1]) < 0.5 for q in verts):
+                verts.append(p)
+        if len(verts) < 3:
+            continue
+        edges = [_path_len([a, b]) for a, b in zip(verts, verts[1:] + verts[:1])]
+        (bars if min(edges) < _BAR_MAX_SHORT_EDGE else heads).append(verts)
+    return heads, bars
+
+
+def _attach_end_mark(
+    pts: list[tuple[float, float]],
+    heads: list[list[tuple[float, float]]],
+    bars: list[list[tuple[float, float]]],
+    used: set[tuple[str, int]],
+) -> tuple[list[tuple[float, float]], str | None]:
+    """Find the arrowhead or screen bar at either end of a stroke.
+
+    Returns (points oriented so the marked end is last, "arrow" | "screen" | None).
+    An arrowhead extends the stroke to its tip (the head vertex farthest from the
+    stroke end). A screen bar is the T-foot: the stroke stops at the bar, and the
+    bar is not a line of its own. Each mark is used once.
+    """
+    best = None
+    for kind, marks, limit in (("arrow", heads, _HEAD_ATTACH_DIST), ("screen", bars, _BAR_ATTACH_DIST)):
+        for mi, verts in enumerate(marks):
+            if (kind, mi) in used:
+                continue
+            cx = sum(v[0] for v in verts) / len(verts)
+            cy = sum(v[1] for v in verts) / len(verts)
+            for end_i in (-1, 0):
+                e = pts[end_i]
+                if kind == "arrow":
+                    d = min(((e[0] - v[0]) ** 2 + (e[1] - v[1]) ** 2) ** 0.5 for v in verts)
+                else:
+                    d = ((e[0] - cx) ** 2 + (e[1] - cy) ** 2) ** 0.5
+                if d <= limit and (best is None or d < best[0]):
+                    best = (d, kind, mi, end_i)
+    if best is None:
+        return pts, None
+    _d, kind, mi, end_i = best
+    used.add((kind, mi))
+    oriented = list(pts) if end_i == -1 else list(reversed(pts))
+    if kind == "arrow":
+        e = oriented[-1]
+        oriented.append(max(heads[mi], key=lambda v: (e[0] - v[0]) ** 2 + (e[1] - v[1]) ** 2))
+    return oriented, kind
+
+
+def _is_digit_ring(
+    d: dict,
+    pts: list[tuple[float, float]],
+    positions_pdf: dict[str, tuple[float, float]],
+) -> bool:
+    """Ball-handler ring: a closed all-curve circle centred on ANY player digit.
+
+    Most rings are under 130 pt and caught by the short-loop test; Fast Scout
+    p30 and p261 draw a 47 pt wide ring (148 pt around) that slipped through.
+    """
+    items = d.get("items") or []
+    if not items or any(it[0] != "c" for it in items):
+        return False
+    if abs(pts[0][0] - pts[-1][0]) >= 8 or abs(pts[0][1] - pts[-1][1]) >= 8:
+        return False
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    bw, bh = max(xs) - min(xs), max(ys) - min(ys)
+    if bw > 60 or bh > 60 or abs(bw - bh) > 8:
+        return False
+    cx, cy = (max(xs) + min(xs)) / 2.0, (max(ys) + min(ys)) / 2.0
+    return any(((cx - x) ** 2 + (cy - y) ** 2) ** 0.5 <= 20 for x, y in positions_pdf.values())
+
+
 def _extract_ink(
     page,
     court: tuple[float, float, float, float],
@@ -594,7 +709,11 @@ def _extract_ink(
             }
         )
 
-    for d in page.get_drawings() or []:
+    drawings = page.get_drawings() or []
+    heads, bars = _end_marks(drawings)
+    used_marks: set[tuple[str, int]] = set()
+
+    for d in drawings:
         fill = d.get("fill")
         color = d.get("color")
         width = d.get("width")
@@ -602,7 +721,10 @@ def _extract_ink(
         if len(pts) < 2:
             continue
         L = _path_len(pts)
-        if L < 35:
+        # A short play stroke is still a line once its arrowhead is added (p32
+        # cuts by 4 and 5 are 31 pt + head), so strokes get the length test below.
+        is_stroke = color is not None and not fill and width is not None and width >= 2.2
+        if L < 35 and not is_stroke:
             continue
 
         # Dribble squiggles: long filled black multi-segment paths (not stroke dashes).
@@ -632,6 +754,14 @@ def _extract_ink(
         # Skip small ball / player circle outlines (nearly closed, short loop).
         if L < 130 and abs(pts[0][0] - pts[-1][0]) < 8 and abs(pts[0][1] - pts[-1][1]) < 8:
             continue
+        if _is_digit_ring(d, pts, positions_pdf):
+            continue
+        # Merge the arrowhead into its stroke, or find its screen bar; the
+        # marked end is the finish.
+        pts, end_mark = _attach_end_mark(pts, heads, bars, used_marks)
+        has_head = end_mark is not None
+        if _path_len(pts) < 35:
+            continue
 
         is_pass_style = _has_dash_pattern(d.get("dashes"))
         start_max = _START_DIST_PASS if is_pass_style else _START_DIST_CUT
@@ -641,9 +771,10 @@ def _extract_ink(
         # Attribute by endpoints (not midpoint): mover/passer = start, receiver = end.
         # Orient from dash/style + endpoints: keep PDF order when start snaps; else
         # reverse once if only the geometric end is near a digit. Not tip≠start.
+        # An arrowhead fixes the direction, so an arrowed stroke is never reversed.
         start_oid = _nearest_oid(start, positions_pdf, max_dist=start_max)
         end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
-        if start_oid is None and end_oid is not None:
+        if start_oid is None and end_oid is not None and not has_head:
             pts_s = list(reversed(pts_s))
             start, end = pts_s[0], pts_s[-1]
             start_oid = end_oid
@@ -679,8 +810,9 @@ def _extract_ink(
             _push_action("pass", start_oid, svg, tip_oid if tip_oid != start_oid else None)
             continue
 
-        # Solid → cut, unless the stroke is a screen foot or a dribble squiggle.
-        kind = _stroke_kind(pts_s)
+        # Solid → cut, unless the stroke ends in a screen bar, has a screen foot,
+        # or is a dribble squiggle.
+        kind = "screen" if end_mark == "screen" else _stroke_kind(pts_s)
         prev = paths.get(start_oid)
         if prev is None or _path_len([(p["x"], p["y"]) for p in svg]) > _path_len(
             [(p["x"], p["y"]) for p in prev]
