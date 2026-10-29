@@ -185,3 +185,6 @@ flask_err.log
 # Local database archive (pushed only if Scott approves)
 db-archive/
 .aider*
+
+# Claude Code personal settings (Scott, 2026-10-28)
+.claude/settings.local.json

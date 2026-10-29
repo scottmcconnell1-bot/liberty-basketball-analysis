@@ -6,6 +6,10 @@ Updated: 2026-10-26. Claude Code took over Muse's vetting role on 2026-10-26. Mu
 
 ## Role
 
+**Current roster, Scott 2026-10-28 evening (overrides everything below):** "Hermes plans-Architect, Muse checks, Cursor codes, you orchestrate." Cursor (`cursor-agent -p`, logged in; Scott turned usage-based pricing OFF) is the coder. Claude Code orchestrates: starts each agent in turn, checks plans and Cursor's diffs and test output, and reports to Scott; it does not write project code. Muse checks plans and Claude Code's verdicts. One Cursor job at a time; no automatic retry loops (a failed check goes to Scott once); if Cursor hits a plan limit it stops and Scott is told. OpenCode stays idle (free limit).
+
+**Earlier the same day (superseded):** "You be the coder. Hermes and Muse checks you, you and Muse check Hermes, you and Hermes checks Muse. Once all works out, a change can happen." Claude Code now writes the code for plans that Hermes wrote and that Claude Code and Muse both passed. Hermes and Muse check Claude Code's diff and test output. Claude Code and Hermes check Muse's verdicts. Any DISAGREE stops the change for Scott. OpenCode is idle. Commit, push and merge still only on Scott's word. The 2026-10-26 text below is kept as history.
+
 Scott's instruction (2026-10-26): one agent makes sure the others stay on track and do not drift. That agent is Claude Code. It checks the other agents' claims and code against the repository. It does not assign tasks and does not replace Scott's decisions.
 
 Flow (Scott, 2026-10-26): Scott → Hermes (plan) → Claude Code (vet the plan) → OpenCode/DeepSeek (code) → Claude Code (vet the code and tests) → commit → Scott. Claude Code does not plan or write project code.
