@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import cv2
 
 from scoreboard_clock import (
     _digit_groups,
@@ -32,76 +31,7 @@ ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
 SEGMENT_GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
 TRACK_DIR = ROOT / "data" / "scoreboard_tracks"
 
-_NOTUS_THRESHOLDS_A1: dict | None = None
-_NOTUS_THRESHOLDS_A: dict | None = None
-_NOTUS_GEOMETRY_A1: dict | None = None
-_NOTUS_GEOMETRY_A: dict | None = None
-
-def _load_notus_thresholds_A1() -> dict:
-    global _NOTUS_THRESHOLDS_A1
-    if _NOTUS_THRESHOLDS_A1 is not None:
-        return _NOTUS_THRESHOLDS_A1
-    import json
-    from pathlib import Path
-    path = ROOT / "data" / "roi" / "notus_red_thresholds_A1.json"
-    _NOTUS_THRESHOLDS_A1 = json.loads(path.read_text(encoding="utf-8"))
-    return _NOTUS_THRESHOLDS_A1
-
-def _load_notus_thresholds_A() -> dict:
-    global _NOTUS_THRESHOLDS_A
-    if _NOTUS_THRESHOLDS_A is not None:
-        return _NOTUS_THRESHOLDS_A
-    import json
-    from pathlib import Path
-    path = ROOT / "data" / "roi" / "notus_red_thresholds_A.json"
-    _NOTUS_THRESHOLDS_A = json.loads(path.read_text(encoding="utf-8"))
-    return _NOTUS_THRESHOLDS_A
-
-def _load_notus_geometry_A1() -> dict:
-    global _NOTUS_GEOMETRY_A1
-    if _NOTUS_GEOMETRY_A1 is not None:
-        return _NOTUS_GEOMETRY_A1
-    import json
-    from pathlib import Path
-    path = ROOT / "data" / "roi" / "notus_segment_geometry_A1.json"
-    _NOTUS_GEOMETRY_A1 = json.loads(path.read_text(encoding="utf-8"))
-    return _NOTUS_GEOMETRY_A1
-
-def _load_notus_geometry_A() -> dict:
-    global _NOTUS_GEOMETRY_A
-    if _NOTUS_GEOMETRY_A is not None:
-        return _NOTUS_GEOMETRY_A
-    import json
-    from pathlib import Path
-    path = ROOT / "data" / "roi" / "notus_segment_geometry_A.json"
-    _NOTUS_GEOMETRY_A = json.loads(path.read_text(encoding="utf-8"))
-    return _NOTUS_GEOMETRY_A
-
-def _notus_red_mask(crop: np.ndarray, game_key: str = "default") -> np.ndarray:
-    """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
-    if game_key == "A1":
-        thresholds = _load_notus_thresholds_A1()
-    elif game_key == "A":
-        thresholds = _load_notus_thresholds_A()
-    else:
-        # Fallback to original single file if requested
-        try:
-            thresholds = _load_notus_thresholds()
-        except:
-            return np.zeros((crop.shape[0], crop.shape[1]), dtype=np.uint8)
-            
-    h_min = thresholds["h_min"]
-    h_max = thresholds["h_max"]
-    s_min = thresholds["s_min"]
-    v_min = thresholds["v_min"]
-    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    if h_min <= h_max:
-        mask = cv2.inRange(hsv, (h_min, s_min, v_min), (h_max, 255, 255))
-    else:
-        low = cv2.inRange(hsv, (0, s_min, v_min), (h_max, 255, 255))
-        high = cv2.inRange(hsv, (h_min, s_min, v_min), (179, 255, 255))
-        mask = cv2.bitwise_or(low, high)
-    return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+_GEOMETRY: dict[str, tuple[float, float, float, float]] | None = None
 
 
 def load_rois(path: str | Path | None = None) -> dict[str, Any]:
@@ -174,8 +104,8 @@ def _read_score(frame: np.ndarray, cell: dict[str, Any]) -> int | None:
     ones_box = cell.get("ones")
     if not tens_box or not ones_box:
         return None
-    tens = _read_notus_digit(_notus_red_mask(_crop(frame, tens_box)))
-    ones = _read_notus_digit(_notus_red_mask(_crop(frame, ones_box)))
+    tens = _read_notus_digit(_red_mask(_crop(frame, tens_box)))
+    ones = _read_notus_digit(_red_mask(_crop(frame, ones_box)))
     if tens == "" and ones == "":
         return None
     if ones == "":

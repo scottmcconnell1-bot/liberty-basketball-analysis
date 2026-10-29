@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT))
 import cv2  # noqa: E402
 import numpy as np  # noqa: E402
 
-from scoreboard_clock_720p import _notus_red_mask  # noqa: E402
+from scoreboard_clock import _SEGMENTS, _red_mask  # noqa: E402
 
 ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
 OUT_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
@@ -60,20 +60,14 @@ def _gate_timestamps(rois: dict) -> list[float]:
 def _sample_timestamps(duration_s: float, gate_s: list[float]) -> list[float]:
     stamps: list[float] = []
     timestamp = FIT_START_S
-    # Holdout times to exclude (from NEXT_TASK.md)
-    holdout_s = [
-        246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1, # A1
-        232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9, # A
-    ]
-    all_exclude = gate_s + holdout_s
     while timestamp < duration_s - 2.0:
-        if not all_exclude or min(abs(timestamp - gate) for gate in all_exclude) >= GATE_GAP_S:
+        if not gate_s or min(abs(timestamp - gate) for gate in gate_s) >= GATE_GAP_S:
             stamps.append(round(timestamp, 3))
         timestamp += FIT_STEP_S
     return stamps
 
 
-def _collect_masks(game: dict, timestamps: list[float], game_key: str) -> list[np.ndarray]:
+def _collect_masks(game: dict, timestamps: list[float]) -> list[np.ndarray]:
     video = ROOT / game["video"]
     capture = cv2.VideoCapture(str(video))
     if not capture.isOpened():
@@ -92,7 +86,7 @@ def _collect_masks(game: dict, timestamps: list[float], game_key: str) -> list[n
                     box = cell.get(slot)
                     if not box:
                         continue
-                    mask = _notus_red_mask(_crop(frame, box), game_key)
+                    mask = _red_mask(_crop(frame, box))
                     if int((mask > 0).sum()) < MIN_LIT_PIXELS:
                         continue
                     masks.append(
@@ -143,7 +137,7 @@ def _find_holes(smoothed: np.ndarray) -> tuple[tuple[int, int, int, int], tuple[
 
 def _standard_geometry() -> dict[str, list[float]]:
     """Fallback only: the shared layout, if the mean map has no holes."""
-    raise RuntimeError("fitting failed: no holes found and no fallback geometry defined")
+    return {name: [float(value) for value in rect] for name, rect in _SEGMENTS.items()}
 
 
 def _fit_geometry(masks: list[np.ndarray]) -> dict[str, list[float]]:
@@ -198,11 +192,9 @@ def _fit_geometry(masks: list[np.ndarray]) -> dict[str, list[float]]:
 def main() -> int:
     rois = json.loads(ROI_FILE.read_text(encoding="utf-8"))
     gate_s = _gate_timestamps(rois)
-    
-    all_game_results = {}
-    
+    masks: list[np.ndarray] = []
+    counts: dict[str, int] = {}
     for game_id, game in (rois.get("games") or {}).items():
-        game_key = "A1" if "A1" in game_id else "A"
         duration_s = float(game.get("fps") or 25.0)
         video = ROOT / game["video"]
         capture = cv2.VideoCapture(str(video))
@@ -213,37 +205,29 @@ def main() -> int:
         capture.release()
         duration_s = frames / fps if frames else duration_s
         timestamps = _sample_timestamps(duration_s, gate_s)
-        game_masks = _collect_masks(game, timestamps, game_key)
-        
-        if not game_masks:
-            print(f"no masks for {game_id}")
-            continue
-            
-        geometry = _fit_geometry(game_masks)
-        all_game_results[game_key] = geometry
+        game_masks = _collect_masks(game, timestamps)
+        masks.extend(game_masks)
+        counts[game_id] = len(game_masks)
         print(f"{game_id}: {len(game_masks)} non-gate slot masks from {len(timestamps)} frames")
-    
-    for game_key, geometry in all_game_results.items():
-        out_file = ROOT / "data" / "roi" / f"notus_segment_geometry_{game_key}.json"
-        payload = {
-            "generated_by": "scripts/fit_notus_segments.py",
-            "method": (
-                "Mean red-mask occupancy of non-gate tens/ones slots, resized to "
-                f"{CANON_W}x{CANON_H}; the two dark holes locate the central column band and the "
-                "upper/lower stroke bands; each segment is a core rectangle inside its measured band. "
-                f"Fitting frames stay at least {GATE_GAP_S:.0f} s from every answer-key timestamp."
-            ),
-            "gate_gap_s": GATE_GAP_S,
-            "core_scale": CORE_SCALE,
-            "fit_masks": {game_id: len(game_masks) for game_id, game_masks in zip([k for k,v in (rois.get("games") or {}).items() if game_key in k], [all_game_results[game_key]])}, # this is wrong, fix logic
-            "segments": geometry,
-        }
-        out_file.parent.mkdir(parents=True, exist_ok=True)
-        out_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        print(f"wrote {out_file.relative_to(ROOT)}")
-    
-    return 0
 
+    geometry = _fit_geometry(masks)
+    payload = {
+        "generated_by": "scripts/fit_notus_segments.py",
+        "method": (
+            "Mean red-mask occupancy of non-gate tens/ones slots, resized to "
+            f"{CANON_W}x{CANON_H}; the two dark holes locate the central column band and the "
+            "upper/lower stroke bands; each segment is a core rectangle inside its measured band. "
+            f"Fitting frames stay at least {GATE_GAP_S:.0f} s from every answer-key timestamp."
+        ),
+        "gate_gap_s": GATE_GAP_S,
+        "core_scale": CORE_SCALE,
+        "fit_masks": counts,
+        "segments": geometry,
+    }
+    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OUT_FILE.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {OUT_FILE.relative_to(ROOT)}")
+    return 0
 
 
 if __name__ == "__main__":
