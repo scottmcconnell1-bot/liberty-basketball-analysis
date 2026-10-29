@@ -27,3 +27,5 @@
 - 2026-10-28 17:50: Vetter error: stamp script for NEXT_TASK Task 1 crashed on a \U escape again (adjacent string literal not raw); the chained command that wrote the Hermes prompt did not run, so Hermes got an empty prompt and did nothing. Fix: stamp text now read from a .txt file; prompt rewritten and Hermes rerun. Rule for the Vetter: never put Windows paths in Python string literals; read text from files; check every command output.
 
 - 2026-10-28 18:30: Muse DISAGREE on Task 1 stamp: cited line 42 for the frame rule; it is line 43 (Hermes added a line above it). Vetter citation error; corrected and Muse rerun.
+
+- 2026-10-28 21:15: Muse DISAGREE on shot step 1 numbers was CORRECT: Adrian tag file has 2 exact duplicate shot rows (45:38.6 2PT Miss, 45:47.2 3PT Miss), and v6_tracks.json has the same 2 duplicates (111 rows, 109 unique). True step-1 numbers: false makes 38 of 93 misses (not 40 of 95); recovery 6 of 19 unchanged. The long-standing baseline "Adrian Q1-Q3 99 of 111" counts those 2 misses twice: true 97 of 109; whole film 113 of 129 -> 111 of 127. Claude missed this when rerunning.

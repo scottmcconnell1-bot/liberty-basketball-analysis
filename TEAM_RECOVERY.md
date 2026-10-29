@@ -115,7 +115,7 @@ opencode run -m opencode/glm-5.3-flash-free "Read MUSE.md and TEAM_RECOVERY.md. 
 ## 6. Current state (update every session)
 
 - **Branch:** `main` = GitHub `main`. Last commit: see `git log -1`.
-- **Make/miss (Proven, 2026-10-26):** Adrian Q1–Q3 99 of 111, 12 makes missed, 0 misses called makes (whole film 113 of 129). Notus A1 Q1 24 of 31, 7 makes missed, 0 misses called makes.
+- **Make/miss (Proven, 2026-10-26):** Adrian Q1–Q3 97 of 109, 12 makes missed, 0 misses called makes (whole film 111 of 127). Corrected 2026-10-28: 2 duplicate miss rows removed from the Adrian tags; the older 99/111 and 113/129 counted them twice. Notus A1 Q1 24 of 31, 7 makes missed, 0 misses called makes.
 - **Candidate ball-weights files:** both failed the gate (Oct 20 and Oct 25). Details in `ACTIVE.md`.
 - **Court:** Liberty is 92 ft (half court 40.75 ft from the hoop). The NFHS camera pans, so one four-point calibration fits one camera view only.
 - **Tests:** 1115 collected. Failures that existed before 2026-10-26 (transfer-bundle tar on Windows, Ollama-pull, panel write, calendar day) are unchanged.
@@ -140,7 +140,7 @@ opencode run -m opencode/glm-5.3-flash-free "Read MUSE.md and TEAM_RECOVERY.md. 
 5. **Claude Code:** install, run `claude` in the repo; it loads `CLAUDE.md` and this file.
 6. **Files that are NOT in GitHub (restore by hand):**
    - Offline backup: `C:\Users\scott\Documents\liberty_offline_backup\` (checksums in `MANIFEST.sha256`):
-     - `temp_scoring\`: the BODD YOLOv8 hoop model, `v6_tracks.json` (Adrian tracks behind 99/111), `v6_tracks_notus_q1.json`, `validate_ball_weights.py`, `collect_notus_q1_bodd.py`, `ball_net_runs\`, the Oct 20 validation results. Copy these back to `C:\Users\scott\AppData\Local\Temp\`; the scripts expect them there.
+     - `temp_scoring\`: the BODD YOLOv8 hoop model, `v6_tracks.json` (Adrian tracks behind 97/109; it still has the 2 duplicate rows), `v6_tracks_notus_q1.json`, `validate_ball_weights.py`, `collect_notus_q1_bodd.py`, `ball_net_runs\`, the Oct 20 validation results. Copy these back to `C:\Users\scott\AppData\Local\Temp\`; the scripts expect them there.
      - `film_tags\`: Scott's shot tags. Copy back to `data\film_tags\`.
    - `film_analysis.db` (about 570 MB, gitignored). See `docs/BACKUP_AND_ARCHIVE.md` and `Backup Liberty Database.bat`.
    - That backup folder is on this PC only. Copy it to a USB drive or cloud folder for real protection.
