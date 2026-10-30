@@ -8,6 +8,9 @@
    A dragged defender keeps that adjustment relative to the ball.
    Ball-you-man: the offense never gets between his defender and the ball.
    A cut across the lane is met chest-to-chest, in the path and on the ball.
+   Scott 2026-10-29: off the ball, every defender builds a triangle with the ball and
+   his man (pulled toward the ball, sagged toward the basket, more the farther the
+   ball is), and no defender except the one on the ball is beyond the 3-point line.
 */
 (function (root, factory) {
   const api = factory();
@@ -34,6 +37,114 @@
   }
 
   function lineDrop(rim) { return (rim && rim.ftDepth) || 110; }
+
+  // The editor's 3-point line: arc of 220 around the rim, corners at x = 40 / 460.
+  const THREE_R = 220;
+  const THREE_CORNER = 210;
+  const INSIDE = 16; // a defender's whole body stays inside the line
+
+
+  // Court is 500 units for 50 ft: 10 units = 1 ft.
+  const FT = 10;
+  // Fitted to Scott's own spots, 2026-10-29: 11 Defense Teacher lessons (3 out 2 in,
+  // high/low post) + 19 dragged spots (4 out 1 in; 3 out 2 in both low), 74 defenders,
+  // mean 2.5 ft off.
+  // Share of the way from the man toward the ball, then feet off the passing lane
+  // toward the basket.
+  const SPOT = {
+    1: { ball: 0.4, offFt: 4.5 },
+    2: { ball: 0.45, offFt: 4.5 },
+    3: { ball: 0.45, offFt: 7.5 },
+    inside: { ball: 0.65, offFt: 3 }, // ball in the post or the lane: everyone sinks
+    post: { ball: 0.2, offFt: 2 }, // man on the block or the elbow: stay tight
+  };
+
+  // Scott's dragged spots: the man on the ball is about 4 ft off him, always toward
+  // the middle of the free-throw line (level on the wing, toward the rim at the top).
+  const ON_BALL_FT = 4.1;
+  function onBallSpot(man, rim, bounds) {
+    const ft = { x: rim.x, y: ftY(rim) };
+    const d = len(sub(ft, man));
+    if (d < 8) return clamp({ x: man.x, y: man.y - ON_BALL_FT * 10 }, bounds);
+    return clamp(add(man, mul(norm(sub(ft, man)), ON_BALL_FT * 10)), bounds);
+  }
+
+  function ballInside(ball, rim) {
+    return isLowPost(ball, rim) || isHighPost(ball, rim) || Math.abs(ball.x - rim.x) < 60 && ball.y < ftY(rim) + 20;
+  }
+
+  // Three passes away (far side): Scott puts him in the middle of the lane, about 9.5 ft
+  // out from the baseline, a step toward his man's side (33 of his spots: 3.1 ft off,
+  // against 4.8 ft for the triangle share).
+  const FAR_HELP = { sideFt: 0.5, depthFt: 9.5 };
+
+  function triangle(man, ball, rim, away, isPost) {
+    if (!isPost && away >= 3 && !ballInside(ball, rim)) {
+      return { x: rim.x + (Math.sign(man.x - rim.x) || 1) * FAR_HELP.sideFt * 10, y: rim.y + FAR_HELP.depthFt * 10 };
+    }
+    const k = isPost ? SPOT.post : ballInside(ball, rim) ? SPOT.inside : SPOT[Math.min(3, Math.max(1, away))];
+    const toBall = sub(ball, man);
+    if (len(toBall) < 8) return lerp(man, rim, 0.2);
+    const u = norm(toBall);
+    let v = { x: -u.y, y: u.x };
+    const toRim = sub(rim, man);
+    if (v.x * toRim.x + v.y * toRim.y < 0) v = mul(v, -1); // off the lane on the basket side
+    return add(add(man, mul(toBall, k.ball)), mul(v, k.offFt * 10));
+  }
+
+  // Scott 2026-10-29, "Fill - Sink - Close": only when a wing is beaten baseline -
+  // the ball is near the baseline, inside the 3-point line, outside the lane, with a
+  // post on the ball's side. Spacing from his two drawn drives (left and right):
+  //   close   - the low post's defender stops the ball (3.6 ft off it, toward the rim)
+  //   sink    - the high post's defender drops to the low post (2.2 ft off him, ball side)
+  //   fill    - the point's defender fills to the high post (3.6 ft off him, ball side)
+  //   rim     - the far wing's defender sinks to the rim
+  //   recover - the beaten defender recovers toward the point (57% of the way to the rim)
+  // Anything else is normal man defense.
+  const DRIVE = { baselineFt: 3.5, closeFt: 3.6, sinkFt: 2.2, fillFt: 3.6, rimDropFt: 3, recover: 0.57 };
+
+  function baselineDrive(offense, handler, rim) {
+    const ball = offense[handler];
+    const side = Math.sign(ball.x - rim.x);
+    const insideArc = Math.abs(ball.x - rim.x) < THREE_CORNER;
+    const outsideLane = Math.abs(ball.x - rim.x) > 60;
+    if (!(ball.y <= DRIVE.baselineFt * 10 + 10 && insideArc && outsideLane && side)) return null;
+    const ids = offenseIds(offense).filter(function (o) { return o !== handler; });
+    const posts = ids.filter(function (o) {
+      const m = offense[o];
+      return (isLowPost(m, rim) || isHighPost(m, rim)) && Math.sign(m.x - rim.x) === side;
+    }).sort(function (a, b) { return offense[a].y - offense[b].y; });
+    if (!posts.length) return null;
+    const low = posts[0], high = posts[1] || null;
+    const point = topId(ids.filter(function (o) { return posts.indexOf(o) < 0; }), offense);
+    const roles = {};
+    roles[handler] = "recover";
+    roles[low] = "close";
+    if (high) roles[high] = "sink";
+    if (point) roles[point] = high ? "fill" : roles[point];
+    ids.forEach(function (o) { if (!roles[o]) roles[o] = "rim"; });
+    const toward = function (from, to, ft) { return add(from, mul(norm(sub(to, from)), ft * 10)); };
+    const spots = {};
+    Object.keys(roles).forEach(function (o) {
+      const r = roles[o];
+      if (r === "close") spots[o] = toward(ball, rim, DRIVE.closeFt);
+      else if (r === "sink") spots[o] = toward(offense[low], ball, DRIVE.sinkFt);
+      else if (r === "fill") spots[o] = toward(offense[high], ball, DRIVE.fillFt);
+      else if (r === "rim") spots[o] = { x: rim.x, y: rim.y + DRIVE.rimDropFt * 10 };
+      else if (r === "recover") spots[o] = lerp(offense[point] || ball, rim, DRIVE.recover);
+    });
+    return { roles: roles, spots: spots };
+  }
+
+  function insideThree(spot, rim) {
+    let p = { x: spot.x, y: spot.y };
+    const maxR = THREE_R - INSIDE;
+    const d = len(sub(p, rim));
+    if (d > maxR) p = add(rim, mul(sub(p, rim), maxR / d));
+    const maxX = THREE_CORNER - INSIDE;
+    if (Math.abs(p.x - rim.x) > maxX) p = { x: rim.x + Math.sign(p.x - rim.x) * maxX, y: p.y };
+    return p;
+  }
 
   function ftY(rim) { return rim.y + lineDrop(rim); }
 
@@ -396,14 +507,11 @@
       const manId = matchups[did] && offense[matchups[did]] ? matchups[did] : oid;
       const man = offense[manId];
       if (!man) return;
-      if (manId === onBallId) out[did] = onBall(man, rim, bounds, manId === top);
-      else if ((isHighPost(man, rim) || isLowPost(man, rim)) && below) out[did] = frontPost(man, ballXY, bounds);
-      else if (isHighPost(man, rim)) out[did] = halfDeny(man, ballXY, rim, bounds);
+      if (manId === onBallId) out[did] = onBallSpot(man, rim, bounds);
+      else if (isHighPost(man, rim) || isLowPost(man, rim)) out[did] = clamp(triangle(man, ballXY, rim, 1, true), bounds);
       else {
         const away = passesAway(manId, offense, ballXY, rim, peers);
-        if (away >= 3) out[did] = threePass(man, ballXY, rim, bounds);
-        else if (away === 2) out[did] = twoPass(man, ballXY, rim, bounds);
-        else out[did] = onTheLine(man, ballXY, bounds);
+        out[did] = clamp(triangle(man, ballXY, rim, away), bounds);
       }
       const tune = opts.tunes && opts.tunes[did];
       if (tune) out[did] = clamp(applyTune(out[did], man, manId === onBallId ? man : ballXY, rim, tune), bounds);
@@ -414,8 +522,50 @@
     Object.keys(out).forEach(function (k) { shell[k] = { x: out[k].x, y: out[k].y }; });
     applyCuts(out, offense, ballXY, onBallId, opts.cuts, rim, bounds);
     applyPostExchange(out, offense, ballXY, onBallId, opts.cuts, rim, bounds, matchups, opts.switchSink, shell);
+    const drive = opts.matchups ? null : baselineDrive(offense, handler, rim);
+    if (drive) Object.keys(drive.spots).forEach(function (o) { out["d" + o.slice(1)] = clamp(drive.spots[o], bounds); });
+    ids.forEach(function (oid) {
+      const did = "d" + oid.slice(1);
+      const manId = matchups[did] && offense[matchups[did]] ? matchups[did] : oid;
+      if (out[did] && manId !== onBallId) out[did] = insideThree(out[did], rim);
+    });
     return out;
   }
 
-  return { placeManDefense: placeManDefense, measureTune: measureTune };
+  // Each defender's job, named by the same branches placeManDefense takes
+  // (for captions; no positions).
+  function defenseRoles(offense, ballPid, options) {
+    const opts = options || {};
+    const rim = opts.rim || { x: 250, y: 15 };
+    const ids = offenseIds(offense || {});
+    if (!ids.length) return {};
+    const handler = ballPid && offense[ballPid] ? ballPid : ids[0];
+    const ballXY = offense[handler];
+    const below = ballAtOrBelowFt(ballXY, rim);
+    const peers = ids.filter(function (oid) {
+      if (oid === handler) return false;
+      const man = offense[oid];
+      if (isHighPost(man, rim)) return false;
+      if (isLowPost(man, rim) && below) return false;
+      return true;
+    });
+    const out = {};
+    const drive = baselineDrive(offense, handler, rim);
+    if (drive) {
+      Object.keys(drive.roles).forEach(function (o) { out["d" + o.slice(1)] = drive.roles[o]; });
+      return out;
+    }
+    ids.forEach(function (oid) {
+      const man = offense[oid];
+      let role;
+      if (oid === handler) role = "ball";
+      else if (isHighPost(man, rim) || isLowPost(man, rim)) role = "post";
+      else if (ballInside(ballXY, rim)) role = "sink";
+      else role = "away" + Math.min(3, Math.max(1, passesAway(oid, offense, ballXY, rim, peers)));
+      out["d" + oid.slice(1)] = role;
+    });
+    return out;
+  }
+
+  return { placeManDefense: placeManDefense, measureTune: measureTune, defenseRoles: defenseRoles };
 });

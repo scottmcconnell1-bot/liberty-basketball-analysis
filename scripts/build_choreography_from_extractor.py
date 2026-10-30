@@ -77,6 +77,9 @@ def build_play(pdf: Path, pages: list[int], play_id, import_id: str) -> dict:
         "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "auto_extract_numbered",
         "sticky": False,
+        # Scott 2026-10-29: saved so Play All opens a full-court play on the
+        # 500 x 940 court; files without it are half court.
+        "court_mode": "full" if any(s.get("court_mode") == "full" for s in steps) else "half",
         "pages": pages,
         "steps": [step_from_extract(s, i, import_id) for i, s in enumerate(steps)],
     }

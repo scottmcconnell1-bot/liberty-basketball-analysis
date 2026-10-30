@@ -239,3 +239,54 @@ class TestSheetExtractApi:
         assert data["source"] == "vector"
         assert "o1" in data["positions"]
         assert "ink" in data
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_trace_records_end_marked_strokes_without_changing_output():
+    """Grading hook: p2 records 5's screen as kept; the extract itself is unchanged."""
+    trace: list = []
+    with_trace = extract_page(PDF, 2, trace=trace)
+    assert with_trace["ink"] == extract_page(PDF, 2)["ink"]
+    screens = [r for r in trace if r["mark"][0] == "screen"]
+    assert [(r["kept"], r["pid"]) for r in screens] == [(True, "o5")]
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_dribble_squiggle_ends_at_far_tip_not_back_at_start():
+    """p64: 1's dribble squiggle is a closed filled outline; the line must end at its tip."""
+    acts = extract_page(PDF, 64)["ink"]["actions"]
+    dribbles = [a for a in acts if a["kind"] == "dribble"]
+    assert [a["pid"] for a in dribbles] == ["o1"]
+    first, last = dribbles[0]["points"][0], dribbles[0]["points"][-1]
+    assert ((first["x"] - last["x"]) ** 2 + (first["y"] - last["y"]) ** 2) ** 0.5 > 40
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_chained_lines_attach_to_the_player_whose_line_ends_there():
+    """Gap 1 (16 pt): p173 4's roll after the screen; p64 1's cut after the dribble."""
+    p173 = [(a["pid"], a["kind"]) for a in extract_page(PDF, 173)["ink"]["actions"]]
+    assert p173.count(("o4", "screen")) == 1 and p173[-1] == ("o4", "cut")
+    p64 = [(a["pid"], a["kind"]) for a in extract_page(PDF, 64)["ink"]["actions"]]
+    assert ("o1", "dribble") in p64 and p64[-1] == ("o1", "cut")
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_no_chaining_when_the_limit_is_zero(monkeypatch):
+    """Chaining only adds lines; with no limit the old lines come out unchanged."""
+    import playbook_vector_extract as vx
+
+    chained = extract_page(PDF, 173)["ink"]["actions"]
+    monkeypatch.setattr(vx, "_CHAIN_DIST", -1.0)
+    plain = extract_page(PDF, 173)["ink"]["actions"]
+    assert chained[: len(plain)] == plain and len(chained) == len(plain) + 1
+
+
+@pytest.mark.skipif(not HAS_PDF, reason="Fast Scout PDF fixture not present")
+def test_full_court_page_is_read_on_the_940_court():
+    """Gap 2: p157 Finish the Cycle - 2.7 pt outline, 1.8 pt play strokes."""
+    step = extract_page(PDF, 157)
+    assert step["court_mode"] == "full"
+    assert len(step["ink"]["actions"]) >= 5
+    ys = [p["y"] for p in step["positions"].values()]
+    assert max(ys) > 470 and all(0 <= y <= 940 for y in ys)
+    assert extract_page(PDF, 2)["court_mode"] == "half"

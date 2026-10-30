@@ -18,6 +18,16 @@ from typing import Any
 
 COURT_W = 500.0
 COURT_H = 470.0
+# Full court in the playbook editor: 500 x 940, basket at y=0 and y=940 (plan v4 Gap 2).
+FULL_COURT_H = 940.0
+# A painted outline this tall for its width is a full court. Plan v4 Gap 2: full
+# court about 1.9, half court about 0.94; all 34 Fast Scout transition pages are
+# 508 / 270 = 1.88. The cut sits near the full-court shape, well above any half court.
+_FULL_COURT_MIN_RATIO = 1.7
+# Full-court pages draw play strokes 1.8 pt and court lines 0.9 pt; half-court
+# play strokes are 2.9 pt.
+_FULL_COURT_STROKE_MIN = 1.2
+_HALF_COURT_STROKE_MIN = 2.2
 # Must match templates/playbook.html drawHalfCourtMarks (basket at top).
 SVG_FT_Y = 160.0
 SVG_THREE_Y = 235.0  # rim y=15 + 3pt radius 220
@@ -163,6 +173,7 @@ def extract_page(
     page_1based: int,
     *,
     next_positions: dict[str, dict] | None = None,
+    trace: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Extract one FastDraw page into choreography step fields."""
     import fitz
@@ -182,6 +193,7 @@ def extract_page(
             pdf_digits,
             landmarks=landmarks,
             next_positions=next_positions,
+            trace=trace,
         )
         page_w = float(page.rect.width) or 1.0
         page_h = float(page.rect.height) or 1.0
@@ -200,6 +212,7 @@ def extract_page(
             "page": page_1based,
             "title": title,
             "court_frac": court_frac,
+            "court_mode": "full" if is_full_court(court) else "half",
             "positions": positions,
             "ink": ink,
         }
@@ -255,6 +268,10 @@ def _detect_court_rect(page) -> tuple[float, float, float, float]:
     page_h = float(page.rect.height) or 792.0
     best_stroke = None
     best_stroke_area = 0.0
+    # Full-court pages paint a 2.7 pt outline (p144, p157, p163); accept it only
+    # when it has a full court's shape.
+    best_full = None
+    best_full_area = 0.0
     best_fill = None
     best_fill_area = 0.0
     for d in page.get_drawings() or []:
@@ -288,18 +305,35 @@ def _detect_court_rect(page) -> tuple[float, float, float, float]:
                 float(rect.x1),
                 float(rect.y1),
             )
+        elif (
+            width is not None
+            and float(width) >= 2.5
+            and float(rect.width) > 0
+            and float(rect.height) / float(rect.width) >= _FULL_COURT_MIN_RATIO
+            and area > best_full_area
+        ):
+            best_full_area = area
+            best_full = (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
     if best_stroke and best_stroke_area > 50_000:
         return best_stroke
+    if best_full and best_full_area > 50_000:
+        return best_full
     if best_fill and best_fill_area > 50_000:
         return best_fill
     return _DEFAULT_COURT_PDF
 
 
 def _detect_court_landmarks(page, court: tuple[float, float, float, float]) -> dict[str, float] | None:
-    """FastDraw lane (FT) + 3pt peak in PDF y, so elbows map to SVG y=160 not the arc."""
+    """FastDraw lane (FT) + 3pt peak in PDF y, so elbows map to SVG y=160 not the arc.
+
+    A full-court outline returns {"full": True}: it maps straight onto the
+    editor's 500 x 940 court (the half-court bands do not apply).
+    """
     x0, y0, x1, y1 = court
     cw = max(x1 - x0, 1e-6)
     ch = max(y1 - y0, 1e-6)
+    if is_full_court(court):
+        return {"full": True}
     page_h = float(page.rect.height) or 792.0
     ft_y = None
     three_y = None
@@ -338,6 +372,12 @@ def _detect_court_landmarks(page, court: tuple[float, float, float, float]) -> d
     return out
 
 
+def is_full_court(court: tuple[float, float, float, float]) -> bool:
+    """True when the detected outline has a full court's shape (taller than wide)."""
+    x0, y0, x1, y1 = court
+    return (y1 - y0) / max(x1 - x0, 1e-6) >= _FULL_COURT_MIN_RATIO
+
+
 def _piecewise(value: float, src: list[float], dst: list[float]) -> float:
     v = float(value)
     if v <= src[0]:
@@ -361,7 +401,9 @@ def _pdf_to_svg(
     x0, y0, x1, y1 = court
     bw = max(x1 - x0, 1e-6)
     sx = (float(x) - x0) / bw * COURT_W
-    if landmarks and landmarks.get("ft"):
+    if landmarks and landmarks.get("full"):
+        sy = (float(y) - y0) / max(y1 - y0, 1e-6) * FULL_COURT_H
+    elif landmarks and landmarks.get("ft"):
         src = [landmarks["baseline"], landmarks["ft"]]
         dst = [0.0, SVG_FT_Y]
         if landmarks.get("three"):
@@ -384,7 +426,9 @@ def _svg_to_pdf(
     x0, y0, x1, y1 = court
     bw = max(x1 - x0, 1e-6)
     px = x0 + float(pos["x"]) / COURT_W * bw
-    if landmarks and landmarks.get("ft"):
+    if landmarks and landmarks.get("full"):
+        py = y0 + float(pos["y"]) / FULL_COURT_H * max(y1 - y0, 1e-6)
+    elif landmarks and landmarks.get("ft"):
         src = [landmarks["baseline"], landmarks["ft"]]
         dst = [0.0, SVG_FT_Y]
         if landmarks.get("three"):
@@ -505,8 +549,16 @@ def _simplify(pts: list[tuple[float, float]], min_dist: float = 4.0) -> list[tup
     return out
 
 
-def _is_court_geometry(pts: list[tuple[float, float]], court: tuple[float, float, float, float], width: float | None) -> bool:
-    """Filter FastDraw court lines (thin dashed arcs / key / baseline)."""
+def _is_court_geometry(
+    pts: list[tuple[float, float]],
+    court: tuple[float, float, float, float],
+    width: float | None,
+    stroke_min: float = _HALF_COURT_STROKE_MIN,
+) -> bool:
+    """Filter FastDraw court lines (thin dashed arcs / key / baseline).
+
+    ``stroke_min`` is the thinnest play stroke on the page (1.2 on full-court pages).
+    """
     if not pts:
         return True
     x0, y0, x1, y1 = court
@@ -515,9 +567,10 @@ def _is_court_geometry(pts: list[tuple[float, float]], court: tuple[float, float
     # Mirror court below the page (FastDraw sometimes emits a reflected copy).
     if min(ys) > y1 + 20:
         return True
-    # Outer white court fill already excluded; thin width ~1.46 = court ink.
-    if width is not None and width < 2.2:
-        # Exception: keep nothing thin — play ink is thicker (~2.92).
+    # Outer white court fill already excluded; court ink is thin (~1.46 pt on half-court
+    # pages, ~0.9 pt on full-court pages).
+    if width is not None and width < stroke_min:
+        # Exception: keep nothing thin — play ink is thicker (~2.92; 1.8 on full court).
         return True
     # Huge closed loops spanning most of the court = 3pt / court outline.
     bw = max(xs) - min(xs)
@@ -584,6 +637,10 @@ _MARK_MAX_PERIM = 130.0
 _HEAD_ATTACH_DIST = 30.0
 _BAR_MAX_SHORT_EDGE = 5.0
 _BAR_ATTACH_DIST = 12.0
+# Scott 2026-10-29: chain a line to a kept line's end only within 16 PDF pt
+# (Liberty_Play_Catalog/chain_check: past ~19 pt the nearest end is often
+# another player's).
+_CHAIN_DIST = 16.0
 
 
 def _end_marks(drawings: list[dict]) -> tuple[list[list[tuple[float, float]]], list[list[tuple[float, float]]]]:
@@ -681,7 +738,11 @@ def _extract_ink(
     *,
     landmarks: dict[str, float] | None = None,
     next_positions: dict[str, dict] | None = None,
+    trace: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    """``trace`` (grading only) gets one record per end-marked stroke (the mark it
+    took, its PDF points, whether it was kept as a line) and per kept dribble
+    squiggle (mark None)."""
     positions_pdf = dict(pdf_digits or {})
     if not positions_pdf:
         for oid, pos in positions.items():
@@ -709,81 +770,18 @@ def _extract_ink(
             }
         )
 
-    drawings = page.get_drawings() or []
-    heads, bars = _end_marks(drawings)
-    used_marks: set[tuple[str, int]] = set()
+    # PDF end of every kept line, in keep order, for chaining (dribble tips too).
+    kept_ends: list[tuple[str, tuple[float, float], list]] = []
+    pending: list[tuple] = []
 
-    for d in drawings:
-        fill = d.get("fill")
-        color = d.get("color")
-        width = d.get("width")
-        pts = _poly_from_drawing(d)
-        if len(pts) < 2:
-            continue
-        L = _path_len(pts)
-        # A short play stroke is still a line once its arrowhead is added (p32
-        # cuts by 4 and 5 are 31 pt + head), so strokes get the length test below.
-        is_stroke = color is not None and not fill and width is not None and width >= 2.2
-        if L < 35 and not is_stroke:
-            continue
-
-        # Dribble squiggles: long filled black multi-segment paths (not stroke dashes).
-        if fill and color is None and len(d.get("items") or []) >= 20 and L > 150:
-            pts_s = _simplify(pts, min_dist=6.0)
-            if _is_court_geometry(pts_s, court, width=3.0):
-                continue
-            start = pts_s[0]
-            oid = _nearest_oid(start, positions_pdf, max_dist=70.0)
-            if not oid:
-                continue
-            svg = [_pdf_to_svg(x, y, court, landmarks) for x, y in pts_s]
-            # Snap start to digit.
-            svg[0] = {"x": float(positions[oid]["x"]), "y": float(positions[oid]["y"])}
-            paths[oid] = svg
-            marks[oid] = "dribble"
-            _push_action("dribble", oid, svg, None)
-            continue
-
-        # Play strokes: thicker black lines — dash pattern = pass, solid = cut.
-        if color is None or fill:
-            continue
-        if width is None or width < 2.2:
-            continue
-        if _is_court_geometry(pts, court, width):
-            continue
-        # Skip small ball / player circle outlines (nearly closed, short loop).
-        if L < 130 and abs(pts[0][0] - pts[-1][0]) < 8 and abs(pts[0][1] - pts[-1][1]) < 8:
-            continue
-        if _is_digit_ring(d, pts, positions_pdf):
-            continue
-        # Merge the arrowhead into its stroke, or find its screen bar; the
-        # marked end is the finish.
-        pts, end_mark = _attach_end_mark(pts, heads, bars, used_marks)
-        has_head = end_mark is not None
-        if _path_len(pts) < 35:
-            continue
-
-        is_pass_style = _has_dash_pattern(d.get("dashes"))
-        start_max = _START_DIST_PASS if is_pass_style else _START_DIST_CUT
-
-        pts_s = _simplify(pts, min_dist=3.5)
-        start, end = pts_s[0], pts_s[-1]
-        # Attribute by endpoints (not midpoint): mover/passer = start, receiver = end.
-        # Orient from dash/style + endpoints: keep PDF order when start snaps; else
-        # reverse once if only the geometric end is near a digit. Not tip≠start.
-        # An arrowhead fixes the direction, so an arrowed stroke is never reversed.
-        start_oid = _nearest_oid(start, positions_pdf, max_dist=start_max)
-        end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
-        if start_oid is None and end_oid is not None and not has_head:
-            pts_s = list(reversed(pts_s))
-            start, end = pts_s[0], pts_s[-1]
-            start_oid = end_oid
-            end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
-        if start_oid is None:
-            continue
-
+    def _keep(pts_s, start_oid, end_oid, is_pass_style, end_mark, rec, *, snap_start: bool) -> None:
+        if rec is not None:
+            rec["kept"], rec["pid"] = True, start_oid
+        kept_ends.append((start_oid, pts_s[-1], pts_s))
+        end = pts_s[-1]
         svg = [_pdf_to_svg(x, y, court, landmarks) for x, y in pts_s]
-        svg[0] = {"x": float(positions[start_oid]["x"]), "y": float(positions[start_oid]["y"])}
+        if snap_start:
+            svg[0] = {"x": float(positions[start_oid]["x"]), "y": float(positions[start_oid]["y"])}
 
         if is_pass_style:
             tip_oid = end_oid
@@ -808,7 +806,7 @@ def _extract_ink(
                 paths[start_oid] = svg
                 marks[start_oid] = "pass"
             _push_action("pass", start_oid, svg, tip_oid if tip_oid != start_oid else None)
-            continue
+            return
 
         # Solid → cut, unless the stroke ends in a screen bar, has a screen foot,
         # or is a dribble squiggle.
@@ -820,6 +818,124 @@ def _extract_ink(
             paths[start_oid] = svg
             marks[start_oid] = kind
         _push_action(kind, start_oid, svg, None)
+
+    drawings = page.get_drawings() or []
+    full = bool(landmarks and landmarks.get("full"))
+    stroke_min = _FULL_COURT_STROKE_MIN if full else _HALF_COURT_STROKE_MIN
+    heads, bars = _end_marks(drawings)
+    used_marks: set[tuple[str, int]] = set()
+
+    for d in drawings:
+        fill = d.get("fill")
+        color = d.get("color")
+        width = d.get("width")
+        pts = _poly_from_drawing(d)
+        if len(pts) < 2:
+            continue
+        L = _path_len(pts)
+        # A short play stroke is still a line once its arrowhead is added (p32
+        # cuts by 4 and 5 are 31 pt + head), so strokes get the length test below.
+        is_stroke = color is not None and not fill and width is not None and width >= stroke_min
+        if L < 35 and not is_stroke:
+            continue
+
+        # Dribble squiggles: long filled black multi-segment paths (not stroke dashes).
+        if fill and color is None and len(d.get("items") or []) >= 20 and L > 150:
+            pts_s = _simplify(pts, min_dist=6.0)
+            if _is_court_geometry(pts_s, court, width=3.0):
+                continue
+            # The squiggle is a filled outline that goes out and comes back to its
+            # first point (all 16 in Fast Scout); the dribble ends at the far tip.
+            tip = max(range(len(pts_s)), key=lambda i: _path_len([pts_s[0], pts_s[i]]))
+            pts_s = pts_s[: tip + 1]
+            start = pts_s[0]
+            oid = _nearest_oid(start, positions_pdf, max_dist=70.0)
+            if not oid:
+                continue
+            svg = [_pdf_to_svg(x, y, court, landmarks) for x, y in pts_s]
+            # Snap start to digit.
+            svg[0] = {"x": float(positions[oid]["x"]), "y": float(positions[oid]["y"])}
+            paths[oid] = svg
+            marks[oid] = "dribble"
+            _push_action("dribble", oid, svg, None)
+            kept_ends.append((oid, pts_s[-1], pts_s))
+            if trace is not None:
+                # A squiggle has no end mark, but a chained line can start at its end.
+                trace.append({"mark": None, "start": pts_s[0], "end": pts_s[-1], "pts": pts_s,
+                              "kept": True, "pid": oid})
+            continue
+
+        # Play strokes: black lines at least stroke_min wide — dash pattern = pass, solid = cut.
+        if color is None or fill:
+            continue
+        if width is None or width < stroke_min:
+            continue
+        if _is_court_geometry(pts, court, width, stroke_min):
+            continue
+        # Skip small ball / player circle outlines (nearly closed, short loop).
+        if L < 130 and abs(pts[0][0] - pts[-1][0]) < 8 and abs(pts[0][1] - pts[-1][1]) < 8:
+            continue
+        if _is_digit_ring(d, pts, positions_pdf):
+            continue
+        # Merge the arrowhead into its stroke, or find its screen bar; the
+        # marked end is the finish.
+        marks_before = set(used_marks)
+        pts, end_mark = _attach_end_mark(pts, heads, bars, used_marks)
+        has_head = end_mark is not None
+        rec = None
+        if trace is not None and has_head:
+            rec = {"mark": next(iter(used_marks - marks_before)), "start": pts[0], "end": pts[-1], "pts": list(pts),
+                   "kept": False, "pid": None}
+            trace.append(rec)
+        if _path_len(pts) < 35:
+            continue
+
+        is_pass_style = _has_dash_pattern(d.get("dashes"))
+        start_max = _START_DIST_PASS if is_pass_style else _START_DIST_CUT
+
+        pts_s = _simplify(pts, min_dist=3.5)
+        start, end = pts_s[0], pts_s[-1]
+        # Attribute by endpoints (not midpoint): mover/passer = start, receiver = end.
+        # Orient from dash/style + endpoints: keep PDF order when start snaps; else
+        # reverse once if only the geometric end is near a digit. Not tip≠start.
+        # An arrowhead fixes the direction, so an arrowed stroke is never reversed.
+        start_oid = _nearest_oid(start, positions_pdf, max_dist=start_max)
+        end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
+        if start_oid is None and end_oid is not None and not has_head:
+            pts_s = list(reversed(pts_s))
+            start, end = pts_s[0], pts_s[-1]
+            start_oid = end_oid
+            end_oid = _nearest_oid(end, positions_pdf, max_dist=_END_DIST)
+        if start_oid is None:
+            # Pass 2 may chain it to the end of a kept line (plan v4 Gap 1).
+            if has_head:
+                pending.append((pts_s, end_oid, is_pass_style, end_mark, rec))
+            continue
+        _keep(pts_s, start_oid, end_oid, is_pass_style, end_mark, rec, snap_start=True)
+
+    # Pass 2: a marked stroke with no start digit continues a player's earlier
+    # line when it starts within _CHAIN_DIST of that line's end (Double p64: 1's
+    # cut after his dribble; Pitt 5 p173: 4's roll after the screen). Draw order
+    # is not time order, so repeat until nothing more attaches.
+    changed = True
+    while changed and pending:
+        changed = False
+        for item in list(pending):
+            start = item[0][0]
+            near = [
+                (_path_len([start, e]), n, oid, parent)
+                for n, (oid, e, parent) in enumerate(kept_ends)
+                if _path_len([start, e]) <= _CHAIN_DIST
+            ]
+            if not near:
+                continue
+            _d, _n, oid, parent = min(near)
+            pts_s, end_oid, is_pass_style, end_mark, rec = item
+            if rec is not None:
+                rec["chained_from"] = parent  # PDF points of the line it continues
+            _keep(pts_s, oid, end_oid, is_pass_style, end_mark, rec, snap_start=False)
+            pending.remove(item)
+            changed = True
 
     return {"paths": paths, "marks": marks, "passes": passes, "actions": actions}
 

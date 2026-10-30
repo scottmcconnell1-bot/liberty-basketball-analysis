@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "player_base.html" if player_build else "base.html" %}
 {% block title %}Playbook – Liberty Basketball{% endblock %}
 
 {% block content %}
@@ -29,6 +29,7 @@
     <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_import') }}">Import</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('bulk_import.bulk_import_page') }}">Bulk Import</a>
     {% endif %}
+    <button class="btn btn-success btn-sm" id="publishPlayerBtn" onclick="publishPlayerApp()">Publish to Player App</button>
     <input type="text" class="form-control" placeholder="Search plays…"
            id="playSearch" oninput="filterPlays(this.value)">
   </div>
@@ -160,10 +161,18 @@
             </select>
             <button class="btn btn-secondary btn-sm" type="submit" title="Deep-copy this play into the selected team">Copy to…</button>
           </form>
-          <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}">
-            <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
-          </form>
-          {% else %}
+           <form method="post" action="{{ url_for('playbook.playbook_delete', play_id=play.id) }}">
+             <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Delete this play?')">Delete</button>
+           </form>
+           <div class="play-visibility-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:#4b5563;white-space:nowrap;">
+             <input type="checkbox" class="play-visible-checkbox"
+                    data-play-id="{{ play.id }}"
+                    onchange="togglePlayVisibility(this)"
+                    {% if play.id|string in visibility_map and visibility_map[play.id|string] %}checked{% endif %}>
+             <span>Visible to players</span>
+           </div>
+           {% else %}
+
           <a class="btn btn-secondary btn-sm" href="{{ url_for('playbook.playbook_export', play_id=play.id) }}">Export</a>
           {% endif %}
         </div>
@@ -180,7 +189,7 @@
 {% endif %}
 
 <!-- keep original page-header block from being duplicated: list mode owns header above -->
-{% if view_mode != "list" %}
+{% if view_mode != "list" and not player_build %}
 <div class="page-header" data-frame="6.1">
   <div>
     {% if view_mode in ("editor", "view") %}
@@ -208,7 +217,7 @@
 <!-- ── EDITOR / VIEW MODE ─────────────────────────────────── -->
 {% if view_mode in ("editor", "view", "share") %}
 {% set is_readonly = view_mode in ("view", "share") %}
-{% if view_mode == "share" %}
+{% if view_mode == "share" and not player_build %}
 <div class="alert" style="background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;margin-bottom:16px;">
   Shared play — view and animate only. Use the video button to export a clip for players.
 </div>
@@ -230,7 +239,7 @@
   {% endfor %}
 </div>
 {% endif %}
-<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+<div class="pb-main-grid" style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <!-- Left: Court Canvas -->
     <div class="card" style="padding:12px;" data-frame="6.3">
@@ -266,8 +275,8 @@
     </div>
     {% endif %}
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-      <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' %}disabled{% endif %}>◀ Previous</button>
-      <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' %}disabled{% endif %}>Next ▶</button>
+      <button class="btn btn-secondary btn-sm" onclick="prevStep()" {% if view_mode == 'share' and not player_build %}disabled{% endif %}>◀ Previous</button>
+      <button class="btn btn-secondary btn-sm" onclick="nextStep()" {% if view_mode == 'share' and not player_build %}disabled{% endif %}>Next ▶</button>
       <span id="stepLabel" style="font-size:0.8rem;font-weight:600;margin:0 4px;">Step 1 / 1</span>
       <button id="playBackBtn" class="btn btn-secondary btn-sm" onclick="rewindPlay()" title="Back up one action and stop">⏮ Back</button>
       <button id="playBeatBtn" class="btn btn-secondary btn-sm" onclick="stepForwardPlay()" title="Play the next action only, then stop">Next step</button>
@@ -277,8 +286,10 @@
       <button type="button" id="addManDefenseBtn" class="btn btn-primary btn-sm" onclick="toggleManDefense()">Add defense</button>
       <button type="button" id="moveManBtn" class="btn btn-secondary btn-sm" onclick="toggleManMove()">Move them</button>
       {% endif %}
+      {% if not player_build %}
       <button type="button" class="btn btn-secondary btn-sm" onclick="undoStep()" title="Undo the last change">Undo</button>
       <button type="button" class="btn btn-secondary btn-sm" onclick="redoStep()" title="Put back what Undo removed">Redo</button>
+      {% endif %}
       {% if view_mode != 'share' %}
       <button type="button" class="btn btn-secondary btn-sm" onclick="addStep()" title="Add a picture after this one">Add picture</button>
       <button type="button" class="btn btn-secondary btn-sm" onclick="removeStep()" title="Delete the picture you are on">Delete picture</button>
@@ -398,7 +409,7 @@
     </div>
 
     <!-- Step notes -->
-    <div style="margin-top:10px;">
+    <div class="pb-step-notes" style="margin-top:10px;">
       <label for="stepNotes" style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px;">
         Step Notes
       </label>
@@ -408,7 +419,7 @@
   </div>
 
   <!-- Right: Play Details Panel -->
-  <div>
+  <div class="pb-right-panel">
     <div class="card" style="margin-bottom:16px;" data-frame="6.4">
       <h4 style="margin-bottom:12px;">{% if is_readonly %}Play Details{% else %}Save Play{% endif %}</h4>
       {% if not is_readonly %}
@@ -515,7 +526,20 @@
 {% endblock %}
 
 {% block head %}
+{% if player_build %}
+<link rel="stylesheet" href="../../playbook.css">
+<style>
+  /* Jr High player app: court first, playback only (plan v7). Editor parts stay in the
+     page for the shared script but are hidden. */
+  .pb-main-grid { grid-template-columns: 1fr !important; }
+  .pb-right-panel, .pb-step-notes, #movementListWrap, #sheetAlignBanner, #stepSourceImageWrap,
+  #stepImages, #playBeatBtn, #arrowEditBar { display: none !important; }
+  .page-header { padding: 8px 12px; }
+  body { overflow-x: hidden; }
+</style>
+{% else %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endif %}
 <style>
   .player-token {
     cursor: grab;
@@ -617,11 +641,48 @@
 {% endblock %}
 
 {% block scripts %}
+{% if player_build %}
+<script src="../../man_defense.js"></script>
+<script src="../../playbook-taxonomy.js"></script>
+<script src="../../playbook-dnd.js"></script>
+<script src="../../playbook-export.js"></script>
+{% else %}
 <script src="{{ url_for('static', filename='js/man_defense.js') }}?v=man-shell8"></script>
 <script src="{{ url_for('static', filename='js/playbook-taxonomy.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-dnd.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook-export.js') }}"></script>
+{% endif %}
 <script>
+async function togglePlayVisibility(cb) {
+  const playId = cb.dataset.playId;
+  const visible = cb.checked;
+  try {
+    const res = await fetch(`/playbook/play/${playId}/visibility`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visible })
+    });
+    if (!res.ok) throw new Error('Failed to toggle visibility');
+  } catch (e) {
+    alert(e.message);
+    cb.checked = !visible;
+  }
+}
+
+async function publishPlayerApp() {
+  try {
+    const res = await fetch('/playbook/publish-player', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Player app built: ${data.count} plays\nURL: ${data.url}`);
+    } else {
+      alert('Publish failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Publish failed: ' + e.message);
+  }
+}
+
 // ── Playbook Canvas State ────────────────────────────────
 const COURT_W = 500, COURT_H = 470;
 const PLAYER_RADIUS = 16;
@@ -751,8 +812,11 @@ let dragOrigin = null;
 const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};
 let shareUrl = {{ share_url|tojson if share_url is defined and share_url else 'null' }};
 /** Share links read sheets/choreography via token-scoped routes (public even when sign-in is required). */
-const shareAssetBase = {{ ('/play/share/' ~ share_token)|tojson if share_token is defined and share_token else 'null' }};
+// Jr High player app (static site): choreography is ./choreography next to the page.
+const playerBuild = {{ 'true' if player_build else 'false' }};
+const shareAssetBase = {{ '.'|tojson if player_build else (('/play/share/' ~ share_token)|tojson if share_token is defined and share_token else 'null') }};
 function sheetImageSrc(url) {
+  if (playerBuild) return null;  // the player app ships no sheet images
   return shareAssetBase && url && url.startsWith('/uploads/') ? shareAssetBase + url : url;
 }
 function sheetApiUrl(kind) {
@@ -966,6 +1030,9 @@ function flipPositionsY(positions, height = COURT_H) {
 
 function playHasSheets(list) {
   const src = list || steps;
+  // The player app ships each play's saved choreography (plays/<id>/choreography) and no
+  // source_image, so it must count as a sheet play before anything loads.
+  if (playerBuild) return true;
   return (src || []).some((s) => s && s.source_image);
 }
 
@@ -3138,6 +3205,8 @@ function buildAnimPositions(fromRaw, toRaw, t) {
 function setPlayStepButton(running) {
   const btn = document.getElementById('playStepBtn');
   if (!btn) return;
+  // Player app: one Stop button only (Play All's) while a play runs.
+  if (playerBuild) btn.style.display = running ? 'none' : '';
   if (running) {
     btn.disabled = false;
     btn.textContent = '⏹ Stop';
@@ -3553,6 +3622,8 @@ async function loadStickyChoreographyDoc() {
 function applyStickyChoreographyDoc(doc) {
   const stickySteps = (doc && doc.steps) || [];
   if (!stickySteps.length) return false;
+  // Scott 2026-10-29: a play saved as full court opens on the 500 x 940 court.
+  if (doc.court_mode === 'full' && !isFullCourt) setCourtMode('full');
   sheetAlignByStep = steps.map((step, idx) => {
     const match = stickySteps.find((s) => Number(s.step_index) === idx)
       || stickySteps[idx]
@@ -3798,7 +3869,9 @@ async function ensureSheetAlignment(options = {}) {
     if (!forceExtract) {
       const sticky = await loadStickyChoreographyDoc();
       const stickySource = sticky && sticky.source;
-      const coachSaved = stickySource && stickySource !== 'auto_extract';
+      // The auto_extract skip lets the server re-read sheets; the player app has no server,
+      // so it plays whatever choreography the build wrote.
+      const coachSaved = playerBuild ? !!sticky : (stickySource && stickySource !== 'auto_extract');
       if (coachSaved && applyStickyChoreographyDoc(sticky)) {
         sheetExtractSource = null;
         setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
@@ -3811,6 +3884,15 @@ async function ensureSheetAlignment(options = {}) {
         }
         return;
       }
+    }
+    if (playerBuild) {
+      // No saved choreography: never fall through to the sheet-extract request.
+      sheetUsingStickyChoreography = false;
+      sheetStickyInkByStep = [];
+      sheetAlignByStep = [];
+      sheetAlignReady = true;
+      setSheetAlignStatus('ready', 'No saved choreography');
+      return;
     }
 
     sheetUsingStickyChoreography = false;
@@ -4175,7 +4257,7 @@ function buildTravelPaths(fromRaw, toRaw, step, inkBundle, ballPid) {
 
 async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
   const step = steps[stepIndex];
-  if (!step || !step.source_image || !playHasSheets()) {
+  if (!step || (!playerBuild && (!step.source_image || !playHasSheets()))) {
     return { paths: {}, marks: {}, passes: [] };
   }
   const skipSticky = !!options.skipSticky;
@@ -4205,6 +4287,7 @@ async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
     sheetSessionInkByStep[stepIndex] = bundle;
     return bundle;
   }
+  if (playerBuild) return { paths: {}, marks: {}, passes: [] };  // no sheet-paths request
   // Ink tracing anchors: prefer THIS sheet's OCR only (not carry-forward from
   // earlier pages — that invented false passes toward stale digit spots).
   // Never use heldLandings / animated toRaw tips as to_positions — that turned

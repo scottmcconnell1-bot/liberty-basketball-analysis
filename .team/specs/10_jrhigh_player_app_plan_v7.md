@@ -1,5 +1,4 @@
-VETTED by Claude Code, 2026-10-29 (v7 revision 3, one binding note): the 4 points are fixed - `{% extends "player_base.html" if player_build else "base.html" %}` with a new templates/player_base.html carrying the same block names (title, head, styles, content, scripts - matches base.html at HEAD); the sheet helper returns null and Stage 1 checks for no /uploads/ request and no self-request; Stage 2 uses static/player/manifest.json and static/player/sw.js, so the main app's static/sw.js and static/manifest.json are untouched; Previous/Next enabled only when player_build. Checked against templates/playbook.html and templates/base.html at HEAD (git show) and git ls-files static.
-BINDING NOTE a (section "Sheet image helper", callers list): the plan names the wrong caller. At HEAD the ONLY call is in showStepSourceImage(index) (playbook.html ~line 1121): `const src = sheetImageSrc(step.source_image); ... currentImg.src = src;`. Assigning null to img.src makes the browser request a file named "null", so that branch must test the helper's result and, when it is null, take the existing else branch (removeAttribute('src'), hide the image). There is no showSheetUnderlay caller. The player build also whitelists play_steps columns without source_image, so normally this branch is not reached; the null check is the safety net.
+VETTED by Claude Code, 2026-10-29 (v7 revision 8) - this stamps the PLAN TEXT; NOTHING IS BUILT, so none of this is in HEAD yet. The plan now says to: render shareAssetBase as "." in the player build ('.'|tojson, checked with jinja2); return true first in playHasSheets() in the player build, so page start (HEAD 7627), the playbar (6291) and Play All (6949, 7042) all reach ensureSheetAlignment(); in the player build apply any saved choreography the build wrote (`coachSaved = playerBuild ? !!sticky : ...`) and stop at "No saved choreography" without the sheet-extract POST when none exists; keep steps plus top-level source and court_mode in the whitelist (court_mode approved by Scott 2026-10-29); pass only id, name, team_key as play/editing_play, so HEAD line 724 (`const editingPlay = {{ editing_play|tojson }}`) would ship nothing else; and check in Stage 1 that Play All works with no server, the HTML has no "/uploads/" and no description text. The plan text was checked against `git show HEAD:templates/playbook.html` and data/playbook/choreography/*.json sources (3 auto_extract, 6 sticky_refresh, 5 user_save).
 
 PLAN v7 - Stage 0 measured; Stage 1 NOT BUILT YET
 
@@ -80,11 +79,11 @@ Gate: Scott confirmed results. Proceed to Stage 1 with four adjustments below.
 **Font stack (when `player_build`):**
 - Lines 517–518 in `head` block: skip the `@import url('https://fonts.googleapis.com/...')` and instead emit a `<style>` block with system font stack: `font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;`
 
-**Sheet image helper (when `player_build`) — FIX for point 2:**
-- Lines 755–757: `sheetImageSrc(url)` function — make it return `null` (not `""`) so no `/uploads/` request fires and no `<img src="">` self-request occurs.
+**Sheet image helper (when `player_build`) — FIX for rejection point 2 (sheet images):**
+- HEAD line 755: `sheetImageSrc(url)` function (reads `shareAssetBase` at HEAD line 756) — make it return `null` (not `""`) so no `/uploads/` request fires and no `<img src="">` self-request occurs. Caller: `showStepSourceImage()` at HEAD line 1113 calls `sheetImageSrc(step.source_image)` (HEAD line 1121) and sets `img.src`.
 - **Callers that must skip setting `src` when `null`:**
-  1. `showSheetUnderlay(stepIdx)` — around line 755, calls `sheetImageSrc(steps[stepIdx].source_image)` and sets `img.src`
-  2. Any other direct calls to `sheetImageSrc()` in the inline JS
+  1. `showStepSourceImage(index)` — at HEAD line 1113, calls `sheetImageSrc(step.source_image)` (HEAD line 1121) and sets `img.src`. Its `else` branch already handles `null` by calling `currentImg.removeAttribute('src')` and hiding the image — safe.
+  2. Any other direct calls to `sheetImageSrc()` in the inline JS — none at HEAD.
 - In the static build, the template receives `shareAssetBase = "."` and `player_build=True`; the helper becomes:
   ```js
   function sheetImageSrc(url) { return null; }
@@ -97,6 +96,30 @@ Gate: Scott confirmed results. Proceed to Stage 1 with four adjustments below.
 
 **PWA hooks (when `player_build`):**
 - Inline in rendered HTML (not via `base.html`): `<link rel="manifest" href="manifest.json">` and inline SW registration script (same as `player_index.html`).
+
+**shareAssetBase fix (rejection point 2 wording):**
+- HEAD line 754 is: `const shareAssetBase = {{ ('/play/share/' ~ share_token)|tojson if share_token is defined and share_token else 'null' }};`
+- In `player_build` mode, this line must become a branch that outputs `"."` so that:
+  - `sheetImageSrc(url)` receives `shareAssetBase = "."` but returns `null` anyway (per the helper override above) — no `/uploads/` request.
+  - `sheetApiUrl(kind)` receives `"."` and returns `./${kind}` — used by no callers in player build (choreography is loaded via `loadStickyChoreographyDoc`).
+  - `loadStickyChoreographyDoc()` (HEAD line 3540) fetches `${shareAssetBase}/choreography` → `./choreography`, which hits the static `plays/<id>/choreography` file written by `_build_player_site`.
+- The template change at HEAD line 754:
+  ```jinja
+  const shareAssetBase = {{ '.'|tojson if player_build else (('/play/share/' ~ share_token)|tojson if share_token is defined and share_token else 'null') }};
+  ```
+- This replaces the single HEAD line 754. Every place that reads `shareAssetBase` at HEAD (grep results, all cited by function):
+  1. **`sheetImageSrc(url)`** (HEAD line 755; reads `shareAssetBase` at HEAD line 756): returns `null` in player build (helper override), so `shareAssetBase` value is irrelevant but `.` is harmless.
+  2. **`sheetApiUrl(kind)`** (HEAD line 758; reads `shareAssetBase` at HEAD line 759): returns `./${kind}` — see caller analysis below.
+  3. **`loadStickyChoreographyDoc()`** (HEAD line 3540; reads `shareAssetBase` at HEAD line 3543): fetches `${shareAssetBase}/choreography` → `./choreography` — exactly the static file written at `plays/<id>/choreography`. Works.
+- Stage 1 test already asserts `'const shareAssetBase = ".";'` in the rendered HTML — this change makes it pass.
+
+**sheetApiUrl() callers at HEAD (rejection point 2 wording fix):**
+The plan previously said `sheetApiUrl()` has "no callers in static page". At HEAD it has three callers:
+1. **`ensureSheetAlignment()` — HEAD line 3767** (`sheet-extract` POST; fetch at HEAD lines 3824/3854): Called when `forceExtract` is true or no saved choreography exists. In player build, after the `playHasSheets` fix (below), `ensureSheetAlignment()` loads saved choreography via `loadStickyChoreographyDoc()` and returns early — **this POST never fires**.
+2. **`ensureSheetAlignment()` — HEAD line 3767** (second `sheet-extract` POST; fetch at HEAD line 3854): Same code path, loop over steps. **Never fires in player build** because saved choreography exists and is applied first (the player-build branch returns before the extract path).
+3. **`fetchSheetInkPaths()` — HEAD line 4176** (`sheet-paths` POST; fetch at HEAD line 4247): Called when no sticky ink exists for a step. In player build, whitelisted choreography includes `ink` for every step, so `sheetStickyInkByStep` is populated by `applyStickyChoreographyDoc()` — **this POST never fires**.
+
+If any of these *did* run in player build (e.g., missing choreography file), they would POST to `./sheet-extract` or `./sheet-paths` on `python -m http.server`, which returns 404/500 and breaks animation. **After the `playHasSheets` fix below, they must not run when a saved choreography exists; in the player build the no-fall-through branch in `ensureSheetAlignment()` guarantees the POSTs never fire.**
 
 ### `templates/player_base.html` (NEW — minimal base for player pages)
 
@@ -155,6 +178,110 @@ Gate: Scott confirmed results. Proceed to Stage 1 with four adjustments below.
 - System font stack (inherited from `player_base.html`)
 - Viewport meta (inherited from `player_base.html`)
 
+### Fix for rejection point 1 (blocking): Saved choreography must load and animate in player build
+
+**Problem:** `_build_player_site` selects steps WITHOUT `source_image` (SELECT step_number, label, positions_json, movements_json). In the page, `playHasSheets()` (HEAD line 967) returns true only if some step has `source_image`. Since player build strips `source_image`, `playHasSheets()` is false. This causes:
+- `ensureSheetAlignment()` (HEAD line 3767) returns at its `if (!playHasSheets())` branch (HEAD lines 3776–3780) BEFORE it calls `loadStickyChoreographyDoc()` (HEAD line 3540 — the ONLY caller of that function).
+- Play All (`playbarTogglePlay`, HEAD line 6948; `playAnimation`, HEAD line 7039): `if (playHasSheets() && !useSheetSlideshowMode() && !sheetAlignReady) { ... await ensureSheetAlignment(); }` skips alignment entirely.
+- `fetchSheetInkPaths()` (HEAD line 4176) returns empty at `if (!step || !step.source_image || !playHasSheets())`.
+- `positionsForAnim()` → `positionsThrough()` (HEAD line 1029) takes the non-sheet branch, using only `steps[i].positions` from the DB, not the whitelisted choreography positions.
+- **Result:** An imported play would not animate. Stage 0 played only because its steps still had `source_image`.
+
+**Fix:** Add a `player_build` branch so the saved choreography loads and animates WITHOUT any `source_image` path or image. The template receives `player_build=True` from `_build_player_site`. Changes:
+
+1. **HEAD line 754 — `shareAssetBase` / `player_build` flag:** Add a JS variable at the top of the inline script (near `shareAssetBase`):
+   ```js
+   const playerBuild = {{ 'true'|tojson if player_build else 'false' }};
+   ```
+
+2. **`playHasSheets(list)` (HEAD line 967)**: In the player build it must return true BEFORE anything loads:
+   ```js
+   function playHasSheets(list) {
+     const src = list || steps;
+     if (playerBuild) return true;
+     return (src || []).some((s) => s && s.source_image);
+   }
+   ```
+   The static build guarantees `plays/<id>/choreography` exists for every published play: `_build_player_site` writes the wrapped whitelisted choreography JSON to `plays/<id>/choreography` before rendering that play's HTML (see Stage 1 `_build_player_site`); if it is ever missing, the player-build branch in step 3 handles it without falling through to the POST.
+
+   With this early return, the page-start gate (`else if (playHasSheets()) { ... ensureSheetAlignment(); }`, HEAD line 7627), the playbar timeline gate (HEAD line 6291), and the Play All gates (`playbarTogglePlay`, HEAD line 6948; `playAnimation`, HEAD line 7039) all reach `ensureSheetAlignment()`, which loads the saved choreography via `loadStickyChoreographyDoc()` (HEAD line 3540) and populates `sheetAlignByStep` / `sheetStickyInkByStep` via `applyStickyChoreographyDoc()` (HEAD line 3553).
+
+3. **`ensureSheetAlignment()` (HEAD line 3767)**: With the `playHasSheets()` fix above, the `if (!playHasSheets())` early return (HEAD lines 3776–3780) is not taken in the player build, so the sticky-first block runs. When `loadStickyChoreographyDoc()` returns nothing, the player build must NOT fall through to the `sheet-extract` POST via `sheetApiUrl('sheet-extract')` (HEAD line 758). Show the branch:
+   ```js
+   // playHasSheets() returns true in the player build (fix step 2), so the
+   // `if (!playHasSheets())` early return (HEAD lines 3776–3780) is skipped here.
+   // Sticky-first: coach-saved choreography wins over the server-backed extract.
+   if (!forceExtract) {
+     const sticky = await loadStickyChoreographyDoc();
+     const stickySource = sticky && sticky.source;
+     const coachSaved = playerBuild ? !!sticky : (stickySource && stickySource !== 'auto_extract');
+     if (coachSaved && applyStickyChoreographyDoc(sticky)) {
+       sheetExtractSource = null;
+       setSheetAlignStatus('ready', 'Ready — saved choreography (sticky)');
+       setSheetAnimHint('Using saved choreography');
+       if (!isPlaybackActive()) {
+         showSheetUnderlay(currentStep);
+         renderStep();
+         invalidatePlaybarTimeline();
+         ensurePlaybarTimeline();
+       }
+       return;
+     }
+   }
+   if (playerBuild) {
+     // Player build: no saved choreography available — do NOT fall through to the sheet-extract POST.
+     sheetUsingStickyChoreography = false;
+     sheetStickyInkByStep = [];
+     sheetAlignByStep = [];
+     sheetAlignReady = true;
+     setSheetAlignStatus('ready', 'No saved choreography');
+     return;
+   }
+   // Server-backed extract path (sheet-extract / sheet-paths via sheetApiUrl) — never reached in player build.
+   ```
+   The rest of `ensureSheetAlignment` stays — the sticky-first block runs before the server-backed extract path, which in the player build is never reached (no `/api` backend on the static host; the POSTs go to `./sheet-extract` / `./sheet-paths` via `sheetApiUrl`).
+
+   **Fix for rejection point 1 confirmed:** in the player build the coach-saved check is now `const coachSaved = playerBuild ? !!sticky : (stickySource && stickySource !== 'auto_extract');` — the player build accepts any saved choreography the build wrote (the `auto_extract` skip exists only so the server can re-read sheets, so it is bypassed in the player build). YES — keep the top-level `source` in the whitelist (now carried through alongside `steps`). Confirm `playId` is set in the player build: `_build_player_site` passes `editing_play` (populated with the play row incl. `id`) into the template, which sets `const playId = {{ editing_play.id|tojson if editing_play and editing_play.id else 'null' }};` (HEAD line 751); `loadStickyChoreographyDoc()` therefore returns null only when `!playId`.
+
+4. **`fetchSheetInkPaths()` (HEAD line 4176)**: Allow sticky ink to be used even without `source_image` in player build:
+   ```js
+   async function fetchSheetInkPaths(stepIndex, fromRaw, toRaw, options = {}) {
+     const step = steps[stepIndex];
+     if (!step) return { paths: {}, marks: {}, passes: [] };
+     // Player build: allow sticky ink even without source_image
+     if (!step.source_image && !playHasSheets() && !playerBuild) {
+       return { paths: {}, marks: {}, passes: [] };
+     }
+     // ... rest unchanged
+   }
+   ```
+
+5. **`positionsThrough()` / `positionsForAnim()`**: The `playHasSheets()` fix above makes this branch execute in player build, so `sheetPositionsForStep()` (HEAD line 1085) reads from `sheetAlignByStep` (populated by sticky choreography; `positionsForAnim` HEAD line 1081 → `positionsThrough` HEAD line 1029).
+
+**Every function at HEAD that tests `source_image` or `playHasSheets()` and what each does in player build:**
+
+| Function / Location | Tests | Player Build Behavior (after fix) |
+|---------------------|-------|-----------------------------------|
+| `playHasSheets()` (HEAD line 967) | `s.source_image` | Returns true BEFORE anything loads in player build (`if (playerBuild) return true;`) — build ships `plays/<id>/choreography` |
+| `useSheetSlideshowMode()` (HEAD line 988) | `playHasSheets()` | Returns false (no `__playbookSheetSlideshow` flag set) |
+| `shouldFlipLegacyBottomBasket()` (HEAD line 1003) | `playHasSheets()` | Returns false (no flip for player build plays) |
+| `positionsThrough()` (HEAD line 1029) | `playHasSheets()` | Takes sheet branch → reads `sheetAlignByStep` (populated from sticky) |
+| `positionsForAnim()` (HEAD line 1081) | `playHasSheets()` via `positionsThrough` | Uses choreography positions for animation |
+| `showStepSourceImage()` (HEAD line 1113) | `step.source_image` | `step.source_image` is undefined → helper returns `null` → image hidden (correct) |
+| `renderStep()` (HEAD line 1314) | `playHasSheets()` | No sheet underlay; clean SVG court; arrows rendered from choreography ink |
+| `ensureSessionInkCaptured()` (HEAD line 3753) | `playHasSheets()` | Returns early (no session ink capture needed; sticky ink already loaded) |
+| `ensureSheetAlignment()` (HEAD line 3767) | `playHasSheets()` | Early return now loads sticky choreography in player build; cached path works |
+| `loadStickyChoreographyDoc()` (HEAD line 3540) | — | Fetches `./choreography` via `shareAssetBase="."` — works |
+| `applyStickyChoreographyDoc()` (HEAD line 3553) | — | Populates `sheetAlignByStep` and `sheetStickyInkByStep` from whitelisted choreography |
+| `fetchSheetInkPaths()` (HEAD line 4176) | `step.source_image`, `playHasSheets()` | Guard allows sticky ink path; `sheetApiUrl('sheet-paths')` POST never fires |
+| `ensurePlaybarTimeline()` (HEAD line 6406) | `playHasSheets()` | `playHasSheets()` true → `ensureSheetAlignment()` called → timeline built from choreography |
+| `playAnimation()` (HEAD line 7039) | `playHasSheets()` | `await ensureSheetAlignment()` runs → animation proceeds with saved choreography |
+| `showSheetUnderlay()` (HEAD line 3508) | `playHasSheets()` | Returns early (no sheet image to show) — correct for player build |
+
+**Add to Stage 1 check:** Serve `dist/player` with `python -m http.server`, open an imported play with NO server API running, press Play All, and confirm the players move along the saved lines (screenshot), and that the HTML contains no `"/uploads/"` string.
+
+**Add to Stage 1 check:** The built HTML of a play whose `description` is set does not contain that description text.
+
 ### New `_build_player_site(db)` — Replacement Implementation
 
 ```python
@@ -188,7 +315,7 @@ def _build_player_site(db):
         if src.exists():
             shutil.copy2(src, dst)
 
-    # DO NOT copy main app's manifest.json or sw.js (point 3 fix).
+    # DO NOT copy main app's manifest.json or sw.js.
     # Player's own manifest and SW are Stage 2 files (static/player/manifest.json, static/player/sw.js).
     # Icons are copied for the player's own manifest (Stage 2).
     icons_src = Path(current_app.root_path) / "static" / "icons"
@@ -202,7 +329,7 @@ def _build_player_site(db):
         if not play:
             continue
 
-        # Load steps (whitelisted columns)
+        # Load steps (whitelisted columns) — NO source_image, NO court_frac
         steps = db.execute(
             "SELECT step_number, label, positions_json, movements_json FROM play_steps WHERE play_id = ? ORDER BY step_number",
             (pid,)
@@ -214,6 +341,8 @@ def _build_player_site(db):
 
         whitelisted_choreo = {}
         if choreo and "steps" in choreo:
+            whitelisted_choreo["source"] = choreo.get("source") or "user_save"
+            whitelisted_choreo["court_mode"] = choreo.get("court_mode") or "half"
             whitelisted_choreo["steps"] = []
             for cstep in choreo["steps"]:
                 cstep_data = {
@@ -242,7 +371,13 @@ def _build_player_site(db):
         (play_dir / "choreography").write_text(json.dumps(wrapped_choreo, indent=2))
 
         # Render playbook.html with view_mode="share" AND player_build=True
-        play_dict = dict(play)
+        # PRIVACY FIX (rejection point 1): build a WHITELISTED play dict — only the keys the
+        # player build needs are passed to the template as `play` and `editing_play`.
+        play_dict = {
+            "id": play["id"],
+            "name": play["name"],
+            "team_key": play["team_key"],
+        }
         steps_list = [dict(s) for s in steps]
         category_tree = _load_playbook_taxonomy(db)
         team_key = normalize_playbook_team(play_dict.get("team_key"))
@@ -278,9 +413,11 @@ def _build_player_site(db):
     # Write plays index manifest (for the selector)
     (out_dir / "plays_index.json").write_text(json.dumps(play_list, indent=2))
 
-    # Return dist path; caller prints the local URL (point 3 fix)
+    # Return dist path; caller prints the local URL
     return {"ok": True, "count": len(play_list), "path": str(out_dir)}
 ```
+
+**Whitelist (privacy fix, rejection point 1):** The play dict passed to the template as `play` and `editing_play` is whitelisted to `id`, `name`, and `team_key` (kept because `id` feeds `playId` for the choreography fetch, `name` is the display key, and `team_key` drives team template context; every other column of the `plays` row — `description`, `tags`, `diagram_json`, `search_blob`, `category`, `category_id`, `category_path`, `playbook_id`, `updated_at`, `step_count`, `progressions`, `playbook_name` — is dropped). Grep HEAD `templates/playbook.html` for `editing_play.` and `play.`; for each key the template reads, the player build keeps it or the template branch never reaches it: `editing_play.id` / `editing_play.name` / `editing_play.team_key` are kept; `editing_play.description`, `editing_play.tags`, `editing_play.diagram_json`, `editing_play.playbook_id`, `editing_play.category` are read only by editor/Play Details branches suppressed in `player_build`; list-branch reads (`play.id`, `play.name`, `play.step_count`, `play.search_blob`, ...) are not reached in the player play page.
 
 ### Precaching list for Stage 2 (exact files the player page loads)
 
@@ -344,6 +481,7 @@ cd C:\Users\scott\Documents\liberty-playbook
 11. Verify `dist/player/plays/` contains ONLY visible plays; hidden play's folder is removed
 12. Zero-visible case: turn ALL plays OFF → click Publish → `dist/player/` rebuilt with empty `plays_index.json`, empty `plays/`, viewer shows empty list (no error)
 13. DevTools Network tab: no requests to `fonts.googleapis.com`, `fonts.gstatic.com`, `/api/analysis_jobs`, or `/uploads/...` on load or during playback; no image request to the page's own URL
+14. **NEW:** Open an imported play (no server API running), press Play All, confirm players move along saved lines (screenshot), verify HTML contains no `"/uploads/"` string
 
 ---
 

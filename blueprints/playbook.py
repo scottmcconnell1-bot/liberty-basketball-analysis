@@ -20,7 +20,9 @@ Routes included:
 """
 
 import json
+import shutil
 from pathlib import Path
+
 
 from flask import (
     Blueprint,
@@ -68,6 +70,9 @@ def _playbook_module_gate():
     db = get_db()
     enforce_module_access(db, get_default_team_id(db), PLAYBOOK_RECOGNITION)
 
+
+def _choreography_base() -> Path:
+    return Path(current_app.root_path) / "data" / "playbook"
 
 def _serialize(obj):
     """Convert non-JSON-serializable objects (datetime, etc.) to strings."""
@@ -734,6 +739,7 @@ def playbook_list():
         editing_steps=[],
         view_mode="list",
         selected_category_id=None,
+        visibility_map=_player_visibility(),
         **_team_template_kwargs(team_key),
     )
 
@@ -1730,8 +1736,142 @@ def playbook_sheet_paths_api():
         return jsonify({"error": f"sheet paths failed: {exc}"}), 500
 
 
-def _choreography_base() -> Path:
-    return Path(current_app.root_path) / "data" / "playbook"
+def _player_visibility():
+    """play_id (str) -> visible to Jr High players (data/playbook/jrhigh_player_visibility.json)."""
+    path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+    try:
+        return json.loads(path.read_text()) if path.exists() else {}
+    except ValueError:
+        return {}
+
+
+@playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_toggle_visibility(play_id):
+    db = get_db()
+    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+    if not play:
+        return jsonify({"error": "Play not found"}), 404
+    data = request.get_json() or {}
+    visible = bool(data.get("visible", False))
+    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    manifest[str(play_id)] = visible
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    return jsonify({"ok": True, "play_id": play_id, "visible": visible})
+
+
+@playbook_bp.route("/playbook/publish-player", methods=["POST"])
+@require_feature("ENABLE_PRACTICES")
+def playbook_publish_player():
+    db = get_db()
+    result = _build_player_site(db)
+    return jsonify(result)
+
+
+def _build_player_site(db, data_root=None, out_dir=None):
+    """Static Jr High player site in dist/player/ (plan .team/specs/10_jrhigh_player_app_plan_v7.md).
+
+    Each visible play is playbook.html rendered in share view with player_build=True,
+    so the phone plays the same animation code as the main program. Privacy: only
+    id, name and team_key of the play reach the page; no source_image, notes or
+    court_frac reach the choreography file. ``data_root`` (visibility + choreography)
+    and ``out_dir`` default to the app's own folders; tests point them at tmp_path.
+    """
+    root = Path(current_app.root_path)
+    data_root = Path(data_root) if data_root else root
+    manifest_path = data_root / "data" / "playbook" / "jrhigh_player_visibility.json"
+    visibility = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    visible_ids = [int(pid) for pid, vis in visibility.items() if vis]
+
+    out_dir = Path(out_dir) if out_dir else root / "dist" / "player"
+    plays_dir = out_dir / "plays"
+    # Rebuild from scratch, so a play turned off is gone from the site.
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    plays_dir.mkdir(parents=True, exist_ok=True)
+
+    for src_rel, dst_name in (
+        ("static/js/man_defense.js", "man_defense.js"),
+        ("static/js/playbook-taxonomy.js", "playbook-taxonomy.js"),
+        ("static/js/playbook-dnd.js", "playbook-dnd.js"),
+        ("static/js/playbook-export.js", "playbook-export.js"),
+        ("static/css/playbook.css", "playbook.css"),
+    ):
+        src = root / src_rel
+        if src.exists():
+            shutil.copy2(src, out_dir / dst_name)
+    # The main app's manifest.json and sw.js are never copied (Stage 2 adds player-only ones).
+    icons_src = root / "static" / "icons"
+    if icons_src.exists():
+        shutil.copytree(icons_src, out_dir / "icons", dirs_exist_ok=True)
+
+    category_tree = _load_playbook_taxonomy(db)
+    play_list = []
+    for pid in visible_ids:
+        play = db.execute("SELECT * FROM plays WHERE id = ?", (pid,)).fetchone()
+        if not play:
+            continue
+        play = dict(play)  # team_key is added by a migration; a fresh DB may not have it
+        steps = db.execute(
+            "SELECT step_number, label, positions_json, movements_json FROM play_steps "
+            "WHERE play_id = ? ORDER BY step_number",
+            (pid,),
+        ).fetchall()
+
+        choreo_path = data_root / "data" / "playbook" / "choreography" / f"{pid}.json"
+        choreo = json.loads(choreo_path.read_text()) if choreo_path.exists() else {}
+        whitelisted = {}
+        if choreo and "steps" in choreo:
+            whitelisted["source"] = choreo.get("source") or "user_save"
+            whitelisted["court_mode"] = choreo.get("court_mode") or "half"
+            whitelisted["steps"] = [
+                {
+                    "step_index": cstep.get("step_index"),
+                    "positions": cstep.get("positions"),
+                    "coachOrder": cstep.get("coachOrder"),
+                    "movements": cstep.get("movements"),
+                    "ink": cstep.get("ink"),
+                }
+                for cstep in choreo["steps"]
+            ]
+
+        play_dir = plays_dir / str(pid)
+        play_dir.mkdir(parents=True, exist_ok=True)
+        # The page fetches ./choreography (shareAssetBase is "." in the player build).
+        (play_dir / "choreography").write_text(
+            json.dumps({"ok": True, "sticky": True, "choreography": whitelisted}, indent=2)
+        )
+
+        play_dict = {"id": play["id"], "name": play["name"], "team_key": play.get("team_key")}
+        steps_list = [dict(s) for s in steps]
+        team_key = normalize_playbook_team(play_dict.get("team_key"))
+        play_html = render_template(
+            "playbook.html",
+            plays=[],
+            playbooks=[],
+            categories=PLAYBOOK_CATEGORIES,
+            category_tree=category_tree,
+            play=play_dict,
+            steps=steps_list,
+            editing_play=play_dict,
+            editing_steps=steps_list,
+            view_mode="share",
+            player_build=True,
+            selected_category_id=None,
+            share_token=None,
+            share_url=None,
+            audience_can_edit=False,
+            **_team_template_kwargs(team_key),
+        )
+        (play_dir / "index.html").write_text(play_html, encoding="utf-8")
+        play_list.append(
+            {"id": play["id"], "name": play["name"], "category": play.get("category"), "team_key": play.get("team_key")}
+        )
+
+    (out_dir / "player.html").write_text(render_template("player_index.html", plays=play_list), encoding="utf-8")
+    (out_dir / "plays_index.json").write_text(json.dumps(play_list, indent=2))
+    return {"ok": True, "count": len(play_list), "path": str(out_dir), "url": "http://localhost:8080/player.html"}
 
 
 @playbook_bp.route("/api/playbook/choreography/<int:play_id>", methods=["GET"])

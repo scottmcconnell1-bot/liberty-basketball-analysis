@@ -1,0 +1,27 @@
+{% extends "player_base.html" %}
+{% block title %}Liberty Jr High Plays{% endblock %}
+{% block styles %}
+<style>
+  h1 { font-size: 1.4rem; margin: 8px 4px 12px; }
+  .play-list { list-style: none; display: grid; gap: 10px; }
+  .play-list a {
+    display: block; padding: 14px 16px; background: var(--color-surface);
+    border: 1px solid var(--color-border); border-radius: var(--radius);
+    color: var(--color-text); text-decoration: none; font-size: 1.1rem; font-weight: 600;
+  }
+  .play-list a:active { background: #eef6f6; }
+  .muted { color: var(--color-muted); padding: 4px; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Liberty Jr High Plays</h1>
+{% if plays %}
+<ul class="play-list">
+  {% for p in plays %}
+  <li><a href="plays/{{ p.id }}/index.html">{{ p.name }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No plays yet. Your coach will add them.</p>
+{% endif %}
+{% endblock %}
