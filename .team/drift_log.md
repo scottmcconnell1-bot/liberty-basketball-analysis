@@ -73,3 +73,45 @@
 ## 2026-10-31 D2 plan (Claude Code)
 - 21_d2_plan.md v1 REJECTED (trained on Adrian Q4 unseen check; labelled build-set missed makes; unmarked estimates). v2 VETTED with two binding notes in the body (frame count fixed by Scott at gate 1; venv torch is CPU only, GPU training in a separate environment). Muse AGREE. Waiting on Scott's gate 1 (OK to label, how many frames).
 - Playbook v15-v17 published: court fits screen, court cut shorter per play (no skew, 960 px page), Start over / Show triangles moved to the play row.
+- 2026-11-01 18:25 MDT OpenCode (beam-free, started in C:\Windows\System32, outside the team loop) wrote and ran .team/shot_detectors/d2_pick_frames.py + test unchecked, and signed a TEAM_RECOVERY log line as 'Claude Code'. Check run by Claude Code: Hermes CHECK: DISAGREE + Muse DISAGREE (inkling) + Claude Code REJECTED: holdout times hard-coded (line 46) not read from holdout_names.json; LOST marks frames after any SEEN, spec says after the last SEEN (187-204); label.html has no arrow keys, no touch, and fetch('frames.json') is blocked on file:// (headless Chrome test: blank page, CORS); label lookup by img.src (377) vs file name (383) erases a box on Back then Next; only 5 trivial tests, none of spec section 6's 8; spacing rule relaxed (282-300). Output itself 600/600, 86x5/85x2, 0 Notus A frames near holdout. Stopped for Scott.
+- 2026-11-01 Claude Code miss (found 2026-11-02): VETTED 22_d2_label_job_spec.md although it said 'Target total: 600 frames (fixed by Scott at gate 1)' before Scott had set any number. OpenCode then asked Scott with a wrong option ('All missed makes', build-set frames) and used 600 anyway. Lesson: a stamp must reject any line that claims a Scott decision not yet made.
+- 2026-11-02 13:40 MDT Claude Code: D2 train job (spec 23 v2) ran: step 0 29/0 OK; val (76 frames) v6 P 0.490 R 0.462 mAP50 0.320 -> d2v1 P 0.819 R 0.783 mAP50 0.780. D1 test INVALID, not a model result: (1) spec 23 single_cls=True made ultralytics save the class as {0: 'item'}; keep_ball_detections.py line 23 keeps only 'basketball', so extract saw no balls (0/3800). (2) arc-rule-report has its own mapping gate (keep_ball_detections.py line 1112) that spec 23 section 4 missed. Misses by Claude Code (vet + code), Hermes and Muse. Stopped for Scott; nothing retried.
+- 2026-11-02 14:25 MDT Claude Code: spec 23 v3 small fix (--mapping-proof-json, 30 lines added to keep_ball_detections.py, 5 tests, 26 passed) - Hermes CHECK: AGREE, MUSE: AGREE. The one valid D2 test: step 0 with flag 29/0 OK; d2v1 (best_basketball.pt) makes_right 29, recovered 2 (adrian 1792900, 2962500), lost 1 (adrian 48600), misses_called_makes 5 (adrian 39400, 530600, 705200, 1166800, 2441900). FAIL (needs >29 and 0). Stopped for Scott, gate 3; no retry, no tuning. models/ and ball_confidence unchanged.
+
+## 2026-11-02 21:10 (Claude Code) - fall-through guard, one run each: FAIL
+- Scott: "We are frozen in analysis. Do this." Q4 tracks rebuilt with the October builder's own functions (.team/shot_detectors/q4_rebuild_tracks.py) -> Liberty_Shot_Outputs/q4_guard/v6_tracks_q4.json, 18 tracks, all with a hoop.
+- Hermes wrote the code (switch_fall_through in small_fixes_v6_copy.py, --fall-through-guard in keep_ball_detections.py, q4_blind_test.py, 9 tests). Claude Code fixed: Hermes's "seen above the rim" check was looser than the spec; dead function with hoop_w=0.0; answer passed into frame picking. 61 passed. Muse AGREE.
+- 140 build shots, d2v1 + guard: makes_right 20 (was 29), misses_called_makes 5 (unchanged). Guard vetoed 9 real makes and 0 misses; all 5 false makes pass the guard (ball seen dropping inside the rim on the image).
+- Adrian Q4 blind, d2v1 + guard: 1/5 makes, 1 miss called make. v6 plain on Q4: 2/5 makes, 1 miss called make (56:33.6) - the current program also calls a false make on unseen shots.
+- No retry, no tuning. models/ and ball_confidence unchanged. Stopped for Scott.
+
+## 2026-11-02 21:58 (Claude Code) - spec 25 v2 one run
+- Plan: Hermes v1 REJECTED (wrong baselines, tracking, pixel_miss edit), v2 VETTED, Muse AGREE. Code by Hermes; Claude Code fixed 3 bugs in measure_player_motion.py (hoop centre from box corner; no-hoop frames counted as 0 players; per-frame seek). 83 passed. Muse AGREE.
+- Double-count cut (next tag time): v6+D1 29 right / 0 false (no change); d2v1+D1 29 / 5. The cut changed 0 calls that matter: 39400's borrowed make is at offset 60, the next tag (Dayley's make) is at offset 62 - the tag marks the ball going in, so the cut comes too late. A cut before the next shot's RELEASE would need a new number; not tuned.
+- d2v1 extract stopped at its own 0.90 gate as before (0.8625 agreement); candidates written first; report used --mapping-proof-json as spec 23 v3.
+- Player motion (140): near-hoop players in last 1 s, makes median 0 (0-3), misses median 1 (0-5); the 5 false makes show 0-1, same as makes. No clean split.
+- v6+D1 and d2v1+D1 disagree on 7 of 140 (5 false makes, 2 recovered makes, 1 lost make); where both say make, 28 of 28 are real.
+
+## 2026-11-03 review queue (Claude Code)
+- Scott: "acceptable solution. Make it just like the 10 clips... test that against all loaded games."
+- Tagged games: Adrian (127 shots, all 4 quarters) and Notus A1 (31). Untagged videos have no shot list, so they're not included.
+- D1 run once on Adrian Q4 for v6 and d2v1 via a scratchpad wrapper that swaps only the shot list (run_d1_q4.py). v6 mapping 1.0000, d2v1 0.8340 (expected stop; v6 used as proof). Both: Q4 2/5 makes, 1 false make (3393600). Output: Liberty_Shot_Outputs/review_queue/q4/.
+- Split over 158 shots: both make 31 (30 real, 1 false = Q4 3393600); disagree 7 (all build: 5 misses, 2 makes); rest auto miss (20 real makes missed).
+- Page (local only, minors): Liberty_Shot_Outputs/review_queue/page/review.html, 38 clips. No core file, model, or number changed. Nothing committed.
+
+## 2026-11-03 spec 26 clip moment fix (Claude Code)
+- Hermes v1 REJECTED (self-contradiction on 39400, negative gap unhandled, wrong constant); v2 VETTED with conditions a-e; Muse AGREE plan.
+- Scott: "Use [Cursor] until you cant." Cursor coded clip_moment_fix.py + test + flags on make_review_queue_page.py (copied into repo unchanged by Claude Code first).
+- pytest .team/shot_detectors -q: 91 passed. Flag off: 874 jpg identical, html differs only by unused note CSS/JS. Flag on: flagged 39400 (1045->985), 2417100 (60501->60428), 2753100 (68836->68828); gray 31 orange 9. Muse AGREE code. Nothing committed.
+
+## 2026-11-03 spec 27 flagged clip length (Claude Code)
+- Scott: clip too short to call; tag frames of 39400/2753100 show release. Hermes plan VETTED (Claude Code added arithmetic), Muse AGREE; Cursor coded; 96 tests pass; one run page_v3 PASS (71/63/16 frames, 0 other clips changed, gray 31 orange 9, per-page storage key); Muse AGREE code. Nothing committed.
+
+## 2026-11-03 spec 28 wide view + combined cards (Claude Code)
+- Spec 27's clip end still showed Dayley's make on 39400 (Claude Code read the frames); Scott's 19:26.8 note: needs to see players. Hermes plan VETTED with corrections (group end = max anchor + 14; counts gray 30 / orange 9 / 42 shots); Muse AGREE. Scott: label "Shot 1, Shot 2" for tip-ins - added. Cursor coded; 103 tests; one run page_v4 PASS; Muse AGREE code. Nothing committed.
+
+## 2026-11-03 spec 29 bigger wide view (Claude Code)
+- Scott: wide view too small. Hermes plan VETTED (disk estimate corrected), Muse AGREE; Cursor coded; 103 tests; page_v5 PASS (close-ups identical, wide 1920x1080, same counts). Nothing committed.
+
+## 2026-11-03 spec 30 clip seconds (Claude Code)
+- Scott decided 2.0 s before / 1.5 s after (halved Claude Code proposal 4/3). Hermes timed out (OpenRouter 504) but spec file was written; VETTED with count correction; Muse AGREE; Cursor coded; 105 tests; page_v6 PASS. Nothing committed.
